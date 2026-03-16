@@ -316,7 +316,7 @@ function App() {
 
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; expirationDate: string } | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
-  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const toastTimeoutRef = useRef<any>(null);
   const showToast = (message: string, type: 'success' | 'info' | 'warning' = 'info') => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ message, type });
@@ -328,13 +328,13 @@ function App() {
 
   // --- Izi Elite Client Features ---
   const [userXP, setUserXP] = useState(1250);
-  const [userLevel, setUserLevel] = useState(12);
-  const [nextLevelXP, setNextLevelXP] = useState(2500);
+  const [userLevel] = useState(12);
+  const [nextLevelXP] = useState(2500);
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [aiMessage, setAiMessage] = useState("Olá! Sou seu assistente Izi. Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?");
   const [showInfinityCard, setShowInfinityCard] = useState(false);
   const [showMasterPerks, setShowMasterPerks] = useState(false);
-  const [activeStories, setActiveStories] = useState<any[]>([
+  const [activeStories] = useState<any[]>([
     { id: 1, title: 'Oferta Relâmpago', merchant: 'Sushi Zen', discount: '30%', timeLeft: '14:55', img: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=400' },
     { id: 2, title: 'Izi Flash', merchant: 'Burger King', discount: '15%', timeLeft: '08:22', img: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?q=80&w=400' },
     { id: 3, title: 'Papo de Gourmet', merchant: 'Pizzaria Bella', discount: 'BOGO', timeLeft: '22:10', img: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=400' },
@@ -355,7 +355,7 @@ function App() {
     banner: string;
   } | null>(null);
 
-  const [quests, setQuests] = useState([
+  const [quests] = useState([
     { id: 1, title: 'Explorador Urbano', desc: 'Peça em 3 categorias diferentes hoje', xp: 500, progress: 1, total: 3, icon: 'explore', color: '#fbbf24' },
     { id: 2, title: 'Amigo do Peito', desc: 'Indique um amigo para a Izi', xp: 1000, progress: 0, total: 1, icon: 'group_add', color: '#10b981' },
     { id: 3, title: 'Madrugador Izi', desc: 'Peça café da manhã antes das 9h', xp: 300, progress: 0, total: 1, icon: 'wb_sunny', color: '#f59e0b' },
@@ -622,7 +622,7 @@ function App() {
   const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponInput, setCouponInput] = useState("");
-  const [couponError, setCouponError] = useState("");
+  const [, setCouponError] = useState("");
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [beverageBanners, setBeverageBanners] = useState<any[]>([]);
   const [beverageOffers, setBeverageOffers] = useState<any[]>([]);
