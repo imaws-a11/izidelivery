@@ -604,9 +604,7 @@ function App() {
     address: "Buscando localização...",
     loading: true,
   });
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro" | "saldo" | "bitcoin_lightning">("cartao");
-    () => (localStorage.getItem("preferredPaymentMethod") as any) || "dinheiro"
-  );
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro" | "saldo" | "bitcoin_lightning">(() => (localStorage.getItem("preferredPaymentMethod") as any) || "cartao");
   useEffect(() => {
     localStorage.setItem("preferredPaymentMethod", paymentMethod);
   }, [paymentMethod]);
