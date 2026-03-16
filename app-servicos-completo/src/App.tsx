@@ -310,6 +310,8 @@ function App() {
     | "pix_payment"
     | "order_chat"
     | "quest_center"
+    | "order_support"
+    | "order_feedback"
   >("none");
 
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; expirationDate: string } | null>(null);
@@ -957,7 +959,7 @@ function App() {
           }
 
           // Atualizar lista completa de pedidos
-          fetchMyOrders(userId);
+          if (userId) fetchMyOrders(userId);
         },
       )
       .subscribe();
@@ -9183,6 +9185,17 @@ function App() {
                   className="absolute inset-0 z-[190]"
                 >
                   {renderQuestCenter()}
+                </motion.div>
+              )}
+              {subView === "pix_payment" && (
+                <motion.div
+                  key="pixpay"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[150]"
+                >
+                  {renderPixPayment()}
                 </motion.div>
               )}
             </AnimatePresence>
