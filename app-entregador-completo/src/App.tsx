@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from './lib/supabase';
 import { playIziSound } from './lib/iziSounds';
@@ -184,12 +184,12 @@ function App() {
     const [filter, setFilter] = useState<ServiceType | 'all'>('all');
     const [stats, setStats] = useState({ balance: 0, today: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
     const [orders, setOrders] = useState<Order[]>([]);
-    const [scheduledOrders, setScheduledOrders] = useState<Order[]>([]);
+    const [scheduledOrders] = useState<Order[]>([]);
     const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
     
     // --- Izi Elite Features State ---
     const [autoPilot, setAutoPilot] = useState(false);
-    const [autoPilotMinPrice, setAutoPilotMinPrice] = useState(15);
+    const [autoPilotMinPrice] = useState(15);
     const [isSOSActive, setIsSOSActive] = useState(false);
     const [showHUD, setShowHUD] = useState(false);
     
