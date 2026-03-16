@@ -94,7 +94,6 @@ function App() {
 
   const [menuCategoriesList, setMenuCategoriesList] = useState<any[]>([]);
   const [selectedMenuCategory, setSelectedMenuCategory] = useState<string>('all');
-  const [simOrderValue, setSimOrderValue] = useState(50);
 
   const [editingItem, setEditingItem] = useState<any>(null);
   const [selectedUser, setSelectedUser] = useState<any>(null);
