@@ -192,8 +192,6 @@ function App() {
     const [autoPilotMinPrice, setAutoPilotMinPrice] = useState(15);
     const [isSOSActive, setIsSOSActive] = useState(false);
     const [showHUD, setShowHUD] = useState(false);
-    const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
-    const [isSaqueInstantaneoLoading, setIsSaqueInstantaneoLoading] = useState(false);
     
     // Virtual Heatmap Data
     const heatmapZones = useMemo(() => [
@@ -209,7 +207,6 @@ function App() {
         { id: 'm3', title: 'Elite Delivery', description: 'Mantenha avaliação 5.0 hoje', rewardXp: 80, rewardCash: 20, progress: 1, goal: 1 },
     ], []);
 
-    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
         if ("Notification" in window) {
