@@ -363,7 +363,6 @@ function App() {
             is_open: data.is_open ?? true,
             store_type: data.store_type || 'restaurant'
           });
-          setActiveTab('my_store');
         } else {
           setMerchantProfile(null);
         }
@@ -1386,7 +1385,8 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         name: cat.name,
         merchant_id: adminData.id,
         sort_order: cat.sort_order || 0,
-        is_active: cat.is_active ?? true
+        is_active: cat.is_active ?? true,
+        parent_id: cat.parent_id ?? null
       };
 
       const { error } = cat.id 
