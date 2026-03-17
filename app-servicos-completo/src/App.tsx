@@ -4918,7 +4918,7 @@ function App() {
           </div>
           <button 
             className="size-12 rounded-2xl bg-red-50 dark:bg-red-500/10 text-red-500 border border-red-100 dark:border-red-500/20 flex items-center justify-center active:scale-90 transition-all"
-            onClick={() => { if(await showConfirm({ message: "Esvaziar carrinho?" })) setCart([]); }}
+            onClick={async () => { if(await showConfirm({ message: "Esvaziar carrinho?" })) setCart([]); }}
           >
             <span className="material-symbols-outlined font-black">delete_sweep</span>
           </button>
@@ -5929,13 +5929,13 @@ function App() {
 
                     <div className="flex gap-3">
                       <button
-                        onClick={(e) => { e.stopPropagation(); setEditingAddress(addr); }}
+                        onClick={async (e) => { e.stopPropagation(); setEditingAddress(addr); }}
                         className="size-12 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 border border-transparent"
                       >
                         <span className="material-symbols-rounded text-2xl">edit_square</span>
                       </button>
                       <button
-                        onClick={(e) => { 
+                        onClick={async (e) => { 
                           e.stopPropagation(); 
                           if(await showConfirm({ message: "Deseja excluir este endereço?" })) {
                             setSavedAddresses(prev => prev.filter(a => a.id !== addr.id)); 
@@ -5996,7 +5996,7 @@ function App() {
       setPaymentMethod("cartao");
     };
 
-    const handleDeleteCard = (id: number) => {
+    const handleDeleteCard = async (id: number) => {
       if (await showConfirm({ message: "Remover este cartão?" })) {
         setSavedCards((prev: any[]) => prev.filter((c: any) => c.id !== id));
       }
