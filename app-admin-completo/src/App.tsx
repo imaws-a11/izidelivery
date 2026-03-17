@@ -1,4 +1,5 @@
 import { toast, toastSuccess, toastError, toastWarning, showConfirm, showPrompt } from './lib/useToast';
+import type { Order, Driver, User, Merchant, MerchantProfile, Product, Category, Promotion, DedicatedSlot, AuditLog, WalletTransaction, DynamicRate, MenuCategory } from './lib/types';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { playIziSound } from './lib/iziSounds';
@@ -55,7 +56,7 @@ function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
   const [userRole, setUserRole] = useState<UserRole>('merchant');
-  const [merchantProfile, setMerchantProfile] = useState<any>(null);
+  const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
 
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
 
@@ -67,15 +68,22 @@ function App() {
     revenue: 0
   });
 
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
-  const [usersList, setUsersList] = useState<any[]>([]);
-  const [driversList, setDriversList] = useState<any[]>([]);
-  const [allOrders, setAllOrders] = useState<any[]>([]);
-  const [myDriversList, setMyDriversList] = useState<any[]>([]);
-  const [merchantsList, setMerchantsList] = useState<any[]>([]);
-  const [productsList, setProductsList] = useState<any[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [usersList, setUsersList] = useState<User[]>([]);
+  const [driversList, setDriversList] = useState<Driver[]>([]);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [myDriversList, setMyDriversList] = useState<Driver[]>([]);
+  const [merchantsList, setMerchantsList] = useState<Merchant[]>([]);
+  const [productsList, setProductsList] = useState<Product[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // Paginação de pedidos
+  const ORDERS_PER_PAGE = 50;
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersTotalCount, setOrdersTotalCount] = useState(0);
+  const [merchantOrdersPage, setMerchantOrdersPage] = useState(1);
+  const [merchantOrdersTotalCount, setMerchantOrdersTotalCount] = useState(0);
 
   const [appSettings, setAppSettings] = useState({
     appName: 'Izi - Hub de Negócios',
@@ -93,16 +101,16 @@ function App() {
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRenderRef = useRef(true);
 
-  const [menuCategoriesList, setMenuCategoriesList] = useState<any[]>([]);
+  const [menuCategoriesList, setMenuCategoriesList] = useState<MenuCategory[]>([]);
   const [selectedMenuCategory, setSelectedMenuCategory] = useState<string>('all');
 
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [selectedMerchantPreview, setSelectedMerchantPreview] = useState<any>(null);
-  const [previewProducts, setPreviewProducts] = useState<any[]>([]);
-  const [previewCategories, setPreviewCategories] = useState<any[]>([]);
-  const [selectedDriverStudio, setSelectedDriverStudio] = useState<any>(null);
-  const [selectedUserStudio, setSelectedUserStudio] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedMerchantPreview, setSelectedMerchantPreview] = useState<Merchant | null>(null);
+  const [previewProducts, setPreviewProducts] = useState<Product[]>([]);
+  const [previewCategories, setPreviewCategories] = useState<MenuCategory[]>([]);
+  const [selectedDriverStudio, setSelectedDriverStudio] = useState<Driver | null>(null);
+  const [selectedUserStudio, setSelectedUserStudio] = useState<User | null>(null);
   const [editType, setEditType] = useState<'user' | 'driver' | 'my_driver' | 'my_product' | 'category' | 'promotion' | 'merchant' | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showActiveOrdersModal, setShowActiveOrdersModal] = useState(false);
@@ -166,8 +174,8 @@ function App() {
     return grid;
   }, [fixedGridCenter, HEX_SIZE, hexToLatLng]);
 
-  const [categoriesState, setCategoriesState] = useState<any[]>([]);
-  const [promotionsList, setPromotionsList] = useState<any[]>([]);
+  const [categoriesState, setCategoriesState] = useState<Category[]>([]);
+  const [promotionsList, setPromotionsList] = useState<Promotion[]>([]);
   const [promoFilter, setPromoFilter] = useState<'all' | 'banner' | 'coupon' | 'active' | 'expired'>('all');
   const [userStatusFilter, setUserStatusFilter] = useState<'all' | 'active' | 'suspended' | 'blocked' | 'inactive'>('all');
   const [activeStudioTab, setActiveStudioTab] = useState<'personal' | 'vehicle' | 'finance' | 'documents' | 'wallet' | 'security'>('personal');
@@ -183,15 +191,15 @@ function App() {
   const [promoSaving, setPromoSaving] = useState(false);
   const [promoSaveStatus, setPromoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const promoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [auditLogsList, setAuditLogsList] = useState<any[]>([]);
+  const [auditLogsList, setAuditLogsList] = useState<AuditLog[]>([]);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
-  const [myDedicatedSlots, setMyDedicatedSlots] = useState<any[]>([]);
+  const [myDedicatedSlots, setMyDedicatedSlots] = useState<DedicatedSlot[]>([]);
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
 
   const [selectedTrackingItem, setSelectedTrackingItem] = useState<any>(null);
   const [trackingListTab, setTrackingListTab] = useState<'orders' | 'drivers'>('orders');
 
-  const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
+  const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
   const [isWalletLoading, setIsWalletLoading] = useState(false);
   const [showAddCreditModal, setShowAddCreditModal] = useState(false);
   const [creditToAdd, setCreditToAdd] = useState('');
@@ -404,7 +412,11 @@ function App() {
       if (activeTab === 'users') await fetchUsers();
       if (activeTab === 'merchants') await fetchMerchants();
       if (activeTab === 'drivers' || activeTab === 'tracking' || activeTab === 'dashboard') await fetchDrivers();
-      if (activeTab === 'orders' || activeTab === 'tracking' || activeTab === 'dashboard') await fetchAllOrders();
+      if (activeTab === 'orders' || activeTab === 'tracking' || activeTab === 'dashboard') {
+        setOrdersPage(1);
+        setMerchantOrdersPage(1);
+        await fetchAllOrders(1);
+      }
       if (activeTab === 'categories') await fetchCategories();
       if (activeTab === 'dynamic_rates') await fetchDynamicRates();
       if (activeTab === 'promotions' || activeTab === 'my_store') {
@@ -452,7 +464,7 @@ function App() {
           }, 5000);
         }
         fetchStats();
-        if (activeTab === 'dashboard' || activeTab === 'orders' || activeTab === 'tracking') fetchAllOrders();
+        if (activeTab === 'dashboard' || activeTab === 'orders' || activeTab === 'tracking') fetchAllOrders(ordersPage);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers_delivery' }, () => {
         fetchStats();
@@ -536,7 +548,7 @@ function App() {
       ]);
 
       const revenueData = results[5].data ?? [];
-      const revenue = revenueData.reduce((sum: number, o: any) => sum + (Number(o.total_amount) || 0), 0);
+      const revenue = revenueData.reduce((sum: number, o: { total_amount?: number }) => sum + (Number(o.total_amount) || 0), 0);
 
       setStats({
         users: results[0].count || 0,
@@ -669,22 +681,40 @@ function App() {
     }
   };
 
-  const fetchAllOrders = async () => {
+  const fetchAllOrders = async (page = 1) => {
     setIsLoadingList(true);
     try {
-      let query = supabase.from('orders_delivery').select('*');
-      
-      // Filter by merchant if user is merchant
+      const from = (page - 1) * ORDERS_PER_PAGE;
+      const to = from + ORDERS_PER_PAGE - 1;
+
       if (userRole === 'merchant' && merchantProfile?.merchant_id) {
-        query = query.eq('merchant_id', merchantProfile.merchant_id);
+        // Paginação para lojista
+        const { data, error, count } = await supabase
+          .from('orders_delivery')
+          .select('*', { count: 'exact' })
+          .eq('merchant_id', merchantProfile.merchant_id)
+          .order('created_at', { ascending: false })
+          .range(from, to);
+
+        if (error) throw error;
+        if (data) setAllOrders(data);
+        if (count !== null) setMerchantOrdersTotalCount(count);
+        setMerchantOrdersPage(page);
+      } else {
+        // Paginação para admin
+        const { data, error, count } = await supabase
+          .from('orders_delivery')
+          .select('*', { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(from, to);
+
+        if (error) throw error;
+        if (data) setAllOrders(data);
+        if (count !== null) setOrdersTotalCount(count);
+        setOrdersPage(page);
       }
-      
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      if (data) setAllOrders(data);
     } catch (err: any) {
-      console.error("Erro ao carregar pedidos:", err.message);
+      console.error('Erro ao carregar pedidos:', err.message);
     } finally {
       setIsLoadingList(false);
     }
@@ -739,7 +769,7 @@ function App() {
     }
   };
 
-  const saveSpecificRateMetadata = async (type: string, metadata: any) => {
+  const saveSpecificRateMetadata = async (type: string, metadata: Record<string, unknown>) => {
     try {
       await supabase.from('dynamic_rates_delivery')
         .update({ metadata })
@@ -815,7 +845,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     setPromoSaving(true);
     if (promoSaveTimer.current) clearTimeout(promoSaveTimer.current);
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         title: promo.title,
         description: promo.description,
         image_url: promo.image_url || null,
@@ -857,7 +887,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     } finally { setPromoSaving(false); }
   };
 
-  const autoSavePromo = (updatedPromo: any) => {
+  const autoSavePromo = (updatedPromo: typeof promoForm & { id?: string }) => {
     setPromoForm(updatedPromo);
     if (updatedPromo.id) {
       setPromoSaveStatus('saving');
@@ -1040,7 +1070,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     }
   };
 
-  const logAction = async (action: string, module: string, metadata: any = {}) => {
+  const logAction = async (action: string, module: string, metadata: Record<string, unknown> = {}) => {
     await supabase.from('audit_logs_delivery').insert({
       user_id: session?.user?.id,
       action,
@@ -1107,7 +1137,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     e.preventDefault();
     setIsSaving(true);
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         name: editingItem.name,
         description: editingItem.desc || editingItem.description || null,
         icon: editingItem.icon || null,
@@ -1233,7 +1263,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
       if (error) throw error;
 
       // Update local state
-      setMerchantProfile((prev: any) => ({
+      setMerchantProfile((prev) => ({
         ...prev,
         [field]: value
       }));
@@ -1788,16 +1818,33 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
   const handleResetPassword = async (userId: string) => {
     if (!await showConfirm({
       title: 'Resetar senha do cliente',
-      message: 'Isso registrará a solicitação no log de auditoria. Para envio real do e-mail, configure uma Edge Function no Supabase com service_role.',
-      confirmLabel: 'Registrar solicitação',
+      message: 'Um e-mail de redefinição de senha será enviado para o cliente. Deseja continuar?',
+      confirmLabel: 'Enviar e-mail',
     })) return;
 
     try {
       setIsSaving(true);
-      logAction('Password Reset Request', 'Auth', { userId });
-      toastWarning('Solicitação registrada no log. Configure a Edge Function para envio real do e-mail.');
+
+      // Buscar e-mail do usuário
+      const targetUser = usersList.find(u => u.id === userId) || selectedUser;
+      const targetEmail = targetUser?.email || targetUser?.phone;
+
+      const { data, error } = await supabase.functions.invoke('reset-password', {
+        body: { userId, userEmail: targetEmail ?? undefined },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toastSuccess('E-mail de redefinição enviado com sucesso!');
+      logAction('Password Reset Sent', 'Auth', { userId, targetEmail });
     } catch (err: any) {
-      toastError('Erro ao processar reset de senha: ' + err.message);
+      // Se a Edge Function ainda não foi deployada, avisa o admin
+      if (err.message?.includes('not found') || err.message?.includes('FunctionNotFound')) {
+        toastWarning('Edge Function não deployada ainda. Siga as instruções em supabase/functions/reset-password/README.md');
+      } else {
+        toastError('Erro ao enviar reset: ' + err.message);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -1812,8 +1859,8 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         .eq('id', orderId);
 
       if (error) throw error;
-       fetchAllOrders();
-      toast('Pedido finalizado como entregue!');
+      fetchAllOrders(userRole === 'merchant' ? merchantOrdersPage : ordersPage);
+      toastSuccess('Pedido finalizado como entregue!');
     } catch (err: any) {
       toastError('Erro ao finalizar pedido: ' + err.message);
     } finally {
@@ -1863,7 +1910,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     const revenuePath = `M${points.join(' L')}`;
 
     // 2. Categories breakdown
-    const categoryStats = allOrders.reduce((acc: any, o) => {
+    const categoryStats = allOrders.reduce((acc: Record<string, { count: number; revenue: number }>, o) => {
       const type = o.service_type || 'delivery';
       if (!acc[type]) acc[type] = { count: 0, revenue: 0 };
       acc[type].count++;
@@ -1883,7 +1930,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         revenue: stats.revenue,
         percent: (Number(stats.count) / (allOrders.length || 1)) * 100
       };
-    }).sort((a: any, b: any) => b.val - a.val);
+    }).sort((a, b) => b.val - a.val);
 
     const totalOrdersToday = allOrders.filter(o => {
       const orderDate = new Date(o.created_at).toISOString().split('T')[0];
@@ -1892,7 +1939,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     }).length;
 
     // 3. Top Merchants
-    const merchantPerformance = allOrders.reduce((acc: any, o) => {
+    const merchantPerformance = allOrders.reduce((acc: Record<string, { id: string; name: string; orders: number; revenue: number }>, o) => {
       if (o.merchant_id) {
         if (!acc[o.merchant_id]) acc[o.merchant_id] = { id: o.merchant_id, name: o.merchant_name || 'Lojista', orders: 0, revenue: 0 };
         acc[o.merchant_id].orders++;
@@ -1901,7 +1948,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
       return acc;
     }, {});
 
-    const topMerchants: any[] = Object.values(merchantPerformance)
+    const topMerchants: { id: string; name: string; orders: number; revenue: number }[] = Object.values(merchantPerformance)
       .sort((a: any, b: any) => b.revenue - a.revenue)
       .slice(0, 5);
 
@@ -1948,7 +1995,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     };
   }, [allOrders, appSettings.appCommission, categoriesState]);
 
-  const renderDevicePreview = (targetItem: any, targetProducts: any[], targetCategories: any[]) => (
+  const renderDevicePreview = (targetItem: Merchant | MerchantProfile | null, targetProducts: Product[], targetCategories: any[]) => (
     <div className="hidden lg:flex w-[400px] bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex-col items-center justify-center p-10 select-none">
       <div className="relative w-full max-w-[320px] aspect-[9/19] bg-white dark:bg-slate-900 rounded-[50px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.3)] border-[8px] border-slate-900 dark:border-slate-800 overflow-hidden">
         {/* Status Bar */}
@@ -2029,7 +2076,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     </div>
   );
 
-  const renderStudioPanel = (targetItem: any, updateItem: (updatedItem: any) => void) => (
+  const renderStudioPanel = (targetItem: Merchant | MerchantProfile, updateItem: (updatedItem: Merchant | MerchantProfile) => void) => (
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-slate-900 overflow-hidden min-h-0">
       <div className="px-8 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800 flex gap-6 overflow-x-auto scrollbar-hide">
         {[
@@ -3489,7 +3536,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id).map((o: any) => (
+                        {allOrders.map((o: any) => (
                           <tr key={o.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                             <td className="px-8 py-5 font-bold text-slate-400 text-sm">#DT-{o.id.slice(0, 8).toUpperCase()}</td>
                             <td className="px-8 py-5 font-black text-slate-900 dark:text-white truncate max-w-[250px]">{o.delivery_address}</td>
@@ -3504,10 +3551,51 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                         ))}
                       </tbody>
                     </table>
-                    {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id).length === 0 && (
+                    {allOrders.length === 0 && (
                       <div className="px-8 py-16 text-center"><span className="material-symbols-outlined text-5xl text-slate-300 mb-4">inbox</span><p className="text-sm font-black text-slate-400">Nenhum pedido encontrado</p></div>
                     )}
                   </div>
+                  {/* Paginação lojista */}
+                  {merchantOrdersTotalCount > ORDERS_PER_PAGE && (
+                    <div className="px-8 py-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/30">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                        Exibindo {((merchantOrdersPage - 1) * ORDERS_PER_PAGE) + 1}–{Math.min(merchantOrdersPage * ORDERS_PER_PAGE, merchantOrdersTotalCount)} de {merchantOrdersTotalCount} pedidos
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          disabled={merchantOrdersPage <= 1 || isLoadingList}
+                          onClick={() => fetchAllOrders(merchantOrdersPage - 1)}
+                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <span className="material-symbols-outlined">chevron_left</span>
+                        </button>
+                        {Array.from({ length: Math.min(5, Math.ceil(merchantOrdersTotalCount / ORDERS_PER_PAGE)) }, (_, i) => {
+                          const totalPages = Math.ceil(merchantOrdersTotalCount / ORDERS_PER_PAGE);
+                          let pageNum: number;
+                          if (totalPages <= 5) pageNum = i + 1;
+                          else if (merchantOrdersPage <= 3) pageNum = i + 1;
+                          else if (merchantOrdersPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                          else pageNum = merchantOrdersPage - 2 + i;
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => fetchAllOrders(pageNum)}
+                              className={`w-10 h-10 flex items-center justify-center rounded-xl font-black text-xs transition-all ${merchantOrdersPage === pageNum ? 'bg-primary text-slate-900 shadow-lg shadow-primary/20' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary hover:border-primary/30'}`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                        <button
+                          disabled={merchantOrdersPage >= Math.ceil(merchantOrdersTotalCount / ORDERS_PER_PAGE) || isLoadingList}
+                          onClick={() => fetchAllOrders(merchantOrdersPage + 1)}
+                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <span className="material-symbols-outlined">chevron_right</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -3551,15 +3639,46 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                     </tbody>
                   </table>
 
-                  {/* Pagination Placeholder */}
+                  {/* Paginação real */}
                   <div className="px-8 py-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/30">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Exibindo {allOrders.length} de {stats.orders} pedidos</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                      Exibindo {((ordersPage - 1) * ORDERS_PER_PAGE) + 1}–{Math.min(ordersPage * ORDERS_PER_PAGE, ordersTotalCount)} de {ordersTotalCount} pedidos
+                    </p>
                     <div className="flex items-center gap-2">
-                      <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-colors">
+                      <button
+                        disabled={ordersPage <= 1 || isLoadingList}
+                        onClick={() => fetchAllOrders(ordersPage - 1)}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
                         <span className="material-symbols-outlined">chevron_left</span>
                       </button>
-                      <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-primary text-slate-900 font-black text-xs">1</button>
-                      <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-colors">
+                      {Array.from({ length: Math.min(5, Math.ceil(ordersTotalCount / ORDERS_PER_PAGE)) }, (_, i) => {
+                        const totalPages = Math.ceil(ordersTotalCount / ORDERS_PER_PAGE);
+                        let pageNum: number;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (ordersPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (ordersPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = ordersPage - 2 + i;
+                        }
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => fetchAllOrders(pageNum)}
+                            className={`w-10 h-10 flex items-center justify-center rounded-xl font-black text-xs transition-all ${ordersPage === pageNum ? 'bg-primary text-slate-900 shadow-lg shadow-primary/20' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary hover:border-primary/30'}`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                      <button
+                        disabled={ordersPage >= Math.ceil(ordersTotalCount / ORDERS_PER_PAGE) || isLoadingList}
+                        onClick={() => fetchAllOrders(ordersPage + 1)}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
                         <span className="material-symbols-outlined">chevron_right</span>
                       </button>
                     </div>
@@ -4677,7 +4796,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                        {allOrders.slice(0, 10).map((tr: any) => (
+                        {allOrders.slice(0, 10).map((tr) => (
                           <tr key={tr.id} className="hover:bg-primary/5 transition-colors group">
                             <td className="px-8 py-6 text-xs font-bold text-slate-500 dark:text-slate-400">
                               {new Date(tr.created_at).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -6898,7 +7017,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                     <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900">
                        {renderStudioPanel(
                         userRole === 'merchant' ? merchantProfile : selectedMerchantPreview,
-                        userRole === 'merchant' ? (updated: any) => setMerchantProfile(updated) : (updated: any) => setSelectedMerchantPreview(updated)
+                        userRole === 'merchant' ? (updated: MerchantProfile) => setMerchantProfile(updated) : (updated: Merchant) => setSelectedMerchantPreview(updated)
                        )}
                     </div>
                   </div>
