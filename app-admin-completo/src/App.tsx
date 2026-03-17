@@ -2374,7 +2374,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                Subcategoria
                              </button>
                              <button 
-                                onClick={() => {
+                                onClick={async () => {
                                    if (await showConfirm({ message: `Excluir categoria "${cat.name}" e todas as suas subcategorias?` })) {
                                       const delFn = userRole === 'merchant' ? handleDeleteMenuCategory : (id: string) => setPreviewCategories(previewCategories.filter(item => item.id !== id && item.parent_id !== id));
                                       delFn(cat.id, cat.name);
@@ -2413,7 +2413,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                       </div>
                                    </div>
                                    <button 
-                                      onClick={() => {
+                                      onClick={async () => {
                                          if (await showConfirm({ message: `Excluir subcategoria "${sub.name}"?` })) {
                                             const delFn = userRole === 'merchant' ? handleDeleteMenuCategory : (id: string) => setPreviewCategories(previewCategories.filter(item => item.id !== id));
                                             delFn(sub.id, sub.name);
@@ -3915,7 +3915,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                     </div>
                     <div className="flex flex-wrap gap-3 w-full lg:w-auto">
                       <button 
-                        onClick={() => {
+                        onClick={async () => {
                           const amount = await showPrompt('Digite o valor do crédito (ex: 50.00):');
                           if (amount) handleApplyCredit(selectedUser.id, parseFloat(amount));
                         }}
@@ -5125,7 +5125,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                               </div>
                               <div className="mt-4 pt-4 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
                                 <div className="flex gap-2">
-                                  <button onClick={() => { setPromoFormType('banner'); setPromoForm({...bn, expires_at: bn.expires_at?.slice(0,10)||''}); setShowPromoForm(true); }}
+                                  <button onClick={async () => { setPromoFormType('banner'); setPromoForm({...bn, expires_at: bn.expires_at?.slice(0,10)||''}); setShowPromoForm(true); }}
                                     className="size-8 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-colors flex items-center justify-center">
                                     <span className="material-symbols-outlined text-base">edit</span>
                                   </button>
@@ -5223,7 +5223,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                                     </td>
                                     <td className="px-8 py-5">
                                       <div className="flex items-center gap-2 justify-end">
-                                        <button onClick={() => { setPromoFormType('coupon'); setPromoForm({...cp, expires_at: cp.expires_at?.slice(0,10)||''}); setShowPromoForm(true); }}
+                                        <button onClick={async () => { setPromoFormType('coupon'); setPromoForm({...cp, expires_at: cp.expires_at?.slice(0,10)||''}); setShowPromoForm(true); }}
                                           className="size-8 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-colors flex items-center justify-center">
                                           <span className="material-symbols-outlined text-base">edit</span>
                                         </button>
@@ -5363,7 +5363,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                         </div>
                         <div className="flex gap-2">
                           <button
-                            onClick={() => { setEditingItem(cat); setEditType('category'); }}
+                            onClick={async () => { setEditingItem(cat); setEditType('category'); }}
                             className="size-10 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-all flex items-center justify-center border border-slate-100 dark:border-slate-700"
                           >
                             <span className="material-symbols-outlined text-lg">edit</span>
@@ -5422,7 +5422,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                             <div key={sub.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 group/sub">
                               <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{sub.name}</span>
                               <div className="flex gap-2 opacity-0 group-hover/sub:opacity-100 transition-opacity">
-                                <button onClick={() => { setEditingItem(sub); setEditType('category'); }} className="text-slate-400 hover:text-primary transition-colors">
+                                <button onClick={async () => { setEditingItem(sub); setEditType('category'); }} className="text-slate-400 hover:text-primary transition-colors">
                                   <span className="material-symbols-outlined text-sm">edit</span>
                                 </button>
                                 <button onClick={async () => { if(await showConfirm({ message: 'Excluir?' })) await supabase.from('categories_delivery').delete().eq('id', sub.id); fetchCategories(); }} className="text-slate-400 hover:text-red-500 transition-colors">
