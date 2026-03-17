@@ -256,13 +256,16 @@ const AddressSearchInput = ({ placeholder, initialValue, onSelect, className }: 
 };
 
 function App() {
-  const [view, setView] = useState<"login" | "app">(
-    "login",
-  );
+  const [view, setView] = useState<"login" | "app" | "loading">("loading");
   const [tab, setTab] = useState<"home" | "orders" | "wallet" | "profile">(
     "home",
   );
   
+  const [authInitLoading, setAuthInitLoading] = useState(true);
+  const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositPixCode, setDepositPixCode] = useState("");
   const [cartAnimations, setCartAnimations] = useState<{id: string, x: number, y: number, img: string}[]>([]);
 
   const triggerCartAnimation = (e: React.MouseEvent, img: string) => {
@@ -598,7 +601,19 @@ function App() {
     };
   }, [userId]);
   const [myOrders, setMyOrders] = useState<any[]>([]);
-  const [cart, setCart] = useState<any[]>([]);
+  const [cart, setCart] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem("izi_cart");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  // Persistir carrinho no localStorage sempre que mudar
+  useEffect(() => {
+    try {
+      localStorage.setItem("izi_cart", JSON.stringify(cart));
+    } catch {}
+  }, [cart]);
   const [userLocation, setUserLocation] = useState<{
     address: string;
     loading: boolean;
@@ -845,6 +860,15 @@ function App() {
       .eq("id", uid)
       .single();
     if (data) setWalletBalance(data.wallet_balance || 0);
+
+    // Buscar transacoes reais
+    const { data: txData } = await supabase
+      .from("wallet_transactions")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (txData) setWalletTransactions(txData);
   };
 
   const isLoaded = true; // Loaded via index.html
@@ -897,12 +921,12 @@ function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        supabase
-          .from("users_delivery")
-          .upsert({ id: session.user.id, name: "Usuário" })
-          .then();
+        supabase.from("users_delivery").select("id").eq("id", session.user.id).maybeSingle().then(({ data }) => {
+          if (!data) supabase.from("users_delivery").insert({ id: session.user.id, name: session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário" }).then();
+        });
         setUserId(session.user.id);
         setView("app");
+        setAuthInitLoading(false);
         window.history.replaceState({ view: "app", tab: "home", subView: "none" }, "");
         fetchMyOrders(session.user.id);
         fetchWalletBalance(session.user.id);
@@ -1238,6 +1262,7 @@ function App() {
           await supabase.from("orders_delivery").update({ status: "novo" }).eq("id", orderData.id);
           
           setCart([]);
+          localStorage.removeItem("izi_cart");
           setAppliedCoupon(null);
           setSelectedItem(orderData);
           setSubView("payment_success");
@@ -1293,6 +1318,7 @@ function App() {
         const isSuccess = Math.random() > 0.05;
         if (isSuccess) {
           setCart([]);
+          localStorage.removeItem("izi_cart");
           setAppliedCoupon(null);
           setSelectedItem(orderData);
           setSubView("payment_success");
@@ -6308,313 +6334,136 @@ function App() {
   const renderWallet = () => (
     <div className="absolute inset-0 z-40 bg-[#f8f9fc] dark:bg-slate-900 flex flex-col hide-scrollbar overflow-y-auto">
       <header className="px-6 py-8 sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between gap-4 rounded-b-[40px] shadow-sm">
-        <button
-          onClick={() => setSubView("none")}
-          className="flex items-center justify-center size-10 bg-white dark:bg-slate-800 rounded-full shadow-sm active:scale-95 transition-all text-slate-900 dark:text-white border border-slate-100 dark:border-slate-700"
-        >
+        <button onClick={() => setSubView("none")} className="flex items-center justify-center size-10 bg-white dark:bg-slate-800 rounded-full shadow-sm active:scale-95 transition-all text-slate-900 dark:text-white border border-slate-100 dark:border-slate-700">
           <span className="material-symbols-rounded text-xl">arrow_back</span>
         </button>
-        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter flex-1 pr-10 text-center">
-          Carteira Digital
-        </h2>
+        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter flex-1 pr-10 text-center">Carteira Digital</h2>
       </header>
 
       <div className="px-6 pb-40">
-        <div className="mt-8 bg-slate-900 dark:bg-slate-800 p-8 rounded-[48px] shadow-2xl text-white relative overflow-hidden group">
-          <div className="absolute -right-20 -top-20 size-64 bg-primary/20 rounded-full blur-[80px] group-hover:scale-110 transition-transform duration-1000"></div>
-          <div className="absolute -left-20 -bottom-20 size-64 bg-blue-600/10 rounded-full blur-[80px] group-hover:scale-110 transition-transform duration-1000"></div>
-
+        {/* Card Saldo */}
+        <div className="mt-8 bg-slate-900 dark:bg-slate-800 p-8 rounded-[48px] shadow-2xl text-white relative overflow-hidden">
+          <div className="absolute -right-20 -top-20 size-64 bg-primary/20 rounded-full blur-[80px]"></div>
+          <div className="absolute -left-20 -bottom-20 size-64 bg-blue-600/10 rounded-full blur-[80px]"></div>
           <div className="relative z-10">
             <div className="flex justify-between items-start mb-10">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 mb-1">
-                  Saldo em Conta
-                </p>
-                <h3 className="text-5xl font-black tracking-tighter shadow-text">
-                  R$ {walletBalance.toFixed(2).replace(".", ",")}
-                </h3>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 mb-1">Saldo em Conta</p>
+                <h3 className="text-5xl font-black tracking-tighter">R$ {walletBalance.toFixed(2).replace(".", ",")}</h3>
               </div>
               <div className="size-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10">
-                <span className="material-symbols-rounded text-primary text-3xl font-black">
-                  token
-                </span>
+                <span className="material-symbols-rounded text-primary text-3xl font-black">token</span>
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() =>
-                  toast("Sistema de Depósito Ativo via PIX Copy & Paste")
-                }
-                className="bg-primary text-slate-900 font-extrabold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
-              >
-                <span className="material-symbols-rounded font-black">
-                  add_circle
-                </span>{" "}
-                Adicionar
+              <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowDepositModal(true)}
+                className="bg-primary text-slate-900 font-extrabold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
+                <span className="material-symbols-rounded font-black">add_circle</span> Adicionar
               </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all"
-              >
-                <span className="material-symbols-rounded">move_up</span>{" "}
-                Transferir
+              <motion.button whileTap={{ scale: 0.95 }} onClick={() => toastWarning("Transferência entre contas estará disponível em breve!")}
+                className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all">
+                <span className="material-symbols-rounded">move_up</span> Transferir
               </motion.button>
             </div>
           </div>
         </div>
 
+        {/* Modal Deposito PIX */}
+        {showDepositModal && (
+          <div className="fixed inset-0 z-[100] bg-black/60 flex items-end justify-center" onClick={() => setShowDepositModal(false)}>
+            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-t-[40px] p-8 pb-12" onClick={e => e.stopPropagation()}>
+              <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-8" />
+              <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Adicionar Saldo</h3>
+              <p className="text-sm text-slate-500 mb-6">Deposite via PIX. O saldo é creditado em até 5 minutos.</p>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Valor</label>
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 rounded-2xl px-5 py-4 border border-slate-100 dark:border-slate-700">
+                    <span className="font-black text-slate-400">R$</span>
+                    <input type="number" value={depositAmount} onChange={e => setDepositAmount(e.target.value)}
+                      placeholder="0,00" min="5" step="0.01"
+                      className="flex-1 bg-transparent font-black text-xl text-slate-900 dark:text-white focus:outline-none" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {["20", "50", "100", "200"].map(v => (
+                    <button key={v} onClick={() => setDepositAmount(v)}
+                      className="py-3 rounded-2xl bg-primary/10 text-primary font-black text-sm active:scale-95 transition-all">
+                      R${v}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={async () => {
+                  const amount = parseFloat(depositAmount);
+                  if (!amount || amount < 5) { toastError("Valor mínimo de R$ 5,00"); return; }
+                  if (!userId) return;
+                  try {
+                    const pixKey = "suporte@izidelivery.com.br";
+                    const code = `00020126360014br.gov.bcb.pix0114${pixKey}5204000053039865406${amount.toFixed(2)}5802BR5925IziDelivery6009SAO PAULO62070503***6304`;
+                    setDepositPixCode(code);
+                    await supabase.from("wallet_transactions").insert({ user_id: userId, type: "deposito", amount, description: "Depósito via PIX" });
+                    await supabase.from("users_delivery").update({ wallet_balance: walletBalance + amount }).eq("id", userId);
+                    setWalletBalance(prev => prev + amount);
+                    setWalletTransactions(prev => [{ id: Date.now(), type: "deposito", amount, description: "Depósito via PIX", created_at: new Date().toISOString() }, ...prev]);
+                    toastSuccess(`Depósito de R$ ${amount.toFixed(2)} adicionado!`);
+                    setShowDepositModal(false);
+                    setDepositAmount("");
+                  } catch { toastError("Erro ao processar depósito."); }
+                }}
+                  className="w-full bg-primary text-slate-900 font-black py-5 rounded-2xl shadow-lg shadow-primary/20 active:scale-95 transition-all">
+                  Confirmar Depósito
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Historico de Transacoes */}
         <div className="mt-12">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-3">
-              <span className="material-symbols-rounded text-primary fill-1">
-                history
-              </span>
+              <span className="material-symbols-rounded text-primary">history</span>
               Movimentações
             </h3>
-            <button className="text-[10px] font-black text-slate-400 uppercase tracking-widest border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-full">
-              Filtrar
-            </button>
           </div>
 
-          <div className="space-y-4">
-            {[
-              {
-                type: "deposito",
-                label: "Depósito via PIX",
-                amount: 150.0,
-                date: "10 Mar • 14:32",
-                icon: "account_balance",
-                color: "emerald",
-              },
-              {
-                type: "pagamento",
-                label: "Restaurante Gourmet",
-                amount: -45.9,
-                date: "09 Mar • 20:15",
-                icon: "restaurant",
-                color: "slate",
-              },
-              {
-                type: "pagamento",
-                label: "Pedido Burger King",
-                amount: -62.5,
-                date: "08 Mar • 22:10",
-                icon: "lunch_dining",
-                color: "slate",
-              },
-              {
-                type: "reembolso",
-                label: "Estorno de Taxa",
-                amount: 5.9,
-                date: "07 Mar • 11:20",
-                icon: "autorenew",
-                color: "emerald",
-              },
-            ].map((t, i) => (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                key={i}
-                className="bg-white dark:bg-slate-800 p-5 rounded-[32px] shadow-sm border border-slate-50 dark:border-slate-800/50 flex items-center gap-5 hover:border-slate-200 transition-colors cursor-pointer group"
-              >
-                <div
-                  className={`size-14 rounded-2xl flex items-center justify-center transition-all ${t.color === "emerald" ? "bg-emerald-50 dark:bg-emerald-900/10 text-emerald-500" : "bg-slate-50 dark:bg-slate-900 text-slate-400"}`}
-                >
-                  <span className="material-symbols-rounded text-2xl group-hover:scale-110 transition-transform">
-                    {t.icon}
-                  </span>
-                </div>
-                <div className="flex-1">
-                  <p className="font-black text-slate-900 dark:text-white text-[15px]">
-                    {t.label}
-                  </p>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
-                    {t.date}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p
-                    className={`font-black text-lg tracking-tighter ${t.amount > 0 ? "text-emerald-500" : "text-slate-900 dark:text-white"}`}
-                  >
-                    {t.amount > 0 ? "+" : ""} R${" "}
-                    {Math.abs(t.amount).toFixed(2).replace(".", ",")}
-                  </p>
-                  {t.amount < 0 && (
-                    <span className="text-[8px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest">
-                      Debitado
+          {walletTransactions.length === 0 ? (
+            <div className="text-center py-16">
+              <span className="material-symbols-rounded text-5xl text-slate-300 mb-4 block">receipt_long</span>
+              <p className="text-sm font-black text-slate-400">Nenhuma movimentação ainda</p>
+              <p className="text-xs text-slate-400 mt-1">Adicione saldo para começar</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {walletTransactions.map((t, i) => {
+                const isCredit = t.type === "deposito" || t.type === "reembolso";
+                const icon = t.type === "deposito" ? "account_balance" : t.type === "reembolso" ? "autorenew" : "shopping_bag";
+                return (
+                  <motion.div key={t.id || i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                    className="bg-white dark:bg-slate-800 p-5 rounded-[32px] shadow-sm border border-slate-50 dark:border-slate-800/50 flex items-center gap-4">
+                    <div className={`size-12 rounded-2xl flex items-center justify-center ${isCredit ? "bg-emerald-50 dark:bg-emerald-900/10 text-emerald-500" : "bg-slate-50 dark:bg-slate-900 text-slate-400"}`}>
+                      <span className="material-symbols-rounded text-xl">{icon}</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-black text-slate-900 dark:text-white text-sm">{t.description || (t.type === "deposito" ? "Depósito" : t.type === "reembolso" ? "Reembolso" : "Pagamento")}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                        {new Date(t.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    <span className={`font-black text-base ${isCredit ? "text-emerald-500" : "text-slate-900 dark:text-white"}`}>
+                      {isCredit ? "+" : "-"}R$ {Math.abs(t.amount).toFixed(2).replace(".", ",")}
                     </span>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-12 p-8 bg-primary/5 dark:bg-primary/2 rounded-[40px] border border-primary/20 border-dashed text-center">
-          <span className="material-symbols-rounded text-primary text-4xl mb-3">
-            verified_user
-          </span>
-          <h4 className="font-black text-slate-900 dark:text-white">
-            Conta Protegida
-          </h4>
-          <p className="text-xs font-medium text-slate-500 mt-2">
-            Suas transações são criptografadas e monitoradas 24/7 para sua
-            segurança total.
-          </p>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 
-  // Helper component for real-time order updates
-  const OrderSync = ({
-    orderId,
-    onUpdate,
-  }: {
-    orderId: string;
-    onUpdate: (order: any) => void;
-  }) => {
-    useEffect(() => {
-      const channel = supabase
-        .channel(`order_tracking_${orderId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "orders_delivery",
-            filter: `id=eq.${orderId}`,
-          },
-          (payload) => {
-            const newOrder = payload.new;
-
-            // Envia Notificação Push-style sobre mudança de status
-            if (Notification.permission === "granted") {
-              let title = "📦 Atualização do Pedido";
-              let body = "Seu pedido mudou de status.";
-
-              if (newOrder.status === "saiu_para_entrega" || newOrder.status === "a_caminho") {
-                title = "🛵 Pedido a caminho!";
-                body = "O entregador já saiu da loja e está vindo até você.";
-              } else if (newOrder.status === "no_local") {
-                title = "📍 Motorista no Local!";
-                body = "Seu motorista acabou de chegar para a coleta/embarque.";
-              } else if (newOrder.status === "concluido" || newOrder.status === "entregue") {
-                title = "✅ Pedido Entregue!";
-                body = "Sua encomenda chegou ao destino. Bom proveito!";
-              } else if (newOrder.status === "preparando") {
-                title = "🍳 Sendo Preparado";
-                body = "O restaurante confirmou seu pedido e já está cozinhando.";
-              }
-
-              new Notification(title, {
-                body,
-                icon: "https://cdn-icons-png.flaticon.com/512/1042/1042261.png",
-              });
-            }
-
-            onUpdate(newOrder);
-          },
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }, [orderId]);
-
-    // Track real-time driver movement from database
-    useEffect(() => {
-      const driverId = (selectedItem as any)?.driver_id;
-      if (!driverId) return;
-
-      const driverChannel = supabase
-        .channel(`driver_realtime_${driverId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "drivers_delivery",
-            filter: `id=eq.${driverId}`,
-          },
-          (payload) => {
-            const { lat, lng } = payload.new;
-            if (lat && lng) {
-              setDriverPos({ lat, lng });
-            }
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(driverChannel);
-      };
-    }, [(selectedItem as any)?.driver_id]);
-
-    // Real-time Chat Messages
-    useEffect(() => {
-      if (!orderId) return;
-
-      // Fetch existing messages
-      const fetchMessages = async () => {
-        const { data } = await supabase
-          .from("order_messages")
-          .select("*")
-          .eq("order_id", orderId)
-          .order("created_at", { ascending: true });
-        
-        if (data) {
-          setChatMessages(data.map((m: any) => ({
-            id: m.id,
-            sender: m.sender_id,
-            text: m.text,
-            time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          })));
-        }
-      };
-      
-      fetchMessages();
-
-      const chatChannel = supabase
-        .channel(`order_chat_${orderId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "order_messages",
-            filter: `order_id=eq.${orderId}`,
-          },
-          (payload) => {
-            const m = payload.new as any;
-            const newMessage = {
-              id: m.id,
-              sender: m.sender_id,
-              text: m.text,
-              time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
-            setChatMessages(prev => [...prev, newMessage]);
-            
-            // Show toast if chat is not open
-            if (subView !== 'order_chat' && m.sender_id !== userId) {
-              showToast("Nova mensagem do entregador! 💬", "info");
-            }
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(chatChannel);
-      };
-    }, [orderId, subView]);
-
-    return null;
-  };
-
+  
   const renderActiveOrder = () => {
     if (!selectedItem) return null;
 
@@ -8651,7 +8500,8 @@ function App() {
     ];
 
     return (
-      <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 p-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[35px] z-50 ring-1 ring-black/5 animate-in slide-in-from-bottom-10 duration-700">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-100 dark:border-slate-800 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+        <div className="flex items-center justify-around px-2 pt-2 pb-3 max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = tab === item.id;
           return (
@@ -8662,17 +8512,11 @@ function App() {
                 setSubView("none");
                 window.history.replaceState({ view: "app", tab: item.id, subView: "none" }, "");
               }}
-              className={`relative flex items-center justify-center transition-all duration-500 rounded-[28px] overflow-hidden ${isActive ? "px-6 py-3 bg-slate-900 dark:bg-primary" : "size-14 bg-transparent hover:bg-slate-100/50 dark:hover:bg-slate-800/50"}`}
+              className="relative flex flex-col items-center justify-center gap-0.5 min-w-[52px] px-2 py-1 active:scale-95 transition-transform"
             >
               <div className="flex items-center gap-2.5">
-                <span className={`material-symbols-outlined text-2xl transition-all duration-500 ${isActive ? "text-white dark:text-slate-900 scale-110 fill-1" : "text-slate-400 group-hover:text-slate-900"}`}>
-                  {item.icon}
-                </span>
-                {isActive && (
-                  <span className="text-[11px] font-black uppercase tracking-widest text-white dark:text-slate-900 animate-in fade-in slide-in-from-left-2 duration-500">
-                    {item.label}
-                  </span>
-                )}
+                <span className={`material-symbols-outlined text-[22px] transition-all duration-300 ${isActive ? "text-primary scale-110" : "text-slate-400"}`} style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>{item.icon}</span>
+                <span className={`text-[10px] font-bold transition-all duration-300 leading-none ${isActive ? "text-primary" : "text-slate-400"}`}>{item.label}</span>
               </div>
               {isActive && (
                 <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20 dark:bg-black/10 scale-x-50" />
@@ -8682,27 +8526,27 @@ function App() {
         })}
         <div className="w-[1px] h-8 bg-slate-200 dark:bg-slate-800 mx-1" />
         {/* Izi AI Advisor */}
-        <button
-           onClick={() => setIsAIOpen(true)}
-           className={`relative size-14 rounded-full bg-slate-900 dark:bg-slate-950 flex items-center justify-center shadow-lg active:scale-90 transition-all group overflow-hidden border border-white/10 ${isAIOpen ? 'ring-2 ring-primary' : ''}`}
-        >
-           <div className="absolute inset-0 bg-primary opacity-20 animate-pulse" />
-           <span className="material-symbols-outlined text-primary font-black relative z-10 text-2xl fill-1">smart_toy</span>
+        <button onClick={() => setIsAIOpen(true)} className="relative flex flex-col items-center justify-center gap-0.5 min-w-[52px] px-2 py-1 active:scale-95 transition-transform">
+          <div className={`relative flex items-center justify-center size-9 rounded-2xl transition-all ${isAIOpen ? "bg-slate-900 dark:bg-primary" : "bg-slate-100 dark:bg-slate-800"}`}>
+            <div className="absolute inset-0 rounded-2xl bg-primary/20 animate-pulse" />
+            <span className="material-symbols-outlined text-[20px] relative z-10 text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>smart_toy</span>
+          </div>
+          <span className="text-[10px] font-bold text-slate-400 leading-none">AI</span>
         </button>
         <div className="w-[1px] h-8 bg-slate-200 dark:bg-slate-800 mx-1" />
         {/* Cart Quick Access */}
-        <button
-          onClick={() => navigateSubView("cart")}
-          className="relative size-14 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30 active:scale-90 transition-all group overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <span className="material-symbols-outlined text-slate-900 font-black relative z-10 transition-transform group-hover:rotate-12 group-hover:scale-110 text-2xl">shopping_cart</span>
-          {cart.length > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-md">
-              {cart.length}
-            </span>
-          )}
+        <button onClick={() => navigateSubView("cart")} className="relative flex flex-col items-center justify-center gap-0.5 min-w-[52px] px-2 py-1 active:scale-95 transition-transform">
+          <div className="relative flex items-center justify-center size-9 rounded-2xl bg-primary shadow-md shadow-primary/30">
+            <span className="material-symbols-outlined text-slate-900 text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>shopping_cart</span>
+            {cart.length > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 ring-2 ring-white dark:ring-slate-900">
+                {cart.length > 99 ? "99+" : cart.length}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] font-bold text-primary leading-none">{cart.length > 0 ? `R$${cart.reduce((s,i) => s+(i.price||0),0).toFixed(0)}` : "Cart"}</span>
         </button>
+        </div>
       </nav>
     );
   };
@@ -8710,6 +8554,14 @@ function App() {
   return (
     <div className="w-full h-[100dvh] bg-background font-sans overflow-hidden relative">
       <AnimatePresence mode="wait">
+        {view === "loading" && (
+          <div className="h-full flex items-center justify-center bg-white dark:bg-slate-950">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+              <p className="text-sm font-bold text-slate-400">Carregando...</p>
+            </div>
+          </div>
+        )}
         {view === "login" && (
           <motion.div
             key="log"
