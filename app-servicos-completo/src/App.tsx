@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "./lib/supabase";
+import { toast, toastSuccess, toastError, toastWarning, showConfirm } from "./lib/useToast";
 import { GoogleMap, Marker, Autocomplete } from '@react-google-maps/api';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 // Chave pública do Stripe (Placeholder - Usuário deve substituir pela sua real)
-const stripePromise = loadStripe('pk_test_51O4E2bK4Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z');
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY as string ?? '');
 
 const StripePaymentForm = ({ onConfirm, total }: { onConfirm: (paymentMethodId: string) => void, total: number }) => {
   const stripe = useStripe();
@@ -529,7 +530,6 @@ function App() {
       
       setESTABLISHMENTS(realEstabs);
     } catch (err) {
-      console.error('Error fetching real establishments:', err);
     }
   }, [isStoreOpen]);
 
@@ -615,7 +615,7 @@ function App() {
   const [cpf] = useState<string>("");
   const [orderNotes] = useState<string>("");
   const [showPixPayment, setShowPixPayment] = useState(false);
-  const [walletBalance, setWalletBalance] = useState(145.5);
+  const [walletBalance, setWalletBalance] = useState(0);
   const [driverPos, setDriverPos] = useState({ lat: -23.5505, lng: -46.6333 });
   const [adIndex, setAdIndex] = useState(0);
   const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
@@ -879,12 +879,10 @@ function App() {
               setTransitData((prev) => ({ ...prev, origin: address }));
             }
           } catch (error) {
-            console.error("Erro ao obter endereço:", error);
             setUserLocation({ address: "São Paulo, SP", loading: false });
           }
         },
         (error) => {
-          console.error("Erro de geolocalização:", error);
           setUserLocation({ address: "Rua Augusta, 45", loading: false });
         },
         { enableHighAccuracy: true },
@@ -936,7 +934,7 @@ function App() {
               'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! 🛵',
               'em_rota': 'O motorista está a caminho do destino! 🚗',
               'no_local': 'O motorista chegou ao local! 📍',
-              'entregue': 'Pedido entregue! Bom apetite! 😋',
+              'concluido': 'Pedido entregue! Bom apetite! 😋',
               'concluido': 'Pedido finalizado com sucesso! Obrigado por usar Izi. ✨',
               'cancelado': 'Ah não, seu pedido foi cancelado. 🛑'
             };
@@ -945,7 +943,7 @@ function App() {
             showToast(msg, newOrder.status === 'cancelado' ? 'warning' : 'success');
 
             // Abrir tela de avaliação ao concluir
-            if (newOrder.status === 'concluido' || newOrder.status === 'entregue') {
+            if (newOrder.status === 'concluido' || newOrder.status === 'concluido') {
               setTimeout(() => {
                 setSubView("order_feedback");
               }, 2000);
@@ -1027,7 +1025,6 @@ function App() {
         setBeverageOffers(formatted);
       }
     } catch (err) {
-      console.error("Erro ao buscar promoções de bebidas:", err);
     }
   };
 
@@ -1114,11 +1111,9 @@ function App() {
 
       if (rememberMe) {
         localStorage.setItem("savedEmail", email);
-        localStorage.setItem("savedPassword", password);
         localStorage.setItem("rememberMe", "true");
       } else {
         localStorage.removeItem("savedEmail");
-        localStorage.removeItem("savedPassword");
         localStorage.removeItem("rememberMe");
       }
 
@@ -1251,7 +1246,6 @@ function App() {
           setSubView("payment_error");
         }
       } catch (err: any) {
-        console.error("Erro no pagamento Stripe:", err);
         setSubView("payment_error");
       } finally {
         setIsLoading(false);
@@ -1288,7 +1282,6 @@ function App() {
         setPixData(pixResult);
         setSubView("pix_payment");
       } catch (err: any) {
-        console.error("Erro ao gerar PIX:", err);
         setSubView("payment_error");
       } finally {
         setIsLoading(false);
@@ -1378,7 +1371,6 @@ function App() {
         weightClass: "Pequeno (até 5kg)",
       });
     } else {
-      console.error("Erro Supabase:", error);
       toastError("Erro ao solicitar transporte.");
     }
   };
@@ -1399,7 +1391,6 @@ function App() {
     setIsLoading(false);
     
     if (error) {
-      console.error("Erro ao cancelar:", error);
       toastError("Não foi possível cancelar o pedido. Ele pode já ter sido confirmado.");
     } else {
       toastSuccess("Pedido cancelado com sucesso.");
@@ -1593,7 +1584,6 @@ function App() {
       .eq('is_available', true);
 
     if (error) {
-      console.error("Error fetching products:", error);
     }
 
     const productsList = productsData || [];
