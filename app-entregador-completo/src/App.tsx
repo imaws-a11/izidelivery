@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from './lib/supabase';
 import { playIziSound } from './lib/iziSounds';
+import { toast, toastSuccess, toastError, toastWarning, showConfirm } from './lib/useToast';
 
 // Icons using Material Symbols Outlined
 const Icon = ({ name, className = "", fill = false }: { name: string; className?: string; fill?: boolean }) => (
@@ -154,9 +155,14 @@ function App() {
     };
 
     const [activeTab, setActiveTab] = useState<View>('dashboard');
-    const [isOnline, setIsOnline] = useState(() => {
-        return localStorage.getItem('Izi_online') !== 'false';
-    });
+    const [isOnline, setIsOnline] = useState(false);
+
+    useEffect(() => {
+        if (!driverId || !isAuthenticated) return;
+        // Restaurar estado online apenas após autenticação confirmada
+        const savedOnline = localStorage.getItem('Izi_online') === 'true';
+        if (savedOnline !== isOnline) setIsOnline(savedOnline);
+    }, [driverId, isAuthenticated]);
 
     useEffect(() => {
         if (!driverId || !isAuthenticated) return;
@@ -189,6 +195,7 @@ function App() {
     // --- Izi Elite Features State ---
     const [autoPilot, setAutoPilot] = useState(false);
     const [autoPilotMinPrice] = useState(15);
+    const [isAccepting, setIsAccepting] = useState(false);
     const [isSOSActive, setIsSOSActive] = useState(false);
     const [showHUD, setShowHUD] = useState(false);
     
@@ -237,7 +244,7 @@ function App() {
                         time: 'Imediato',
                         customer: 'Cliente Izi',
                         rating: 4.8
-                    })).filter(o => !declinedIds.includes(o.id));
+                    })).filter(o => !declinedIds.includes(o.realId));
                     setOrders(formatted);
                 } else {
                     setOrders([]);
@@ -342,7 +349,7 @@ function App() {
 
     // --- Auto-Pilot Logic ---
     useEffect(() => {
-        if (autoPilot && orders.length > 0 && !activeMission && isOnline) {
+        if (autoPilot && orders.length > 0 && !activeMission && isOnline && !isAccepting) {
             const bestOrder = orders.find(o => o.price >= autoPilotMinPrice);
             if (bestOrder) {
                 handleAccept(bestOrder);
@@ -356,6 +363,8 @@ function App() {
     }, [filter, orders]);
 
     const handleAccept = async (order: Order) => {
+        if (isAccepting) return;
+        setIsAccepting(true);
         try {
             // Usamos o realId que agora está guardado no objeto order
             const targetId = order.realId || order.id;
@@ -386,7 +395,6 @@ function App() {
                 .eq('id', realOrder.id);
 
             if (error) {
-                console.error("Erro ao aceitar pedido:", error);
                 toastError("Erro de conexão ao aceitar a corrida.");
                 return;
             }
@@ -395,18 +403,19 @@ function App() {
             setOrders(prev => prev.filter(o => !o.id.startsWith(order.id)));
             setActiveTab('active_mission');
         } catch (e) {
-            console.error("Erro fatal ao aceitar:", e);
             toastError("Erro fatal ao aceitar pedido.");
+        } finally {
+            setIsAccepting(false);
         }
     };
 
-    const handleDecline = (orderId: string) => {
+    const handleDecline = (order: Order) => {
         const declined = JSON.parse(localStorage.getItem('Izi_declined') || '[]');
-        if (!declined.includes(orderId)) {
-            declined.push(orderId);
+        if (!declined.includes(order.realId)) {
+            declined.push(order.realId);
             localStorage.setItem('Izi_declined', JSON.stringify(declined));
         }
-        setOrders(prev => prev.filter(o => o.id !== orderId));
+        setOrders(prev => prev.filter(o => o.realId !== order.realId));
     };
 
     const handleComplete = async () => {
@@ -418,7 +427,6 @@ function App() {
                     .eq('id', activeMission.id);
 
                 if (error) {
-                    console.error("Erro ao sincronizar conclusão:", error.message);
                     toastError("Erro ao concluir a missão.");
                     return; // Prevent local completion if DB update fails
                 }
@@ -446,7 +454,6 @@ function App() {
                     };
                 });
             } catch (e) {
-                console.error("Erro de conexão ao finalizar missão.", e);
                 toastError("Erro de conexão ao finalizar missão.");
                 return;
             }
@@ -937,7 +944,7 @@ function App() {
                                         <span className="relative z-10">{isMobility ? 'Aceitar Corrida' : 'Aceitar Coleta'}</span>
                                     </button>
                                     <button
-                                        onClick={() => handleDecline(order.id)}
+                                        onClick={() => handleDecline(order)}
                                         className="premium-button flex-1 h-16 glass-card bg-red-500/5 text-red-500/60 font-black text-[10px] uppercase tracking-[0.1em] italic rounded-2xl border-red-500/10"
                                     >
                                         <Icon name="close" className="relative z-10 text-lg" />
@@ -1162,7 +1169,14 @@ function App() {
                                     Ignorar
                                 </button>
                                 <button 
-                                    onClick={() => toast('Parabéns! Sua candidatura para esta vaga dedicada foi enviada. O lojista entrará em contato em breve!')}
+                                    onClick={async () => {
+                                        try {
+                                            const { error } = await supabase.from('slot_applications').insert({ slot_id: slot.id, driver_id: driverId, status: 'pending', created_at: new Date().toISOString() });
+                                            if (error && error.code !== '42P01') throw error;
+                                            toastSuccess('Candidatura enviada! O lojista entrará em contato.');
+                                            setDedicatedSlots(prev => prev.filter(s => s.id !== slot.id));
+                                        } catch { toastError('Erro ao enviar candidatura. Tente pelo WhatsApp.'); }
+                                    }}
                                     className="h-16 bg-primary text-background font-black text-[10px] uppercase tracking-widest italic rounded-2xl shadow-[0_0_30px_rgba(0,245,255,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
                                 >
                                     <Icon name="check_circle" className="text-lg" />
