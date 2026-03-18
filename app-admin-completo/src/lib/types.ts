@@ -10,7 +10,6 @@ export interface Order {
   status: 'pending' | 'aceito' | 'preparando' | 'pendente' | 'picked_up' | 'em_rota' | 'a_caminho' | 'concluido' | 'cancelado' | 'novo';
   service_type?: string;
   total_price: number;
-  total_amount?: number;
   delivery_address: string;
   payment_method?: string;
   created_at: string;
