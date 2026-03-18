@@ -700,14 +700,14 @@ function App() {
         isAdmin
           ? supabase.from('orders_delivery').select('*').order('created_at', { ascending: false }).limit(5)
           : supabase.from('orders_delivery').select('*').limit(5),
-        // Receita real: soma de total_amount dos pedidos concluídos
+        // Receita real: soma de total_price dos pedidos concluídos
         isAdmin
-          ? supabase.from('orders_delivery').select('total_amount').eq('status', 'concluido')
-          : supabase.from('orders_delivery').select('total_amount').eq('status', 'concluido').eq('merchant_id', adminId)
+          ? supabase.from('orders_delivery').select('total_price').eq('status', 'concluido')
+          : supabase.from('orders_delivery').select('total_price').eq('status', 'concluido').eq('merchant_id', adminId)
       ]);
 
       const revenueData = results[5].data ?? [];
-      const revenue = revenueData.reduce((sum: number, o: { total_amount?: number }) => sum + (Number(o.total_amount) || 0), 0);
+      const revenue = revenueData.reduce((sum: number, o: { total_price?: number }) => sum + (Number(o.total_price) || 0), 0);
 
       setStats({
         users: results[0].count || 0,
@@ -2056,7 +2056,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     const revenueByDay = last7Days.map(day => {
       const dayTotal = allOrders
         .filter(o => o.created_at.startsWith(day.dateStr) && o.status === 'concluido')
-        .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+        .reduce((sum, o) => sum + (o.total_price || 0), 0);
       return dayTotal;
     });
 
@@ -2103,7 +2103,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
       if (o.merchant_id) {
         if (!acc[o.merchant_id]) acc[o.merchant_id] = { id: o.merchant_id, name: o.merchant_name || 'Lojista', orders: 0, revenue: 0 };
         acc[o.merchant_id].orders++;
-        if (o.status === 'concluido') acc[o.merchant_id].revenue += (o.total_amount || 0);
+        if (o.status === 'concluido') acc[o.merchant_id].revenue += (o.total_price || 0);
       }
       return acc;
     }, {});
@@ -2114,7 +2114,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
 
     // 4. Global KPIs
     const completedOrders = allOrders.filter(o => o.status === 'concluido');
-    const totalRevenue = completedOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+    const totalRevenue = completedOrders.reduce((sum, o) => sum + (o.total_price || 0), 0);
     const avgTicket = totalRevenue / (completedOrders.length || 1);
     const totalCommission = totalRevenue * (appSettings.appCommission / 100);
     const deliverySuccessRate = (completedOrders.length / (allOrders.filter(o => o.status !== 'cancelado').length || 1)) * 100;
@@ -2129,7 +2129,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     const revenue30Days = last30Days.map(dateStr => {
       return allOrders
         .filter(o => o.created_at.startsWith(dateStr) && o.status === 'concluido')
-        .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+        .reduce((sum, o) => sum + (o.total_price || 0), 0);
     });
 
     const totalOrders = allOrders.length;
@@ -4970,7 +4970,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                               </span>
                             </td>
                             <td className="px-8 py-6 text-sm font-bold text-slate-700 dark:text-slate-300">{tr.user_name || 'Usuário'}</td>
-                            <td className="px-8 py-6 text-sm font-black text-primary">R$ {tr.total_amount?.toFixed(2).replace('.', ',')}</td>
+                            <td className="px-8 py-6 text-sm font-black text-primary">R$ {tr.total_price?.toFixed(2).replace('.', ',')}</td>
                             <td className="px-8 py-6 text-right">
                               <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
                                 tr.status === 'concluido' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
@@ -8682,7 +8682,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-black text-primary">R$ {o.total_amount?.toFixed(2).replace('.', ',')}</p>
+                          <p className="text-sm font-black text-primary">R$ {o.total_price?.toFixed(2).replace('.', ',')}</p>
                         </div>
                       </div>
 
