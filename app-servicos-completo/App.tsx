@@ -310,145 +310,6 @@ const AddressSearchInput = ({ placeholder, initialValue, onSelect, className }: 
   );
 };
 
-// ─── AI Concierge Component ──────────────────────────────────────────────────
-const AIConciergePanel = ({ isOpen, onClose, userName, walletBalance, userLocation, myOrders, ESTABLISHMENTS }: any) => {
-  const [messages, setMessages] = useState<{role: 'user'|'assistant', content: string}[]>([]);
-  const [input, setInput] = useState('');
-  const [isThinking, setIsThinking] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const totalGasto = myOrders.filter((o: any) => o.status === 'concluido').reduce((s: number, o: any) => s + (o.total_price || 0), 0).toFixed(2);
-
-  const systemPrompt = `Você é o Izi Concierge, assistente do app IziDelivery. Seja direto e útil.
-Contexto: Nome: ${userName || 'Cliente'}, Saldo: R$${walletBalance?.toFixed(2)}, Total gasto: R$${totalGasto}
-Últimos pedidos: ${JSON.stringify(myOrders.slice(0,5).map((o: any) => ({ status: o.status, total: o.total_price, tipo: o.service_type })))}
-Estabelecimentos: ${JSON.stringify(ESTABLISHMENTS?.slice(0,8).map((e: any) => ({ nome: e.name, tipo: e.type })))}
-Responda em português, máx 3 linhas, use emojis com moderação.`;
-
-  const sendMessage = async () => {
-    if (!input.trim() || isThinking) return;
-    const userMsg = { role: 'user' as const, content: input.trim() };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
-    setInput('');
-    setIsThinking(true);
-    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system: systemPrompt, messages: newMessages.map(m => ({ role: m.role, content: m.content })) }),
-      });
-      const data = await response.json();
-      const reply = data.content?.[0]?.text || 'Não consegui processar. Tente novamente.';
-      setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Problema de conexão. Tente novamente.' }]);
-    } finally {
-      setIsThinking(false);
-      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    }
-  };
-
-  const quickSuggestions = [
-    myOrders.length > 0 ? 'Repetir meu último pedido' : 'O que está em promoção?',
-    'Quanto gastei esse mês?',
-    'Sugestão para jantar de hoje',
-    'Tem cupom disponível?',
-  ];
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="absolute inset-0 z-[160] bg-[#020617] flex flex-col overflow-hidden">
-      <header className="px-6 py-5 border-b border-white/5 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="size-12 rounded-[18px] bg-primary/10 border border-primary/20 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary text-2xl" style={{fontVariationSettings: "'FILL' 1"}}>smart_toy</span>
-          </div>
-          <div>
-            <h2 className="text-base font-black text-white tracking-tight">Izi Concierge</h2>
-            <div className="flex items-center gap-1.5">
-              <div className="size-1.5 bg-emerald-400 rounded-full animate-pulse" />
-              <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">IA Ativa</p>
-            </div>
-          </div>
-        </div>
-        <button onClick={onClose} className="size-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 active:scale-90 transition-all">
-          <span className="material-symbols-outlined font-black text-xl">close</span>
-        </button>
-      </header>
-      <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-5 space-y-4">
-        {messages.length === 0 && (
-          <div className="space-y-5">
-            <div className="flex items-start gap-3">
-              <div className="size-8 rounded-[12px] bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="material-symbols-outlined text-primary text-sm" style={{fontVariationSettings: "'FILL' 1"}}>smart_toy</span>
-              </div>
-              <div className="bg-white/5 border border-white/8 rounded-[20px] rounded-tl-[6px] px-4 py-3 max-w-[85%]">
-                <p className="text-sm text-white/80 leading-relaxed">Olá{userName ? `, ${userName.split(" ")[0]}` : ""}! 👋 Sou o Izi Concierge. Posso te ajudar a encontrar restaurantes, verificar seu saldo, sugerir pedidos e muito mais!</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white/[0.03] border border-white/5 rounded-[20px] p-4">
-                <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Saldo</p>
-                <p className="text-lg font-black text-primary mt-0.5">R$ {walletBalance?.toFixed(2).replace(".", ",")}</p>
-              </div>
-              <div className="bg-white/[0.03] border border-white/5 rounded-[20px] p-4">
-                <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Total Gasto</p>
-                <p className="text-lg font-black text-white mt-0.5">R$ {totalGasto.replace(".", ",")}</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-[9px] font-black text-white/20 uppercase tracking-widest px-1">Sugestões rápidas</p>
-              {quickSuggestions.map((s, i) => (
-                <button key={i} onClick={() => setInput(s)} className="w-full text-left bg-white/[0.03] border border-white/8 rounded-[16px] px-4 py-3 text-sm text-white/60 font-bold hover:bg-white/[0.06] hover:text-white transition-all active:scale-[0.98] flex items-center gap-3">
-                  <span className="material-symbols-outlined text-primary text-base">arrow_forward</span>{s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex items-start gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
-            {msg.role === "assistant" && (
-              <div className="size-8 rounded-[12px] bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="material-symbols-outlined text-primary text-sm" style={{fontVariationSettings: "'FILL' 1"}}>smart_toy</span>
-              </div>
-            )}
-            <div className={`px-4 py-3 max-w-[82%] ${msg.role === "user" ? "bg-primary text-slate-900 rounded-[20px] rounded-tr-[6px]" : "bg-white/5 border border-white/8 text-white/85 rounded-[20px] rounded-tl-[6px]"}`}>
-              <p className="text-sm leading-relaxed font-medium">{msg.content}</p>
-            </div>
-          </div>
-        ))}
-        {isThinking && (
-          <div className="flex items-start gap-3">
-            <div className="size-8 rounded-[12px] bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-primary text-sm" style={{fontVariationSettings: "'FILL' 1"}}>smart_toy</span>
-            </div>
-            <div className="bg-white/5 border border-white/8 rounded-[20px] rounded-tl-[6px] px-4 py-3">
-              <div className="flex gap-1.5 items-center">
-                <div className="size-2 bg-primary/60 rounded-full animate-bounce" style={{animationDelay:'0ms'}} />
-                <div className="size-2 bg-primary/60 rounded-full animate-bounce" style={{animationDelay:'200ms'}} />
-                <div className="size-2 bg-primary/60 rounded-full animate-bounce" style={{animationDelay:'400ms'}} />
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      <div className="px-5 pb-8 pt-3 shrink-0 border-t border-white/5">
-        <div className="flex items-center gap-3 bg-white/[0.05] border border-white/10 rounded-[22px] px-4 py-2">
-          <input type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Pergunte algo..." className="flex-1 bg-transparent border-none outline-none text-white text-sm font-medium placeholder:text-white/20 py-2" />
-          <button onClick={sendMessage} disabled={!input.trim() || isThinking} className="size-10 rounded-[14px] bg-primary text-slate-900 flex items-center justify-center shadow-lg shadow-primary/20 active:scale-90 transition-all disabled:opacity-30 shrink-0">
-            <span className="material-symbols-outlined font-black text-lg">send</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 function App() {
   const [view, setView] = useState<"login" | "app" | "loading">("loading");
   const [tab, setTab] = useState<"home" | "orders" | "wallet" | "profile">(
@@ -510,8 +371,6 @@ function App() {
     | "quest_center"
     | "order_support"
     | "order_feedback"
-    | "mobility_payment"
-    | "waiting_driver"
   >("none");
 
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; expirationDate: string } | null>(null);
@@ -534,17 +393,12 @@ function App() {
   const [aiMessage, setAiMessage] = useState("Olá! Sou seu assistente Izi. Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?");
   const [showInfinityCard, setShowInfinityCard] = useState(false);
   const [showMasterPerks, setShowMasterPerks] = useState(false);
-  const [flashOffers, setFlashOffers] = useState<any[]>([]);
-
-  const fetchFlashOffers = async () => {
-    const { data } = await supabase
-      .from('flash_offers')
-      .select('*, admin_users(store_name, store_logo)')
-      .eq('is_active', true)
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false });
-    if (data) setFlashOffers(data);
-  };
+  const [activeStories] = useState<any[]>([
+    { id: 1, title: 'Oferta Relâmpago', merchant: 'Sushi Zen', discount: '30%', timeLeft: '14:55', img: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=400' },
+    { id: 2, title: 'Izi Flash', merchant: 'Burger King', discount: '15%', timeLeft: '08:22', img: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?q=80&w=400' },
+    { id: 3, title: 'Papo de Gourmet', merchant: 'Pizzaria Bella', discount: 'BOGO', timeLeft: '22:10', img: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=400' },
+    { id: 4, title: 'Master Exclusive', merchant: 'Loja Premium', discount: '50%', timeLeft: '04:20', img: 'https://images.unsplash.com/photo-1542491595-3004b44c58fc?q=80&w=400', isMaster: true },
+  ]);
 
   const [rating, setRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState("");
@@ -639,8 +493,6 @@ function App() {
   const [distancePrices, setDistancePrices] = useState<Record<string, number>>({});
   const [routeDistance, setRouteDistance] = useState<string>("");
   const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
-  const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
-  const [nearbyDriversCount, setNearbyDriversCount] = useState(0);
 
   const [transitHistory, setTransitHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem("transitHistory");
@@ -975,19 +827,6 @@ function App() {
             utilitario: Math.max(bv.utilitario_min, bv.utilitario_km * distKm * surge),
           };
           setDistancePrices(prices);
-
-          // Buscar motoristas online reais
-          supabase
-            .from('drivers_delivery')
-            .select('id, name, vehicle_type, rating')
-            .eq('is_online', true)
-            .limit(5)
-            .then(({ data }) => {
-              if (data) {
-                setNearbyDrivers(data);
-                setNearbyDriversCount(data.length);
-              }
-            });
         }
       }
     );
@@ -1074,15 +913,8 @@ function App() {
 
   useEffect(() => {
     fetchMarketData();
-    fetchFlashOffers();
-    const interval = setInterval(fetchMarketData, 20000);
-    const flashChannel = supabase.channel('flash_offers_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'flash_offers' }, fetchFlashOffers)
-      .subscribe();
-    return () => {
-      clearInterval(interval);
-      supabase.removeChannel(flashChannel);
-    };
+    const interval = setInterval(fetchMarketData, 20000); 
+    return () => clearInterval(interval);
   }, []);
 
   const fetchWalletBalance = async (uid: string) => {
@@ -1213,16 +1045,6 @@ function App() {
             // Se o usuário estiver vendo os detalhes deste pedido, atualizar o item selecionado
             if (selectedItem?.id === newOrder.id) {
               setSelectedItem(newOrder);
-              // Se estava na tela de aguardando e motorista aceitou, ir para acompanhamento
-              if (subViewRef.current === "waiting_driver" && 
-                  ["a_caminho", "aceito", "confirmado", "em_rota", "no_local"].includes(newOrder.status)) {
-                setTimeout(() => setSubView("active_order"), 1500);
-              }
-              // Se pedido foi cancelado e estava aguardando, voltar para home
-              if (subViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {
-                setSubView("none");
-                fetchMyOrders(userId!);
-              }
             }
           }
 
@@ -1556,31 +1378,21 @@ function App() {
     } else if (paymentMethod === "pix") {
       setSubView("payment_processing");
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error("Sessão expirada.");
+        // CONFIGURAÇÃO: Altere para 'pagbank' quando quiser trocar de provedor
+        const PIX_PROVIDER: 'mercadopago' | 'pagbank' = 'mercadopago'; 
+        const functionName = PIX_PROVIDER === 'mercadopago' ? 'create-pix-payment' : 'create-pagbank-payment';
 
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-        const pixResponse = await fetch(`${supabaseUrl}/functions/v1/create-pagbank-payment`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-            'apikey': import.meta.env.VITE_SUPABASE_KEY as string,
-          },
-          body: JSON.stringify({
-            amount: total,
+        const { data: pixResult, error: pixError } = await supabase.functions.invoke(functionName, {
+          body: { 
+            amount: total, 
             orderId: orderData.id,
             email: email,
-            customer: { name: userName, cpf: cpf }
-          }),
+            customer: { name: userName, cpf: cpf } // CPF já é coletado no checkout
+          }
         });
 
-        if (!pixResponse.ok) {
-          const errText = await pixResponse.text();
-          throw new Error(`Erro ao gerar PIX: ${errText}`);
-        }
+        if (pixError) throw pixError;
 
-        const pixResult = await pixResponse.json();
         setPixData(pixResult);
         setSubView("pix_payment");
       } catch (err: any) {
@@ -1616,47 +1428,33 @@ function App() {
 
   const handleRequestTransit = async () => {
     if (!transitData.destination) return;
-    // Redirecionar para seleção de pagamento antes de confirmar
-    setSubView("mobility_payment");
-  };
-
-  const handleConfirmMobility = async (selectedPaymentMethod: string) => {
-    if (!transitData.destination) return;
     setIsLoading(true);
 
+    // Preço: usa calculado por distância se disponível, senão dinâmico base
     const bv = marketConditions.settings.baseValues;
     const basePrices: Record<string, number> = { mototaxi: bv.mototaxi_min, carro: bv.carro_min, van: bv.van_min, utilitario: bv.utilitario_min };
-    const price = (transitData.estPrice > 0 ? transitData.estPrice : calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min)) ?? 0;
+    let price = transitData.estPrice > 0 ? transitData.estPrice : calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min);
 
     if (!userId) {
+      // Se não estiver logado, mostrar tela de resultado sem criar no banco
       setIsLoading(false);
-      toastError("Faça login para solicitar o serviço.");
+      setSubView("active_order");
+      const newHistory = [transitData.destination, ...transitHistory.filter(h => h !== transitData.destination)].slice(0, 5);
+      setTransitHistory(newHistory);
+      localStorage.setItem("transitHistory", JSON.stringify(newHistory));
       return;
     }
 
-    // Se pagamento for cartão, processar via Stripe
-    if (selectedPaymentMethod === "cartao") {
-      const activeCard = savedCards.find((c: any) => c.active);
-      if (!activeCard?.stripe_payment_method_id) {
-        setIsLoading(false);
-        toastError("Adicione um cartão válido para continuar.");
-        setSubView("payments");
-        setPaymentsOrigin("checkout");
-        return;
-      }
-    }
-
-    // Criar pedido
     const { data, error } = await supabase
       .from("orders_delivery")
       .insert({
         user_id: userId,
-        status: selectedPaymentMethod === "cartao" ? "pendente_pagamento" : "pendente",
-        total_price: parseFloat(price.toFixed(2)),
+        status: transitData.scheduled ? "agendado" : "pendente",
+        total_price: price,
         pickup_address: transitData.origin,
         delivery_address: transitData.destination,
         service_type: transitData.type,
-        payment_method: selectedPaymentMethod,
+        payment_method: "dinheiro",
         scheduled_date: transitData.scheduled ? transitData.scheduledDate : null,
         scheduled_time: transitData.scheduled ? transitData.scheduledTime : null,
         receiver_name: transitData.receiverName || null,
@@ -1667,96 +1465,29 @@ function App() {
       .select()
       .single();
 
-    if (error) {
-      setIsLoading(false);
-      toastError("Erro ao solicitar transporte.");
-      return;
-    }
-
-    // Processar pagamento
-    if (selectedPaymentMethod === "cartao") {
-      setSubView("payment_processing");
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error("Sessão expirada.");
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-        const intentResponse = await fetch(`${supabaseUrl}/functions/v1/create-payment-intent`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-            'apikey': import.meta.env.VITE_SUPABASE_KEY as string,
-          },
-          body: JSON.stringify({ amount: price, orderId: data.id }),
-        });
-        if (!intentResponse.ok) throw new Error(await intentResponse.text());
-        const intentData = await intentResponse.json();
-        const stripe = await stripePromise;
-        if (!stripe) throw new Error("Stripe não carregado.");
-        const activeCard = savedCards.find((c: any) => c.active);
-        const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(intentData.clientSecret, {
-          payment_method: activeCard.stripe_payment_method_id
-        });
-        if (confirmError) throw confirmError;
-        if (paymentIntent.status === "succeeded") {
-          await supabase.from("orders_delivery").update({ status: "pendente" }).eq("id", data.id);
-          setSelectedItem({ ...data, status: "pendente" });
-          setSubView("waiting_driver");
-          fetchMyOrders(userId);
-        } else {
-          setSubView("payment_error");
-        }
-      } catch {
-        setSubView("payment_error");
-      }
-    } else if (selectedPaymentMethod === "pix") {
-      setSubView("payment_processing");
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error("Sessão expirada.");
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-        const pixResponse = await fetch(`${supabaseUrl}/functions/v1/create-mp-pix`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-            'apikey': import.meta.env.VITE_SUPABASE_KEY as string,
-          },
-          body: JSON.stringify({ amount: price, orderId: data.id, email, customer: { name: userName, cpf } }),
-        });
-        if (!pixResponse.ok) throw new Error(await pixResponse.text());
-        const pixResult = await pixResponse.json();
-        setPixData(pixResult);
-        setSubView("pix_payment");
-      } catch {
-        setSubView("payment_error");
-      }
-    } else if (selectedPaymentMethod === "saldo") {
-      if (walletBalance < price) {
-        setIsLoading(false);
-        toastError("Saldo insuficiente na carteira.");
-        return;
-      }
-      setSubView("payment_processing");
-      setTimeout(async () => {
-        await supabase.from("users_delivery").update({ wallet_balance: walletBalance - price }).eq("id", userId);
-        setWalletBalance(walletBalance - price);
-        setSelectedItem(data);
-        setSubView("waiting_driver");
-        fetchMyOrders(userId);
-      }, 1500);
-    } else {
-      // Dinheiro — vai direto para aguardando motorista
-      setSelectedItem(data);
-      setSubView("waiting_driver");
-      fetchMyOrders(userId);
-    }
-
-    const newHistory = [transitData.destination, ...transitHistory.filter(h => h !== transitData.destination)].slice(0, 5);
-    setTransitHistory(newHistory);
-    localStorage.setItem("transitHistory", JSON.stringify(newHistory));
-    setTransitData({ ...transitData, destination: "", estPrice: 0, scheduled: false, receiverName: "", receiverPhone: "", packageDesc: "", weightClass: "Pequeno (até 5kg)" });
     setIsLoading(false);
+    if (!error) {
+      setSelectedItem(data);
+      setSubView("active_order");
+      fetchMyOrders(userId);
+      
+      const newHistory = [transitData.destination, ...transitHistory.filter(h => h !== transitData.destination)].slice(0, 5);
+      setTransitHistory(newHistory);
+      localStorage.setItem("transitHistory", JSON.stringify(newHistory));
+
+      setTransitData({ 
+        ...transitData, 
+        destination: "", 
+        estPrice: 0,
+        scheduled: false,
+        receiverName: "",
+        receiverPhone: "",
+        packageDesc: "",
+        weightClass: "Pequeno (até 5kg)",
+      });
+    } else {
+      toastError("Erro ao solicitar transporte.");
+    }
   };
 
   const handleCancelOrder = async (orderId: string) => {
@@ -2011,7 +1742,7 @@ function App() {
       { emoji: "🍺", label: "Bebidas", desc: "Distribuidoras e adegas", type: "beverages", gradient: "linear-gradient(135deg, #f59e0b, #eab308)", bgColor: "#fffbeb", tagColor: "#d97706", tag: "Geladas" },
       {
         emoji: "📦", label: "Envios", desc: "Entregas e encomendas", gradient: "linear-gradient(135deg, #8b5cf6, #9333ea)", bgColor: "#f5f3ff", tagColor: "#7c3aed", tag: "Express",
-        action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("transit_selection"); },
+        action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); },
       },
       { emoji: "🛒", label: "Mercado", desc: "Compras do dia a dia", type: "market", gradient: "linear-gradient(135deg, #10b981, #0d9488)", bgColor: "#ecfdf5", tagColor: "#059669", tag: "Rápido" },
       { emoji: "💊", label: "Farmácia", desc: "Medicamentos e saúde", type: "pharmacy", gradient: "linear-gradient(135deg, #3b82f6, #06b6d4)", bgColor: "#eff6ff", tagColor: "#2563eb", tag: "24h" },
@@ -2024,19 +1755,19 @@ function App() {
     const mobilityServices = [
       {
         emoji: "🏍️", label: "Mototáxi", desc: "Rápido e econômico", gradient: "linear-gradient(135deg, #facc15, #f97316)", bgColor: "#fefce8", tagColor: "#ca8a04", tag: "Promo",
-        action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("transit_selection"); },
+        action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("explore_mobility"); },
       },
       {
         emoji: "🚗", label: "Motorista Particular", desc: "Conforto para sua viagem", gradient: "linear-gradient(135deg, #334155, #0f172a)", bgColor: "#f1f5f9", tagColor: "#334155", tag: "Premium",
-        action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("transit_selection"); },
+        action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("explore_mobility"); },
       },
       {
         emoji: "🚐", label: "Van / Utilitário", desc: "Mudanças e cargas", gradient: "linear-gradient(135deg, #6366f1, #2563eb)", bgColor: "#eef2ff", tagColor: "#4f46e5",
-        action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("transit_selection"); },
+        action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("explore_mobility"); },
       },
       {
         emoji: "🚚", label: "Frete", desc: "Transporte de volumes", gradient: "linear-gradient(135deg, #06b6d4, #3b82f6)", bgColor: "#ecfeff", tagColor: "#0891b2",
-        action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("transit_selection"); },
+        action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("explore_mobility"); },
       },
     ];
 
@@ -2147,66 +1878,123 @@ function App() {
           </div>
         </header>
 
-        {/* IZI FLASH — Grid Vitrine */}
-        {flashOffers.length > 0 && (
-          <div className="mt-8 px-5">
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <div className="size-2 bg-rose-500 rounded-full animate-ping" />
-                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Izi Flash</h3>
-                <span className="text-[9px] font-black text-rose-500 bg-rose-500/10 px-2.5 py-1 rounded-full uppercase tracking-widest border border-rose-500/20">Ao Vivo</span>
-              </div>
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{flashOffers.length} ofertas</span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {flashOffers.map((offer: any) => {
-                const expiresAt = new Date(offer.expires_at);
-                const diffMs = expiresAt.getTime() - Date.now();
-                const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-                const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                const timeLabel = diffHrs > 0 ? `${diffHrs}h ${diffMins}m` : `${diffMins}min`;
-                const isUrgent = diffHrs < 2;
-                return (
-                  <motion.div
-                    key={offer.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    whileTap={{ scale: 0.97 }}
-                    className="bg-white dark:bg-slate-800 rounded-[28px] overflow-hidden border border-slate-100 dark:border-slate-700/50 shadow-xl cursor-pointer group"
-                    onClick={() => {
-                      const shop = ESTABLISHMENTS.find((e: any) => e.id === offer.merchant_id);
-                      if (shop) handleShopClick(shop);
-                      else toast("Loja não disponível no momento.");
-                    }}
-                  >
-                    <div className="relative aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-slate-900">
-                      <img
-                        src={offer.product_image || offer.admin_users?.store_logo || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400"}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        alt={offer.product_name}
-                      />
-                      <div className="absolute top-2.5 left-2.5 bg-rose-500 text-white text-[10px] font-black px-2.5 py-1 rounded-xl shadow-lg">
-                        -{offer.discount_percent}%
-                      </div>
-                      <div className={`absolute top-2.5 right-2.5 backdrop-blur-md px-2 py-1 rounded-xl border text-[9px] font-black flex items-center gap-1 ${isUrgent ? "bg-rose-500/90 border-rose-400/30 text-white" : "bg-black/60 border-white/10 text-white"}`}>
-                        <span className="material-symbols-outlined text-[10px]">timer</span>
-                        {timeLabel}
-                      </div>
-                    </div>
-                    <div className="p-3.5">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate mb-0.5">{offer.admin_users?.store_name || "Loja Parceira"}</p>
-                      <p className="text-xs font-black text-slate-900 dark:text-white leading-tight truncate">{offer.product_name}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[10px] text-slate-400 line-through">R$ {Number(offer.original_price).toFixed(2).replace(".", ",")}</span>
-                        <span className="text-sm font-black text-rose-500">R$ {Number(offer.discounted_price).toFixed(2).replace(".", ",")}</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
+        {/* Izi INFINITY PROGRESS */}
+        <div className="px-5 mt-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-[35px] border border-white/10 shadow-2xl relative overflow-hidden group active:scale-95 transition-all cursor-pointer" onClick={() => setShowInfinityCard(!showInfinityCard)}>
+             <div className="absolute top-0 right-0 p-4">
+                <span className="text-[8px] font-black text-primary uppercase tracking-[0.4em] animate-pulse">Infinity Tier</span>
+             </div>
+             <div className="flex items-center gap-4 mb-4">
+                <div className="size-12 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30">
+                   <span className="material-symbols-outlined text-primary fill-1">diamond</span>
+                </div>
+                <div>
+                   <h3 className="text-sm font-black text-white italic tracking-tight uppercase">Izi Infinity</h3>
+                   <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Patente Nível {userLevel}</p>
+                </div>
+             </div>
+             <div className="space-y-2">
+                <div className="flex justify-between items-end">
+                   <span className="text-[9px] font-black text-white uppercase tracking-widest">XP Progress</span>
+                   <span className="text-[9px] font-black text-primary italic">{userXP} / {nextLevelXP}</span>
+                </div>
+                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                   <motion.div 
+                     initial={{ width: 0 }}
+                     animate={{ width: `${(userXP / nextLevelXP) * 100}%` }}
+                     className="h-full bg-gradient-to-r from-primary to-orange-400 shadow-[0_0_10px_rgba(255,165,0,0.4)]"
+                   />
+                </div>
           </div>
-        )}
+        </div>
+      </div>
+
+      {/* Izi QUESTS & ACTIVITY */}
+      <div className="px-5 mt-4 grid grid-cols-2 gap-4">
+           {/* Quest Shortcut */}
+           <motion.div 
+             whileTap={{ scale: 0.96 }}
+             onClick={() => setSubView("quest_center")}
+             className="bg-white dark:bg-slate-800 p-5 rounded-[35px] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-black/20 flex flex-col justify-between h-40 group cursor-pointer"
+           >
+              <div className="flex items-start justify-between">
+                 <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                    <span className="material-symbols-outlined font-black">explore</span>
+                 </div>
+                 <div className="size-6 bg-primary/20 rounded-full flex items-center justify-center">
+                    <span className="text-[8px] font-black text-primary">!</span>
+                 </div>
+              </div>
+              <div>
+                 <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-1">Quest Ativa</p>
+                 <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase leading-tight tracking-tight">Explorador Urbano</h4>
+                 <div className="mt-3 h-1.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary" style={{ width: '33%' }} />
+                 </div>
+              </div>
+           </motion.div>
+
+           {/* Social Ranking Shortcut */}
+           <motion.div 
+             whileTap={{ scale: 0.96 }}
+             onClick={() => setSubView("quest_center")}
+             className="bg-slate-900 dark:bg-slate-950 p-5 rounded-[35px] border border-white/5 shadow-2xl flex flex-col justify-between h-40 group cursor-pointer"
+           >
+              <div className="flex items-start justify-between">
+                 <div className="size-12 rounded-2xl bg-white/5 flex items-center justify-center text-primary border border-white/10">
+                    <span className="material-symbols-outlined font-black">groups</span>
+                 </div>
+                 <span className="text-[9px] font-black text-white/40 uppercase tracking-widest italic">Rank #1</span>
+              </div>
+              <div>
+                 <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Social</p>
+                 <h4 className="text-xs font-black text-white uppercase leading-tight tracking-tight italic">Elite Challenge</h4>
+                 <p className="text-[8px] font-bold text-primary uppercase tracking-widest mt-1">Mariana te superou!</p>
+              </div>
+           </motion.div>
+        </div>
+
+        {/* Izi FLASH STORIES */}
+        <div className="mt-8">
+           <div className="px-5 flex items-center justify-between mb-4">
+              <h3 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] italic">Izi Flash • Ofertas 24h</h3>
+              <span className="text-[10px] font-black text-primary uppercase tracking-widest animate-pulse">Ao Vivo</span>
+           </div>
+           <div className="flex gap-4 px-5 overflow-x-auto no-scrollbar pb-4">
+              {activeStories.map(story => (
+                 <div 
+                   key={story.id}
+                   onClick={() => {
+                     if (story.isMaster && userLevel < 10) {
+                       toast("Esta oferta é exclusiva para membros Tier MASTER. Continue pedindo para desbloquear!");
+                     } else if (story.isMaster) {
+                       setShowMasterPerks(true);
+                     } else {
+                       toast(`Izi Flash: Oferta de ${story.discount} ativada para ${story.merchant}! Use o cupom FLASH${story.id}`);
+                     }
+                   }}
+                   className={`relative flex-shrink-0 size-24 rounded-[30px] p-[2px] bg-gradient-to-tr ${story.isMaster ? 'from-amber-400 via-primary to-orange-600' : 'from-primary via-orange-500 to-rose-500'} animate-gradient-spin cursor-pointer active:scale-95 transition-all group`}
+                 >
+                    <div className="size-full rounded-[28px] overflow-hidden bg-slate-900 border-2 border-slate-900">
+                       <img src={story.img} className="size-full object-cover opacity-70 group-hover:scale-110 transition-transform" />
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-3">
+                          <p className="text-[7px] font-black text-white uppercase tracking-tighter truncate">{story.merchant}</p>
+                          <p className="text-[10px] font-black text-primary italic leading-none">{story.discount}</p>
+                       </div>
+                       {story.isMaster && (
+                          <div className="absolute top-2 left-2 bg-primary/20 backdrop-blur-md size-6 rounded-lg flex items-center justify-center border border-primary/30">
+                             <span className="material-symbols-rounded text-[10px] text-primary fill-1">diamond</span>
+                          </div>
+                       )}
+                       <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded-full border border-white/10">
+                          <p className="text-[6px] font-black text-white">{story.timeLeft}</p>
+                       </div>
+                    </div>
+                 </div>
+              ))}
+           </div>
+        </div>
+
         <main className="flex flex-col gap-12 pt-6">
           {/* Active Order Widget: Premium Design */}
           {(() => {
@@ -7513,17 +7301,97 @@ function App() {
     );
   };
 
-
   const renderAIConcierge = () => {
-    return <AIConciergePanel
-      isOpen={isAIOpen}
-      onClose={() => setIsAIOpen(false)}
-      userName={userName}
-      walletBalance={walletBalance}
-      userLocation={userLocation}
-      myOrders={myOrders}
-      ESTABLISHMENTS={ESTABLISHMENTS}
-    />;
+    return (
+      <div className="absolute inset-0 z-[160] bg-slate-950 flex flex-col hide-scrollbar overflow-hidden">
+        <header className="p-8 pb-6 border-b border-white/5 flex items-center justify-between">
+           <div className="flex items-center gap-4">
+              <div className="size-14 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/20 relative overflow-hidden group">
+                 <div className="absolute inset-x-0 h-[2px] bg-primary/50 shadow-[0_0_10px_#ffd900] animate-scanner z-30" />
+                 <div className="absolute inset-0 bg-primary/10 animate-pulse" />
+                 <span className="material-symbols-outlined text-3xl text-primary animate-bounce fill-1 relative z-10">smart_toy</span>
+              </div>
+              <div>
+                 <h2 className="text-xl font-black text-white italic uppercase tracking-tighter">Izi Concierge</h2>
+                 <p className="text-[10px] text-primary font-black uppercase tracking-[0.3em]">IA Agente Ativo</p>
+              </div>
+           </div>
+           <button 
+             onClick={() => setIsAIOpen(false)}
+             className="size-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 active:scale-90 transition-all border border-white/10"
+           >
+             <span className="material-symbols-outlined font-black">close</span>
+           </button>
+        </header>
+
+        <main className="flex-1 p-8 overflow-y-auto no-scrollbar space-y-8">
+           {/* AI Insight Card */}
+           <div className="glass-card p-8 rounded-[45px] border-primary/20 bg-primary/5 space-y-6 relative overflow-hidden group">
+              <div className="absolute -right-10 -bottom-10 size-40 bg-primary/10 rounded-full blur-3xl" />
+              <div className="space-y-2">
+                 <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Sugestão Inteligente</span>
+                 <p className="text-lg font-bold text-white leading-relaxed italic">"{aiMessage}"</p>
+              </div>
+              <div className="flex gap-3">
+                 <button className="flex-1 h-14 bg-primary text-slate-900 font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 active:scale-95 transition-all">Aceitar Sugestão</button>
+                 <button className="h-14 px-6 bg-white/5 text-white/40 font-black text-xs uppercase tracking-widest rounded-2xl border border-white/5 active:scale-95 transition-all">Outra</button>
+              </div>
+           </div>
+
+           {/* User Patterns */}
+           <div className="space-y-6">
+              <h3 className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] ml-2">Tendências de Consumo</h3>
+              <div className="grid grid-cols-2 gap-4">
+                 <div className="bg-white/5 p-6 rounded-[35px] border border-white/5 space-y-4">
+                    <div className="size-12 rounded-2xl bg-rose-500/20 flex items-center justify-center text-rose-500">
+                       <span className="material-symbols-outlined fill-1">favorite</span>
+                    </div>
+                    <p className="text-xs font-black text-white uppercase tracking-tight">Sushi Lover</p>
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Top Categoria</p>
+                 </div>
+                 <div className="bg-white/5 p-6 rounded-[35px] border border-white/5 space-y-4">
+                    <div className="size-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-500">
+                       <span className="material-symbols-outlined fill-1">bolt</span>
+                    </div>
+                    <p className="text-xs font-black text-white uppercase tracking-tight">Horário Nobre</p>
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">19h - 21h</p>
+                 </div>
+              </div>
+           </div>
+
+           {/* AI capabilities */}
+           <div className="space-y-4">
+              <h3 className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] ml-2">O que posso fazer?</h3>
+              {[
+                { label: "Encontrar cupons ocultos", icon: "sell" },
+                { label: "Sugestão de prato saudável", icon: "health_and_safety" },
+                { label: "Agendar pedido recorrente", icon: "calendar_today" },
+                { label: "Comparar preços de mercado", icon: "insights" },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-4 p-5 bg-white/5 rounded-[25px] border border-white/5 group active:scale-98 transition-all cursor-pointer">
+                   <div className="size-10 rounded-xl bg-white/5 flex items-center justify-center text-white/20 group-hover:text-primary transition-colors">
+                      <span className="material-symbols-outlined text-xl">{item.icon}</span>
+                   </div>
+                   <span className="text-xs font-black text-white/60 uppercase tracking-widest">{item.label}</span>
+                </div>
+              ))}
+           </div>
+        </main>
+
+        <footer className="p-8 bg-slate-900/50 backdrop-blur-3xl border-t border-white/5">
+           <div className="flex items-center gap-4 bg-white/5 p-4 rounded-[30px] border border-white/10">
+              <input 
+                type="text" 
+                placeholder="Pergunte algo à IA..." 
+                className="flex-1 bg-transparent border-none outline-none text-white font-bold text-sm placeholder:text-white/20 px-2"
+              />
+              <button className="size-12 rounded-2xl bg-primary text-slate-900 flex items-center justify-center shadow-lg shadow-primary/20 active:scale-90 transition-all">
+                 <span className="material-symbols-outlined font-black">send</span>
+              </button>
+           </div>
+        </footer>
+      </div>
+    );
   };
 
   const renderQuestCenter = () => {
@@ -8327,7 +8195,7 @@ function App() {
       <div className="absolute inset-0 z-[110] bg-slate-50 dark:bg-slate-900 flex flex-col hide-scrollbar overflow-y-auto animate-in fade-in duration-500">
         <header className="px-6 py-8 flex items-center justify-between gap-4">
           <button
-            onClick={() => setSubView("none")}
+            onClick={() => setSubView(isShippingView ? "explore_envios" : "explore_mobility")}
             className="size-12 rounded-2xl bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center text-slate-900 dark:text-white active:scale-90 transition-all border border-slate-100 dark:border-slate-700"
           >
             <span className="material-symbols-outlined font-black">arrow_back</span>
@@ -8447,7 +8315,7 @@ function App() {
                   const addr = place.formatted_address || "";
                   if (addr) {
                     setTransitData(prev => ({ ...prev, destination: addr }));
-                    // Manter precos anteriores ate novo calculo terminar
+                    setDistancePrices({});
                     setRouteDistance("");
                     calculateDistancePrices(transitData.origin, addr);
                   }
@@ -8474,120 +8342,78 @@ function App() {
           </div>
         )}
 
-        {/* Resumo da Corrida Selecionada */}
-        {(() => {
-          const vehicles: Record<string, { label: string; icon: string; color: string; desc: string }> = {
-            mototaxi: { label: "MotoTáxi", icon: "motorcycle", color: "from-yellow-400 to-orange-500", desc: "Rápido e econômico" },
-            carro: { label: "Carro Executivo", icon: "directions_car", color: "from-slate-700 to-slate-900", desc: "Conforto e segurança" },
-            van: { label: "Van de Carga", icon: "airport_shuttle", color: "from-blue-600 to-indigo-700", desc: "Para volumes maiores" },
-            utilitario: { label: "Entrega Express", icon: "bolt", color: "from-violet-500 to-purple-700", desc: "Entrega urgente" },
-          };
-          const v = vehicles[transitData.type] || vehicles.mototaxi;
-          const hasDistance = Object.keys(distancePrices).length > 0;
-          const basePrice = parseFloat(String(marketConditions.settings?.baseValues?.[transitData.type + "_min"] ?? 6.0)) || 6.0;
-          const rawPrice = hasDistance ? (distancePrices[transitData.type] ?? basePrice) : calculateDynamicPrice(basePrice);
-          const displayPrice = isNaN(rawPrice) || !rawPrice ? basePrice : rawPrice;
-          const hasSurge = marketConditions.settings?.baseValues?.isDynamicActive && marketConditions.surgeMultiplier > 1.05;
-          const etaFromRoute = routeDistance ? routeDistance.split("•")[1]?.trim() : null;
-          const etaFallback = transitData.type === "mototaxi" ? "3–5 min" : transitData.type === "carro" ? "6–10 min" : transitData.type === "van" ? "10–15 min" : "5–8 min";
-          const eta = etaFromRoute || etaFallback;
+        {/* Vehicle Selection: Luxury Horizontal Cards */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between px-2">
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">
+              Selecione o Serviço
+            </h3>
+            {marketConditions.surgeMultiplier > 1.1 && (
+              <span className="text-[10px] font-bold text-orange-500 flex items-center gap-1 bg-orange-50 px-2 py-1 rounded-full">
+                <span className="material-symbols-outlined text-sm">local_fire_department</span>
+                Alta demanda ×{marketConditions.surgeMultiplier.toFixed(1)}
+              </span>
+            )}
+            {marketConditions.surgeMultiplier <= 1.1 && (
+              <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-full">
+                <span className="material-symbols-outlined text-sm">bolt</span>
+                Preço normal
+              </span>
+            )}
+          </div>
 
-          return (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between px-2">
-                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Resumo da Corrida</h3>
-                {hasSurge && (
-                  <span className="text-[10px] font-bold text-orange-500 flex items-center gap-1 bg-orange-50 px-2 py-1 rounded-full">
-                    <span className="material-symbols-outlined text-sm">local_fire_department</span>
-                    Alta demanda ×{marketConditions.surgeMultiplier.toFixed(1)}
-                  </span>
-                )}
-                {!hasSurge && (
-                  <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-full">
-                    <span className="material-symbols-outlined text-sm">bolt</span>
-                    Preço normal
-                  </span>
-                )}
-              </div>
-
-              {/* Card do veiculo selecionado */}
-              <div className="bg-white dark:bg-slate-800 rounded-[35px] border-2 border-primary shadow-2xl shadow-primary/10 p-6 flex items-center gap-5">
-                <div className={`size-16 rounded-[22px] flex items-center justify-center shadow-xl bg-gradient-to-br ${v.color}`}>
-                  <span className="material-symbols-outlined text-white text-3xl font-black">{v.icon}</span>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-black text-slate-900 dark:text-white text-base tracking-tight">{v.label}</h4>
-                    <span className="text-[8px] font-black uppercase tracking-widest bg-primary text-slate-900 px-2 py-0.5 rounded-full">Selecionado</span>
-                  </div>
-                  <p className="text-[11px] font-bold text-slate-400">{v.desc}</p>
-                </div>
-                <button
-                  onClick={() => navigateSubView("none")}
-                  className="text-[10px] font-black text-primary uppercase tracking-widest bg-primary/10 px-3 py-2 rounded-xl active:scale-95 transition-all"
+          <div className="space-y-4">
+            {[
+              { id: "mototaxi", label: "MotoTáxi", icon: "motorcycle", time: "3-5 min", basePrice: marketConditions.settings.baseValues.mototaxi_min, desc: "Rápido e econômico para documentos e pacotes", color: "from-yellow-400 to-orange-500" },
+              { id: "carro", label: "Carro Executivo", icon: "directions_car", time: "6-10 min", basePrice: marketConditions.settings.baseValues.carro_min, desc: "Conforto e segurança para você ou suas compras", color: "from-slate-700 to-slate-900" },
+              { id: "van", label: "Van de Carga", icon: "airport_shuttle", time: "10-15 min", basePrice: marketConditions.settings.baseValues.van_min, desc: "Para volumes maiores e mudanças", color: "from-blue-600 to-indigo-700" },
+              { id: "utilitario", label: "Entrega Express", icon: "bolt", time: "5-8 min", basePrice: marketConditions.settings.baseValues.utilitario_min, desc: "Entrega urgente de encomendas", color: "from-violet-500 to-purple-700" }
+            ].map((v) => {
+              const hasDistance = Object.keys(distancePrices).length > 0;
+              const displayPrice = hasDistance ? distancePrices[v.id] : calculateDynamicPrice(v.basePrice);
+              const hasSurge = marketConditions.settings.baseValues.isDynamicActive && marketConditions.surgeMultiplier > 1.05;
+              return (
+                <motion.div
+                  key={v.id}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setTransitData({ ...transitData, type: v.id as any, estPrice: distancePrices[v.id] || 0 })}
+                  className={`p-6 rounded-[35px] border-2 transition-all duration-500 flex items-center gap-5 cursor-pointer relative overflow-hidden group ${transitData.type === v.id ? "bg-white dark:bg-slate-800 border-primary shadow-2xl shadow-primary/10" : "bg-white/50 dark:bg-slate-800/50 border-transparent opacity-60 hover:opacity-100 shadow-sm"}`}
                 >
-                  Trocar
-                </button>
-              </div>
-
-              {/* Detalhes da corrida */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white dark:bg-slate-800 rounded-[24px] p-4 text-center border border-slate-100 dark:border-slate-700">
-                  <span className="material-symbols-outlined text-primary text-xl block mb-1">schedule</span>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Chegada</p>
-                  <p className="text-sm font-black text-slate-900 dark:text-white">{eta}</p>
-                </div>
-                <div className="bg-white dark:bg-slate-800 rounded-[24px] p-4 text-center border border-slate-100 dark:border-slate-700">
-                  <span className="material-symbols-outlined text-primary text-xl block mb-1">route</span>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Distância</p>
-                  <p className="text-sm font-black text-slate-900 dark:text-white">{routeDistance ? routeDistance.split("•")[0].trim() : "—"}</p>
-                </div>
-                <div className={`rounded-[24px] p-4 text-center border ${hasSurge ? "bg-orange-50 border-orange-100" : "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700"}`}>
-                  <span className={`material-symbols-outlined text-xl block mb-1 ${hasSurge ? "text-orange-500" : "text-primary"}`}>payments</span>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Valor</p>
-                  {isCalculatingPrice ? (
-                    <div className="size-4 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-                  ) : (
-                    <p className={`text-sm font-black ${hasSurge ? "text-orange-500" : "text-slate-900 dark:text-white"}`}>
-                      R$ {(displayPrice ?? 0).toFixed(2).replace(".", ",")}
-                    </p>
+                  {transitData.type === v.id && (
+                    <div className="absolute top-0 right-0 size-24 bg-primary/5 rounded-full blur-2xl -mr-10 -mt-10" />
                   )}
-                </div>
-              </div>
+                  <div className={`size-16 rounded-[22px] flex items-center justify-center shadow-xl transition-transform duration-500 group-hover:scale-110 bg-gradient-to-br ${v.color}`}>
+                    <span className="material-symbols-outlined text-white text-3xl font-black">{v.icon}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-black text-slate-900 dark:text-white text-base tracking-tight leading-none mb-1">{v.label}</h4>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{v.time}</p>
+                    <p className="text-[10px] font-medium text-slate-400 mt-0.5 truncate">{v.desc}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    {hasDistance && hasSurge && (
+                      <p className="text-[9px] font-black text-slate-400 mb-0.5">
+                        ×{marketConditions.surgeMultiplier.toFixed(1)} surge
+                      </p>
+                    )}
+                    {isCalculatingPrice ? (
+                      <div className="size-5 border-2 border-primary border-t-transparent rounded-full animate-spin ml-auto"></div>
+                    ) : (
+                      <p className={`font-black text-lg tracking-tighter ${ hasSurge && hasDistance ? 'text-orange-500' : 'text-slate-900 dark:text-white'}`}>
+                        R$ {displayPrice.toFixed(2).replace('.', ',')}
+                      </p>
+                    )}
+                    {transitData.type === v.id && (
+                      <span className="inline-block text-[8px] font-black uppercase tracking-widest bg-primary text-slate-900 px-2 py-0.5 rounded-full mt-1">Selecionado</span>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
 
-              {/* Motoristas proximos reais */}
-              {nearbyDriversCount > 0 ? (
-                <div className="bg-white dark:bg-slate-800 rounded-[28px] p-5 border border-slate-100 dark:border-slate-700 flex items-center gap-4">
-                  <div className="flex -space-x-3">
-                    {nearbyDrivers.slice(0, 3).map((d, i) => (
-                      <div key={i} className="size-9 rounded-full bg-gradient-to-br from-primary to-orange-400 flex items-center justify-center text-slate-900 text-[10px] font-black border-2 border-white dark:border-slate-800">
-                        {d.name?.charAt(0).toUpperCase() || "M"}
-                      </div>
-                    ))}
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-slate-900 dark:text-white">{nearbyDriversCount} motorista{nearbyDriversCount > 1 ? "s" : ""} disponível{nearbyDriversCount > 1 ? "s" : ""}</p>
-                    <p className="text-[10px] font-bold text-slate-400">
-                      {nearbyDrivers.filter(d => d.vehicle_type === transitData.type).length > 0
-                        ? `${nearbyDrivers.filter(d => d.vehicle_type === transitData.type).length} com ${transitData.type}`
-                        : "Todos os tipos disponíveis"}
-                    </p>
-                  </div>
-                  <div className="ml-auto size-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <div className="size-3 rounded-full bg-emerald-500 animate-pulse" />
-                  </div>
-                </div>
-              ) : isCalculatingPrice ? (
-                <div className="bg-white dark:bg-slate-800 rounded-[28px] p-5 border border-slate-100 dark:border-slate-700 flex items-center gap-3">
-                  <div className="size-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  <p className="text-sm font-bold text-slate-400">Buscando motoristas...</p>
-                </div>
-              ) : null}
-            </div>
-          );
-        })()}
-
-                {/* Dynamic History & Favorites */}
+        {/* Dynamic History & Favorites */}
         <div className="space-y-6">
           {transitHistory.length > 0 && (
             <div className="space-y-4">
@@ -8631,6 +8457,7 @@ function App() {
                     onClick={() => {
                       const dest = `${addr.street}${addr.details ? ', ' + addr.details : ''}`;
                       setTransitData({ ...transitData, destination: dest });
+                      setDistancePrices({});
                       calculateDistancePrices(transitData.origin, dest);
                     }}
                   >
@@ -8641,13 +8468,24 @@ function App() {
                     <p className="text-[9px] font-bold text-slate-400 truncate w-full">{addr.street}</p>
                   </div>
                 );
-              }) : (
-                <div className="bg-white dark:bg-slate-800 p-5 rounded-[30px] border border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center text-center min-w-[220px]">
-                  <span className="material-symbols-outlined text-slate-300 text-3xl mb-2">location_on</span>
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Nenhum endereço salvo</p>
-                  <p className="text-[10px] font-bold text-slate-400 mt-1">Adicione endereços no perfil</p>
+              }) : [
+                { icon: "home", label: "Casa", text: savedAddresses[0]?.street || "Adicione seu endereço" },
+                { icon: "work", label: "Trabalho", text: savedAddresses[1]?.street || "Adicione no perfil" },
+                { icon: "local_hospital", label: "Hospital", text: "Hospital das Clínicas" },
+                { icon: "local_mall", label: "Shopping", text: "Shopping Eldorado" },
+              ].map((s, i) => (
+                <div
+                  key={i}
+                  className="min-w-[140px] bg-white dark:bg-slate-800 p-5 rounded-[30px] shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer active:scale-95 transition-all group flex flex-col items-center text-center"
+                  onClick={() => setTransitData({ ...transitData, destination: s.text })}
+                >
+                  <div className="size-10 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center mb-3 group-hover:bg-primary transition-colors">
+                    <span className="material-symbols-outlined text-slate-400 group-hover:text-slate-900 text-xl">{s.icon}</span>
+                  </div>
+                  <p className="text-[10px] font-black uppercase text-slate-800 dark:text-slate-200 tracking-widest leading-none mb-1">{s.label}</p>
+                  <p className="text-[9px] font-bold text-slate-400 truncate w-full">{s.text}</p>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         </div>
@@ -8666,9 +8504,8 @@ function App() {
                   R$ {(() => {
                     const bv = marketConditions.settings.baseValues;
                     const basePrices: Record<string, number> = { mototaxi: bv.mototaxi_min, carro: bv.carro_min, van: bv.van_min, utilitario: bv.utilitario_min };
-                    const rawP = distancePrices[transitData.type] || calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min);
-                    const p = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || bv.mototaxi_min || 6) : rawP;
-                    return (p ?? 0).toFixed(2).replace('.', ',');
+                    const p = distancePrices[transitData.type] || calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min);
+                    return p.toFixed(2).replace('.', ',');
                   })()}
                 </span>
               )}
@@ -8697,255 +8534,6 @@ function App() {
     </div>
     );
   };
-
-  // ─── Tela de Pagamento da Mobilidade ─────────────────────────────────────
-  const renderMobilityPayment = () => {
-    const bv = marketConditions.settings.baseValues;
-    const basePrices: Record<string, number> = { mototaxi: bv.mototaxi_min, carro: bv.carro_min, van: bv.van_min, utilitario: bv.utilitario_min };
-    const price = (transitData.estPrice > 0 ? transitData.estPrice : calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min)) ?? 0;
-
-    const serviceLabels: Record<string, { label: string; icon: string }> = {
-      mototaxi: { label: "MotoTáxi", icon: "motorcycle" },
-      carro: { label: "Carro Executivo", icon: "directions_car" },
-      van: { label: "Van de Carga", icon: "airport_shuttle" },
-      utilitario: { label: "Entrega Express", icon: "bolt" },
-    };
-    const service = serviceLabels[transitData.type] || { label: "Serviço", icon: "local_shipping" };
-    const activeCard = savedCards.find((c: any) => c.active);
-
-    return (
-      <div className="absolute inset-0 z-[115] bg-[#F8FAFC] dark:bg-slate-950 flex flex-col hide-scrollbar overflow-y-auto">
-        {/* Header */}
-        <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-2xl border-b border-slate-100 dark:border-white/5 px-6 py-5 flex items-center gap-4">
-          <button onClick={() => setSubView("transit_selection")} className="size-11 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 flex items-center justify-center active:scale-90 transition-all">
-            <span className="material-symbols-outlined font-black">arrow_back</span>
-          </button>
-          <div>
-            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tighter">Confirmar Serviço</h2>
-            <p className="text-[10px] font-black text-primary uppercase tracking-widest">Escolha como pagar</p>
-          </div>
-        </header>
-
-        <div className="flex-1 px-6 py-6 space-y-6 pb-40">
-          {/* Resumo do serviço */}
-          <div className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[40px] p-6 space-y-5">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Resumo da Solicitação</h3>
-            <div className="flex items-center gap-4">
-              <div className="size-14 rounded-[22px] bg-primary/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary text-2xl font-black">{service.icon}</span>
-              </div>
-              <div className="flex-1">
-                <p className="font-black text-slate-900 dark:text-white text-base">{service.label}</p>
-                <p className="text-xs text-slate-400 truncate mt-0.5">
-                  {transitData.origin.split(",")[0]} → {transitData.destination.split(",")[0]}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  R$ {price.toFixed(2).replace(".", ",")}
-                </p>
-                {transitData.scheduled && (
-                  <p className="text-[9px] font-black text-primary uppercase tracking-widest mt-0.5">Agendado</p>
-                )}
-              </div>
-            </div>
-
-            {/* Rota detalhada */}
-            <div className="bg-slate-50 dark:bg-black/20 rounded-[24px] p-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="mt-1.5 size-2 rounded-full bg-primary shrink-0" />
-                <div>
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Origem</p>
-                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{transitData.origin}</p>
-                </div>
-              </div>
-              <div className="ml-[3px] h-4 w-[1px] bg-slate-200 dark:bg-white/10" />
-              <div className="flex items-start gap-3">
-                <div className="mt-1.5 size-2 rounded-full bg-orange-500 shrink-0" />
-                <div>
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Destino</p>
-                  <p className="text-xs font-bold text-slate-900 dark:text-white">{transitData.destination}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Métodos de pagamento */}
-          <div className="space-y-3">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Forma de Pagamento</h3>
-
-            {/* Cartão salvo */}
-            {activeCard && activeCard.stripe_payment_method_id && (
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleConfirmMobility("cartao")}
-                disabled={isLoading}
-                className="w-full bg-slate-900 dark:bg-white/5 border-2 border-primary/20 rounded-[28px] p-5 flex items-center gap-4 active:scale-[0.98] transition-all"
-              >
-                <div className="size-12 rounded-[18px] bg-primary/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-primary text-xl">credit_card</span>
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="font-black text-white text-sm">{activeCard.brand} ••••{activeCard.last4}</p>
-                  <p className="text-[10px] text-white/40 uppercase tracking-widest">Débito instantâneo</p>
-                </div>
-                <span className="material-symbols-outlined text-primary font-black">arrow_forward</span>
-              </motion.button>
-            )}
-
-            {/* PIX */}
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleConfirmMobility("pix")}
-              disabled={isLoading}
-              className="w-full bg-white dark:bg-white/5 border border-emerald-200 dark:border-emerald-500/20 rounded-[28px] p-5 flex items-center gap-4 active:scale-[0.98] transition-all"
-            >
-              <div className="size-12 rounded-[18px] bg-emerald-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-emerald-500 text-xl">qr_code_2</span>
-              </div>
-              <div className="flex-1 text-left">
-                <p className="font-black text-slate-900 dark:text-white text-sm">PIX</p>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Aprovação imediata</p>
-              </div>
-              <span className="material-symbols-outlined text-slate-400 font-black">arrow_forward</span>
-            </motion.button>
-
-            {/* Saldo */}
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleConfirmMobility("saldo")}
-              disabled={isLoading || walletBalance < price}
-              className="w-full bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[28px] p-5 flex items-center gap-4 active:scale-[0.98] transition-all disabled:opacity-40"
-            >
-              <div className="size-12 rounded-[18px] bg-blue-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-blue-500 text-xl">account_balance_wallet</span>
-              </div>
-              <div className="flex-1 text-left">
-                <p className="font-black text-slate-900 dark:text-white text-sm">Saldo em Carteira</p>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest">R$ {walletBalance.toFixed(2).replace(".", ",")} disponível</p>
-              </div>
-              {walletBalance < price ? (
-                <span className="text-[9px] font-black text-red-400 uppercase">Insuficiente</span>
-              ) : (
-                <span className="material-symbols-outlined text-slate-400 font-black">arrow_forward</span>
-              )}
-            </motion.button>
-
-            {/* Dinheiro */}
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleConfirmMobility("dinheiro")}
-              disabled={isLoading}
-              className="w-full bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[28px] p-5 flex items-center gap-4 active:scale-[0.98] transition-all"
-            >
-              <div className="size-12 rounded-[18px] bg-slate-100 dark:bg-white/5 flex items-center justify-center">
-                <span className="material-symbols-outlined text-slate-600 dark:text-slate-400 text-xl">payments</span>
-              </div>
-              <div className="flex-1 text-left">
-                <p className="font-black text-slate-900 dark:text-white text-sm">Dinheiro</p>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Pague ao prestador</p>
-              </div>
-              <span className="material-symbols-outlined text-slate-400 font-black">arrow_forward</span>
-            </motion.button>
-          </div>
-
-          {/* Badge segurança */}
-          <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 border-dashed p-4 rounded-[24px]">
-            <span className="material-symbols-outlined text-primary text-xl">shield_with_heart</span>
-            <p className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest">Pagamento 100% seguro e criptografado</p>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // ─── Tela de Aguardando Motorista ────────────────────────────────────────
-  const renderWaitingDriver = () => {
-    if (!selectedItem) return null;
-
-    const serviceLabels: Record<string, { label: string; icon: string; color: string }> = {
-      mototaxi: { label: "MotoTáxi", icon: "motorcycle", color: "text-primary" },
-      carro: { label: "Carro Executivo", icon: "directions_car", color: "text-slate-600" },
-      van: { label: "Van de Carga", icon: "airport_shuttle", color: "text-blue-500" },
-      utilitario: { label: "Entrega Express", icon: "bolt", color: "text-purple-500" },
-    };
-    const service = serviceLabels[selectedItem.service_type] || { label: "Serviço", icon: "local_shipping", color: "text-primary" };
-
-    return (
-      <div className="absolute inset-0 z-[115] bg-[#020617] flex flex-col items-center justify-center p-8 text-white overflow-hidden">
-        {/* Fundo animado */}
-        <div className="absolute inset-0 opacity-5 bg-[linear-gradient(rgba(255,217,0,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,217,0,0.1)_1px,transparent_1px)] bg-[size:32px_32px]" />
-
-        {/* Radar */}
-        <div className="relative mb-10">
-          <motion.div animate={{ scale: [1, 2.5], opacity: [0.4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }} className="absolute inset-0 bg-primary/20 rounded-full" />
-          <motion.div animate={{ scale: [1, 2], opacity: [0.3, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeOut", delay: 0.6 }} className="absolute inset-0 bg-primary/20 rounded-full" />
-          <div className="relative size-24 bg-primary/10 border border-primary/30 rounded-full flex items-center justify-center">
-            <span className={`material-symbols-outlined text-4xl ${service.color}`}>{service.icon}</span>
-          </div>
-        </div>
-
-        <h2 className="text-2xl font-black text-white tracking-tight text-center mb-2">Buscando Prestador</h2>
-        <p className="text-white/40 text-sm text-center mb-8 max-w-xs">Estamos encontrando o melhor prestador disponível para você</p>
-
-        {/* Info do pedido */}
-        <div className="w-full max-w-sm bg-white/5 border border-white/10 rounded-[32px] p-6 space-y-4 mb-8">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Serviço</span>
-            <span className="text-sm font-black text-white">{service.label}</span>
-          </div>
-          <div className="h-px bg-white/5" />
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="mt-1.5 size-2 rounded-full bg-primary shrink-0" />
-              <p className="text-xs text-white/60 leading-tight">{selectedItem.pickup_address}</p>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="mt-1.5 size-2 rounded-full bg-orange-500 shrink-0" />
-              <p className="text-xs text-white/80 font-bold leading-tight">{selectedItem.delivery_address}</p>
-            </div>
-          </div>
-          <div className="h-px bg-white/5" />
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Valor</span>
-            <span className="text-xl font-black text-primary">R$ {Number(selectedItem.total_price).toFixed(2).replace(".", ",")}</span>
-          </div>
-        </div>
-
-        {/* Cancelar */}
-        <button
-          onClick={async () => {
-            if (!await showConfirm({ message: "Cancelar a solicitação?" })) return;
-            await supabase.from("orders_delivery").update({ status: "cancelado" }).eq("id", selectedItem.id);
-            setSubView("none");
-            fetchMyOrders(userId!);
-            toastSuccess("Solicitação cancelada.");
-          }}
-          className="text-white/30 font-black text-[10px] uppercase tracking-widest border border-white/10 px-6 py-3 rounded-2xl hover:bg-white/5 transition-all active:scale-95"
-        >
-          Cancelar Solicitação
-        </button>
-
-        {/* Auto-redireciona para active_order quando driver aceita */}
-        {selectedItem?.status && ["a_caminho", "aceito", "confirmado", "em_rota", "no_local"].includes(selectedItem.status) && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute bottom-10 left-6 right-6"
-          >
-            <button
-              onClick={() => setSubView("active_order")}
-              className="w-full bg-primary text-slate-900 font-black py-5 rounded-[24px] shadow-2xl shadow-primary/30 flex items-center justify-center gap-3 text-sm uppercase tracking-widest"
-            >
-              <span className="material-symbols-outlined font-black">navigation</span>
-              Motorista Encontrado! Acompanhar
-            </button>
-          </motion.div>
-        )}
-      </div>
-    );
-  };
-
   const renderPaymentProcessing = () => {
     return (
       <div className="absolute inset-0 z-[150] bg-slate-900 flex flex-col items-center justify-center p-8 text-center text-white overflow-hidden">
@@ -9577,30 +9165,6 @@ function App() {
                   className="absolute inset-0 z-[110]"
                 >
                   {renderTransitSelection()}
-                </motion.div>
-              )}
-              {subView === "mobility_payment" && (
-                <motion.div
-                  key="mob_pay"
-                  initial={{ x: "100%" }}
-                  animate={{ x: 0 }}
-                  exit={{ x: "100%" }}
-                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-                  className="absolute inset-0 z-[115]"
-                >
-                  {renderMobilityPayment()}
-                </motion.div>
-              )}
-              {subView === "waiting_driver" && (
-                <motion.div
-                  key="wait_drv"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="absolute inset-0 z-[115]"
-                >
-                  {renderWaitingDriver()}
                 </motion.div>
               )}
               {subView === "shipping_details" && (

@@ -333,7 +333,7 @@ function App() {
     try {
       const { data, error } = await supabase
         .from('admin_users')
-        .select('id, role, merchant_id, store_name, store_logo, store_description, store_banner, store_phone, delivery_radius, dispatch_priority, scheduling_priority, opening_hours, store_address, is_open, is_active, store_type, free_delivery')
+        .select('id, role, merchant_id, store_name, store_logo, store_description, store_banner, store_phone, delivery_radius, dispatch_priority, scheduling_priority, opening_hours, store_address, is_open, is_active, store_type')
         .eq('email', cleanEmail)
         .maybeSingle();
 
@@ -361,7 +361,6 @@ function App() {
             dispatch_priority: data.dispatch_priority || 'global',
             scheduling_priority: data.scheduling_priority || 'global',
             is_open: data.is_open ?? true,
-            free_delivery: data.free_delivery ?? false,
             store_type: data.store_type || 'restaurant'
           });
         } else {
@@ -426,11 +425,6 @@ function App() {
           await fetchMenuCategories();
           await fetchMyDedicatedSlots();
         }
-      }
-      if (activeTab === 'my_studio') {
-        await fetchProducts();
-        await fetchMenuCategories();
-        await fetchMyDedicatedSlots();
       }
       if (activeTab === 'audit_logs') await fetchAuditLogs();
       if (activeTab === 'my_drivers') await fetchMyDrivers();
@@ -539,17 +533,17 @@ function App() {
           : supabase.from('drivers_delivery').select('*', { count: 'exact', head: true }).eq('merchant_id', adminId),
         isAdmin
           ? supabase.from('orders_delivery').select('*', { count: 'exact', head: true })
-          : supabase.from('orders_delivery').select('id', { count: 'exact', head: true }).order('created_at', { ascending: false }),
+          : supabase.from('orders_delivery').select('id', { count: 'exact', head: true }).or(`merchant_id.eq.${adminId},merchant_id.is.null`).order('created_at', { ascending: false }),
         isAdmin
           ? supabase.from('drivers_delivery').select('*', { count: 'exact', head: true }).eq('is_online', true)
           : supabase.from('drivers_delivery').select('*', { count: 'exact', head: true }).eq('merchant_id', adminId).eq('is_online', true),
         isAdmin
           ? supabase.from('orders_delivery').select('*').order('created_at', { ascending: false }).limit(5)
-          : supabase.from('orders_delivery').select('*').limit(5),
+          : supabase.from('orders_delivery').select('*').or(`merchant_id.eq.${adminId},merchant_id.is.null`).order('created_at', { ascending: false }).limit(5),
         // Receita real: soma de total_amount dos pedidos concluídos
         isAdmin
           ? supabase.from('orders_delivery').select('total_amount').eq('status', 'concluido')
-          : supabase.from('orders_delivery').select('total_amount').eq('status', 'concluido').eq('merchant_id', adminId)
+          : supabase.from('orders_delivery').select('total_amount').eq('status', 'concluido').or(`merchant_id.eq.${adminId},merchant_id.is.null`)
       ]);
 
       const revenueData = results[5].data ?? [];
@@ -693,11 +687,11 @@ function App() {
       const to = from + ORDERS_PER_PAGE - 1;
 
       if (userRole === 'merchant' && merchantProfile?.merchant_id) {
-        // Paginação para lojista
+        // Paginação para lojista — inclui pedidos sem merchant_id definido
         const { data, error, count } = await supabase
           .from('orders_delivery')
           .select('*', { count: 'exact' })
-          .eq('merchant_id', merchantProfile.merchant_id)
+          .or(`merchant_id.eq.${merchantProfile.merchant_id},merchant_id.is.null`)
           .order('created_at', { ascending: false })
           .range(from, to);
 
@@ -6568,32 +6562,6 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                          className={`w-12 h-6 rounded-full relative p-1 transition-all ${merchantProfile?.is_open ? 'bg-emerald-500' : 'bg-slate-300'}`}
                        >
                          <div className={`w-4 h-4 bg-white rounded-full transition-all ${merchantProfile?.is_open ? 'ml-auto' : 'ml-0'}`}></div>
-                       </button>
-                    </div>
-                    <div className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2">
-                       <span className={`text-[10px] font-black uppercase tracking-widest ${(merchantProfile as any)?.free_delivery ? 'text-emerald-500' : 'text-slate-400'}`}>
-                         {(merchantProfile as any)?.free_delivery ? 'Frete Grátis ON' : 'Frete Grátis OFF'}
-                       </span>
-                       <button
-                         onClick={async () => {
-                           const prevState = (merchantProfile as any).free_delivery;
-                           const newState = !prevState;
-                           setMerchantProfile({ ...merchantProfile, free_delivery: newState } as any);
-                           try {
-                             const { error } = await supabase
-                               .from('admin_users')
-                               .update({ free_delivery: newState })
-                               .eq('id', merchantProfile.merchant_id);
-                             if (error) throw error;
-                             toastSuccess(newState ? 'Frete grátis ativado! 🎉' : 'Frete grátis desativado.');
-                           } catch (err: any) {
-                             setMerchantProfile({ ...merchantProfile, free_delivery: prevState } as any);
-                             toastError('Erro ao alterar frete: ' + err.message);
-                           }
-                         }}
-                         className={`w-12 h-6 rounded-full relative p-1 transition-all ${(merchantProfile as any)?.free_delivery ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                       >
-                         <div className={`w-4 h-4 bg-white rounded-full transition-all ${(merchantProfile as any)?.free_delivery ? 'ml-auto' : 'ml-0'}`}></div>
                        </button>
                     </div>
                     <span className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
