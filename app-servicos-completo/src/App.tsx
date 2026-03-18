@@ -193,23 +193,39 @@ const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClear, clas
     }
   };
 
-  const fetchSuggestions = (input: string) => {
+  const fetchSuggestions = async (input: string) => {
     if (!input || input.length < 3) { setSuggestions([]); setOpen(false); return; }
-    if (!googleReady || !(window as any).google?.maps?.places) return;
-    const service = new (window as any).google.maps.places.AutocompleteService();
-    service.getPlacePredictions(
-      { input, componentRestrictions: { country: "br" }, language: "pt-BR" },
-      (predictions: any[]) => {
-        if (predictions && predictions.length > 0) {
-          setSuggestions(predictions);
-          updateDropdownPos();
-          setOpen(true);
-        } else {
-          setSuggestions([]);
-          setOpen(false);
+    try {
+      const apiKey = "AIzaSyAhmPK3-Wpa8iEpusCluHKUBP-NmlkR0hw";
+      const res = await fetch(
+        `https://places.googleapis.com/v1/places:autocomplete`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey },
+          body: JSON.stringify({ input, includedRegionCodes: ["br"], languageCode: "pt-BR" }),
         }
+      );
+      const data = await res.json();
+      const predictions = (data.suggestions || []).map((s: any) => ({
+        description: s.placePrediction?.text?.text || "",
+        place_id: s.placePrediction?.placeId || "",
+        structured_formatting: {
+          main_text: s.placePrediction?.structuredFormat?.mainText?.text || "",
+          secondary_text: s.placePrediction?.structuredFormat?.secondaryText?.text || "",
+        }
+      })).filter((p: any) => p.description);
+      if (predictions.length > 0) {
+        setSuggestions(predictions);
+        updateDropdownPos();
+        setOpen(true);
+      } else {
+        setSuggestions([]);
+        setOpen(false);
       }
-    );
+    } catch {
+      setSuggestions([]);
+      setOpen(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -968,21 +984,36 @@ function App() {
       : basePrice;
   };
 
-  // Calcula preços realistas em tempo real usando distância da rota
-  const calculateDistancePrices = (origin: string, destination: string) => {
-    if (!origin || !destination || !(window as any).google?.maps) return;
+  // Calcula preços usando Routes API (nova, não deprecated)
+  const calculateDistancePrices = async (origin: string, destination: string) => {
+    if (!origin || !destination) return;
     setIsCalculatingPrice(true);
-    const service = new (window as any).google.maps.DistanceMatrixService();
-    service.getDistanceMatrix(
-      { origins: [origin], destinations: [destination], travelMode: "DRIVING", language: "pt-BR" },
-      (response: any, status: string) => {
-        setIsCalculatingPrice(false);
-        if (status === "OK" && response?.rows?.[0]?.elements?.[0]?.status === "OK") {
-          const element = response.rows[0].elements[0];
-          const distKm = element.distance.value / 1000;
-          const durationText = element.duration.text;
-          const distText = element.distance.text;
-          setRouteDistance(`${distText} • ${durationText}`);
+    try {
+      const apiKey = "AIzaSyAhmPK3-Wpa8iEpusCluHKUBP-NmlkR0hw";
+      const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask": "routes.duration,routes.distanceMeters",
+        },
+        body: JSON.stringify({
+          origin: { address: origin },
+          destination: { address: destination },
+          travelMode: "DRIVE",
+          languageCode: "pt-BR",
+        }),
+      });
+      const data = await res.json();
+      setIsCalculatingPrice(false);
+      if (data?.routes?.[0]) {
+        const route = data.routes[0];
+        const distKm = (route.distanceMeters || 0) / 1000;
+        const secs = parseInt(route.duration?.replace("s","") || "0");
+        const mins = Math.round(secs / 60);
+        const durationText = mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60}min` : `${mins} min`;
+        const distText = distKm < 1 ? `${Math.round(distKm*1000)} m` : `${distKm.toFixed(1)} km`;
+        setRouteDistance(`${distText} • ${durationText}`);
           const bv = marketConditions.settings.baseValues;
           const surge = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
           const mototaxi_min = parseFloat(String(bv.mototaxi_min)) || 6.0;
@@ -1015,9 +1046,11 @@ function App() {
                 setNearbyDriversCount(data.length);
               }
             });
-        }
       }
-    );
+    } catch {
+    } finally {
+      setIsCalculatingPrice(false);
+    }
   };
 
   // Auto-rotate ad banner
