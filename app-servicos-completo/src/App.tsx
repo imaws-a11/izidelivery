@@ -1268,7 +1268,6 @@ function App() {
               'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! 🛵',
               'em_rota': 'O motorista está a caminho do destino! 🚗',
               'no_local': 'O motorista chegou ao local! 📍',
-              'concluido': 'Pedido entregue! Bom apetite! 😋',
               'concluido': 'Pedido finalizado com sucesso! Obrigado por usar Izi. ✨',
               'cancelado': 'Ah não, seu pedido foi cancelado. 🛑'
             };
