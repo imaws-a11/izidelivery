@@ -156,7 +156,7 @@ function loadGoogleMapsScript(callback: () => void) {
   document.head.appendChild(script);
 }
 
-const AddressSearchInput = ({ placeholder, initialValue, onSelect, className }: any) => {
+const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClear, className }: any) => {
   const [query, setQuery] = useState(initialValue || "");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
@@ -216,7 +216,20 @@ const AddressSearchInput = ({ placeholder, initialValue, onSelect, className }: 
     const val = e.target.value;
     setQuery(val);
     clearTimeout(debounceRef.current);
+    if (!val) {
+      setSuggestions([]);
+      setOpen(false);
+      if (onClear) onClear();
+      return;
+    }
     debounceRef.current = setTimeout(() => fetchSuggestions(val), 400);
+  };
+
+  const handleClear = () => {
+    setQuery("");
+    setSuggestions([]);
+    setOpen(false);
+    if (onClear) onClear();
   };
 
   const handleSelect = (prediction: any) => {
@@ -292,19 +305,30 @@ const AddressSearchInput = ({ placeholder, initialValue, onSelect, className }: 
 
   return (
     <div ref={wrapperRef} style={{ position: "relative", width: "100%" }}>
-      <input
-        type="text"
-        value={query}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className={className}
-        autoComplete="off"
-        onFocus={() => {
-          updateDropdownPos();
-          if (suggestions.length > 0) setOpen(true);
-        }}
-      />
+      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+        <input
+          type="text"
+          value={query}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className={className}
+          autoComplete="off"
+          style={{ paddingRight: query ? "2.5rem" : undefined }}
+          onFocus={() => {
+            updateDropdownPos();
+            if (suggestions.length > 0) setOpen(true);
+          }}
+        />
+        {query && (
+          <button
+            onMouseDown={(e) => { e.preventDefault(); handleClear(); }}
+            style={{ position: "absolute", right: "12px", background: "rgba(100,116,139,0.15)", border: "none", borderRadius: "50%", width: "22px", height: "22px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, zIndex: 10 }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: "14px", color: "#94a3b8" }}>close</span>
+          </button>
+        )}
+      </div>
       {dropdown}
     </div>
   );
@@ -950,12 +974,7 @@ function App() {
     setIsCalculatingPrice(true);
     const service = new (window as any).google.maps.DistanceMatrixService();
     service.getDistanceMatrix(
-      {
-        origins: [origin],
-        destinations: [destination],
-        travelMode: "DRIVING",
-        language: "pt-BR",
-      },
+      { origins: [origin], destinations: [destination], travelMode: "DRIVING", language: "pt-BR" },
       (response: any, status: string) => {
         setIsCalculatingPrice(false);
         if (status === "OK" && response?.rows?.[0]?.elements?.[0]?.status === "OK") {
@@ -964,17 +983,25 @@ function App() {
           const durationText = element.duration.text;
           const distText = element.distance.text;
           setRouteDistance(`${distText} • ${durationText}`);
-          
           const bv = marketConditions.settings.baseValues;
-          const surge = bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0;
-          // Taxa por km por tipo + tarifa mínima via BD
-          const prices = {
-            mototaxi: Math.max(bv.mototaxi_min, bv.mototaxi_km * distKm * surge),
-            carro: Math.max(bv.carro_min, bv.carro_km * distKm * surge),
-            van: Math.max(bv.van_min, bv.van_km * distKm * surge),
-            utilitario: Math.max(bv.utilitario_min, bv.utilitario_km * distKm * surge),
+          const surge = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
+          const mototaxi_min = parseFloat(String(bv.mototaxi_min)) || 6.0;
+          const mototaxi_km  = parseFloat(String(bv.mototaxi_km))  || 2.5;
+          const carro_min    = parseFloat(String(bv.carro_min))    || 14.0;
+          const carro_km     = parseFloat(String(bv.carro_km))     || 4.5;
+          const van_min      = parseFloat(String(bv.van_min))      || 35.0;
+          const van_km       = parseFloat(String(bv.van_km))       || 8.0;
+          const utilitario_min = parseFloat(String(bv.utilitario_min)) || 10.0;
+          const utilitario_km  = parseFloat(String(bv.utilitario_km))  || 3.0;
+          const newPrices = {
+            mototaxi:   parseFloat((Math.max(mototaxi_min,   mototaxi_km   * distKm * surge)).toFixed(2)),
+            carro:      parseFloat((Math.max(carro_min,       carro_km      * distKm * surge)).toFixed(2)),
+            van:        parseFloat((Math.max(van_min,         van_km        * distKm * surge)).toFixed(2)),
+            utilitario: parseFloat((Math.max(utilitario_min,  utilitario_km * distKm * surge)).toFixed(2)),
           };
-          setDistancePrices(prices);
+          setDistancePrices(newPrices);
+          // Atualizar estPrice no transitData para uso no pagamento
+          setTransitData(prev => ({ ...prev, estPrice: newPrices[prev.type] || newPrices.mototaxi }));
 
           // Buscar motoristas online reais
           supabase
@@ -1000,6 +1027,14 @@ function App() {
     }, 4000);
     return () => clearInterval(adTimer);
   }, []);
+
+  // Recalcular preços ao entrar na tela transit_selection com rota já definida
+  useEffect(() => {
+    if (subView === "transit_selection" && transitData.origin && transitData.destination && Object.keys(distancePrices).length === 0) {
+      setRouteDistance("");
+      calculateDistancePrices(transitData.origin, transitData.destination);
+    }
+  }, [subView]);
 
   // Simular movimento do entregador
   useEffect(() => {
@@ -8223,7 +8258,13 @@ function App() {
                  placeholder="Digite o endereço..."
                  className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 dark:text-white"
                  onSelect={(place: google.maps.places.PlaceResult) => {
-                   setTransitData({...transitData, destination: place.formatted_address || ""});
+                   const dest = place.formatted_address || "";
+                   setTransitData(prev => ({ ...prev, destination: dest }));
+                   if (dest && transitData.origin) {
+                     setDistancePrices({});
+                     setRouteDistance("");
+                     calculateDistancePrices(transitData.origin, dest);
+                   }
                  }}
                />
             </div>
@@ -8413,7 +8454,34 @@ function App() {
               <span className="material-symbols-outlined text-slate-900 font-black">my_location</span>
             </div>
             <div className="flex-1">
-              <p className="text-[9px] font-black uppercase text-slate-400 tracking-[0.25em] mb-1.5 ml-1">Origem Atual</p>
+              <div className="flex items-center justify-between mb-1.5 ml-1">
+                <p className="text-[9px] font-black uppercase text-slate-400 tracking-[0.25em]">Origem Atual</p>
+                <button
+                  onClick={() => {
+                    if (!navigator.geolocation) return;
+                    navigator.geolocation.getCurrentPosition((pos) => {
+                      const { latitude, longitude } = pos.coords;
+                      if (!(window as any).google?.maps) return;
+                      const geocoder = new (window as any).google.maps.Geocoder();
+                      geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results: any, status: any) => {
+                        if (status === "OK" && results[0]) {
+                          const addr = results[0].formatted_address;
+                          setTransitData(prev => ({ ...prev, origin: addr }));
+                          if (addr && transitData.destination) {
+                            setDistancePrices({});
+                            setRouteDistance("");
+                            calculateDistancePrices(addr, transitData.destination);
+                          }
+                        }
+                      });
+                    }, () => toastError("Não foi possível obter sua localização."));
+                  }}
+                  className="flex items-center gap-1 text-[9px] font-black text-primary uppercase tracking-widest bg-primary/10 px-2.5 py-1.5 rounded-xl active:scale-95 transition-all"
+                >
+                  <span className="material-symbols-outlined text-sm">my_location</span>
+                  Usar minha localização
+                </button>
+              </div>
               <AddressSearchInput 
                 isLoaded={isLoaded}
                 initialValue={transitData.origin}
@@ -8421,7 +8489,13 @@ function App() {
                 className="w-full bg-slate-50 dark:bg-slate-900/50 border-none px-4 py-3.5 rounded-2xl text-[14px] font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                 onSelect={(place: google.maps.places.PlaceResult) => {
                   if (place.formatted_address) {
-                    setTransitData(prev => ({ ...prev, origin: place.formatted_address || "" }));
+                    const newOrigin = place.formatted_address;
+                    setTransitData(prev => ({ ...prev, origin: newOrigin }));
+                    if (newOrigin && transitData.destination) {
+                      setDistancePrices({});
+                      setRouteDistance("");
+                      calculateDistancePrices(newOrigin, transitData.destination);
+                    }
                   }
                 }}
               />
@@ -8446,11 +8520,20 @@ function App() {
                 onSelect={(place: any) => {
                   const addr = place.formatted_address || "";
                   if (addr) {
-                    setTransitData(prev => ({ ...prev, destination: addr }));
-                    // Manter precos anteriores ate novo calculo terminar
+                    setTransitData(prev => ({ ...prev, destination: addr, estPrice: 0 }));
                     setRouteDistance("");
+                    setDistancePrices({});
                     calculateDistancePrices(transitData.origin, addr);
+                  } else {
+                    setTransitData(prev => ({ ...prev, destination: "", estPrice: 0 }));
+                    setRouteDistance("");
+                    setDistancePrices({});
                   }
+                }}
+                onClear={() => {
+                  setTransitData(prev => ({ ...prev, destination: "", estPrice: 0 }));
+                  setRouteDistance("");
+                  setDistancePrices({});
                 }}
               />
             </div>
