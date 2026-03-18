@@ -2298,7 +2298,7 @@ function App() {
         <main className="flex flex-col gap-12 pt-6">
           {/* Active Order Widget: Premium Design */}
           {(() => {
-            const activeOrder = myOrders.find(o => !["concluido", "cancelado"].includes(o.status));
+            const activeOrder = myOrders.find(o => !["concluido", "cancelado", "agendado"].includes(o.status));
             if (!activeOrder) return null;
 
             const isCarService = ['carro', 'van', 'utilitario'].includes(activeOrder.service_type);
