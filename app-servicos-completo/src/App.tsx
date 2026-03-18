@@ -552,6 +552,7 @@ function App() {
     | "order_feedback"
     | "mobility_payment"
     | "waiting_driver"
+    | "scheduled_order"
   >("none");
 
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; expirationDate: string } | null>(null);
@@ -571,6 +572,10 @@ function App() {
   const [userLevel] = useState(12);
   const [nextLevelXP] = useState(2500);
   const [isAIOpen, setIsAIOpen] = useState(false);
+  const [schedObsState, setSchedObsState] = useState('');
+  const [schedChatInputState, setSchedChatInputState] = useState('');
+  const [schedMessagesState, setSchedMessagesState] = useState<{id: string; text: string; from: 'user'|'driver'; time: string}[]>([]);
+  const [isSavingObsState, setIsSavingObsState] = useState(false);
   const [aiMessage, setAiMessage] = useState("Olá! Sou seu assistente Izi. Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?");
   const [showInfinityCard, setShowInfinityCard] = useState(false);
   const [showMasterPerks, setShowMasterPerks] = useState(false);
@@ -1684,7 +1689,22 @@ function App() {
 
   const handleRequestTransit = async () => {
     if (!transitData.destination) return;
-    // Redirecionar para seleção de pagamento antes de confirmar
+    // Validar agendamento
+    if (transitData.scheduled) {
+      if (!transitData.scheduledDate) {
+        toastError("Selecione a data do agendamento.");
+        return;
+      }
+      if (!transitData.scheduledTime) {
+        toastError("Selecione o horário do agendamento.");
+        return;
+      }
+      const scheduled = new Date(`${transitData.scheduledDate}T${transitData.scheduledTime}`);
+      if (scheduled <= new Date(Date.now() + 25*60*1000)) {
+        toastError("O agendamento deve ser com pelo menos 30 minutos de antecedência.");
+        return;
+      }
+    }
     setSubView("mobility_payment");
   };
 
@@ -1719,7 +1739,7 @@ function App() {
       .from("orders_delivery")
       .insert({
         user_id: userId,
-        status: selectedPaymentMethod === "cartao" ? "pendente_pagamento" : "pendente",
+        status: transitData.scheduled ? "agendado" : (selectedPaymentMethod === "cartao" ? "pendente_pagamento" : "pendente"),
         total_price: parseFloat(price.toFixed(2)),
         pickup_address: transitData.origin,
         delivery_address: transitData.destination,
@@ -1814,9 +1834,9 @@ function App() {
         fetchMyOrders(userId);
       }, 1500);
     } else {
-      // Dinheiro — vai direto para aguardando motorista
+      // Dinheiro — vai direto para aguardando motorista (ou confirmação de agendamento)
       setSelectedItem(data);
-      setSubView("waiting_driver");
+      setSubView(transitData.scheduled ? "active_order" : "waiting_driver");
       fetchMyOrders(userId);
     }
 
@@ -5837,8 +5857,9 @@ function App() {
   };
 
   const renderOrders = () => {
-    const activeOrders = myOrders.filter(o => o && !["concluido", "cancelado"].includes(o.status));
-    const pastOrders = myOrders.filter(o => o && ["concluido", "cancelado"].includes(o.status));
+    const scheduledOrders = myOrders.filter(o => o && o.status === 'agendado');
+    const activeOrders = myOrders.filter(o => o && !['concluido', 'cancelado', 'agendado'].includes(o.status));
+    const pastOrders = myOrders.filter(o => o && ['concluido', 'cancelado'].includes(o.status));
 
     return (
       <div className="flex flex-col h-full bg-[#f8f9fc] dark:bg-slate-900 pb-32 animate-in fade-in duration-700 overflow-hidden">
@@ -5874,6 +5895,13 @@ function App() {
                   {activeOrders.length}
                 </span>
               )}
+            </button>
+            <button
+              onClick={() => setFilterTab('agendados' as any)}
+              className={`flex-1 py-3.5 rounded-[18px] text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-300 flex items-center justify-center gap-2 ${filterTab === 'agendados' ? "bg-white dark:bg-slate-700 text-slate-950 dark:text-white shadow-xl shadow-slate-200/50 dark:shadow-black/20" : "text-slate-400"}`}
+            >
+              Agendados
+              {scheduledOrders.length > 0 && <span className="size-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-[9px] font-black">{scheduledOrders.length}</span>}
             </button>
             <button
               onClick={() => setFilterTab('historico')}
@@ -5963,6 +5991,58 @@ function App() {
                     );
                   })
                 )}
+              </motion.div>
+            ) : filterTab === 'agendados' ? (
+              <motion.div key="scheduled" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-6">
+                {scheduledOrders.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center px-10">
+                    <div className="size-32 rounded-[50px] bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center mb-8">
+                      <span className="material-symbols-outlined text-5xl text-slate-200 dark:text-slate-700">event</span>
+                    </div>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight mb-3">Sem agendamentos</h3>
+                    <p className="text-xs font-medium text-slate-400 leading-relaxed uppercase tracking-widest">Agende um serviço de mobilidade.</p>
+                  </div>
+                ) : scheduledOrders.map((order: any, i: number) => {
+                  const icons: Record<string,string> = { mototaxi:'motorcycle', carro:'directions_car', van:'airport_shuttle', utilitario:'bolt' };
+                  const labels: Record<string,string> = { mototaxi:'MotoTáxi', carro:'Carro Executivo', van:'Van', utilitario:'Entrega Express' };
+                  const scheduledAt = order.scheduled_date && order.scheduled_time
+                    ? new Date(`${order.scheduled_date}T${order.scheduled_time}`).toLocaleString('pt-BR', { weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+                    : 'Data não informada';
+                  return (
+                    <motion.div key={order.id} initial={{ opacity:0, scale:0.95 }} animate={{ opacity:1, scale:1 }} transition={{ delay: i*0.08 }}
+                      onClick={() => { setSelectedItem(order); setSubView('scheduled_order'); setSchedObsState(order.order_notes || ''); setSchedMessagesState([]); }}
+                      className="bg-white dark:bg-slate-800 rounded-[40px] p-6 shadow-xl border border-slate-50 dark:border-slate-700/50 cursor-pointer active:scale-[0.98] transition-all relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 left-0 right-0 h-1.5 bg-blue-100 dark:bg-blue-900/30 overflow-hidden">
+                        <div className={`h-full bg-blue-500 ${order.driver_id ? 'w-full' : 'w-1/3'}`} />
+                      </div>
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-4">
+                          <div className="size-14 rounded-[20px] bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-blue-500 text-2xl">{icons[order.service_type] || 'event'}</span>
+                          </div>
+                          <div>
+                            <h3 className="font-black text-slate-900 dark:text-white text-base">{labels[order.service_type] || 'Serviço'}</h3>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <div className={`size-1.5 rounded-full ${order.driver_id ? 'bg-emerald-500 animate-pulse' : 'bg-blue-400'}`} />
+                              <span className={`text-[9px] font-black uppercase tracking-widest ${order.driver_id ? 'text-emerald-500' : 'text-blue-400'}`}>
+                                {order.driver_id ? 'Motorista Confirmado' : 'Aguardando Motorista'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-base font-black text-slate-900 dark:text-white">R$ {(order.total_price||0).toFixed(2).replace('.',',')}</span>
+                      </div>
+                      <div className="bg-blue-50 dark:bg-blue-500/10 rounded-[20px] p-4 space-y-2 mb-4 border border-blue-100 dark:border-blue-500/20">
+                        <div className="flex items-center gap-2"><span className="material-symbols-outlined text-blue-500 text-lg">event</span><p className="text-sm font-black text-slate-900 dark:text-white capitalize">{scheduledAt}</p></div>
+                        <div className="flex items-center gap-2"><span className="material-symbols-outlined text-slate-400 text-lg">location_on</span><p className="text-xs font-bold text-slate-500 truncate">{order.delivery_address}</p></div>
+                      </div>
+                      <button className="w-full py-4 bg-blue-500 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-[20px] shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2">
+                        <span className="material-symbols-outlined text-lg">manage_search</span>Acompanhar Agendamento
+                      </button>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
             ) : (
               <motion.div
@@ -8455,6 +8535,7 @@ function App() {
                 <input 
                   type="date" 
                   value={transitData.scheduledDate}
+                  min={new Date(Date.now() + 30*60*1000).toISOString().split('T')[0]}
                   onChange={(e) => setTransitData({...transitData, scheduledDate: e.target.value})}
                   className="bg-transparent border-none p-0 text-lg font-black w-full focus:ring-0 dark:text-white tracking-tighter"
                 />
@@ -8646,8 +8727,8 @@ function App() {
                 </button>
               </div>
 
-              {/* Detalhes da corrida */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* Detalhes da corrida — só aparecem após calcular rota */}
+              {routeDistance && <div className="grid grid-cols-3 gap-3">
                 <div className="bg-white dark:bg-slate-800 rounded-[24px] p-4 text-center border border-slate-100 dark:border-slate-700">
                   <span className="material-symbols-outlined text-primary text-xl block mb-1">schedule</span>
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Chegada</p>
@@ -8669,9 +8750,10 @@ function App() {
                     </p>
                   )}
                 </div>
-              </div>
+              </div>}
 
-              {/* Motoristas proximos reais */}
+              {/* Motoristas proximos reais — só aparecem após calcular rota */}
+              {routeDistance && <>
               {nearbyDriversCount > 0 ? (
                 <div className="bg-white dark:bg-slate-800 rounded-[28px] p-5 border border-slate-100 dark:border-slate-700 flex items-center gap-4">
                   <div className="flex -space-x-3">
@@ -8699,6 +8781,7 @@ function App() {
                   <p className="text-sm font-bold text-slate-400">Buscando motoristas...</p>
                 </div>
               ) : null}
+              </>}
             </div>
           );
         })()}
@@ -8865,6 +8948,19 @@ function App() {
                 )}
               </div>
             </div>
+
+            {/* Info de agendamento */}
+            {transitData.scheduled && transitData.scheduledDate && (
+              <div className="bg-primary/5 border border-primary/20 rounded-[20px] p-4 flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary text-xl">event</span>
+                <div>
+                  <p className="text-[9px] font-black text-primary uppercase tracking-widest">Agendado para</p>
+                  <p className="text-sm font-black text-slate-900 dark:text-white">
+                    {new Date(`${transitData.scheduledDate}T${transitData.scheduledTime}`).toLocaleString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Rota detalhada */}
             <div className="bg-slate-50 dark:bg-black/20 rounded-[24px] p-4 space-y-3">
@@ -9062,7 +9158,139 @@ function App() {
     );
   };
 
-  const renderPaymentProcessing = () => {
+  const renderScheduledOrder = () => {
+    if (!selectedItem) return null;
+    const svcIcons: Record<string,string> = { mototaxi:'motorcycle', carro:'directions_car', van:'airport_shuttle', utilitario:'bolt' };
+    const svcLabels: Record<string,string> = { mototaxi:'MotoTáxi', carro:'Carro Executivo', van:'Van de Carga', utilitario:'Entrega Express' };
+    const icon = svcIcons[selectedItem.service_type] || 'event';
+    const label = svcLabels[selectedItem.service_type] || 'Serviço';
+    const scheduledAt = selectedItem.scheduled_date && selectedItem.scheduled_time
+      ? new Date(`${selectedItem.scheduled_date}T${selectedItem.scheduled_time}`).toLocaleString('pt-BR', { weekday:'long', day:'2-digit', month:'long', hour:'2-digit', minute:'2-digit' })
+      : null;
+    const hasDriver = !!selectedItem.driver_id;
+
+    const saveObservation = async () => {
+      if (!schedObsState.trim()) return;
+      setIsSavingObsState(true);
+      await supabase.from('orders_delivery').update({ order_notes: schedObsState }).eq('id', selectedItem.id);
+      setIsSavingObsState(false);
+      toastSuccess('Observação salva!');
+    };
+
+    const sendScheduledMessage = () => {
+      if (!schedChatInputState.trim()) return;
+      const msg = { id: Date.now().toString(), text: schedChatInputState.trim(), from: 'user' as const, time: new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) };
+      setSchedMessagesState(prev => [...prev, msg]);
+      setSchedChatInputState('');
+    };
+
+    return (
+      <div className="absolute inset-0 z-[120] bg-[#f8fafc] dark:bg-slate-950 flex flex-col overflow-hidden">
+        <header className="px-6 py-5 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 flex items-center gap-4 shrink-0">
+          <button onClick={() => { setSubView('none'); setFilterTab('agendados' as any); }} className="size-11 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 flex items-center justify-center active:scale-90 transition-all">
+            <span className="material-symbols-outlined font-black text-slate-700 dark:text-white">arrow_back</span>
+          </button>
+          <div className="flex-1">
+            <h2 className="text-base font-black text-slate-900 dark:text-white tracking-tight">Agendamento</h2>
+            <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest">{label}</p>
+          </div>
+          <button onClick={async () => {
+            if (!await showConfirm({ message: 'Cancelar este agendamento?' })) return;
+            await supabase.from('orders_delivery').update({ status: 'cancelado' }).eq('id', selectedItem.id);
+            setSubView('none'); fetchMyOrders(userId!); toastSuccess('Agendamento cancelado.');
+          }} className="px-4 py-2 border border-red-200 dark:border-red-500/20 text-red-500 rounded-2xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">
+            Cancelar
+          </button>
+        </header>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-5 space-y-4">
+          {/* Status */}
+          <div className={`rounded-[28px] p-5 flex items-center gap-4 ${hasDriver ? 'bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20' : 'bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20'}`}>
+            <div className={`size-12 rounded-[18px] flex items-center justify-center ${hasDriver ? 'bg-emerald-500/20' : 'bg-blue-500/20'}`}>
+              <span className={`material-symbols-outlined text-2xl ${hasDriver ? 'text-emerald-500' : 'text-blue-500'}`}>{hasDriver ? 'verified' : 'pending'}</span>
+            </div>
+            <div>
+              <p className={`text-[9px] font-black uppercase tracking-widest ${hasDriver ? 'text-emerald-500' : 'text-blue-400'}`}>{hasDriver ? 'Motorista Confirmado' : 'Aguardando Confirmação'}</p>
+              <h3 className="text-base font-black text-slate-900 dark:text-white">{hasDriver ? 'Seu motorista está confirmado!' : 'Buscando motorista disponível...'}</h3>
+            </div>
+          </div>
+
+          {/* Detalhes */}
+          <div className="bg-white dark:bg-slate-800 rounded-[28px] border border-slate-100 dark:border-slate-700 p-5 space-y-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-blue-500 text-xl">{icon}</span>
+              <div><p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Serviço</p><p className="text-sm font-black text-slate-900 dark:text-white">{label}</p></div>
+            </div>
+            {scheduledAt && <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary text-xl">event</span>
+              <div><p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Agendado para</p><p className="text-sm font-black text-slate-900 dark:text-white capitalize">{scheduledAt}</p></div>
+            </div>}
+            <div className="flex items-start gap-3">
+              <span className="material-symbols-outlined text-yellow-500 text-xl mt-0.5">trip_origin</span>
+              <div><p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Origem</p><p className="text-sm font-bold text-slate-700 dark:text-slate-300">{selectedItem.pickup_address}</p></div>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="material-symbols-outlined text-red-500 text-xl mt-0.5">location_on</span>
+              <div><p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Destino</p><p className="text-sm font-bold text-slate-900 dark:text-white">{selectedItem.delivery_address}</p></div>
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Valor Total</span>
+              <span className="text-lg font-black text-slate-900 dark:text-white">R$ {(selectedItem.total_price||0).toFixed(2).replace('.',',')}</span>
+            </div>
+          </div>
+
+          {/* Observações */}
+          <div className="bg-white dark:bg-slate-800 rounded-[28px] border border-slate-100 dark:border-slate-700 p-5 shadow-sm space-y-3">
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Observações para o Motorista</p>
+            <textarea value={schedObsState} onChange={e => setSchedObsState(e.target.value)}
+              placeholder="Ex: Tenho bagagens, endereço tem portão azul, preciso de nota fiscal..."
+              rows={3} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-300 focus:outline-none focus:border-blue-400 resize-none"
+            />
+            <button onClick={saveObservation} disabled={isSavingObsState}
+              className="w-full py-3 bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-md shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50">
+              {isSavingObsState ? 'Salvando...' : 'Salvar Observação'}
+            </button>
+          </div>
+
+          {/* Chat */}
+          <div className="bg-white dark:bg-slate-800 rounded-[28px] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center gap-3">
+              <span className="material-symbols-outlined text-blue-500 text-xl">chat</span>
+              <p className="text-sm font-black text-slate-900 dark:text-white">Chat com o Motorista</p>
+            </div>
+            <div className="p-4 min-h-[100px] space-y-3">
+              {schedMessagesState.length === 0 && (
+                <p className="text-center text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest py-4">
+                  {hasDriver ? 'Inicie a conversa com seu motorista' : 'Disponível após confirmação do motorista'}
+                </p>
+              )}
+              {schedMessagesState.map((msg: any) => (
+                <div key={msg.id} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] px-4 py-2.5 rounded-[18px] ${msg.from === 'user' ? 'bg-blue-500 text-white rounded-tr-[6px]' : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white rounded-tl-[6px]'}`}>
+                    <p className="text-sm font-medium">{msg.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="px-4 pb-4 flex gap-3">
+              <input type="text" value={schedChatInputState} onChange={e => setSchedChatInputState(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendScheduledMessage()}
+                placeholder={hasDriver ? 'Escreva uma mensagem...' : 'Aguardando motorista...'}
+                disabled={!hasDriver}
+                className="flex-1 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-300 focus:outline-none focus:border-blue-400 disabled:opacity-40"
+              />
+              <button onClick={sendScheduledMessage} disabled={!hasDriver || !schedChatInputState.trim()}
+                className="size-12 bg-blue-500 text-white rounded-2xl flex items-center justify-center shadow-md shadow-blue-500/20 active:scale-90 transition-all disabled:opacity-30">
+                <span className="material-symbols-outlined font-black">send</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+    const renderPaymentProcessing = () => {
     return (
       <div className="absolute inset-0 z-[150] bg-slate-900 flex flex-col items-center justify-center p-8 text-center text-white overflow-hidden">
         {/* Radar/Scan effect */}
@@ -9717,6 +9945,23 @@ function App() {
                   className="absolute inset-0 z-[115]"
                 >
                   {renderWaitingDriver()}
+                </motion.div>
+              )}
+              {subView === "scheduled_order" && (
+                <motion.div
+                  key="sched_ord"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[120]"
+                >
+                  {renderScheduledOrder()}
+                </motion.div>
+              )}
+              {subView === "scheduled_order" && (
+                <motion.div key="sched_ord" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  {renderScheduledOrder()}
                 </motion.div>
               )}
               {subView === "shipping_details" && (
