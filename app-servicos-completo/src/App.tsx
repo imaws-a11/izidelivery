@@ -553,9 +553,12 @@ function App() {
     | "mobility_payment"
     | "waiting_driver"
     | "scheduled_order"
+    | "lightning_payment"
   >("none");
 
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; expirationDate: string } | null>(null);
+  const [lightningData, setLightningData] = useState<{ payment_request: string; satoshis: number; btc_price_brl: number } | null>(null);
+
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
   const toastTimeoutRef = useRef<any>(null);
   const showToast = (message: string, type: 'success' | 'info' | 'warning' = 'info') => {
@@ -1275,8 +1278,13 @@ function App() {
             const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
             showToast(msg, newOrder.status === 'cancelado' ? 'warning' : 'success');
 
+            // Se o pagamento lightning foi confirmado, fechar a tela de pagamento
+            if (newOrder.payment_status === 'paid' && subViewRef.current === "lightning_payment") {
+              setSubView("payment_success");
+            }
+
             // Abrir tela de avaliação ao concluir
-            if (newOrder.status === 'concluido' || newOrder.status === 'concluido') {
+            if (newOrder.status === 'concluido') {
               setTimeout(() => {
                 setSubView("order_feedback");
               }, 2000);
@@ -1683,6 +1691,41 @@ function App() {
         }
         setIsLoading(false);
       }, 2000);
+    } else if (paymentMethod === "bitcoin_lightning") {
+      setSubView("payment_processing");
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Sessão expirada.");
+
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+        const lnResponse = await fetch(`${supabaseUrl}/functions/v1/create-lightning-invoice`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_KEY as string,
+          },
+          body: JSON.stringify({
+            amount: total,
+            orderId: orderData.id,
+            memo: `Pedido IziDelivery #${orderData.id.slice(0,8).toUpperCase()}`
+          }),
+        });
+
+        if (!lnResponse.ok) {
+          const errText = await lnResponse.text();
+          throw new Error(`Erro ao gerar Invoice Lightning: ${errText}`);
+        }
+
+        const lnResult = await lnResponse.json();
+        setLightningData(lnResult);
+        setSubView("lightning_payment");
+      } catch (err: any) {
+        toastError(err.message);
+        setSubView("payment_error");
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -5542,25 +5585,29 @@ function App() {
                   <span className="material-symbols-outlined text-slate-900 dark:text-white">
                     {paymentMethod === "pix"
                       ? "qr_code"
-                      : paymentMethod === "dinheiro"
-                        ? "payments"
-                        : paymentMethod === "saldo"
-                          ? "account_balance_wallet"
-                          : "credit_card"}
+                      : paymentMethod === "bitcoin_lightning"
+                        ? "bolt"
+                        : paymentMethod === "dinheiro"
+                          ? "payments"
+                          : paymentMethod === "saldo"
+                            ? "account_balance_wallet"
+                            : "credit_card"}
                   </span>
                 </div>
                 <div className="flex-1">
                   <p className="font-black text-slate-900 dark:text-white text-base uppercase tracking-tight">
                     {paymentMethod === "pix"
                       ? "PIX"
-                      : paymentMethod === "dinheiro"
-                        ? "Dinheiro"
-                        : paymentMethod === "saldo"
-                          ? "Saldo App"
-                          : (() => {
-                              const activeCard = savedCards.find((c: any) => c.active);
-                              return activeCard ? `${activeCard.brand} ••••${activeCard.last4}` : "Cartão de Crédito";
-                            })()}
+                      : paymentMethod === "bitcoin_lightning"
+                        ? "Bitcoin Lightning"
+                        : paymentMethod === "dinheiro"
+                          ? "Dinheiro"
+                          : paymentMethod === "saldo"
+                            ? "Saldo App"
+                            : (() => {
+                                const activeCard = savedCards.find((c: any) => c.active);
+                                return activeCard ? `${activeCard.brand} ••••${activeCard.last4}` : "Cartão de Crédito";
+                              })()}
                   </p>
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                     {paymentMethod === "saldo"
@@ -5772,6 +5819,89 @@ function App() {
           })()}
         </div>
       </Elements>
+    );
+  };
+
+  const renderLightningPayment = () => {
+    if (!lightningData) return null;
+
+    const copyToClipboard = (text: string) => {
+      navigator.clipboard.writeText(text);
+      toastSuccess("Copiado com sucesso!");
+    };
+
+    return (
+      <div className="absolute inset-0 z-[100] bg-slate-50 dark:bg-slate-950 flex flex-col animate-in fade-in zoom-in duration-500">
+        <header className="p-6 flex items-center justify-between">
+          <button 
+            onClick={() => setSubView("checkout")}
+            className="size-12 rounded-2xl bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center active:scale-90 transition-all"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+          <div className="text-center">
+            <h2 className="text-sm font-black uppercase tracking-widest text-orange-500">Bitcoin Lightning</h2>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Aguardando Confirmação</p>
+          </div>
+          <div className="size-12" /> {/* Spacer */}
+        </header>
+
+        <main className="flex-1 overflow-y-auto px-8 py-4 flex flex-col items-center">
+          <div className="w-full aspect-square max-w-[280px] bg-white rounded-[40px] p-6 shadow-2xl shadow-orange-500/10 border-4 border-orange-500/20 relative mb-10">
+            <img 
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${lightningData.payment_request}`} 
+              alt="Lightning Invoice QR" 
+              className="w-full h-full object-contain"
+            />
+            <div className="absolute -top-3 -right-3 size-12 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg animate-bounce">
+              <span className="material-symbols-outlined text-white font-black">bolt</span>
+            </div>
+          </div>
+
+          <div className="w-full space-y-6">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div className="flex justify-between items-center mb-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Invoice Lightning (BOLT11)</p>
+                    <p className="text-[10px] font-black uppercase text-orange-500">{lightningData.satoshis} SATS</p>
+                </div>
+              <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                <p className="flex-1 text-[11px] font-mono break-all line-clamp-2 text-slate-500 text-left">
+                  {lightningData.payment_request}
+                </p>
+                <button 
+                  onClick={() => copyToClipboard(lightningData.payment_request)}
+                  className="size-10 bg-orange-500 text-white rounded-xl flex items-center justify-center shrink-0 active:scale-90 transition-all shadow-lg shadow-orange-500/20"
+                >
+                  <span className="material-symbols-outlined text-sm font-black">content_copy</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-orange-500/5 border border-orange-500/20 p-6 rounded-[32px] flex items-center gap-5">
+              <div className="size-12 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-500">
+                <span className="material-symbols-outlined animate-pulse">speed</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">Pagamento Instantâneo</p>
+                <p className="text-[10px] font-medium text-orange-600/70 dark:text-orange-400/50 uppercase mt-1">Sua invoice será detectada em milissegundos.</p>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-12 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center max-w-[200px] leading-relaxed">
+            Escaneie com sua carteira <span className="text-orange-500">Lightning</span> preferida
+          </p>
+        </main>
+
+        <footer className="p-8 pb-12">
+          <button 
+            onClick={() => setTab("orders")}
+            className="w-full py-5 bg-slate-900 dark:bg-slate-800 text-white font-black rounded-[24px] uppercase tracking-widest text-[11px] shadow-xl active:scale-95 transition-all"
+          >
+            Ver Meus Pedidos
+          </button>
+        </footer>
+      </div>
     );
   };
 
@@ -6789,6 +6919,27 @@ function App() {
               <div className="h-[1px] bg-slate-100 dark:bg-slate-700 w-full" />
 
               <div
+                className={`flex items-center gap-5 cursor-pointer p-2 rounded-2xl transition-all ${paymentMethod === "bitcoin_lightning" ? "bg-orange-500/10 border border-orange-500/20" : ""}`}
+                onClick={() => setPaymentMethod("bitcoin_lightning")}
+              >
+                <div className={`size-14 rounded-2xl flex items-center justify-center transition-colors ${paymentMethod === "bitcoin_lightning" ? "bg-orange-500 text-white" : "bg-orange-50 dark:bg-orange-900/10 text-orange-500"}`}>
+                  <span className="material-symbols-rounded text-3xl font-black">bolt</span>
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-black text-slate-900 dark:text-white leading-tight">Bitcoin Lightning</h4>
+                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1 opacity-70">
+                    {paymentMethod === "bitcoin_lightning" ? "Selecionado" : "Taxas quase zero"}
+                  </p>
+                </div>
+                {paymentMethod === "bitcoin_lightning"
+                  ? <span className="material-symbols-rounded text-orange-500">check_circle</span>
+                  : <span className="text-[10px] font-black text-primary uppercase tracking-widest">Selecionar</span>
+                }
+              </div>
+
+              <div className="h-[1px] bg-slate-100 dark:bg-slate-700 w-full" />
+
+              <div
                 className={`flex items-center gap-5 cursor-pointer p-2 rounded-2xl transition-all ${paymentMethod === "dinheiro" ? "bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600" : ""}`}
                 onClick={() => setPaymentMethod("dinheiro")}
               >
@@ -6837,6 +6988,11 @@ function App() {
               {paymentMethod === "dinheiro" && (
                 <span className="bg-slate-900/20 text-slate-900 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
                   Dinheiro
+                </span>
+              )}
+              {paymentMethod === "bitcoin_lightning" && (
+                <span className="bg-slate-900/20 text-slate-900 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                  Bitcoin
                 </span>
               )}
               {paymentMethod === "saldo" && (
@@ -10076,6 +10232,17 @@ function App() {
                   className="absolute inset-0 z-[150]"
                 >
                   {renderPixPayment()}
+                </motion.div>
+              )}
+              {subView === "lightning_payment" && (
+                <motion.div
+                  key="lnpay"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[150]"
+                >
+                  {renderLightningPayment()}
                 </motion.div>
               )}
             </AnimatePresence>
