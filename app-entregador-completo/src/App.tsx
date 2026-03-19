@@ -8,7 +8,7 @@ const Icon = ({ name, className = "", fill = false }: { name: string; className?
     <span className={`material-symbols-outlined ${className} ${fill ? 'font-fill' : ''}`} style={{ fontVariationSettings: fill ? "'FILL' 1" : "" }}>{name}</span>
 );
 
-type View = 'dashboard' | 'history' | 'earnings' | 'profile' | 'active_mission' | 'dedicated' | 'sos';
+type View = 'dashboard' | 'history' | 'earnings' | 'profile' | 'active_mission' | 'dedicated' | 'scheduled' | 'sos';
 type ServiceType = 'package' | 'mototaxi' | 'car_ride' | string;
 
 interface Order {
@@ -90,10 +90,10 @@ function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSOSActive, setIsSOSActive] = useState(false);
     const [isAccepting, setIsAccepting] = useState(false);
-    const [autoPilot, setAutoPilot] = useState(false);
     const [filter, setFilter] = useState<ServiceType | 'all'>('all');
     const [orders, setOrders] = useState<Order[]>([]);
     const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
+    const [scheduledOrders, setScheduledOrders] = useState<any[]>([]);
     const [history, setHistory] = useState<Order[]>([]);
     const [stats, setStats] = useState({ balance: 0, today: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
 
@@ -163,6 +163,55 @@ function App() {
         return () => { supabase.removeChannel(slotsChannel); };
     }, [isAuthenticated]);
 
+    // Buscar agendamentos disponíveis e aceitos
+    useEffect(() => {
+        if (!isAuthenticated || !driverId) return;
+
+        const fetchScheduled = async () => {
+            const today = new Date().toISOString().split('T')[0];
+            const { data } = await supabase
+                .from('orders_delivery')
+                .select('*, merchant_id')
+                .not('scheduled_date', 'is', null)
+                .in('status', ['pendente', 'novo', 'agendado', 'a_caminho', 'preparando'])
+                .gte('scheduled_date', today)
+                .order('scheduled_date', { ascending: true })
+                .order('scheduled_time', { ascending: true });
+
+            if (data) setScheduledOrders(data);
+        };
+
+        fetchScheduled();
+
+        // Realtime para agendamentos
+        const scheduledChannel = supabase.channel('scheduled_orders_realtime')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders_delivery' }, (payload) => {
+                const o = payload.new as any;
+                if (o.scheduled_date) {
+                    setScheduledOrders(prev => [...prev, o].sort((a, b) =>
+                        new Date(a.scheduled_date + 'T' + (a.scheduled_time || '00:00')).getTime() -
+                        new Date(b.scheduled_date + 'T' + (b.scheduled_time || '00:00')).getTime()
+                    ));
+                }
+            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders_delivery' }, (payload) => {
+                const o = payload.new as any;
+                if (o.scheduled_date) {
+                    if (['concluido', 'cancelado'].includes(o.status)) {
+                        setScheduledOrders(prev => prev.filter(s => s.id !== o.id));
+                    } else {
+                        setScheduledOrders(prev => prev.map(s => s.id === o.id ? { ...s, ...o } : s));
+                    }
+                }
+            })
+            .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'orders_delivery' }, (payload) => {
+                setScheduledOrders(prev => prev.filter(s => s.id !== (payload.old as any).id));
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(scheduledChannel); };
+    }, [isAuthenticated, driverId]);
+
     useEffect(() => {
         const fetchOrders = async () => {
             const { data, error } = await supabase.from('orders_delivery').select('*').eq('status', 'pendente');
@@ -195,12 +244,7 @@ function App() {
         return () => { supabase.removeChannel(channel); };
     }, [isOnline]);
 
-    useEffect(() => {
-        if (autoPilot && orders.length > 0 && !activeMission && isOnline && !isAccepting) {
-            const best = orders.find((o: any) => o.price >= 15);
-            if (best) handleAccept(best);
-        }
-    }, [orders, autoPilot, activeMission, isOnline]);
+
 
     const filteredOrders = useMemo(() => filter === 'all' ? orders : orders.filter((o: any) => o.type === filter), [filter, orders]);
 
@@ -296,9 +340,9 @@ function App() {
                             <Icon name="account_balance_wallet" className="text-primary text-2xl" />
                         </div>
                         <nav className="flex-1 space-y-1">
-                            {[{ id: 'dashboard', label: 'Painel', icon: 'grid_view' }, { id: 'dedicated', label: 'Vagas Dedicadas', icon: 'stars' }, { id: 'history', label: 'Histórico', icon: 'history' }, { id: 'earnings', label: 'Financeiro', icon: 'payments' }, { id: 'profile', label: 'Meu Perfil', icon: 'person' }].map(item => (
+                            {[{ id: 'dashboard', label: 'Painel', icon: 'grid_view' }, { id: 'dedicated', label: 'Vagas Dedicadas', icon: 'stars' }, { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length }, { id: 'history', label: 'Histórico', icon: 'history' }, { id: 'earnings', label: 'Financeiro', icon: 'payments' }, { id: 'profile', label: 'Meu Perfil', icon: 'person' }].map(item => (
                                 <button key={item.id} onClick={() => { setActiveTab(item.id as any); setIsMenuOpen(false); }} className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all text-left ${activeTab === item.id ? 'bg-primary/10 text-primary border border-primary/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
-                                    <Icon name={item.icon} className="text-xl" fill={activeTab === item.id} /><span className="text-sm font-black uppercase tracking-widest">{item.label}</span>
+                                    <div className="relative"><Icon name={item.icon} className="text-xl" fill={activeTab === item.id} />{(item as any).badge > 0 && <span className="absolute -top-1 -right-1 size-4 bg-blue-500 text-white text-[8px] font-black rounded-full flex items-center justify-center">{(item as any).badge}</span>}</div><span className="text-sm font-black uppercase tracking-widest">{item.label}</span>
                                 </button>
                             ))}
                         </nav>
@@ -329,9 +373,6 @@ function App() {
                     <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mt-1">{stats.xp}/{stats.nextXp} XP</p>
                 </div>
                 <div className="text-right space-y-2">
-                    <button onClick={() => setAutoPilot(!autoPilot)} className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${autoPilot ? 'bg-primary text-slate-900' : 'bg-white/5 text-white/30 border border-white/10'}`}>
-                        <Icon name={autoPilot ? 'smart_toy' : 'person'} className="text-sm" fill={autoPilot} />Auto-Pilot
-                    </button>
                     <div className="flex items-center gap-3 justify-end">
                         <div><p className="text-[8px] text-white/20 uppercase tracking-widest">Hoje</p><p className="text-sm font-black text-white">R$ {stats.today.toFixed(0)}</p></div>
                         <div><p className="text-[8px] text-white/20 uppercase tracking-widest">Corridas</p><p className="text-sm font-black text-primary">{stats.count}</p></div>
@@ -412,9 +453,105 @@ function App() {
                     </div>
                 )}
             </div>
+
+            {/* Agendamentos */}
+            <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-2">
+                        <Icon name="event" className="text-blue-400 text-sm" fill />
+                        <h2 className="text-sm font-black text-white uppercase tracking-widest">Agendamentos</h2>
+                        {scheduledOrders.length > 0 && (
+                            <span className="size-5 bg-blue-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                                {scheduledOrders.length}
+                            </span>
+                        )}
                     </div>
                 </div>
-            )}
+
+                {scheduledOrders.length === 0 ? (
+                    <div className="bg-white/[0.02] border border-white/5 border-dashed rounded-[28px] p-6 flex items-center gap-4">
+                        <div className="size-10 rounded-2xl bg-white/5 flex items-center justify-center shrink-0">
+                            <Icon name="event_available" className="text-white/20 text-xl" />
+                        </div>
+                        <div>
+                            <p className="text-[11px] font-black text-white/30 uppercase tracking-widest">Sem agendamentos</p>
+                            <p className="text-[10px] text-white/20 mt-0.5">Novos pedidos agendados aparecerão aqui</p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {scheduledOrders.map((order: any) => {
+                            const isPending = order.status === 'pendente' || order.status === 'novo' || order.status === 'agendado';
+                            const isAccepted = order.driver_id === driverId;
+                            const statusColor = isAccepted ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : isPending ? 'text-blue-400 bg-blue-400/10 border-blue-400/20' : 'text-white/40 bg-white/5 border-white/10';
+                            const statusLabel = isAccepted ? 'Aceito por você' : isPending ? 'Disponível' : order.status;
+                            return (
+                                <motion.div
+                                    key={order.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="bg-white/[0.04] border border-white/10 rounded-[28px] p-5 space-y-4"
+                                >
+                                    {/* Header */}
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <Icon name="event" className="text-blue-400 text-sm" />
+                                                <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">
+                                                    {new Date(order.scheduled_date).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
+                                                    {order.scheduled_time && ` • ${order.scheduled_time.slice(0,5)}`}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm font-black text-white truncate">{order.delivery_address}</p>
+                                            <p className="text-[10px] text-white/30 truncate mt-0.5">{order.pickup_address}</p>
+                                        </div>
+                                        <div className="text-right shrink-0 ml-3">
+                                            <p className="text-base font-black text-primary">R$ {(order.total_price || 0).toFixed(2).replace('.', ',')}</p>
+                                            <p className="text-[9px] text-white/30 uppercase">{order.service_type}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Status e Acao */}
+                                    <div className="flex items-center justify-between">
+                                        <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border ${statusColor}`}>
+                                            {statusLabel}
+                                        </span>
+                                        {isPending && !isAccepted && (
+                                            <button
+                                                onClick={() => handleAccept({
+                                                    id: order.id.slice(0, 8).toUpperCase(),
+                                                    realId: order.id,
+                                                    type: order.service_type as ServiceType,
+                                                    title: 'Agendamento',
+                                                    origin: order.pickup_address,
+                                                    destination: order.delivery_address,
+                                                    price: order.total_price,
+                                                    distance: '---',
+                                                    time: order.scheduled_time || 'Agendado',
+                                                    customer: 'Cliente Izi',
+                                                    rating: 5.0,
+                                                    scheduled_at: order.scheduled_date
+                                                })}
+                                                disabled={isAccepting}
+                                                className="bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-2xl flex items-center gap-2 active:scale-95 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                                            >
+                                                <Icon name="check_circle" className="text-sm" />
+                                                Aceitar
+                                            </button>
+                                        )}
+                                        {isAccepted && (
+                                            <span className="text-[9px] font-black text-emerald-400 flex items-center gap-1.5">
+                                                <Icon name="verified" className="text-sm" fill />
+                                                Você aceitou esta corrida
+                                            </span>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
 
             <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
                 {[{ id: 'all', label: 'Todos', icon: 'apps' }, { id: 'package', label: 'Pacotes', icon: 'package_2' }, { id: 'mototaxi', label: 'Moto', icon: 'two_wheeler' }, { id: 'car_ride', label: 'Carro', icon: 'directions_car' }].map(item => (
@@ -525,6 +662,110 @@ function App() {
                     ))}
                 </div>
             </div>
+        </motion.div>
+    );
+
+    const renderScheduledView = () => (
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-10 pt-4">
+            <div>
+                <p className="text-[9px] font-black text-blue-400 uppercase tracking-[0.5em]">Calendário</p>
+                <h2 className="text-3xl font-black text-white tracking-tight mt-1">Agendamentos</h2>
+                <p className="text-xs text-white/30 mt-1">Pedidos agendados disponíveis e aceitos.</p>
+            </div>
+
+            {scheduledOrders.length === 0 ? (
+                <div className="py-20 bg-white/[0.02] border border-white/5 border-dashed rounded-[32px] flex flex-col items-center gap-4 text-center">
+                    <Icon name="event_available" className="text-4xl text-white/10" />
+                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Nenhum agendamento disponível</p>
+                    <p className="text-[10px] text-white/10 mt-1">Novos agendamentos aparecem aqui em tempo real</p>
+                </div>
+            ) : scheduledOrders.map((order: any, i: number) => {
+                const isPending = order.status === 'pendente' || order.status === 'novo' || order.status === 'agendado';
+                const isAccepted = order.driver_id === driverId;
+                const isMyAccepted = isAccepted;
+                const statusColor = isMyAccepted ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : isPending ? 'text-blue-400 bg-blue-400/10 border-blue-400/20' : 'text-white/40 bg-white/5 border-white/10';
+                const statusLabel = isMyAccepted ? '✓ Aceito por você' : isPending ? 'Disponível' : order.status;
+                const schedDate = new Date(order.scheduled_date + 'T12:00:00');
+                const isToday = schedDate.toDateString() === new Date().toDateString();
+                const isTomorrow = schedDate.toDateString() === new Date(Date.now() + 86400000).toDateString();
+                const dateLabel = isToday ? 'Hoje' : isTomorrow ? 'Amanhã' : schedDate.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+
+                return (
+                    <motion.div key={order.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
+                        className={`bg-white/[0.03] border rounded-[32px] p-6 space-y-5 ${isMyAccepted ? 'border-emerald-500/20' : 'border-white/8'}`}>
+
+                        {/* Data e hora */}
+                        <div className="flex items-center gap-3">
+                            <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 ${isToday ? 'bg-blue-500/20 border border-blue-500/30' : 'bg-white/5 border border-white/10'}`}>
+                                <Icon name="event" className={`text-xl ${isToday ? 'text-blue-400' : 'text-white/30'}`} fill />
+                            </div>
+                            <div>
+                                <p className={`text-sm font-black uppercase tracking-widest ${isToday ? 'text-blue-400' : 'text-white/50'}`}>{dateLabel}</p>
+                                <p className="text-[10px] text-white/30">{order.scheduled_time ? order.scheduled_time.slice(0,5) + 'h' : 'Horário a confirmar'}</p>
+                            </div>
+                            <div className={`ml-auto text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border ${statusColor}`}>
+                                {statusLabel}
+                            </div>
+                        </div>
+
+                        {/* Endereços */}
+                        <div className="space-y-2">
+                            <div className="flex items-start gap-3">
+                                <div className="size-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                                    <div className="size-2 rounded-full bg-emerald-400" />
+                                </div>
+                                <p className="text-sm font-bold text-white/70 flex-1">{order.pickup_address}</p>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <div className="size-6 rounded-full bg-red-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                                    <Icon name="location_on" className="text-red-400 text-sm" fill />
+                                </div>
+                                <p className="text-sm font-bold text-white flex-1">{order.delivery_address}</p>
+                            </div>
+                        </div>
+
+                        {/* Valor e tipo */}
+                        <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                            <div className="flex items-center gap-3">
+                                <span className="text-[9px] font-black text-white/20 uppercase bg-white/5 px-3 py-1 rounded-full">{order.service_type}</span>
+                                {order.order_notes && <span className="text-[9px] text-white/20 truncate max-w-[120px]">{order.order_notes}</span>}
+                            </div>
+                            <span className="text-lg font-black text-primary">R$ {(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                        </div>
+
+                        {/* Botao aceitar */}
+                        {isPending && !isMyAccepted && (
+                            <button
+                                onClick={() => handleAccept({
+                                    id: order.id.slice(0, 8).toUpperCase(),
+                                    realId: order.id,
+                                    type: order.service_type as ServiceType,
+                                    title: 'Agendamento',
+                                    origin: order.pickup_address,
+                                    destination: order.delivery_address,
+                                    price: order.total_price,
+                                    distance: '---',
+                                    time: order.scheduled_time || 'Agendado',
+                                    customer: 'Cliente Izi',
+                                    rating: 5.0,
+                                    scheduled_at: order.scheduled_date
+                                })}
+                                disabled={isAccepting}
+                                className="w-full bg-blue-500 text-white font-black text-[11px] uppercase tracking-widest py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                            >
+                                <Icon name="check_circle" className="text-lg" />
+                                Aceitar Agendamento
+                            </button>
+                        )}
+                        {isMyAccepted && (
+                            <div className="flex items-center justify-center gap-2 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
+                                <Icon name="verified" className="text-emerald-400 text-lg" fill />
+                                <span className="text-[11px] font-black text-emerald-400 uppercase tracking-widest">Você aceitou esta corrida</span>
+                            </div>
+                        )}
+                    </motion.div>
+                );
+            })}
         </motion.div>
     );
 
@@ -732,6 +973,7 @@ function App() {
                                     {activeTab === 'earnings' && <div key="earn">{renderEarningsView()}</div>}
                                     {activeTab === 'profile' && <div key="prof">{renderProfileView()}</div>}
                                     {activeTab === 'dedicated' && <div key="dedi">{renderDedicatedView()}</div>}
+                                    {activeTab === 'scheduled' && <div key="sched">{renderScheduledView()}</div>}
                                 </AnimatePresence>
                             </main>
                         </div>
