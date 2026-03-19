@@ -339,22 +339,79 @@ function App() {
                 </div>
             </div>
 
-            {dedicatedSlots.length > 0 && (
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between px-1">
-                        <div className="flex items-center gap-2"><Icon name="stars" className="text-primary text-sm" fill /><h2 className="text-sm font-black text-white uppercase tracking-widest">Vagas Dedicadas</h2></div>
-                        <button onClick={() => setActiveTab('dedicated')} className="text-[9px] font-black text-primary uppercase tracking-widest">Ver todas</button>
+            {/* Vagas Dedicadas - Secao Principal */}
+            <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-2">
+                        <Icon name="stars" className="text-primary text-sm" fill />
+                        <h2 className="text-sm font-black text-white uppercase tracking-widest">Vagas Dedicadas</h2>
+                        {dedicatedSlots.length > 0 && (
+                            <span className="size-5 bg-primary text-slate-900 text-[9px] font-black rounded-full flex items-center justify-center animate-pulse">
+                                {dedicatedSlots.length}
+                            </span>
+                        )}
                     </div>
+                    {dedicatedSlots.length > 0 && (
+                        <button onClick={() => setActiveTab('dedicated')} className="text-[9px] font-black text-primary uppercase tracking-widest">Ver todas</button>
+                    )}
+                </div>
+
+                {dedicatedSlots.length === 0 ? (
+                    <div className="bg-white/[0.02] border border-white/5 border-dashed rounded-[28px] p-6 flex items-center gap-4">
+                        <div className="size-10 rounded-2xl bg-white/5 flex items-center justify-center shrink-0">
+                            <Icon name="stars" className="text-white/20 text-xl" />
+                        </div>
+                        <div>
+                            <p className="text-[11px] font-black text-white/30 uppercase tracking-widest">Nenhuma vaga disponível</p>
+                            <p className="text-[10px] text-white/20 mt-0.5">Você será notificado quando surgirem novas vagas</p>
+                        </div>
+                    </div>
+                ) : (
                     <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-                        {dedicatedSlots.slice(0, 3).map((slot: any) => (
-                            <motion.div key={slot.id} whileTap={{ scale: 0.97 }} onClick={() => setActiveTab('dedicated')} className="min-w-[220px] bg-white/[0.03] border border-white/10 rounded-[28px] p-5 cursor-pointer shrink-0">
-                                <div className="flex items-center gap-3 mb-3">
-                                    <div className="size-10 rounded-xl bg-white/5 border border-white/10 overflow-hidden p-1 shrink-0"><img src={slot.admin_users?.store_logo || 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png'} className="w-full h-full object-contain" alt="" /></div>
-                                    <div><p className="text-[9px] font-black text-white/40 uppercase tracking-widest truncate max-w-[120px]">{slot.admin_users?.store_name}</p><p className="text-sm font-black text-white">{slot.title}</p></div>
+                        {dedicatedSlots.slice(0, 5).map((slot: any) => (
+                            <motion.div
+                                key={slot.id}
+                                whileTap={{ scale: 0.97 }}
+                                onClick={() => setActiveTab('dedicated')}
+                                className="min-w-[240px] bg-white/[0.04] border border-white/10 rounded-[28px] p-5 cursor-pointer shrink-0 hover:border-primary/30 transition-all"
+                            >
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="size-10 rounded-xl bg-white/5 border border-white/10 overflow-hidden p-1 shrink-0">
+                                        <img src={slot.admin_users?.store_logo || 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png'} className="w-full h-full object-contain" alt="" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[9px] font-black text-white/30 uppercase tracking-widest truncate">{slot.admin_users?.store_name || 'Loja Parceira'}</p>
+                                        <p className="text-sm font-black text-white truncate">{slot.title}</p>
+                                    </div>
+                                    <div className="size-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                                 </div>
-                                <div className="flex items-center justify-between"><span className="text-[9px] font-black text-emerald-400 uppercase">{slot.working_hours}</span><span className="text-sm font-black text-primary">R$ {parseFloat(slot.fee_per_day).toFixed(0)}/dia</span></div>
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5">
+                                            <Icon name="schedule" className="text-white/30 text-sm" />
+                                            <span className="text-[10px] font-black text-white/50 uppercase">{slot.working_hours || 'Flexível'}</span>
+                                        </div>
+                                        <span className="text-sm font-black text-primary">R$ {parseFloat(slot.fee_per_day || 0).toFixed(0)}<span className="text-[9px] text-white/30">/dia</span></span>
+                                    </div>
+                                    {slot.admin_users?.store_address && (
+                                        <div className="flex items-center gap-1.5">
+                                            <Icon name="location_on" className="text-white/30 text-sm" />
+                                            <span className="text-[10px] font-bold text-white/40 truncate">{slot.admin_users.store_address.split(',')[0]}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="mt-4 flex items-center justify-between">
+                                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1">
+                                        <div className="size-1.5 rounded-full bg-emerald-400" />
+                                        Disponível
+                                    </span>
+                                    <span className="text-[9px] font-black text-primary uppercase tracking-widest">Ver detalhes →</span>
+                                </div>
                             </motion.div>
                         ))}
+                    </div>
+                )}
+            </div>
                     </div>
                 </div>
             )}
