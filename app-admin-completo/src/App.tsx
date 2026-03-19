@@ -55,6 +55,7 @@ const FlashOffersSection = ({ supabase }: { supabase: any }) => {
   const [loading, setLoading] = React.useState(false);
   const [showForm, setShowForm] = React.useState(false);
   const [merchants, setMerchants] = React.useState<any[]>([]);
+  const [uploadingImage, setUploadingImage] = React.useState(false);
   const [form, setForm] = React.useState({ product_name: '', product_image: '', original_price: '', discounted_price: '', merchant_id: '', expires_at: '', description: '' });
 
   const fetchOffers = async () => {
@@ -633,6 +634,9 @@ function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_users' }, () => {
         if (activeTab === 'merchants') fetchMerchants();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'promotions_delivery' }, () => {
+        if (activeTab === 'promotions' || activeTab === 'my_store') fetchPromotions();
+      })
       .subscribe();
 
     const interval = setInterval(() => {
@@ -1013,7 +1017,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         discount_value: promo.discount_value,
         min_order_value: promo.min_order_value,
         max_usage: promo.max_usage,
-        expires_at: promo.expires_at || null,
+        expires_at: promo.expires_at ? new Date(promo.expires_at + 'T23:59:59').toISOString() : null,
         is_active: promo.is_active,
         is_vip: promo.is_vip || false,
         updated_at: new Date().toISOString()
@@ -5203,6 +5207,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data de Expiração</label>
                         <input type="date" value={promoForm.expires_at}
+                          min={new Date().toISOString().split('T')[0]}
                           onChange={e => autoSavePromo({...promoForm, expires_at: e.target.value})}
                           className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white" />
                       </div>
