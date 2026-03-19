@@ -1508,8 +1508,8 @@ function App() {
     if (!userId) return;
     setIsLoading(true);
     const subtotal = cart.reduce((acc, item) => acc + (item.price || 0), 0);
-    const taxaBase = 5.0; 
-    const taxaDinamica = calculateDynamicPrice(taxaBase);
+    const taxaBase = selectedShop?.freeDelivery ? 0 : 5.0; 
+    const taxaDinamica = selectedShop?.freeDelivery ? 0 : calculateDynamicPrice(taxaBase);
     
     let desconto = 0;
     if (appliedCoupon) {
@@ -5328,7 +5328,8 @@ function App() {
 
   const renderCart = () => {
     const subtotal = cart.reduce((a, b) => a + (b.price || 0), 0);
-    const taxa = 0;
+    const isFree = selectedShop?.freeDelivery;
+    const taxa = isFree ? 0 : calculateDynamicPrice(5.0);
     const total = subtotal + taxa;
 
     if (cart.length === 0) {
@@ -5465,7 +5466,11 @@ function App() {
             </div>
             <div className="flex justify-between items-center text-sm font-bold text-slate-500 dark:text-slate-400">
                <span>Taxa de Entrega</span>
-               <span className="text-green-500 font-black tracking-widest text-[10px] uppercase bg-green-500/10 px-3 py-1 rounded-full">Grátis</span>
+               {isFree ? (
+                 <span className="text-green-500 font-black tracking-widest text-[10px] uppercase bg-green-500/10 px-3 py-1 rounded-full">Grátis</span>
+               ) : (
+                 <span className="text-slate-900 dark:text-white font-black">R$ {taxa.toFixed(2).replace(".", ",")}</span>
+               )}
             </div>
             <div className="h-px bg-slate-100 dark:bg-white/5 my-4" />
             <div className="flex justify-between items-center pt-2">
@@ -5513,7 +5518,11 @@ function App() {
       street: userLocation.address,
     };
 
-    const finalTotal = Math.max(0, subtotal + calculateDynamicPrice(5.0) - (appliedCoupon ? (appliedCoupon.discount_type === 'percent' ? (subtotal * appliedCoupon.discount_value) / 100 : appliedCoupon.discount_value) : 0));
+    const isFree = selectedShop?.freeDelivery;
+    const taxaBase = isFree ? 0 : 5.0;
+    const taxaTotalCheckout = isFree ? 0 : calculateDynamicPrice(taxaBase);
+
+    const finalTotal = Math.max(0, subtotal + taxaTotalCheckout - (appliedCoupon ? (appliedCoupon.discount_type === 'percent' ? (subtotal * appliedCoupon.discount_value) / 100 : appliedCoupon.discount_value) : 0));
 
     return (
       <Elements stripe={stripePromise}>
@@ -5766,9 +5775,13 @@ function App() {
               </div>
               <div className="flex justify-between items-center text-slate-500 dark:text-slate-400 font-bold text-sm">
                 <span>Taxa de Entrega</span>
-                <span className="font-black text-slate-900 dark:text-white tracking-tighter">
-                  R$ {calculateDynamicPrice(5.0).toFixed(2).replace(".", ",")}
-                </span>
+                {isFree ? (
+                  <span className="text-green-500 font-black tracking-widest text-[10px] uppercase bg-green-500/10 px-3 py-1 rounded-full">Grátis</span>
+                ) : (
+                  <span className="font-black text-slate-900 dark:text-white tracking-tighter">
+                    R$ {taxaTotalCheckout.toFixed(2).replace(".", ",")}
+                  </span>
+                )}
               </div>
               {appliedCoupon && (
                 <div className="flex justify-between items-center text-emerald-500 font-bold text-sm">
