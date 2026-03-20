@@ -197,7 +197,7 @@ const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClear, clas
   const fetchSuggestions = async (input: string) => {
     if (!input || input.length < 3) { setSuggestions([]); setOpen(false); return; }
     try {
-      const apiKey = "AIzaSyAhmPK3-Wpa8iEpusCluHKUBP-NmlkR0hw";
+      const apiKey = "GMAPS_KEY";
       const res = await fetch(
         `https://places.googleapis.com/v1/places:autocomplete`,
         {
@@ -1004,7 +1004,7 @@ function App() {
     if (!origin || !destination) return;
     setIsCalculatingPrice(true);
     try {
-      const apiKey = "AIzaSyAhmPK3-Wpa8iEpusCluHKUBP-NmlkR0hw";
+      const apiKey = "GMAPS_KEY";
       const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
         method: "POST",
         headers: {
