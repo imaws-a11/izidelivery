@@ -8,7 +8,8 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 // Chave pública do Stripe (Placeholder - Usuário deve substituir pela sua real)
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY as string ?? '');
+const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY as string || "";
+const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
 const StripePaymentForm = ({ onConfirm, total, userId, onCardSaved }: {
   onConfirm: (paymentMethodId: string) => void;
@@ -554,7 +555,10 @@ function App() {
     | "waiting_driver"
     | "scheduled_order"
     | "lightning_payment"
+    | "izi_black_purchase"
   >("none");
+  const [iziBlackOrigin, setIziBlackOrigin] = useState<"home" | "checkout">("home");
+  const [iziBlackStep, setIziBlackStep] = useState<"info" | "payment" | "success">("info");
 
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; expirationDate: string } | null>(null);
   const [lightningData, setLightningData] = useState<{ payment_request: string; satoshis: number; btc_price_brl: number } | null>(null);
@@ -569,6 +573,7 @@ function App() {
       toastTimeoutRef.current = null;
     }, 4000);
   };
+  const toastError = (message: string) => showToast(message, 'warning');
 
   // --- Izi Elite Client Features ---
   const [userXP, setUserXP] = useState(1250);
@@ -580,7 +585,9 @@ function App() {
   const [schedMessagesState, setSchedMessagesState] = useState<{id: string; text: string; from: 'user'|'driver'; time: string}[]>([]);
   const [isSavingObsState, setIsSavingObsState] = useState(false);
   const [aiMessage, setAiMessage] = useState("Olá! Sou seu assistente Izi. Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?");
-  const [showInfinityCard, setShowInfinityCard] = useState(false);
+  const [isIziBlackMembership, setIsIziBlackMembership] = useState(false);
+  const [iziCashbackEarned, setIziCashbackEarned] = useState(0);
+  const [showIziBlackCard, setShowIziBlackCard] = useState(false);
   const [showMasterPerks, setShowMasterPerks] = useState(false);
   const [flashOffers, setFlashOffers] = useState<any[]>([]);
 
@@ -793,7 +800,7 @@ function App() {
     // AI Dynamic Suggestions Cycle
     const aiTips = [
       "Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?",
-      "Hoje é sexta! Temos cupons especiais de 20% em bebidas para membros Izi Infinity.",
+      "Hoje é sexta! Temos cupons especiais de 20% em bebidas para membros Izi Black. 🍻",
       "Baseado no seu histórico, você costuma pedir em mercados às 19h. Deseja agendar suas compras?",
       "O trânsito está pesado hoje. Sugiro usar o Mototáxi para chegar mais rápido ao seu destino.",
       "Você está a apenas 250 XP de subir para o nível 13! Que tal um pedido extra hoje?"
@@ -1164,10 +1171,14 @@ function App() {
   const fetchWalletBalance = async (uid: string) => {
     const { data } = await supabase
       .from("users_delivery")
-      .select("wallet_balance")
+      .select("wallet_balance, is_izi_black, cashback_earned")
       .eq("id", uid)
       .single();
-    if (data) setWalletBalance(data.wallet_balance || 0);
+    if (data) {
+      setWalletBalance(data.wallet_balance || 0);
+      setIsIziBlackMembership(data.is_izi_black || false);
+      setIziCashbackEarned(data.cashback_earned || 0);
+    }
 
     // Buscar transacoes reais
     const { data: txData } = await supabase
@@ -1508,8 +1519,9 @@ function App() {
     if (!userId) return;
     setIsLoading(true);
     const subtotal = cart.reduce((acc, item) => acc + (item.price || 0), 0);
-    const taxaBase = selectedShop?.freeDelivery ? 0 : 5.0; 
-    const taxaDinamica = selectedShop?.freeDelivery ? 0 : calculateDynamicPrice(taxaBase);
+    const isFree = selectedShop?.freeDelivery || (isIziBlackMembership && subtotal >= 50);
+    const taxaBase = isFree ? 0 : 5.0; 
+    const taxaDinamica = isFree ? 0 : calculateDynamicPrice(taxaBase);
     
     let desconto = 0;
     if (appliedCoupon) {
@@ -1523,7 +1535,7 @@ function App() {
     const total = Math.max(0, subtotal + taxaDinamica - desconto);
 
     if (paymentMethod === "saldo" && walletBalance < total) {
-      toast("Saldo insuficiente na carteira! Adicione fundos para continuar.");
+      showToast("Saldo insuficiente na carteira! Adicione fundos para continuar.");
       setIsLoading(false);
       return;
     }
@@ -1608,6 +1620,10 @@ function App() {
           // 3. Atualizar pedido para 'novo' (sucesso)
           await supabase.from("orders_delivery").update({ status: "novo" }).eq("id", orderData.id);
           
+          const newCashback = iziCashbackEarned + (isIziBlackMembership ? (subtotal * 0.05) : (subtotal * 0.01));
+          await supabase.from('users_delivery').update({ cashback_earned: newCashback }).eq('id', userId);
+          setIziCashbackEarned(newCashback);
+
           setCart([]);
           localStorage.removeItem("izi_cart");
           setAppliedCoupon(null);
@@ -1627,6 +1643,10 @@ function App() {
 
     // Fluxo Legado (Dinheiro / Saldo)
     if (paymentMethod === "dinheiro") {
+      const newCashback = iziCashbackEarned + (isIziBlackMembership ? (subtotal * 0.05) : (subtotal * 0.01));
+      supabase.from('users_delivery').update({ cashback_earned: newCashback }).eq('id', userId).then();
+      setIziCashbackEarned(newCashback);
+
       setCart([]);
       setAppliedCoupon(null);
       setSelectedItem(orderData);
@@ -2277,6 +2297,64 @@ function App() {
           </div>
         </header>
 
+        {/* IZI BLACK VIP CARD */}
+        <div className="px-5 mt-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`relative overflow-hidden rounded-[32px] p-6 border-2 transition-all ${isIziBlackMembership ? 'bg-slate-900 border-primary shadow-2xl shadow-primary/20' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/50 dark:shadow-black/20'}`}
+          >
+            <div className={`absolute top-0 right-0 w-48 h-48 -mr-20 -mt-20 rounded-full blur-3xl opacity-30 ${isIziBlackMembership ? 'bg-primary' : 'bg-slate-400'}`} />
+            
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg ${isIziBlackMembership ? 'bg-primary text-slate-900' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}>
+                    <span className="material-symbols-outlined text-2xl font-black fill-1">workspace_premium</span>
+                  </div>
+                  <div>
+                    <h3 className={`text-sm font-black uppercase tracking-widest ${isIziBlackMembership ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
+                      {isIziBlackMembership ? 'Membro Izi Black' : 'Programa de Fidelidade'}
+                    </h3>
+                    <p className={`text-xl font-black tracking-tight ${isIziBlackMembership ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
+                      {isIziBlackMembership ? 'Seu Status é VIP' : 'Seja um Izi Black'}
+                    </p>
+                  </div>
+                </div>
+                {isIziBlackMembership && (
+                  <div className="bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-xl">
+                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">Ativo</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className={`p-4 rounded-2xl border ${isIziBlackMembership ? 'bg-white/5 border-white/10' : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800'}`}>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Cashback Disponível</p>
+                  <p className={`text-xl font-black tracking-tighter ${isIziBlackMembership ? 'text-primary' : 'text-slate-900 dark:text-white'}`}>
+                    R$ {iziCashbackEarned.toFixed(2).replace('.', ',')}
+                  </p>
+                </div>
+                <div className={`p-4 rounded-2xl border ${isIziBlackMembership ? 'bg-white/5 border-white/10' : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800'}`}>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Benefícios Ativos</p>
+                  <p className={`text-xl font-black tracking-tighter ${isIziBlackMembership ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
+                    {isIziBlackMembership ? 'Entrega Grátis*' : 'Ver Vantagens'}
+                  </p>
+                </div>
+              </div>
+
+              {!isIziBlackMembership && (
+                <button 
+                  onClick={() => { setIziBlackOrigin('home'); setIziBlackStep('info'); setSubView('izi_black_purchase'); }}
+                  className="w-full mt-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-black/20 dark:shadow-white/5"
+                >
+                  Conhecer Benefícios Izi Black
+                </button>
+              )}
+            </div>
+          </motion.div>
+        </div>
+
         {/* IZI FLASH — Grid Vitrine */}
         {flashOffers.length > 0 && (
           <div className="mt-8 px-5">
@@ -2306,7 +2384,7 @@ function App() {
                     onClick={() => {
                       const shop = ESTABLISHMENTS.find((e: any) => e.id === offer.merchant_id);
                       if (shop) handleShopClick(shop);
-                      else toast("Loja não disponível no momento.");
+                      else showToast("Loja não disponível no momento.");
                     }}
                   >
                     <div className="relative aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-slate-900">
@@ -5518,9 +5596,37 @@ function App() {
       street: userLocation.address,
     };
 
-    const isFree = selectedShop?.freeDelivery;
+    const isFree = selectedShop?.freeDelivery || (isIziBlackMembership && subtotal >= 50);
     const taxaBase = isFree ? 0 : 5.0;
     const taxaTotalCheckout = isFree ? 0 : calculateDynamicPrice(taxaBase);
+
+    // Banner de incentivo Izi Black no checkout
+    const renderBlackIncentive = () => {
+      if (isIziBlackMembership) return null;
+      return (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          onClick={() => { setIziBlackOrigin('checkout'); setIziBlackStep('info'); setSubView('izi_black_purchase'); }}
+          className="mx-6 mb-8 p-6 rounded-[35px] bg-slate-900 border-2 border-primary/30 relative overflow-hidden group cursor-pointer"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl -mr-10 -mt-10" />
+          <div className="flex items-start gap-5 relative z-10">
+            <div className="size-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+               <span className="material-symbols-outlined text-primary font-black fill-1">workspace_premium</span>
+            </div>
+            <div>
+               <h4 className="text-white font-black text-sm italic mb-1 uppercase tracking-tight">Economize R$ {taxaTotalCheckout.toFixed(2).replace('.', ',')} agora!</h4>
+               <p className="text-white/40 text-[10px] font-medium leading-relaxed">Membros <span className="text-primary font-black">Izi Black</span> não pagam frete neste pedido. Assine agora por apenas R$ 29,90.</p>
+            </div>
+            <span className="material-symbols-outlined text-primary ml-auto self-center group-hover:translate-x-1 transition-transform">arrow_forward</span>
+          </div>
+        </motion.div>
+      );
+    };
+
+    // Cálculo do cashback que será ganho neste pedido (ex: 5% para Izi Black, 1% normal)
+    const cashbackEstimado = isIziBlackMembership ? (subtotal * 0.05) : (subtotal * 0.01);
 
     const finalTotal = Math.max(0, subtotal + taxaTotalCheckout - (appliedCoupon ? (appliedCoupon.discount_type === 'percent' ? (subtotal * appliedCoupon.discount_value) / 100 : appliedCoupon.discount_value) : 0));
 
@@ -5545,6 +5651,7 @@ function App() {
           </header>
 
           <main className="flex-1 overflow-y-auto pb-40">
+            {renderBlackIncentive()}
             {/* Delivery Address Section */}
             <section className="p-6 bg-white dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 animate-in fade-in slide-in-from-top-4 duration-500">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6">
@@ -5773,6 +5880,14 @@ function App() {
                   R$ {subtotal.toFixed(2).replace(".", ",")}
                 </span>
               </div>
+              {appliedCoupon && (
+                <div className="flex justify-between items-center text-emerald-500 font-bold text-sm">
+                  <span>Desconto</span>
+                  <span className="font-black tracking-tighter">
+                    -R$ {(appliedCoupon.discount_type === 'percent' ? (subtotal * appliedCoupon.discount_value) / 100 : appliedCoupon.discount_value).toFixed(2).replace(".", ",")}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-center text-slate-500 dark:text-slate-400 font-bold text-sm">
                 <span>Taxa de Entrega</span>
                 {isFree ? (
@@ -6323,8 +6438,8 @@ function App() {
               { icon: "account_balance_wallet", label: "Minha Carteira", desc: "Saldo e Extrato", action: () => setSubView("wallet"), color: "primary" },
               { icon: "location_on", label: "Endereços", desc: "Suas localizações salvas", action: () => setSubView("addresses"), color: "blue" },
               { icon: "credit_card", label: "Pagamentos", desc: "Cartões e Métodos", action: () => { setPaymentsOrigin("profile"); setSubView("payments"); }, color: "purple" },
-              { icon: "notifications", label: "Notificações", desc: "Alertas e Novidades", action: () => toast("Configurações de alerta"), color: "amber" },
-              { icon: "help", label: "Ajuda & Suporte", desc: "Falar com o atendimento", action: () => toast("Suporte 24h em breve"), color: "emerald" },
+              { icon: "notifications", label: "Notificações", desc: "Alertas e Novidades", action: () => showToast("Configurações de alerta"), color: "amber" },
+              { icon: "help", label: "Ajuda & Suporte", desc: "Falar com o atendimento", action: () => showToast("Suporte 24h em breve"), color: "emerald" },
             ].map((item, i) => (
               <motion.div
                 whileTap={{ scale: 0.98 }}
@@ -6673,9 +6788,9 @@ function App() {
     const handleSaveCard = async () => {
       if (!userId) return;
       const rawNumber = newCardData.number.replace(/\s/g, "");
-      if (rawNumber.length < 15) return toast("Insira um número de cartão válido");
-      if (!newCardData.expiry || newCardData.expiry.length < 5) return toast("Insira a validade do cartão");
-      if (!newCardData.cvv || newCardData.cvv.length < 3) return toast("Insira o CVV");
+      if (rawNumber.length < 15) return showToast("Insira um número de cartão válido");
+      if (!newCardData.expiry || newCardData.expiry.length < 5) return showToast("Insira a validade do cartão");
+      if (!newCardData.cvv || newCardData.cvv.length < 3) return showToast("Insira o CVV");
 
       setIsLoadingCards(true);
       try {
@@ -6717,7 +6832,7 @@ function App() {
         setPaymentMethod("cartao");
         setIsAddingCard(false);
         setNewCardData({ number: "", expiry: "", cvv: "", brand: "Visa" });
-        toast("Cartão adicionado com sucesso!");
+        showToast("Cartão adicionado com sucesso!");
       } catch (err: any) {
         toastError("Erro ao salvar cartão: " + err.message);
       } finally {
@@ -6768,7 +6883,7 @@ function App() {
               <motion.button
                 whileTap={{ scale: 0.96 }}
                 className="bg-black text-white p-5 rounded-[28px] flex flex-col items-center gap-2 shadow-xl shadow-black/10"
-                onClick={() => toast("Apple Pay não disponível neste dispositivo")}
+                onClick={() => showToast("Apple Pay não disponível neste dispositivo")}
               >
                 <div className="size-10 flex items-center justify-center">
                   <svg className="w-8 h-8 fill-current" viewBox="0 0 17 20" xmlns="http://www.w3.org/2000/svg"><path d="M15.11 15.18c-.8.88-1.57 1.83-2.67 1.84-1.07.01-1.39-.63-2.65-.63-1.25 0-1.63.63-2.63.64-1.08.02-1.85-.97-2.7-1.92-1.69-1.9-2.99-5.36-1.24-8.38 1.45-2.52 4.1-3.26 5.6-3.26 1.42 0 2.38.74 3.01.74.62 0 1.96-.86 3.49-.71 1.05.04 1.9.43 2.51.98-2.31 1.54-1.91 5.38.68 6.47-.56 1.63-1.6 3.32-2.7 4.23zM10.84 2.82c-.67.87-1.74 1.48-2.77 1.41-.14-1.09.43-2.19 1.02-2.88.75-.86 1.94-1.42 2.83-1.35.15 1.1-.38 1.95-1.08 2.82z"/></svg>
@@ -6778,7 +6893,7 @@ function App() {
               <motion.button
                 whileTap={{ scale: 0.96 }}
                 className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-5 rounded-[28px] border border-slate-100 dark:border-slate-700 flex flex-col items-center gap-2 shadow-xl"
-                onClick={() => toast("Google Pay não disponível neste dispositivo")}
+                onClick={() => showToast("Google Pay não disponível neste dispositivo")}
               >
                 <div className="size-10 flex items-center justify-center">
                   <svg className="w-8 h-8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 24c6.627 0 12-5.373 12-12S18.627 0 12 0 0 5.373 0 12s5.373 12 12 12z" fill="#f2f2f2"/><path d="M18.125 10.688c0-.46-.03-.92-.116-1.38H12v2.76h3.6c-.144.736-.583 1.344-1.206 1.764v1.543h1.954c1.144-1.042 1.777-2.583 1.777-4.687z" fill="#4285f4"/><path d="M12 16.5c-1.216 0-2.26-.814-2.656-1.94l-1.95.006-.008 1.51c.907 1.76 2.72 2.924 4.614 2.924 1.575 0 2.955-.536 3.968-1.458l-1.954-1.543c-.563.376-1.238.6-2.014.6z" fill="#34a853"/><path d="M9.344 14.56c-.2-.593-.314-1.232-.314-1.942s.114-1.349.314-1.942L7.382 9.09l-.01.013c-.66 1.347-1.04 2.868-1.04 4.515 0 1.64.38 3.141 1.04 4.475l2.008-1.533z" fill="#fbbc05"/><path d="M12 7.74c.9 0 1.63.31 2.277.85l1.644-1.644C14.885 6.012 13.565 5.4 12 5.4c-1.9 0-3.666 1.096-4.613 2.768L9.344 9.4c.396-1.127 1.44-1.66 2.656-1.66z" fill="#ea4335"/></svg>
@@ -7048,7 +7163,7 @@ function App() {
                     userId={userId}
                     onConfirm={() => {
                       setIsAddingCard(false);
-                      toast("Cartão salvo com sucesso!");
+                      showToast("Cartão salvo com sucesso!");
                     }}
                     onCardSaved={(card) => {
                       const newCard = {
@@ -7518,7 +7633,7 @@ function App() {
               <div className="mb-12">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.25em]">Resumo do Pedido</h3>
-                  <button onClick={() => toast("Recibo Digital em breve")} className="text-primary font-black uppercase text-[9px] border border-primary/20 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors">Ver Recibo</button>
+                  <button onClick={() => showToast("Recibo Digital em breve")} className="text-primary font-black uppercase text-[9px] border border-primary/20 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors">Ver Recibo</button>
                 </div>
                 <div className="space-y-3">
                    {/* Fallback to mock items if detailed data isn't in selectedItem */}
@@ -7964,23 +8079,193 @@ function App() {
     );
   };
 
-  const renderInfinityCard = () => {
+  const renderIziBlackPurchase = () => {
+    const handleClose = () => {
+      setSubView(iziBlackOrigin === 'checkout' ? 'checkout' : 'none');
+    };
+
+    const handleSubscribe = async () => {
+      if (!userId) return;
+      setIsLoading(true);
+      try {
+        const { error } = await supabase
+          .from('users_delivery')
+          .update({ is_izi_black: true })
+          .eq('id', userId);
+        
+        if (error) throw error;
+        
+        setIsIziBlackMembership(true);
+        setIziBlackStep('success');
+        showToast("Bem-vindo ao Izi Black! 🎉", "success");
+      } catch (err) {
+        showToast("Erro ao processar assinatura.", "warning");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (iziBlackStep === 'payment') {
+      return (
+        <div className="absolute inset-0 z-[180] bg-[#020617] flex flex-col antialiased">
+           <header className="p-8 flex items-center gap-4">
+              <button onClick={() => setIziBlackStep('info')} className="size-10 rounded-xl bg-white/5 flex items-center justify-center text-white">
+                 <span className="material-symbols-outlined">arrow_back</span>
+              </button>
+              <h2 className="text-white font-black italic uppercase tracking-tight">Pagamento Assinatura</h2>
+           </header>
+           <main className="flex-1 px-8 space-y-6">
+              <div className="bg-white/5 border border-white/10 rounded-[35px] p-8 text-center">
+                 <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2">Total a pagar</p>
+                 <p className="text-4xl font-black text-white italic">R$ 29,90<span className="text-sm text-white/20 not-italic">/mês</span></p>
+              </div>
+
+              <div className="space-y-3">
+                 <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] ml-2">Escolha o método</p>
+                 <button onClick={handleSubscribe} className="w-full flex items-center justify-between p-6 bg-white/5 border border-white/10 rounded-[30px] group active:scale-95 transition-all">
+                    <div className="flex items-center gap-4">
+                       <div className="size-12 rounded-2xl bg-[#00BFA5]/20 flex items-center justify-center">
+                          <img src="https://logopng.com.br/logos/pix-128.png" className="size-6 object-contain" />
+                       </div>
+                       <div className="text-left">
+                          <p className="text-white font-black italic text-sm">PIX Copia e Cola</p>
+                          <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Aprovação Instantânea</p>
+                       </div>
+                    </div>
+                    <span className="material-symbols-outlined text-white/20 group-hover:text-primary transition-colors">chevron_right</span>
+                 </button>
+
+                 <button onClick={handleSubscribe} className="w-full flex items-center justify-between p-6 bg-white/5 border border-white/10 rounded-[30px] group active:scale-95 transition-all">
+                    <div className="flex items-center gap-4">
+                       <div className="size-12 rounded-2xl bg-primary/20 flex items-center justify-center">
+                          <span className="material-symbols-outlined text-primary">credit_card</span>
+                       </div>
+                       <div className="text-left">
+                          <p className="text-white font-black italic text-sm">Cartão de Crédito</p>
+                          <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">**** 4432 (Salvo)</p>
+                       </div>
+                    </div>
+                    <span className="material-symbols-outlined text-white/20 group-hover:text-primary transition-colors">chevron_right</span>
+                 </button>
+              </div>
+           </main>
+        </div>
+      );
+    }
+
+    if (iziBlackStep === 'success') {
+      return (
+        <div className="absolute inset-0 z-[190] bg-primary flex flex-col items-center justify-center text-center p-10">
+           <motion.div 
+             initial={{ scale: 0 }}
+             animate={{ scale: 1 }}
+             className="size-32 rounded-[40px] bg-slate-900 flex items-center justify-center mb-8 shadow-2xl"
+           >
+              <span className="material-symbols-outlined text-primary text-6xl fill-1">workspace_premium</span>
+           </motion.div>
+           <h2 className="text-4xl font-black text-slate-900 italic tracking-tighter leading-tight mb-4 text-center">VOCÊ AGORA É<br/>IZI BLACK!</h2>
+           <p className="text-slate-800 font-bold text-sm max-w-[250px] mb-12">Prepare-se para economizar muito frete e ganhar cashback em cada pedido.</p>
+           <button onClick={handleClose} className="w-full bg-slate-900 text-primary h-20 rounded-[30px] font-black uppercase tracking-widest shadow-2xl">
+              Começar a Usar
+           </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="absolute inset-0 z-[180] bg-[#020617] flex flex-col hide-scrollbar overflow-y-auto antialiased">
+         {/* Premium Banner */}
+         <div className="relative h-[45vh] shrink-0 overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1550745165-9bc0b252728f?q=80&w=1200" className="w-full h-full object-cover opacity-60" />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#020617]/50 to-[#020617]" />
+            
+            <header className="absolute top-0 inset-x-0 p-8 flex items-center justify-between">
+               <button onClick={handleClose} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl flex items-center justify-center text-white border border-white/10">
+                  <span className="material-symbols-outlined">close</span>
+               </button>
+            </header>
+
+            <div className="absolute bottom-10 inset-x-0 px-8">
+               <div className="bg-primary/20 border border-primary/30 w-fit px-4 py-1.5 rounded-full mb-4">
+                  <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Convite Exclusivo</span>
+               </div>
+               <h1 className="text-5xl font-black text-white italic tracking-tighter leading-none mb-4">
+                  IZI <span className="text-primary">BLACK</span>
+               </h1>
+               <p className="text-white/60 text-sm font-medium leading-relaxed max-w-[280px]">
+                  Eleve sua experiência para o nível máximo com benefícios que se pagam sozinhos.
+               </p>
+            </div>
+         </div>
+
+         <main className="px-8 pb-32 space-y-10 relative z-10 -mt-6">
+            <div className="grid grid-cols-1 gap-4">
+               {[
+                  { icon: 'local_shipping', title: 'Fretes Grátis Ilimitados', desc: 'Não pague taxa de entrega em pedidos acima de R$50.' },
+                  { icon: 'payments', title: '5% de Cashback Real', desc: 'Dinheiro de volta em todos os seus pedidos na plataforma.' },
+                  { icon: 'star', title: 'Ofertas Antecipadas', desc: 'Acesso exclusivo às Izi Flash antes de todo mundo.' },
+                  { icon: 'support_agent', title: 'Suporte VIP 24h', desc: 'Atendimento prioritário com nossa equipe de elite.' }
+               ].map((item, i) => (
+                  <div key={i} className="flex gap-5 p-6 bg-white/5 border border-white/10 rounded-[35px] backdrop-blur-md">
+                     <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
+                        <span className="material-symbols-outlined text-primary">{item.icon}</span>
+                     </div>
+                     <div>
+                        <h4 className="text-white font-black text-sm mb-1 italic">{item.title}</h4>
+                        <p className="text-white/40 text-[11px] leading-relaxed font-medium">{item.desc}</p>
+                     </div>
+                  </div>
+               ))}
+            </div>
+
+            <div className="bg-gradient-to-r from-primary/20 to-orange-500/20 border border-primary/30 rounded-[40px] p-8 text-center">
+               <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-2">Plano Standard</p>
+               <div className="flex items-center justify-center gap-2 mb-2">
+                  <span className="text-white/40 text-lg font-black line-through">R$ 49,90</span>
+                  <span className="text-4xl font-black text-white italic">R$ 29,90</span>
+                  <span className="text-white/40 text-sm font-bold">/mês</span>
+               </div>
+               <p className="text-white/60 text-[10px] font-medium">Cancele quando quiser. Sem fidelidade.</p>
+            </div>
+         </main>
+
+         <footer className="fixed bottom-0 inset-x-0 p-8 pt-4 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent">
+            <button 
+               onClick={() => setIziBlackStep('payment')}
+               disabled={isLoading}
+               className="w-full bg-primary text-slate-900 h-20 rounded-[30px] font-black uppercase tracking-[0.2em] text-sm shadow-2xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+               {isLoading ? (
+                  <span className="material-symbols-outlined animate-spin text-slate-900">sync</span>
+               ) : (
+                  <>
+                     <span className="font-black">Quero ser Izi Black</span>
+                     <span className="material-symbols-outlined font-black">arrow_forward</span>
+                  </>
+               )}
+            </button>
+         </footer>
+      </div>
+    );
+  };
+
+  const renderIziBlackCard = () => {
     const perks = [
-      { icon: 'speed', label: 'Entrega Grátis Infinito', desc: 'Em todos os pedidos acima de R$50' },
-      { icon: 'potted_plant', label: 'Eco-Points em Dobro', desc: 'Ajude o planeta e ganhe mais XP' },
+      { icon: 'speed', label: 'Entrega Grátis Izi Black', desc: 'Em todos os pedidos acima de R$50' },
+      { icon: 'potted_plant', label: 'Cashback em Dobro', desc: 'Ganhe mais em cada real gasto' },
       { icon: 'headset_mic', label: 'Suporte VIP Priority', desc: 'Atendimento humano em < 2 min' },
-      { icon: 'shield_check', label: 'Seguro Izi Elite', desc: 'Proteção total em todas as viagens' },
+      { icon: 'shield_check', label: 'Seguro Izi Black', desc: 'Proteção total em todas as suas entregas' },
     ];
 
     return (
       <div className="absolute inset-0 z-[170] bg-slate-900 flex flex-col hide-scrollbar overflow-y-auto pb-32">
         <header className="p-8 pt-12 flex items-center justify-between sticky top-0 bg-slate-900/80 backdrop-blur-2xl z-20">
            <div>
-              <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">Izi Infinity</h2>
+              <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">Izi Black</h2>
               <p className="text-[10px] text-primary font-black uppercase tracking-[0.4em]">Sua Patente de Elite</p>
            </div>
            <button 
-             onClick={() => setShowInfinityCard(false)}
+             onClick={() => setShowIziBlackCard(false)}
              className="size-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 active:scale-90 transition-all border border-white/10"
            >
              <span className="material-symbols-outlined font-black">close</span>
@@ -8022,7 +8307,7 @@ function App() {
             {/* Battle Pass Access */}
             <motion.div 
               whileTap={{ scale: 0.98 }}
-              onClick={() => { setShowInfinityCard(false); setSubView("quest_center"); }}
+              onClick={() => { setShowIziBlackCard(false); setSubView("quest_center"); }}
               className="bg-primary/10 border border-primary/20 p-6 rounded-[35px] flex items-center justify-between group cursor-pointer"
             >
                <div className="flex items-center gap-5">
@@ -10127,11 +10412,6 @@ function App() {
                   {renderScheduledOrder()}
                 </motion.div>
               )}
-              {subView === "scheduled_order" && (
-                <motion.div key="sched_ord" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderScheduledOrder()}
-                </motion.div>
-              )}
               {subView === "shipping_details" && (
                 <motion.div
                   key="ship_det"
@@ -10187,6 +10467,18 @@ function App() {
                   className="absolute inset-0 z-[150]"
                 >
                   {renderPaymentSuccess()}
+                </motion.div>
+              )}
+              {subView === "izi_black_purchase" && (
+                <motion.div
+                  key="iziblackp"
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.5 }}
+                  className="absolute inset-0 z-[180]"
+                >
+                  {renderIziBlackPurchase()}
                 </motion.div>
               )}
               {subView === "order_support" && (
@@ -10294,7 +10586,7 @@ function App() {
                         PAULO62070503***6304E2B1
                       </p>
                       <button
-                        onClick={() => toast("Chave copiada!")}
+                        onClick={() => showToast("Chave copiada!")}
                         className="mt-4 w-full bg-white text-brand-600 font-black py-3 rounded-xl shadow-sm active:scale-95 transition-all text-sm uppercase"
                       >
                         Copiar Código
@@ -10328,7 +10620,7 @@ function App() {
                   {renderAIConcierge()}
                 </motion.div>
               )}
-              {showInfinityCard && (
+              {showIziBlackCard && (
                 <motion.div
                   initial={{ y: "100%" }}
                   animate={{ y: 0 }}
@@ -10336,7 +10628,7 @@ function App() {
                   transition={{ type: "spring", bounce: 0, duration: 0.5 }}
                   className="fixed inset-0 z-[170]"
                 >
-                  {renderInfinityCard()}
+                  {renderIziBlackCard()}
                 </motion.div>
               )}
               {showMasterPerks && (
