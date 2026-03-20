@@ -558,7 +558,8 @@ function App() {
     | "izi_black_purchase"
   >("none");
   const [iziBlackOrigin, setIziBlackOrigin] = useState<"home" | "checkout">("home");
-  const [iziBlackStep, setIziBlackStep] = useState<"info" | "payment" | "success">("info");
+  const [iziBlackStep, setIziBlackStep] = useState<"info" | "payment" | "pix_qr" | "success">("info");
+  const [iziBlackPixCode, setIziBlackPixCode] = useState("");
 
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; expirationDate: string } | null>(null);
   const [lightningData, setLightningData] = useState<{ payment_request: string; satoshis: number; btc_price_brl: number } | null>(null);
@@ -1103,7 +1104,7 @@ function App() {
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [newCardData, setNewCardData] = useState({ number: "", expiry: "", cvv: "", brand: "Visa" });
   // Controla de onde a tela de pagamentos foi aberta: "checkout" | "profile"
-  const [paymentsOrigin, setPaymentsOrigin] = useState<"checkout" | "profile">("profile");
+  const [paymentsOrigin, setPaymentsOrigin] = useState<"checkout" | "profile" | "izi_black">("profile");
 
   const fetchSavedCards = async (uid: string) => {
     setIsLoadingCards(true);
@@ -2352,7 +2353,15 @@ function App() {
                 </div>
               </div>
 
-              {!isIziBlackMembership && (
+              {isIziBlackMembership ? (
+                <button 
+                  onClick={() => setShowIziBlackCard(true)}
+                  className="w-full mt-6 bg-primary dark:bg-primary text-slate-900 dark:text-slate-900 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-sm">workspace_premium</span>
+                  Acessar Painel VIP Izi Black
+                </button>
+              ) : (
                 <button 
                   onClick={() => { setIziBlackOrigin('home'); setIziBlackStep('info'); setSubView('izi_black_purchase'); }}
                   className="w-full mt-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-black/20 dark:shadow-white/5"
@@ -3275,25 +3284,26 @@ function App() {
   const renderExploreCategory = () => {
     if (!exploreCategoryState) return null;
 
-    const mockData: Record<string, any[]> = {
-      flowers: [
-        { id: 8001, name: "Floricultura Magnólia", rating: "4.9", time: "30-50 min", tag: "Premium", banner: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=800", logo: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=200", freeDelivery: true },
-        { id: 8002, name: "Bouquet & Co", rating: "4.8", time: "40-60 min", tag: "Artesanal", banner: "https://images.unsplash.com/photo-1596003906949-67221c37965c?q=80&w=800", logo: "https://images.unsplash.com/photo-1596003906949-67221c37965c?q=80&w=200", freeDelivery: false, fee: "R$ 12,00" },
-        { id: 8003, name: "Jardim Secreto", rating: "5.0", time: "20-40 min", tag: "Luxo", banner: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?q=80&w=800", logo: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?q=80&w=200", freeDelivery: true },
-      ],
-      sweets: [
-        { id: 8101, name: "Confeitaria D'Or", rating: "4.9", time: "25-40 min", tag: "Francesa", banner: "https://images.unsplash.com/photo-1578985542846-399fe5c5f47d?q=80&w=800", logo: "https://images.unsplash.com/photo-1578985542846-399fe5c5f47d?q=80&w=200", freeDelivery: true },
-        { id: 8102, name: "Bolos da Júlia", rating: "4.7", time: "60-90 min", tag: "Caseiro", banner: "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?q=80&w=800", logo: "https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?q=80&w=200", freeDelivery: false, fee: "R$ 8,00" },
-        { id: 8103, name: "The Chocolate Factory", rating: "4.8", time: "20-30 min", tag: "Chocolates", banner: "https://images.unsplash.com/photo-1549007994-cb92caebd54b?q=80&w=800", logo: "https://images.unsplash.com/photo-1549007994-cb92caebd54b?q=80&w=200", freeDelivery: true },
-      ],
-      pets: [
-        { id: 8201, name: "Puppy Luxury Store", rating: "4.9", time: "30-45 min", tag: "Pet Boutique", banner: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=800", logo: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=200", freeDelivery: true },
-        { id: 8202, name: "Petz Exclusive", rating: "4.8", time: "20-35 min", tag: "Geral", banner: "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?q=80&w=800", logo: "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?q=80&w=200", freeDelivery: true },
-        { id: 8203, name: "Miau & Cia", rating: "4.7", time: "30-50 min", tag: "Gatos", banner: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=800", logo: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=200", freeDelivery: false, fee: "R$ 5,00" },
-      ]
-    };
+    // Filtra os lojistas reais do banco de dados ao invés de usar dados engessados (hardcoded)
+    const shops = ESTABLISHMENTS.filter((estab: any) => {
+       const catId = (exploreCategoryState.id || "").toLowerCase();
+       const catTitle = (exploreCategoryState.title || "").toLowerCase();
+       const type = (estab.type || "").toLowerCase();
+       const tag = (estab.tag || "").toLowerCase();
+       return type === catId || type === catTitle || estab.category_id === catId || tag.includes(catId) || tag.includes(catTitle);
+    }).map((estab: any) => ({
+      id: estab.id,
+      name: estab.name,
+      rating: estab.rating || "5.0",
+      time: estab.time || "30-50 min",
+      freeDelivery: estab.freeDelivery || true,
+      fee: estab.freeDelivery ? undefined : "R$ 4,90",
+      tag: estab.tag || "Loja Parceira",
+      banner: estab.banner || estab.img,
+      logo: estab.img || estab.banner,
+      type: estab.type,
+    }));
 
-    const shops = mockData[exploreCategoryState.id] || [];
     const accentColor = exploreCategoryState.primaryColor;
 
     return (
@@ -3805,86 +3815,46 @@ function App() {
   const renderGenericList = () => {
     if (!activeService) return null;
 
-    const data: any = {
-      pet: {
-        title: "Pet Shops",
-        tagline: "Cuidado & Carinho",
-        shops: [
-          { name: "Petz Store VIP", tag: "Premium", rating: "4.9", time: "25-45 min", img: "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?q=80&w=300", freeDelivery: true },
-          { name: "Amigo Bicho", tag: "Acessórios", rating: "4.7", time: "40-50 min", img: "https://images.unsplash.com/photo-1516733725897-1aa73b87c8e8?q=80&w=300", freeDelivery: false, fee: "R$ 7,90" },
-        ],
-        products: [
-          { id: 401, name: "Ração Golden 3kg", price: 54.9, desc: "Sabor carne para cães adultos.", img: "https://images.unsplash.com/photo-1589924691995-400dc9ecc119?q=80&w=300" },
-          { id: 402, name: "Brinquedo Mordedor", price: 15.0, desc: "Borracha atóxica durável.", img: "https://images.unsplash.com/photo-1576201836106-db1758fd1c97?q=80&w=300" },
-          { id: 403, name: "Cama Soft Dream", price: 89.90, desc: "Conforto máximo para o seu pet.", img: "https://images.unsplash.com/photo-1591946614720-90a587da4a36?q=80&w=300" },
-        ],
-      },
-      beverages: {
-        title: "Bebidas",
-        tagline: "Geladas no Ponto",
-        shops: [
-          { name: "Adega Top Prime", tag: "Geladas", rating: "4.8", time: "10-20 min", img: "https://images.unsplash.com/photo-1528913135592-4abd73f8a0aa?q=80&w=300", freeDelivery: true },
-          { name: "Empório da Cerva", tag: "Artesanais", rating: "4.9", time: "15-25 min", img: "https://images.unsplash.com/photo-1608270586620-248524c67de9?q=80&w=300", freeDelivery: true },
-        ],
-        products: [
-          { id: 501, name: "Vinho Tinto Reserva", price: 45.0, desc: "Cabernet Sauvignon 750ml.", img: "https://images.unsplash.com/photo-1584916201218-f4242ceb4809?q=80&w=300" },
-          { id: 502, name: "Heineken 6-pack", price: 34.90, desc: "Long Neck 330ml.", img: "https://images.unsplash.com/photo-1503920306624-94636ad82bfb?q=80&w=300" },
-        ],
-      },
-      rest: {
-        title: "Serviços",
-        tagline: "Tudo que você precisa",
-        shops: [],
-        products: []
-      },
-      medicamentos: {
-        title: "Remédios",
-        tagline: "Sua saúde em primeiro lugar",
-        shops: [
-          { name: "Droga Raia Premium", rating: "4.9", time: "10 min", img: "https://images.unsplash.com/photo-1587854692152-cbe660dbbb88?q=80&w=300", freeDelivery: true },
-          { name: "Pague Menos Express", rating: "4.8", time: "15 min", img: "https://images.unsplash.com/photo-1576602976047-174e57a47881?q=80&w=300", fee: "R$ 4,90" },
-        ],
-        products: [
-          { id: 901, name: "Ibuprofeno 600mg", price: 14.90, desc: "Alívio de dor e febre.", img: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?q=80&w=300" },
-          { id: 902, name: "Antigripal Multi", price: 19.90, desc: "Combate sintomas da gripe.", img: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?q=80&w=300" },
-        ]
-      },
-      higiene: {
-        title: "Higiene & Cuidados",
-        tagline: "Frescor para o seu dia",
-        shops: [
-          { name: "Drugstore Luxury", rating: "5.0", time: "10 min", img: "https://images.unsplash.com/photo-1631549448223-1f629c9bb6ad?q=80&w=300", freeDelivery: true },
-        ],
-        products: [
-          { id: 910, name: "Shampoo Anticaspa", price: 32.50, desc: "Ação profunda e duradoura.", img: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=300" },
-          { id: 911, name: "Creme Dental Pro", price: 15.90, desc: "Branqueamento avançado.", img: "https://images.unsplash.com/photo-1559591937-e6b7d27e279b?q=80&w=300" },
-        ]
-      },
-      dermocosmeticos: {
-        title: "Beleza & Dermos",
-        tagline: "Cuidado com sua pele",
-        shops: [
-          { name: "Droga Raia Premium", rating: "4.9", time: "10 min", img: "https://images.unsplash.com/photo-1587854692152-cbe660dbbb88?q=80&w=300", freeDelivery: true },
-        ],
-        products: [
-          { id: 920, name: "Sérum Hidratante", price: 89.00, desc: "Ácido hialurônico puro.", img: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=300" },
-          { id: 921, name: "Protetor FPS 50", price: 54.90, desc: "Toque seco e invisível.", img: "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=300" },
-        ]
-      },
-      vitaminas: {
-        title: "Saúde & Vitaminas",
-        tagline: "Energia e Imunidade",
-        shops: [
-          { name: "Pague Menos Express", rating: "4.8", time: "15 min", img: "https://images.unsplash.com/photo-1576602976047-174e57a47881?q=80&w=300", fee: "R$ 4,90" },
-        ],
-        products: [
-          { id: 930, name: "Multivitamínico A-Z", price: 45.00, desc: "Todas as vitaminas essenciais.", img: "https://images.unsplash.com/photo-1614859324967-bdf739e9cc21?q=80&w=300" },
-          { id: 931, name: "Vitamina C 1g", price: 18.20, desc: "Tabletes efervescentes.", img: "https://images.unsplash.com/photo-1614859324967-bdf739e9cc21?q=80&w=300" },
-        ]
-      }
+    const searchId = (activeService.subType || activeService.type || "").toLowerCase();
+    
+    const titles: Record<string, any> = {
+      pet: { title: "Pet Shops", tagline: "Cuidado & Carinho" },
+      beverages: { title: "Bebidas", tagline: "Geladas no Ponto" },
+      medicamentos: { title: "Remédios", tagline: "Sua saúde em primeiro lugar" },
+      higiene: { title: "Higiene & Cuidados", tagline: "Frescor para o seu dia" },
+      dermocosmeticos: { title: "Beleza & Dermos", tagline: "Cuidado com sua pele" },
+      vitaminas: { title: "Saúde & Vitaminas", tagline: "Energia e Imunidade" },
+      hortifruti: { title: "Hortifruti", tagline: "Feira fresca todo dia" },
+      carnes: { title: "Carnes & Açougue", tagline: "Cortes selecionados" },
+      padaria: { title: "Padaria", tagline: "Pão quentinho" },
     };
 
-    const serviceData = data[activeService.subType] || data[activeService.type] || data.rest;
+    const headerInfo = titles[searchId] || { title: activeService.name || "Explorar", tagline: "Tudo o que você precisa" };
+
+    const realShops = ESTABLISHMENTS.filter((estab: any) => {
+       const type = (estab.type || "").toLowerCase();
+       const tag = (estab.tag || "").toLowerCase();
+       return type === searchId || estab.category_id === searchId || tag.includes(searchId);
+    }).map((estab: any) => ({
+      id: estab.id,
+      name: estab.name,
+      rating: estab.rating || "5.0",
+      time: estab.time || "30-50 min",
+      freeDelivery: estab.freeDelivery || true,
+      fee: estab.freeDelivery ? undefined : "R$ 4,90",
+      tag: estab.tag || "Loja Parceira",
+      banner: estab.banner || estab.img,
+      img: estab.img || estab.banner,
+      logo: estab.img,
+      type: estab.type,
+    }));
+
+    const serviceData = {
+      title: headerInfo.title,
+      tagline: headerInfo.tagline,
+      shops: realShops,
+      products: [],
+    };
 
     return (
       <div className="absolute inset-0 z-40 bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 flex flex-col hide-scrollbar overflow-y-auto pb-32">
@@ -5178,29 +5148,14 @@ function App() {
 
   const renderStoreCatalog = () => {
     const shop = selectedShop || {
-      name: "Lux Floricultura",
-      rating: "4.9",
-      tag: "Floricultura Premium",
-      priceRange: "$$$",
-      time: "40-60 min",
+      name: "Loja Parceira",
+      rating: "5.0",
+      tag: "Categoria",
+      priceRange: "$",
+      time: "30-60 min",
       fee: "Grátis",
-      img: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1000",
-      categories: [
-        {
-          name: "💐 Buquês Premium",
-          items: [
-            { id: 201, name: "Amor Infinito", desc: "12 rosas vermelhas importadas com folhagens nobres.", price: 189.90, img: "https://images.unsplash.com/photo-1548842215-64903328e353?q=80&w=600" },
-            { id: 202, name: "Jardim Encantado", desc: "Mix de flores da estação em tons pastéis.", price: 145.90, img: "https://images.unsplash.com/photo-1567606117518-ff3526c9f691?q=80&w=600" }
-          ]
-        },
-        {
-          name: "🎁 Presentes & Mimos",
-          items: [
-            { id: 203, name: "Vinho & Flores", desc: "Kit com espumante premium e mini buquê.", price: 299.00, img: "https://images.unsplash.com/photo-1516733725897-1aa73b87c8e8?q=80&w=600" },
-            { id: 204, name: "Orquídea Phalaenopsis", desc: "Vaso decorativo com orquídea de duas hastes.", price: 85.00, img: "https://images.unsplash.com/photo-1598282348505-89b14188546b?q=80&w=600" }
-          ]
-        }
-      ],
+      img: "https://images.unsplash.com/photo-1552566626-52f8b828add9?q=80&w=1000",
+      categories: [],
     };
 
     return (
@@ -5996,7 +5951,10 @@ function App() {
       <div className="absolute inset-0 z-[100] bg-slate-50 dark:bg-slate-950 flex flex-col animate-in fade-in zoom-in duration-500">
         <header className="p-6 flex items-center justify-between">
           <button 
-            onClick={() => setSubView("checkout")}
+            onClick={() => {
+              if (paymentsOrigin === "izi_black") setSubView("izi_black_purchase");
+              else setSubView("checkout");
+            }}
             className="size-12 rounded-2xl bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center active:scale-90 transition-all"
           >
             <span className="material-symbols-outlined">close</span>
@@ -6079,7 +6037,10 @@ function App() {
       <div className="absolute inset-0 z-[100] bg-slate-50 dark:bg-slate-950 flex flex-col animate-in fade-in zoom-in duration-500">
         <header className="p-6 flex items-center justify-between">
           <button 
-            onClick={() => setSubView("checkout")}
+            onClick={() => {
+              if (paymentsOrigin === "izi_black") setSubView("izi_black_purchase");
+              else setSubView("checkout");
+            }}
             className="size-12 rounded-2xl bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center active:scale-90 transition-all"
           >
             <span className="material-symbols-outlined">close</span>
@@ -6881,10 +6842,10 @@ function App() {
 
     const handleConfirmAndReturn = () => {
       // Só define cartão se nenhum outro método foi selecionado explicitamente
-      if (activeCard && paymentMethod !== "pix" && paymentMethod !== "dinheiro" && paymentMethod !== "saldo") {
+      if (activeCard && paymentMethod !== "pix" && paymentMethod !== "dinheiro" && paymentMethod !== "saldo" && paymentMethod !== "bitcoin_lightning") {
         setPaymentMethod("cartao");
       }
-      setSubView("checkout");
+      setSubView(paymentsOrigin === "izi_black" ? "izi_black_purchase" : "checkout");
     };
 
     return (
@@ -6893,7 +6854,11 @@ function App() {
         <header className="px-6 py-8 sticky top-0 z-50 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border-b border-slate-100 dark:border-slate-800/50 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => paymentsOrigin === "checkout" ? setSubView("checkout") : setSubView("none")}
+              onClick={() => {
+                if (paymentsOrigin === "checkout") setSubView("checkout");
+                else if (paymentsOrigin === "izi_black") setSubView("izi_black_purchase");
+                else setSubView("none");
+              }}
               className="size-11 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-lg border border-slate-50 dark:border-slate-700 active:scale-90 transition-all"
             >
               <span className="material-symbols-rounded text-2xl">arrow_back</span>
@@ -8120,103 +8085,267 @@ function App() {
       setSubView(iziBlackOrigin === 'checkout' ? 'checkout' : 'none');
     };
 
-    const handleSubscribe = async () => {
+    const handleSubscribeReal = async () => {
       if (!userId) return;
       setIsLoading(true);
+      
+      const total = 29.90;
+      
       try {
-        const { error } = await supabase
-          .from('users_delivery')
-          .update({ is_izi_black: true })
-          .eq('id', userId);
-        
-        if (error) throw error;
-        
-        setIsIziBlackMembership(true);
-        setIziBlackStep('success');
-        showToast("Bem-vindo ao Izi Black! 🎉", "success");
-      } catch (err) {
-        showToast("Erro ao processar assinatura.", "warning");
+        // 1. Criar um "pedido" de assinatura em orders_delivery
+        const { data: orderData, error: orderError } = await supabase
+          .from("orders_delivery")
+          .insert({
+            user_id: userId,
+            status: (paymentMethod === "cartao" || paymentMethod === "bitcoin_lightning") ? "pendente_pagamento" : "novo",
+            total_price: total,
+            pickup_address: "Assinatura Izi Black",
+            delivery_address: "Serviço Digital",
+            service_type: "subscription",
+            payment_method: paymentMethod,
+            cpf_invoice: cpf,
+          })
+          .select()
+          .single();
+
+        if (orderError) throw orderError;
+
+        // 2. Disparar o fluxo de pagamento correto
+        if (paymentMethod === "cartao") {
+          const activeCard = savedCards.find((c: any) => c.active);
+          if (!activeCard?.stripe_payment_method_id) {
+            toastWarning("Selecione ou adicione um cartão de crédito.");
+            setIsLoading(false);
+            return;
+          }
+
+          setSubView("payment_processing");
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) throw new Error("Sessão expirada.");
+
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+          const intentResponse = await fetch(`${supabaseUrl}/functions/v1/create-payment-intent`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+            },
+            body: JSON.stringify({ amount: total, orderId: orderData.id }),
+          });
+
+          if (!intentResponse.ok) throw new Error("Erro ao processar pagamento com cartão.");
+
+          const intentData = await intentResponse.json();
+          const stripe = await stripePromise;
+          if (!stripe) throw new Error("Stripe não carregado.");
+
+          const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(intentData.clientSecret, {
+            payment_method: activeCard.stripe_payment_method_id
+          });
+
+          if (confirmError) throw confirmError;
+
+          if (paymentIntent.status === "succeeded") {
+            await supabase.from('users_delivery').update({ is_izi_black: true }).eq('id', userId);
+            setIsIziBlackMembership(true);
+            setIziBlackStep('success');
+            setSubView("izi_black_purchase");
+          } else {
+            setSubView("payment_error");
+          }
+        } else if (paymentMethod === "pix") {
+          setSubView("payment_processing");
+          const { data: { session } } = await supabase.auth.getSession();
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+          const pixResponse = await fetch(`${supabaseUrl}/functions/v1/create-pagbank-payment`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token}`,
+              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+            },
+            body: JSON.stringify({
+              amount: total,
+              orderId: orderData.id,
+              email: email,
+              customer: { name: userName, cpf: cpf }
+            }),
+          });
+
+          if (!pixResponse.ok) throw new Error("Erro ao gerar PIX.");
+
+          const pixResult = await pixResponse.json();
+          setPixData(pixResult);
+          setPaymentsOrigin("izi_black");
+          setSubView("pix_payment");
+        } else if (paymentMethod === "bitcoin_lightning") {
+          setSubView("payment_processing");
+          const { data: { session } } = await supabase.auth.getSession();
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+          const lnResponse = await fetch(`${supabaseUrl}/functions/v1/create-lightning-invoice`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token}`,
+              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+            },
+            body: JSON.stringify({
+              amount: total,
+              orderId: orderData.id,
+              memo: "Recarga Izi Black VIP"
+            }),
+          });
+
+          if (!lnResponse.ok) throw new Error("Erro ao gerar fatura Bitcoin.");
+
+          const lnResult = await lnResponse.json();
+          setLightningData(lnResult);
+          setPaymentsOrigin("izi_black");
+          setSubView("lightning_payment");
+        }
+      } catch (err: any) {
+        toastError(err.message || "Erro ao processar assinatura.");
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (iziBlackStep === 'payment') {
-      return (
-        <div className="absolute inset-0 z-[180] bg-[#020617] flex flex-col antialiased">
-           <header className="p-8 flex items-center gap-4">
-              <button onClick={() => setIziBlackStep('info')} className="size-10 rounded-xl bg-white/5 flex items-center justify-center text-white">
-                 <span className="material-symbols-outlined">arrow_back</span>
-              </button>
-              <h2 className="text-white font-black italic uppercase tracking-tight">Pagamento Assinatura</h2>
-           </header>
-           <main className="flex-1 px-8 space-y-6">
-              <div className="bg-white/5 border border-white/10 rounded-[35px] p-8 text-center">
-                 <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2">Total a pagar</p>
-                 <p className="text-4xl font-black text-white italic">R$ 29,90<span className="text-sm text-white/20 not-italic">/mês</span></p>
-              </div>
-
-              <div className="space-y-3">
-                 <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] ml-2">Escolha o método</p>
-                 <button onClick={handleSubscribe} className="w-full flex items-center justify-between p-6 bg-white/5 border border-white/10 rounded-[30px] group active:scale-95 transition-all">
-                    <div className="flex items-center gap-4">
-                       <div className="size-12 rounded-2xl bg-[#00BFA5]/20 flex items-center justify-center">
-                          <img src="https://logopng.com.br/logos/pix-128.png" className="size-6 object-contain" />
-                       </div>
-                       <div className="text-left">
-                          <p className="text-white font-black italic text-sm">PIX Copia e Cola</p>
-                          <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Aprovação Instantânea</p>
-                       </div>
-                    </div>
-                    <span className="material-symbols-outlined text-white/20 group-hover:text-primary transition-colors">chevron_right</span>
-                 </button>
-
-                 <button onClick={handleSubscribe} className="w-full flex items-center justify-between p-6 bg-white/5 border border-white/10 rounded-[30px] group active:scale-95 transition-all">
-                    <div className="flex items-center gap-4">
-                       <div className="size-12 rounded-2xl bg-primary/20 flex items-center justify-center">
-                          <span className="material-symbols-outlined text-primary">credit_card</span>
-                       </div>
-                       <div className="text-left">
-                          <p className="text-white font-black italic text-sm">Cartão de Crédito</p>
-                          <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">**** 4432 (Salvo)</p>
-                       </div>
-                    </div>
-                    <span className="material-symbols-outlined text-white/20 group-hover:text-primary transition-colors">chevron_right</span>
-                 </button>
-              </div>
-           </main>
-        </div>
-      );
-    }
-
     if (iziBlackStep === 'success') {
       return (
-        <div className="absolute inset-0 z-[190] bg-primary flex flex-col items-center justify-center text-center p-10">
+        <div className="h-full w-full bg-primary flex flex-col items-center justify-center text-center p-12">
            <motion.div 
-             initial={{ scale: 0 }}
-             animate={{ scale: 1 }}
-             className="size-32 rounded-[40px] bg-slate-900 flex items-center justify-center mb-8 shadow-2xl"
+             initial={{ scale: 0, rotate: -20 }}
+             animate={{ scale: 1, rotate: 0 }}
+             className="size-36 rounded-[45px] bg-slate-900 flex items-center justify-center mb-10 shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)]"
            >
-              <span className="material-symbols-outlined text-primary text-6xl fill-1">workspace_premium</span>
+              <span className="material-symbols-outlined text-primary text-7xl fill-1">workspace_premium</span>
            </motion.div>
-           <h2 className="text-4xl font-black text-slate-900 italic tracking-tighter leading-tight mb-4 text-center">VOCÊ AGORA É<br/>IZI BLACK!</h2>
-           <p className="text-slate-800 font-bold text-sm max-w-[250px] mb-12">Prepare-se para economizar muito frete e ganhar cashback em cada pedido.</p>
-           <button onClick={handleClose} className="w-full bg-slate-900 text-primary h-20 rounded-[30px] font-black uppercase tracking-widest shadow-2xl">
+           <h2 className="text-5xl font-black text-slate-900 italic tracking-tighter leading-[0.9] mb-6 text-center">VOCÊ AGORA É<br/>IZI BLACK!</h2>
+           <p className="text-slate-800 font-bold text-sm max-w-[280px] mb-14 leading-relaxed">Sua conta foi elevada ao nível VIP. Aproveite todos os benefícios exclusivos agora mesmo.</p>
+           <button onClick={handleClose} className="w-full bg-slate-900 text-primary h-20 rounded-[35px] font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all">
               Começar a Usar
            </button>
         </div>
       );
     }
 
+    if (iziBlackStep === 'payment') {
+      return (
+        <div className="h-full w-full bg-[#020617] flex flex-col antialiased overflow-y-auto hide-scrollbar">
+           <header className="p-8 flex items-center gap-4 shrink-0">
+              <button onClick={() => setIziBlackStep('info')} className="size-10 rounded-xl bg-white/5 flex items-center justify-center text-white active:scale-90 transition-all">
+                 <span className="material-symbols-outlined">arrow_back</span>
+              </button>
+              <h2 className="text-white font-black italic uppercase tracking-tight">Checkout VIP</h2>
+           </header>
+           
+           <main className="flex-1 px-8 space-y-8 flex flex-col pt-4">
+              <div className="bg-gradient-to-br from-primary/20 to-orange-500/20 border border-white/10 rounded-[40px] p-8 text-center relative overflow-hidden shrink-0">
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl opacity-50" />
+                 <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mb-2 relative z-10">Assinatura Mensal</p>
+                 <p className="text-5xl font-black text-white italic relative z-10 tracking-tighter">R$ 29,90</p>
+              </div>
+
+              <div className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">Forma de Pagamento</h3>
+                    <button 
+                      onClick={() => {
+                        setPaymentsOrigin("izi_black");
+                        setSubView("payments");
+                      }}
+                      className="text-[10px] font-black text-primary uppercase tracking-widest bg-primary/10 px-4 py-1.5 rounded-full"
+                    >
+                      Alterar
+                    </button>
+                  </div>
+
+                  <div className="bg-white/5 border border-white/10 rounded-[35px] overflow-hidden">
+                    {paymentMethod === "cartao" && (
+                      <div className="flex items-center gap-4 p-6">
+                        <div className="size-12 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/30">
+                          <span className="material-symbols-outlined text-primary text-2xl">credit_card</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-white font-black text-sm uppercase tracking-tight">Cartão de Crédito</p>
+                          <p className="text-[10px] text-white/30 font-bold uppercase">•••• {savedCards.find(c => c.active)?.last4 || '—'}</p>
+                        </div>
+                        <span className="material-symbols-outlined text-primary">check_circle</span>
+                      </div>
+                    )}
+                    {paymentMethod === "pix" && (
+                      <div className="flex items-center gap-4 p-6">
+                        <div className="size-12 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+                          <img src="https://logopng.com.br/logos/pix-128.png" className="size-6 object-contain" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-white font-black text-sm uppercase tracking-tight">PIX Instantâneo</p>
+                          <p className="text-[10px] text-emerald-500 font-bold uppercase">Aprovação imediata</p>
+                        </div>
+                        <span className="material-symbols-outlined text-emerald-500">check_circle</span>
+                      </div>
+                    )}
+                    {paymentMethod === "bitcoin_lightning" && (
+                      <div className="flex items-center gap-4 p-6">
+                        <div className="size-12 rounded-xl bg-orange-500/20 flex items-center justify-center border border-orange-500/30">
+                          <span className="material-symbols-outlined text-orange-500 text-2xl">bolt</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-white font-black text-sm uppercase tracking-tight">Bitcoin Lightning</p>
+                          <p className="text-[10px] text-orange-500 font-bold uppercase">Privacidade & Velocidade</p>
+                        </div>
+                        <span className="material-symbols-outlined text-orange-500">check_circle</span>
+                      </div>
+                    )}
+                    {(!paymentMethod || (paymentMethod !== "cartao" && paymentMethod !== "pix" && paymentMethod !== "bitcoin_lightning")) && (
+                      <button 
+                        onClick={() => {
+                          setPaymentsOrigin("izi_black");
+                          setSubView("payments");
+                        }}
+                        className="w-full p-8 text-white/30 font-black uppercase tracking-widest text-xs flex flex-col items-center gap-2"
+                      >
+                        <span className="material-symbols-outlined text-3xl">payments</span>
+                        Selecione um método
+                      </button>
+                    )}
+                  </div>
+              </div>
+
+              <div className="pt-4">
+                 <button 
+                   onClick={handleSubscribeReal}
+                   disabled={isLoading || !paymentMethod || (paymentMethod === "cartao" && !savedCards.some(c => c.active))}
+                   className="w-full bg-primary text-slate-900 h-20 rounded-[30px] font-black uppercase tracking-[0.2em] text-sm shadow-2xl shadow-primary/30 flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale"
+                 >
+                    {isLoading ? (
+                       <span className="material-symbols-outlined animate-spin font-black text-2xl">sync</span>
+                    ) : (
+                       <>
+                          <span>Ativar Izi Black</span>
+                          <span className="material-symbols-outlined font-black">bolt</span>
+                       </>
+                    )}
+                 </button>
+                 <p className="text-center text-[10px] font-bold text-white/20 uppercase tracking-widest mt-6 bg-white/5 py-4 rounded-2xl">
+                    Seguro • Criptografado • SSL
+                 </p>
+              </div>
+           </main>
+        </div>
+      );
+    }
+
     return (
-      <div className="absolute inset-0 z-[180] bg-[#020617] flex flex-col hide-scrollbar overflow-y-auto antialiased">
+      <div className="h-full w-full bg-[#020617] flex flex-col hide-scrollbar overflow-y-auto antialiased">
          {/* Premium Banner */}
-         <div className="relative h-[45vh] shrink-0 overflow-hidden">
+         <div className="relative h-[48vh] shrink-0 overflow-hidden">
             <img src="https://images.unsplash.com/photo-1550745165-9bc0b252728f?q=80&w=1200" className="w-full h-full object-cover opacity-60" />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#020617]/50 to-[#020617]" />
             
             <header className="absolute top-0 inset-x-0 p-8 flex items-center justify-between">
-               <button onClick={handleClose} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl flex items-center justify-center text-white border border-white/10">
+               <button onClick={handleClose} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl flex items-center justify-center text-white border border-white/10 active:scale-90 transition-all">
                   <span className="material-symbols-outlined">close</span>
                </button>
             </header>
@@ -8234,7 +8363,7 @@ function App() {
             </div>
          </div>
 
-         <main className="px-8 pb-32 space-y-10 relative z-10 -mt-6">
+         <main className="px-8 pb-40 space-y-10 relative z-10 -mt-6">
             <div className="grid grid-cols-1 gap-4">
                {[
                   { icon: 'local_shipping', title: 'Fretes Grátis Ilimitados', desc: 'Não pague taxa de entrega em pedidos acima de R$50.' },
@@ -8265,11 +8394,13 @@ function App() {
             </div>
          </main>
 
-         <footer className="fixed bottom-0 inset-x-0 p-8 pt-4 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent">
+         <footer className="fixed bottom-0 inset-x-0 p-8 pt-4 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent z-50">
             <button 
-               onClick={() => setIziBlackStep('payment')}
+               onClick={() => {
+                 setIziBlackStep('payment');
+               }}
                disabled={isLoading}
-               className="w-full bg-primary text-slate-900 h-20 rounded-[30px] font-black uppercase tracking-[0.2em] text-sm shadow-2xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+               className="w-full bg-primary text-slate-900 h-20 rounded-[35px] font-black uppercase tracking-[0.2em] text-sm shadow-[0_20px_40px_-10px_rgba(255,214,0,0.3)] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
             >
                {isLoading ? (
                   <span className="material-symbols-outlined animate-spin text-slate-900">sync</span>
