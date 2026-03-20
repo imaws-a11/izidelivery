@@ -125,7 +125,7 @@ const StripePaymentForm = ({ onConfirm, total, userId, onCardSaved }: {
 };
 
 interface SavedAddress {
-  id: number;
+  id: string | number;
   label: string;
   street: string;
   details: string;
@@ -679,7 +679,7 @@ function App() {
   const [tempQuantity, setTempQuantity] = useState(1);
   const [filterTab, setFilterTab] = useState<"ativos" | "historico">("ativos");
   const [transitData, setTransitData] = useState({
-    origin: "Rua Augusta, 45",
+    origin: "",
     destination: "",
     type: "mototaxi" as "mototaxi" | "carro" | "van" | "utilitario",
     estPrice: 0,
@@ -885,7 +885,8 @@ function App() {
   }, [paymentMethod]);
   const [deliveryType] = useState<"delivery" | "pickup">("delivery");
   const [changeFor] = useState<string>("");
-  const [cpf] = useState<string>("");
+
+  const [cpf, setCpf] = useState<string>("");
   const [orderNotes] = useState<string>("");
   const [showPixPayment, setShowPixPayment] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
@@ -1132,24 +1133,30 @@ function App() {
     }
     setIsLoadingCards(false);
   };
-  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([
-    {
-      id: 1,
-      label: "Casa",
-      street: "Rua Augusta, 45",
-      details: "Apto 12",
-      city: "São Paulo",
-      active: true,
-    },
-    {
-      id: 2,
-      label: "Trabalho",
-      street: "Av. Paulista, 1000",
-      details: "Andar 15",
-      city: "São Paulo",
-      active: false,
-    },
-  ]);
+  const fetchSavedAddresses = async (uid: string) => {
+    const { data, error } = await supabase
+      .from("saved_addresses")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: true });
+    if (!error && data) {
+      const addresses = data.map((addr: any) => ({
+        id: addr.id,
+        label: addr.label,
+        street: addr.street,
+        details: addr.details,
+        city: addr.city,
+        active: addr.is_active,
+      }));
+      setSavedAddresses(addresses);
+      // Sincroniza o local atual se houver um endereço ativo no banco
+      const active = addresses.find(a => a.active);
+      if (active) {
+        setUserLocation(prev => ({ ...prev, address: active.street }));
+      }
+    }
+  };
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const addressAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(
     null,
   );
@@ -1226,7 +1233,7 @@ function App() {
           }
         },
         (error) => {
-          setUserLocation({ address: "Rua Augusta, 45", loading: false });
+          setUserLocation({ address: "Endereço não identificado", loading: false });
         },
         { enableHighAccuracy: true },
       );
@@ -1250,6 +1257,7 @@ function App() {
         fetchMyOrders(session.user.id);
         fetchWalletBalance(session.user.id);
         fetchSavedCards(session.user.id);
+        fetchSavedAddresses(session.user.id);
         fetchCoupons();
         fetchBeveragePromo();
       } else {
@@ -1562,6 +1570,7 @@ function App() {
             ? parseFloat(changeFor)
             : null,
         cpf_invoice: cpf,
+
         order_notes: orderNotes,
         coupon_applied: appliedCoupon?.coupon_code || null,
         discount_amount: parseFloat(desconto.toFixed(2))
@@ -1872,7 +1881,7 @@ function App() {
             'Authorization': `Bearer ${session.access_token}`,
             'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY as string,
           },
-          body: JSON.stringify({ amount: price, orderId: data.id, email, customer: { name: userName, cpf } }),
+          body: JSON.stringify({ amount: price, orderId: data.id, email, customer: { name: userName, cpf: cpf } }),
         });
         if (!pixResponse.ok) throw new Error(await pixResponse.text());
         const pixResult = await pixResponse.json();
@@ -5738,6 +5747,31 @@ function App() {
                   Alterar
                 </button>
               </div>
+              {/* Campo para CPF se for Pix */}
+              {paymentMethod === "pix" && (
+                <div className="mt-8 animate-in slide-in-from-bottom-4 duration-500">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 ml-1">CPF para Nota Fiscal (Opcional)</h3>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="000.000.000-00"
+                      className="w-full bg-slate-100 dark:bg-slate-900 border-none rounded-2xl py-4 px-5 font-black text-xs tracking-widest dark:text-white focus:ring-2 focus:ring-primary shadow-inner"
+                      value={cpf}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/\D/g, "");
+                        if (val.length <= 11) {
+                          let masked = val;
+                          if (val.length > 3) masked = val.replace(/^(\d{3})(\d)/, "$1.$2");
+                          if (val.length > 6) masked = masked.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
+                          if (val.length > 9) masked = masked.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
+                          setCpf(masked);
+                        }
+                      }}
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400">fingerprint</span>
+                  </div>
+                </div>
+              )}
 
               {/* Stripe Payment Form — só aparece se não tiver cartão salvo com stripe_payment_method_id */}
               {paymentMethod === "cartao" && (() => {
@@ -6407,28 +6441,7 @@ function App() {
           </div>
         </div>
 
-        {/* Izi Infinity Card */}
-        <motion.div 
-          onClick={() => setShowInfinityCard(true)}
-          whileTap={{ scale: 0.98 }}
-          className="bg-gradient-to-br from-primary via-orange-400 to-rose-500 p-[1px] rounded-[48px] shadow-2xl shadow-primary/20 mb-10 cursor-pointer group"
-        >
-          <div className="bg-slate-900 dark:bg-slate-800 p-8 rounded-[47px] relative overflow-hidden">
-             <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
-             <div className="relative z-10 flex items-center justify-between">
-                <div className="flex items-center gap-5">
-                   <div className="size-14 rounded-2xl bg-white/5 flex items-center justify-center text-primary border border-white/10">
-                      <span className="material-symbols-outlined text-3xl fill-1">diamond</span>
-                   </div>
-                   <div>
-                      <h4 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">Izi Infinity</h4>
-                      <p className="text-[9px] text-primary font-black uppercase tracking-[0.3em]">Explore seus Benefícios</p>
-                   </div>
-                </div>
-                <span className="material-symbols-outlined text-white/20 group-hover:text-white transition-colors">chevron_right</span>
-             </div>
-          </div>
-        </motion.div>
+
 
         <div className="space-y-6">
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Explorar Conta</h3>
@@ -6476,17 +6489,43 @@ function App() {
   );
 
   const renderAddresses = () => {
-    const handleSaveAddress = () => {
-      if (!editingAddress) return;
+    const handleSaveAddress = async () => {
+      if (!editingAddress || !userId) return;
       
-      const exists = savedAddresses.find(a => a.id === editingAddress.id);
-      if (exists) {
-        setSavedAddresses(prev => prev.map(a => a.id === editingAddress.id ? editingAddress : a));
+      const payload = {
+        user_id: userId,
+        label: editingAddress.label,
+        street: editingAddress.street,
+        details: editingAddress.details,
+        city: editingAddress.city,
+        is_active: editingAddress.active,
+      };
+
+      if (typeof editingAddress.id === 'string') {
+        await supabase.from('saved_addresses').update(payload).eq('id', editingAddress.id);
       } else {
-        setSavedAddresses(prev => [...prev, editingAddress]);
+        await supabase.from('saved_addresses').insert(payload);
       }
+      
+      fetchSavedAddresses(userId);
       setEditingAddress(null);
       setIsAddingAddress(false);
+    };
+
+    const handleSelectAddress = async (addrId: string | number) => {
+      const addr = savedAddresses.find(a => a.id === addrId);
+      if (!addr) return;
+
+      if (userId) {
+        await supabase.from('saved_addresses').update({ is_active: false }).eq('user_id', userId);
+        await supabase.from('saved_addresses').update({ is_active: true }).eq('id', addrId).eq('user_id', userId);
+        fetchSavedAddresses(userId);
+      } else {
+        setSavedAddresses(prev => prev.map(a => ({ ...a, active: a.id === addrId })));
+      }
+      
+      setUserLocation({ ...userLocation, address: addr.street });
+      setSubView("none");
     };
 
     return (
@@ -6707,7 +6746,12 @@ function App() {
                         onClick={async (e) => { 
                           e.stopPropagation(); 
                           if(await showConfirm({ message: "Deseja excluir este endereço?" })) {
-                            setSavedAddresses(prev => prev.filter(a => a.id !== addr.id)); 
+                            if (userId) {
+                              await supabase.from('saved_addresses').delete().eq('id', addr.id).eq('user_id', userId);
+                              fetchSavedAddresses(userId);
+                            } else {
+                              setSavedAddresses(prev => prev.filter(a => a.id !== addr.id));
+                            }
                           }
                         }}
                         className="size-12 rounded-2xl bg-red-50 dark:bg-red-900/10 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all active:scale-90"
@@ -6719,11 +6763,7 @@ function App() {
 
                   <div
                     className="cursor-pointer"
-                    onClick={() => {
-                      setSavedAddresses(prev => prev.map(a => ({ ...a, active: a.id === addr.id })));
-                      setUserLocation({ ...userLocation, address: addr.street });
-                      setSubView("none");
-                    }}
+                    onClick={() => handleSelectAddress(addr.id)}
                   >
                     <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-[35px] border border-slate-100 dark:border-white/5 shadow-inner group-hover:border-primary/20 transition-all">
                       <p className="font-bold text-slate-800 dark:text-slate-200 text-base leading-snug">
@@ -6740,11 +6780,7 @@ function App() {
 
                   {!addr.active && (
                     <button
-                      onClick={() => {
-                        setSavedAddresses(prev => prev.map(a => ({ ...a, active: a.id === addr.id })));
-                        setUserLocation({ ...userLocation, address: addr.street });
-                        setSubView("none");
-                      }}
+                      onClick={() => handleSelectAddress(addr.id)}
                       className="mt-6 w-full py-4 bg-slate-50 dark:bg-slate-900 text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:bg-primary hover:text-slate-900 transition-all shadow-inner border border-transparent"
                     >
                       Selecionar este Endereço
