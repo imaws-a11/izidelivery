@@ -1471,7 +1471,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
   const handleDeleteMyDriver = async (id: string) => {
     if (!await showConfirm({ message: 'Deseja realmente remover este motoboy da sua frota?' })) return;
     try {
-      const { error } = await supabase.from('drivers_delivery').delete().eq('id', id);
+      await supabase.from('orders_delivery').update({ driver_id: null }).eq('driver_id', id); const { error } = await supabase.from('drivers_delivery').delete().eq('id', id);
       if (error) throw error;
       fetchMyDrivers();
     } catch (err) {
@@ -1794,7 +1794,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
   const handleDeleteDriver = async (id: string) => {
     if (!await showConfirm({ message: 'Deseja realmente EXCLUIR este entregador permanentemente?' })) return;
     try {
-      const { error } = await supabase.from('drivers_delivery').delete().eq('id', id);
+      await supabase.from('orders_delivery').update({ driver_id: null }).eq('driver_id', id); const { error } = await supabase.from('drivers_delivery').delete().eq('id', id);
       if (error) throw error;
       fetchDrivers();
       logAction('Delete Driver', 'Drivers', { id });
@@ -5510,7 +5510,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                 )}
 
                 {/* IZI FLASH */}
-                <FlashOffersSection supabase={supabase} />
+                {userRole === 'admin' && <FlashOffersSection supabase={supabase} />}
 
               </div>
             )}
@@ -7147,16 +7147,6 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                     </div>
                     <p className="text-slate-500 dark:text-slate-400">Gerencie sua frota exclusiva, acompanhe o status e configure regras de prioridade.</p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setEditingItem({ name: '', phone: '', vehicle_type: '', license_plate: '', is_active: true });
-                      setEditType('my_driver');
-                    }}
-                    className="flex items-center gap-2 bg-primary text-slate-900 px-8 py-4 rounded-[24px] font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
-                  >
-                    <span className="material-symbols-outlined">person_add</span>
-                    Adicionar Motoboy
-                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -7225,7 +7215,15 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                           <span className="material-symbols-outlined text-primary">groups</span>
                           Sua Equipe
                         </h3>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total: {myDriversList.length} motoboys</span>
+                        <div className="flex items-center gap-4">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total: {myDriversList.length} motoboys</span>
+                          <button 
+                            onClick={() => setSelectedDriverStudio({ id: `new-${Date.now()}`, name: '', phone: '', vehicle_type: 'Moto', is_active: true, status: 'active', bank_info: { bank: '', agency: '', account: '', pix_key: '' } })}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-primary text-slate-900 rounded-lg text-[9px] font-black uppercase tracking-widest hover:brightness-110 transition-all shadow-sm"
+                          >
+                             <span className="material-symbols-outlined text-xs">add</span> Novo
+                          </button>
+                        </div>
                       </div>
                       <div className="divide-y divide-slate-50 dark:divide-slate-800">
                         {myDriversList.length > 0 ? (
@@ -8341,20 +8339,32 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                    disabled={isSaving}
                    onClick={async () => {
                      setIsSaving(true);
-                     try {
-                       const driverData = {
-                         name: selectedDriverStudio.name,
-                         phone: selectedDriverStudio.phone,
-                         vehicle_type: selectedDriverStudio.vehicle_type,
-                         vehicle_model: selectedDriverStudio.vehicle_model,
-                         vehicle_color: selectedDriverStudio.vehicle_color,
-                         license_plate: selectedDriverStudio.license_plate,
-                         document_number: selectedDriverStudio.document_number,
-                         address: selectedDriverStudio.address,
-                         bank_info: selectedDriverStudio.bank_info,
-                         is_active: selectedDriverStudio.is_active,
-                         status: selectedDriverStudio.status || 'active'
-                       };
+                       try {
+                         // Obter merchant_id se não estiver presente
+                         let mId = selectedDriverStudio.merchant_id;
+                         if (!mId && session?.user?.email) {
+                           const { data: adminData } = await supabase
+                             .from('admin_users')
+                             .select('id')
+                             .eq('email', session.user.email)
+                             .single();
+                           if (adminData) mId = adminData.id;
+                         }
+
+                         const driverData = {
+                           name: selectedDriverStudio.name,
+                           phone: selectedDriverStudio.phone,
+                           vehicle_type: selectedDriverStudio.vehicle_type,
+                           vehicle_model: selectedDriverStudio.vehicle_model,
+                           vehicle_color: selectedDriverStudio.vehicle_color,
+                           license_plate: selectedDriverStudio.license_plate,
+                           document_number: selectedDriverStudio.document_number,
+                           address: selectedDriverStudio.address,
+                           bank_info: selectedDriverStudio.bank_info,
+                           is_active: selectedDriverStudio.is_active,
+                           status: selectedDriverStudio.status || 'active',
+                           merchant_id: mId
+                         };
 
                        const isNew = !selectedDriverStudio.id || (typeof selectedDriverStudio.id === 'string' && selectedDriverStudio.id.startsWith('new-'));
                        
@@ -8370,6 +8380,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                        toastSuccess('Dados do entregador salvos com sucesso!');
                        setSelectedDriverStudio(null);
                        fetchDrivers();
+                       fetchMyDrivers();
                      } catch (err: any) {
                        toastError('Erro ao salvar entregador: ' + err.message);
                      } finally {
