@@ -231,6 +231,31 @@ function App() {
   const [merchantsList, setMerchantsList] = useState<Merchant[]>([]);
   const [productsList, setProductsList] = useState<Product[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
+  const [driverSearch, setDriverSearch] = useState('');
+  const [driverFilter, setDriverFilter] = useState('Todos');
+  const [driversPage, setDriversPage] = useState(1);
+  const DRIVERS_PER_PAGE = 10;
+
+  const filteredDrivers = useMemo(() => {
+    setDriversPage(1); // Auto-reset page when filter/search changes
+    return driversList.filter(d => {
+      const matchesSearch = (d.name || '').toLowerCase().includes(driverSearch.toLowerCase()) || 
+                           (d.id || '').toLowerCase().includes(driverSearch.toLowerCase()) ||
+                           (d.phone || '').includes(driverSearch);
+      
+      const matchesFilter = driverFilter === 'Todos' || 
+                           (driverFilter === 'Ativos' && (d.is_active || d.status === 'active')) ||
+                           (driverFilter === 'Offline' && !d.is_online) ||
+                           (driverFilter === 'Pendentes' && (!d.is_active || d.status !== 'active') && d.status !== 'suspended');
+                           
+      return matchesSearch && matchesFilter;
+    });
+  }, [driversList, driverSearch, driverFilter]);
+
+  const paginatedDrivers = useMemo(() => {
+    const start = (driversPage - 1) * DRIVERS_PER_PAGE;
+    return filteredDrivers.slice(start, start + DRIVERS_PER_PAGE);
+  }, [filteredDrivers, driversPage]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // Paginação de pedidos
@@ -330,10 +355,11 @@ function App() {
   }, [fixedGridCenter, HEX_SIZE, hexToLatLng]);
 
   const [categoriesState, setCategoriesState] = useState<Category[]>([]);
+  const [selectedCategoryStudio, setSelectedCategoryStudio] = useState<Category | null>(null);
   const [promotionsList, setPromotionsList] = useState<Promotion[]>([]);
   const [promoFilter, setPromoFilter] = useState<'all' | 'banner' | 'coupon' | 'active' | 'expired'>('all');
   const [userStatusFilter, setUserStatusFilter] = useState<'all' | 'active' | 'suspended' | 'blocked' | 'inactive'>('all');
-  const [activeStudioTab, setActiveStudioTab] = useState<'personal' | 'vehicle' | 'finance' | 'documents' | 'wallet' | 'security'>('personal');
+  const [activeStudioTab, setActiveStudioTab] = useState<'personal' | 'vehicle' | 'finance' | 'documents' | 'wallet' | 'security' | 'general' | 'subcategories'>('personal');
   const [promoSearch, setPromoSearch] = useState('');
   const [showPromoForm, setShowPromoForm] = useState(false);
   const [promoFormType, setPromoFormType] = useState<'banner' | 'coupon'>('coupon');
@@ -1807,6 +1833,42 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     } catch (err) {
       console.error('Delete driver error:', err);
     }
+  };
+
+  const handleExportDrivers = () => {
+    if (filteredDrivers.length === 0) {
+      alert('Nenhum dado para exportar.');
+      return;
+    }
+    
+    // Preparar cabeçalhos em português
+    const headers = ['ID', 'Nome', 'Email', 'Telefone', 'Status', 'Veículo', 'Placa', 'Avaliação', 'Online', 'Data de Cadastro'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredDrivers.map(d => [
+        d.id,
+        `"${d.name}"`,
+        d.email || '',
+        d.phone || '',
+        d.status === 'active' ? 'Ativo' : d.status === 'suspended' ? 'Suspenso' : 'Inativo',
+        d.vehicle_type || 'Moto',
+        d.license_plate || '',
+        d.rating || '5.0',
+        d.is_online ? 'Sim' : 'Não',
+        new Date(d.created_at).toLocaleDateString('pt-BR')
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `izi_entregadores_${new Date().toISOString().split('T')[0]}.csv`;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    logAction('Export Drivers', 'Drivers', { count: filteredDrivers.length });
   };
 
   const handleUpdateUserStatus = async (id: string, newStatus: 'active' | 'inactive' | 'suspended') => {
@@ -3786,170 +3848,212 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
 
             {activeTab === 'drivers' && (
               <div className="space-y-8">
-                {/* Statistics Bar */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="material-symbols-outlined text-3xl text-primary">sports_motorsports</span>
+                      <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Gestão de Entregadores</h1>
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400">Controle total da frota, aprovações, suspensões e monitoramento de performance.</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                     <div className="flex bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20">
+                        <span className="material-symbols-outlined text-slate-400 pl-2">search</span>
+                        <input
+                          type="text"
+                          placeholder="Buscar por nome, id ou telefone..."
+                          className="bg-transparent border-none text-xs font-bold px-3 py-2 focus:ring-0 dark:text-white w-64"
+                          value={driverSearch}
+                          onChange={(e) => setDriverSearch(e.target.value)}
+                        />
+                     </div>
+                  </div>
+                </div>
+
+                {/* Statistics Bar - Real & Dynamic */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {[
-                    { label: 'Total de Frota', val: stats.drivers, icon: 'group', color: 'text-primary', bg: 'bg-primary/10', trend: '+12%', tc: 'text-green-500' },
-                    { label: 'Ativos Agora', val: stats.onlineDrivers, icon: 'bolt', color: 'text-green-500', bg: 'bg-green-500/10', trend: '84%', tc: 'text-green-500' },
-                    { label: 'Pendentes', val: driversList.filter(d => !d.is_active).length, icon: 'pending_actions', color: 'text-orange-500', bg: 'bg-orange-500/10', trend: '⚠️', tc: 'text-orange-500' },
-                    { label: 'Suspensos', val: '15', icon: 'warning', color: 'text-red-500', bg: 'bg-red-500/10', trend: 'Crítico', tc: 'text-red-500' },
+                    { label: 'Frota Total', val: driversList.length, icon: 'group', color: 'text-primary', bg: 'bg-primary/10', trend: 'Base Completa', tc: 'text-slate-500' },
+                    { label: 'Disponíveis Agora', val: driversList.filter(d => d.is_online).length, icon: 'bolt', color: 'text-green-500', bg: 'bg-green-500/10', trend: 'Online', tc: 'text-green-500' },
+                    { label: 'Aguardando Aprovação', val: driversList.filter(d => !d.is_active && d.status !== 'suspended').length, icon: 'pending_actions', color: 'text-orange-500', bg: 'bg-orange-500/10', trend: 'Pendentes', tc: 'text-orange-500' },
+                    { label: 'Contas Suspensas', val: driversList.filter(d => d.status === 'suspended').length, icon: 'warning', color: 'text-red-500', bg: 'bg-red-500/10', trend: 'Ação Necessária', tc: 'text-red-500' },
                   ].map((s, i) => (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.1 }}
-                      className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-sm"
+                      className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:scale-[1.02] transition-all"
                     >
-                      <div className="flex justify-between items-start mb-4">
-                        <span className={`material-symbols-outlined ${s.color} p-3 ${s.bg} rounded-2xl font-bold`}>{s.icon}</span>
-                        <span className={`text-[10px] font-black ${s.tc} px-2.5 py-1 rounded-full border border-current opacity-80 uppercase tracking-widest`}>{s.trend}</span>
+                      <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform">
+                        <span className="material-symbols-outlined text-6xl">{s.icon}</span>
                       </div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">{s.label}</p>
-                      <h3 className="text-3xl font-black text-slate-900 dark:text-white mt-2 tracking-tighter">{s.val}</h3>
+                      <div className="flex justify-between items-start mb-6">
+                        <span className={`material-symbols-outlined ${s.color} p-4 ${s.bg} rounded-3xl font-bold`}>{s.icon}</span>
+                        <span className={`text-[10px] font-black ${s.tc} px-3 py-1 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-50 dark:border-slate-800 shadow-sm uppercase tracking-widest`}>{s.trend}</span>
+                      </div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2">{s.label}</p>
+                      <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{s.val}</h3>
                     </motion.div>
                   ))}
                 </div>
 
-                {/* Filters Section */}
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-1.5 shadow-sm">
-                    {['Todos', 'Ativos', 'Offline', 'Pendentes'].map((f, i) => (
+                {/* Filters & Actions Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-6">
+                  <div className="flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[28px] p-2 shadow-sm shrink-0">
+                    {['Todos', 'Ativos', 'Offline', 'Pendentes'].map((f) => (
                       <button
                         key={f}
-                        className={`px-5 py-2 text-xs font-black rounded-xl uppercase tracking-widest transition-all ${i === 0 ? 'bg-primary text-slate-900 shadow-sm' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                        onClick={() => setDriverFilter(f)}
+                        className={`px-8 py-3.5 text-[10px] font-black rounded-2xl uppercase tracking-[0.15em] transition-all ${driverFilter === f ? 'bg-primary text-slate-900 shadow-xl shadow-primary/20 scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
                       >
                         {f}
                       </button>
                     ))}
                   </div>
-                  <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2"></div>
-                  <select className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-black uppercase tracking-widest px-6 py-3.5 focus:ring-primary focus:border-primary cursor-pointer shadow-sm appearance-none outline-none">
-                    <option>Veículo: Todos</option>
-                    <option>Moto</option>
-                    <option>Carro</option>
-                    <option>Van</option>
-                  </select>
-                  <div className="ml-auto flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-6 py-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-slate-50 transition-all shadow-sm">
-                      <span className="material-symbols-outlined text-sm">download</span>
-                      Exportar
-                    </button>
+
+                  <div className="flex items-center gap-4">
                     <button 
-                      onClick={() => setSelectedDriverStudio({ id: `new-${Date.now()}`, name: '', phone: '', vehicle_type: 'Moto', is_active: true, status: 'active', bank_info: { bank: '', agency: '', account: '', pix_key: '' } })}
-                      className="flex items-center gap-2 px-6 py-3.5 bg-primary text-slate-900 rounded-2xl text-xs font-black uppercase tracking-widest hover:brightness-110 transition-all shadow-lg shadow-primary/20"
+                      onClick={handleExportDrivers}
+                      className="size-14 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm"
+                      title="Exportar CSV"
                     >
-                       <span className="material-symbols-outlined text-sm">person_add</span>
+                      <span className="material-symbols-outlined">download</span>
+                    </button>
+                    <button
+                      onClick={fetchDrivers}
+                      className="size-14 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm active:rotate-180"
+                      title="Sincronizar"
+                    >
+                      <span className="material-symbols-outlined">sync</span>
+                    </button>
+                    <button
+                      onClick={() => setSelectedDriverStudio({ 
+                        id: `new-${Date.now()}`, 
+                        name: '', 
+                        email: '',
+                        phone: '', 
+                        vehicle_type: 'Moto', 
+                        vehicle_model: '',
+                        vehicle_color: '',
+                        license_plate: '',
+                        address: '',
+                        document_number: '',
+                        is_active: true, 
+                        status: 'active', 
+                        bank_info: { bank: '', agency: '', account: '', pix_key: '' } 
+                      })}
+                      className="px-10 py-5 bg-slate-900 dark:bg-primary text-white dark:text-slate-900 rounded-[28px] text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl hover:brightness-110 active:scale-95 transition-all flex items-center gap-3"
+                    >
+                       <span className="material-symbols-outlined text-lg">person_add</span>
                        Novo Entregador
                     </button>
                   </div>
                 </div>
 
-                {/* Deliverers Table */}
-                <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative">
+                {/* Deliverers Table with Modern Styling */}
+                <div className="bg-white dark:bg-slate-900 rounded-[56px] border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden relative">
                   {isLoadingList && (
-                    <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm z-10 flex items-center justify-center">
-                      <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md z-10 flex items-center justify-center">
+                      <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
                     </div>
                   )}
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Entregador</th>
-                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Veículo & Placa</th>
-                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
-                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Avaliação</th>
-                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Configurações</th>
+                        <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800/50 uppercase">
+                          <th className="px-10 py-8 text-[10px] font-black tracking-[0.2em] text-slate-400">Entregador & ID</th>
+                          <th className="px-10 py-8 text-[10px] font-black tracking-[0.2em] text-slate-400">Operacional</th>
+                          <th className="px-10 py-8 text-[10px] font-black tracking-[0.2em] text-slate-400">Status Acesso</th>
+                          <th className="px-10 py-8 text-[10px] font-black tracking-[0.2em] text-slate-400">Rating & Performance</th>
+                          <th className="px-10 py-8 text-[10px] font-black tracking-[0.2em] text-slate-400 text-right">Ações de Gestão</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-900 dark:text-white">
-                        {driversList.map((d) => (
-                          <tr key={d.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
-                            <td className="px-8 py-6">
-                              <div className="flex items-center gap-4">
-                                <div className="size-12 rounded-[20px] bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-700 shadow-sm overflow-hidden shrink-0">
-                                  <img className="w-full h-full object-cover" src={`https://ui-avatars.com/api/?name=${d.name}&background=ffd900&color=000&size=128&bold=true`} />
+                        {paginatedDrivers.map((d) => (
+                          <tr key={d.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-all group">
+                            <td className="px-10 py-8">
+                              <div className="flex items-center gap-6">
+                                <div className="size-16 rounded-[28px] bg-slate-100 dark:bg-slate-800 p-0.5 border-2 border-white dark:border-slate-700 shadow-xl overflow-hidden shrink-0 relative">
+                                  <img className="w-full h-full object-cover rounded-[24px]" src={`https://ui-avatars.com/api/?name=${d.name}&background=ffd900&color=000&size=128&bold=true`} />
+                                  {d.is_online && <span className="absolute bottom-0 right-0 size-4 bg-green-500 border-4 border-white dark:border-slate-800 rounded-full" />}
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="text-base font-black tracking-tight truncate">{d.name}</p>
-                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID: #{d.id.slice(0, 8).toUpperCase()}</p>
+                                <div>
+                                  <p className="text-lg font-black tracking-tighter mb-0.5">{d.name}</p>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">ID: {d.id.slice(0, 8)}</span>
+                                    {d.is_online && <span className="px-2 py-0.5 bg-green-500/10 text-green-500 text-[8px] font-black rounded-full uppercase">Online</span>}
+                                  </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-8 py-6">
-                              <div className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-slate-400 text-lg">
-                                  {d.vehicle_type?.toLowerCase().includes('moto') ? 'motorcycle' : 'directions_car'}
-                                </span>
-                                <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{d.vehicle_type || 'Moto'} ({d.license_plate || 'S/P'})</span>
+                            <td className="px-10 py-8">
+                              <div className="space-y-1.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="material-symbols-outlined text-slate-400 text-base">
+                                    {d.vehicle_type?.toLowerCase().includes('moto') ? 'motorcycle' : d.vehicle_type?.toLowerCase().includes('bike') ? 'directions_bike' : 'directions_car'}
+                                  </span>
+                                  <span className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest">{d.vehicle_type || 'Moto'}</span>
+                                </div>
+                                <p className="text-[10px] font-bold text-slate-400">{d.license_plate?.toUpperCase() || 'SEM PLACA'}</p>
                               </div>
                             </td>
-                            <td className="px-8 py-6">
-                              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-colors ${
+                            <td className="px-10 py-8">
+                              <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] border transition-all ${
                                 d.status === 'active' || d.is_active
-                                ? 'bg-green-50 text-green-700 border-green-100 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
+                                ? 'bg-green-50 text-green-700 border-green-100 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20 shadow-sm'
                                 : d.status === 'suspended'
                                 ? 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
                                 : 'bg-red-50 text-red-700 border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/10'
                                 }`}>
-                                <span className={`size-1.5 rounded-full ${
+                                <span className={`size-2 rounded-full ${
                                   (d.status === 'active' || d.is_active) ? 'bg-green-500' : d.status === 'suspended' ? 'bg-amber-500' : 'bg-red-500'
-                                }`}></span>
-                                {d.status === 'suspended' ? 'Suspenso' : (d.status === 'active' || d.is_active ? 'Ativo' : 'Inativo')}
+                                } shadow-sm`}></span>
+                                {d.status === 'suspended' ? 'Suspenso' : (d.status === 'active' || d.is_active ? 'Conta Ativa' : 'Desativado')}
                               </span>
                             </td>
-                            <td className="px-8 py-6">
-                              <div className="flex items-center gap-1.5 text-primary">
-                                <span className="material-symbols-outlined text-base fill-1">star</span>
-                                <span className="text-sm font-black text-slate-900 dark:text-white">{d.rating || '5.0'}</span>
+                            <td className="px-10 py-8">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-primary">
+                                  <span className="material-symbols-outlined text-lg fill-1">star</span>
+                                  <span className="text-base font-black text-slate-900 dark:text-white">{d.rating?.toFixed(1) || '5.0'}</span>
+                                </div>
+                                <div className="w-24 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                   <div className="h-full bg-primary" style={{ width: `${(d.rating || 5) * 20}%` }} />
+                                </div>
                               </div>
                             </td>
-                            <td className="px-8 py-6">
-                              <div className="flex items-center justify-end gap-2">
-                                {d.phone && (
-                                  <button
-                                    onClick={() => window.open(`https://wa.me/55${d.phone.replace(/\D/g, '')}`, '_blank')}
-                                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-green-50 text-green-600 hover:bg-green-500 hover:text-white transition-all shadow-sm border border-green-100"
-                                    title="Contato WhatsApp"
-                                  >
-                                    <span className="material-symbols-outlined text-lg">forum</span>
-                                  </button>
-                                )}
+                            <td className="px-10 py-8">
+                              <div className="flex items-center justify-end gap-3">
                                 <button
-                                  onClick={() => {
-                                    setEditingItem(d);
-                                    setEditType('driver');
-                                  }}
-                                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-primary hover:text-slate-900 transition-all shadow-sm"
-                                  title="Editar Entregador"
+                                  onClick={() => window.open(`https://wa.me/55${d.phone?.replace(/\D/g, '')}`, '_blank')}
+                                  className="size-11 flex items-center justify-center rounded-2xl bg-white dark:bg-slate-800 text-green-500 border border-slate-100 dark:border-slate-800 hover:bg-green-500 hover:text-white transition-all shadow-sm group/btn"
+                                  title="Enviar Mensagem"
                                 >
-                                  <span className="material-symbols-outlined text-lg">edit</span>
+                                  <span className="material-symbols-outlined text-xl group-hover/btn:scale-110 transition-transform">chat</span>
                                 </button>
                                 <button
-                                  onClick={() => handleUpdateDriverStatus(d.id, (d.status === 'active' || d.is_active) ? 'inactive' : 'active')}
-                                  className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all shadow-sm ${
-                                    (d.status === 'active' || d.is_active) ? 'bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500' : 'bg-green-50 text-green-500 hover:bg-green-500 hover:text-white border border-green-100'
-                                  }`}
-                                  title={(d.status === 'active' || d.is_active) ? 'Desativar Acesso' : 'Ativar Acesso'}
+                                  onClick={() => { setSelectedDriverStudio(d); setActiveStudioTab('personal'); }}
+                                  className="size-11 flex items-center justify-center rounded-2xl bg-white dark:bg-slate-800 text-blue-500 border border-slate-100 dark:border-slate-800 hover:bg-blue-500 hover:text-white transition-all shadow-sm"
+                                  title="Editar Perfil"
                                 >
-                                  <span className="material-symbols-outlined text-lg">{(d.status === 'active' || d.is_active) ? 'do_not_disturb_on' : 'check_circle'}</span>
+                                  <span className="material-symbols-outlined text-xl">manage_accounts</span>
                                 </button>
                                 <button
-                                  onClick={() => handleUpdateDriverStatus(d.id, 'suspended')}
-                                  className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all shadow-sm ${
-                                    d.status === 'suspended' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-500 hover:bg-amber-500 hover:text-white border border-amber-100'
+                                  onClick={() => handleUpdateDriverStatus(d.id, d.status === 'suspended' ? 'active' : 'suspended')}
+                                  className={`size-11 flex items-center justify-center rounded-2xl transition-all shadow-sm ${
+                                    d.status === 'suspended' ? 'bg-amber-500 text-white' : 'bg-white dark:bg-slate-800 text-amber-500 border border-slate-100 dark:border-slate-800 hover:bg-amber-500 hover:text-white'
                                   }`}
-                                  title="Suspender Temporariamente"
+                                  title={d.status === 'suspended' ? 'Reativar' : 'Suspender'}
                                 >
-                                  <span className="material-symbols-outlined text-lg">pause_circle</span>
+                                  <span className="material-symbols-outlined text-xl">warning</span>
                                 </button>
                                 <button
                                   onClick={() => handleDeleteDriver(d.id)}
-                                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100"
-                                  title="Excluir Entregador"
+                                  className="size-11 flex items-center justify-center rounded-2xl bg-white dark:bg-slate-800 text-red-500 border border-slate-100 dark:border-slate-800 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                  title="Excluir Permanentemente"
                                 >
-                                  <span className="material-symbols-outlined text-lg">delete</span>
+                                  <span className="material-symbols-outlined text-xl">delete_forever</span>
                                 </button>
                               </div>
                             </td>
@@ -3957,18 +4061,61 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                         ))}
                       </tbody>
                     </table>
+                    {filteredDrivers.length === 0 && (
+                      <div className="py-32 text-center">
+                         <div className="size-24 rounded-[32px] bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center mx-auto mb-6 text-slate-300">
+                             <span className="material-symbols-outlined text-5xl">sports_motorsports</span>
+                         </div>
+                         <h4 className="text-xl font-black text-slate-900 dark:text-white">Nenhum entregador encontrado</h4>
+                         <p className="text-sm font-bold text-slate-400 mt-2">Ajuste seu filtro ou busque por outro termo.</p>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Pagination Placeholder */}
-                  <div className="px-8 py-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/30">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Exibindo {driversList.length} de {stats.drivers} entregadores</p>
-                    <div className="flex items-center gap-2">
-                      <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-colors">
-                        <span className="material-symbols-outlined">chevron_left</span>
+                  {/* Pagination Footer */}
+                  <div className="px-10 py-8 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/20">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-4">
+                       Filtro: <span className="text-slate-900 dark:text-white">{driverFilter}</span>
+                       <span className="w-1 h-1 rounded-full bg-slate-300" />
+                       Exibindo {filteredDrivers.length} de {driversList.length} entregadores
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <button 
+                        disabled={driversPage === 1}
+                        onClick={() => setDriversPage(prev => prev - 1)}
+                        className="h-12 px-5 flex items-center gap-2 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-all font-black text-[10px] uppercase tracking-widest shadow-sm disabled:opacity-40"
+                      >
+                        <span className="material-symbols-outlined text-lg">chevron_left</span>
+                        Anterior
                       </button>
-                      <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-primary text-slate-900 font-black text-xs">1</button>
-                      <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-colors">
-                        <span className="material-symbols-outlined">chevron_right</span>
+                      
+                      <div className="flex items-center gap-2">
+                         {Array.from({ length: Math.ceil(filteredDrivers.length / DRIVERS_PER_PAGE) }).map((_, i) => {
+                             const p = i + 1;
+                             const totalP = Math.ceil(filteredDrivers.length / DRIVERS_PER_PAGE);
+                             if (p === 1 || p === totalP || (p >= driversPage - 1 && p <= driversPage + 1)) {
+                                 return (
+                                   <button 
+                                     key={p}
+                                     onClick={() => setDriversPage(p)}
+                                     className={`size-12 rounded-2xl font-black text-xs transition-all ${driversPage === p ? 'bg-primary text-slate-900 shadow-lg shadow-primary/20' : 'bg-white dark:bg-slate-800 text-slate-400 hover:text-primary border border-transparent dark:border-slate-800 hover:border-primary/30'}`}
+                                   >
+                                     {p}
+                                   </button>
+                                 );
+                             }
+                             if (p === driversPage - 2 || p === driversPage + 2) return <span key={p} className="text-slate-400 font-bold px-1">...</span>;
+                             return null;
+                         })}
+                      </div>
+
+                      <button 
+                        disabled={driversPage >= Math.ceil(filteredDrivers.length / DRIVERS_PER_PAGE)}
+                        onClick={() => setDriversPage(prev => prev + 1)}
+                        className="h-12 px-5 flex items-center gap-2 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-primary transition-all font-black text-[10px] uppercase tracking-widest shadow-sm disabled:opacity-40"
+                      >
+                        Próximo
+                        <span className="material-symbols-outlined text-lg">chevron_right</span>
                       </button>
                     </div>
                   </div>
@@ -5461,8 +5608,15 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                     )}
                     <button
                       onClick={() => {
-                        setEditingItem({ is_active: true, type: categoryGroupFilter === 'all' ? 'service' : categoryGroupFilter });
-                        setEditType('category');
+                        setSelectedCategoryStudio({ 
+                          id: `new-${Date.now()}`, 
+                          name: '', 
+                          description: '', 
+                          icon: 'category', 
+                          type: categoryGroupFilter === 'all' ? 'service' : categoryGroupFilter, 
+                          is_active: true 
+                        });
+                        setActiveStudioTab('general');
                       }}
                       className="flex items-center gap-3 bg-primary text-slate-900 px-8 py-5 rounded-[24px] font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
                       <span className="material-symbols-outlined text-lg">add_circle</span>
@@ -5522,7 +5676,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                         </div>
                         <div className="flex gap-2">
                           <button
-                            onClick={async () => { setEditingItem(cat); setEditType('category'); }}
+                            onClick={() => { setSelectedCategoryStudio(cat); setActiveStudioTab('general'); }}
                             className="size-10 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-all flex items-center justify-center border border-slate-100 dark:border-slate-700"
                           >
                             <span className="material-symbols-outlined text-lg">edit</span>
@@ -5566,8 +5720,8 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Subcategorias ({categoriesState.filter(s => s.parent_id === cat.id).length})</span>
                           <button 
                             onClick={() => {
-                              setEditingItem({ parent_id: cat.id, is_active: true });
-                              setEditType('category');
+                              setSelectedCategoryStudio(cat);
+                              setActiveStudioTab('subcategories');
                             }}
                             className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline flex items-center gap-1"
                           >
@@ -5581,7 +5735,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                             <div key={sub.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 group/sub">
                               <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{sub.name}</span>
                               <div className="flex gap-2 opacity-0 group-hover/sub:opacity-100 transition-opacity">
-                                <button onClick={async () => { setEditingItem(sub); setEditType('category'); }} className="text-slate-400 hover:text-primary transition-colors">
+                                <button onClick={() => { setSelectedCategoryStudio(cat); setActiveStudioTab('subcategories'); }} className="text-slate-400 hover:text-primary transition-colors">
                                   <span className="material-symbols-outlined text-sm">edit</span>
                                 </button>
                                 <button onClick={async () => { if(await showConfirm({ message: 'Excluir?' })) await supabase.from('categories_delivery').delete().eq('id', sub.id); fetchCategories(); }} className="text-slate-400 hover:text-red-500 transition-colors">
@@ -8651,6 +8805,279 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
           </motion.div>
         </div>
       )}
+      {/* ••••••• Category Studio (Services & Infrastructure) ••••••• */}
+      {selectedCategoryStudio && (
+        <div className="fixed inset-0 z-[170] flex items-center justify-center p-4 md:p-10 text-slate-900 overflow-hidden">
+          <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-3xl" onClick={() => setSelectedCategoryStudio(null)}></div>
+          
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-[56px] overflow-hidden shadow-[0_0_150px_rgba(0,0,0,0.6)] relative z-10 flex flex-col border border-white/20 dark:border-slate-800 h-[90vh]"
+          >
+            {/* Studio Header */}
+            <div className="p-10 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/40">
+              <div className="flex items-center gap-6">
+                <div className="size-20 rounded-[32px] bg-primary/20 flex items-center justify-center text-primary shadow-xl shadow-primary/10 border border-primary/20">
+                  <span className="material-symbols-outlined text-4xl font-black">{selectedCategoryStudio.icon || 'category'}</span>
+                </div>
+                <div>
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">Estúdio de Categoria</h2>
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
+                      <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
+                      {selectedCategoryStudio.id?.startsWith('new-') ? 'Novo Recurso Estrutural' : `ID: ${selectedCategoryStudio.id}`}
+                    </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedCategoryStudio(null)}
+                className="size-14 rounded-3xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-red-500 transition-all border border-slate-200 dark:border-slate-700 shadow-xl"
+              >
+                <span className="material-symbols-outlined text-2xl font-black">close</span>
+              </button>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="px-10 py-2 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-100 dark:border-slate-800 flex gap-8">
+                 {[
+                   { id: 'general', label: 'Dados Gerais', icon: 'settings' },
+                   { id: 'subcategories', label: 'Subcategorias', icon: 'account_tree' },
+                 ].map(t => (
+                   <button
+                     key={t.id}
+                     onClick={() => setActiveStudioTab(t.id as any)}
+                     className={`flex items-center gap-2 py-5 px-3 border-b-4 transition-all ${activeStudioTab === t.id ? 'border-primary text-slate-900 dark:text-white' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                   >
+                     <span className="material-symbols-outlined text-xl">{t.icon}</span>
+                     <span className="text-[10px] font-black uppercase tracking-widest">{t.label}</span>
+                   </button>
+                 ))}
+            </div>
+
+            {/* Main Content */}
+            <div className="flex-1 overflow-y-auto p-12 custom-scrollbar space-y-12 bg-white dark:bg-slate-900">
+               <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeStudioTab}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className="space-y-10"
+                    >
+                      {activeStudioTab === 'general' && (
+                         <div className="space-y-10">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-2">
+                                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-4">Nome da Categoria</label>
+                                   <input 
+                                     type="text" 
+                                     value={selectedCategoryStudio.name || ''} 
+                                     onChange={e => setSelectedCategoryStudio({...selectedCategoryStudio, name: e.target.value})}
+                                     className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-3xl px-8 py-5 font-bold text-sm focus:ring-2 focus:ring-primary shadow-inner dark:text-white"
+                                     placeholder="Ex: Limpeza Residencial"
+                                   />
+                                </div>
+                                <div className="space-y-2">
+                                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-4">Ícone (Symbol Name)</label>
+                                   <div className="flex gap-4">
+                                      <input 
+                                        type="text" 
+                                        value={selectedCategoryStudio.icon || ''} 
+                                        onChange={e => setSelectedCategoryStudio({...selectedCategoryStudio, icon: e.target.value})}
+                                        className="flex-1 bg-slate-50 dark:bg-slate-800/50 border-none rounded-3xl px-8 py-5 font-bold text-sm focus:ring-2 focus:ring-primary shadow-inner dark:text-white"
+                                        placeholder="Ex: home_repair_service"
+                                      />
+                                      <div className="size-16 rounded-3xl bg-primary flex items-center justify-center text-slate-900 shadow-lg shadow-primary/20">
+                                         <span className="material-symbols-outlined text-2xl">{selectedCategoryStudio.icon || 'help'}</span>
+                                      </div>
+                                   </div>
+                                </div>
+                                <div className="md:col-span-2 space-y-2">
+                                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-4">Descrição da Atividade</label>
+                                   <textarea 
+                                     value={selectedCategoryStudio.description || ''} 
+                                     onChange={e => setSelectedCategoryStudio({...selectedCategoryStudio, description: e.target.value})}
+                                     className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-3xl px-8 py-5 font-bold text-sm focus:ring-2 focus:ring-primary shadow-inner h-32 resize-none dark:text-white"
+                                     placeholder="Descreva brevemente o que esta categoria abrange..."
+                                   />
+                                </div>
+                            </div>
+
+                            <div className="p-8 rounded-[40px] bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                       <div className={`size-12 rounded-2xl flex items-center justify-center ${selectedCategoryStudio.is_active ? 'bg-emerald-500/20 text-emerald-500' : 'bg-red-500/20 text-red-500'}`}>
+                                          <span className="material-symbols-outlined">{selectedCategoryStudio.is_active ? 'check_circle' : 'block'}</span>
+                                       </div>
+                                       <div>
+                                          <p className="text-sm font-black text-slate-900 dark:text-white">Status de Disponibilidade</p>
+                                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">{selectedCategoryStudio.is_active ? 'Visível para todos os usuários' : 'Oculto na interface do cliente'}</p>
+                                       </div>
+                                    </div>
+                                    <button 
+                                      onClick={() => setSelectedCategoryStudio({...selectedCategoryStudio, is_active: !selectedCategoryStudio.is_active})}
+                                      className={`w-16 h-10 rounded-full relative transition-all ${selectedCategoryStudio.is_active ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-slate-400'}`}
+                                    >
+                                       <div className={`absolute top-1 size-8 bg-white rounded-full shadow-md transition-all ${selectedCategoryStudio.is_active ? 'left-7' : 'left-1'}`} />
+                                    </button>
+                                </div>
+                            </div>
+                         </div>
+                      )}
+
+                      {activeStudioTab === 'subcategories' && (
+                         <div className="space-y-8">
+                            <div className="flex items-center justify-between">
+                               <div>
+                                  <h3 className="text-xl font-black text-slate-900 dark:text-white">Sub-nódulos Operacionais</h3>
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Defina as especialidades desta categoria</p>
+                               </div>
+                               <button 
+                                 onClick={async () => {
+                                    if (String(selectedCategoryStudio.id).startsWith('new-')) {
+                                       toastWarning('Salve a categoria principal antes de adicionar subcategorias.');
+                                       return;
+                                    }
+                                    const { data, error } = await supabase.from('categories_delivery').insert([{
+                                       name: 'Nova Subcategoria',
+                                       parent_id: selectedCategoryStudio.id,
+                                       type: 'service',
+                                       is_active: true
+                                    }]).select();
+                                    if (error) toastError('Falha na infraestrutura: ' + error.message);
+                                    else {
+                                       toastSuccess('Sub-unidade adicionada com sucesso.');
+                                       setCategoriesState(prev => [...prev, data[0]]);
+                                    }
+                                 }}
+                                 className="px-6 py-4 bg-primary/10 text-primary border border-primary/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-slate-900 transition-all"
+                               >
+                                  + Add Subcategoria
+                               </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-4">
+                               {categoriesState.filter(c => String(c.parent_id) === String(selectedCategoryStudio.id)).map(sub => (
+                                  <div key={sub.id} className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 flex items-center justify-between group">
+                                     <div className="flex items-center gap-6">
+                                         <div className="size-12 rounded-2xl bg-white dark:bg-slate-900 flex items-center justify-center text-primary shadow-sm border border-slate-100 dark:border-slate-800">
+                                            <span className="material-symbols-outlined text-xl">{sub.icon || 'subdirectory_arrow_right'}</span>
+                                         </div>
+                                         <input 
+                                           type="text" 
+                                           value={sub.name} 
+                                           onBlur={async (e) => {
+                                              const val = e.target.value;
+                                              if (val.trim()) { await supabase.from('categories_delivery').update({ name: val }).eq('id', sub.id); }
+                                           }}
+                                           onChange={e => {
+                                              const updated = categoriesState.map(c => c.id === sub.id ? { ...c, name: e.target.value } : c);
+                                              setCategoriesState(updated);
+                                           }}
+                                           className="bg-transparent border-none font-bold text-sm focus:ring-0 p-0 dark:text-white w-64"
+                                         />
+                                     </div>
+                                     <div className="flex items-center gap-4">
+                                        <button 
+                                          onClick={async () => {
+                                             const nextStatus = !sub.is_active;
+                                             const { error } = await supabase.from('categories_delivery').update({ is_active: nextStatus }).eq('id', sub.id);
+                                             if (!error) {
+                                               setCategoriesState(prev => prev.map(c => c.id === sub.id ? { ...c, is_active: nextStatus } : c));
+                                             }
+                                          }}
+                                          className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${sub.is_active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-200 text-slate-500'}`}
+                                        >
+                                           {sub.is_active ? 'Ativa' : 'Inativa'}
+                                        </button>
+                                        <button 
+                                           onClick={async () => {
+                                             if(await showConfirm({ message: 'Excluir subcategoria?' })) {
+                                                fetchCategories();
+                                             }
+                                           }}
+                                           className="size-10 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+                                        >
+                                           <span className="material-symbols-outlined text-lg">delete</span>
+                                        </button>
+                                     </div>
+                                  </div>
+                               ))}
+                               {categoriesState.filter(c => c.parent_id === selectedCategoryStudio.id).length === 0 && (
+                                  <div className="py-20 text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[48px]">
+                                      <div className="size-20 rounded-[32px] bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center mx-auto mb-4 text-slate-300">
+                                          <span className="material-symbols-outlined text-4xl">account_tree</span>
+                                      </div>
+                                      <p className="text-sm font-bold text-slate-400">Nenhuma subcategoria vinculada.</p>
+                                  </div>
+                               )}
+                            </div>
+                         </div>
+                      )}
+                    </motion.div>
+               </AnimatePresence>
+            </div>
+
+            {/* Studio Footer */}
+            <div className="p-10 border-t border-slate-100 dark:border-slate-800 flex justify-between bg-white dark:bg-slate-950 rounded-b-[56px]">
+               <button 
+                 onClick={() => setSelectedCategoryStudio(null)}
+                 className="px-10 py-5 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-600 transition-all font-sans"
+               >
+                 Descartar Alterações
+               </button>
+               <button 
+                 disabled={isSaving}
+                 onClick={async () => {
+                    setIsSaving(true);
+                    try {
+                      const categoryData = {
+                        name: selectedCategoryStudio.name,
+                        description: selectedCategoryStudio.description,
+                        icon: selectedCategoryStudio.icon,
+                        type: selectedCategoryStudio.type || 'service',
+                        is_active: selectedCategoryStudio.is_active,
+                        parent_id: selectedCategoryStudio.parent_id
+                      };
+
+                      const isNew = selectedCategoryStudio.id?.startsWith('new-');
+                      
+                      if (isNew) {
+                         const { data, error } = await supabase.from('categories_delivery').insert([categoryData]).select();
+                         if (error) throw error;
+                         if (data && data[0]) {
+                            // Categoria criada, podemos agora permitir subcategorias
+                            toastSuccess('Categoria implementada com sucesso!');
+                            setSelectedCategoryStudio(data[0]);
+                            setActiveStudioTab('subcategories');
+                         }
+                      } else {
+                        const { error } = await supabase.from('categories_delivery').update(categoryData).eq('id', selectedCategoryStudio.id);
+                        if (error) throw error;
+                        toastSuccess('Dados atualizados no ecossistema.');
+                        setSelectedCategoryStudio(null);
+                      }
+                      fetchCategories();
+                    } catch (err: any) {
+                      toastError('Erro na infraestrutura: ' + err.message);
+                    } finally {
+                      setIsSaving(false);
+                    }
+                 }}
+                 className="px-12 py-5 bg-primary text-slate-900 font-black text-[10px] uppercase tracking-widest rounded-3xl shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50"
+               >
+                  {isSaving ? (
+                    <span className="material-symbols-outlined animate-spin text-lg">sync</span>
+                  ) : (
+                    <span className="material-symbols-outlined text-lg">rocket_launch</span>
+                  )}
+                  {isSaving ? 'Sincronizando...' : 'Implementar Mudanças'}
+               </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* ••••••• Category Directory Modal ••••••• */}
       {showCategoryListModal && (
         <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 md:p-10 text-slate-900 overflow-hidden">
@@ -8704,8 +9131,8 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button 
                            onClick={() => {
-                             setEditingItem(cat);
-                             setEditType('category');
+                             setSelectedCategoryStudio(cat);
+                             setActiveStudioTab('general');
                              setShowCategoryListModal(false);
                            }}
                            className="size-10 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-slate-900 transition-all flex items-center justify-center"
@@ -8727,7 +9154,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                     </div>
                     <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
                        <span className={cat.is_active ? 'text-emerald-500' : 'text-slate-300'}>{cat.is_active ? '● Ativo' : '○ Inativo'}</span>
-                       <span>Criado em {new Date(cat.created_at).toLocaleDateString()}</span>
+                       <span>Criado em {cat.created_at ? new Date(cat.created_at).toLocaleDateString() : 'N/A'}</span>
                     </div>
                   </div>
                 ))}
@@ -8739,8 +9166,15 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Painel de Controle de Infraestrutura</p>
                <button 
                  onClick={() => {
-                    setEditingItem({ is_active: true });
-                    setEditType('category');
+                    setSelectedCategoryStudio({ 
+                      id: `new-${Date.now()}`, 
+                      name: '', 
+                      description: '', 
+                      icon: 'category', 
+                      type: 'service', 
+                      is_active: true 
+                    });
+                    setActiveStudioTab('general');
                     setShowCategoryListModal(false);
                  }}
                  className="px-8 py-4 bg-primary text-slate-900 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-lg shadow-primary/20 hover:scale-105 transition-all"
