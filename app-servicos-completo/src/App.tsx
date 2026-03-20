@@ -1594,7 +1594,7 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
-            'apikey': import.meta.env.VITE_SUPABASE_KEY as string,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY as string,
           },
           body: JSON.stringify({ amount: total, orderId: orderData.id }),
         });
@@ -1665,7 +1665,7 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
-            'apikey': import.meta.env.VITE_SUPABASE_KEY as string,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY as string,
           },
           body: JSON.stringify({
             amount: total,
@@ -1723,7 +1723,7 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
-            'apikey': import.meta.env.VITE_SUPABASE_KEY as string,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY as string,
           },
           body: JSON.stringify({
             amount: total,
@@ -1835,7 +1835,7 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
-            'apikey': import.meta.env.VITE_SUPABASE_KEY as string,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY as string,
           },
           body: JSON.stringify({ amount: price, orderId: data.id }),
         });
@@ -1870,7 +1870,7 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
-            'apikey': import.meta.env.VITE_SUPABASE_KEY as string,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY as string,
           },
           body: JSON.stringify({ amount: price, orderId: data.id, email, customer: { name: userName, cpf } }),
         });
