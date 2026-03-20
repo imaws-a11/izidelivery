@@ -1484,7 +1484,14 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     if (!editingItem) return;
     setIsSaving(true);
     try {
-      const { error } = await supabase.from('users_delivery').update({ name: editingItem.name, phone: editingItem.phone, is_active: editingItem.is_active }).eq('id', editingItem.id);
+      const { error } = await supabase.from('users_delivery').update({ 
+        name: editingItem.name, 
+        phone: editingItem.phone, 
+        is_active: editingItem.is_active,
+        is_izi_black: editingItem.is_izi_black,
+        cashback_earned: editingItem.cashback_earned
+      }).eq('id', editingItem.id);
+      
       if (error) toastError(error.message);
       else {
         toastSuccess('Cliente atualizado com sucesso!');
@@ -1492,9 +1499,31 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         logAction('Update User', 'Users', editingItem);
         setEditingItem(null);
         setEditType(null);
+        if (selectedUser?.id === editingItem.id) {
+          setSelectedUser({ ...selectedUser, ...editingItem });
+        }
       }
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const toggleIziBlack = async (userId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('users_delivery')
+        .update({ is_izi_black: !currentStatus })
+        .eq('id', userId);
+
+      if (error) throw error;
+      
+      toastSuccess(`Status Izi Black ${!currentStatus ? 'ativado' : 'desativado'}!`);
+      fetchUsers();
+      if (selectedUser?.id === userId) {
+        setSelectedUser({ ...selectedUser, is_izi_black: !currentStatus });
+      }
+    } catch (err: any) {
+      toastError('Erro ao atualizar status Izi Black: ' + err.message);
     }
   };
 
@@ -4164,6 +4193,64 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                             <span className="material-symbols-outlined text-sm transition-transform group-hover:translate-x-1">arrow_forward</span>
                           </button>
                         </div>
+                      </div>
+                    </section>
+
+                    {/* Izi Black Management Section */}
+                    <section className={`bg-white dark:bg-slate-900 rounded-[40px] p-8 border-2 shadow-sm relative overflow-hidden transition-all ${selectedUser.is_izi_black ? 'border-primary shadow-primary/10' : 'border-slate-100 dark:border-slate-800'}`}>
+                      <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full blur-3xl ${selectedUser.is_izi_black ? 'bg-primary/20' : 'bg-slate-500/5'}`}></div>
+                      <div className="flex items-center justify-between mb-8">
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+                          <span className={`material-symbols-outlined ${selectedUser.is_izi_black ? 'text-primary' : 'text-slate-300'}`}>workspace_premium</span>
+                          Programa Izi Black
+                        </h3>
+                        <div 
+                          onClick={() => toggleIziBlack(selectedUser.id, !!selectedUser.is_izi_black)}
+                          className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors flex items-center ${selectedUser.is_izi_black ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'}`}
+                        >
+                          <div className={`size-4 bg-white rounded-full shadow-sm transition-transform ${selectedUser.is_izi_black ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-6">
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status de Fidelidade</p>
+                          <p className={`text-sm font-black uppercase tracking-widest ${selectedUser.is_izi_black ? 'text-primary' : 'text-slate-500'}`}>
+                            {selectedUser.is_izi_black ? 'MEMBRO VIP ATIVO' : 'CLIENTE REGULAR'}
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cashback Acumulado</label>
+                          <div className="flex items-center gap-3 mt-1">
+                            <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">R$ {(selectedUser.cashback_earned || 0).toFixed(2).replace('.', ',')}</p>
+                            <button 
+                              onClick={async () => {
+                                const newVal = await showPrompt('Digite o novo valor do cashback:');
+                                if (newVal !== null) {
+                                  const { error } = await supabase.from('users_delivery').update({ cashback_earned: parseFloat(newVal) }).eq('id', selectedUser.id);
+                                  if (!error) {
+                                    toastSuccess('Cashback atualizado!');
+                                    fetchUsers();
+                                    setSelectedUser({ ...selectedUser, cashback_earned: parseFloat(newVal) });
+                                  }
+                                }
+                              }}
+                              className="size-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-sm">edit</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {selectedUser.is_izi_black && (
+                          <div className="pt-4 space-y-3">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 rounded-xl border border-emerald-100 dark:border-emerald-500/20">
+                              <span className="material-symbols-outlined text-sm">check_circle</span>
+                              Benefícios VIP aplicados
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </section>
                   </div>
@@ -8338,6 +8425,7 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                 { id: 'personal', label: 'Cadastro Base', icon: 'account_circle' },
                 { id: 'wallet', label: 'Carteira & Saldo', icon: 'wallet' },
                 { id: 'security', label: 'Segurança & Status', icon: 'verified_user' },
+                { id: 'iziblack', label: 'Izi Black VIP', icon: 'workspace_premium' },
               ].map(t => (
                 <button
                   key={t.id}
@@ -8508,6 +8596,46 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                     </div>
                   )}
 
+                  {activeStudioTab === 'iziblack' && (
+                    <div className="space-y-12">
+                      <div className="p-10 rounded-[48px] bg-slate-950 border border-slate-800 shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-[80px] -mr-20 -mt-20 group-hover:bg-white/10 transition-colors"></div>
+                        <div className="flex items-center gap-6 mb-10 relative z-10">
+                          <div className="size-16 rounded-3xl bg-gradient-to-br from-slate-700 to-black flex items-center justify-center text-white shadow-xl shadow-black/50 border border-white/10">
+                            <span className="material-symbols-outlined text-3xl font-bold fill-1">workspace_premium</span>
+                          </div>
+                          <div>
+                            <h4 className="text-xl font-black uppercase tracking-tight text-white">Programa Izi Black</h4>
+                            <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Painel Administrativo VIP</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                           <div className="space-y-4">
+                              <label className="text-[10px] font-black text-white/50 uppercase tracking-widest ml-4">Status da Assinatura</label>
+                              <div className="relative">
+                                <select 
+                                  value={selectedUserStudio.is_izi_black ? 'active' : 'inactive'}
+                                  onChange={e => setSelectedUserStudio({...selectedUserStudio, is_izi_black: e.target.value === 'active'})}
+                                  className="w-full bg-white/5 border border-white/10 rounded-3xl px-8 py-5 font-black text-sm focus:ring-4 focus:ring-white/10 text-white appearance-none cursor-pointer"
+                                >
+                                  <option value="active" className="text-black">🟢 Assinatura VIP Ativa</option>
+                                  <option value="inactive" className="text-black">⚪ Sem Assinatura (Conta Comum)</option>
+                                </select>
+                                <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none">expand_more</span>
+                              </div>
+                           </div>
+                           <div className="p-6 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-between">
+                              <div>
+                                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Cashback Histórico Ganho</p>
+                                <p className="text-3xl font-black text-white tabular-nums italic">R$ <span className="text-emerald-400">{(selectedUserStudio.cashback_earned || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}</span></p>
+                              </div>
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {activeStudioTab === 'security' && (
                     <div className="space-y-12">
                       <div className="p-10 rounded-[48px] bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/50 shadow-inner">
@@ -8593,7 +8721,8 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                         name: selectedUserStudio.name,
                         phone: selectedUserStudio.phone,
                         is_active: selectedUserStudio.is_active,
-                        status: selectedUserStudio.status || 'active'
+                        status: selectedUserStudio.status || 'active',
+                        is_izi_black: selectedUserStudio.is_izi_black || false
                       };
 
                       const isNew = !selectedUserStudio.id || (typeof selectedUserStudio.id === 'string' && selectedUserStudio.id.startsWith('new-'));
