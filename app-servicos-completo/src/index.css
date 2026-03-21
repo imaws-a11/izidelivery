@@ -46,11 +46,22 @@
     0%, 100% { transform: scale(1); opacity: 0.5; }
     50% { transform: scale(1.1); opacity: 0.8; }
   }
+
+  --shadow-premium: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-gold: 0 10px 30px -10px rgba(212, 175, 55, 0.3);
+  --color-gold: #D4AF37;
+  --bg-dark-obsidian: #030712;
 }
 
 @layer components {
   .glass-panel {
-    @apply bg-white/70 backdrop-blur-xl border border-white/20;
+    @apply bg-white/70 backdrop-blur-2xl border border-white/20 dark:bg-slate-900/70 dark:border-white/5;
+  }
+  .luxury-card {
+    @apply bg-white dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-white/5 shadow-soft hover:shadow-float transition-all duration-500;
+  }
+  .gold-gradient {
+    background: linear-gradient(135deg, #FFD900 0%, #D4AF37 100%);
   }
 }
 
