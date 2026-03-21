@@ -2275,235 +2275,313 @@ function App() {
   };
 
   const renderHome = () => {
-    // ── Lógica de Navegação Reativa ──
-    const handleNavigation = (id: string, type: string = 'restaurant') => {
-      const svc = { id, type };
-      handleServiceSelection(svc);
+    const deliveryServices = [
+      { icon: "restaurant", label: "Restaurantes", type: "restaurant", action: null },
+      { icon: "local_mall", label: "Mercados", type: "market", action: null },
+      { icon: "pedal_bike", label: "Logística", type: null, action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
+      { icon: "local_pharmacy", label: "Saúde", type: "pharmacy", action: null },
+    ];
+
+    const handleServiceSelection = (cat: any) => {
+      if (cat.action) return cat.action();
+      setActiveService(cat);
+      if (cat.type === "restaurant") navigateSubView("restaurant_list");
+      else if (cat.type === "market") navigateSubView("market_list");
+      else if (cat.type === "pharmacy") navigateSubView("pharmacy_list");
+      else if (cat.type === "beverages") navigateSubView("beverages_list");
+      else navigateSubView("generic_list");
     };
 
-    return (
-      <div className="bg-black text-zinc-100 font-body antialiased min-h-full pb-32 overflow-y-auto no-scrollbar selection:bg-primary selection:text-black">
-        
-        {/* CSS INJETADO PARA FIDELIDADE AOS ESTILOS SOLICITADOS */}
-        <style dangerouslySetInnerHTML={{ __html: `
-          .neon-glow-hover:hover { box-shadow: 0 0 20px rgba(255, 215, 9, 0.2); }
-          .glass-nav { background: rgba(12, 15, 16, 0.85); backdrop-filter: blur(20px); }
-          .premium-text-gradient { background: linear-gradient(135deg, #ffd709 0%, #efc900 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-          .neon-glow-sm { filter: drop-shadow(0 0 8px rgba(255, 215, 9, 0.4)); }
-          .neon-glow-lg { filter: drop-shadow(0 0 20px rgba(255, 215, 9, 0.25)); }
-          .hide-scrollbar::-webkit-scrollbar { display: none; }
-        `}} />
+    const activeStories = [
+      { id: 1, merchant: "Burger King", discount: "30% OFF", timeLeft: "2h", img: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=400", isMaster: false },
+      { id: 2, merchant: "Pizza Hut", discount: "2x1", timeLeft: "45min", img: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=400", isMaster: false },
+      { id: 3, merchant: "Sushi Premium", discount: "20% OFF", timeLeft: "1h", img: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=400", isMaster: true },
+      { id: 4, merchant: "Outback", discount: "Frete Grátis", timeLeft: "3h", img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=400", isMaster: false },
+    ];
 
-        {/* Top Navigation Anchor */}
-        <header className="sticky top-0 z-50 flex justify-between items-center w-full px-8 py-6 max-w-screen-xl mx-auto bg-gradient-to-b from-black to-transparent no-border bg-black/40 backdrop-blur-md">
-          <div className="flex items-center gap-4">
-            <div className="relative cursor-pointer" onClick={() => setTab("profile")}>
-              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary/20">
-                <img 
-                  className="w-full h-full object-cover" 
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || 'default'}`} 
-                  alt="Perfil" 
-                />
+    const activeOrder = myOrders.find(o => !["concluido", "cancelado"].includes(o.status));
+
+    return (
+      <div className="flex flex-col bg-black text-zinc-100 pb-32 overflow-y-auto no-scrollbar h-full">
+
+        {/* HEADER */}
+        <header className="sticky top-0 z-50 flex justify-between items-center w-full px-6 py-5"
+          style={{ background: "linear-gradient(to bottom, #000000 60%, transparent)" }}>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setSubView(subView === "addresses" ? "none" : "addresses")}>
+            <div className="relative">
+              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-yellow-400/20">
+                <img className="w-full h-full object-cover" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" />
               </div>
-              {isIziBlackMembership && (
-                <div className="absolute -bottom-1 -right-1 bg-primary text-black text-[10px] font-extrabold px-1.5 py-0.5 rounded-full flex items-center gap-1 shadow-[0_0_10px_rgba(255,215,9,0.5)]">
-                  <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+              {userLevel >= 10 && (
+                <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black text-[9px] font-extrabold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-[0_0_10px_rgba(255,215,9,0.5)]">
+                  <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "\'FILL\' 1" }}>workspace_premium</span>
                   VIP
                 </div>
               )}
             </div>
             <div>
-              <p className="text-zinc-500 text-xs font-medium uppercase tracking-widest">Entregar em</p>
-              <div className="flex items-center gap-1 cursor-pointer" onClick={() => setSubView("addresses")}>
-                <span className="text-zinc-100 font-bold text-sm tracking-tight truncate max-w-[150px]">
-                  {userLocation.address.split(',')[0]}
+              <p className="text-zinc-500 text-[10px] font-medium uppercase tracking-widest">Entregar em</p>
+              <div className="flex items-center gap-1">
+                <span className="text-zinc-100 font-bold text-sm tracking-tight max-w-[150px] truncate">
+                  {userLocation.loading ? "Buscando..." : userLocation.address}
                 </span>
-                <span className="material-symbols-outlined text-primary text-sm">expand_more</span>
+                <span className="material-symbols-outlined text-yellow-400 text-sm">expand_more</span>
               </div>
             </div>
           </div>
-          
-          <h1 className="text-xl font-extrabold tracking-tighter text-zinc-100 font-headline hidden md:block uppercase tracking-[0.4em] italic text-primary">IZI</h1>
-          
-          <div className="flex items-center gap-4">
-            <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-800/50 transition-all active:scale-95 duration-200">
-              <span className="material-symbols-outlined text-zinc-100">notifications</span>
+
+          <h1 className="text-lg font-extrabold tracking-[0.4em] italic text-yellow-400 hidden md:block uppercase">IZI</h1>
+
+          <div className="flex items-center gap-3">
+            <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-800/50 transition-all active:scale-95">
+              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>
+              )}
             </button>
-            <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-800/50 transition-all active:scale-95 duration-200 md:hidden">
-              <span className="material-symbols-outlined text-zinc-100">menu</span>
+            <button onClick={() => setSubView("quest_center")} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-800/50 transition-all active:scale-95">
+              <span className="material-symbols-outlined text-zinc-100">notifications</span>
             </button>
           </div>
         </header>
 
-        <main className="max-w-screen-xl mx-auto px-6">
-          
-          {/* Luxury Search Anchor */}
-          <section className="mt-4 mb-10">
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                <span className="material-symbols-outlined text-zinc-500 group-focus-within:text-primary transition-colors">search</span>
-              </div>
-              <input 
-                className="w-full bg-zinc-900/50 border-none rounded-xl py-5 pl-14 pr-6 text-zinc-100 placeholder:text-zinc-600 focus:ring-1 focus:ring-primary/30 transition-all outline-none" 
-                placeholder="O que você deseja pedir hoje?" 
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <div className="absolute inset-y-0 right-5 flex items-center cursor-pointer">
-                <span className="material-symbols-outlined text-zinc-500">tune</span>
-              </div>
-            </div>
-          </section>
+        <main className="px-5 pb-10 flex flex-col gap-8">
 
-          {/* Premium Banner Section */}
-          <section className="mb-10 overflow-hidden">
-            <div className="relative h-48 w-full rounded-xl overflow-hidden group">
-              <img 
-                className="w-full h-full object-cover brightness-50 group-hover:scale-105 transition-transform duration-700" 
-                src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=800" 
-                alt="Banner" 
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-transparent flex flex-col justify-center p-8">
-                <span className="bg-primary text-black font-extrabold text-[10px] px-2 py-0.5 rounded-sm w-fit mb-2">OFFERTA VIP</span>
-                <h2 className="text-3xl font-headline font-extrabold text-white leading-tight uppercase italic">Ganhe 50% OFF<br/>na Primeira Entrega</h2>
-                <p className="text-zinc-300 text-sm mt-2 font-medium">Use o código: <span className="text-primary font-bold">IZI-FIRST</span></p>
-              </div>
+          {/* SEARCH */}
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+              <span className="material-symbols-outlined text-zinc-500 group-focus-within:text-yellow-400 transition-colors text-xl">search</span>
             </div>
-          </section>
+            <input
+              className="w-full bg-zinc-900/60 border border-zinc-800 rounded-2xl py-4 pl-14 pr-12 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 transition-all text-sm font-medium"
+              placeholder="O que você deseja pedir hoje?"
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <div className="absolute inset-y-0 right-5 flex items-center">
+              {searchQuery
+                ? <button onClick={() => setSearchQuery("")}><span className="material-symbols-outlined text-zinc-500 text-sm">close</span></button>
+                : <span className="material-symbols-outlined text-zinc-500 text-xl">tune</span>
+              }
+            </div>
+          </div>
 
-          {/* Privilégio Elite Card */}
-          <section className="mb-12">
-            <motion.div 
-              whileTap={{ scale: 0.98 }}
-              onClick={() => { if(!isIziBlackMembership) { setIziBlackOrigin('home'); setIziBlackStep('info'); setSubView('izi_black_purchase'); } else { setShowIziBlackCard(true); } }}
-              className="relative overflow-hidden rounded-[2rem] h-52 flex items-center p-8 bg-gradient-to-br from-zinc-900/40 to-black border border-white/5 cursor-pointer shadow-2xl"
+          {/* PEDIDO ATIVO */}
+          {activeOrder && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => { setSelectedItem(activeOrder); setSubView("active_order"); }}
+              className="bg-yellow-400 text-black p-5 rounded-2xl flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all relative overflow-hidden"
             >
-              <div className="relative z-10 space-y-3">
-                <span className="text-primary text-[10px] font-black uppercase tracking-[0.3em]">Privilégio Elite</span>
-                <h2 className="text-3xl font-headline font-extrabold text-white leading-tight tracking-tighter italic uppercase">Taxa zero em<br/>toda a cidade.</h2>
-                <p className="text-zinc-500 text-xs font-medium max-w-[200px]">A velocidade máxima do ecossistema IZI Black ao seu comando.</p>
+              <div className="size-12 rounded-xl bg-black/10 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-2xl">moped</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-black/60">Pedido em andamento</p>
+                <h4 className="font-black text-base leading-tight">Acompanhar entrega em tempo real</h4>
+              </div>
+              <div className="size-2 bg-red-500 rounded-full animate-ping shrink-0" />
+            </motion.div>
+          )}
+
+          {/* BANNER PROMO */}
+          <section>
+            <div className="relative h-44 w-full rounded-2xl overflow-hidden group cursor-pointer" onClick={() => navigateSubView("exclusive_offer")}>
+              <img className="w-full h-full object-cover brightness-50 group-hover:scale-105 transition-transform duration-700" src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=800" alt="Promo" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-transparent flex flex-col justify-center p-7">
+                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Oferta VIP</span>
+                <h2 className="text-2xl font-extrabold text-white leading-tight">Ganhe 50% OFF<br/>na Primeira Entrega</h2>
+                <p className="text-zinc-300 text-xs mt-1.5 font-medium">Use o código: IZI-FIRST</p>
+              </div>
+            </div>
+          </section>
+
+          {/* CARD ELITE */}
+          <section>
+            <div className="relative overflow-hidden rounded-[2rem] h-48 flex items-center p-7 bg-gradient-to-br from-zinc-900/60 to-black border border-white/5">
+              <div className="relative z-10 space-y-2">
+                <span className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.3em]">Privilégio Elite</span>
+                <h2 className="text-2xl font-extrabold text-white leading-tight tracking-tight">Taxa zero em<br/>toda a cidade.</h2>
+                <p className="text-zinc-500 text-xs font-medium max-w-[190px]">A velocidade máxima do ecossistema IZI Black ao seu comando.</p>
               </div>
               <div className="absolute right-[-5%] top-1/2 -translate-y-1/2 opacity-20 pointer-events-none">
-                <span className="material-symbols-outlined text-[180px] text-primary" style={{ fontVariationSettings: "'FILL' 0" }}>delivery_dining</span>
+                <span className="material-symbols-outlined text-[160px] text-yellow-400" style={{ fontVariationSettings: "\'FILL\' 0" }}>delivery_dining</span>
               </div>
-            </motion.div>
+            </div>
           </section>
 
-          {/* Stealth Floating Service Grid */}
-          <section className="grid grid-cols-2 gap-y-12 gap-x-8 mb-16 px-4">
-            {[
-              { id: 'food', label: "Restaurantes", icon: "restaurant" },
-              { id: 'market', label: "Mercados", icon: "local_mall" },
-              { id: 'transit', label: "Logística", icon: "pedal_bike", action: () => setTransitData({ ...transitData, type: "mototaxi", scheduled: false }) || navigateSubView("transit_selection") },
-              { id: 'pharmacy', label: "Saúde", icon: "local_pharmacy" },
-            ].map((svc) => (
-              <div 
-                key={svc.id}
-                onClick={() => svc.action ? svc.action() : handleNavigation(svc.id)}
-                className="flex flex-col items-center gap-4 group cursor-pointer"
+          {/* GRADE DE SERVIÇOS */}
+          <section className="grid grid-cols-2 gap-y-12 gap-x-8">
+            {deliveryServices.map((svc, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.05 }}
+                onClick={() => handleServiceSelection(svc)}
+                className="flex flex-col items-center gap-4 group cursor-pointer active:scale-95 transition-all"
               >
                 <div className="relative w-24 h-24 flex items-center justify-center transition-all duration-700 group-hover:scale-110">
-                  <div className="absolute inset-0 bg-primary/10 blur-[30px] rounded-full opacity-60 group-hover:opacity-100 transition-opacity"></div>
-                  <span className="material-symbols-outlined text-6xl text-white neon-glow-lg transition-colors group-hover:text-primary">{svc.icon}</span>
+                  <div className="absolute inset-0 bg-yellow-400/10 blur-[30px] rounded-full opacity-60 group-hover:opacity-100 transition-opacity" />
+                  <span className="material-symbols-outlined text-6xl text-white group-hover:text-yellow-400 transition-colors" style={{ filter: "drop-shadow(0 0 20px rgba(255,215,9,0.25))" }}>
+                    {svc.icon}
+                  </span>
                 </div>
-                <span className="text-[10px] font-black text-zinc-500 group-hover:text-primary tracking-[0.3em] uppercase transition-colors">{svc.label}</span>
-              </div>
+                <span className="text-[10px] font-black text-zinc-500 group-hover:text-yellow-400 tracking-[0.3em] uppercase transition-colors">{svc.label}</span>
+              </motion.div>
             ))}
           </section>
 
-          {/* Regional Favorites (Bento Style) */}
-          <section className="mb-12">
-            <div className="flex justify-between items-end mb-8 px-2">
-              <div>
-                <h3 className="text-2xl font-headline font-extrabold tracking-tight text-white uppercase italic">Favoritos da Região</h3>
-                <p className="text-zinc-500 text-sm">Os mais pedidos em São Paulo agora</p>
+          {/* CUPONS */}
+          {availableCoupons.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-black tracking-tight text-zinc-100">Cupons Disponíveis</h3>
+                <span className="text-[10px] font-black text-yellow-400 bg-yellow-400/10 px-3 py-1 rounded-full">
+                  {availableCoupons.length} {availableCoupons.length === 1 ? "cupom" : "cupons"}
+                </span>
               </div>
-              <button className="text-primary text-sm font-bold hover:underline py-2">Ver todos</button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {/* Bento Item 1 */}
-              <motion.div 
-                whileHover={{ y: -5 }}
-                className="md:col-span-2 group cursor-pointer h-64 md:h-80"
-              >
-                <div className="relative rounded-xl overflow-hidden h-full shadow-2xl">
-                  <img src="https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=800" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" alt="Burger" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-6 flex flex-col justify-end">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="bg-primary text-black text-[10px] font-bold px-1.5 py-0.5 rounded">EXCLUSIVO</span>
-                      <div className="flex items-center text-primary text-xs font-bold">
-                        <span className="material-symbols-outlined text-[14px] mr-1" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                        4.9
+              <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-5 px-5">
+                {availableCoupons.map((coupon, i) => {
+                  const isCopied = copiedCoupon === coupon.coupon_code;
+                  return (
+                    <motion.div key={coupon.id || i} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.07 }}
+                      className="flex-shrink-0 w-64 h-28 bg-zinc-900/60 rounded-2xl p-5 flex justify-between items-center border border-zinc-800/60">
+                      <div>
+                        <p className="text-yellow-400 text-[10px] font-bold mb-1 uppercase tracking-wider">CUPOM ATIVO</p>
+                        <h5 className="text-base font-black text-white font-mono tracking-widest">{coupon.coupon_code}</h5>
+                        <p className="text-zinc-500 text-[10px] mt-1">
+                          {coupon.discount_type === "fixed" ? `R$ ${coupon.discount_value?.toFixed(2)} OFF` : `${coupon.discount_value}% OFF`}
+                          {coupon.min_order_value > 0 && ` • Mín R$${coupon.min_order_value}`}
+                        </p>
                       </div>
-                    </div>
-                    <h4 className="text-xl font-bold text-white uppercase italic tracking-tighter">The Black Burger Studio</h4>
-                    <p className="text-zinc-400 text-sm font-medium">Hamburgueria • 20-30 min • Grátis</p>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Bento Item 2 & 3 Stack */}
-              <div className="flex flex-col gap-8">
-                <motion.div whileHover={{ scale: 1.02 }} className="group cursor-pointer">
-                  <div className="relative rounded-xl overflow-hidden aspect-video shadow-xl">
-                    <img src="https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=400" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Sushi" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent p-4 flex flex-col justify-end">
-                      <h4 className="font-bold text-white italic uppercase tracking-tighter leading-none">Sushiman Prime</h4>
-                      <p className="text-zinc-400 text-xs">Japonesa • 45-60 min</p>
-                    </div>
-                  </div>
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.02 }} className="group cursor-pointer">
-                  <div className="relative rounded-xl overflow-hidden aspect-video shadow-xl">
-                    <img src="https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=400" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Pizza" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent p-4 flex flex-col justify-end">
-                      <h4 className="font-bold text-white italic uppercase tracking-tighter leading-none">Forno D'Oro</h4>
-                      <p className="text-zinc-400 text-xs">Pizzaria • 15-25 min</p>
-                    </div>
-                  </div>
-                </motion.div>
+                      <button onClick={() => { navigator.clipboard.writeText(coupon.coupon_code).catch(() => {}); setCopiedCoupon(coupon.coupon_code); setTimeout(() => setCopiedCoupon(null), 2000); }}
+                        className="w-10 h-10 rounded-full bg-yellow-400/10 flex items-center justify-center active:scale-90 transition-all">
+                        <span className={`material-symbols-outlined text-lg ${isCopied ? "text-emerald-400" : "text-yellow-400"}`}>
+                          {isCopied ? "check_circle" : "content_copy"}
+                        </span>
+                      </button>
+                    </motion.div>
+                  );
+                })}
               </div>
-            </div>
-          </section>
+            </section>
+          )}
 
-          {/* Coupons & Banners */}
-          <section className="mb-20">
-            <div className="flex gap-4 overflow-x-auto no-scrollbar py-4 -mx-6 px-6">
-              {[
-                { title: "Cupom Ativo", code: "IZIFREE30", desc: "Válido acima de R$50", icon: "confirmation_number" },
-                { title: "Programa VIP", code: "Cashback de 5%", desc: "Em todas as compras", icon: "account_balance_wallet" }
-              ].map((item, i) => (
-                <div key={i} className="flex-shrink-0 w-72 h-32 bg-zinc-900/50 rounded-xl p-6 flex justify-between items-center border border-zinc-800/50 hover:bg-zinc-800 transition-colors cursor-pointer group">
-                  <div>
-                    <p className="text-primary text-xs font-bold mb-1 uppercase tracking-widest">{item.title}</p>
-                    <h5 className="text-lg font-bold text-white italic tracking-tighter">{item.code}</h5>
-                    <p className="text-zinc-500 text-xs mt-1">{item.desc}</p>
-                  </div>
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-primary">{item.icon}</span>
+          {/* FLASH OFFERS */}
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black text-zinc-100 uppercase tracking-[0.2em]">Izi Flash</h3>
+              <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest animate-pulse">Ao Vivo</span>
+            </div>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-5 px-5">
+              {activeStories.map(story => (
+                <div key={story.id}
+                  onClick={() => {
+                    if (story.isMaster && userLevel < 10) toast("Esta oferta é exclusiva para membros Tier MASTER.");
+                    else if (story.isMaster) setShowMasterPerks(true);
+                    else toast(`Izi Flash: Oferta de ${story.discount} ativada para ${story.merchant}!`);
+                  }}
+                  className={`relative flex-shrink-0 size-24 rounded-[28px] p-[2px] bg-gradient-to-tr ${story.isMaster ? "from-amber-400 via-yellow-400 to-orange-600" : "from-yellow-400 via-orange-400 to-rose-500"} cursor-pointer active:scale-95 transition-all group`}>
+                  <div className="size-full rounded-[26px] overflow-hidden bg-zinc-900 border-2 border-zinc-900 relative">
+                    <img src={story.img} className="size-full object-cover opacity-70 group-hover:scale-110 transition-transform" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-2.5">
+                      <p className="text-[7px] font-black text-white uppercase tracking-tighter truncate">{story.merchant}</p>
+                      <p className="text-[10px] font-black text-yellow-400 italic">{story.discount}</p>
+                    </div>
+                    <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded-full">
+                      <p className="text-[6px] font-black text-white">{story.timeLeft}</p>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </section>
-        </main>
 
-        {/* Contextual FAB */}
-        <motion.button 
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => cart.length > 0 && navigateSubView("cart")}
-          className="fixed bottom-8 right-8 z-[100] w-16 h-16 bg-primary rounded-full flex items-center justify-center text-black shadow-[0_10px_40px_rgba(255,215,9,0.4)] cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'wght' 700" }}>shopping_bag</span>
-          {cart.length > 0 && (
-            <span className="absolute -top-1 -right-1 size-6 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-black">
-              {cart.length}
-            </span>
-          )}
-        </motion.button>
+          {/* FAVORITOS DA REGIÃO */}
+          <section>
+            <div className="flex justify-between items-end mb-6">
+              <div>
+                <h3 className="text-xl font-extrabold tracking-tight text-white">Favoritos da Região</h3>
+                <p className="text-zinc-500 text-xs mt-0.5">Os mais pedidos agora</p>
+              </div>
+              <button className="text-yellow-400 text-xs font-bold hover:underline">Ver todos</button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {ESTABLISHMENTS.length > 0 && (
+                <div className="md:col-span-2 group cursor-pointer" onClick={() => handleShopClick(ESTABLISHMENTS[0])}>
+                  <div className="relative rounded-2xl overflow-hidden aspect-video">
+                    <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={ESTABLISHMENTS[0].img} alt={ESTABLISHMENTS[0].name} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-5 flex flex-col justify-end">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="bg-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded uppercase">Exclusivo</span>
+                        <div className="flex items-center text-yellow-400 text-xs font-bold">
+                          <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "\'FILL\' 1" }}>star</span>
+                          {ESTABLISHMENTS[0].rating}
+                        </div>
+                      </div>
+                      <h4 className="text-lg font-bold text-white">{ESTABLISHMENTS[0].name}</h4>
+                      <p className="text-zinc-400 text-xs">{ESTABLISHMENTS[0].tag} • {ESTABLISHMENTS[0].time} • {ESTABLISHMENTS[0].freeDelivery ? "Grátis" : ESTABLISHMENTS[0].fee}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-col gap-6">
+                {ESTABLISHMENTS.slice(1, 3).map((shop) => (
+                  <div key={shop.id} className="group cursor-pointer" onClick={() => handleShopClick(shop)}>
+                    <div className="relative rounded-2xl overflow-hidden aspect-video">
+                      <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={shop.img} alt={shop.name} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent p-4 flex flex-col justify-end">
+                        <h4 className="font-bold text-white text-sm">{shop.name}</h4>
+                        <p className="text-zinc-400 text-xs">{shop.tag} • {shop.time}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* MOBILIDADE */}
+          <section>
+            <div className="mb-10 text-center">
+              <p className="text-[10px] font-black text-yellow-400 tracking-[0.4em] uppercase mb-1">Ecossistema Urbano</p>
+              <h2 className="text-2xl font-extrabold tracking-tight text-white">Mobilidade e Transporte</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-y-12 gap-x-8">
+              {[
+                { icon: "two_wheeler", label: "Mototáxi", action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("explore_mobility"); } },
+                { icon: "airport_shuttle", label: "Van", action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("explore_mobility"); } },
+                { icon: "directions_car", label: "Motorista\nParticular", action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("explore_mobility"); } },
+                { icon: "local_shipping", label: "Frete", action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("explore_mobility"); } },
+              ].map((svc, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.05 }}
+                  onClick={svc.action}
+                  className="flex flex-col items-center gap-4 group cursor-pointer active:scale-95 transition-all"
+                >
+                  <div className="relative w-24 h-24 flex items-center justify-center transition-all duration-700 group-hover:scale-110">
+                    <div className="absolute inset-0 bg-yellow-400/10 blur-[30px] rounded-full opacity-60 group-hover:opacity-100 transition-opacity" />
+                    <span className="material-symbols-outlined text-6xl text-white group-hover:text-yellow-400 transition-colors" style={{ filter: "drop-shadow(0 0 20px rgba(255,215,9,0.25))" }}>
+                      {svc.icon}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-black text-zinc-500 group-hover:text-yellow-400 tracking-[0.3em] uppercase transition-colors text-center leading-tight">
+                    {svc.label.split("\n").map((line: string, j: number) => (
+                      <span key={j}>{line}{j < svc.label.split("\n").length - 1 && <br/>}</span>
+                    ))}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+
+        </main>
       </div>
     );
   };
