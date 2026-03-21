@@ -45,12 +45,12 @@ const wazeMapStyle = [
   { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#92998d" }] }
 ];
 
-type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'financial' | 'settings' | 'support' | 'promotions' | 'categories' | 'dynamic_rates' | 'audit_logs' | 'my_store' | 'my_drivers' | 'my_studio' | 'merchants';
+type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'financial' | 'settings' | 'support' | 'promotions' | 'categories' | 'dynamic_rates' | 'audit_logs' | 'my_store' | 'my_drivers' | 'my_studio' | 'merchants' | 'izi_black';
 type UserRole = 'admin' | 'merchant';
 const MASTER_ADMIN_EMAIL = (import.meta.env.VITE_MASTER_ADMIN_EMAIL as string ?? '').trim().toLowerCase();
 
 // ─── Flash Offers Section ────────────────────────────────────────────────────
-const FlashOffersSection = ({ supabase }: { supabase: any }) => {
+const FlashOffersSection = ({ supabase, userRole, merchantId }: { supabase: any, userRole: string, merchantId?: string }) => {
   const [offers, setOffers] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [showForm, setShowForm] = React.useState(false);
@@ -59,12 +59,24 @@ const FlashOffersSection = ({ supabase }: { supabase: any }) => {
   const [form, setForm] = React.useState({ product_name: '', product_image: '', original_price: '', discounted_price: '', merchant_id: '', expires_at: '', description: '' });
 
   const fetchOffers = async () => {
-    const { data } = await supabase.from('flash_offers').select('*, admin_users(store_name)').order('created_at', { ascending: false });
+    let query = supabase.from('flash_offers').select('*, admin_users(store_name)');
+    if (userRole === 'merchant' && merchantId) {
+      query = query.eq('merchant_id', merchantId);
+    }
+    const { data } = await query.order('created_at', { ascending: false });
     if (data) setOffers(data);
   };
   const fetchMerchants = async () => {
-    const { data } = await supabase.from('admin_users').select('id, store_name').eq('role', 'merchant').eq('is_active', true);
-    if (data) setMerchants(data);
+    if (userRole === 'admin') {
+      const { data } = await supabase.from('admin_users').select('id, store_name').eq('role', 'merchant').eq('is_active', true);
+      if (data) setMerchants(data);
+    } else if (merchantId) {
+      const { data } = await supabase.from('admin_users').select('id, store_name').eq('id', merchantId).single();
+      if (data) {
+        setMerchants([data]);
+        setForm(prev => ({ ...prev, merchant_id: merchantId }));
+      }
+    }
   };
 
   React.useEffect(() => { fetchOffers(); fetchMerchants(); }, []);
@@ -265,6 +277,10 @@ function App() {
   const [merchantOrdersPage, setMerchantOrdersPage] = useState(1);
   const [merchantOrdersTotalCount, setMerchantOrdersTotalCount] = useState(0);
 
+  const [subscriptionOrders, setSubscriptionOrders] = useState<Order[]>([]);
+  const [subscriptionOrdersPage, setSubscriptionOrdersPage] = useState(1);
+  const [subscriptionOrdersTotalCount, setSubscriptionOrdersTotalCount] = useState(0);
+
   const [appSettings, setAppSettings] = useState({
     appName: 'Izi - Hub de Negócios',
     supportEmail: 'ajuda@izi.app',
@@ -275,7 +291,13 @@ function App() {
     appCommission: 12,
     serviceFee: 2,
     smsNotifications: true,
-    emailNotifications: true
+    emailNotifications: true,
+    iziBlackFee: 29.90,
+    iziBlackCashback: 5,
+    iziBlackMinOrderFreeShipping: 50,
+    flashOfferTitle: 'Burgers Gourmet',
+    flashOfferDiscount: 50,
+    flashOfferExpiry: ''
   });
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'pending' | 'saved' | 'error'>('idle');
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -603,6 +625,10 @@ function App() {
         setMerchantOrdersPage(1);
         await fetchAllOrders(1);
       }
+      if (activeTab === 'izi_black') {
+        setSubscriptionOrdersPage(1);
+        await fetchSubscriptionOrders(1);
+      }
       if (activeTab === 'categories') await fetchCategories();
       if (activeTab === 'dynamic_rates') await fetchDynamicRates();
       if (activeTab === 'promotions' || activeTab === 'my_store') {
@@ -656,6 +682,7 @@ function App() {
         }
         fetchStats();
         if (activeTab === 'dashboard' || activeTab === 'orders' || activeTab === 'tracking') fetchAllOrders(ordersPage);
+        if (activeTab === 'izi_black') fetchSubscriptionOrders(subscriptionOrdersPage);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers_delivery' }, () => {
         fetchStats();
@@ -726,20 +753,26 @@ function App() {
         supabase.from('users_delivery').select('*', { count: 'exact', head: true }),
         isAdmin
           ? supabase.from('drivers_delivery').select('*', { count: 'exact', head: true })
-          : supabase.from('drivers_delivery').select('*', { count: 'exact', head: true }).eq('merchant_id', adminId),
+          : adminId 
+            ? supabase.from('drivers_delivery').select('*', { count: 'exact', head: true }).eq('merchant_id', adminId)
+            : Promise.resolve({ count: 0, data: null, error: null }),
         isAdmin
           ? supabase.from('orders_delivery').select('*', { count: 'exact', head: true })
           : supabase.from('orders_delivery').select('id', { count: 'exact', head: true }).order('created_at', { ascending: false }),
         isAdmin
           ? supabase.from('drivers_delivery').select('*', { count: 'exact', head: true }).eq('is_online', true)
-          : supabase.from('drivers_delivery').select('*', { count: 'exact', head: true }).eq('merchant_id', adminId).eq('is_online', true),
+          : adminId
+            ? supabase.from('drivers_delivery').select('*', { count: 'exact', head: true }).eq('merchant_id', adminId).eq('is_online', true)
+            : Promise.resolve({ count: 0, data: null, error: null }),
         isAdmin
           ? supabase.from('orders_delivery').select('*').order('created_at', { ascending: false }).limit(5)
           : supabase.from('orders_delivery').select('*').limit(5),
         // Receita real: soma de total_price dos pedidos concluídos
         isAdmin
           ? supabase.from('orders_delivery').select('total_price').eq('status', 'concluido')
-          : supabase.from('orders_delivery').select('total_price').eq('status', 'concluido').eq('merchant_id', adminId)
+          : adminId
+            ? supabase.from('orders_delivery').select('total_price').eq('status', 'concluido').eq('merchant_id', adminId)
+            : Promise.resolve({ count: 0, data: [], error: null })
       ]);
 
       const revenueData = results[5].data ?? [];
@@ -896,10 +929,11 @@ function App() {
         if (count !== null) setMerchantOrdersTotalCount(count);
         setMerchantOrdersPage(page);
       } else {
-        // Paginação para admin
+        // Paginação para admin - EXCLUINDO assinaturas (serviço digital)
         const { data, error, count } = await supabase
           .from('orders_delivery')
           .select('*', { count: 'exact' })
+          .neq('service_type', 'subscription')
           .order('created_at', { ascending: false })
           .range(from, to);
 
@@ -910,6 +944,31 @@ function App() {
       }
     } catch (err: any) {
       console.error('Erro ao carregar pedidos:', err.message);
+    } finally {
+      setIsLoadingList(false);
+    }
+  };
+
+  const fetchSubscriptionOrders = async (page = 1) => {
+    setIsLoadingList(true);
+    try {
+      const from = (page - 1) * ORDERS_PER_PAGE;
+      const to = from + ORDERS_PER_PAGE - 1;
+
+      // Buscar APENAS assinaturas
+      const { data, error, count } = await supabase
+        .from('orders_delivery')
+        .select('*', { count: 'exact' })
+        .eq('service_type', 'subscription')
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+      if (data) setSubscriptionOrders(data);
+      if (count !== null) setSubscriptionOrdersTotalCount(count);
+      setSubscriptionOrdersPage(page);
+    } catch (err: any) {
+      console.error('Erro ao carregar assinaturas:', err.message);
     } finally {
       setIsLoadingList(false);
     }
@@ -1260,7 +1319,13 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         appCommission: data.commission_percent,
         serviceFee: data.service_fee_percent,
         smsNotifications: data.sms_enabled,
-        emailNotifications: data.email_enabled
+        emailNotifications: data.email_enabled,
+        iziBlackFee: data.izi_black_fee || 29.90,
+        iziBlackCashback: data.izi_black_cashback || 5,
+        iziBlackMinOrderFreeShipping: data.izi_black_min_order_free_shipping || 50,
+        flashOfferTitle: data.flash_offer_title || 'Burgers Gourmet',
+        flashOfferDiscount: data.flash_offer_discount || 50,
+        flashOfferExpiry: data.flash_offer_expiry ? new Date(data.flash_offer_expiry).toISOString().slice(0, 16) : ''
       });
     }
   };
@@ -1294,6 +1359,12 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
           service_fee_percent: appSettings.serviceFee,
           sms_enabled: appSettings.smsNotifications,
           email_enabled: appSettings.emailNotifications,
+          izi_black_fee: appSettings.iziBlackFee,
+          izi_black_cashback: appSettings.iziBlackCashback,
+          izi_black_min_order_free_shipping: appSettings.iziBlackMinOrderFreeShipping,
+          flash_offer_title: appSettings.flashOfferTitle,
+          flash_offer_discount: appSettings.flashOfferDiscount,
+          flash_offer_expiry: appSettings.flashOfferExpiry ? new Date(appSettings.flashOfferExpiry).toISOString() : null,
           updated_at: new Date().toISOString()
         }).eq('id', '00000000-0000-0000-0000-000000000000' as any);
         if (error) { setAutoSaveStatus('error'); }
@@ -2126,6 +2197,70 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
       toastError('Erro ao finalizar pedido: ' + err.message);
     } finally {
       setIsCompletingOrder(null);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!await showConfirm({ message: 'Deseja realmente excluir este pedido permanentemente? Esta ação não pode ser desfeita.' })) return;
+    
+    setIsLoadingList(true);
+    try {
+      // 0. Deletar mensagens do chat relacionadas para evitar erro de FK (ForeignKey Constraint)
+      await supabase.from('order_messages').delete().eq('order_id', orderId);
+
+      // 1. Deletar o pedido propriamente dito
+      const { error } = await supabase
+        .from('orders_delivery')
+        .delete()
+        .eq('id', orderId);
+
+      if (error) throw error;
+      toastSuccess('Registro excluído com sucesso!');
+      
+      // 2. Atualizar as listas necessárias
+      if (activeTab === 'izi_black') {
+        fetchSubscriptionOrders(subscriptionOrdersPage);
+      } else {
+        fetchAllOrders(userRole === 'merchant' ? merchantOrdersPage : ordersPage);
+      }
+    } catch (err: any) {
+      console.error('Erro ao excluir:', err);
+      toastError('Erro ao excluir: ' + (err.message || 'Erro inesperado'));
+    } finally {
+      setIsLoadingList(false);
+    }
+  };
+
+  const handleConfirmSubscriptionPayment = async (order: Order) => {
+    if (!await showConfirm({ message: `Confirmar pagamento manual da assinatura para ${order.user_name}?` })) return;
+    
+    setIsSaving(true);
+    try {
+      // 1. Atualizar pedido para concluído
+      const { error: orderErr } = await supabase
+        .from('orders_delivery')
+        .update({ status: 'concluido' })
+        .eq('id', order.id);
+
+      if (orderErr) throw orderErr;
+
+      // 2. Ativar Izi Black para o usuário
+      if (order.user_id) {
+        const { error: userErr } = await supabase
+          .from('users_delivery')
+          .update({ is_izi_black: true })
+          .eq('id', order.user_id);
+        
+        if (userErr) throw userErr;
+      }
+
+      toastSuccess('Pagamento confirmado e VIP ativado!');
+      fetchSubscriptionOrders(subscriptionOrdersPage);
+      fetchUsers(); // Atualizar lista de usuários para refletir novo VIP
+    } catch (err: any) {
+      toastError('Erro ao confirmar pagamento: ' + err.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -3057,6 +3192,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   <p className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mt-6">Operacional</p>
                   <SidebarItem id="categories" icon="layers" label="Categorias" />
                   <SidebarItem id="promotions" icon="percent" label="Promoções" />
+                  <SidebarItem id="izi_black" icon="workspace_premium" label="Izi Black VIP" />
 <SidebarItem id="dynamic_rates" icon="payments" label="Taxas Dinâmicas" />
                   <SidebarItem id="financial" icon="bar_chart" label="Financeiro" />
                   <SidebarItem id="support" icon="support_agent" label="Suporte" />
@@ -3112,16 +3248,18 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                         activeTab === 'users' ? 'Gestão de Clientes' :
                           activeTab === 'categories' ? 'Gestão de Categorias' :
                             activeTab === 'promotions' ? 'Promoções e Banners' :
-activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
-                                activeTab === 'financial' ? 'Relatórios Financeiros' :
-                                  activeTab === 'support' ? 'Central de Suporte' :
-                                    activeTab === 'audit_logs' ? 'Logs de Auditoria' :
-                                      activeTab === 'my_store' ? 'Meu Estabelecimento' :
-                                        activeTab === 'my_drivers' ? 'Gestão de Motoboys Próprios' :
-                                          activeTab === 'my_studio' ? 'Estúdio do Lojista' : 'Configurações do Sistema'}
+                              activeTab === 'izi_black' ? 'Membros Izi Black VIP' :
+                                activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
+                                  activeTab === 'financial' ? 'Relatórios Financeiros' :
+                                    activeTab === 'support' ? 'Central de Suporte' :
+                                      activeTab === 'audit_logs' ? 'Logs de Auditoria' :
+                                        activeTab === 'my_store' ? 'Meu Estabelecimento' :
+                                          activeTab === 'my_drivers' ? 'Gestão de Motoboys Próprios' :
+                                            activeTab === 'my_studio' ? 'Estúdio do Lojista' : 'Configurações do Sistema'}
               </h2>
               <p className="text-xs font-medium text-slate-500">
-                {activeTab === 'dashboard' ? 'Bem-vindo de volta! Veja o que está acontecendo hoje.' : 'Acompanhamento em tempo real dos seus dados.'}
+                {activeTab === 'dashboard' ? 'Bem-vindo de volta! Veja o que está acontecendo hoje.' : 
+                  activeTab === 'izi_black' ? 'Gerenciamento de benefícios e recompensas exclusivas.' : 'Acompanhamento em tempo real dos seus dados.'}
               </p>
             </div>
 
@@ -5561,12 +5699,258 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                 )}
 
                 {/* IZI FLASH */}
-                {userRole === 'admin' && <FlashOffersSection supabase={supabase} />}
+                {(userRole === 'admin' || userRole === 'merchant') && (
+                  <FlashOffersSection 
+                    supabase={supabase} 
+                    userRole={userRole} 
+                    merchantId={userRole === 'merchant' ? merchantProfile?.merchant_id : undefined} 
+                  />
+                )}
 
               </div>
             )}
 
-                        {activeTab === 'categories' && (
+            {activeTab === 'izi_black' && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div>
+                    <div className="flex items-center gap-3 mb-1">
+                      <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                        <span className="material-symbols-outlined text-amber-500">workspace_premium</span>
+                      </div>
+                      <h1 className="text-3xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">Izi Black VIP</h1>
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm ml-1">Gerencie benefícios, membros e configurações globais do programa VIP.</p>
+                  </div>
+                </div>
+
+                {/* VIP Overview Stats */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[
+                    { label: 'Total Membros', val: usersList.filter(u => u.is_izi_black).length, icon: 'group', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20' },
+                    { label: 'Recompensas Ativas', val: promotionsList.filter(p => p.is_vip && p.is_active).length, icon: 'redeem', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20' },
+                    { label: 'Receita Est. (Mensal)', val: `R$ ${(usersList.filter(u => u.is_izi_black).length * appSettings.iziBlackFee).toFixed(2).replace('.', ',')}`, icon: 'payments', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-500/10 border-blue-100 dark:border-blue-500/20' },
+                    { label: 'Cashback Distribuído', val: `R$ ${usersList.reduce((acc, u) => acc + (u.cashback_earned || 0), 0).toFixed(0)}`, icon: 'monetization_on', color: 'text-primary', bg: 'bg-primary/10 border-primary/20' },
+                  ].map((s, i) => (
+                    <motion.div key={i} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay: i*0.07 }}
+                      className={`bg-white dark:bg-slate-900 rounded-[28px] p-6 border ${s.bg} flex items-center gap-4 shadow-sm`}>
+                      <div className={`p-3 rounded-2xl ${s.bg.split(' ').slice(0,2).join(' ')}`}>
+                        <span className={`material-symbols-outlined ${s.color}`}>{s.icon}</span>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p>
+                        <p className={`text-2xl font-black ${s.color}`}>{s.val}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Global VIP Configuration */}
+                  <div className="lg:col-span-1 bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 p-8 shadow-sm">
+                    <h3 className="text-base font-black text-slate-900 dark:text-white mb-6 flex items-center gap-3">
+                      <span className="material-symbols-outlined text-amber-500">settings</span>
+                      Configuração do Programa
+                    </h3>
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço da Assinatura (Mês)</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
+                          <input type="number" step="0.01" 
+                            value={appSettings.iziBlackFee}
+                            onChange={e => setAppSettings({ ...appSettings, iziBlackFee: parseFloat(e.target.value) || 0 })}
+                            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl pl-10 pr-5 py-4 font-black text-lg focus:ring-2 focus:ring-primary dark:text-white" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Taxa de Cashback (%)</label>
+                        <div className="relative">
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">%</span>
+                          <input type="number" 
+                            value={appSettings.iziBlackCashback}
+                            onChange={e => setAppSettings({ ...appSettings, iziBlackCashback: parseInt(e.target.value) || 0 })}
+                            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 font-black text-lg focus:ring-2 focus:ring-primary dark:text-white" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Min. Pedido Frete Grátis</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
+                          <input type="number" 
+                            value={appSettings.iziBlackMinOrderFreeShipping}
+                            onChange={e => setAppSettings({ ...appSettings, iziBlackMinOrderFreeShipping: parseInt(e.target.value) || 0 })}
+                            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl pl-10 pr-5 py-4 font-black text-lg focus:ring-2 focus:ring-primary dark:text-white" />
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-3xl bg-amber-50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10">
+                         <p className="text-[9px] font-bold text-amber-600 dark:text-amber-500/80 uppercase tracking-widest leading-relaxed">
+                           As alterações entram em vigor imediatamente para todos os membros ativos.
+                         </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* VIP Exclusive Rewards (Surprises) */}
+                  <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 p-8 shadow-sm">
+                    <div className="flex items-center justify-between mb-8">
+                      <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-3">
+                        <span className="material-symbols-outlined text-emerald-500">card_giftcard</span>
+                        Recompensas e Surpresas VIP
+                      </h3>
+                      <button 
+                        onClick={() => { setPromoFormType('coupon'); setPromoForm({ title:'', description:'', image_url:'', coupon_code:'', discount_type:'percent', discount_value:10, min_order_value:0, max_usage:100, expires_at:'', is_active:true, is_vip:true }); setShowPromoForm(true); setActiveTab('promotions'); }}
+                        className="flex items-center gap-2 px-5 py-3 bg-primary text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:brightness-110 transition-all">
+                        <span className="material-symbols-outlined text-lg">add</span>
+                        Nova Recompensa
+                      </button>
+                    </div>
+
+                    <div className="space-y-4 max-h-[460px] overflow-y-auto pr-2 custom-scrollbar">
+                      {promotionsList.filter(p => p.is_vip).map((p, i) => (
+                        <div key={p.id || i} className="flex items-center justify-between p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-amber-500/20 transition-all group">
+                          <div className="flex items-center gap-4">
+                            <div className={`size-12 rounded-2xl flex items-center justify-center ${p.image_url ? 'bg-amber-500/10 text-amber-500' : 'bg-primary/10 text-primary'}`}>
+                              <span className="material-symbols-outlined text-xl">{p.image_url ? 'view_carousel' : 'confirmation_number'}</span>
+                            </div>
+                            <div>
+                              <p className="text-sm font-black text-slate-900 dark:text-white">{p.title}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">
+                                  {p.coupon_code || 'Banner Exclusivo'}
+                                </span>
+                                <span className="size-1 rounded-full bg-slate-300"></span>
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${p.is_active ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                  {p.is_active ? 'Ativo' : 'Pausado'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => { setPromoFormType(p.coupon_code ? 'coupon' : 'banner'); setPromoForm(p); setShowPromoForm(true); setActiveTab('promotions'); }} className="size-9 rounded-xl bg-white dark:bg-slate-700 text-slate-400 hover:text-primary transition-colors flex items-center justify-center shadow-sm">
+                              <span className="material-symbols-outlined text-lg">edit</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {promotionsList.filter(p => p.is_vip).length === 0 && (
+                        <div className="text-center py-20 opacity-40">
+                          <span className="material-symbols-outlined text-6xl mb-4 block text-slate-300">stars</span>
+                          <p className="text-sm font-black uppercase tracking-widest">Nenhuma recompensa VIP configurada</p>
+                          <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Clique no botão acima para criar banners ou cupons exclusivos para membros.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Gestão de Pedidos de Assinatura */}
+                <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                  <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/20">
+                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-3">
+                      <span className="material-symbols-outlined text-blue-500">history_edu</span>
+                      Fila de Ativação (Pedidos de Assinatura)
+                    </h3>
+                    <button 
+                      onClick={() => fetchSubscriptionOrders(1)}
+                      className="size-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-primary transition-colors"
+                    >
+                      <span className="material-symbols-outlined">sync</span>
+                    </button>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="bg-slate-50 dark:bg-slate-800/50">
+                        <tr>
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</th>
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Status Pgto</th>
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Valor</th>
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Data</th>
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {subscriptionOrders.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="px-8 py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs opacity-50">
+                               Nenhuma assinatura pendente no momento
+                            </td>
+                          </tr>
+                        ) : (
+                          subscriptionOrders.map((o) => (
+                            <tr key={o.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                              <td className="px-8 py-6">
+                                 <p className="font-black text-slate-900 dark:text-white text-sm">{o.user_name || 'Cliente'}</p>
+                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID: {o.id.slice(0,8).toUpperCase()}</p>
+                              </td>
+                              <td className="px-8 py-6">
+                                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                  o.status === 'concluido' ? 'bg-green-100 text-green-600 border border-green-200' :
+                                  'bg-amber-100 text-amber-600 border border-amber-200'
+                                }`}>
+                                  {o.status === 'concluido' ? 'Pago & Ativo' : 'Aguardando'}
+                                </span>
+                              </td>
+                              <td className="px-8 py-6 font-black text-slate-900 dark:text-white">R$ {(o.total_price || 0).toFixed(2).replace('.', ',')}</td>
+                              <td className="px-8 py-6 font-bold text-slate-500 text-xs">{new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
+                              <td className="px-8 py-6">
+                                <div className="flex items-center gap-3">
+                                  {o.status !== 'concluido' && (
+                                    <button 
+                                      onClick={() => handleConfirmSubscriptionPayment(o)}
+                                      className="h-10 px-4 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all shadow-lg shadow-emerald-500/20"
+                                    >
+                                      Confirmar Pgto
+                                    </button>
+                                  )}
+                                  <button 
+                                    onClick={() => handleDeleteOrder(o.id)}
+                                    className="size-10 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-100 dark:border-red-500/20"
+                                  >
+                                    <span className="material-symbols-outlined text-lg">delete</span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Paginação Assinaturas */}
+                  {subscriptionOrdersTotalCount > ORDERS_PER_PAGE && (
+                    <div className="px-8 py-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/30">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                        Página {subscriptionOrdersPage} de {Math.ceil(subscriptionOrdersTotalCount / ORDERS_PER_PAGE)}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          disabled={subscriptionOrdersPage <= 1 || isLoadingList}
+                          onClick={() => fetchSubscriptionOrders(subscriptionOrdersPage - 1)}
+                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-colors disabled:opacity-40"
+                        >
+                          <span className="material-symbols-outlined">chevron_left</span>
+                        </button>
+                        <button
+                          disabled={subscriptionOrdersPage >= Math.ceil(subscriptionOrdersTotalCount / ORDERS_PER_PAGE) || isLoadingList}
+                          onClick={() => fetchSubscriptionOrders(subscriptionOrdersPage + 1)}
+                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-colors disabled:opacity-40"
+                        >
+                          <span className="material-symbols-outlined">chevron_right</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'categories' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {/* Categories Header */}
                 <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
@@ -6701,6 +7085,65 @@ activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
                           onChange={(e) => setAppSettings({ ...appSettings, serviceFee: parseInt(e.target.value) || 0 })}
                         />
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-500 font-black text-sm">%</span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Oferta Flash Global Section */}
+                <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+                  {/* Background Glow Effect */}
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/5 -mr-32 -mt-32 rounded-full blur-[100px] group-hover:bg-rose-500/10 transition-colors duration-1000"></div>
+                  
+                  <div className="flex items-center gap-4 mb-8 relative z-10">
+                    <div className="p-4 rounded-[22px] bg-rose-500/10 text-rose-500 border border-rose-500/20 shadow-lg shadow-rose-500/5">
+                      <span className="material-symbols-outlined text-2xl">bolt</span>
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Banner de Oferta Flash</h2>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controle o banner de destaque da home do app</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Título do Banner</label>
+                      <div className="relative group/input">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-300 group-focus-within/input:text-rose-500 transition-colors text-lg">edit_note</span>
+                        <input 
+                          type="text"
+                          value={appSettings.flashOfferTitle}
+                          onChange={e => setAppSettings({...appSettings, flashOfferTitle: e.target.value})}
+                          placeholder="Ex: Burgers Gourmet"
+                          className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-2xl pl-11 pr-4 py-4 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Desconto (%)</label>
+                      <div className="relative group/input">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-300 group-focus-within/input:text-rose-500 transition-colors text-lg">percent</span>
+                        <input 
+                          type="number"
+                          value={appSettings.flashOfferDiscount}
+                          onChange={e => setAppSettings({...appSettings, flashOfferDiscount: parseInt(e.target.value) || 0})}
+                          placeholder="50"
+                          className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-2xl pl-11 pr-4 py-4 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Expira em</label>
+                      <div className="relative group/input">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-300 group-focus-within/input:text-rose-500 transition-colors text-lg">calendar_today</span>
+                        <input 
+                          type="datetime-local"
+                          value={appSettings.flashOfferExpiry}
+                          onChange={e => setAppSettings({...appSettings, flashOfferExpiry: e.target.value})}
+                          className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-2xl pl-11 pr-4 py-4 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
+                        />
                       </div>
                     </div>
                   </div>
