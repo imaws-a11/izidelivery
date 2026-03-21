@@ -42,38 +42,37 @@ export default function HomeView() {
   } = useServices();
 
   // ── Serviços Principais (Entregas) ──
+  // icon3d: Google Noto Emoji 3D (512px webp) — mesmo estilo da referência visual
+  const N = (code: string) => `https://fonts.gstatic.com/s/e/notoemoji/latest/${code}/512.webp`;
   const deliveryServices = [
-    { emoji: "🍽️", label: "Food", desc: "Peça o melhor da cidade", type: "restaurant", gradient: "linear-gradient(135deg, #f97316, #ef4444)", bgColor: "#fff7ed", tagColor: "#ea580c", tag: "Populares" },
-    { emoji: "🍺", label: "Bebidas", desc: "Distribuidoras e adegas", type: "beverages", gradient: "linear-gradient(135deg, #f59e0b, #eab308)", bgColor: "#fffbeb", tagColor: "#d97706", tag: "Geladas" },
-    {
-      emoji: "📦", label: "Envios", desc: "Entregas e encomendas", gradient: "linear-gradient(135deg, #8b5cf6, #9333ea)", bgColor: "#f5f3ff", tagColor: "#7c3aed", tag: "Express",
-      action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("transit_selection"); },
-    },
-    { emoji: "🛒", label: "Mercado", desc: "Compras do dia a dia", type: "market", gradient: "linear-gradient(135deg, #10b981, #0d9488)", bgColor: "#ecfdf5", tagColor: "#059669", tag: "Rápido" },
-    { emoji: "💊", label: "Farmácia", desc: "Medicamentos e saúde", type: "pharmacy", gradient: "linear-gradient(135deg, #3b82f6, #06b6d4)", bgColor: "#eff6ff", tagColor: "#2563eb", tag: "24h" },
-    { emoji: "🐾", label: "Petshop", desc: "Cuidados para seu pet", type: "generic", gradient: "linear-gradient(135deg, #ec4899, #f43f5e)", bgColor: "#fdf2f8", tagColor: "#db2777", tag: "Novo", action: () => { setExploreCategoryState({ id: 'pets', title: 'Pet Shop Premium', tagline: 'Mimo para seu melhor amigo', primaryColor: 'rose-500', icon: 'pets', banner: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=1200' }); navigateSubView('explore_category'); } },
-    { emoji: "🎂", label: "Doces & Bolos", desc: "Confeitarias e padarias", type: "generic", gradient: "linear-gradient(135deg, #d946ef, #ec4899)", bgColor: "#fdf4ff", tagColor: "#c026d3", action: () => { setExploreCategoryState({ id: 'sweets', title: 'Doces & Bolos', tagline: 'Momentos mais doces', primaryColor: 'fuchsia-500', icon: 'cake', banner: 'https://images.unsplash.com/photo-1578985542846-399fe5c5f47d?q=80&w=1200' }); navigateSubView('explore_category'); } },
-    { emoji: "💐", label: "Flores", desc: "Buquês e arranjos", type: "generic", gradient: "linear-gradient(135deg, #fb7185, #f43f5e)", bgColor: "#fff1f2", tagColor: "#e11d48", action: () => { setExploreCategoryState({ id: 'flowers', title: 'Floricultura', tagline: 'Flores que encantam', primaryColor: 'rose-400', icon: 'local_florist', banner: 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1200' }); navigateSubView('explore_category'); } },
+    { icon3d: N("1f37d-fe0f"), label: "Food",         type: "restaurant", bg: "#FFF0E6",
+      action: undefined },
+    { icon3d: N("1f37a"),      label: "Bebidas",       type: "beverages",  bg: "#FFF8E1",
+      action: undefined },
+    { icon3d: N("1f4e6"),      label: "Envios",        type: undefined,    bg: "#F0EAFF",
+      action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("transit_selection"); } },
+    { icon3d: N("1f6d2"),      label: "Mercado",       type: "market",     bg: "#E6FAF3",
+      action: undefined },
+    { icon3d: N("1f48a"),      label: "Farmácia",      type: "pharmacy",   bg: "#E6F0FF",
+      action: undefined },
+    { icon3d: N("1f43e"),      label: "Petshop",       type: "generic",    bg: "#FFE6F3",
+      action: () => { setExploreCategoryState({ id: 'pets', title: 'Pet Shop Premium', tagline: 'Mimo para seu melhor amigo', primaryColor: 'rose-500', icon: 'pets', banner: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=1200' }); navigateSubView('explore_category'); } },
+    { icon3d: N("1f382"),      label: "Doces",         type: "generic",    bg: "#FDE8FF",
+      action: () => { setExploreCategoryState({ id: 'sweets', title: 'Doces & Bolos', tagline: 'Momentos mais doces', primaryColor: 'fuchsia-500', icon: 'cake', banner: 'https://images.unsplash.com/photo-1578985542846-399fe5c5f47d?q=80&w=1200' }); navigateSubView('explore_category'); } },
+    { icon3d: N("1f490"),      label: "Flores",        type: "generic",    bg: "#FFE8EC",
+      action: () => { setExploreCategoryState({ id: 'flowers', title: 'Floricultura', tagline: 'Flores que encantam', primaryColor: 'rose-400', icon: 'local_florist', banner: 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1200' }); navigateSubView('explore_category'); } },
   ];
 
   // ── Serviços de Mobilidade ──
   const mobilityServices = [
-    {
-      emoji: "🏍️", label: "Mototáxi", desc: "Rápido e econômico", gradient: "linear-gradient(135deg, #facc15, #f97316)", bgColor: "#fefce8", tagColor: "#ca8a04", tag: "Promo",
-      action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("transit_selection"); },
-    },
-    {
-      emoji: "🚗", label: "Motorista Particular", desc: "Conforto para sua viagem", gradient: "linear-gradient(135deg, #334155, #0f172a)", bgColor: "#f1f5f9", tagColor: "#334155", tag: "Premium",
-      action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("transit_selection"); },
-    },
-    {
-      emoji: "🚐", label: "Van / Utilitário", desc: "Mudanças e cargas", gradient: "linear-gradient(135deg, #6366f1, #2563eb)", bgColor: "#eef2ff", tagColor: "#4f46e5",
-      action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("transit_selection"); },
-    },
-    {
-      emoji: "🚚", label: "Frete", desc: "Transporte de volumes", gradient: "linear-gradient(135deg, #06b6d4, #3b82f6)", bgColor: "#ecfeff", tagColor: "#0891b2",
-      action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("transit_selection"); },
-    },
+    { icon3d: N("1f3cd-fe0f"), label: "Mototáxi",    bg: "#FFF8E1",
+      action: () => { setTransitData({ ...transitData, type: "mototaxi",   scheduled: false }); navigateSubView("transit_selection"); } },
+    { icon3d: N("1f697"),      label: "Motorista",   bg: "#F0F4FF",
+      action: () => { setTransitData({ ...transitData, type: "carro",      scheduled: false }); navigateSubView("transit_selection"); } },
+    { icon3d: N("1f690"),      label: "Van",         bg: "#EEF0FF",
+      action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("transit_selection"); } },
+    { icon3d: N("1f69a"),      label: "Frete",       bg: "#E6FAFF",
+      action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("transit_selection"); } },
   ];
 
   // Compatibilidade com handleServiceSelection
@@ -83,18 +82,13 @@ export default function HomeView() {
 
   const handleServiceSelection = (cat: any) => {
     if (cat.action) return cat.action();
+    if (!cat.type) return;
     setActiveService(cat);
-    if (cat.type === "restaurant") {
-      navigateSubView("restaurant_list");
-    } else if (cat.type === "market") {
-      navigateSubView("market_list");
-    } else if (cat.type === "pharmacy") {
-      navigateSubView("pharmacy_list");
-    } else if (cat.type === "beverages") {
-      navigateSubView("beverages_list");
-    } else {
-      navigateSubView("generic_list");
-    }
+    if (cat.type === "restaurant") navigateSubView("restaurant_list");
+    else if (cat.type === "market")    navigateSubView("market_list");
+    else if (cat.type === "pharmacy")  navigateSubView("pharmacy_list");
+    else if (cat.type === "beverages") navigateSubView("beverages_list");
+    else navigateSubView("generic_list");
   };
 
   return (
@@ -594,9 +588,8 @@ export default function HomeView() {
             </div>
           </div>
           <div className="grid grid-cols-4 gap-3">
-            {deliveryServices.filter(cat => 
-              cat.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
-              (cat.desc && cat.desc.toLowerCase().includes(searchQuery.toLowerCase()))
+            {deliveryServices.filter(cat =>
+              cat.label.toLowerCase().includes(searchQuery.toLowerCase())
             ).map((cat, i) => (
               <motion.div
                 initial={{ opacity: 0, y: 15, scale: 0.9 }}
@@ -604,19 +597,24 @@ export default function HomeView() {
                 transition={{ delay: i * 0.04, type: "spring", stiffness: 300 }}
                 key={`delivery-${i}`}
                 onClick={() => handleServiceSelection(cat)}
-                className="flex flex-col items-center group cursor-pointer active:scale-90 transition-all duration-200"
+                className="flex flex-col items-center gap-2 cursor-pointer active:scale-90 transition-all duration-200 group"
               >
-                <div className="relative w-full aspect-square rounded-[24px] flex items-center justify-center shadow-lg mb-2 overflow-hidden" style={{ background: cat.gradient }}>
-                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <span className="text-3xl relative z-10 drop-shadow-sm">{cat.emoji}</span>
-                  {cat.tag && (
-                    <span className="absolute top-1.5 right-1.5 bg-white/90 backdrop-blur-sm text-[7px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full text-slate-700 shadow-sm">
-                      {cat.tag}
-                    </span>
-                  )}
+                {/* Ícone 3D com fundo colorido arredondado */}
+                <div
+                  className="w-full aspect-square rounded-[22px] flex items-center justify-center overflow-hidden shadow-sm group-active:scale-95 transition-transform"
+                  style={{ backgroundColor: cat.bg }}
+                >
+                  <img
+                    src={cat.icon3d}
+                    alt={cat.label}
+                    className="w-[72%] h-[72%] object-contain drop-shadow-md"
+                    loading="lazy"
+                  />
                 </div>
-                <span className="text-[11px] font-black text-slate-800 dark:text-slate-200 text-center leading-tight tracking-tight">{cat.label}</span>
-                <span className="text-[8px] font-semibold text-slate-400 text-center leading-tight mt-0.5 hidden sm:block">{cat.desc}</span>
+                {/* Label */}
+                <span className="text-[11px] font-black text-slate-800 dark:text-slate-100 text-center leading-tight tracking-tight">
+                  {cat.label}
+                </span>
               </motion.div>
             ))}
           </div>
@@ -637,28 +635,35 @@ export default function HomeView() {
           </div>
           
           <div className={isMobilityExpanded ? "grid grid-cols-4 gap-3 px-4" : "flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-3"}>
-            {(isMobilityExpanded ? mobilityServices : mobilityServices).filter(svc => 
-              svc.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
-              svc.desc.toLowerCase().includes(searchQuery.toLowerCase())
+            {mobilityServices.filter(svc =>
+              svc.label.toLowerCase().includes(searchQuery.toLowerCase())
             ).map((svc, i) => (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.05 }}
                 key={`mobility-${i}`}
-                onClick={() => handleServiceSelection(svc)}
-                className={`${isMobilityExpanded ? "flex flex-col items-center" : "min-w-[160px] p-4"} bg-white dark:bg-slate-800 rounded-[28px] shadow-md border border-slate-100 dark:border-slate-700 cursor-pointer active:scale-95 transition-all duration-200 group hover:shadow-xl`}
+                onClick={() => svc.action()}
+                className={`${isMobilityExpanded
+                  ? "flex flex-col items-center gap-2"
+                  : "flex flex-col items-center gap-2 min-w-[76px]"
+                } cursor-pointer active:scale-90 transition-all duration-200 group`}
               >
-                <div className={`${isMobilityExpanded ? "w-full aspect-square mb-2" : "size-14 mb-3"} rounded-[18px] flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`} style={{ background: svc.gradient }}>
-                  <span className={isMobilityExpanded ? "text-3xl" : "text-xl"}>{svc.emoji}</span>
+                {/* Ícone 3D com fundo colorido arredondado */}
+                <div
+                  className="w-full aspect-square rounded-[22px] flex items-center justify-center overflow-hidden shadow-sm group-active:scale-95 transition-transform"
+                  style={{ backgroundColor: svc.bg }}
+                >
+                  <img
+                    src={svc.icon3d}
+                    alt={svc.label}
+                    className="w-[72%] h-[72%] object-contain drop-shadow-md"
+                    loading="lazy"
+                  />
                 </div>
-                <h4 className={`${isMobilityExpanded ? "text-[11px] text-center" : "text-[13px]"} font-black text-slate-900 dark:text-white leading-tight mb-1`}>{svc.label}</h4>
-                {!isMobilityExpanded && <p className="text-[10px] text-slate-400 font-semibold leading-snug">{svc.desc}</p>}
-                {svc.tag && !isMobilityExpanded && (
-                  <span className="inline-block mt-2 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: svc.tagColor, backgroundColor: svc.bgColor }}>
-                    {svc.tag}
-                  </span>
-                )}
+                <span className="text-[11px] font-black text-slate-800 dark:text-slate-100 text-center leading-tight tracking-tight">
+                  {svc.label}
+                </span>
               </motion.div>
             ))}
           </div>
