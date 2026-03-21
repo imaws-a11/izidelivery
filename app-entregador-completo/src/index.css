@@ -1,8 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
+@theme {
   --color-primary: #ffd900;
   --color-background-light: #f8f8f5;
   --color-background-dark: #23200f;
@@ -10,9 +8,11 @@
   --shadow-premium: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
 }
 
-body {
-  @apply antialiased bg-[#020617] text-white overflow-x-hidden;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+@layer base {
+  body {
+    @apply antialiased bg-[#020617] text-white overflow-x-hidden;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
 }
 
 @layer components {
