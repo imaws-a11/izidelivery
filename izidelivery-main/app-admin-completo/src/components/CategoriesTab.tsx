@@ -108,11 +108,13 @@ export default function CategoriesTab() {
         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 -mr-16 -mt-16 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors"></div>
 
         <div className="flex justify-between items-start mb-8 relative z-10">
-          <div className="w-20 h-20 rounded-[32px] bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-xl overflow-hidden group-hover:scale-110 transition-transform">
-            {cat.icon && (cat.icon.startsWith('http') || cat.icon.startsWith('/') || cat.icon.length > 50) ? (
-              <img src={cat.icon} className="size-full object-contain p-2" alt={cat.name} />
+          <div className="w-20 h-20 rounded-[28px] flex items-center justify-center shadow-lg overflow-hidden group-hover:scale-110 transition-transform"
+            style={{ backgroundColor: (cat.type || 'service') === 'mobility' ? '#E6F0FF' : '#FFF0E6' }}
+          >
+            {cat.icon && (cat.icon.startsWith('http') || cat.icon.startsWith('/') || cat.icon.length > 30) ? (
+              <img src={cat.icon} className="w-[80%] h-[80%] object-contain drop-shadow-md" alt={cat.name} />
             ) : (
-              <span className="material-symbols-outlined text-4xl font-bold">{cat.icon || 'category'}</span>
+              <span className="material-symbols-outlined text-4xl font-bold text-slate-600">{cat.icon || 'category'}</span>
             )}
           </div>
           <div className="flex gap-2">
