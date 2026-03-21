@@ -8,6 +8,72 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 // Chave pública do Stripe (Placeholder - Usuário deve substituir pela sua real)
+import { BespokeIcons } from "./lib/BespokeIcons";
+
+const Icon = ({ name, className = "", size = 20 }: { name: string; className?: string; size?: number }) => {
+  const icons: Record<string, any> = {
+    'home': BespokeIcons.Home,
+    'search': BespokeIcons.Search,
+    'shopping_bag': BespokeIcons.Bag,
+    'shopping_cart': BespokeIcons.Bag,
+    'person': BespokeIcons.User,
+    'chevron_left': BespokeIcons.ChevronLeft,
+    'chevron_right': BespokeIcons.ChevronRight,
+    'location_on': BespokeIcons.Pin,
+    'pin_drop': BespokeIcons.Pin,
+    'bolt': BespokeIcons.Bolt,
+    'category': BespokeIcons.Bag,
+    'map': BespokeIcons.Map,
+    'more_vert': BespokeIcons.Menu,
+    'close': BespokeIcons.X,
+    'notifications': BespokeIcons.Notifications,
+    'shield': BespokeIcons.Shield,
+    'support_agent': BespokeIcons.Support,
+    'help': BespokeIcons.Help,
+    'history': BespokeIcons.History,
+    'payments': BespokeIcons.Wallet,
+    'wallet': BespokeIcons.Wallet,
+    'account_balance_wallet': BespokeIcons.Wallet,
+    'credit_card': BespokeIcons.CreditCard,
+    'star': BespokeIcons.StarFilled,
+    'check_circle': BespokeIcons.Check,
+    'check': BespokeIcons.Check,
+    'logout': BespokeIcons.Logout,
+    'settings': BespokeIcons.User,
+    'local_shipping': BespokeIcons.Truck,
+    'monetization_on': BespokeIcons.Coins,
+    'card_giftcard': BespokeIcons.Gift,
+    'expand_more': BespokeIcons.ChevronDown,
+    'expand_less': BespokeIcons.ChevronUp,
+    'directions_car': BespokeIcons.Car,
+    'two_wheeler': BespokeIcons.Motorcycle,
+    'schedule': BespokeIcons.Clock,
+    'workspace_premium': BespokeIcons.Bolt,
+    'stars': BespokeIcons.Star,
+    'qr_code_2': BespokeIcons.Check,
+    'receipt_long': BespokeIcons.History,
+    'smart_toy': BespokeIcons.Bolt,
+    'military_tech': BespokeIcons.Shield,
+    'sync': BespokeIcons.Clock,
+    'diamond': BespokeIcons.Bolt,
+    'arrow_back': BespokeIcons.ChevronLeft,
+    'arrow_forward': BespokeIcons.ChevronRight,
+    'delete': BespokeIcons.X,
+    'edit': BespokeIcons.User,
+    'local_pizza': BespokeIcons.Pizza,
+    'pizza': BespokeIcons.Pizza,
+    'fastfood': BespokeIcons.Burger,
+    'burger': BespokeIcons.Burger,
+    'local_cafe': BespokeIcons.Coffee,
+    'coffee': BespokeIcons.Coffee,
+    'package': BespokeIcons.Package,
+    'inventory_2': BespokeIcons.Package,
+  };
+
+  const IconComp = icons[name] || BespokeIcons.Help;
+  return <IconComp size={size} className={className} />;
+};
+
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY as string || "";
 const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
@@ -105,7 +171,7 @@ const StripePaymentForm = ({ onConfirm, total, userId, onCardSaved }: {
             onClick={() => setSaveCard(!saveCard)}
             className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${saveCard ? 'bg-primary border-primary' : 'border-slate-300 dark:border-slate-600'}`}
           >
-            {saveCard && <span className="material-symbols-rounded text-slate-900 text-sm font-black">check</span>}
+            {saveCard && <Icon name="check" />}
           </div>
           <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Salvar cartão para próximas compras</span>
         </label>
@@ -303,7 +369,7 @@ const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClear, clas
           onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
           onMouseLeave={e => (e.currentTarget.style.background = "white")}
         >
-          <span style={{ fontSize: "18px", marginTop: "2px", flexShrink: 0 }}>📍</span>
+          <span style={{ fontSize: "18px", marginTop: "2px", flexShrink: 0 }}>ðŸ“</span>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: "14px", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {s.structured_formatting?.main_text || s.description}
@@ -351,7 +417,7 @@ const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClear, clas
   );
 };
 
-// ─── AI Concierge Component ──────────────────────────────────────────────────
+// ─── AI Concierge Component ──────────
 const AIConciergePanel = ({ isOpen, onClose, userName, walletBalance, userLocation, myOrders, ESTABLISHMENTS }: any) => {
   const [messages, setMessages] = useState<{role: 'user'|'assistant', content: string}[]>([]);
   const [input, setInput] = useState('');
@@ -362,8 +428,6 @@ const AIConciergePanel = ({ isOpen, onClose, userName, walletBalance, userLocati
 
   const systemPrompt = `Você é o Izi Concierge, assistente do app IziDelivery. Seja direto e útil.
 Contexto: Nome: ${userName || 'Cliente'}, Saldo: R$${walletBalance?.toFixed(2)}, Total gasto: R$${totalGasto}
-Últimos pedidos: ${JSON.stringify(myOrders.slice(0,5).map((o: any) => ({ status: o.status, total: o.total_price, tipo: o.service_type })))}
-Estabelecimentos: ${JSON.stringify(ESTABLISHMENTS?.slice(0,8).map((e: any) => ({ nome: e.name, tipo: e.type })))}
 Responda em português, máx 3 linhas, use emojis com moderação.`;
 
   const sendMessage = async () => {
@@ -378,7 +442,7 @@ Responda em português, máx 3 linhas, use emojis com moderação.`;
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system: systemPrompt, messages: newMessages.map(m => ({ role: m.role, content: m.content })) }),
+        body: JSON.stringify({ model: 'claude-3-5-sonnet-20240620', max_tokens: 1000, system: systemPrompt, messages: newMessages.map(m => ({ role: m.role, content: m.content })) }),
       });
       const data = await response.json();
       const reply = data.content?.[0]?.text || 'Não consegui processar. Tente novamente.';
@@ -395,94 +459,96 @@ Responda em português, máx 3 linhas, use emojis com moderação.`;
     myOrders.length > 0 ? 'Repetir meu último pedido' : 'O que está em promoção?',
     'Quanto gastei esse mês?',
     'Sugestão para jantar de hoje',
-    'Tem cupom disponível?',
   ];
 
   if (!isOpen) return null;
 
   return (
-    <div className="absolute inset-0 z-[160] bg-[#020617] flex flex-col overflow-hidden">
-      <header className="px-6 py-5 border-b border-white/5 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="size-12 rounded-[18px] bg-primary/10 border border-primary/20 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary text-2xl" style={{fontVariationSettings: "'FILL' 1"}}>smart_toy</span>
+    <div className="absolute inset-0 z-[160] bg-[#020617]/95 backdrop-blur-3xl flex flex-col overflow-hidden">
+      <header className="px-8 py-8 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-5">
+          <div className="size-14 rounded-[22px] bg-primary/10 border border-primary/20 flex items-center justify-center shadow-lg shadow-primary/10 relative overflow-hidden">
+            <div className="absolute inset-0 bg-primary/10 animate-pulse" />
+            <Icon name="bolt" size={28} className="text-primary relative z-10" />
           </div>
           <div>
-            <h2 className="text-base font-black text-white tracking-tight">Izi Concierge</h2>
-            <div className="flex items-center gap-1.5">
-              <div className="size-1.5 bg-emerald-400 rounded-full animate-pulse" />
-              <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">IA Ativa</p>
+            <h2 className="text-xl font-black text-white tracking-tighter uppercase italic leading-none mb-1">Izi <span className="text-primary">Concierge</span></h2>
+            <div className="flex items-center gap-2">
+              <div className="size-1.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_white]" />
+              <p className="text-[8px] font-black text-emerald-400 uppercase tracking-[0.4em]">Sintonizado</p>
             </div>
           </div>
         </div>
-        <button onClick={onClose} className="size-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 active:scale-90 transition-all">
-          <span className="material-symbols-outlined font-black text-xl">close</span>
+        <button onClick={onClose} className="size-12 rounded-[20px] bg-white/5 border border-white/10 flex items-center justify-center text-white/40 active:scale-90 transition-all shadow-premium">
+          <Icon name="close" size={24} />
         </button>
       </header>
-      <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-5 space-y-4">
+      
+      <div className="flex-1 overflow-y-auto no-scrollbar px-8 py-4 space-y-6">
         {messages.length === 0 && (
-          <div className="space-y-5">
-            <div className="flex items-start gap-3">
-              <div className="size-8 rounded-[12px] bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="material-symbols-outlined text-primary text-sm" style={{fontVariationSettings: "'FILL' 1"}}>smart_toy</span>
+          <div className="space-y-10">
+            <div className="flex flex-col items-center text-center mt-12 mb-16">
+              <div className="size-20 rounded-full bg-primary/20 border-4 border-white/5 flex items-center justify-center mb-6 shadow-2xl">
+                <Icon name="bolt" size={40} className="text-primary" />
               </div>
-              <div className="bg-white/5 border border-white/8 rounded-[20px] rounded-tl-[6px] px-4 py-3 max-w-[85%]">
-                <p className="text-sm text-white/80 leading-relaxed">Olá{userName ? `, ${userName.split(" ")[0]}` : ""}! 👋 Sou o Izi Concierge. Posso te ajudar a encontrar restaurantes, verificar seu saldo, sugerir pedidos e muito mais!</p>
+              <h3 className="text-3xl font-black text-white italic tracking-tighter mb-4 uppercase">Olá, {userName?.split(" ")[0]}</h3>
+              <p className="text-zinc-400 text-sm font-medium leading-relaxed max-w-[80%] mx-auto">Sua inteligência logística pessoal. O que deseja agilizar hoje?</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white/5 border border-white/10 rounded-[30px] p-6 shadow-soft">
+                <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Dotação Izi</p>
+                <p className="text-2xl font-black text-primary tracking-tighter">R$ {walletBalance?.toFixed(2).replace(".", ",")}</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-[30px] p-6 shadow-soft">
+                <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Ciclo Operacional</p>
+                <p className="text-2xl font-black text-white tracking-tighter">R$ {totalGasto.replace(".", ",")}</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white/[0.03] border border-white/5 rounded-[20px] p-4">
-                <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Saldo</p>
-                <p className="text-lg font-black text-primary mt-0.5">R$ {walletBalance?.toFixed(2).replace(".", ",")}</p>
-              </div>
-              <div className="bg-white/[0.03] border border-white/5 rounded-[20px] p-4">
-                <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Total Gasto</p>
-                <p className="text-lg font-black text-white mt-0.5">R$ {totalGasto.replace(".", ",")}</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-[9px] font-black text-white/20 uppercase tracking-widest px-1">Sugestões rápidas</p>
+
+            <div className="space-y-3">
+              <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] px-2 mb-4">Comandos Rápidos</p>
               {quickSuggestions.map((s, i) => (
-                <button key={i} onClick={() => setInput(s)} className="w-full text-left bg-white/[0.03] border border-white/8 rounded-[16px] px-4 py-3 text-sm text-white/60 font-bold hover:bg-white/[0.06] hover:text-white transition-all active:scale-[0.98] flex items-center gap-3">
-                  <span className="material-symbols-outlined text-primary text-base">arrow_forward</span>{s}
+                <button key={i} onClick={() => setInput(s)} className="w-full text-left bg-white/5 border border-white/5 rounded-[22px] px-6 py-4.5 text-sm text-white/60 font-black uppercase tracking-tight hover:bg-white/10 hover:text-white transition-all active:scale-[0.98] flex items-center justify-between group">
+                  {s} <Icon name="arrow_forward" className="text-primary opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0" />
                 </button>
               ))}
             </div>
           </div>
         )}
         {messages.map((msg, i) => (
-          <div key={i} className={`flex items-start gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
+          <div key={i} className={`flex items-start gap-4 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
             {msg.role === "assistant" && (
-              <div className="size-8 rounded-[12px] bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="material-symbols-outlined text-primary text-sm" style={{fontVariationSettings: "'FILL' 1"}}>smart_toy</span>
+              <div className="size-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-1 shadow-lg">
+                <Icon name="bolt" size={20} className="text-primary" />
               </div>
             )}
-            <div className={`px-4 py-3 max-w-[82%] ${msg.role === "user" ? "bg-primary text-slate-900 rounded-[20px] rounded-tr-[6px]" : "bg-white/5 border border-white/8 text-white/85 rounded-[20px] rounded-tl-[6px]"}`}>
-              <p className="text-sm leading-relaxed font-medium">{msg.content}</p>
+            <div className={`px-6 py-4.5 max-w-[85%] shadow-premium ${msg.role === "user" ? "bg-primary text-slate-950 font-black rounded-[28px] rounded-tr-[4px]" : "bg-white/5 border border-white/10 text-white/90 rounded-[28px] rounded-tl-[4px]"}`}>
+              <p className="text-sm leading-relaxed tracking-tight">{msg.content}</p>
             </div>
           </div>
         ))}
         {isThinking && (
-          <div className="flex items-start gap-3">
-            <div className="size-8 rounded-[12px] bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-primary text-sm" style={{fontVariationSettings: "'FILL' 1"}}>smart_toy</span>
+          <div className="flex items-start gap-4">
+            <div className="size-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-1">
+              <Icon name="bolt" size={20} className="text-primary" />
             </div>
-            <div className="bg-white/5 border border-white/8 rounded-[20px] rounded-tl-[6px] px-4 py-3">
-              <div className="flex gap-1.5 items-center">
-                <div className="size-2 bg-primary/60 rounded-full animate-bounce" style={{animationDelay:'0ms'}} />
-                <div className="size-2 bg-primary/60 rounded-full animate-bounce" style={{animationDelay:'200ms'}} />
-                <div className="size-2 bg-primary/60 rounded-full animate-bounce" style={{animationDelay:'400ms'}} />
+            <div className="bg-white/5 border border-white/10 rounded-[28px] rounded-tl-[4px] px-6 py-4.5">
+              <div className="flex gap-2 items-center">
+                <div className="size-2 bg-primary rounded-full animate-pulse" />
+                <div className="size-2 bg-primary/60 rounded-full animate-pulse delay-75" />
+                <div className="size-2 bg-primary/30 rounded-full animate-pulse delay-150" />
               </div>
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
-      <div className="px-5 pb-8 pt-3 shrink-0 border-t border-white/5">
-        <div className="flex items-center gap-3 bg-white/[0.05] border border-white/10 rounded-[22px] px-4 py-2">
-          <input type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Pergunte algo..." className="flex-1 bg-transparent border-none outline-none text-white text-sm font-medium placeholder:text-white/20 py-2" />
-          <button onClick={sendMessage} disabled={!input.trim() || isThinking} className="size-10 rounded-[14px] bg-primary text-slate-900 flex items-center justify-center shadow-lg shadow-primary/20 active:scale-90 transition-all disabled:opacity-30 shrink-0">
-            <span className="material-symbols-outlined font-black text-lg">send</span>
+      <div className="px-8 pb-10 pt-4 shrink-0 border-t border-white/5">
+        <div className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-[30px] px-6 py-3 shadow-inner">
+          <input type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Comando operacional..." className="flex-1 bg-transparent border-none outline-none text-white text-[15px] font-black placeholder:text-white/10 py-3 uppercase tracking-tight" />
+          <button onClick={sendMessage} disabled={!input.trim() || isThinking} className="size-12 rounded-[20px] bg-primary text-slate-950 flex items-center justify-center shadow-lg shadow-primary/20 active:scale-90 transition-all disabled:opacity-10 shrink-0">
+            <Icon name="arrow_forward" size={24} />
           </button>
         </div>
       </div>
@@ -836,7 +902,7 @@ function App() {
     // AI Dynamic Suggestions Cycle
     const aiTips = [
       "Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?",
-      "Hoje é sexta! Temos cupons especiais de 20% em bebidas para membros Izi Black. 🍻",
+      "Hoje é sexta! Temos cupons especiais de 20% em bebidas para membros Izi Black. ðŸ»",
       "Baseado no seu histórico, você costuma pedir em mercados às 19h. Deseja agendar suas compras?",
       "O trânsito está pesado hoje. Sugiro usar o Mototáxi para chegar mais rápido ao seu destino.",
       "Você está a apenas 250 XP de subir para o nível 13! Que tal um pedido extra hoje?"
@@ -1319,17 +1385,17 @@ function App() {
           // Se o status mudou, mostrar notificação personalizada
           if (newOrder.status !== oldOrder.status) {
             const statusMessages: Record<string, string> = {
-              'novo': 'Seu pedido foi recebido! 🙌',
-              'pendente_pagamento': 'Aguardando confirmação do pagamento... 💳',
-              'aceito': 'O estabelecimento aceitou seu pedido! 📝',
-              'confirmado': 'Pedido confirmado e pronto para começar! ✅',
-              'preparando': 'O restaurante começou a preparar seu pedido! 🍳',
-              'pronto': 'Seu pedido está pronto e aguardando coleta! 🛍️',
-              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! 🛵',
-              'em_rota': 'O motorista está a caminho do destino! 🚗',
-              'no_local': 'O motorista chegou ao local! 📍',
-              'concluido': 'Pedido finalizado com sucesso! Obrigado por usar Izi. ✨',
-              'cancelado': 'Ah não, seu pedido foi cancelado. 🛑'
+              'novo': 'Seu pedido foi recebido! ðŸ™Œ',
+              'pendente_pagamento': 'Aguardando confirmação do pagamento... ðŸ’³',
+              'aceito': 'O estabelecimento aceitou seu pedido! ðŸ“',
+              'confirmado': 'Pedido confirmado e pronto para começar! âœ…',
+              'preparando': 'O restaurante começou a preparar seu pedido! ðŸ³',
+              'pronto': 'Seu pedido está pronto e aguardando coleta! ðŸ›ï¸',
+              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! ðŸ›µ',
+              'em_rota': 'O motorista está a caminho do destino! ðŸš—',
+              'no_local': 'O motorista chegou ao local! ðŸ“',
+              'concluido': 'Pedido finalizado com sucesso! Obrigado por usar Izi. âœ¨',
+              'cancelado': 'Ah não, seu pedido foi cancelado. ðŸ›‘'
             };
 
             const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
@@ -2102,7 +2168,7 @@ function App() {
             className="flex items-center gap-2 group"
           >
             <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${rememberMe ? 'bg-primary border-primary' : 'border-white/20 bg-white/5'}`}>
-              {rememberMe && <span className="material-symbols-rounded text-slate-900 text-[14px] font-black">check</span>}
+              {rememberMe && <Icon name="check" />}
             </div>
             <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors uppercase tracking-widest">
               Lembrar meus dados
@@ -2128,16 +2194,16 @@ function App() {
           className="w-full bg-primary text-slate-900 font-black text-xl py-5 rounded-[32px] shadow-2xl shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center gap-3"
         >
           {isLoading ? (
-            <span className="material-symbols-rounded animate-spin">sync</span>
+            <Icon name="sync" />
           ) : authMode === 'login' ? (
             <>
               CONECTAR
-              <span className="material-symbols-rounded font-black">arrow_forward</span>
+              <Icon name="arrow_forward" />
             </>
           ) : (
             <>
               CRIAR CONTA
-              <span className="material-symbols-rounded font-black">person_add</span>
+              <Icon name="person_add" />
             </>
           )}
         </button>
@@ -2209,37 +2275,37 @@ function App() {
   };
 
   const renderHome = () => {
-    // ── Serviços Principais (Entregas) ──
+    // â”€â”€ Serviços Principais (Entregas) â”€â”€
     const deliveryServices = [
-      { emoji: "🍽️", label: "Food", desc: "Peça o melhor da cidade", type: "restaurant", gradient: "linear-gradient(135deg, #f97316, #ef4444)", bgColor: "#fff7ed", tagColor: "#ea580c", tag: "Populares" },
-      { emoji: "🍺", label: "Bebidas", desc: "Distribuidoras e adegas", type: "beverages", gradient: "linear-gradient(135deg, #f59e0b, #eab308)", bgColor: "#fffbeb", tagColor: "#d97706", tag: "Geladas" },
+      { emoji: "ðŸ½ï¸", label: "Food", desc: "Peça o melhor da cidade", type: "restaurant", gradient: "linear-gradient(135deg, #f97316, #ef4444)", bgColor: "#fff7ed", tagColor: "#ea580c", tag: "Populares" },
+      { emoji: "ðŸº", label: "Bebidas", desc: "Distribuidoras e adegas", type: "beverages", gradient: "linear-gradient(135deg, #f59e0b, #eab308)", bgColor: "#fffbeb", tagColor: "#d97706", tag: "Geladas" },
       {
-        emoji: "📦", label: "Envios", desc: "Entregas e encomendas", gradient: "linear-gradient(135deg, #8b5cf6, #9333ea)", bgColor: "#f5f3ff", tagColor: "#7c3aed", tag: "Express",
+        emoji: "ðŸ“¦", label: "Envios", desc: "Entregas e encomendas", gradient: "linear-gradient(135deg, #8b5cf6, #9333ea)", bgColor: "#f5f3ff", tagColor: "#7c3aed", tag: "Express",
         action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("transit_selection"); },
       },
-      { emoji: "🛒", label: "Mercado", desc: "Compras do dia a dia", type: "market", gradient: "linear-gradient(135deg, #10b981, #0d9488)", bgColor: "#ecfdf5", tagColor: "#059669", tag: "Rápido" },
-      { emoji: "💊", label: "Farmácia", desc: "Medicamentos e saúde", type: "pharmacy", gradient: "linear-gradient(135deg, #3b82f6, #06b6d4)", bgColor: "#eff6ff", tagColor: "#2563eb", tag: "24h" },
-      { emoji: "🐾", label: "Petshop", desc: "Cuidados para seu pet", type: "generic", gradient: "linear-gradient(135deg, #ec4899, #f43f5e)", bgColor: "#fdf2f8", tagColor: "#db2777", tag: "Novo", action: () => { setExploreCategoryState({ id: 'pets', title: 'Pet Shop Premium', tagline: 'Mimo para seu melhor amigo', primaryColor: 'rose-500', icon: 'pets', banner: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=1200' }); navigateSubView('explore_category'); } },
-      { emoji: "🎂", label: "Doces & Bolos", desc: "Confeitarias e padarias", type: "generic", gradient: "linear-gradient(135deg, #d946ef, #ec4899)", bgColor: "#fdf4ff", tagColor: "#c026d3", action: () => { setExploreCategoryState({ id: 'sweets', title: 'Doces & Bolos', tagline: 'Momentos mais doces', primaryColor: 'fuchsia-500', icon: 'cake', banner: 'https://images.unsplash.com/photo-1578985542846-399fe5c5f47d?q=80&w=1200' }); navigateSubView('explore_category'); } },
-      { emoji: "💐", label: "Flores", desc: "Buquês e arranjos", type: "generic", gradient: "linear-gradient(135deg, #fb7185, #f43f5e)", bgColor: "#fff1f2", tagColor: "#e11d48", action: () => { setExploreCategoryState({ id: 'flowers', title: 'Floricultura', tagline: 'Flores que encantam', primaryColor: 'rose-400', icon: 'local_florist', banner: 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1200' }); navigateSubView('explore_category'); } },
+      { emoji: "ðŸ›’", label: "Mercado", desc: "Compras do dia a dia", type: "market", gradient: "linear-gradient(135deg, #10b981, #0d9488)", bgColor: "#ecfdf5", tagColor: "#059669", tag: "Rápido" },
+      { emoji: "ðŸ’Š", label: "Farmácia", desc: "Medicamentos e saúde", type: "pharmacy", gradient: "linear-gradient(135deg, #3b82f6, #06b6d4)", bgColor: "#eff6ff", tagColor: "#2563eb", tag: "24h" },
+      { emoji: "ðŸ¾", label: "Petshop", desc: "Cuidados para seu pet", type: "generic", gradient: "linear-gradient(135deg, #ec4899, #f43f5e)", bgColor: "#fdf2f8", tagColor: "#db2777", tag: "Novo", action: () => { setExploreCategoryState({ id: 'pets', title: 'Pet Shop Premium', tagline: 'Mimo para seu melhor amigo', primaryColor: 'rose-500', icon: 'pets', banner: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=1200' }); navigateSubView('explore_category'); } },
+      { emoji: "ðŸŽ‚", label: "Doces & Bolos", desc: "Confeitarias e padarias", type: "generic", gradient: "linear-gradient(135deg, #d946ef, #ec4899)", bgColor: "#fdf4ff", tagColor: "#c026d3", action: () => { setExploreCategoryState({ id: 'sweets', title: 'Doces & Bolos', tagline: 'Momentos mais doces', primaryColor: 'fuchsia-500', icon: 'cake', banner: 'https://images.unsplash.com/photo-1578985542846-399fe5c5f47d?q=80&w=1200' }); navigateSubView('explore_category'); } },
+      { emoji: "ðŸ’", label: "Flores", desc: "Buquês e arranjos", type: "generic", gradient: "linear-gradient(135deg, #fb7185, #f43f5e)", bgColor: "#fff1f2", tagColor: "#e11d48", action: () => { setExploreCategoryState({ id: 'flowers', title: 'Floricultura', tagline: 'Flores que encantam', primaryColor: 'rose-400', icon: 'local_florist', banner: 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1200' }); navigateSubView('explore_category'); } },
     ];
 
-    // ── Serviços de Mobilidade ──
+    // â”€â”€ Serviços de Mobilidade â”€â”€
     const mobilityServices = [
       {
-        emoji: "🏍️", label: "Mototáxi", desc: "Rápido e econômico", gradient: "linear-gradient(135deg, #facc15, #f97316)", bgColor: "#fefce8", tagColor: "#ca8a04", tag: "Promo",
+        emoji: "ðŸï¸", label: "Mototáxi", desc: "Rápido e econômico", gradient: "linear-gradient(135deg, #facc15, #f97316)", bgColor: "#fefce8", tagColor: "#ca8a04", tag: "Promo",
         action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("transit_selection"); },
       },
       {
-        emoji: "🚗", label: "Motorista Particular", desc: "Conforto para sua viagem", gradient: "linear-gradient(135deg, #334155, #0f172a)", bgColor: "#f1f5f9", tagColor: "#334155", tag: "Premium",
+        emoji: "ðŸš—", label: "Motorista Particular", desc: "Conforto para sua viagem", gradient: "linear-gradient(135deg, #334155, #0f172a)", bgColor: "#f1f5f9", tagColor: "#334155", tag: "Premium",
         action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("transit_selection"); },
       },
       {
-        emoji: "🚐", label: "Van / Utilitário", desc: "Mudanças e cargas", gradient: "linear-gradient(135deg, #6366f1, #2563eb)", bgColor: "#eef2ff", tagColor: "#4f46e5",
+        emoji: "ðŸš", label: "Van / Utilitário", desc: "Mudanças e cargas", gradient: "linear-gradient(135deg, #6366f1, #2563eb)", bgColor: "#eef2ff", tagColor: "#4f46e5",
         action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("transit_selection"); },
       },
       {
-        emoji: "🚚", label: "Frete", desc: "Transporte de volumes", gradient: "linear-gradient(135deg, #06b6d4, #3b82f6)", bgColor: "#ecfeff", tagColor: "#0891b2",
+        emoji: "ðŸšš", label: "Frete", desc: "Transporte de volumes", gradient: "linear-gradient(135deg, #06b6d4, #3b82f6)", bgColor: "#ecfeff", tagColor: "#0891b2",
         action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("transit_selection"); },
       },
     ];
@@ -2276,7 +2342,7 @@ function App() {
             >
               <div className="size-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-xl shadow-slate-200/50 dark:shadow-black/20 border border-slate-50 dark:border-slate-700 group-active:scale-95 transition-all relative overflow-hidden">
                 <div className="absolute inset-0 bg-primary/10 rounded-2xl animate-pulse" />
-                <span className="material-symbols-outlined text-primary text-2xl fill-1 relative z-10">location_on</span>
+                <Icon name="location_on" />
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] uppercase font-black tracking-[0.25em] text-slate-400 mb-0.5">Entregar em</span>
@@ -2296,7 +2362,7 @@ function App() {
                 onClick={() => cart.length > 0 && navigateSubView("cart")}
                 className="relative size-12 rounded-2xl bg-white dark:bg-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-black/20 border border-slate-50 dark:border-slate-700 active:scale-90 transition-all flex items-center justify-center group"
               >
-                <span className="material-symbols-outlined text-2xl text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">shopping_bag</span>
+                <Icon name="shopping_bag" />
                 {cart.length > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 size-6 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 animate-bounce-slow shadow-lg">
                     {cart.length}
@@ -2324,7 +2390,7 @@ function App() {
                 <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || 'default'}`} alt="User" className="size-full bg-slate-100 group-hover:scale-110 transition-transform" />
                 {userLevel >= 10 && (
                   <div className="absolute top-0 right-0 size-4 bg-primary border-2 border-white dark:border-slate-800 rounded-full flex items-center justify-center -translate-y-1 translate-x-1 shadow-lg shadow-primary/40">
-                    <span className="material-symbols-rounded text-[8px] font-black text-slate-900 fill-1">diamond</span>
+                    <Icon name="diamond" />
                   </div>
                 )}
               </div>
@@ -2334,7 +2400,7 @@ function App() {
           <div className="px-5 mt-2">
             <div className="flex items-center bg-slate-100 dark:bg-slate-800/50 rounded-2xl px-5 h-14 border border-transparent focus-within:border-primary/40 transition-all shadow-inner relative overflow-hidden group">
               <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-primary/20 to-transparent scale-x-0 group-focus-within:scale-x-100 transition-transform duration-500" />
-              <span className="material-symbols-outlined text-slate-400 mr-3 text-2xl">search</span>
+              <Icon name="search" />
               <input
                 className="bg-transparent border-none focus:ring-0 w-full text-[15px] placeholder:text-slate-400 font-bold dark:text-white outline-none"
                 placeholder="O que você deseja pedir hoje?"
@@ -2344,7 +2410,7 @@ function App() {
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery("")} className="size-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center animate-in fade-in zoom-in">
-                  <span className="material-symbols-outlined text-sm font-black text-slate-500">close</span>
+                  <Icon name="close" />
                 </button>
               )}
             </div>
@@ -2369,7 +2435,7 @@ function App() {
                 <div className="relative">
                   <div className="absolute inset-0 bg-yellow-400/20 blur-xl rounded-full" />
                   <div className="size-20 rounded-full bg-zinc-900 border border-yellow-400/30 flex items-center justify-center relative z-10 shadow-inner group-hover:bg-yellow-400 transition-colors">
-                    <span className="material-symbols-outlined text-yellow-500 text-4xl font-black fill-1 group-hover:text-black transition-colors">stars</span>
+                    <Icon name="stars" />
                   </div>
                 </div>
                 
@@ -2402,7 +2468,7 @@ function App() {
                 <div className="flex flex-col gap-6 relative z-10">
                   <div className="flex items-center gap-4">
                     <div className="size-16 rounded-3xl bg-zinc-800/80 backdrop-blur-xl border border-white/5 flex items-center justify-center shadow-2xl">
-                      <span className="material-symbols-outlined text-yellow-500 text-4xl font-black fill-1 group-hover:scale-125 transition-transform">bolt</span>
+                      <Icon name="bolt" />
                     </div>
                     <div className="flex flex-col">
                        <span className="text-[11px] font-black text-yellow-400 uppercase tracking-[0.5em] mb-1">Privilégio</span>
@@ -2472,7 +2538,7 @@ function App() {
                         -{offer.discount_percent}%
                       </div>
                       <div className={`absolute top-2.5 right-2.5 backdrop-blur-md px-2 py-1 rounded-xl border text-[9px] font-black flex items-center gap-1 ${isUrgent ? "bg-rose-500/90 border-rose-400/30 text-white" : "bg-black/60 border-white/10 text-white"}`}>
-                        <span className="material-symbols-outlined text-[10px]">timer</span>
+                        <Icon name="timer" />
                         {timeLabel}
                       </div>
                     </div>
@@ -2535,20 +2601,20 @@ function App() {
                   </div>
 
                   <div className={`size-10 rounded-full flex items-center justify-center group-hover:translate-x-1 transition-transform ${activeOrder.service_type === 'subscription' ? 'bg-white/5 text-yellow-400' : 'bg-slate-900/10'}`}>
-                    <span className="material-symbols-outlined font-black">{activeOrder.service_type === 'subscription' ? 'bolt' : 'map'}</span>
+                    <Icon name={activeOrder.service_type === 'subscription' ? 'bolt' : 'map'} />
                   </div>
                 </motion.div>
               </div>
             );
           })()}
 
-          {/* ═══ SEÇÃO: OFERTAS VIP (Izi Black) ═══ */}
+          {/* â•â•â• SEÇÃO: OFERTAS VIP (Izi Black) â•â•â• */}
           {isIziBlackMembership && availableCoupons.filter(p => p.is_vip).length > 0 && (
             <section className="px-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                    <span className="material-symbols-outlined text-amber-500 text-lg fill-1">workspace_premium</span>
+                    <Icon name="workspace_premium" />
                   </div>
                   <div>
                     <h3 className="text-[15px] font-black tracking-tight text-slate-900 dark:text-white">Ofertas VIP</h3>
@@ -2575,7 +2641,7 @@ function App() {
 
                     <div className="relative z-10 flex flex-col items-center gap-1.5">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="material-symbols-outlined text-yellow-400 text-[12px] opacity-60">stars</span>
+                        <Icon name="stars" />
                         <span className="text-yellow-400 font-black text-[8px] uppercase tracking-[0.4em]">
                           {cpn.title || "Membro Izi Black"}
                         </span>
@@ -2630,7 +2696,7 @@ function App() {
                         >
                           <div className="flex flex-col items-center gap-2">
                              <div className="size-10 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                               <span className="material-symbols-outlined text-emerald-400">check_circle</span>
+                               <Icon name="check_circle" />
                              </div>
                              <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Código Copiado</span>
                           </div>
@@ -2649,23 +2715,23 @@ function App() {
                   onClick={() => { setIziBlackOrigin('home'); setIziBlackStep('info'); setSubView('izi_black_purchase'); }}
                   className="mt-2 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-all"
                 >
-                  <span className="material-symbols-outlined text-amber-500 fill-1">lock</span>
+                  <Icon name="lock" />
                   <div className="flex-1">
                     <p className="text-[11px] font-black text-slate-900 dark:text-white">Assine o Izi Black para usar cupons VIP</p>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Toque aqui para conhecer os benefícios</p>
                   </div>
-                  <span className="material-symbols-outlined text-amber-500">arrow_forward</span>
+                  <Icon name="arrow_forward" />
                 </motion.div>
               )}
             </section>
           )}
 
-          {/* ═══ SEÇÃO: CUPONS DISPONÍVEIS ═══ */}
+          {/* â•â•â• SEÇÃO: CUPONS DISPONÃVEIS â•â•â• */}
           {availableCoupons.length > 0 && (
             <section className="px-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-lg">confirmation_number</span>
+                  <Icon name="confirmation_number" />
                   <h3 className="text-[15px] font-black tracking-tight text-slate-900 dark:text-white">Cupons Disponíveis</h3>
                 </div>
                 <span className="text-[10px] font-black text-primary bg-primary/10 px-3 py-1.5 rounded-full">
@@ -2753,7 +2819,7 @@ function App() {
             </section>
           )}
 
-          {/* ═══ SEÇÃO: PEÇA & RECEBA ═══ */}
+          {/* â•â•â• SEÇÃO: PEÇA & RECEBA â•â•â• */}
           <section className="px-4">
             <div className="flex items-center justify-between mb-5">
               <div>
@@ -2848,7 +2914,7 @@ function App() {
                       }}
                       className="whitespace-nowrap bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 px-5 py-3 rounded-2xl flex items-center gap-2.5 shadow-sm active:scale-95 transition-all text-[11px] font-bold dark:text-white"
                     >
-                      <span className="material-symbols-outlined text-[16px] text-primary">history</span>
+                      <Icon name="history" />
                       {addr}
                     </div>
                   ))}
@@ -2857,11 +2923,11 @@ function App() {
             )}
           </section>
 
-          {/* ═══ ESPAÇO PUBLICITÁRIO PREMIUM ═══ */}
+          {/* â•â•â• ESPAÇO PUBLICITÃRIO PREMIUM â•â•â• */}
           {(() => {
             const ads = [
               { id: 1, brand: "iFood Business", title: "Anuncie aqui e alcance", highlight: "+50 mil usuários", cta: "Saiba mais", tag: "Tecnologia", img: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=800", accentColor: "#6366f1", badgeColor: "from-indigo-600 to-purple-600" },
-              { id: 2, brand: "Outback Steakhouse", title: "Promoção exclusiva no app", highlight: "Bloomin' Onion GRÁTIS", cta: "Ver oferta", tag: "Gastronomia", img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=800", accentColor: "#f97316", badgeColor: "from-orange-500 to-red-600" },
+              { id: 2, brand: "Outback Steakhouse", title: "Promoção exclusiva no app", highlight: "Bloomin' Onion GRÃTIS", cta: "Ver oferta", tag: "Gastronomia", img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=800", accentColor: "#f97316", badgeColor: "from-orange-500 to-red-600" },
               { id: 3, brand: "Nike Store", title: "Novos lançamentos 2026", highlight: "Até 40% OFF", cta: "Comprar agora", tag: "Moda & Lifestyle", img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=800", accentColor: "#10b981", badgeColor: "from-emerald-500 to-teal-600" },
               { id: 4, brand: "Samsung Brasil", title: "Galaxy AI chegou", highlight: "S25 Ultra é aqui", cta: "Explorar", tag: "Tecnologia", img: "https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?q=80&w=800", accentColor: "#3b82f6", badgeColor: "from-blue-600 to-cyan-500" },
             ];
@@ -2908,7 +2974,7 @@ function App() {
                   </div>
                 </motion.div>
                 <button className="w-full mt-3 py-3 px-5 flex items-center justify-center gap-2.5 rounded-[18px] border border-dashed border-slate-200 dark:border-slate-700 group hover:border-primary/40 transition-all active:scale-[0.98]">
-                  <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 group-hover:text-primary transition-colors text-[18px]">campaign</span>
+                  <Icon name="campaign" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 dark:text-slate-600 group-hover:text-primary transition-colors">Anuncie seu negócio aqui · a partir de R$ 49/dia</span>
                 </button>
               </div>
@@ -2958,7 +3024,7 @@ function App() {
 
               {/* Lightning Icon Accent */}
               <div className="absolute top-8 right-10 opacity-20 group-hover:opacity-100 group-hover:rotate-12 transition-all duration-700">
-                <span className="material-symbols-outlined text-yellow-400 text-3xl">bolt</span>
+                <Icon name="bolt" />
               </div>
               
               {/* Top/Bottom Light Lines */}
@@ -2976,7 +3042,7 @@ function App() {
                 <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1 opacity-80">Os melhores de São Paulo</p>
               </div>
               <button className="size-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 shadow-xl flex items-center justify-center group active:scale-90 transition-all">
-                <span className="material-symbols-outlined text-2xl text-primary font-black group-hover:rotate-[20deg] transition-transform">explore</span>
+                <Icon name="explore" />
               </button>
             </div>
             <div className="flex gap-6 overflow-x-auto no-scrollbar -mx-4 px-4 pb-10">
@@ -2996,7 +3062,7 @@ function App() {
                     <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-110 transition-transform duration-[1500ms]" />
                     <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     <div className="absolute top-5 right-5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl px-4 py-2 rounded-2xl flex items-center gap-2 shadow-2xl border border-white/10">
-                      <span className="material-symbols-outlined text-sm text-primary fill-1">star</span>
+                      <Icon name="star" />
                       <span className="text-xs font-black">{shop.rating}</span>
                     </div>
                     <div className="absolute bottom-5 left-5 flex gap-2.5">
@@ -3007,14 +3073,14 @@ function App() {
                     <h4 className="font-black text-slate-900 dark:text-white text-lg mb-4 leading-tight tracking-tighter group-hover:text-primary transition-colors">{shop.name}</h4>
                     <div className="flex items-center justify-between border-t border-slate-50 dark:border-slate-700/50 pt-5">
                       <div className="flex items-center gap-5 text-[12px] font-black uppercase tracking-tighter text-slate-400">
-                        <span className="flex items-center gap-1.5"><span className="material-symbols-outlined text-base font-black opacity-60">schedule</span>{shop.time}</span>
+                        <span className="flex items-center gap-1.5"><Icon name="schedule" />{shop.time}</span>
                         <span className={shop.freeDelivery ? 'text-emerald-500 flex items-center gap-1.5' : 'flex items-center gap-1.5'}>
-                          <span className="material-symbols-outlined text-base font-black opacity-60">{shop.freeDelivery ? 'delivery_dining' : 'payments'}</span>
+                          <Icon name={shop.freeDelivery ? 'delivery_dining' : 'payments'} />
                           {shop.freeDelivery ? 'Grátis' : shop.fee}
                         </span>
                       </div>
                       <div className="size-11 rounded-[18px] bg-slate-50 dark:bg-slate-900 group-hover:bg-primary flex items-center justify-center text-slate-300 group-hover:text-slate-900 transition-all duration-700 shadow-inner group-hover:shadow-lg group-hover:shadow-primary/20">
-                        <span className="material-symbols-outlined text-lg font-black group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+                        <Icon name="arrow_forward" />
                       </div>
                     </div>
                   </div>
@@ -3022,7 +3088,7 @@ function App() {
               ))}
               {searchQuery && ESTABLISHMENTS.filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
                 <div className="min-w-[300px] flex flex-col items-center justify-center p-10 bg-slate-100 dark:bg-slate-800/50 rounded-[50px] border border-dashed border-slate-300 dark:border-slate-700">
-                  <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">search_off</span>
+                  <Icon name="search_off" />
                   <p className="text-[10px] font-black uppercase text-slate-400">Nenhum favorito encontrado</p>
                 </div>
               )}
@@ -3051,7 +3117,7 @@ function App() {
           <div className="flex items-center p-6 pb-2 justify-between">
             <div className="flex items-center gap-5">
               <button onClick={() => setSubView('restaurant_list')} className="size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center active:scale-90 transition-all group">
-                <span className="material-symbols-outlined font-black group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div>
                 <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-slate-900 dark:text-white">Burgers</h1>
@@ -3059,14 +3125,14 @@ function App() {
               </div>
             </div>
             <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center group active:scale-95 transition-all">
-              <span className="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">shopping_bag</span>
+              <Icon name="shopping_bag" />
               {cart.length > 0 && <span className="absolute -top-1.5 -right-1.5 size-6 bg-primary text-slate-900 text-[10px] font-black rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-xl animate-bounce-subtle">{cart.length}</span>}
             </button>
           </div>
           <div className="px-6 mt-4">
             <div className="flex items-center bg-white dark:bg-slate-800/80 rounded-[28px] px-6 h-16 border border-slate-100 dark:border-white/5 focus-within:border-primary/40 transition-all shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] relative group overflow-hidden">
                <div className="absolute inset-0 bg-primary/5 opacity-0 group-focus-within:opacity-100 transition-opacity" />
-               <span className="material-symbols-outlined text-slate-400 mr-4 text-2xl relative z-10">search</span>
+               <Icon name="search" />
                <input className="bg-transparent border-none focus:ring-0 w-full text-base placeholder:text-slate-400 font-bold dark:text-white outline-none relative z-10" placeholder="Buscar burger ou combo..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
           </div>
@@ -3089,12 +3155,12 @@ function App() {
                     <h3 className="text-2xl font-black tracking-tighter mb-2 group-hover:text-primary transition-colors">{shop.name}</h3>
                     <div className="flex items-center gap-4 text-[10px] uppercase font-black tracking-widest text-white/80">
                       <span className="text-primary flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
-                        <span className="material-symbols-outlined text-[16px] fill-1">star</span>{shop.rating}
+                        <Icon name="star" />{shop.rating}
                       </span>
                       <span className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
-                         <span className="material-symbols-outlined text-[16px]">schedule</span>{shop.time}
+                         <Icon name="schedule" />{shop.time}
                       </span>
-                      {shop.freeDelivery && <span className="bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-[9px] shadow-lg">FRETE GRÁTIS</span>}
+                      {shop.freeDelivery && <span className="bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-[9px] shadow-lg">FRETE GRÃTIS</span>}
                     </div>
                   </div>
                 </div>
@@ -3123,7 +3189,7 @@ function App() {
                           <div className="flex items-center justify-between">
                             <span className="text-2xl font-black text-slate-900 dark:text-white">R$ {p.price.toFixed(2).replace('.', ',')}</span>
                             <div className="size-12 rounded-[20px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xl flex items-center justify-center group-hover:bg-primary group-hover:text-slate-900 transition-all duration-300">
-                              <span className="material-symbols-outlined text-xl font-black">add</span>
+                              <Icon name="add" />
                             </div>
                           </div>
                         </div>
@@ -3140,7 +3206,7 @@ function App() {
                 >
                   <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                   <span className="relative z-10 group-hover:text-slate-900 transition-colors">Ver Cardápio Completo</span>
-                  <span className="material-symbols-outlined text-xl font-black group-hover:translate-x-2 transition-transform relative z-10 group-hover:text-slate-900 transition-colors">arrow_forward</span>
+                  <Icon name="arrow_forward" />
                 </button>
               </div>
             </motion.div>
@@ -3168,7 +3234,7 @@ function App() {
           <div className="flex items-center p-6 pb-2 justify-between">
             <div className="flex items-center gap-5">
               <button onClick={() => setSubView('restaurant_list')} className="size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center active:scale-90 transition-all group">
-                <span className="material-symbols-outlined font-black group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div>
                 <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-slate-900 dark:text-white">Pizzarias</h1>
@@ -3176,14 +3242,14 @@ function App() {
               </div>
             </div>
             <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center group active:scale-95 transition-all">
-              <span className="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">shopping_bag</span>
+              <Icon name="shopping_bag" />
               {cart.length > 0 && <span className="absolute -top-1.5 -right-1.5 size-6 bg-primary text-slate-900 text-[10px] font-black rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-xl animate-bounce-subtle">{cart.length}</span>}
             </button>
           </div>
           <div className="px-6 mt-4">
             <div className="flex items-center bg-white dark:bg-slate-800/80 rounded-[28px] px-6 h-16 border border-slate-100 dark:border-white/5 focus-within:border-primary/40 transition-all shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] relative group overflow-hidden">
                <div className="absolute inset-0 bg-primary/5 opacity-0 group-focus-within:opacity-100 transition-opacity" />
-               <span className="material-symbols-outlined text-slate-400 mr-4 text-2xl relative z-10">search</span>
+               <Icon name="search" />
                <input className="bg-transparent border-none focus:ring-0 w-full text-base placeholder:text-slate-400 font-bold dark:text-white outline-none relative z-10" placeholder="Buscar sabor ou pizzaria..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
           </div>
@@ -3206,12 +3272,12 @@ function App() {
                     <h3 className="text-2xl font-black tracking-tighter mb-2 group-hover:text-primary transition-colors">{shop.name}</h3>
                     <div className="flex items-center gap-4 text-[10px] uppercase font-black tracking-widest text-white/80">
                       <span className="text-primary flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
-                        <span className="material-symbols-outlined text-[16px] fill-1">star</span>{shop.rating}
+                        <Icon name="star" />{shop.rating}
                       </span>
                       <span className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
-                         <span className="material-symbols-outlined text-[16px]">schedule</span>{shop.time}
+                         <Icon name="schedule" />{shop.time}
                       </span>
-                      {shop.freeDelivery && <span className="bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-[9px] shadow-lg">FRETE GRÁTIS</span>}
+                      {shop.freeDelivery && <span className="bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-[9px] shadow-lg">FRETE GRÃTIS</span>}
                     </div>
                   </div>
                 </div>
@@ -3239,7 +3305,7 @@ function App() {
                         <div className="flex items-center justify-between">
                           <span className="text-2xl font-black text-slate-900 dark:text-white">R$ {p.price.toFixed(2).replace('.', ',')}</span>
                           <div className="size-12 rounded-[20px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xl flex items-center justify-center group-hover:bg-primary group-hover:text-slate-900 transition-all duration-300">
-                            <span className="material-symbols-outlined text-xl font-black">add</span>
+                            <Icon name="add" />
                           </div>
                         </div>
                       </div>
@@ -3253,7 +3319,7 @@ function App() {
                 >
                   <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                   <span className="relative z-10 group-hover:text-slate-900 transition-colors">Ver Cardápio Completo</span>
-                  <span className="material-symbols-outlined text-xl font-black group-hover:translate-x-2 transition-transform relative z-10 group-hover:text-slate-900 transition-colors">arrow_forward</span>
+                  <Icon name="arrow_forward" />
                 </button>
               </div>
             </motion.div>
@@ -3281,7 +3347,7 @@ function App() {
           <div className="flex items-center p-6 pb-2 justify-between">
             <div className="flex items-center gap-5">
               <button onClick={() => setSubView('restaurant_list')} className="size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center active:scale-90 transition-all group">
-                <span className="material-symbols-outlined font-black group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div>
                 <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-slate-900 dark:text-white">Açaí & Refrescos</h1>
@@ -3289,14 +3355,14 @@ function App() {
               </div>
             </div>
             <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center group active:scale-95 transition-all">
-              <span className="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">shopping_bag</span>
+              <Icon name="shopping_bag" />
               {cart.length > 0 && <span className="absolute -top-1.5 -right-1.5 size-6 bg-primary text-slate-900 text-[10px] font-black rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-xl animate-bounce-subtle">{cart.length}</span>}
             </button>
           </div>
           <div className="px-6 mt-4">
             <div className="flex items-center bg-white dark:bg-slate-800/80 rounded-[28px] px-6 h-16 border border-slate-100 dark:border-white/5 focus-within:border-primary/40 transition-all shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] relative group overflow-hidden">
                <div className="absolute inset-0 bg-primary/5 opacity-0 group-focus-within:opacity-100 transition-opacity" />
-               <span className="material-symbols-outlined text-slate-400 mr-4 text-2xl relative z-10">search</span>
+               <Icon name="search" />
                <input className="bg-transparent border-none focus:ring-0 w-full text-base placeholder:text-slate-400 font-bold dark:text-white outline-none relative z-10" placeholder="Buscar açaí ou adicional..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
           </div>
@@ -3319,12 +3385,12 @@ function App() {
                     <h3 className="text-2xl font-black tracking-tighter mb-2 group-hover:text-primary transition-colors">{shop.name}</h3>
                     <div className="flex items-center gap-4 text-[10px] uppercase font-black tracking-widest text-white/80">
                       <span className="text-primary flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
-                        <span className="material-symbols-outlined text-[16px] fill-1">star</span>{shop.rating}
+                        <Icon name="star" />{shop.rating}
                       </span>
                       <span className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
-                         <span className="material-symbols-outlined text-[16px]">schedule</span>{shop.time}
+                         <Icon name="schedule" />{shop.time}
                       </span>
-                      {shop.freeDelivery && <span className="bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-[9px] shadow-lg">FRETE GRÁTIS</span>}
+                      {shop.freeDelivery && <span className="bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-[9px] shadow-lg">FRETE GRÃTIS</span>}
                     </div>
                   </div>
                 </div>
@@ -3352,7 +3418,7 @@ function App() {
                         <div className="flex items-center justify-between">
                           <span className="text-2xl font-black text-slate-900 dark:text-white">R$ {p.price.toFixed(2).replace('.', ',')}</span>
                           <div className="size-12 rounded-[20px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xl flex items-center justify-center group-hover:bg-primary group-hover:text-slate-900 transition-all duration-300">
-                            <span className="material-symbols-outlined text-xl font-black">add</span>
+                            <Icon name="add" />
                           </div>
                         </div>
                       </div>
@@ -3366,7 +3432,7 @@ function App() {
                 >
                   <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                   <span className="relative z-10 group-hover:text-slate-900 transition-colors">Ver opções do Açaí</span>
-                  <span className="material-symbols-outlined text-xl font-black group-hover:translate-x-2 transition-transform relative z-10 group-hover:text-slate-900 transition-colors">arrow_forward</span>
+                  <Icon name="arrow_forward" />
                 </button>
               </div>
             </motion.div>
@@ -3395,7 +3461,7 @@ function App() {
           <div className="flex items-center p-6 pb-2 justify-between">
             <div className="flex items-center gap-5">
               <button onClick={() => setSubView('restaurant_list')} className="size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center active:scale-90 transition-all group">
-                <span className="material-symbols-outlined font-black group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div>
                 <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-slate-900 dark:text-white">Culinária Japonesa</h1>
@@ -3403,14 +3469,14 @@ function App() {
               </div>
             </div>
             <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center group active:scale-95 transition-all">
-              <span className="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">shopping_bag</span>
+              <Icon name="shopping_bag" />
               {cart.length > 0 && <span className="absolute -top-1.5 -right-1.5 size-6 bg-primary text-slate-900 text-[10px] font-black rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-xl animate-bounce-subtle">{cart.length}</span>}
             </button>
           </div>
           <div className="px-6 mt-4">
             <div className="flex items-center bg-white dark:bg-slate-800/80 rounded-[28px] px-6 h-16 border border-slate-100 dark:border-white/5 focus-within:border-primary/40 transition-all shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] relative group overflow-hidden">
                <div className="absolute inset-0 bg-primary/5 opacity-0 group-focus-within:opacity-100 transition-opacity" />
-               <span className="material-symbols-outlined text-slate-400 mr-4 text-2xl relative z-10">search</span>
+               <Icon name="search" />
                <input className="bg-transparent border-none focus:ring-0 w-full text-base placeholder:text-slate-400 font-bold dark:text-white outline-none relative z-10" placeholder="Buscar sushi, temaki..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
           </div>
@@ -3433,12 +3499,12 @@ function App() {
                     <h3 className="text-2xl font-black tracking-tighter mb-2 group-hover:text-primary transition-colors">{shop.name}</h3>
                     <div className="flex items-center gap-4 text-[10px] uppercase font-black tracking-widest text-white/80">
                       <span className="text-primary flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
-                        <span className="material-symbols-outlined text-[16px] fill-1">star</span>{shop.rating}
+                        <Icon name="star" />{shop.rating}
                       </span>
                       <span className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
-                         <span className="material-symbols-outlined text-[16px]">schedule</span>{shop.time}
+                         <Icon name="schedule" />{shop.time}
                       </span>
-                      {shop.freeDelivery && <span className="bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-[9px] shadow-lg">FRETE GRÁTIS</span>}
+                      {shop.freeDelivery && <span className="bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-[9px] shadow-lg">FRETE GRÃTIS</span>}
                     </div>
                   </div>
                 </div>
@@ -3466,7 +3532,7 @@ function App() {
                         <div className="flex items-center justify-between">
                           <span className="text-2xl font-black text-slate-900 dark:text-white">R$ {p.price.toFixed(2).replace('.', ',')}</span>
                           <div className="size-12 rounded-[20px] bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xl flex items-center justify-center group-hover:bg-primary group-hover:text-slate-900 transition-all duration-300">
-                            <span className="material-symbols-outlined text-xl font-black">add</span>
+                            <Icon name="add" />
                           </div>
                         </div>
                       </div>
@@ -3480,7 +3546,7 @@ function App() {
                 >
                   <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                   <span className="relative z-10 group-hover:text-slate-900 transition-colors">Ver Combinados Completos</span>
-                  <span className="material-symbols-outlined text-xl font-black group-hover:translate-x-2 transition-transform relative z-10 group-hover:text-slate-900 transition-colors">arrow_forward</span>
+                  <Icon name="arrow_forward" />
                 </button>
               </div>
             </motion.div>
@@ -3526,10 +3592,10 @@ function App() {
               onClick={() => setSubView('none')} 
               className="size-12 rounded-[22px] bg-white/20 backdrop-blur-3xl border border-white/30 flex items-center justify-center text-white active:scale-90 transition-all font-black"
             >
-              <span className="material-symbols-outlined">arrow_back</span>
+              <Icon name="arrow_back" />
             </button>
             <button className="size-12 rounded-[22px] bg-white/20 backdrop-blur-3xl border border-white/30 flex items-center justify-center text-white active:scale-90 transition-all font-black">
-              <span className="material-symbols-outlined">search</span>
+              <Icon name="search" />
             </button>
           </div>
 
@@ -3569,7 +3635,7 @@ function App() {
                   <img src={shop.banner} className="size-full object-cover group-hover:scale-105 transition-transform duration-[2000ms]" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <div className="absolute top-4 right-4 bg-white/95 backdrop-blur px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-xl">
-                     <span className="material-symbols-outlined text-amber-500 text-[16px] fill-1">star</span>
+                     <Icon name="star" />
                      <span className="text-[11px] font-black text-slate-900">{shop.rating}</span>
                   </div>
                 </div>
@@ -3615,7 +3681,7 @@ function App() {
           <div className="flex items-center p-6 pb-2 justify-between">
             <div className="flex items-center gap-5">
               <button onClick={() => setSubView('restaurant_list')} className="size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center active:scale-90 transition-all group font-black">
-                <span className="material-symbols-outlined group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div>
                 <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-slate-900 dark:text-white">Explorar Restaurantes</h1>
@@ -3625,7 +3691,7 @@ function App() {
           </div>
           <div className="px-6 mt-4">
             <div className="flex items-center bg-white dark:bg-slate-800/80 rounded-[28px] px-6 h-16 border border-slate-100 dark:border-white/5 focus-within:border-primary/40 transition-all shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] relative group overflow-hidden">
-               <span className="material-symbols-outlined text-slate-400 mr-4 text-2xl relative z-10">search</span>
+               <Icon name="search" />
                <input className="bg-transparent border-none focus:ring-0 w-full text-base placeholder:text-slate-400 font-bold dark:text-white outline-none relative z-10" placeholder="Buscar por gênero ou nome..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
           </div>
@@ -3645,7 +3711,7 @@ function App() {
                 <img src={shop.banner} className="size-full object-cover group-hover:scale-105 transition-transform duration-[2000ms]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-xl">
-                   <span className="material-symbols-outlined text-primary text-[16px] fill-1">star</span>
+                   <Icon name="star" />
                    <span className="text-[11px] font-black text-slate-900">{shop.rating}</span>
                 </div>
               </div>
@@ -3682,7 +3748,7 @@ function App() {
           <div className="flex items-center p-6 pb-2 justify-between">
             <div className="flex items-center gap-5">
               <button onClick={() => setSubView('restaurant_list')} className="size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center active:scale-90 transition-all group">
-                <span className="material-symbols-outlined font-black group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div>
                 <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-slate-900 dark:text-white">Cardápios do Dia</h1>
@@ -3720,7 +3786,7 @@ function App() {
                        <div className="flex items-center justify-between">
                          <span className="text-xl font-black text-slate-900 dark:text-white">R$ {p.price.toFixed(2).replace('.', ',')}</span>
                          <div className="size-11 rounded-[18px] bg-pink-50 dark:bg-pink-900/20 text-pink-500 flex items-center justify-center group-hover:bg-pink-500 group-hover:text-white transition-all shadow-lg">
-                           <span className="material-symbols-outlined text-xl font-black">add</span>
+                           <Icon name="add" />
                          </div>
                        </div>
                     </div>
@@ -3779,19 +3845,19 @@ function App() {
               onClick={() => setSubView("none")} 
               className="size-12 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center active:scale-90 transition-all group"
             >
-              <span className="material-symbols-outlined font-black text-zinc-400 group-hover:text-white transition-colors">arrow_back</span>
+              <Icon name="arrow_back" />
             </button>
             
             <div className="flex flex-col items-center">
               <div className="flex items-center gap-2 mb-1">
-                <span className="material-symbols-outlined text-yellow-400 text-sm fill-1">bolt</span>
+                <Icon name="bolt" />
                 <span className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.4em]">Ofertas Flash</span>
               </div>
               <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">Exclusivo Membros Izi Black</p>
             </div>
 
             <div className="size-12 rounded-full bg-yellow-400/5 border border-yellow-400/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-yellow-400 font-black animate-pulse">stars</span>
+              <Icon name="stars" />
             </div>
           </div>
 
@@ -3852,7 +3918,7 @@ function App() {
                   
                   <div className="w-full bg-white/[0.03] border border-white/5 py-4 rounded-full group-hover:bg-yellow-400 group-hover:border-yellow-400 transition-all flex items-center justify-center gap-3">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 group-hover:text-black transition-colors">Adicionar ao Carrinho</span>
-                    <span className="material-symbols-outlined text-base text-yellow-400 group-hover:text-black transition-colors">add_circle</span>
+                    <Icon name="add_circle" />
                   </div>
                 </div>
               </div>
@@ -3881,7 +3947,7 @@ function App() {
           <div className="flex items-center p-6 pb-2 justify-between">
             <div className="flex items-center gap-5">
               <button onClick={() => setSubView('restaurant_list')} className="size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center active:scale-90 transition-all group">
-                <span className="material-symbols-outlined font-black group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div>
                 <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-slate-900 dark:text-white">Culinária Brasileira</h1>
@@ -3904,7 +3970,7 @@ function App() {
                     <div>
                       <h3 className="text-xl font-black tracking-tight text-white mb-1">{shop.name}</h3>
                       <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-white/80">
-                         <span className="text-primary flex items-center gap-1.5"><span className="material-symbols-outlined text-[16px] fill-1">star</span>{shop.rating}</span>
+                         <span className="text-primary flex items-center gap-1.5"><Icon name="star" />{shop.rating}</span>
                          <span>•</span>
                          <span>{shop.time}</span>
                       </div>
@@ -3923,7 +3989,7 @@ function App() {
                            <span className="text-lg font-black text-slate-900 dark:text-white">R$ {p.price.toFixed(2).replace('.', ',')}</span>
                         </div>
                         <div className="size-10 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-all">
-                           <span className="material-symbols-outlined font-black">add</span>
+                           <Icon name="add" />
                         </div>
                      </div>
                    ))}
@@ -3947,7 +4013,7 @@ function App() {
                 onClick={() => navigateSubView('pharmacy_list')} 
                 className="size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center active:scale-90 transition-all group"
               >
-                <span className="material-symbols-outlined font-black">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div>
                 <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-slate-900 dark:text-white">Plantão de Saúde</h1>
@@ -3960,7 +4026,7 @@ function App() {
         <main className="p-6 space-y-8 pt-8">
            <div className="bg-slate-900 text-white p-10 rounded-[60px] relative overflow-hidden shadow-2xl mb-4">
               <div className="relative z-10">
-                <span className="material-symbols-outlined text-primary text-5xl mb-4 animate-pulse">medical_services</span>
+                <Icon name="medical_services" />
                 <h2 className="text-4xl font-black tracking-tighter mb-4 leading-none">Cuidado Premium <br />Pela Metade do Preço</h2>
                 <p className="opacity-60 text-sm font-medium max-w-[200px]">Somente nas próximas 12 horas ou enquanto durarem os estoques.</p>
               </div>
@@ -3992,7 +4058,7 @@ function App() {
                     </div>
                   </div>
                   <div className="size-12 rounded-[22px] bg-primary text-slate-900 flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined font-black">add_shopping_cart</span>
+                    <Icon name="add_shopping_cart" />
                   </div>
                 </motion.div>
               ))}
@@ -4020,7 +4086,7 @@ function App() {
           <div className="flex items-center p-6 pb-2 justify-between">
             <div className="flex items-center gap-5">
               <button onClick={() => setSubView('pharmacy_list')} className="size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center active:scale-90 transition-all group">
-                <span className="material-symbols-outlined font-black">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div>
                 <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-slate-900 dark:text-white">Todas as Farmácias</h1>
@@ -4030,7 +4096,7 @@ function App() {
           </div>
           <div className="px-6 mt-4">
             <div className="flex items-center bg-white dark:bg-slate-800/80 rounded-[28px] px-6 h-16 border border-slate-100 dark:border-white/5 focus-within:border-primary/40 transition-all shadow-xl relative group overflow-hidden">
-               <span className="material-symbols-outlined text-slate-400 mr-4 text-2xl relative z-10">search</span>
+               <Icon name="search" />
                <input className="bg-transparent border-none focus:ring-0 w-full text-base placeholder:text-slate-400 font-bold dark:text-white outline-none relative z-10" placeholder="Buscar farmácia..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
           </div>
@@ -4053,7 +4119,7 @@ function App() {
                 <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2 leading-tight truncate group-hover:text-primary transition-colors">{pharm.name}</h3>
                 <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
                   <div className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-primary text-[16px] fill-1">star</span>
+                    <Icon name="star" />
                     <span className="text-slate-900 dark:text-white">{pharm.rating}</span>
                   </div>
                   <span>•</span>
@@ -4063,7 +4129,7 @@ function App() {
                 </div>
               </div>
               <div className="size-12 rounded-[22px] bg-slate-100 dark:bg-slate-800 flex items-center justify-center group-hover:bg-primary transition-colors">
-                <span className="material-symbols-outlined font-black group-hover:text-slate-900 transition-colors">arrow_forward</span>
+                <Icon name="arrow_forward" />
               </div>
             </motion.div>
           ))}
@@ -4125,7 +4191,7 @@ function App() {
                 onClick={() => setSubView('none')} 
                 className="size-11 rounded-2xl bg-white dark:bg-slate-800 shadow-xl border border-white/5 flex items-center justify-center active:scale-90 transition-all"
               >
-                <span className="material-symbols-outlined font-black">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div>
                 <h1 className="text-xl font-black tracking-tight leading-none mb-1">{serviceData.title}</h1>
@@ -4133,13 +4199,13 @@ function App() {
               </div>
             </div>
             <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-12 rounded-2xl bg-white dark:bg-slate-800 shadow-lg border border-white/5 flex items-center justify-center group">
-              <span className="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">shopping_bag</span>
+              <Icon name="shopping_bag" />
               {cart.length > 0 && <span className="absolute -top-1.5 -right-1.5 size-6 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-lg">{cart.length}</span>}
             </button>
           </div>
           <div className="px-5 mt-2">
             <div className="flex items-center bg-slate-100 dark:bg-slate-800/50 rounded-2xl px-5 h-14 border border-transparent focus-within:border-primary/40 transition-all shadow-inner group">
-              <span className="material-symbols-outlined text-slate-400 mr-3 text-2xl">search</span>
+              <Icon name="search" />
               <input 
                 className="bg-transparent border-none focus:ring-0 w-full text-[15px] placeholder:text-slate-400 font-bold dark:text-white outline-none" 
                 placeholder={`Buscar em ${serviceData.title}...`} 
@@ -4177,7 +4243,7 @@ function App() {
                     <div className="h-40 rounded-[35px] overflow-hidden mb-5 relative shadow-inner">
                       <img src={shop.img} className="size-full object-cover group-hover:scale-110 transition-transform duration-700" />
                       <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-2xl flex items-center gap-1.5 shadow-xl">
-                        <span className="material-symbols-outlined text-primary text-sm fill-1">star</span>
+                        <Icon name="star" />
                         <span className="text-[10px] font-black text-slate-900">{shop.rating}</span>
                       </div>
                     </div>
@@ -4226,7 +4292,7 @@ function App() {
                       <div className="flex items-center justify-between">
                         <span className="text-lg font-black text-slate-900 dark:text-white">R$ {p.price.toFixed(2).replace('.', ',')}</span>
                         <div className="size-10 rounded-2xl bg-primary flex items-center justify-center text-slate-900 shadow-xl shadow-primary/20 group-hover:scale-110 transition-transform">
-                          <span className="material-symbols-outlined font-black">add</span>
+                          <Icon name="add" />
                         </div>
                       </div>
                     </div>
@@ -4267,7 +4333,7 @@ function App() {
                 onClick={() => setSubView("none")} 
                 className="size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center active:scale-90 transition-all group"
               >
-                <span className="material-symbols-outlined font-black group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div>
                 <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-slate-900 dark:text-white">Restaurantes</h1>
@@ -4278,7 +4344,7 @@ function App() {
               onClick={() => cart.length > 0 && navigateSubView("cart")} 
               className="relative size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center group active:scale-95 transition-all"
             >
-              <span className="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">shopping_bag</span>
+              <Icon name="shopping_bag" />
               {cart.length > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 size-6 bg-primary text-slate-900 text-[10px] font-black rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-xl animate-bounce-subtle">
                   {cart.length}
@@ -4290,7 +4356,7 @@ function App() {
           <div className="px-6 mt-4">
             <div className="flex items-center bg-white dark:bg-slate-800/80 rounded-[28px] px-6 h-16 border border-slate-100 dark:border-white/5 focus-within:border-primary/40 transition-all shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] relative group overflow-hidden">
                <div className="absolute inset-0 bg-primary/5 opacity-0 group-focus-within:opacity-100 transition-opacity" />
-               <span className="material-symbols-outlined text-slate-400 mr-4 text-2xl relative z-10">search</span>
+               <Icon name="search" />
                <input 
                 className="bg-transparent border-none focus:ring-0 w-full text-base placeholder:text-slate-400 font-bold dark:text-white outline-none relative z-10" 
                 placeholder="Qual sua vontade hoje?" 
@@ -4302,7 +4368,7 @@ function App() {
                   onClick={() => setSearchQuery("")} 
                   className="size-10 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 hover:text-primary transition-all relative z-10"
                 >
-                  <span className="material-symbols-outlined text-lg font-black">close</span>
+                  <Icon name="close" />
                 </button>
                )}
             </div>
@@ -4357,7 +4423,7 @@ function App() {
                           className="bg-white text-slate-900 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl cursor-pointer active:scale-95 transition-all"
                         >
                            <span className="text-sm font-black tracking-widest uppercase">{cpn.coupon_code}</span>
-                           <span className="material-symbols-outlined text-lg">{!!copiedCoupon && copiedCoupon === (cpn.id || cpn.coupon_code) ? 'check' : 'content_copy'}</span>
+                           <Icon name={!!copiedCoupon && copiedCoupon === (cpn.id || cpn.coupon_code) ? 'check' : 'content_copy'} />
                         </div>
                       ) : (
                         <div className="text-white/80 text-[10px] font-bold uppercase tracking-widest bg-black/20 backdrop-blur px-4 py-2 rounded-xl">
@@ -4365,7 +4431,7 @@ function App() {
                         </div>
                       )}
                       <div className="size-12 rounded-full border-2 border-white/30 flex items-center justify-center text-white backdrop-blur-md group-hover:bg-white group-hover:text-slate-900 transition-all">
-                         <span className="material-symbols-outlined text-xl font-black">arrow_forward</span>
+                         <Icon name="arrow_forward" />
                       </div>
                     </div>
                   </motion.div>
@@ -4394,7 +4460,7 @@ function App() {
                   
                   <div className="relative z-10 hidden sm:block">
                     <div className="size-24 rounded-full bg-primary/20 backdrop-blur-3xl flex items-center justify-center border border-primary/30">
-                      <span className="material-symbols-outlined text-primary text-5xl font-black animate-pulse">workspace_premium</span>
+                      <Icon name="workspace_premium" />
                     </div>
                   </div>
                 </motion.div>
@@ -4428,7 +4494,7 @@ function App() {
                   >
                     {/* Glass Decoration */}
                     <div className="absolute -top-1/2 -right-1/2 size-full bg-white/20 rounded-full blur-[40px]" />
-                    <span className="material-symbols-outlined text-white text-[42px] font-black drop-shadow-2xl relative z-10 transform group-hover:scale-110 transition-transform">{cat.icon}</span>
+                    <Icon name={cat.icon} />
                   </div>
                   <span className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest">{cat.name}</span>
                 </motion.div>
@@ -4444,7 +4510,7 @@ function App() {
                 <div className="w-10 h-1.5 bg-primary rounded-full mt-1.5" />
               </div>
               <div className="size-11 rounded-2xl bg-white dark:bg-slate-800 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center text-primary animate-pulse-gentle">
-                <span className="material-symbols-outlined text-xl font-black">trending_up</span>
+                <Icon name="trending_up" />
               </div>
             </div>
 
@@ -4457,7 +4523,7 @@ function App() {
                   className="min-w-[300px] bg-white dark:bg-slate-900 rounded-[50px] p-6 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)] dark:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] border border-slate-100 dark:border-white/5 group cursor-pointer relative overflow-hidden"
                 >
                   <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="material-symbols-outlined text-primary text-[40px] opacity-20">verified</span>
+                    <Icon name="verified" />
                   </div>
 
                   <div className="relative h-44 rounded-[38px] overflow-hidden mb-6 shadow-2xl">
@@ -4477,7 +4543,7 @@ function App() {
                         </div>
                       </div>
                       <div className="bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm">
-                        <span className="material-symbols-outlined text-[14px] text-primary fill-1">star</span>
+                        <Icon name="star" />
                         <span className="text-xs font-black text-primary">{item.rating}</span>
                       </div>
                     </div>
@@ -4485,7 +4551,7 @@ function App() {
                     <div className="flex items-center justify-between pt-4 border-t border-slate-50 dark:border-slate-800/50">
                       <span className="text-xl font-black text-slate-900 dark:text-white">R$ {item.price.toFixed(2).replace('.', ',')}</span>
                       <div className="size-11 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center shadow-2xl group-hover:bg-primary group-hover:text-slate-900 transition-all">
-                        <span className="material-symbols-outlined font-black">add</span>
+                        <Icon name="add" />
                       </div>
                     </div>
                   </div>
@@ -4502,7 +4568,7 @@ function App() {
                 <div className="w-10 h-1.5 bg-primary rounded-full mt-1.5" />
               </div>
               <button className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                Filtrar <span className="material-symbols-outlined text-sm">filter_list</span>
+                Filtrar <Icon name="filter_list" />
               </button>
             </div>
 
@@ -4523,13 +4589,13 @@ function App() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
                     
                     <div className="absolute top-5 right-5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-2 rounded-2xl flex items-center gap-2 shadow-2xl border border-white/20 scale-100 group-hover:scale-110 transition-transform">
-                      <span className="material-symbols-outlined text-[16px] text-primary fill-1">star</span>
+                      <Icon name="star" />
                       <span className="text-[13px] font-black">{shop.rating}</span>
                     </div>
 
                     {shop.freeDelivery && (
                        <div className="absolute bottom-5 left-5 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.1em] px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-2 border border-white/20 translate-y-0 group-hover:-translate-y-2 transition-transform">
-                         <span className="material-symbols-outlined text-[16px] animate-pulse">check_circle</span>
+                         <Icon name="check_circle" />
                          Entrega Grátis
                        </div>
                     )}
@@ -4542,17 +4608,17 @@ function App() {
                       </h4>
                       <div className="flex items-center gap-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
                         <span className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 px-3 py-1.5 rounded-xl">
-                          <span className="material-symbols-outlined text-sm text-primary opacity-60">local_fire_department</span>
+                          <Icon name="local_fire_department" />
                           {shop.tag}
                         </span>
                         <span className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 px-3 py-1.5 rounded-xl">
-                          <span className="material-symbols-outlined text-sm text-primary opacity-60">schedule</span>
+                          <Icon name="schedule" />
                           {shop.time}
                         </span>
                       </div>
                     </div>
                     <div className="size-14 rounded-[22px] bg-slate-50 dark:bg-slate-800/80 group-hover:bg-primary flex items-center justify-center text-slate-400 group-hover:text-slate-900 transition-all duration-500 shadow-inner group-hover:shadow-[0_10px_20px_-5px_rgba(255,193,7,0.5)]">
-                      <span className="material-symbols-outlined text-2xl font-black group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                      <Icon name="arrow_forward" />
                     </div>
                   </div>
                 </motion.div>
@@ -4585,24 +4651,24 @@ function App() {
                 onClick={() => setSubView('none')} 
                 className="size-11 rounded-2xl bg-white dark:bg-slate-800 shadow-xl border border-white/5 flex items-center justify-center active:scale-90 transition-all shrink-0"
               >
-                <span className="material-symbols-outlined font-black">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div className="min-w-0">
                 <h1 className="text-xl font-black tracking-tight leading-none mb-1 truncate">Supermercados</h1>
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[12px]">location_on</span>
+                  <Icon name="location_on" />
                   <span className="truncate">{userLocation.address.split(',')[0]}</span>
                 </p>
               </div>
             </div>
             <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-12 rounded-2xl bg-white dark:bg-slate-800 shadow-lg border border-white/5 flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-2xl">shopping_bag</span>
+              <Icon name="shopping_bag" />
               {cart.length > 0 && <span className="absolute -top-1.5 -right-1.5 size-6 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-lg shrink-0">{cart.length}</span>}
             </button>
           </div>
           <div className="px-5 mt-2">
             <div className="flex items-center bg-slate-100 dark:bg-slate-800/50 rounded-2xl px-5 h-14 border border-transparent focus-within:border-primary/40 transition-all shadow-inner group relative">
-              <span className="material-symbols-outlined text-slate-400 mr-3 text-2xl">search</span>
+              <Icon name="search" />
               <input 
                 className="bg-transparent border-none focus:ring-0 w-full text-[15px] placeholder:text-slate-400 font-bold dark:text-white outline-none" 
                 placeholder="Buscar no mercado..." 
@@ -4631,7 +4697,7 @@ function App() {
                 >
                   <div className="size-20 rounded-[30px] flex items-center justify-center shadow-xl relative overflow-hidden group-hover:scale-105 transition-transform" style={{ background: cat.gradient }}>
                     <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-                    <span className="material-symbols-outlined text-white text-4xl leading-none drop-shadow-lg">{cat.icon}</span>
+                    <Icon name={cat.icon} />
                   </div>
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 group-hover:text-primary transition-colors">{cat.name}</span>
                 </motion.div>
@@ -4683,7 +4749,7 @@ function App() {
                     </div>
                   </div>
                   <div className="size-11 rounded-[18px] bg-primary flex items-center justify-center shadow-xl shadow-primary/20 group-hover:scale-110 transition-transform self-center">
-                    <span className="material-symbols-outlined text-slate-900 font-black">add</span>
+                    <Icon name="add" />
                   </div>
                 </motion.div>
               ))}
@@ -4711,7 +4777,7 @@ function App() {
                   <div className="h-40 rounded-[35px] overflow-hidden mb-5 relative shadow-inner">
                     <img src={market.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={market.name} />
                     <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-2xl flex items-center gap-1.5 shadow-xl">
-                      <span className="material-symbols-outlined text-primary text-[13px] fill-1">star</span>
+                      <Icon name="star" />
                       <span className="text-[11px] font-black text-slate-900">{market.rating}</span>
                     </div>
                     {market.freeDelivery && (
@@ -4739,7 +4805,7 @@ function App() {
       { id: 'cervejas', name: 'Cervejas', icon: 'sports_bar', color: 'bg-amber-500', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)' },
       { id: 'vinhos', name: 'Vinhos', icon: 'wine_bar', color: 'bg-purple-700', gradient: 'linear-gradient(135deg, #7e22ce, #581c87)' },
       { id: 'destilados', name: 'Destilados', icon: 'liquor', color: 'bg-slate-700', gradient: 'linear-gradient(135deg, #334155, #0f172a)' },
-      { id: 'nao_alcoolicos', name: 'Sem Álcool', icon: 'water_drop', color: 'bg-blue-500', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)' },
+      { id: 'nao_alcoolicos', name: 'Sem Ãlcool', icon: 'water_drop', color: 'bg-blue-500', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)' },
     ];
 
     const popularShops = ESTABLISHMENTS.filter(e => e.type === 'beverages');
@@ -4753,7 +4819,7 @@ function App() {
                 onClick={() => setSubView('none')} 
                 className="size-11 rounded-2xl bg-white dark:bg-slate-800 shadow-xl border border-white/5 flex items-center justify-center active:scale-90 transition-all shrink-0"
               >
-                <span className="material-symbols-outlined font-black">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div className="min-w-0">
                 <h1 className="text-xl font-black tracking-tight leading-none mb-1 truncate">Bebidas</h1>
@@ -4761,13 +4827,13 @@ function App() {
               </div>
             </div>
             <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-12 rounded-2xl bg-white dark:bg-slate-800 shadow-lg border border-white/5 flex items-center justify-center shrink-0 group">
-              <span className="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">shopping_bag</span>
+              <Icon name="shopping_bag" />
               {cart.length > 0 && <span className="absolute -top-1.5 -right-1.5 size-6 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-lg shrink-0">{cart.length}</span>}
             </button>
           </div>
           <div className="px-5 mt-2">
             <div className="flex items-center bg-slate-100 dark:bg-slate-800/50 rounded-2xl px-5 h-14 border border-transparent focus-within:border-primary/40 transition-all shadow-inner group relative">
-              <span className="material-symbols-outlined text-slate-400 mr-3 text-2xl">search</span>
+              <Icon name="search" />
               <input 
                 className="bg-transparent border-none focus:ring-0 w-full text-[15px] placeholder:text-slate-400 font-bold dark:text-white outline-none" 
                 placeholder="Qual sua sede hoje? Geladas, vinhos..." 
@@ -4796,7 +4862,7 @@ function App() {
                   style={{ background: cat.gradient }}
                 >
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-                  <span className="material-symbols-outlined text-white text-5xl leading-none drop-shadow-xl">{cat.icon}</span>
+                  <Icon name={cat.icon} />
                   <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/90 text-center">{cat.name}</span>
                 </motion.div>
               ))}
@@ -4871,7 +4937,7 @@ function App() {
                     <h3 className="font-black text-slate-900 dark:text-white leading-tight text-base truncate mb-1.5 group-hover:text-primary transition-colors">{shop.name}</h3>
                     <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
                       <div className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-primary text-[15px] fill-1">star</span>
+                        <Icon name="star" />
                         <span className="text-slate-900 dark:text-white">{shop.rating}</span>
                       </div>
                       <span className="opacity-50">•</span>
@@ -4879,7 +4945,7 @@ function App() {
                     </div>
                   </div>
                   <div className="size-11 rounded-[18px] bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-slate-900 transition-all shadow-inner">
-                    <span className="material-symbols-outlined text-lg font-black">arrow_forward</span>
+                    <Icon name="arrow_forward" />
                   </div>
                 </motion.div>
               ))}
@@ -4900,14 +4966,14 @@ function App() {
             onClick={() => setSubView("beverages_list")}
             className="size-12 rounded-2xl bg-white/5 flex items-center justify-center text-white border border-white/10 active:scale-90 transition-all"
           >
-            <span className="material-symbols-outlined font-black">arrow_back</span>
+            <Icon name="arrow_back" />
           </button>
           <div className="flex-1">
             <h1 className="text-2xl font-black tracking-tighter leading-none mb-1">Ofertas Geladas</h1>
             <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em]">Seleção Premium de Ofertas</p>
           </div>
           <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group active:scale-95 transition-all">
-            <span className="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">shopping_bag</span>
+            <Icon name="shopping_bag" />
             {cart.length > 0 && <span className="absolute -top-1.5 -right-1.5 size-6 bg-primary text-slate-900 text-[10px] font-black rounded-full flex items-center justify-center ring-4 ring-slate-950 shadow-xl">{cart.length}</span>}
           </button>
         </header>
@@ -5032,7 +5098,7 @@ function App() {
                 onClick={() => setSubView('none')} 
                 className="size-11 rounded-2xl bg-white dark:bg-slate-800 shadow-xl border border-white/5 flex items-center justify-center active:scale-90 transition-all shrink-0"
               >
-                <span className="material-symbols-outlined font-black">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div className="min-w-0">
                 <h1 className="text-xl font-black tracking-tight leading-none mb-1 truncate">Farmácias</h1>
@@ -5040,13 +5106,13 @@ function App() {
               </div>
             </div>
             <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-12 rounded-2xl bg-white dark:bg-slate-800 shadow-lg border border-white/5 flex items-center justify-center shrink-0 group">
-              <span className="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">shopping_bag</span>
+              <Icon name="shopping_bag" />
               {cart.length > 0 && <span className="absolute -top-1.5 -right-1.5 size-6 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-lg shrink-0">{cart.length}</span>}
             </button>
           </div>
           <div className="px-5 mt-2">
             <div className="flex items-center bg-slate-100 dark:bg-slate-800/50 rounded-2xl px-5 h-14 border border-transparent focus-within:border-primary/40 transition-all shadow-inner group relative">
-              <span className="material-symbols-outlined text-slate-400 mr-3 text-2xl">search</span>
+              <Icon name="search" />
               <input 
                 className="bg-transparent border-none focus:ring-0 w-full text-[15px] placeholder:text-slate-400 font-bold dark:text-white outline-none" 
                 placeholder="Buscar produtos ou remédios..." 
@@ -5075,7 +5141,7 @@ function App() {
                   style={{ background: cat.gradient }}
                 >
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-                  <span className="material-symbols-outlined text-white text-5xl leading-none drop-shadow-xl">{cat.icon}</span>
+                  <Icon name={cat.icon} />
                   <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/90 text-center">{cat.name}</span>
                 </motion.div>
               ))}
@@ -5133,7 +5199,7 @@ function App() {
                     <h3 className="font-black text-slate-900 dark:text-white leading-tight text-base truncate mb-1.5 group-hover:text-primary transition-colors">{pharm.name}</h3>
                     <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
                       <div className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-primary text-[15px] fill-1">star</span>
+                        <Icon name="star" />
                         <span className="text-slate-900 dark:text-white">{pharm.rating}</span>
                       </div>
                       <span className="opacity-50">•</span>
@@ -5141,7 +5207,7 @@ function App() {
                     </div>
                   </div>
                   <div className="size-11 rounded-[18px] bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-slate-900 transition-all shadow-inner">
-                    <span className="material-symbols-outlined text-lg font-black">arrow_forward</span>
+                    <Icon name="arrow_forward" />
                   </div>
                 </motion.div>
               ))}
@@ -5206,14 +5272,14 @@ function App() {
               onClick={() => navigateSubView("none")} 
               className="flex items-center justify-center size-12 rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-2xl shadow-2xl border border-white/30 active:scale-95 transition-all text-white group"
             >
-              <span className="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">arrow_back_ios_new</span>
+              <Icon name="arrow_back_ios_new" />
             </button>
             <div className="flex gap-3">
               <button className="flex items-center justify-center size-12 rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-2xl shadow-2xl border border-white/30 active:scale-95 transition-all text-white group">
-                <span className="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">search</span>
+                <Icon name="search" />
               </button>
               <button className="flex items-center justify-center size-12 rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-2xl shadow-2xl border border-white/30 active:scale-95 transition-all text-white group">
-                <span className="material-symbols-outlined text-xl group-hover:scale-110 transition-transform text-red-400">favorite</span>
+                <Icon name="favorite" />
               </button>
             </div>
           </div>
@@ -5243,7 +5309,7 @@ function App() {
                 </div>
                 <div className="bg-[#FFF9E6] dark:bg-primary/10 border border-primary/20 rounded-[24px] px-4 py-3 flex flex-col items-center shadow-lg shadow-primary/5">
                   <div className="flex items-center gap-1 mb-0.5">
-                    <span className="material-symbols-outlined text-primary text-[18px] fill-1">star</span>
+                    <Icon name="star" />
                     <span className="text-lg font-black text-slate-900 dark:text-white leading-none">{shop.rating}</span>
                   </div>
                   <span className="text-[9px] font-black uppercase text-primary tracking-widest leading-none">Rating</span>
@@ -5253,7 +5319,7 @@ function App() {
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-3xl group hover:bg-slate-100 transition-colors">
                   <div className="size-10 rounded-2xl bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-xl">schedule</span>
+                    <Icon name="schedule" />
                   </div>
                   <div>
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Tempo</p>
@@ -5262,7 +5328,7 @@ function App() {
                 </div>
                 <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-3xl group hover:bg-slate-100 transition-colors">
                   <div className="size-10 rounded-2xl bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-xl">delivery_dining</span>
+                    <Icon name="delivery_dining" />
                   </div>
                   <div>
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Entrega</p>
@@ -5305,7 +5371,7 @@ function App() {
                 <div>
                   <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter flex items-center gap-2">
                     {category.name}
-                    {idx === 0 && <span className="material-symbols-outlined text-primary fill-1">verified</span>}
+                    {idx === 0 && <Icon name="verified" />}
                   </h2>
                   <div className="w-12 h-1.5 bg-primary rounded-full mt-1.5" />
                 </div>
@@ -5436,14 +5502,14 @@ function App() {
               onClick={() => setSubView("none")} 
               className="flex items-center justify-center size-12 rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-2xl shadow-2xl border border-white/30 active:scale-95 transition-all text-white group"
             >
-              <span className="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">arrow_back_ios_new</span>
+              <Icon name="arrow_back_ios_new" />
             </button>
             <div className="flex gap-3">
               <button className="flex items-center justify-center size-12 rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-2xl shadow-2xl border border-white/30 active:scale-95 transition-all text-white group">
-                <span className="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">search</span>
+                <Icon name="search" />
               </button>
               <button className="flex items-center justify-center size-12 rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-2xl shadow-2xl border border-white/30 active:scale-95 transition-all text-white group">
-                <span className="material-symbols-outlined text-xl group-hover:scale-110 transition-transform text-red-400">favorite</span>
+                <Icon name="favorite" />
               </button>
             </div>
           </div>
@@ -5472,7 +5538,7 @@ function App() {
                 </div>
                 <div className="bg-pink-50 dark:bg-pink-900/10 border border-pink-100 rounded-[24px] px-4 py-3 flex flex-col items-center shadow-lg shadow-pink-500/5">
                   <div className="flex items-center gap-1 mb-0.5">
-                    <span className="material-symbols-outlined text-pink-500 text-[18px] fill-1">star</span>
+                    <Icon name="star" />
                     <span className="text-lg font-black text-slate-900 dark:text-white leading-none">{shop.rating}</span>
                   </div>
                   <span className="text-[9px] font-black uppercase text-pink-500 tracking-widest leading-none">Rating</span>
@@ -5482,7 +5548,7 @@ function App() {
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-3xl group hover:bg-slate-100 transition-colors">
                   <div className="size-10 rounded-2xl bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center text-pink-500 group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-xl">schedule</span>
+                    <Icon name="schedule" />
                   </div>
                   <div>
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Tempo</p>
@@ -5491,7 +5557,7 @@ function App() {
                 </div>
                 <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-3xl group hover:bg-slate-100 transition-colors">
                   <div className="size-10 rounded-2xl bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-xl">delivery_dining</span>
+                    <Icon name="delivery_dining" />
                   </div>
                   <div>
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Entrega</p>
@@ -5581,7 +5647,7 @@ function App() {
                         <span className="text-lg font-black text-slate-900 dark:text-white">
                           R$ {item.price.toFixed(2).replace('.', ',')}
                         </span>
-                        <span className="material-symbols-outlined text-primary text-xl font-black group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        <Icon name="arrow_forward" />
                       </div>
                     </div>
                   </motion.div>
@@ -5643,7 +5709,7 @@ function App() {
             className="size-64 bg-slate-50 dark:bg-white/5 rounded-[60px] flex items-center justify-center mb-8 relative"
           >
             <div className="absolute inset-0 bg-primary/20 blur-[80px] rounded-full animate-pulse" />
-            <span className="material-symbols-outlined text-8xl text-slate-300 dark:text-white/10 relative z-10">shopping_bag</span>
+            <Icon name="shopping_bag" />
           </motion.div>
           <h2 className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white mb-2">Seu carrinho está vazio</h2>
           <p className="text-slate-400 font-bold text-sm max-w-[250px] leading-relaxed mb-10">Que tal explorar as delícias próximas a você e encher sua sacola?</p>
@@ -5669,7 +5735,7 @@ function App() {
             }}
             className="size-12 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 flex items-center justify-center text-slate-900 dark:text-white active:scale-90 transition-all"
           >
-            <span className="material-symbols-outlined font-black">arrow_back</span>
+            <Icon name="arrow_back" />
           </button>
           <div className="text-center flex-1">
             <h1 className="text-xl font-black tracking-tighter dark:text-white">Sua Sacola</h1>
@@ -5679,7 +5745,7 @@ function App() {
             className="size-12 rounded-2xl bg-red-50 dark:bg-red-500/10 text-red-500 border border-red-100 dark:border-red-500/20 flex items-center justify-center active:scale-90 transition-all"
             onClick={async () => { if(await showConfirm({ message: "Esvaziar carrinho?" })) setCart([]); }}
           >
-            <span className="material-symbols-outlined font-black">delete_sweep</span>
+            <Icon name="delete_sweep" />
           </button>
         </header>
 
@@ -5735,14 +5801,14 @@ function App() {
                             onClick={() => handleRemoveFromCart(item.id)}
                             className="size-8 rounded-xl bg-white dark:bg-white/5 text-slate-900 dark:text-white shadow-sm flex items-center justify-center active:scale-90 transition-all"
                            >
-                             <span className="material-symbols-outlined text-sm font-black">remove</span>
+                             <Icon name="remove" />
                            </button>
                            <span className="font-black text-slate-900 dark:text-white text-sm w-4 text-center">{count}</span>
                            <button 
                             onClick={() => handleAddToCart(item)}
                             className="size-8 rounded-xl bg-primary text-slate-900 shadow-lg shadow-primary/20 flex items-center justify-center active:scale-90 transition-all font-black text-sm"
                            >
-                             <span className="material-symbols-outlined text-sm font-black">add</span>
+                             <Icon name="add" />
                            </button>
                         </div>
                       </div>
@@ -5751,7 +5817,7 @@ function App() {
                       onClick={() => handleRemoveFromCart(item.id, true)}
                       className="size-10 rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all flex items-center justify-center"
                     >
-                      <span className="material-symbols-outlined text-xl">delete</span>
+                      <Icon name="delete" />
                     </button>
                   </motion.div>
                 );
@@ -5795,7 +5861,7 @@ function App() {
             
             <div className="flex items-center gap-4 ml-4">
                <div className="size-12 rounded-2xl bg-white/10 dark:bg-black/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-white dark:text-slate-900 font-black">lock</span>
+                  <Icon name="lock" />
                </div>
                <span className="font-black text-white dark:text-slate-900 uppercase tracking-[0.2em] text-sm">Fechar Pedido</span>
             </div>
@@ -5835,7 +5901,7 @@ function App() {
           <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-400/5 blur-[80px] -mr-12 -mt-12" />
           <div className="flex items-center gap-6 relative z-10">
             <div className="size-16 rounded-3xl bg-zinc-900 flex items-center justify-center shrink-0 border border-yellow-400/20 shadow-inner">
-               <span className="material-symbols-outlined text-yellow-500 text-3xl fill-1">stars</span>
+               <Icon name="stars" />
             </div>
             <div>
                <h4 className="text-white font-black text-base italic mb-1 uppercase tracking-tighter">Status: Membro Elite</h4>
@@ -5855,13 +5921,13 @@ function App() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 blur-[100px] -mr-20 -mt-20 group-hover:bg-yellow-400/10 transition-colors" />
           <div className="flex items-center gap-6 relative z-10">
             <div className="size-16 rounded-[28px] bg-yellow-400 flex items-center justify-center shrink-0 shadow-[0_15px_30px_-5px_rgba(255,214,0,0.4)] group-hover:scale-110 transition-transform">
-               <span className="material-symbols-outlined text-black font-black text-3xl">bolt</span>
+               <Icon name="bolt" />
             </div>
             <div className="flex-1">
-               <h4 className="text-white font-black text-lg italic mb-1 uppercase tracking-tighter">Taxa de entrega GRÁTIS?</h4>
+               <h4 className="text-white font-black text-lg italic mb-1 uppercase tracking-tighter">Taxa de entrega GRÃTIS?</h4>
                <p className="text-zinc-500 text-[10px] font-bold leading-relaxed uppercase tracking-widest">Ative o Izi Black agora para zerar o frete e ganhar 5% de cashback neste pedido.</p>
             </div>
-            <span className="material-symbols-outlined text-yellow-400 text-3xl group-hover:translate-x-2 transition-transform">chevron_right</span>
+            <Icon name="chevron_right" />
           </div>
         </motion.div>
       );
@@ -5882,7 +5948,7 @@ function App() {
                 onClick={handleBack}
                 className={`size-12 flex items-center justify-center rounded-2xl transition-all active:scale-95 border ${isIziBlackMembership ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-slate-100/50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-transparent'}`}
               >
-                <span className="material-symbols-outlined font-black">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               
               <div className="flex-1 text-center">
@@ -5896,7 +5962,7 @@ function App() {
 
               {isIziBlackMembership ? (
                 <div className="size-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-yellow-500 fill-1">verified_user</span>
+                  <Icon name="verified_user" />
                 </div>
               ) : (
                 <div className="size-12" />
@@ -6131,7 +6197,7 @@ function App() {
               ) : (
                 <div className="flex items-center gap-4 p-5 border-2 border-dashed border-primary/30 rounded-[24px] bg-primary/5 shadow-sm animate-in zoom-in duration-300">
                   <div className="size-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary">
-                    <span className="material-symbols-outlined font-black">sell</span>
+                    <Icon name="sell" />
                   </div>
                   <div className="flex-1">
                     <p className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">
@@ -6145,7 +6211,7 @@ function App() {
                     onClick={() => setAppliedCoupon(null)}
                     className="size-10 rounded-2xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center active:scale-90 transition-transform group"
                   >
-                    <span className="material-symbols-outlined text-sm font-black text-slate-500 group-hover:text-red-500">close</span>
+                    <Icon name="close" />
                   </button>
                 </div>
               )}
@@ -6217,7 +6283,7 @@ function App() {
                           ••••{activeCard.last4}
                         </span>
                       )}
-                      <span className="material-symbols-outlined font-black">chevron_right</span>
+                      <Icon name="chevron_right" />
                     </>
                   )}
                 </motion.button>
@@ -6283,14 +6349,14 @@ function App() {
                   onClick={() => copyToClipboard(lightningData.payment_request)}
                   className={`size-10 ${isVIP ? 'bg-yellow-400 text-black shadow-yellow-400/20' : 'bg-orange-500 text-white shadow-orange-500/20'} rounded-xl flex items-center justify-center shrink-0 active:scale-90 transition-all shadow-lg`}
                 >
-                  <span className="material-symbols-outlined text-sm font-black">content_copy</span>
+                  <Icon name="content_copy" />
                 </button>
               </div>
             </div>
 
             <div className={`${isVIP ? 'bg-yellow-400/5 border-yellow-400/20' : 'bg-orange-500/5 border-orange-500/20'} border p-6 rounded-[32px] flex items-center gap-5`}>
               <div className={`size-12 rounded-2xl ${isVIP ? 'bg-yellow-400/20 text-yellow-400' : 'bg-orange-500/20 text-orange-500'} flex items-center justify-center`}>
-                <span className="material-symbols-outlined animate-pulse">speed</span>
+                <Icon name="speed" />
               </div>
               <div className="flex-1">
                 <p className={`text-xs font-black ${isVIP ? 'text-yellow-400' : 'text-orange-600 dark:text-orange-400'} uppercase tracking-widest`}>Pagamento Instantâneo</p>
@@ -6376,14 +6442,14 @@ function App() {
                   onClick={copyToClipboard}
                   className={`size-10 ${isVIP ? 'bg-yellow-400 text-black shadow-yellow-400/20' : 'bg-primary text-slate-900 shadow-primary/20'} rounded-xl flex items-center justify-center shrink-0 active:scale-90 transition-all shadow-lg`}
                 >
-                  <span className="material-symbols-outlined text-sm font-black">content_copy</span>
+                  <Icon name="content_copy" />
                 </button>
               </div>
             </div>
 
             <div className={`${isVIP ? 'bg-yellow-400/5 border-yellow-400/20' : 'bg-emerald-500/5 border-emerald-500/20'} border p-6 rounded-[32px] flex items-center gap-5`}>
               <div className={`size-12 rounded-2xl ${isVIP ? 'bg-yellow-400/20 text-yellow-400' : 'bg-emerald-500/20 text-emerald-500'} flex items-center justify-center`}>
-                <span className="material-symbols-outlined animate-pulse">timer</span>
+                <Icon name="timer" />
               </div>
               <div className="flex-1">
                 <p className={`text-xs font-black ${isVIP ? 'text-yellow-400' : 'text-emerald-600 dark:text-emerald-400'} uppercase tracking-widest`}>Pagamento Instantâneo</p>
@@ -6436,10 +6502,10 @@ function App() {
             </div>
             <div className="flex gap-3">
               <button className="size-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-500 border border-slate-100 dark:border-slate-700 active:scale-95 transition-all">
-                <span className="material-symbols-outlined text-2xl">search</span>
+                <Icon name="search" />
               </button>
               <button className="size-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-500 border border-slate-100 dark:border-slate-700 active:scale-95 transition-all relative">
-                <span className="material-symbols-outlined text-2xl">notifications</span>
+                <Icon name="notifications" />
                 <span className="absolute top-3 right-3 size-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-800" />
               </button>
             </div>
@@ -6488,7 +6554,7 @@ function App() {
                   <div className="flex flex-col items-center justify-center py-20 text-center px-10">
                     <div className="size-32 rounded-[50px] bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center mb-8 relative">
                       <div className="absolute inset-0 bg-primary/5 rounded-[50px] animate-pulse" />
-                      <span className="material-symbols-outlined text-5xl text-slate-200 dark:text-slate-700">moped</span>
+                      <Icon name="moped" />
                     </div>
                     <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight mb-3">Tudo pronto por aqui!</h3>
                     <p className="text-xs font-medium text-slate-400 leading-relaxed uppercase tracking-widest opacity-80">Você não tem pedidos ativos no momento.</p>
@@ -6537,11 +6603,11 @@ function App() {
 
                         <div className="bg-slate-50 dark:bg-slate-900/50 rounded-[28px] p-5 border border-slate-100 dark:border-slate-800/80 mb-6">
                           <div className="flex items-center gap-4 mb-4">
-                            <span className="material-symbols-outlined text-primary text-xl">location_on</span>
+                            <Icon name="location_on" />
                             <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 truncate flex-1 uppercase tracking-wider">{order.delivery_address || order.destination_address || "Endereço não informado"}</p>
                           </div>
                           <div className="flex items-center gap-4">
-                            <span className="material-symbols-outlined text-primary text-xl">schedule</span>
+                            <Icon name="schedule" />
                             <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Chega em <span className="text-slate-900 dark:text-white font-black">12-18 min</span></p>
                           </div>
                         </div>
@@ -6559,7 +6625,7 @@ function App() {
                 {scheduledOrders.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 text-center px-10">
                     <div className="size-32 rounded-[50px] bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center mb-8">
-                      <span className="material-symbols-outlined text-5xl text-slate-200 dark:text-slate-700">event</span>
+                      <Icon name="event" />
                     </div>
                     <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight mb-3">Sem agendamentos</h3>
                     <p className="text-xs font-medium text-slate-400 leading-relaxed uppercase tracking-widest">Agende um serviço de mobilidade.</p>
@@ -6581,7 +6647,7 @@ function App() {
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-4">
                           <div className="size-14 rounded-[20px] bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-blue-500 text-2xl">{icons[order.service_type] || 'event'}</span>
+                            <Icon name={icons[order.service_type] || 'event'} />
                           </div>
                           <div>
                             <h3 className="font-black text-slate-900 dark:text-white text-base">{labels[order.service_type] || 'Serviço'}</h3>
@@ -6596,11 +6662,11 @@ function App() {
                         <span className="text-base font-black text-slate-900 dark:text-white">R$ {(order.total_price||0).toFixed(2).replace('.',',')}</span>
                       </div>
                       <div className="bg-blue-50 dark:bg-blue-500/10 rounded-[20px] p-4 space-y-2 mb-4 border border-blue-100 dark:border-blue-500/20">
-                        <div className="flex items-center gap-2"><span className="material-symbols-outlined text-blue-500 text-lg">event</span><p className="text-sm font-black text-slate-900 dark:text-white capitalize">{scheduledAt}</p></div>
-                        <div className="flex items-center gap-2"><span className="material-symbols-outlined text-slate-400 text-lg">location_on</span><p className="text-xs font-bold text-slate-500 truncate">{order.delivery_address}</p></div>
+                        <div className="flex items-center gap-2"><Icon name="event" /><p className="text-sm font-black text-slate-900 dark:text-white capitalize">{scheduledAt}</p></div>
+                        <div className="flex items-center gap-2"><Icon name="location_on" /><p className="text-xs font-bold text-slate-500 truncate">{order.delivery_address}</p></div>
                       </div>
                       <button className="w-full py-4 bg-blue-500 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-[20px] shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2">
-                        <span className="material-symbols-outlined text-lg">manage_search</span>Acompanhar Agendamento
+                        <Icon name="manage_search" />Acompanhar Agendamento
                       </button>
                     </motion.div>
                   );
@@ -6616,7 +6682,7 @@ function App() {
               >
                 {pastOrders.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 text-center">
-                    <span className="material-symbols-outlined text-6xl text-slate-200 dark:text-slate-800 mb-6">history</span>
+                    <Icon name="history" />
                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Nenhum histórico encontrado</p>
                   </div>
                 ) : (
@@ -6680,7 +6746,7 @@ function App() {
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Configurações e Conta</p>
         </div>
         <button className="size-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-          <span className="material-symbols-outlined font-black">settings</span>
+          <Icon name="settings" />
         </button>
       </header>
 
@@ -6701,7 +6767,7 @@ function App() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h2 className="text-2xl font-black tracking-tight">Estevan</h2>
-                <span className="material-symbols-outlined text-primary text-xl fill-1">verified</span>
+                <Icon name="verified" />
               </div>
               <p className="text-xs font-bold text-white/50 tracking-wide mt-1 uppercase tracking-widest">{email}</p>
               <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-primary/20 border border-primary/20 rounded-full">
@@ -6732,13 +6798,13 @@ function App() {
                 className="flex items-center gap-5 bg-white dark:bg-slate-800 p-5 rounded-[32px] shadow-xl shadow-slate-200/30 dark:shadow-black/20 border border-slate-50 dark:border-slate-700/50 cursor-pointer group hover:border-primary/30 transition-all"
               >
                 <div className={`size-14 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center group-hover:bg-primary group-hover:text-slate-900 transition-colors`}>
-                  <span className="material-symbols-outlined text-2xl group-hover:fill-1">{item.icon}</span>
+                  <Icon name={item.icon} />
                 </div>
                 <div className="flex-1">
                   <span className="font-black text-slate-900 dark:text-white block">{item.label}</span>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{item.desc}</span>
                 </div>
-                <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">chevron_right</span>
+                <Icon name="chevron_right" />
               </motion.div>
             ))}
           </div>
@@ -6751,7 +6817,7 @@ function App() {
             }}
             className="w-full mt-10 py-5 bg-red-50 dark:bg-red-900/10 text-red-500 border border-red-100 dark:border-red-900/20 font-black rounded-[28px] shadow-lg shadow-red-500/5 active:scale-95 transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2"
           >
-            <span className="material-symbols-outlined text-lg">logout</span>
+            <Icon name="logout" />
             Encerrar Sessão
           </motion.button>
         </div>
@@ -6807,7 +6873,7 @@ function App() {
           <div className="flex items-center gap-4 flex-1">
             <div className="size-14 bg-white dark:bg-slate-800 rounded-[22px] flex items-center justify-center shadow-2xl shadow-primary/20 border border-white/10 relative overflow-hidden">
               <div className="absolute inset-0 bg-primary/10 animate-pulse" />
-              <span className="material-symbols-outlined text-primary text-3xl fill-1 relative z-10">location_on</span>
+              <Icon name="location_on" />
             </div>
             <div className="flex flex-col text-left">
               <span className="text-[10px] uppercase font-black tracking-[0.3em] text-slate-500 mb-1 opacity-80">Meus Endereços</span>
@@ -6824,7 +6890,7 @@ function App() {
             }}
             className="size-11 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center active:scale-90 transition-all text-slate-900 dark:text-white shadow-xl border border-white/5"
           >
-            <span className="material-symbols-rounded font-black text-2xl">close</span>
+            <Icon name="close" />
           </button>
         </header>
 
@@ -6951,7 +7017,7 @@ function App() {
                       onClick={() => setEditingAddress(null)}
                       className="flex-1 bg-slate-100 dark:bg-slate-900 text-slate-500 font-black py-5 rounded-3xl active:scale-95 transition-all text-sm"
                     >
-                      <span className="material-symbols-rounded">close</span>
+                      <Icon name="close" />
                     </button>
                   </div>
                 </div>
@@ -6966,7 +7032,7 @@ function App() {
                 className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black py-6 rounded-[35px] flex items-center justify-center gap-4 mb-12 shadow-2xl transition-all border-none group"
               >
                 <div className="size-10 rounded-2xl bg-white/20 dark:bg-slate-900/10 flex items-center justify-center group-hover:rotate-90 transition-transform">
-                  <span className="material-symbols-rounded font-black text-2xl">add</span>
+                  <Icon name="add" />
                 </div>
                 <span className="uppercase tracking-[0.2em] text-xs">Adicionar Novo Endereço</span>
               </motion.button>
@@ -6977,7 +7043,7 @@ function App() {
             <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.25em] ml-2 mb-6">Locais Salvos</h3>
             {savedAddresses.length === 0 ? (
               <div className="text-center py-20 opacity-30">
-                <span className="material-symbols-rounded text-6xl block mb-4">location_off</span>
+                <Icon name="location_off" />
                 <p className="text-xs font-black uppercase tracking-widest text-slate-400">Nenhum endereço salvo</p>
               </div>
             ) : (
@@ -7011,7 +7077,7 @@ function App() {
                         onClick={async (e) => { e.stopPropagation(); setEditingAddress(addr); }}
                         className="size-12 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 border border-transparent"
                       >
-                        <span className="material-symbols-rounded text-2xl">edit_square</span>
+                        <Icon name="edit_square" />
                       </button>
                       <button
                         onClick={async (e) => { 
@@ -7027,7 +7093,7 @@ function App() {
                         }}
                         className="size-12 rounded-2xl bg-red-50 dark:bg-red-900/10 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all active:scale-90"
                       >
-                        <span className="material-symbols-rounded text-2xl">delete</span>
+                        <Icon name="delete" />
                       </button>
                     </div>
                   </div>
@@ -7171,7 +7237,7 @@ function App() {
               }}
               className="size-11 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-lg border border-slate-50 dark:border-slate-700 active:scale-90 transition-all"
             >
-              <span className="material-symbols-rounded text-2xl">arrow_back</span>
+              <Icon name="arrow_back" />
             </button>
             <div>
               <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter">Pagamentos</h2>
@@ -7181,7 +7247,7 @@ function App() {
             </div>
           </div>
           <div className="size-11 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary font-black">verified_user</span>
+            <Icon name="verified_user" />
           </div>
         </header>
 
@@ -7222,7 +7288,7 @@ function App() {
             >
               <div className="flex items-center gap-5">
                 <div className={`size-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 ${paymentMethod === "saldo" ? "bg-primary text-slate-900" : "bg-primary/20 text-primary"}`}>
-                  <span className="material-symbols-rounded text-3xl font-black">account_balance_wallet</span>
+                  <Icon name="account_balance_wallet" />
                 </div>
                 <div>
                   <h4 className="text-white font-black tracking-tight leading-none mb-1">Saldo em Carteira</h4>
@@ -7255,7 +7321,7 @@ function App() {
               </div>
             ) : savedCards.length === 0 ? (
               <div className="bg-white dark:bg-slate-800 rounded-[35px] p-8 text-center border border-dashed border-slate-200 dark:border-slate-700">
-                <span className="material-symbols-outlined text-4xl text-slate-300 mb-3 block">credit_card_off</span>
+                <Icon name="credit_card_off" />
                 <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhum cartão salvo</p>
                 <p className="text-xs text-slate-400 mt-2">Adicione um cartão para pagar com facilidade</p>
               </div>
@@ -7278,7 +7344,7 @@ function App() {
                     {/* Top Bar */}
                     <div className="flex justify-between items-start mb-10 relative z-10">
                       <div className="size-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20">
-                        <span className="material-symbols-rounded text-3xl opacity-80">credit_card</span>
+                        <Icon name="credit_card" />
                       </div>
                       <div className="text-right">
                         <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-50 block mb-1">Bandeira</span>
@@ -7315,14 +7381,14 @@ function App() {
                           onClick={(e) => { e.stopPropagation(); handleDeleteCard(card.id); }}
                           className="size-10 bg-red-500/20 backdrop-blur-md border border-red-500/20 text-red-100 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
                         >
-                          <span className="material-symbols-rounded text-xl">delete</span>
+                          <Icon name="delete" />
                         </button>
                       </div>
                     </div>
 
                     {card.active && (
                       <div className="absolute top-6 right-20 bg-primary/95 text-slate-900 text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-xl flex items-center gap-1">
-                        <span className="material-symbols-rounded text-[12px]">check</span>
+                        <Icon name="check" />
                         Selecionado
                       </div>
                     )}
@@ -7341,7 +7407,7 @@ function App() {
                 onClick={() => setPaymentMethod("pix")}
               >
                 <div className={`size-14 rounded-2xl flex items-center justify-center transition-colors ${paymentMethod === "pix" ? "bg-emerald-500 text-white" : "bg-emerald-50 dark:bg-emerald-900/10 text-emerald-500"}`}>
-                  <span className="material-symbols-rounded text-3xl font-black">qr_code_2</span>
+                  <Icon name="qr_code_2" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-black text-slate-900 dark:text-white leading-tight">PIX Instantâneo</h4>
@@ -7350,7 +7416,7 @@ function App() {
                   </p>
                 </div>
                 {paymentMethod === "pix"
-                  ? <span className="material-symbols-rounded text-emerald-500">check_circle</span>
+                  ? <Icon name="check_circle" />
                   : <span className="text-[10px] font-black text-primary uppercase tracking-widest">Selecionar</span>
                 }
               </div>
@@ -7362,7 +7428,7 @@ function App() {
                 onClick={() => setPaymentMethod("bitcoin_lightning")}
               >
                 <div className={`size-14 rounded-2xl flex items-center justify-center transition-colors ${paymentMethod === "bitcoin_lightning" ? "bg-orange-500 text-white" : "bg-orange-50 dark:bg-orange-900/10 text-orange-500"}`}>
-                  <span className="material-symbols-rounded text-3xl font-black">bolt</span>
+                  <Icon name="bolt" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-black text-slate-900 dark:text-white leading-tight">Bitcoin Lightning</h4>
@@ -7371,7 +7437,7 @@ function App() {
                   </p>
                 </div>
                 {paymentMethod === "bitcoin_lightning"
-                  ? <span className="material-symbols-rounded text-orange-500">check_circle</span>
+                  ? <Icon name="check_circle" />
                   : <span className="text-[10px] font-black text-primary uppercase tracking-widest">Selecionar</span>
                 }
               </div>
@@ -7383,7 +7449,7 @@ function App() {
                 onClick={() => setPaymentMethod("dinheiro")}
               >
                 <div className={`size-14 rounded-2xl flex items-center justify-center transition-colors ${paymentMethod === "dinheiro" ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900" : "bg-slate-50 dark:bg-slate-900 text-slate-400"}`}>
-                  <span className="material-symbols-rounded text-3xl font-black">payments</span>
+                  <Icon name="payments" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-black text-slate-900 dark:text-white leading-tight">Pagamento em Dinheiro</h4>
@@ -7391,14 +7457,14 @@ function App() {
                     {paymentMethod === "dinheiro" ? "Selecionado" : "Pague na entrega"}
                   </p>
                 </div>
-                {paymentMethod === "dinheiro" && <span className="material-symbols-rounded text-slate-900 dark:text-white">check_circle</span>}
+                {paymentMethod === "dinheiro" && <Icon name="check_circle" />}
               </div>
             </div>
           </section>
 
           {/* SECURITY */}
           <div className="bg-primary/5 border border-primary/20 border-dashed p-6 rounded-[35px] flex flex-col items-center text-center gap-2">
-            <span className="material-symbols-rounded text-3xl text-primary animate-pulse">shield_with_heart</span>
+            <Icon name="shield_with_heart" />
             <p className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest">Dados Criptografados</p>
             <p className="text-[9px] text-slate-400 font-bold leading-relaxed px-4 opacity-70">Sua segurança é nossa prioridade. Nunca armazenamos o CVV.</p>
           </div>
@@ -7412,7 +7478,7 @@ function App() {
               onClick={handleConfirmAndReturn}
               className="w-full bg-primary text-slate-900 font-black py-5 rounded-[24px] shadow-2xl shadow-primary/30 flex items-center justify-center gap-3 uppercase tracking-widest text-sm"
             >
-              <span className="material-symbols-rounded font-black">check_circle</span>
+              <Icon name="check_circle" />
               Confirmar Pagamento
               {paymentMethod === "cartao" && activeCard && (
                 <span className="bg-slate-900/20 text-slate-900 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
@@ -7465,7 +7531,7 @@ function App() {
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Tokenizado com segurança via Stripe</p>
                   </div>
                   <button onClick={() => setIsAddingCard(false)} className="size-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                    <span className="material-symbols-rounded text-slate-500">close</span>
+                    <Icon name="close" />
                   </button>
                 </div>
                 <Elements stripe={stripePromise}>
@@ -7506,7 +7572,7 @@ function App() {
     <div className="absolute inset-0 z-40 bg-[#f8f9fc] dark:bg-slate-900 flex flex-col hide-scrollbar overflow-y-auto">
       <header className="px-6 py-8 sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center justify-between gap-4 rounded-b-[40px] shadow-sm">
         <button onClick={() => setSubView("none")} className="flex items-center justify-center size-10 bg-white dark:bg-slate-800 rounded-full shadow-sm active:scale-95 transition-all text-slate-900 dark:text-white border border-slate-100 dark:border-slate-700">
-          <span className="material-symbols-rounded text-xl">arrow_back</span>
+          <Icon name="arrow_back" />
         </button>
         <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter flex-1 pr-10 text-center">Carteira Digital</h2>
       </header>
@@ -7523,17 +7589,17 @@ function App() {
                 <h3 className="text-5xl font-black tracking-tighter">R$ {walletBalance.toFixed(2).replace(".", ",")}</h3>
               </div>
               <div className="size-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10">
-                <span className="material-symbols-rounded text-primary text-3xl font-black">token</span>
+                <Icon name="token" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowDepositModal(true)}
                 className="bg-primary text-slate-900 font-extrabold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
-                <span className="material-symbols-rounded font-black">add_circle</span> Adicionar
+                <Icon name="add_circle" /> Adicionar
               </motion.button>
               <motion.button whileTap={{ scale: 0.95 }} onClick={() => toastWarning("Transferência entre contas estará disponível em breve!")}
                 className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all">
-                <span className="material-symbols-rounded">move_up</span> Transferir
+                <Icon name="move_up" /> Transferir
               </motion.button>
             </div>
           </div>
@@ -7593,14 +7659,14 @@ function App() {
         <div className="mt-12">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-3">
-              <span className="material-symbols-rounded text-primary">history</span>
+              <Icon name="history" />
               Movimentações
             </h3>
           </div>
 
           {walletTransactions.length === 0 ? (
             <div className="text-center py-16">
-              <span className="material-symbols-rounded text-5xl text-slate-300 mb-4 block">receipt_long</span>
+              <Icon name="receipt_long" />
               <p className="text-sm font-black text-slate-400">Nenhuma movimentação ainda</p>
               <p className="text-xs text-slate-400 mt-1">Adicione saldo para começar</p>
             </div>
@@ -7613,7 +7679,7 @@ function App() {
                   <motion.div key={t.id || i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                     className="bg-white dark:bg-slate-800 p-5 rounded-[32px] shadow-sm border border-slate-50 dark:border-slate-800/50 flex items-center gap-4">
                     <div className={`size-12 rounded-2xl flex items-center justify-center ${isCredit ? "bg-emerald-50 dark:bg-emerald-900/10 text-emerald-500" : "bg-slate-50 dark:bg-slate-900 text-slate-400"}`}>
-                      <span className="material-symbols-rounded text-xl">{icon}</span>
+                      <Icon name={icon} />
                     </div>
                     <div className="flex-1">
                       <p className="font-black text-slate-900 dark:text-white text-sm">{t.description || (t.type === "deposito" ? "Depósito" : t.type === "reembolso" ? "Reembolso" : "Pagamento")}</p>
@@ -7684,7 +7750,7 @@ function App() {
     const isTransit = selectedItem.service_type === 'mototaxi' || selectedItem.service_type === 'carro' || selectedItem.service_type === 'van' || selectedItem.service_type === 'utilitario';
 
     const getStatusText = () => {
-      if (currentStep === 4) return "CONCLUÍDO!";
+      if (currentStep === 4) return "CONCLUÃDO!";
       if (currentStep === 3) return "A CAMINHO!";
       if (isTransit) {
         if (currentStep === 0) return "SOLICITADO...";
@@ -7722,7 +7788,7 @@ function App() {
 
           <header className="relative z-50 p-8 flex items-center justify-between">
             <button onClick={() => setSubView("none")} className="size-14 rounded-3xl bg-white/5 backdrop-blur-3xl flex items-center justify-center text-white border border-white/10 active:scale-90 transition-all">
-              <span className="material-symbols-outlined font-black text-2xl">close</span>
+              <Icon name="close" />
             </button>
             <div className="bg-white/5 backdrop-blur-3xl px-6 py-3 rounded-full border border-white/10 flex items-center gap-3">
                <div className="size-2 bg-yellow-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(255,184,0,0.5)]" />
@@ -7734,7 +7800,7 @@ function App() {
              <div className="relative mb-20">
                 <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className="absolute inset-[-40px] border border-white/5 rounded-full" />
                 <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="size-48 rounded-[55px] bg-zinc-900 flex items-center justify-center border border-yellow-400/20 shadow-[0_50px_100px_-20px_rgba(255,184,0,0.15)]">
-                   <span className="material-symbols-outlined text-7xl text-yellow-400 fill-1">verified_user</span>
+                   <Icon name="verified_user" />
                 </motion.div>
                 <div className="absolute -inset-4 border-2 border-yellow-400/10 rounded-[60px]" />
              </div>
@@ -7757,7 +7823,7 @@ function App() {
                 ].map((step, i) => (
                   <div key={i} className={`flex items-center gap-6 p-6 bg-zinc-900/40 border border-white/5 rounded-[35px] backdrop-blur-sm ${!step.active ? 'grayscale opacity-40' : ''}`}>
                      <div className={`size-14 rounded-2xl flex items-center justify-center ${step.active ? 'bg-yellow-400/10 text-yellow-400' : 'bg-zinc-800 text-zinc-600'}`}>
-                        <span className="material-symbols-outlined font-black">{step.icon}</span>
+                        <Icon name={step.icon} />
                      </div>
                      <div className="flex-1">
                         <p className="text-white font-black text-sm italic uppercase tracking-wider">{step.label}</p>
@@ -7787,7 +7853,7 @@ function App() {
              className="bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-2xl flex items-center gap-4"
            >
               <div className="size-10 bg-primary/20 rounded-xl flex items-center justify-center">
-                 <span className="material-symbols-outlined text-primary text-xl">speed</span>
+                 <Icon name="speed" />
               </div>
               <div>
                  <p className="text-[8px] font-black text-white/40 uppercase tracking-widest">Velocidade Atual</p>
@@ -7801,7 +7867,7 @@ function App() {
              className="bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-2xl flex items-center gap-4"
            >
               <div className="size-10 bg-primary/20 rounded-xl flex items-center justify-center">
-                 <span className="material-symbols-outlined text-primary text-xl">timer</span>
+                 <Icon name="timer" />
               </div>
               <div>
                  <p className="text-[8px] font-black text-white/40 uppercase tracking-widest">Tempo Estimado</p>
@@ -7819,7 +7885,7 @@ function App() {
              className="size-14 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-2xl flex items-center justify-center border-4 border-slate-950/20 cursor-pointer"
              onClick={() => setSubView("order_chat")}
            >
-              <span className="material-symbols-outlined font-black text-2xl">chat</span>
+              <Icon name="chat" />
            </motion.div>
         </div>
 
@@ -7830,7 +7896,7 @@ function App() {
              className="size-14 rounded-2xl bg-primary text-slate-900 shadow-2xl shadow-primary/30 flex items-center justify-center border-4 border-slate-950/20 active:scale-90 transition-all cursor-pointer"
              onClick={() => setIsAIOpen(true)}
            >
-              <span className="material-symbols-outlined font-black text-2xl fill-1">smart_toy</span>
+              <Icon name="smart_toy" />
            </motion.div>
         </div>
 
@@ -7876,7 +7942,7 @@ function App() {
             </GoogleMap>
           ) : (
             <div className="w-full h-full bg-slate-100 dark:bg-slate-800 animate-pulse flex items-center justify-center">
-              <span className="material-symbols-outlined text-slate-400 text-5xl">location_searching</span>
+              <Icon name="location_searching" />
             </div>
           )}
           {/* Top Gradient Overlay */}
@@ -7889,7 +7955,7 @@ function App() {
             onClick={() => setSubView("none")}
             className="size-14 rounded-3xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-2xl flex items-center justify-center text-slate-900 dark:text-white border border-white/20 active:scale-90 transition-all"
           >
-            <span className="material-symbols-outlined font-black text-2xl">arrow_back</span>
+            <Icon name="arrow_back" />
           </button>
 
           <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl px-6 py-3 rounded-full shadow-2xl border border-white/20 flex items-center gap-3">
@@ -7901,7 +7967,7 @@ function App() {
             onClick={() => setSubView('order_support')}
             className="size-14 rounded-3xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-2xl flex items-center justify-center text-slate-900 dark:text-white border border-white/20 active:scale-90 transition-all"
           >
-            <span className="material-symbols-outlined font-black text-2xl">support_agent</span>
+            <Icon name="support_agent" />
           </button>
         </header>
 
@@ -7952,7 +8018,7 @@ function App() {
                 </h3>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center text-primary bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/5">
-                    <span className="material-symbols-outlined text-xs fill-1">star</span>
+                    <Icon name="star" />
                     <span className="text-[10px] font-black ml-1">4.9</span>
                   </div>
                   <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest truncate">
@@ -7965,13 +8031,13 @@ function App() {
                   onClick={() => window.location.href = `https://wa.me/${phone.replace(/\D/g, '')}`}
                   className="size-14 rounded-2xl bg-primary text-slate-900 flex items-center justify-center shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
                 >
-                  <span className="material-symbols-outlined font-black text-2xl">chat</span>
+                  <Icon name="chat" />
                 </button>
                 <button
                   onClick={() => window.location.href = `tel:${phone.replace(/\D/g, '')}`}
                   className="size-14 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-white shadow-xl hover:scale-105 active:scale-95 transition-all"
                 >
-                  <span className="material-symbols-outlined font-black text-2xl">call</span>
+                  <Icon name="call" />
                 </button>
               </div>
             </div>
@@ -7990,7 +8056,7 @@ function App() {
                     transition={{ delay: i * 0.1 }}
                     className={`size-11 rounded-2xl flex items-center justify-center relative z-10 transition-all duration-700 shadow-2xl ${currentStep >= item.step ? 'bg-primary text-slate-900 border-none' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border border-transparent'}`}
                   >
-                    <span className="material-symbols-outlined text-lg font-black">{currentStep > item.step ? 'check' : item.icon}</span>
+                    <Icon name={currentStep > item.step ? 'check' : item.icon} />
                   </motion.div>
                   <div className="flex-1 pt-1.5">
                     <p className={`text-sm font-black tracking-tight transition-colors duration-700 ${currentStep >= item.step ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
@@ -8041,7 +8107,7 @@ function App() {
               <div className="p-7 bg-slate-50 dark:bg-slate-800/30 rounded-[40px] border border-slate-100 dark:border-slate-800 group hover:border-primary/20 transition-all">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-primary text-xl">location_on</span>
+                    <Icon name="location_on" />
                   </div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Endereço de Entrega</p>
                 </div>
@@ -8052,7 +8118,7 @@ function App() {
               <div className="p-7 bg-slate-50 dark:bg-slate-800/30 rounded-[40px] border border-slate-100 dark:border-slate-800 group hover:border-primary/20 transition-all">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-primary text-xl">payments</span>
+                    <Icon name="payments" />
                   </div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Forma de Pagamento</p>
                 </div>
@@ -8072,7 +8138,7 @@ function App() {
                   onClick={() => handleCancelOrder(selectedItem.id)}
                   className="w-full py-6 rounded-[35px] border-2 border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-500 font-black uppercase text-[11px] tracking-[0.25em] transition-all active:scale-[0.98] flex items-center justify-center gap-3 group"
                 >
-                  <span className="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">cancel</span>
+                  <Icon name="cancel" />
                   Cancelar Pedido
                 </button>
                 <p className="text-[9px] text-slate-400 font-bold uppercase text-center mt-4 tracking-widest opacity-60">
@@ -8139,7 +8205,7 @@ function App() {
           <div className="flex flex-col gap-4 mt-10 relative z-10">
             <button 
               onClick={() => {
-                showToast("Obrigado pela sua avaliação! 🌟", "success");
+                showToast("Obrigado pela sua avaliação! ðŸŒŸ", "success");
                 setUserXP(prev => prev + 50);
                 setSubView("none");
                 setRating(0);
@@ -8192,7 +8258,7 @@ function App() {
                 onClick={() => setSubView("active_order")}
                 className="size-11 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-900 dark:text-white border border-slate-100 dark:border-slate-700 active:scale-90 transition-all"
               >
-                <span className="material-symbols-outlined font-black">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div>
                  <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-1">Chat Izi</h2>
@@ -8210,7 +8276,7 @@ function App() {
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#f8f9fc] dark:bg-slate-950/20">
            {chatMessages.length === 0 && (
              <div className="flex flex-col items-center justify-center h-full opacity-20 text-center px-10">
-                <span className="material-symbols-outlined text-6xl mb-4">chat_bubble</span>
+                <Icon name="chat_bubble" />
                 <p className="text-xs font-black uppercase tracking-[0.3em]">Nenhuma mensagem ainda.<br/>Inicie a conversa!</p>
              </div>
            )}
@@ -8249,7 +8315,7 @@ function App() {
                 onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
               />
               <button className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300">
-                <span className="material-symbols-outlined">mood</span>
+                <Icon name="mood" />
               </button>
            </div>
            <button 
@@ -8257,7 +8323,7 @@ function App() {
              disabled={!chatInput.trim()}
              className="size-14 rounded-2xl bg-primary text-slate-900 flex items-center justify-center shadow-xl shadow-primary/20 active:scale-90 transition-all disabled:opacity-50"
            >
-             <span className="material-symbols-outlined font-black">send</span>
+             <Icon name="send" />
            </button>
         </footer>
       </div>
@@ -8272,7 +8338,7 @@ function App() {
             onClick={() => setSubView("none")}
             className="size-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-900 dark:text-white border border-slate-100 dark:border-slate-700 active:scale-90 transition-all"
           >
-            <span className="material-symbols-outlined font-black">arrow_back</span>
+            <Icon name="arrow_back" />
           </button>
           <div>
             <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-1">Central de Ajuda</h1>
@@ -8284,7 +8350,7 @@ function App() {
            <div className="bg-primary/5 rounded-[40px] p-8 border border-primary/20 text-center relative overflow-hidden group">
               <div className="absolute -right-10 -top-10 size-32 bg-primary/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000" />
               <div className="size-20 rounded-[30px] bg-primary flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/30">
-                 <span className="material-symbols-outlined text-4xl text-slate-900 font-black">support_agent</span>
+                 <Icon name="support_agent" />
               </div>
               <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">Estamos aqui para ajudar!</h2>
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed max-w-[200px] mx-auto opacity-80 uppercase tracking-widest leading-loose">Atendimento 24/7 disponível para sua melhor experiência.</p>
@@ -8304,7 +8370,7 @@ function App() {
                   className={`p-6 rounded-[32px] border transition-all cursor-pointer group flex items-center gap-5 ${item.premium ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white dark:bg-slate-800 border-slate-50 dark:border-slate-700 hover:border-primary/30 shadow-xl shadow-slate-200/20 dark:shadow-black/20'}`}
                 >
                   <div className={`size-14 rounded-2xl flex items-center justify-center ${item.premium ? 'bg-primary text-slate-900' : 'bg-slate-50 dark:bg-slate-900 text-slate-400 group-hover:text-primary transition-colors'}`}>
-                    <span className="material-symbols-outlined text-2xl font-black">{item.icon}</span>
+                    <Icon name={item.icon} />
                   </div>
                   <div className="flex-1">
                     <p className={`font-black text-[15px] tracking-tight ${item.premium ? 'text-white' : 'text-slate-900 dark:text-white'}`}>{item.label}</p>
@@ -8346,83 +8412,92 @@ function App() {
     ];
 
     return (
-      <div className="absolute inset-0 z-[190] bg-slate-950 flex flex-col hide-scrollbar overflow-y-auto pb-32">
-        <header className="p-8 pt-12 flex items-center justify-between sticky top-0 bg-slate-950/90 backdrop-blur-2xl z-30">
-           <div className="flex items-center gap-4">
+      <div className="absolute inset-0 z-[190] bg-[#020617] flex flex-col hide-scrollbar overflow-y-auto pb-32">
+        <header className="p-8 pt-12 flex items-center justify-between sticky top-0 bg-[#020617]/80 backdrop-blur-3xl z-30 border-b border-white/5">
+           <div className="flex items-center gap-5">
               <button 
                 onClick={() => setSubView("none")}
-                className="size-11 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 active:scale-90 transition-all border border-white/10"
+                className="size-12 rounded-[20px] bg-white/5 flex items-center justify-center text-white/40 active:scale-90 transition-all border border-white/10 shadow-2xl"
               >
-                <span className="material-symbols-outlined font-black">arrow_back</span>
+                <Icon name="arrow_back" size={24} />
               </button>
               <div>
-                 <h2 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">Quests & Social</h2>
-                 <p className="text-[9px] text-primary font-black uppercase tracking-[0.3em]">Status de Batalha</p>
+                 <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">Izi <span className="text-primary">Ops</span></h2>
+                 <p className="text-[9px] text-primary/50 font-black uppercase tracking-[0.4em]">Status de Batalha</p>
               </div>
            </div>
         </header>
 
-        <main className="px-8 space-y-12 pb-10">
+        <main className="px-8 space-y-16 pb-10 mt-6">
            {/* Level Progress Hero */}
-           <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-8 rounded-[45px] border border-white/10 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-8 opacity-10">
-                 <span className="material-symbols-outlined text-8xl text-primary animate-pulse">military_tech</span>
+           <div className="bg-gradient-to-br from-slate-900 to-black p-10 rounded-[50px] border border-white/10 relative overflow-hidden shadow-2xl">
+              <div className="absolute top-0 right-0 p-10 opacity-5">
+                 <Icon name="military_tech" size={120} />
               </div>
               <div className="relative z-10">
-                 <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-4">Temporada 1: Izi Origins</p>
-                 <h3 className="text-3xl font-black text-white italic tracking-tighter mb-6">BATTLE PASS</h3>
+                 <div className="flex items-center gap-3 mb-6">
+                    <div className="px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black text-primary uppercase tracking-widest">Temporada 1</div>
+                    <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-black text-white/40 uppercase tracking-widest">Izi Origins</div>
+                 </div>
+                 <h3 className="text-4xl font-black text-white italic tracking-tighter mb-10">BATTLE <span className="text-primary">PASS</span></h3>
                  
-                 <div className="space-y-3">
+                 <div className="space-y-4">
                     <div className="flex justify-between items-end">
-                       <span className="text-[10px] font-black text-white/40 uppercase">Progresso do Passe</span>
-                       <span className="text-xs font-black text-white italic">LVL {userLevel} <span className="text-primary opacity-50">/ 50</span></span>
+                       <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Sincronização do Passe</span>
+                       <span className="text-sm font-black text-white italic">LVL {userLevel} <span className="text-primary/40 not-italic ml-1">/ 50</span></span>
                     </div>
-                    <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
                        <motion.div 
                          initial={{ width: 0 }}
                          animate={{ width: `${(userLevel / 50) * 100}%` }}
-                         className="h-full bg-primary shadow-[0_0_15px_rgba(255,217,0,0.4)]"
+                         className="h-full bg-gradient-to-r from-primary to-yellow-600 rounded-full shadow-[0_0_20px_rgba(255,217,0,0.3)]"
                        />
                     </div>
                  </div>
               </div>
            </div>
 
-           {/* Tabs: Quests / Ranking */}
-           <div className="space-y-8">
-              <div className="flex items-center justify-between">
-                 <h3 className="text-[11px] font-black text-white/20 uppercase tracking-[0.4em] italic">Quests Diárias</h3>
-                 <span className="text-[9px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest">Reseta em 14h</span>
+           {/* Quests */}
+           <div className="space-y-10">
+              <div className="flex items-center justify-between px-2">
+                 <h3 className="text-[12px] font-black text-white uppercase tracking-[0.4em] italic leading-none">Quests Diárias</h3>
+                 <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/5">
+                    <div className="size-1.5 bg-primary rounded-full animate-pulse" />
+                    <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Refresh em 14h</span>
+                 </div>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-6">
                  {quests.map((q, i) => (
                     <motion.div 
                       key={q.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: i * 0.1 }}
-                      className="p-6 bg-white/5 rounded-[35px] border border-white/5 flex items-center gap-6 group hover:bg-white/[0.08] transition-all"
+                      className="p-8 bg-white/5 rounded-[40px] border border-white/5 flex items-center gap-8 group hover:bg-white/[0.08] transition-all shadow-lg"
                     >
-                       <div className="size-16 rounded-2xl bg-white/5 flex items-center justify-center text-primary group-hover:scale-110 transition-transform relative overflow-hidden shadow-xl" style={{ color: q.color }}>
+                       <div className="size-20 rounded-[28px] bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-all duration-500 relative overflow-hidden shadow-2xl">
                           <div className="absolute inset-0 opacity-10" style={{ backgroundColor: q.color }} />
-                          <span className="material-symbols-outlined text-3xl font-black relative z-10">{q.icon}</span>
+                          <Icon name={q.icon} size={32} className="relative z-10" />
                        </div>
                        <div className="flex-1">
-                          <h4 className="text-sm font-black text-white uppercase tracking-tight">{q.title}</h4>
-                          <p className="text-[10px] font-medium text-white/30 uppercase tracking-widest mt-1 mb-3">{q.desc}</p>
-                          <div className="flex items-center gap-4">
+                          <h4 className="text-base font-black text-white uppercase tracking-tight mb-2">{q.title}</h4>
+                          <p className="text-[11px] font-bold text-white/30 tracking-tight uppercase mb-5 leading-snug">{q.desc}</p>
+                          <div className="flex items-center gap-5">
                              <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full transition-all duration-1000" 
-                                  style={{ width: `${(q.progress / q.total) * 100}%`, backgroundColor: q.color }} 
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${(q.progress / q.total) * 100}%` }}
+                                  className="h-full transition-all duration-1000 shadow-lg" 
+                                  style={{ backgroundColor: q.color }} 
                                 />
                              </div>
-                             <span className="text-[10px] font-black text-white/40 tabular-nums">{q.progress}/{q.total}</span>
+                             <span className="text-[11px] font-black text-white/30 tabular-nums uppercase tracking-widest">{q.progress} <span className="opacity-40">/ {q.total}</span></span>
                           </div>
                        </div>
                        <div className="text-right">
-                          <p className="text-[10px] font-black text-primary italic">+{q.xp} XP</p>
+                          <p className="text-xs font-black text-primary italic tracking-widest leading-none">+{q.xp}</p>
+                          <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mt-1">XP</p>
                        </div>
                     </motion.div>
                  ))}
@@ -8430,25 +8505,26 @@ function App() {
            </div>
 
            {/* Global Ranking */}
-           <div className="space-y-8">
-              <h3 className="text-[11px] font-black text-white/20 uppercase tracking-[0.4em] italic">Lendários da Cidade</h3>
-              <div className="bg-white/5 rounded-[45px] border border-white/5 overflow-hidden">
+           <div className="space-y-10">
+              <h3 className="text-[12px] font-black text-white uppercase tracking-[0.4em] italic leading-none px-2">Lendários da Cidade</h3>
+              <div className="bg-white/5 rounded-[50px] border border-white/10 overflow-hidden shadow-2xl p-4">
                  {ranking.map((item, i) => (
                     <div 
-                      key={i}
-                      className={`flex items-center gap-5 p-6 border-b border-white/[0.03] last:border-none ${item.name === "Estevan" ? "bg-primary/5" : ""}`}
+                      key={i} 
+                      className={`flex items-center gap-6 p-6 transition-all ${i !== ranking.length - 1 ? "border-b border-white/5" : ""}`}
                     >
-                       <div className="w-8 text-center">
-                          <span className={`text-xs font-black italic ${i < 3 ? 'text-primary' : 'text-white/20'}`}>#{item.rank}</span>
-                       </div>
-                       <div className={`size-12 rounded-xl border-2 ${item.name === "Estevan" ? "border-primary" : "border-white/10"} p-1`}>
-                          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${item.avatar}`} className="size-full object-cover rounded-lg" />
+                       <span className={`text-xl font-black italic tracking-tighter w-10 ${i === 0 ? "text-primary" : "text-white/20"}`}>#0{item.rank}</span>
+                       <div className={`size-14 rounded-2xl overflow-hidden border-2 ${i === 0 ? "border-primary" : "border-white/5"} shadow-xl`}>
+                          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${item.avatar}`} alt="Avatar" className="bg-slate-800 size-full" />
                        </div>
                        <div className="flex-1">
-                          <p className={`text-sm font-black ${item.name === "Estevan" ? "text-primary" : "text-white"}`}>{item.name}</p>
-                          <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Nível {item.level} • {item.xp} XP</p>
+                          <p className="text-base font-black text-white tracking-tight uppercase mb-0.5">{item.name}</p>
+                          <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest">Elite Level {item.level}</p>
                        </div>
-                       {i === 0 && <span className="material-symbols-outlined text-primary fill-1">military_tech</span>}
+                       <div className="text-right">
+                          <p className="text-sm font-black text-white tabular-nums tracking-tighter">{item.xp}</p>
+                          <p className="text-[8px] font-black text-white/20 uppercase tracking-widest leading-none">Total XP</p>
+                       </div>
                     </div>
                  ))}
               </div>
@@ -8600,7 +8676,7 @@ function App() {
              animate={{ scale: 1, rotate: 0 }}
              className="relative z-10 size-48 rounded-[55px] bg-zinc-900 flex items-center justify-center mb-12 shadow-[0_45px_100px_-20px_rgba(255,184,0,0.3)] border border-yellow-400/20"
            >
-              <span className="material-symbols-outlined text-yellow-500 text-8xl fill-1">verified</span>
+              <Icon name="verified" />
            </motion.div>
            
            <div className="relative z-10 space-y-6">
@@ -8627,7 +8703,7 @@ function App() {
            <header className="p-8 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-4">
                 <button onClick={() => setIziBlackStep('info')} className="size-12 rounded-[20px] bg-white/5 flex items-center justify-center text-white active:scale-90 transition-all border border-white/10 hover:border-white/20">
-                   <span className="material-symbols-outlined">arrow_back</span>
+                   <Icon name="arrow_back" />
                 </button>
                 <div>
                   <h2 className="text-white font-black italic uppercase tracking-tighter text-lg leading-none">Checkout VIP</h2>
@@ -8666,13 +8742,13 @@ function App() {
                     {paymentMethod === "cartao" && (
                       <div className="flex items-center gap-5 p-7">
                         <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
-                          <span className="material-symbols-outlined text-yellow-400 text-3xl">contactless</span>
+                          <Icon name="contactless" />
                         </div>
                         <div className="flex-1">
                           <p className="text-white font-black text-sm uppercase tracking-tight italic">Cartão de Elite</p>
                           <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">•••• {savedCards.find(c => c.active)?.last4 || '—'}</p>
                         </div>
-                        <span className="material-symbols-outlined text-yellow-400 fill-1">verified_user</span>
+                        <Icon name="verified_user" />
                       </div>
                     )}
                     {paymentMethod === "pix" && (
@@ -8684,25 +8760,25 @@ function App() {
                           <p className="text-white font-black text-sm uppercase tracking-tight italic">PIX Instantâneo</p>
                           <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest mt-0.5">Liberação em 1s</p>
                         </div>
-                        <span className="material-symbols-outlined text-emerald-500 fill-1">speed</span>
+                        <Icon name="speed" />
                       </div>
                     )}
                     {paymentMethod === "bitcoin_lightning" && (
                       <div className="flex items-center gap-5 p-7">
                         <div className="size-14 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
-                          <span className="material-symbols-outlined text-orange-400 text-3xl fill-1">bolt</span>
+                          <Icon name="bolt" />
                         </div>
                         <div className="flex-1">
                           <p className="text-white font-black text-sm uppercase tracking-tight italic">LN Payments</p>
                           <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest mt-0.5">Privacy First Layer</p>
                         </div>
-                        <span className="material-symbols-outlined text-orange-500">lock</span>
+                        <Icon name="lock" />
                       </div>
                     )}
                     {!paymentMethod && (
                       <button onClick={() => { setPaymentsOrigin("izi_black"); setSubView("payments"); }} className="w-full p-10 text-zinc-600 font-black uppercase tracking-[0.3em] text-[10px] flex flex-col items-center gap-4">
                         <div className="size-14 rounded-full bg-zinc-800 flex items-center justify-center border border-white/5">
-                           <span className="material-symbols-outlined text-3xl">add_card</span>
+                           <Icon name="add_card" />
                         </div>
                         Escolher Canal de Pagamento
                       </button>
@@ -8717,7 +8793,7 @@ function App() {
                  ].map((s, i) => (
                    <div key={i} className="flex items-center justify-between">
                      <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-zinc-700 text-lg">{s.icon}</span>
+                        <Icon name={s.icon} />
                         <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{s.label}</span>
                      </div>
                      <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">{s.status}</span>
@@ -8733,11 +8809,11 @@ function App() {
                 className="w-full bg-white text-black h-20 rounded-[35px] font-black uppercase tracking-[0.2em] text-sm shadow-[0_20px_50px_-10px_rgba(255,255,255,0.1)] active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center gap-4 group"
               >
                  {isLoading ? (
-                    <span className="material-symbols-outlined animate-spin font-black text-2xl">sync</span>
+                    <Icon name="sync" />
                  ) : (
                     <>
                        <span className="font-black">Ativar Membership Black</span>
-                       <span className="material-symbols-outlined font-black group-hover:translate-x-1 transition-transform">bolt</span>
+                       <Icon name="bolt" />
                     </>
                  )}
               </button>
@@ -8762,10 +8838,10 @@ function App() {
             
             <header className="absolute top-0 inset-x-0 p-8 flex items-center justify-between z-20">
                <button onClick={handleClose} className="size-14 rounded-3xl bg-black/60 backdrop-blur-2xl flex items-center justify-center text-white border border-white/10 active:scale-90 transition-all hover:bg-black/80">
-                  <span className="material-symbols-outlined font-black">close</span>
+                  <Icon name="close" />
                </button>
                <div className="size-14 rounded-3xl bg-yellow-400/20 backdrop-blur-2xl flex items-center justify-center border border-yellow-400/30">
-                  <span className="material-symbols-outlined text-yellow-400 fill-1">stars</span>
+                  <Icon name="stars" />
                </div>
             </header>
 
@@ -8789,7 +8865,7 @@ function App() {
          <main className="px-10 pb-52 space-y-12 relative z-10 -mt-8">
             <div className="grid grid-cols-1 gap-5">
                {[
-                  { icon: 'flight_takeoff', title: 'LOGÍSTICA ZERO', desc: 'Isenção de taxa de entrega em pedidos acima de R$50 sem limites.', color: 'text-blue-400' },
+                  { icon: 'flight_takeoff', title: 'LOGÃSTICA ZERO', desc: 'Isenção de taxa de entrega em pedidos acima de R$50 sem limites.', color: 'text-blue-400' },
                   { icon: 'account_balance_wallet', title: 'CASHBACK ELITE', desc: '5% de retorno real em todas as transações, direto na sua Izi Wallet.', color: 'text-emerald-400' },
                   { icon: 'speed', title: 'IZI FLASH VIP', desc: 'Acesso instantâneo a ofertas de até 70% OFF exclusivas para o círculo.', color: 'text-yellow-400' },
                   { icon: 'shield_person', title: 'PERSONAL CONCIERGE', desc: 'Atendimento prioritário humano pronto para resolver qualquer demanda.', color: 'text-purple-400' }
@@ -8838,11 +8914,11 @@ function App() {
                className="w-full bg-yellow-400 text-black h-24 rounded-[45px] font-black uppercase tracking-[0.3em] text-sm shadow-[0_30px_60px_-15px_rgba(255,184,0,0.4)] active:scale-95 transition-all flex items-center justify-center gap-4 hover:shadow-yellow-400/60"
             >
                {isLoading ? (
-                  <span className="material-symbols-outlined animate-spin text-black text-3xl">sync</span>
+                  <Icon name="sync" />
                ) : (
                   <>
                      <span className="font-black">Ativar Membership Elite</span>
-                     <span className="material-symbols-outlined font-black text-2xl">bolt</span>
+                     <Icon name="bolt" />
                   </>
                )}
             </button>
@@ -8880,7 +8956,7 @@ function App() {
               transition={{ type: "spring", delay: 0.5, bounce: 0.6 }}
               className="size-24 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-[32px] flex items-center justify-center shadow-[0_15px_40px_rgba(234,179,8,0.3)] mb-10"
             >
-              <span className="material-symbols-rounded text-5xl text-black font-black">workspace_premium</span>
+              <Icon name="workspace_premium" />
             </motion.div>
 
             <motion.div
@@ -8889,7 +8965,7 @@ function App() {
               transition={{ delay: 0.8 }}
             >
               <h1 className="text-4xl font-black text-white mb-4 tracking-tight">
-                VOCÊ ESTÁ <span className="text-yellow-500">DENTRO</span>.
+                VOCÊ ESTÃ <span className="text-yellow-500">DENTRO</span>.
               </h1>
               <p className="text-zinc-400 font-medium text-lg leading-relaxed mb-12">
                 Seja bem-vindo ao <span className="text-white font-bold">Izi Black</span>. 
@@ -8911,18 +8987,17 @@ function App() {
                 { icon: 'support_agent', label: 'Suporte Elite' }
               ].map((perk, i) => (
                 <div key={i} className="bg-white/5 border border-white/10 rounded-3xl p-4 flex items-center gap-3">
-                  <span className="material-symbols-outlined text-yellow-500 text-lg">{perk.icon}</span>
+                  <Icon name={perk.icon} />
                   <span className="text-[10px] font-black text-white uppercase tracking-widest">{perk.label}</span>
                 </div>
               ))}
             </motion.div>
 
             <motion.button
-              whileHover={{ scale: 1.03, brightness: 1.2 }}
+              whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => {
                 setShowIziBlackWelcome(false);
-                // Forçar refresh total do usuário para carregar badges e perks
                 if (userId) {
                   fetchWalletBalance(userId);
                   fetchMyOrders(userId);
@@ -8959,186 +9034,181 @@ function App() {
     ];
 
     return (
-      <div className="absolute inset-0 z-[170] bg-[#050505] flex flex-col hide-scrollbar overflow-y-auto">
-        <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.025]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }} />
-        <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] -mt-72 pointer-events-none z-0">
-          <div className="absolute inset-0 rounded-full bg-primary/[0.06] blur-[150px]" style={{ animation: 'pulse 6s ease-in-out infinite alternate' }} />
+      <div className="absolute inset-0 z-[170] bg-[#020617] flex flex-col hide-scrollbar overflow-y-auto pb-32">
+        <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.05]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }} />
+        <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] -mt-96 pointer-events-none z-0">
+          <div className="absolute inset-0 rounded-full bg-primary/[0.1] blur-[180px] animate-pulse" />
         </div>
 
-        <header className="px-7 pt-12 pb-4 flex items-center justify-between sticky top-0 z-20" style={{ background: 'linear-gradient(to bottom, #050505 70%, transparent)' }}>
-          <p className="text-[10px] font-black text-primary/50 uppercase tracking-[0.4em]">Izi Black</p>
-          <button onClick={() => setShowIziBlackCard(false)} className="size-9 rounded-full bg-white/[0.04] flex items-center justify-center text-white/20 active:scale-90 transition-all">
-            <span className="material-symbols-outlined text-base">close</span>
+        <header className="px-8 pt-12 pb-6 flex items-center justify-between sticky top-0 z-40 bg-[#020617]/80 backdrop-blur-3xl border-b border-white/5">
+          <div>
+            <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">Izi <span className="text-primary">Black</span></h2>
+            <p className="text-[9px] text-primary/40 font-black uppercase tracking-[0.4em]">Protocolo VIP</p>
+          </div>
+          <button onClick={() => setShowIziBlackCard(false)} className="size-12 rounded-[20px] bg-white/5 border border-white/10 flex items-center justify-center text-white/40 active:scale-90 transition-all shadow-2xl">
+            <Icon name="close" size={24} />
           </button>
         </header>
 
-        <main className="relative z-10 pb-40">
-          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="text-center pt-4 pb-12 px-7">
-            <div className="relative inline-block mb-6">
-              <svg width="140" height="140" viewBox="0 0 120 120" className="-rotate-90">
-                <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="4" />
-                <motion.circle cx="60" cy="60" r="54" fill="none" stroke="url(#coinGrad2)" strokeWidth="4" strokeLinecap="round" strokeDasharray={circumference} initial={{ strokeDashoffset: circumference }} animate={{ strokeDashoffset: dashOffset }} transition={{ duration: 2.5, ease: "easeOut", delay: 0.3 }} />
-                <defs><linearGradient id="coinGrad2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#FFD900" /><stop offset="50%" stopColor="#F59E0B" /><stop offset="100%" stopColor="#FFD900" /></linearGradient></defs>
+        <main className="relative z-10 px-8 py-10 space-y-16">
+          {/* Progress Section */}
+          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="flex flex-col items-center text-center">
+            <div className="relative mb-10 group cursor-pointer">
+              <div className="absolute inset-0 bg-primary/20 blur-[40px] rounded-full scale-75 group-hover:scale-100 transition-all duration-700 opacity-0 group-hover:opacity-100" />
+              <svg width="200" height="200" viewBox="0 0 120 120" className="-rotate-90 relative z-10 drop-shadow-[0_0_15px_rgba(255,217,0,0.2)]">
+                <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="3" />
+                <motion.circle cx="60" cy="60" r="54" fill="none" stroke="url(#cardProgressGrad)" strokeWidth="3" strokeLinecap="round" strokeDasharray={circumference} initial={{ strokeDashoffset: circumference }} animate={{ strokeDashoffset: dashOffset }} transition={{ duration: 3, ease: "easeOut" }} />
+                <defs><linearGradient id="cardProgressGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#FBBF24" /><stop offset="100%" stopColor="#B45309" /></linearGradient></defs>
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.2, type: "spring", bounce: 0.4 }} className="text-5xl font-black text-white leading-none tracking-tighter">{userLevel}</motion.span>
+                <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3, type: "spring" }} className="text-6xl font-black text-white leading-none tracking-tighter italic">{userLevel}</motion.span>
+                <span className="text-[8px] font-black text-primary uppercase tracking-[0.4em] mt-1 italic">Nível</span>
               </div>
             </div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-              <p className="text-[9px] font-black text-primary uppercase tracking-[0.5em] mb-2">{currentTierName}</p>
-              <h1 className="text-2xl font-black text-white tracking-tight leading-none mb-1">Membro Fundador</h1>
-              <p className="text-[10px] text-white/15 font-bold">{progressPercent.toFixed(0)}% para {nextTierName}</p>
+            
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="space-y-4">
+              <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/5 border border-white/10 shadow-xl">
+                 <div className="size-2 bg-primary rounded-full animate-pulse shadow-[0_0_8px_white]" />
+                 <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">{currentTierName} Member</span>
+              </div>
+              <h1 className="text-4xl font-black text-white tracking-tighter italic uppercase leading-tight">Membro <span className="text-primary italic">Fundador</span></h1>
+              <div className="flex items-center justify-center gap-3">
+                 <div className="h-1 w-20 bg-white/5 rounded-full overflow-hidden">
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${progressPercent}%` }} className="h-full bg-primary" />
+                 </div>
+                 <p className="text-[10px] text-white/20 font-black uppercase tracking-widest">{progressPercent.toFixed(0)}% para {nextTierName}</p>
+              </div>
             </motion.div>
           </motion.section>
 
-          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-center pb-12 px-7">
-            <div className="inline-flex items-center gap-2 mb-3 px-4 py-1.5 rounded-full bg-primary/[0.06]">
-              <span className="text-sm">🪙</span>
-              <span className="text-[9px] font-black text-primary/70 uppercase tracking-[0.3em]">IziCoin</span>
+          {/* Wallet Balance Hero */}
+          <motion.section initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.6 }} className="bg-gradient-to-br from-slate-900 to-black p-10 rounded-[50px] border border-white/10 relative overflow-hidden shadow-2xl text-center">
+            <div className="absolute top-0 left-0 p-8 opacity-5">
+              <Icon name="monetization_on" size={100} />
             </div>
-            <motion.h2 initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.6, type: "spring" }} className="text-6xl font-black text-white tabular-nums tracking-tighter leading-none mb-2">{iziCoins.toLocaleString('pt-BR')}</motion.h2>
-            <p className="text-[10px] text-white/15 font-bold">+5 coins a cada R$ 1 gasto</p>
+            <div className="relative z-10 space-y-4">
+              <div className="flex items-center justify-center gap-2">
+                <div className="size-1.5 rounded-full bg-primary shadow-[0_0_8px_white]" />
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">IziCoin Balance</p>
+              </div>
+              <h2 className="text-7xl font-black text-white tabular-nums tracking-tighter leading-none mb-4 italic">{iziCoins.toLocaleString('pt-BR')}</h2>
+              <div className="inline-block px-6 py-2 rounded-full bg-white/5 border border-white/5 text-[9px] font-black text-white/20 uppercase tracking-[0.3em]">
+                Acumule +5 coins a cada R$ 1,00 gasto
+              </div>
+            </div>
           </motion.section>
 
-          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="flex items-center justify-center gap-6 pb-12">
+          {/* Global Stats */}
+          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="grid grid-cols-3 gap-6 bg-white/5 rounded-[40px] p-8 border border-white/5 shadow-2xl">
             {[
-              { value: myOrders.length, label: 'Pedidos' },
-              { value: `R$${iziCashbackEarned.toFixed(0)}`, label: 'Cashback' },
-              { value: `R$${(myOrders.length * 5).toFixed(0)}`, label: 'Economia' },
+              { value: myOrders.length, label: 'Pedidos', icon: 'package' },
+              { value: `R$${iziCashbackEarned.toFixed(0)}`, label: 'Cashback', icon: 'monetization_on' },
+              { value: `R$${(myOrders.length * 5).toFixed(0)}`, label: 'Economia', icon: 'shield' },
             ].map((stat, i) => (
-              <Fragment key={i}>
-                {i > 0 && <div className="w-px h-8 bg-white/[0.06]" />}
-                <div className="text-center">
-                  <p className="text-lg font-black text-white tracking-tight leading-none mb-0.5">{stat.value}</p>
-                  <p className="text-[8px] font-black text-white/15 uppercase tracking-widest">{stat.label}</p>
+              <div key={i} className="text-center space-y-2 group">
+                <div className="size-10 rounded-2xl bg-white/5 flex items-center justify-center mx-auto text-primary group-hover:scale-110 transition-all border border-white/5">
+                   <Icon name={stat.icon} size={18} />
                 </div>
-              </Fragment>
+                <div>
+                   <p className="text-lg font-black text-white tracking-tight leading-none italic">{stat.value}</p>
+                   <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mt-1">{stat.label}</p>
+                </div>
+              </div>
             ))}
           </motion.section>
 
-          <div className="mx-7 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
-
-          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="py-10">
-            <p className="text-[9px] font-black text-white/10 uppercase tracking-[0.4em] px-7 mb-5">Benefícios ativos</p>
-            <div className="flex gap-2.5 overflow-x-auto no-scrollbar px-7">
+          {/* Perks Section */}
+          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="space-y-8">
+            <div className="flex items-center justify-between px-2">
+               <h3 className="text-[11px] font-black text-white/20 uppercase tracking-[0.4em] italic leading-none">Vantagens de Membro</h3>
+               <span className="text-[9px] font-black text-primary/40 uppercase tracking-widest">Protocolo Ativado</span>
+            </div>
+            
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 pr-10">
               {perks.map((perk, i) => (
                 <motion.div 
-                  key={i} 
-                  initial={{ opacity: 0, y: 15 }} 
-                  animate={{ opacity: perk.active ? 1 : 0.25, y: 0 }} 
-                  transition={{ delay: 0.9 + i * 0.06 }} 
-                  whileTap={{ scale: 0.95 }} 
-                  onClick={() => perk.active && perk.id ? setActivePerkDetail(activePerkDetail === perk.id ? null : perk.id) : null}
-                  className={`shrink-0 flex items-center gap-2.5 py-3 px-5 rounded-full cursor-pointer transition-all ${
-                    activePerkDetail === perk.id 
-                      ? 'bg-primary/[0.12] ring-1 ring-primary/30' 
-                      : perk.active ? 'bg-white/[0.04]' : 'bg-white/[0.015]'
-                  }`}
+                   key={i} 
+                   initial={{ opacity: 0, x: 20 }} 
+                   animate={{ opacity: perk.active ? 1 : 0.2, x: 0 }} 
+                   transition={{ delay: 0.9 + i * 0.05 }} 
+                   whileTap={{ scale: 0.95 }} 
+                   onClick={() => perk.active && perk.id ? setActivePerkDetail(activePerkDetail === perk.id ? null : perk.id) : null}
+                   className={`shrink-0 flex items-center gap-4 py-4 px-8 rounded-[30px] border transition-all cursor-pointer ${
+                     activePerkDetail === perk.id 
+                       ? 'bg-primary/10 border-primary/30 shadow-lg shadow-primary/10' 
+                       : perk.active ? 'bg-white/5 border-white/10' : 'bg-transparent border-white/5'
+                   }`}
                 >
-                  <span className={`material-symbols-outlined text-base fill-1 ${perk.active ? 'text-primary' : 'text-white/15'}`}>{perk.icon}</span>
-                  <span className={`text-[11px] font-black tracking-tight whitespace-nowrap ${perk.active ? 'text-white' : 'text-white/20'}`}>{perk.label}</span>
-                  {!perk.active && <span className="text-[9px]">🔒</span>}
-                  {perk.active && perk.id && <span className={`material-symbols-outlined text-[10px] ${activePerkDetail === perk.id ? 'text-primary' : 'text-white/15'}`}>{activePerkDetail === perk.id ? 'expand_less' : 'expand_more'}</span>}
+                   <div className={`${perk.active ? 'text-primary' : 'text-white/10'}`}>
+                      <Icon name={perk.icon} size={22} />
+                   </div>
+                   <div className="text-left">
+                      <p className={`text-[11px] font-black uppercase tracking-tight whitespace-nowrap ${perk.active ? 'text-white' : 'text-white/10'}`}>{perk.label}</p>
+                      {perk.active && perk.id && (
+                        <div className="flex items-center gap-1 mt-0.5 opacity-20 group-hover:opacity-100 transition-opacity">
+                           <p className="text-[8px] font-black uppercase tracking-widest text-white/80">Detalhes</p>
+                           <Icon name={activePerkDetail === perk.id ? 'expand_less' : 'expand_more'} size={10} />
+                        </div>
+                      )}
+                   </div>
+                   {!perk.active && <Icon name="shield" size={14} className="text-white/10" />}
                 </motion.div>
               ))}
             </div>
 
-            {/* ── Painel expandível do benefício selecionado ── */}
-            <AnimatePresence>
-              {activePerkDetail === 'frete' && (
-                <motion.div 
-                  initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }} className="overflow-hidden px-7"
+            {/* Expandable Details */}
+            <AnimatePresence mode="wait">
+              {activePerkDetail && (
+                <motion.div
+                  key={activePerkDetail}
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden bg-white/5 rounded-[40px] border border-white/10 mx-2"
                 >
-                  <div className="pt-6 pb-2">
-                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-4">Cupons de Frete Grátis</p>
-                    {availableCoupons.filter(c => c.is_vip && (c.title?.toLowerCase().includes('frete') || c.discount_type === 'shipping')).length > 0 ? (
-                      <div className="space-y-2.5">
-                        {availableCoupons.filter(c => c.is_vip && (c.title?.toLowerCase().includes('frete') || c.discount_type === 'shipping')).map((cpn, ci) => (
-                          <div key={ci} className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/[0.03]">
-                            <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-                              <span className="material-symbols-outlined text-emerald-400 text-base fill-1">local_shipping</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[12px] font-black text-white tracking-tight leading-none mb-0.5">{cpn.title || 'Frete Grátis'}</p>
-                              <p className="text-[9px] text-white/20 font-bold">{cpn.coupon_code ? `Código: ${cpn.coupon_code}` : 'Aplicado automaticamente'}</p>
-                            </div>
-                            {cpn.coupon_code && (
-                              <button onClick={() => { navigator.clipboard.writeText(cpn.coupon_code); setCopiedCoupon(cpn.id || cpn.coupon_code); setTimeout(() => setCopiedCoupon(null), 2000); }} className="px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">
-                                {!!copiedCoupon && copiedCoupon === (cpn.id || cpn.coupon_code) ? 'Copiado!' : 'Copiar'}
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <span className="material-symbols-outlined text-white/10 text-3xl mb-2 block">local_shipping</span>
-                        <p className="text-[11px] text-white/20 font-bold">Frete grátis automático em pedidos acima de R$ 50</p>
-                        <p className="text-[9px] text-white/10 mt-1">Aplicado automaticamente no checkout</p>
+                  <div className="p-8">
+                    {activePerkDetail === 'frete' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-4 mb-2">
+                           <div className="size-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                             <Icon name="local_shipping" size={20} />
+                           </div>
+                           <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Frete Grátis Ativado</h4>
+                        </div>
+                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Você possui frete grátis ilimitado em todos os pedidos acima de R$ 50,00. O benefício é aplicado automaticamente no seu checkout.</p>
                       </div>
                     )}
-                  </div>
-                </motion.div>
-              )}
 
-              {activePerkDetail === 'cashback' && (
-                <motion.div 
-                  initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }} className="overflow-hidden px-7"
-                >
-                  <div className="pt-6 pb-2">
-                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-4">Detalhes do Cashback</p>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.03]">
-                        <div className="flex items-center gap-3">
-                          <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center"><span className="material-symbols-outlined text-primary text-base fill-1">trending_up</span></div>
-                          <div>
-                            <p className="text-[12px] font-black text-white">5% em todos os pedidos</p>
-                            <p className="text-[9px] text-white/20 font-bold">Crédito automático na carteira</p>
-                          </div>
+                    {activePerkDetail === 'cashback' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-4 mb-2">
+                           <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                             <Icon name="monetization_on" size={20} />
+                           </div>
+                           <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Cashback Elite</h4>
                         </div>
-                        <p className="text-lg font-black text-primary">R${iziCashbackEarned.toFixed(0)}</p>
+                        <div className="bg-black/40 rounded-3xl p-6 border border-white/5 flex items-center justify-between">
+                           <div>
+                              <p className="text-[10px] text-white/20 font-black uppercase tracking-widest mb-1">Acumulado</p>
+                              <p className="text-3xl font-black text-white italic tracking-tighter">R$ {iziCashbackEarned.toFixed(2)}</p>
+                           </div>
+                           <div className="text-right">
+                              <p className="text-[10px] text-primary font-black uppercase tracking-widest leading-none">5% OFF</p>
+                              <p className="text-[8px] text-white/10 font-bold uppercase tracking-widest mt-1">Sempre ativo</p>
+                           </div>
+                        </div>
                       </div>
-                      <p className="text-[9px] text-white/10 text-center">O cashback é creditado automaticamente após a confirmação da entrega</p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+                    )}
 
-              {activePerkDetail === 'surprise' && (
-                <motion.div 
-                  initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }} className="overflow-hidden px-7"
-                >
-                  <div className="pt-6 pb-2">
-                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-4">Surpresas Disponíveis</p>
-                    {availableCoupons.filter(c => c.is_vip).length > 0 ? (
-                      <div className="space-y-2.5">
-                        {availableCoupons.filter(c => c.is_vip).map((cpn, ci) => (
-                          <div key={ci} className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/[0.03]">
-                            <div className="size-10 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
-                              <span className="material-symbols-outlined text-violet-400 text-base fill-1">redeem</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[12px] font-black text-white tracking-tight leading-none mb-0.5">{cpn.title || 'Surpresa VIP'}</p>
-                              <p className="text-[9px] text-white/20 font-bold">
-                                {cpn.discount_type === 'percent' ? `${cpn.discount_value}% OFF` : `R$ ${cpn.discount_value} OFF`}
-                              </p>
-                            </div>
-                            {cpn.coupon_code && (
-                              <button onClick={() => { navigator.clipboard.writeText(cpn.coupon_code); setCopiedCoupon(cpn.id || cpn.coupon_code); setTimeout(() => setCopiedCoupon(null), 2000); }} className="px-3 py-1.5 rounded-xl bg-violet-500/10 text-violet-400 text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">
-                                {!!copiedCoupon && copiedCoupon === (cpn.id || cpn.coupon_code) ? 'Copiado!' : 'Resgatar'}
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <span className="material-symbols-outlined text-white/10 text-3xl mb-2 block">card_giftcard</span>
-                        <p className="text-[11px] text-white/20 font-bold">Nenhuma surpresa disponível agora</p>
-                        <p className="text-[9px] text-white/10 mt-1">Novas surpresas são adicionadas todo mês!</p>
+                    {activePerkDetail === 'surprise' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-4 mb-2">
+                           <div className="size-10 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-400">
+                             <Icon name="card_giftcard" size={20} />
+                           </div>
+                           <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Izi Surprise</h4>
+                        </div>
+                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Como membro nível 3, você recebe mimos exclusivos todos os meses. Fique atento às suas notificações!</p>
                       </div>
                     )}
                   </div>
@@ -9149,32 +9219,33 @@ function App() {
 
           <div className="mx-7 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
 
-          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="py-10 px-7 space-y-1">
+          {/* Integration Links */}
+          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="py-10 px-7 space-y-2">
             {[
-              { icon: 'military_tech', title: 'Izi Battle Pass', sub: 'Missões e ranking', action: () => { setShowIziBlackCard(false); setSubView("quest_center"); }, active: true },
-              { icon: 'workspace_premium', title: 'Próximas Recompensas', sub: 'Desbloqueie mais benefícios', action: () => setShowMasterPerks(true), active: true },
-              { icon: 'share', title: 'Indicar Amigos', sub: 'Ganhe coins por indicação', action: () => {}, active: false },
+              { icon: 'military_tech', title: 'Izi Battle Pass', sub: 'Missões e Ranking Global', action: () => { setShowIziBlackCard(false); setSubView("quest_center"); }, active: true },
+              { icon: 'workspace_premium', title: 'Próximas Recompensas', sub: 'O que vem por aí', action: () => setShowMasterPerks(true), active: true },
             ].map((item, i) => (
               <Fragment key={i}>
-                <motion.div whileTap={{ scale: 0.98 }} onClick={item.action} className={`flex items-center justify-between py-5 cursor-pointer group ${!item.active ? 'opacity-30' : ''}`}>
-                  <div className="flex items-center gap-4">
-                    <div className={`size-10 rounded-xl flex items-center justify-center ${item.active ? 'bg-primary/[0.08]' : 'bg-white/[0.03]'}`}>
-                      <span className={`material-symbols-outlined text-lg fill-1 ${item.active ? 'text-primary' : 'text-white/20'}`}>{item.icon}</span>
+                <motion.div whileTap={{ scale: 0.98 }} onClick={item.action} className="flex items-center justify-between py-6 px-6 rounded-[32px] bg-white/[0.03] border border-white/5 cursor-pointer group hover:bg-white/[0.05] transition-all">
+                  <div className="flex items-center gap-5">
+                    <div className="size-12 rounded-2xl bg-primary/[0.08] flex items-center justify-center text-primary group-hover:scale-110 transition-all shadow-lg border border-primary/10">
+                      <Icon name={item.icon} size={24} />
                     </div>
                     <div>
-                      <h4 className="text-[13px] font-black text-white tracking-tight">{item.title}</h4>
-                      <p className="text-[9px] text-white/15 font-bold uppercase tracking-widest">{item.sub}</p>
+                      <h4 className="text-[14px] font-black text-white tracking-tight leading-none mb-1.5">{item.title}</h4>
+                      <p className="text-[9px] text-white/20 font-black uppercase tracking-[0.2em]">{item.sub}</p>
                     </div>
                   </div>
-                  <span className="material-symbols-outlined text-white/10 text-base group-hover:text-primary group-hover:translate-x-1 transition-all">arrow_forward_ios</span>
+                  <div className="size-10 rounded-full flex items-center justify-center text-white/20 group-hover:text-primary transition-colors">
+                     <Icon name="arrow_forward" size={16} />
+                  </div>
                 </motion.div>
-                {i < 2 && <div className="h-px bg-white/[0.03]" />}
               </Fragment>
             ))}
           </motion.section>
 
-          <div className="text-center pt-8 pb-4 px-7">
-            <p className="text-[8px] font-black text-white/[0.06] uppercase tracking-[0.5em]">Izi Black · Membro desde 2026</p>
+          <div className="text-center pt-8 pb-4">
+            <p className="text-[8px] font-black text-white/[0.06] uppercase tracking-[0.5em] italic">Izi Black · Membro Fundador desde 2024</p>
           </div>
         </main>
       </div>
@@ -9196,7 +9267,7 @@ function App() {
         <header className="p-6 pt-10 flex items-center justify-between sticky top-0 bg-black/90 backdrop-blur-xl z-20 border-b border-white/[0.04]">
           <div className="flex items-center gap-3">
             <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-xl fill-1">workspace_premium</span>
+              <Icon name="workspace_premium" />
             </div>
             <div>
               <h2 className="text-lg font-black text-white tracking-tight leading-none">Recompensas</h2>
@@ -9207,7 +9278,7 @@ function App() {
             onClick={() => setShowMasterPerks(false)}
             className="size-10 rounded-xl bg-white/[0.04] flex items-center justify-center text-white/30 active:scale-90 transition-all border border-white/[0.06]"
           >
-            <span className="material-symbols-outlined text-lg">close</span>
+            <Icon name="close" />
           </button>
         </header>
 
@@ -9230,7 +9301,7 @@ function App() {
                 className="bg-white/[0.03] rounded-2xl p-5 border border-white/[0.06] flex items-start gap-4"
               >
                 <div className="size-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0 mt-0.5">
-                  <span className="material-symbols-outlined fill-1">{perk.icon}</span>
+                  <Icon name={perk.icon} />
                 </div>
                 <div>
                   <h4 className="text-sm font-black text-white tracking-tight mb-1">{perk.label}</h4>
@@ -9292,7 +9363,7 @@ function App() {
               </span>
             </button>
             <button className="w-12 h-12 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center text-slate-900 dark:text-white border border-white/20">
-              <span className="material-symbols-rounded text-xl">favorite</span>
+              <Icon name="favorite" />
             </button>
           </header>
         </div>
@@ -9412,7 +9483,7 @@ function App() {
                 onClick={() => setSubView('none')} 
                 className="size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-2xl border border-slate-100 dark:border-white/5 flex items-center justify-center active:scale-90 transition-all group"
               >
-                <span className="material-symbols-outlined font-black">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div>
                 <h1 className="text-2xl font-black tracking-tighter leading-none mb-1">Explorar Mobilidade</h1>
@@ -9444,7 +9515,7 @@ function App() {
               <div className="absolute top-0 right-0 size-40 bg-primary/20 rounded-full blur-[60px] -mr-20 -mt-20 group-hover:bg-primary/30 transition-colors" />
               <div className="flex items-center gap-6 relative z-10">
                 <div className="size-18 rounded-[25px] bg-primary flex items-center justify-center shadow-2xl shadow-primary/30 group-hover:rotate-6 transition-transform">
-                  <span className="material-symbols-outlined text-slate-900 text-3xl font-black italic">schedule</span>
+                  <Icon name="schedule" />
                 </div>
                 <div>
                   <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">Agendar Corrida</h3>
@@ -9452,7 +9523,7 @@ function App() {
                 </div>
               </div>
               <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center group-hover:translate-x-2 transition-transform shadow-inner">
-                <span className="material-symbols-outlined text-primary font-black">arrow_forward</span>
+                <Icon name="arrow_forward" />
               </div>
             </div>
           </section>
@@ -9478,7 +9549,7 @@ function App() {
                   className="bg-white dark:bg-slate-800 p-6 rounded-[45px] border border-slate-100 dark:border-white/5 shadow-xl flex items-center gap-6 group active:scale-[0.98] transition-all relative overflow-hidden"
                 >
                   <div className="size-20 rounded-[28px] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-500" style={{ background: cat.gradient }}>
-                    <span className="material-symbols-outlined text-white text-4xl font-black">{cat.icon}</span>
+                    <Icon name={cat.icon} />
                   </div>
                   <div className="flex-1">
                     <h4 className="font-black text-slate-900 dark:text-white text-lg tracking-tight mb-1">{cat.name}</h4>
@@ -9489,7 +9560,7 @@ function App() {
                     </div>
                   </div>
                   <div className="size-12 rounded-[22px] bg-slate-50 dark:bg-slate-900 flex items-center justify-center group-hover:bg-primary transition-colors">
-                    <span className="material-symbols-outlined font-black group-hover:text-slate-900 transition-colors">arrow_forward</span>
+                    <Icon name="arrow_forward" />
                   </div>
                 </motion.div>
               ))}
@@ -9516,7 +9587,7 @@ function App() {
                 onClick={() => setSubView('none')} 
                 className="size-12 rounded-[22px] bg-white dark:bg-slate-800 shadow-xl border border-slate-100 dark:border-white/5 flex items-center justify-center active:scale-90 transition-all group"
               >
-                <span className="material-symbols-outlined font-black">arrow_back</span>
+                <Icon name="arrow_back" />
               </button>
               <div>
                 <h1 className="text-2xl font-black tracking-tighter leading-none mb-1">Explorar Envios</h1>
@@ -9528,7 +9599,7 @@ function App() {
           <div className="px-6 mt-4">
             <div className="bg-white dark:bg-slate-800/80 rounded-[28px] p-6 shadow-2xl border border-slate-100 dark:border-white/5 focus-within:border-primary/40 transition-all relative overflow-hidden group">
                <div className="flex items-center gap-4 relative z-10">
-                  <span className="material-symbols-outlined text-primary text-2xl group-focus-within:scale-110 transition-transform">location_on</span>
+                  <Icon name="location_on" />
                   <div className="flex-1">
                     <p className="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">Para onde deseja enviar?</p>
                     <AddressSearchInput 
@@ -9582,7 +9653,7 @@ function App() {
                    className="bg-white dark:bg-slate-800 p-6 rounded-[45px] border border-slate-100 dark:border-white/5 shadow-xl flex items-center gap-6 group active:scale-[0.98] transition-all relative overflow-hidden"
                  >
                     <div className="size-20 rounded-[28px] flex items-center justify-center shadow-xl group-hover:-rotate-3 transition-transform duration-500" style={{ background: cat.gradient }}>
-                       <span className="material-symbols-outlined text-white text-4xl font-black italic">{cat.icon}</span>
+                       <Icon name={cat.icon} />
                     </div>
                     <div className="flex-1">
                       <h4 className="font-black text-slate-900 dark:text-white text-lg tracking-tight mb-1">{cat.name}</h4>
@@ -9593,7 +9664,7 @@ function App() {
                       </div>
                     </div>
                     <div className="size-12 rounded-[22px] bg-slate-50 dark:bg-slate-900 flex items-center justify-center group-hover:bg-primary transition-colors">
-                       <span className="material-symbols-outlined font-black group-hover:text-slate-900 transition-colors">add_location_alt</span>
+                       <Icon name="add_location_alt" />
                     </div>
                  </motion.div>
                ))}
@@ -9612,7 +9683,7 @@ function App() {
             onClick={() => setSubView("transit_selection")}
             className="size-12 rounded-2xl bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center text-slate-900 dark:text-white active:scale-90 transition-all border border-slate-100 dark:border-slate-700"
           >
-            <span className="material-symbols-outlined font-black">arrow_back</span>
+            <Icon name="arrow_back" />
           </button>
           <div className="text-right">
             <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-1">
@@ -9625,7 +9696,7 @@ function App() {
         <main className="px-6 space-y-10">
           <section className="space-y-6">
             <div className="flex items-center gap-4 px-2">
-              <span className="material-symbols-outlined text-primary font-black">location_on</span>
+              <Icon name="location_on" />
               <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Local da Entrega</h3>
             </div>
             <div className="bg-white dark:bg-slate-800 p-6 rounded-[35px] border border-slate-100 dark:border-white/5 shadow-xl">
@@ -9650,7 +9721,7 @@ function App() {
 
           <section className="space-y-6">
             <div className="flex items-center gap-4 px-2">
-              <span className="material-symbols-outlined text-primary font-black">person</span>
+              <Icon name="person" />
               <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Quem recebe?</h3>
             </div>
             
@@ -9681,7 +9752,7 @@ function App() {
 
           <section className="space-y-6">
             <div className="flex items-center gap-4 px-2">
-              <span className="material-symbols-outlined text-primary font-black">inventory_2</span>
+              <Icon name="inventory_2" />
               <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">O que está enviando?</h3>
             </div>
 
@@ -9712,7 +9783,7 @@ function App() {
           </section>
 
           <div className="bg-amber-50 dark:bg-amber-900/20 p-6 rounded-[35px] border border-amber-100 dark:border-amber-900/30 flex items-start gap-4">
-             <span className="material-symbols-outlined text-amber-500">warning</span>
+             <Icon name="warning" />
              <p className="text-[10px] font-bold text-amber-700 dark:text-amber-300 leading-relaxed uppercase tracking-wider">
                 Certifique-se de que o objeto esteja bem embalado. Não transportamos itens proibidos por lei ou inflamáveis.
              </p>
@@ -9730,7 +9801,7 @@ function App() {
             ) : (
               <>
                 <span className="tracking-tighter uppercase tracking-[0.1em]">Agendar Coleta & Enviar</span>
-                <span className="material-symbols-outlined font-black group-hover:translate-x-2 transition-transform">bolt</span>
+                <Icon name="bolt" />
               </>
             )}
           </button>
@@ -9749,7 +9820,7 @@ function App() {
             onClick={() => setSubView("none")}
             className="size-12 rounded-2xl bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center text-slate-900 dark:text-white active:scale-90 transition-all border border-slate-100 dark:border-slate-700"
           >
-            <span className="material-symbols-outlined font-black">arrow_back</span>
+            <Icon name="arrow_back" />
           </button>
           <div className="text-right">
             <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none mb-1">
@@ -9793,7 +9864,7 @@ function App() {
 
             <div className="flex items-center gap-6 relative z-10 p-5 bg-slate-50 dark:bg-slate-900/50 rounded-[30px] border border-slate-100 dark:border-white/5 group hover:border-primary/30 transition-colors">
               <div className="size-14 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined text-primary text-2xl font-black italic">event</span>
+                <Icon name="event" />
               </div>
               <div className="flex-1">
                 <p className="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1.5 ml-1">Data Desejada</p>
@@ -9809,7 +9880,7 @@ function App() {
 
             <div className="flex items-center gap-6 relative z-10 p-5 bg-slate-50 dark:bg-slate-900/50 rounded-[30px] border border-slate-100 dark:border-white/5 group hover:border-primary/30 transition-colors">
               <div className="size-14 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined text-primary text-2xl font-black italic">alarm</span>
+                <Icon name="alarm" />
               </div>
               <div className="flex-1">
                 <p className="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1.5 ml-1">Horário Previsto</p>
@@ -9830,7 +9901,7 @@ function App() {
 
           <div className="flex items-center gap-5 relative">
             <div className="size-12 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
-              <span className="material-symbols-outlined text-slate-900 font-black">my_location</span>
+              <Icon name="my_location" />
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1.5 ml-1">
@@ -9857,7 +9928,7 @@ function App() {
                   }}
                   className="flex items-center gap-1 text-[9px] font-black text-primary uppercase tracking-widest bg-primary/10 px-2.5 py-1.5 rounded-xl active:scale-95 transition-all"
                 >
-                  <span className="material-symbols-outlined text-sm">my_location</span>
+                  <Icon name="my_location" />
                   Usar minha localização
                 </button>
               </div>
@@ -9888,7 +9959,7 @@ function App() {
 
           <div className="flex items-center gap-5 relative">
             <div className="size-12 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/20 shrink-0">
-              <span className="material-symbols-outlined text-white font-black">location_on</span>
+              <Icon name="location_on" />
             </div>
             <div className="flex-1">
               <p className="text-[9px] font-black uppercase text-slate-400 tracking-[0.25em] mb-1.5 ml-1">Destino Final</p>
@@ -9922,7 +9993,7 @@ function App() {
         {/* Route info badge */}
         {routeDistance && (
           <div className="flex items-center gap-3 px-5 py-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-100 dark:border-emerald-700">
-            <span className="material-symbols-outlined text-emerald-500 text-xl">route</span>
+            <Icon name="route" />
             <div>
               <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest">Rota calculada</p>
               <p className="text-[13px] font-bold text-emerald-700">{routeDistance}</p>
@@ -9960,13 +10031,13 @@ function App() {
                 <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Resumo da Corrida</h3>
                 {hasSurge && (
                   <span className="text-[10px] font-bold text-orange-500 flex items-center gap-1 bg-orange-50 px-2 py-1 rounded-full">
-                    <span className="material-symbols-outlined text-sm">local_fire_department</span>
-                    Alta demanda ×{marketConditions.surgeMultiplier.toFixed(1)}
+                    <Icon name="local_fire_department" />
+                    Alta demanda Ã—{marketConditions.surgeMultiplier.toFixed(1)}
                   </span>
                 )}
                 {!hasSurge && (
                   <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-full">
-                    <span className="material-symbols-outlined text-sm">bolt</span>
+                    <Icon name="bolt" />
                     Preço normal
                   </span>
                 )}
@@ -9975,7 +10046,7 @@ function App() {
               {/* Card do veiculo selecionado */}
               <div className="bg-white dark:bg-slate-800 rounded-[35px] border-2 border-primary shadow-2xl shadow-primary/10 p-6 flex items-center gap-5">
                 <div className={`size-16 rounded-[22px] flex items-center justify-center shadow-xl bg-gradient-to-br ${v.color}`}>
-                  <span className="material-symbols-outlined text-white text-3xl font-black">{v.icon}</span>
+                  <Icon name={v.icon} />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -9995,12 +10066,12 @@ function App() {
               {/* Detalhes da corrida — só aparecem após calcular rota */}
               {routeDistance && <div className="grid grid-cols-3 gap-3">
                 <div className="bg-white dark:bg-slate-800 rounded-[24px] p-4 text-center border border-slate-100 dark:border-slate-700">
-                  <span className="material-symbols-outlined text-primary text-xl block mb-1">schedule</span>
+                  <Icon name="schedule" />
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Chegada</p>
                   <p className="text-sm font-black text-slate-900 dark:text-white">{eta}</p>
                 </div>
                 <div className="bg-white dark:bg-slate-800 rounded-[24px] p-4 text-center border border-slate-100 dark:border-slate-700">
-                  <span className="material-symbols-outlined text-primary text-xl block mb-1">route</span>
+                  <Icon name="route" />
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Distância</p>
                   <p className="text-sm font-black text-slate-900 dark:text-white">{routeDistance ? routeDistance.split("•")[0].trim() : "—"}</p>
                 </div>
@@ -10068,7 +10139,7 @@ function App() {
                     onClick={() => setTransitData({ ...transitData, destination: address })}
                   >
                     <div className="size-11 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center shrink-0 group-hover:bg-primary transition-colors">
-                      <span className="material-symbols-outlined text-slate-400 group-hover:text-slate-900 text-xl">history</span>
+                      <Icon name="history" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-[9px] font-black uppercase text-primary tracking-widest leading-none mb-1">Anterior</p>
@@ -10099,7 +10170,7 @@ function App() {
                     }}
                   >
                     <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary transition-colors">
-                      <span className="material-symbols-outlined text-primary group-hover:text-slate-900 text-xl">{icon}</span>
+                      <Icon name={icon} />
                     </div>
                     <p className="text-[11px] font-black text-slate-800 dark:text-slate-200 tracking-widest leading-none mb-1 uppercase">{addr.label}</p>
                     <p className="text-[9px] font-bold text-slate-400 truncate w-full">{addr.street}</p>
@@ -10107,7 +10178,7 @@ function App() {
                 );
               }) : (
                 <div className="bg-white dark:bg-slate-800 p-5 rounded-[30px] border border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center text-center min-w-[220px]">
-                  <span className="material-symbols-outlined text-slate-300 text-3xl mb-2">location_on</span>
+                  <Icon name="location_on" />
                   <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Nenhum endereço salvo</p>
                   <p className="text-[10px] font-bold text-slate-400 mt-1">Adicione endereços no perfil</p>
                 </div>
@@ -10153,7 +10224,7 @@ function App() {
                   ? (isShippingView ? `Confirmar Envio` : `Buscar Prestador`)
                   : "Defina o Destino"}
               </span>
-              <span className="material-symbols-outlined font-black group-hover:translate-x-2 transition-transform">arrow_forward</span>
+              <Icon name="arrow_forward" />
             </>
           )}
         </button>
@@ -10162,7 +10233,7 @@ function App() {
     );
   };
 
-  // ─── Tela de Pagamento da Mobilidade ─────────────────────────────────────
+  // â”€â”€â”€ Tela de Pagamento da Mobilidade â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const renderMobilityPayment = () => {
     const bv = marketConditions.settings.baseValues;
     const basePrices: Record<string, number> = { mototaxi: bv.mototaxi_min, carro: bv.carro_min, van: bv.van_min, utilitario: bv.utilitario_min };
@@ -10182,7 +10253,7 @@ function App() {
         {/* Header */}
         <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-2xl border-b border-slate-100 dark:border-white/5 px-6 py-5 flex items-center gap-4">
           <button onClick={() => setSubView("transit_selection")} className="size-11 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 flex items-center justify-center active:scale-90 transition-all">
-            <span className="material-symbols-outlined font-black">arrow_back</span>
+            <Icon name="arrow_back" />
           </button>
           <div>
             <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tighter">Confirmar Serviço</h2>
@@ -10196,12 +10267,12 @@ function App() {
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Resumo da Solicitação</h3>
             <div className="flex items-center gap-4">
               <div className="size-14 rounded-[22px] bg-primary/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary text-2xl font-black">{service.icon}</span>
+                <Icon name={service.icon} />
               </div>
               <div className="flex-1">
                 <p className="font-black text-slate-900 dark:text-white text-base">{service.label}</p>
                 <p className="text-xs text-slate-400 truncate mt-0.5">
-                  {transitData.origin.split(",")[0]} → {transitData.destination.split(",")[0]}
+                  {transitData.origin.split(",")[0]} â†’ {transitData.destination.split(",")[0]}
                 </p>
               </div>
               <div className="text-right">
@@ -10217,7 +10288,7 @@ function App() {
             {/* Info de agendamento */}
             {transitData.scheduled && transitData.scheduledDate && (
               <div className="bg-primary/5 border border-primary/20 rounded-[20px] p-4 flex items-center gap-3">
-                <span className="material-symbols-outlined text-primary text-xl">event</span>
+                <Icon name="event" />
                 <div>
                   <p className="text-[9px] font-black text-primary uppercase tracking-widest">Agendado para</p>
                   <p className="text-sm font-black text-slate-900 dark:text-white">
@@ -10260,13 +10331,13 @@ function App() {
                 className="w-full bg-slate-900 dark:bg-white/5 border-2 border-primary/20 rounded-[28px] p-5 flex items-center gap-4 active:scale-[0.98] transition-all"
               >
                 <div className="size-12 rounded-[18px] bg-primary/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-primary text-xl">credit_card</span>
+                  <Icon name="credit_card" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="font-black text-white text-sm">{activeCard.brand} ••••{activeCard.last4}</p>
                   <p className="text-[10px] text-white/40 uppercase tracking-widest">Débito instantâneo</p>
                 </div>
-                <span className="material-symbols-outlined text-primary font-black">arrow_forward</span>
+                <Icon name="arrow_forward" />
               </motion.button>
             )}
 
@@ -10278,13 +10349,13 @@ function App() {
               className="w-full bg-white dark:bg-white/5 border border-emerald-200 dark:border-emerald-500/20 rounded-[28px] p-5 flex items-center gap-4 active:scale-[0.98] transition-all"
             >
               <div className="size-12 rounded-[18px] bg-emerald-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-emerald-500 text-xl">qr_code_2</span>
+                <Icon name="qr_code_2" />
               </div>
               <div className="flex-1 text-left">
                 <p className="font-black text-slate-900 dark:text-white text-sm">PIX</p>
                 <p className="text-[10px] text-slate-400 uppercase tracking-widest">Aprovação imediata</p>
               </div>
-              <span className="material-symbols-outlined text-slate-400 font-black">arrow_forward</span>
+              <Icon name="arrow_forward" />
             </motion.button>
 
             {/* Saldo */}
@@ -10295,7 +10366,7 @@ function App() {
               className="w-full bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[28px] p-5 flex items-center gap-4 active:scale-[0.98] transition-all disabled:opacity-40"
             >
               <div className="size-12 rounded-[18px] bg-blue-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-blue-500 text-xl">account_balance_wallet</span>
+                <Icon name="account_balance_wallet" />
               </div>
               <div className="flex-1 text-left">
                 <p className="font-black text-slate-900 dark:text-white text-sm">Saldo em Carteira</p>
@@ -10304,7 +10375,7 @@ function App() {
               {walletBalance < price ? (
                 <span className="text-[9px] font-black text-red-400 uppercase">Insuficiente</span>
               ) : (
-                <span className="material-symbols-outlined text-slate-400 font-black">arrow_forward</span>
+                <Icon name="arrow_forward" />
               )}
             </motion.button>
 
@@ -10316,19 +10387,19 @@ function App() {
               className="w-full bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[28px] p-5 flex items-center gap-4 active:scale-[0.98] transition-all"
             >
               <div className="size-12 rounded-[18px] bg-slate-100 dark:bg-white/5 flex items-center justify-center">
-                <span className="material-symbols-outlined text-slate-600 dark:text-slate-400 text-xl">payments</span>
+                <Icon name="payments" />
               </div>
               <div className="flex-1 text-left">
                 <p className="font-black text-slate-900 dark:text-white text-sm">Dinheiro</p>
                 <p className="text-[10px] text-slate-400 uppercase tracking-widest">Pague ao prestador</p>
               </div>
-              <span className="material-symbols-outlined text-slate-400 font-black">arrow_forward</span>
+              <Icon name="arrow_forward" />
             </motion.button>
           </div>
 
           {/* Badge segurança */}
           <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 border-dashed p-4 rounded-[24px]">
-            <span className="material-symbols-outlined text-primary text-xl">shield_with_heart</span>
+            <Icon name="shield_with_heart" />
             <p className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest">Pagamento 100% seguro e criptografado</p>
           </div>
         </div>
@@ -10336,7 +10407,7 @@ function App() {
     );
   };
 
-  // ─── Tela de Aguardando Motorista ────────────────────────────────────────
+  // â”€â”€â”€ Tela de Aguardando Motorista â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const renderWaitingDriver = () => {
     if (!selectedItem) return null;
 
@@ -10414,7 +10485,7 @@ function App() {
               onClick={() => setSubView("active_order")}
               className="w-full bg-primary text-slate-900 font-black py-5 rounded-[24px] shadow-2xl shadow-primary/30 flex items-center justify-center gap-3 text-sm uppercase tracking-widest"
             >
-              <span className="material-symbols-outlined font-black">navigation</span>
+              <Icon name="navigation" />
               Motorista Encontrado! Acompanhar
             </button>
           </motion.div>
@@ -10453,7 +10524,7 @@ function App() {
       <div className="absolute inset-0 z-[120] bg-[#f8fafc] dark:bg-slate-950 flex flex-col overflow-hidden">
         <header className="px-6 py-5 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 flex items-center gap-4 shrink-0">
           <button onClick={() => { setSubView('none'); setFilterTab('agendados' as any); }} className="size-11 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 flex items-center justify-center active:scale-90 transition-all">
-            <span className="material-symbols-outlined font-black text-slate-700 dark:text-white">arrow_back</span>
+            <Icon name="arrow_back" />
           </button>
           <div className="flex-1">
             <h2 className="text-base font-black text-slate-900 dark:text-white tracking-tight">Agendamento</h2>
@@ -10483,19 +10554,19 @@ function App() {
           {/* Detalhes */}
           <div className="bg-white dark:bg-slate-800 rounded-[28px] border border-slate-100 dark:border-slate-700 p-5 space-y-4 shadow-sm">
             <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-blue-500 text-xl">{icon}</span>
+              <Icon name={icon} />
               <div><p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Serviço</p><p className="text-sm font-black text-slate-900 dark:text-white">{label}</p></div>
             </div>
             {scheduledAt && <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-primary text-xl">event</span>
+              <Icon name="event" />
               <div><p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Agendado para</p><p className="text-sm font-black text-slate-900 dark:text-white capitalize">{scheduledAt}</p></div>
             </div>}
             <div className="flex items-start gap-3">
-              <span className="material-symbols-outlined text-yellow-500 text-xl mt-0.5">trip_origin</span>
+              <Icon name="trip_origin" />
               <div><p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Origem</p><p className="text-sm font-bold text-slate-700 dark:text-slate-300">{selectedItem.pickup_address}</p></div>
             </div>
             <div className="flex items-start gap-3">
-              <span className="material-symbols-outlined text-red-500 text-xl mt-0.5">location_on</span>
+              <Icon name="location_on" />
               <div><p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Destino</p><p className="text-sm font-bold text-slate-900 dark:text-white">{selectedItem.delivery_address}</p></div>
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700">
@@ -10520,7 +10591,7 @@ function App() {
           {/* Chat */}
           <div className="bg-white dark:bg-slate-800 rounded-[28px] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center gap-3">
-              <span className="material-symbols-outlined text-blue-500 text-xl">chat</span>
+              <Icon name="chat" />
               <p className="text-sm font-black text-slate-900 dark:text-white">Chat com o Motorista</p>
             </div>
             <div className="p-4 min-h-[100px] space-y-3">
@@ -10546,7 +10617,7 @@ function App() {
               />
               <button onClick={sendScheduledMessage} disabled={!hasDriver || !schedChatInputState.trim()}
                 className="size-12 bg-blue-500 text-white rounded-2xl flex items-center justify-center shadow-md shadow-blue-500/20 active:scale-90 transition-all disabled:opacity-30">
-                <span className="material-symbols-outlined font-black">send</span>
+                <Icon name="send" />
               </button>
             </div>
           </div>
@@ -10574,7 +10645,7 @@ function App() {
                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                    className="absolute inset-x-0 h-[2px] bg-primary shadow-[0_0_15px_#ffd900] z-20"
                  />
-                 <span className="material-symbols-outlined text-5xl text-primary animate-pulse relative z-10 fill-1">fingerprint</span>
+                 <Icon name="fingerprint" />
               </div>
            </div>
         </div>
@@ -10591,7 +10662,7 @@ function App() {
 
         <div className="mt-16 bg-white/5 backdrop-blur-md px-6 py-4 rounded-[25px] border border-white/10 flex items-center gap-4">
            <div className="size-10 bg-primary/20 rounded-xl flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-xl">verified_user</span>
+              <Icon name="verified_user" />
            </div>
            <div className="text-left">
               <p className="text-[9px] font-black text-white uppercase tracking-widest">Gateway Ativo</p>
@@ -10637,7 +10708,7 @@ function App() {
           </button>
         </div>
         <div className="mt-12 flex items-center gap-2 text-slate-500 font-bold text-sm cursor-pointer hover:text-slate-900 transition-colors">
-          <span className="material-symbols-outlined">chat</span>
+          <Icon name="chat" />
           <span>Falar com o Suporte</span>
         </div>
       </div>
@@ -10758,14 +10829,14 @@ function App() {
   const BottomNav = () => {
     const navItems = [
       { id: "home", icon: "home", label: "Início" },
-      { id: "orders", icon: "receipt_long", label: "Pedidos" },
-      { id: "wallet", icon: "account_balance_wallet", label: "Carteira" },
+      { id: "orders", icon: "history", label: "Pedidos" },
+      { id: "wallet", icon: "wallet", label: "Carteira" },
       { id: "profile", icon: "person", label: "Perfil" },
     ];
 
     return (
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-100 dark:border-slate-800 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-        <div className="flex items-center justify-around px-2 pt-2 pb-3 max-w-lg mx-auto">
+      <nav className="fixed bottom-0 left-0 right-0 z-[100] bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border-t border-slate-100/50 dark:border-white/5 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] rounded-t-[32px]" style={{ paddingBottom: "env(safe-area-inset-bottom, 20px)" }}>
+        <div className="flex items-center justify-between px-6 pt-4 pb-2 max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = tab === item.id;
           return (
@@ -10776,39 +10847,39 @@ function App() {
                 setSubView("none");
                 window.history.replaceState({ view: "app", tab: item.id, subView: "none" }, "");
               }}
-              className="relative flex flex-col items-center justify-center gap-0.5 min-w-[52px] px-2 py-1 active:scale-95 transition-transform"
+              className="relative flex flex-col items-center justify-center gap-1 active:scale-90 transition-all duration-300"
             >
-              <div className="flex items-center gap-2.5">
-                <span className={`material-symbols-outlined text-[22px] transition-all duration-300 ${isActive ? "text-primary scale-110" : "text-slate-400"}`} style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>{item.icon}</span>
-                <span className={`text-[10px] font-bold transition-all duration-300 leading-none ${isActive ? "text-primary" : "text-slate-400"}`}>{item.label}</span>
+              <div className={`flex flex-col items-center gap-1.5 transition-all duration-500 ${isActive ? "scale-110" : "opacity-40 grayscale"}`}>
+                <div className={`p-2.5 rounded-2xl transition-all duration-500 ${isActive ? "bg-primary/10 text-primary shadow-lg shadow-primary/10" : "text-slate-400"}`}>
+                  <Icon name={item.icon} size={24} />
+                </div>
+                <span className={`text-[9px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${isActive ? "text-primary flex opacity-100" : "hidden opacity-0"}`}>{item.label}</span>
               </div>
               {isActive && (
-                <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20 dark:bg-black/10 scale-x-50" />
+                <motion.div layoutId="nav-glow" className="absolute -top-4 size-1 bg-primary rounded-full blur-[2px]" />
               )}
             </button>
           );
         })}
-        <div className="w-[1px] h-8 bg-slate-200 dark:bg-slate-800 mx-1" />
-        {/* Izi AI Advisor */}
-        <button onClick={() => setIsAIOpen(true)} className="relative flex flex-col items-center justify-center gap-0.5 min-w-[52px] px-2 py-1 active:scale-95 transition-transform">
-          <div className={`relative flex items-center justify-center size-9 rounded-2xl transition-all ${isAIOpen ? "bg-slate-900 dark:bg-primary" : "bg-slate-100 dark:bg-slate-800"}`}>
-            <div className="absolute inset-0 rounded-2xl bg-primary/20 animate-pulse" />
-            <span className="material-symbols-outlined text-[20px] relative z-10 text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>smart_toy</span>
+        
+        {/* Izi AI Advisor - Premium AI look */}
+        <button onClick={() => setIsAIOpen(true)} className="relative group active:scale-90 transition-all">
+          <div className={`relative flex items-center justify-center size-12 rounded-[22px] transition-all duration-500 ${isAIOpen ? "bg-slate-900 shadow-2xl scale-110" : "bg-gradient-to-tr from-slate-100 to-white dark:from-slate-800 dark:to-slate-700"} border border-slate-200 dark:border-white/10 shadow-soft`}>
+            <div className="absolute inset-0 rounded-[22px] bg-primary/20 animate-pulse opacity-40" />
+            <Icon name="bolt" size={24} className="relative z-10 text-primary" />
           </div>
-          <span className="text-[10px] font-bold text-slate-400 leading-none">AI</span>
         </button>
-        <div className="w-[1px] h-8 bg-slate-200 dark:bg-slate-800 mx-1" />
-        {/* Cart Quick Access */}
-        <button onClick={() => navigateSubView("cart")} className="relative flex flex-col items-center justify-center gap-0.5 min-w-[52px] px-2 py-1 active:scale-95 transition-transform">
-          <div className="relative flex items-center justify-center size-9 rounded-2xl bg-primary shadow-md shadow-primary/30">
-            <span className="material-symbols-outlined text-slate-900 text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>shopping_cart</span>
+
+        {/* Cart Quick Access - Premium look */}
+        <button onClick={() => navigateSubView("cart")} className="relative active:scale-90 transition-all group">
+          <div className="relative flex items-center justify-center size-12 rounded-[22px] bg-primary shadow-lg shadow-primary/30 border border-primary/20 group-hover:scale-105 transition-all">
+            <Icon name="shopping_cart" size={24} className="text-slate-900" />
             {cart.length > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 ring-2 ring-white dark:ring-slate-900">
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 ring-2 ring-white dark:ring-slate-900 shadow-lg">
                 {cart.length > 99 ? "99+" : cart.length}
               </span>
             )}
           </div>
-          <span className="text-[10px] font-bold text-primary leading-none">{cart.length > 0 ? `R$${cart.reduce((s,i) => s+(i.price||0),0).toFixed(0)}` : "Cart"}</span>
         </button>
         </div>
       </nav>

@@ -4,9 +4,44 @@ import { supabase } from './lib/supabase';
 import { playIziSound } from './lib/iziSounds';
 import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 
-const Icon = ({ name, className = "", fill = false }: { name: string; className?: string; fill?: boolean }) => (
-    <span className={`material-symbols-outlined ${className} ${fill ? 'font-fill' : ''}`} style={{ fontVariationSettings: fill ? "'FILL' 1" : "" }}>{name}</span>
-);
+import { BespokeIcons } from './lib/BespokeIcons';
+
+const Icon = ({ name, className = "", size = 20, ...props }: any) => {
+  const icons: Record<string, any> = {
+    'grid_view': BespokeIcons.Home,
+    'stars': BespokeIcons.Star,
+    'event': BespokeIcons.Clock,
+    'history': BespokeIcons.History,
+    'payments': BespokeIcons.Wallet,
+    'person': BespokeIcons.User,
+    'menu': BespokeIcons.Menu,
+    'star': BespokeIcons.StarFilled,
+    'account_balance_wallet': BespokeIcons.Wallet,
+    'package_2': BespokeIcons.Bag,
+    'two_wheeler': BespokeIcons.Motorcycle,
+    'directions_car': BespokeIcons.Car,
+    'local_shipping': BespokeIcons.Truck,
+    'schedule': BespokeIcons.Clock,
+    'location_on': BespokeIcons.Pin,
+    'check_circle': BespokeIcons.Check,
+    'verified': BespokeIcons.Check,
+    'chat': BespokeIcons.Support,
+    'power_off': BespokeIcons.Logout,
+    'radar': BespokeIcons.Bolt,
+    'check': BespokeIcons.Check,
+    'close': BespokeIcons.X,
+    'analytics': BespokeIcons.Coins,
+    'today': BespokeIcons.Clock,
+    'route': BespokeIcons.Map,
+    'military_tech': BespokeIcons.Shield,
+    'event_available': BespokeIcons.Check,
+    'history_edu': BespokeIcons.History,
+    'sentiment_dissatisfied': BespokeIcons.Help,
+  };
+
+  const IconComp = icons[name] || BespokeIcons.Help;
+  return <IconComp size={size} className={className} />;
+};
 
 type View = 'dashboard' | 'history' | 'earnings' | 'profile' | 'active_mission' | 'dedicated' | 'scheduled' | 'sos';
 type ServiceType = 'package' | 'mototaxi' | 'car_ride' | string;
@@ -20,6 +55,10 @@ interface Order {
     price: number;
     customer: string;
     scheduled_at?: string;
+    title?: string;
+    distance?: string;
+    time?: string;
+    rating? : number;
 }
 
 function App() {
@@ -307,17 +346,17 @@ function App() {
     };
 
     const renderHeader = () => (
-        <header className="px-6 py-5 flex items-center justify-between sticky top-0 z-50 bg-[#020617]/90 backdrop-blur-2xl border-b border-white/5 shrink-0">
-            <button onClick={() => setIsMenuOpen(true)} className="size-11 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center active:scale-95 transition-all">
-                <Icon name="menu" className="text-white text-xl" />
+        <header className="px-6 py-6 flex items-center justify-between sticky top-0 z-50 bg-[#020617]/80 backdrop-blur-3xl border-b border-white/5 shrink-0">
+            <button onClick={() => setIsMenuOpen(true)} className="size-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center active:scale-90 transition-all shadow-premium">
+                <Icon name="menu" className="text-white" size={24} />
             </button>
             <div className="flex flex-col items-center">
-                <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em]">Terminal</span>
-                <h1 className="text-base font-black text-white tracking-tighter uppercase leading-none">Izi <span className="text-primary">Pilot</span></h1>
+                <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.5em] mb-0.5">Terminal Operacional</span>
+                <h1 className="text-xl font-black text-white tracking-tighter uppercase leading-none">Izi <span className="text-primary italic">Pilot</span></h1>
             </div>
-            <button onClick={() => setIsOnline(!isOnline)} className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all active:scale-95 ${isOnline ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
-                <div className={`size-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
-                <span className="text-[9px] font-black uppercase tracking-widest">{isOnline ? 'Online' : 'Offline'}</span>
+            <button onClick={() => setIsOnline(!isOnline)} className={`flex items-center gap-2.5 px-4 py-2.5 rounded-[20px] border transition-all active:scale-90 ${isOnline ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10' : 'bg-red-500/10 border-red-500/20 text-red-400 shadow-lg shadow-red-500/10'}`}>
+                <div className={`size-2 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                <span className="text-[10px] font-black uppercase tracking-widest">{isOnline ? 'Online' : 'Offline'}</span>
             </button>
         </header>
     );
@@ -326,34 +365,34 @@ function App() {
         <AnimatePresence>
             {isMenuOpen && (
                 <>
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMenuOpen(false)} className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[100]" />
-                    <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="fixed top-0 left-0 bottom-0 w-[82%] max-w-[300px] bg-[#030712] border-r border-white/5 z-[101] flex flex-col p-8">
-                        <div className="flex items-center gap-4 mb-10 pb-8 border-b border-white/5">
-                            <div className="size-14 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center"><Icon name="person" className="text-primary text-2xl" /></div>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMenuOpen(false)} className="fixed inset-0 bg-black/90 backdrop-blur-2xl z-[100]" />
+                    <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} className="fixed top-0 left-0 bottom-0 w-[85%] max-w-[320px] bg-[#030712] border-r border-white/5 z-[101] flex flex-col p-10 overflow-y-auto no-scrollbar shadow-premium">
+                        <div className="flex items-center gap-5 mb-12 pb-10 border-b border-white/5">
+                            <div className="size-16 rounded-[24px] bg-primary/10 border border-primary/20 flex items-center justify-center shadow-lg shadow-primary/5"><Icon name="person" size={32} className="text-primary" /></div>
                             <div>
-                                <h3 className="text-base font-black text-white tracking-tight">{driverName}</h3>
-                                <div className="flex items-center gap-1.5 mt-0.5"><Icon name="star" className="text-primary text-xs" fill /><span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Nível {stats.level}</span></div>
+                                <h3 className="text-lg font-black text-white tracking-tight">{driverName}</h3>
+                                <div className="flex items-center gap-2 mt-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/5 w-fit"><Icon name="star" className="text-primary text-xs" /><span className="text-[9px] font-black text-white/50 uppercase tracking-[0.2em]">Nível {stats.level}</span></div>
                             </div>
                         </div>
-                        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-8 flex items-center justify-between">
-                            <div><p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Saldo Disponível</p><p className="text-xl font-black text-white">R$ {stats.balance.toFixed(2).replace('.', ',')}</p></div>
-                            <Icon name="account_balance_wallet" className="text-primary text-2xl" />
+                        <div className="bg-gradient-to-br from-white/5 to-transparent border border-white/10 rounded-[30px] p-6 mb-10 flex items-center justify-between shadow-inner">
+                            <div><p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-1">Saldo Total</p><p className="text-2xl font-black text-white tracking-tighter">R$ {stats.balance.toFixed(2).replace('.', ',')}</p></div>
+                            <div className="size-12 bg-primary/20 rounded-2xl flex items-center justify-center"><Icon name="account_balance_wallet" size={24} className="text-primary" /></div>
                         </div>
-                        <nav className="flex-1 space-y-1">
+                        <nav className="flex-1 space-y-2">
                             {[{ id: 'dashboard', label: 'Painel', icon: 'grid_view' }, { id: 'dedicated', label: 'Vagas Dedicadas', icon: 'stars' }, { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length }, { id: 'history', label: 'Histórico', icon: 'history' }, { id: 'earnings', label: 'Financeiro', icon: 'payments' }, { id: 'profile', label: 'Meu Perfil', icon: 'person' }].map(item => (
-                                <button key={item.id} onClick={() => { setActiveTab(item.id as any); setIsMenuOpen(false); }} className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all text-left ${activeTab === item.id ? 'bg-primary/10 text-primary border border-primary/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
-                                    <div className="relative"><Icon name={item.icon} className="text-xl" fill={activeTab === item.id} />{(item as any).badge > 0 && <span className="absolute -top-1 -right-1 size-4 bg-blue-500 text-white text-[8px] font-black rounded-full flex items-center justify-center">{(item as any).badge}</span>}</div><span className="text-sm font-black uppercase tracking-widest">{item.label}</span>
+                                <button key={item.id} onClick={() => { setActiveTab(item.id as any); setIsMenuOpen(false); }} className={`w-full flex items-center gap-5 px-5 py-4.5 rounded-[22px] transition-all text-left group ${activeTab === item.id ? 'bg-primary text-slate-950 font-black shadow-lg shadow-primary/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
+                                    <div className="relative"><Icon name={item.icon} size={22} />{(item as any).badge > 0 && <span className="absolute -top-1.5 -right-1.5 size-5 bg-blue-500 text-white text-[9px] font-black rounded-full flex items-center justify-center ring-2 ring-[#030712]">{(item as any).badge}</span>}</div><span className="text-sm font-black uppercase tracking-[0.1em]">{item.label}</span>
                                 </button>
                             ))}
                         </nav>
-                        <div className="pt-8 border-t border-white/5 space-y-4">
+                        <div className="pt-10 border-t border-white/5 space-y-6 mt-8">
                             <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Receber Chamadas</span>
-                                <button onClick={() => setIsOnline(!isOnline)} className={`h-7 w-12 rounded-full relative transition-colors ${isOnline ? 'bg-emerald-500' : 'bg-white/10'}`}>
-                                    <motion.div animate={{ x: isOnline ? 22 : 2 }} className="absolute top-1 size-5 bg-white rounded-full shadow-lg" />
+                                <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">Status Operacional</span>
+                                <button onClick={() => setIsOnline(!isOnline)} className={`h-8 w-14 rounded-full relative transition-all duration-500 ${isOnline ? 'bg-emerald-500 ring-4 ring-emerald-500/20' : 'bg-white/10'}`}>
+                                    <motion.div animate={{ x: isOnline ? 28 : 4 }} className="absolute top-1 size-6 bg-white rounded-full shadow-xl" />
                                 </button>
                             </div>
-                            <button onClick={handleLogout} className="w-full py-3.5 border border-red-500/20 text-red-500/70 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500/5 transition-all">Encerrar Sessão</button>
+                            <button onClick={handleLogout} className="w-full py-4.5 border border-red-500/20 text-red-500/60 rounded-[22px] text-[10px] font-black uppercase tracking-[0.3em] hover:bg-red-500/5 transition-all active:scale-95">Ejetar Sessão</button>
                         </div>
                     </motion.div>
                 </>
@@ -384,7 +423,7 @@ function App() {
             <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
-                        <Icon name="stars" className="text-primary text-sm" fill />
+                        <Icon name="stars" className="text-primary text-sm" />
                         <h2 className="text-sm font-black text-white uppercase tracking-widest">Vagas Dedicadas</h2>
                         {dedicatedSlots.length > 0 && (
                             <span className="size-5 bg-primary text-slate-900 text-[9px] font-black rounded-full flex items-center justify-center animate-pulse">
@@ -458,7 +497,7 @@ function App() {
             <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
-                        <Icon name="event" className="text-blue-400 text-sm" fill />
+                        <Icon name="event" className="text-blue-400 text-sm" />
                         <h2 className="text-sm font-black text-white uppercase tracking-widest">Agendamentos</h2>
                         {scheduledOrders.length > 0 && (
                             <span className="size-5 bg-blue-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
@@ -541,7 +580,7 @@ function App() {
                                         )}
                                         {isAccepted && (
                                             <span className="text-[9px] font-black text-emerald-400 flex items-center gap-1.5">
-                                                <Icon name="verified" className="text-sm" fill />
+                                                <Icon name="verified" className="text-sm" />
                                                 Você aceitou esta corrida
                                             </span>
                                         )}
@@ -556,7 +595,7 @@ function App() {
             <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
                 {[{ id: 'all', label: 'Todos', icon: 'apps' }, { id: 'package', label: 'Pacotes', icon: 'package_2' }, { id: 'mototaxi', label: 'Moto', icon: 'two_wheeler' }, { id: 'car_ride', label: 'Carro', icon: 'directions_car' }].map(item => (
                     <button key={item.id} onClick={() => setFilter(item.id as any)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl whitespace-nowrap transition-all shrink-0 ${filter === item.id ? 'bg-primary text-slate-900 font-black shadow-lg shadow-primary/20' : 'bg-white/[0.03] text-white/40 border border-white/5'}`}>
-                        <Icon name={item.icon} className="text-base" fill={filter === item.id} /><span className="text-[11px] font-black uppercase tracking-widest">{item.label}</span>
+                        <Icon name={item.icon} className="text-base" /><span className="text-[11px] font-black uppercase tracking-widest">{item.label}</span>
                     </button>
                 ))}
             </div>
@@ -585,7 +624,7 @@ function App() {
                         <motion.div key={order.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }} className="bg-white/[0.03] border border-white/8 rounded-[32px] p-6 space-y-5">
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-4">
-                                    <div className={`size-14 rounded-[20px] ${details.bg} ${details.color} flex items-center justify-center border border-current/10`}><Icon name={details.icon} className="text-3xl" fill /></div>
+                                    <div className={`size-14 rounded-[20px] ${details.bg} ${details.color} flex items-center justify-center border border-current/10`}><Icon name={details.icon} className="text-3xl" /></div>
                                     <div><p className={`text-[9px] font-black uppercase tracking-widest mb-0.5 ${details.color}`}>{details.label}</p><h3 className="text-base font-black text-white">{isMobility ? 'Chamada de Passageiro' : 'Entrega de Pacote'}</h3></div>
                                 </div>
                                 <div className="text-right"><p className="text-2xl font-black text-primary">R$ {order.price.toFixed(0)}</p><p className="text-[8px] text-white/20 uppercase tracking-widest">Ganho estimado</p></div>
@@ -621,8 +660,8 @@ function App() {
                         const details = getTypeDetails(order.type);
                         return (
                             <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-white/[0.03] border border-white/5 rounded-[24px] p-5 flex items-center gap-4">
-                                <div className={`size-12 rounded-[18px] ${details.bg} ${details.color} flex items-center justify-center border border-current/10 shrink-0`}><Icon name={details.icon} className="text-2xl" fill /></div>
-                                <div className="flex-1 min-w-0"><p className="text-sm font-black text-white truncate">{order.destination.split(',')[0]}</p><div className="flex items-center gap-1.5 mt-0.5"><Icon name="verified" className="text-emerald-400 text-xs" fill /><span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Concluída</span></div></div>
+                                <div className={`size-12 rounded-[18px] ${details.bg} ${details.color} flex items-center justify-center border border-current/10 shrink-0`}><Icon name={details.icon} className="text-2xl" /></div>
+                                <div className="flex-1 min-w-0"><p className="text-sm font-black text-white truncate">{order.destination.split(',')[0]}</p><div className="flex items-center gap-1.5 mt-0.5"><Icon name="verified" className="text-emerald-400 text-xs" /><span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Concluída</span></div></div>
                                 <div className="text-right shrink-0"><p className="text-lg font-black text-white">R$ {order.price.toFixed(0)}</p><p className="text-[8px] font-black text-white/20 uppercase">#{order.id}</p></div>
                             </motion.div>
                         );
@@ -647,7 +686,7 @@ function App() {
             <div className="grid grid-cols-2 gap-4">
                 {[{ label: 'Hoje', value: `R$ ${stats.today.toFixed(0)}`, icon: 'today', color: 'text-primary' }, { label: 'Corridas', value: stats.count.toString(), icon: 'route', color: 'text-emerald-400' }, { label: 'Nível', value: stats.level.toString(), icon: 'military_tech', color: 'text-blue-400' }, { label: 'Avaliação', value: '4.98', icon: 'star', color: 'text-yellow-400' }].map((stat, i) => (
                     <div key={i} className="bg-white/[0.03] border border-white/5 rounded-[24px] p-5 space-y-2">
-                        <Icon name={stat.icon} className={`${stat.color} text-xl`} fill /><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">{stat.label}</p><p className="text-xl font-black text-white">{stat.value}</p>
+                        <Icon name={stat.icon} className={`${stat.color} text-xl`} /><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">{stat.label}</p><p className="text-xl font-black text-white">{stat.value}</p>
                     </div>
                 ))}
             </div>
@@ -697,7 +736,7 @@ function App() {
                         {/* Data e hora */}
                         <div className="flex items-center gap-3">
                             <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 ${isToday ? 'bg-blue-500/20 border border-blue-500/30' : 'bg-white/5 border border-white/10'}`}>
-                                <Icon name="event" className={`text-xl ${isToday ? 'text-blue-400' : 'text-white/30'}`} fill />
+                                <Icon name="event" className={`text-xl ${isToday ? 'text-blue-400' : 'text-white/30'}`} />
                             </div>
                             <div>
                                 <p className={`text-sm font-black uppercase tracking-widest ${isToday ? 'text-blue-400' : 'text-white/50'}`}>{dateLabel}</p>
@@ -718,7 +757,7 @@ function App() {
                             </div>
                             <div className="flex items-start gap-3">
                                 <div className="size-6 rounded-full bg-red-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                                    <Icon name="location_on" className="text-red-400 text-sm" fill />
+                                    <Icon name="location_on" className="text-red-400 text-sm" />
                                 </div>
                                 <p className="text-sm font-bold text-white flex-1">{order.delivery_address}</p>
                             </div>
@@ -759,7 +798,7 @@ function App() {
                         )}
                         {isMyAccepted && (
                             <div className="flex items-center justify-center gap-2 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
-                                <Icon name="verified" className="text-emerald-400 text-lg" fill />
+                                <Icon name="verified" className="text-emerald-400 text-lg" />
                                 <span className="text-[11px] font-black text-emerald-400 uppercase tracking-widest">Você aceitou esta corrida</span>
                             </div>
                         )}
@@ -813,9 +852,9 @@ function App() {
             <div className="flex flex-col items-center pt-4 pb-2">
                 <div className="size-24 rounded-[32px] bg-gradient-to-br from-primary/30 to-primary/5 border border-primary/20 flex items-center justify-center mb-4"><Icon name="person" className="text-primary text-5xl" /></div>
                 <h2 className="text-2xl font-black text-white tracking-tight">{driverName}</h2>
-                <div className="flex items-center gap-2 mt-1.5"><Icon name="verified" className="text-primary text-sm" fill /><span className="text-[10px] font-black text-primary uppercase tracking-widest">Piloto Izi • Nível {stats.level}</span></div>
+                <div className="flex items-center gap-2 mt-1.5"><Icon name="verified" className="text-primary text-sm" /><span className="text-[10px] font-black text-primary uppercase tracking-widest">Piloto Izi • Nível {stats.level}</span></div>
                 <div className="flex gap-4 mt-4">
-                    <div className="flex items-center gap-1.5 bg-white/5 px-4 py-2 rounded-2xl border border-white/5"><Icon name="star" className="text-primary text-sm" fill /><span className="text-sm font-black text-white">4.98</span></div>
+                    <div className="flex items-center gap-1.5 bg-white/5 px-4 py-2 rounded-2xl border border-white/5"><Icon name="star" className="text-primary text-sm" /><span className="text-sm font-black text-white">4.98</span></div>
                     <div className="flex items-center gap-1.5 bg-white/5 px-4 py-2 rounded-2xl border border-white/5"><Icon name="route" className="text-emerald-400 text-sm" /><span className="text-sm font-black text-white">{stats.count} corridas</span></div>
                 </div>
             </div>
@@ -873,10 +912,10 @@ function App() {
                         <button onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeMission.destination)}`, '_blank')} className="flex-1 h-14 bg-white/5 border border-white/10 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
                             <Icon name="map" className="text-primary text-lg" />GPS Externo
                         </button>
-                        <button onClick={() => setIsSOSActive(true)} className="size-14 bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"><Icon name="emergency" className="text-xl" fill /></button>
+                        <button onClick={() => setIsSOSActive(true)} className="size-14 bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"><Icon name="emergency" className="text-xl" /></button>
                     </div>
                     <button onClick={handleComplete} className="w-full h-16 bg-gradient-to-r from-primary to-yellow-400 text-slate-900 font-black text-sm uppercase tracking-widest rounded-[22px] shadow-2xl shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
-                        <Icon name="check_circle" className="text-2xl" fill />{isMobility ? 'Concluir Corrida' : 'Finalizar Entrega'}
+                        <Icon name="check_circle" className="text-2xl" />{isMobility ? 'Concluir Corrida' : 'Finalizar Entrega'}
                     </button>
                 </div>
             </motion.div>
@@ -889,7 +928,7 @@ function App() {
             <h1 className="text-4xl font-black text-white uppercase tracking-tight mb-3">SOS Ativado</h1>
             <p className="text-white/60 text-sm mb-10 max-w-xs leading-relaxed">Sua localização está sendo compartilhada com a central Izi.</p>
             <div className="w-full max-w-sm space-y-4">
-                <button onClick={() => { window.open('tel:190'); setIsSOSActive(false); }} className="w-full h-16 bg-white text-red-600 rounded-[24px] flex items-center justify-center gap-4 font-black text-lg uppercase tracking-tight shadow-2xl active:scale-95 transition-all"><Icon name="local_police" className="text-3xl" fill />Ligar 190</button>
+                <button onClick={() => { window.open('tel:190'); setIsSOSActive(false); }} className="w-full h-16 bg-white text-red-600 rounded-[24px] flex items-center justify-center gap-4 font-black text-lg uppercase tracking-tight shadow-2xl active:scale-95 transition-all"><Icon name="local_police" className="text-3xl" />Ligar 190</button>
                 <button onClick={() => { toastSuccess('Apoio mecânico acionado.'); setIsSOSActive(false); }} className="w-full h-16 bg-white/10 border border-white/20 text-white rounded-[24px] flex items-center justify-center gap-4 font-black text-base uppercase active:scale-95 transition-all"><Icon name="build" className="text-2xl" />Apoio Mecânico</button>
                 <button onClick={() => setIsSOSActive(false)} className="text-white/30 font-black uppercase tracking-widest text-sm mt-4">Cancelar</button>
             </div>
@@ -899,7 +938,7 @@ function App() {
     const renderLoginView = () => {
         if (authInitLoading) return (
             <div className="h-screen flex items-center justify-center bg-[#020617]">
-                <div className="flex flex-col items-center gap-4"><div className="size-16 bg-primary/10 rounded-full flex items-center justify-center animate-pulse"><Icon name="bolt" className="text-primary text-3xl" fill /></div><p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Inicializando...</p></div>
+                <div className="flex flex-col items-center gap-4"><div className="size-16 bg-primary/10 rounded-full flex items-center justify-center animate-pulse"><Icon name="bolt" className="text-primary text-3xl" /></div><p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Inicializando...</p></div>
             </div>
         );
         return (
@@ -941,7 +980,7 @@ function App() {
             <AnimatePresence mode="wait">
                 {!isAuthenticated && authInitLoading && (
                     <div key="boot" className="h-full flex flex-col items-center justify-center bg-[#020617]">
-                        <div className="size-20 bg-primary/10 rounded-full flex items-center justify-center animate-pulse mb-4"><Icon name="bolt" className="text-primary text-4xl" fill /></div>
+                        <div className="size-20 bg-primary/10 rounded-full flex items-center justify-center animate-pulse mb-4"><Icon name="bolt" className="text-primary text-4xl" /></div>
                         <p className="text-[9px] font-black text-primary uppercase tracking-[0.5em] animate-pulse">Inicializando Terminal...</p>
                     </div>
                 )}
@@ -963,7 +1002,7 @@ function App() {
                             </AnimatePresence>
                             {!activeMission && (
                                 <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.85 }} onClick={() => setIsSOSActive(true)} className="fixed bottom-8 right-5 size-14 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_24px_rgba(220,38,38,0.4)] z-[60] border-2 border-red-900">
-                                    <Icon name="emergency" className="text-white text-2xl" fill />
+                                    <Icon name="emergency" className="text-white text-2xl" />
                                 </motion.button>
                             )}
                             <main className="flex-1 overflow-y-auto no-scrollbar">
