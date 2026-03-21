@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "./lib/supabase";
@@ -589,8 +589,43 @@ function App() {
   const [isIziBlackMembership, setIsIziBlackMembership] = useState(false);
   const [iziCashbackEarned, setIziCashbackEarned] = useState(0);
   const [showIziBlackCard, setShowIziBlackCard] = useState(false);
+  const [showIziBlackWelcome, setShowIziBlackWelcome] = useState(false);
   const [showMasterPerks, setShowMasterPerks] = useState(false);
+  const [activePerkDetail, setActivePerkDetail] = useState<string | null>(null);
   const [flashOffers, setFlashOffers] = useState<any[]>([]);
+  const [globalSettings, setGlobalSettings] = useState<any>(null);
+
+  const fetchGlobalSettings = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('admin_settings_delivery')
+        .select('*')
+        .eq('id', '00000000-0000-0000-0000-000000000000' as any)
+        .single();
+      if (data) setGlobalSettings(data);
+    } catch (e) {}
+  }, []);
+
+  const [timeLeft, setTimeLeft] = useState<{h: string, m: string, s: string}>({h: '00', m: '00', s: '00'});
+
+  useEffect(() => {
+    if (!globalSettings?.flash_offer_expiry) return;
+    const target = new Date(globalSettings.flash_offer_expiry).getTime();
+    const timer = setInterval(() => {
+      const now = Date.now();
+      const diff = target - now;
+      if (diff <= 0) {
+        setTimeLeft({h: '00', m: '00', s: '00'});
+        clearInterval(timer);
+        return;
+      }
+      const h = Math.floor(diff / (1000 * 60 * 60)).toString().padStart(2, '0');
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+      const s = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+      setTimeLeft({h, m, s});
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [globalSettings]);
 
   const fetchFlashOffers = async () => {
     const { data } = await supabase
@@ -1166,6 +1201,8 @@ function App() {
   useEffect(() => {
     fetchMarketData();
     fetchFlashOffers();
+    fetchGlobalSettings();
+    fetchBeveragePromo();
     const interval = setInterval(fetchMarketData, 20000);
     const flashChannel = supabase.channel('flash_offers_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'flash_offers' }, fetchFlashOffers)
@@ -1303,10 +1340,15 @@ function App() {
               setSubView("payment_success");
             }
 
-            // Abrir tela de avaliação ao concluir
+            // Abrir tela de avaliação ao concluir (exceto para assinaturas Izi Black)
             if (newOrder.status === 'concluido') {
               setTimeout(() => {
-                setSubView("order_feedback");
+                if (newOrder.service_type === 'subscription') {
+                  setShowIziBlackWelcome(true);
+                  setSubView("none");
+                } else {
+                  setSubView("order_feedback");
+                }
               }, 2000);
             }
 
@@ -1355,7 +1397,7 @@ function App() {
     if (data) setAvailableCoupons(data);
   };
 
-  const fetchBeveragePromo = async () => {
+  const fetchBeveragePromo = useCallback(async () => {
     try {
       // 1. Buscar Banners específicos para bebidas ou banners gerais ativos
       const { data: banners } = await supabase
@@ -1383,13 +1425,15 @@ function App() {
         .limit(8);
       
       if (pDeals) {
-        // Mapeia para o formato esperado pelo componente, adicionando preço antigo simulado se não existir
+        const discountPct = globalSettings?.flash_offer_discount || 25;
+        const discountMult = 1 / (1 - (discountPct / 100)); // Calculate back to original price
+        
         const formatted = pDeals.map(p => ({
           id: p.id,
           name: p.name,
           price: p.price,
-          oldPrice: p.price * 1.25,
-          off: "25%",
+          oldPrice: p.price * (discountMult || 1.25),
+          off: `${discountPct}%`,
           img: p.image_url || "https://images.unsplash.com/photo-1596753738914-7bc33e08f58b?q=80&w=400",
           cat: p.category || "Bebidas"
         }));
@@ -1397,7 +1441,7 @@ function App() {
       }
     } catch (err) {
     }
-  };
+  }, [globalSettings]);
 
   const validateCoupon = async (code: string) => {
     if (!code.trim()) return;
@@ -2307,74 +2351,87 @@ function App() {
           </div>
         </header>
 
-        {/* IZI BLACK VIP CARD */}
-        <div className="px-5 mt-8">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`relative overflow-hidden rounded-[32px] p-6 border-2 transition-all ${isIziBlackMembership ? 'bg-slate-900 border-primary shadow-2xl shadow-primary/20' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/50 dark:shadow-black/20'}`}
-          >
-            <div className={`absolute top-0 right-0 w-48 h-48 -mr-20 -mt-20 rounded-full blur-3xl opacity-30 ${isIziBlackMembership ? 'bg-primary' : 'bg-slate-400'}`} />
-            
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg ${isIziBlackMembership ? 'bg-primary text-slate-900' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}>
-                    <span className="material-symbols-outlined text-2xl font-black fill-1">workspace_premium</span>
-                  </div>
-                  <div>
-                    <h3 className={`text-sm font-black uppercase tracking-widest ${isIziBlackMembership ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-                      {isIziBlackMembership ? 'Membro Izi Black' : 'Programa de Fidelidade'}
-                    </h3>
-                    <p className={`text-xl font-black tracking-tight ${isIziBlackMembership ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
-                      {isIziBlackMembership ? 'Seu Status é VIP' : 'Seja um Izi Black'}
-                    </p>
-                  </div>
-                </div>
-                {isIziBlackMembership && (
-                  <div className="bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-xl">
-                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">Ativo</span>
-                  </div>
-                )}
+        {/* IZI BLACK LUXURY ENTRY POINTS */}
+        <div className="px-5 mt-10">
+          {isIziBlackMembership ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              onClick={() => setShowIziBlackCard(true)}
+              className="relative overflow-hidden rounded-[45px] bg-zinc-950 p-10 flex flex-col items-center justify-center text-center cursor-pointer active:scale-[0.98] transition-all shadow-[0_45px_100px_-20px_rgba(0,0,0,0.8)] border border-yellow-400/10 group"
+            >
+              {/* Dynamic Aura */}
+              <div className="absolute inset-0 z-0">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-48 bg-yellow-400/[0.05] blur-[80px] rounded-full animate-pulse" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className={`p-4 rounded-2xl border ${isIziBlackMembership ? 'bg-white/5 border-white/10' : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800'}`}>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Cashback Disponível</p>
-                  <p className={`text-xl font-black tracking-tighter ${isIziBlackMembership ? 'text-primary' : 'text-slate-900 dark:text-white'}`}>
-                    R$ {iziCashbackEarned.toFixed(2).replace('.', ',')}
-                  </p>
+              <div className="relative z-10 flex flex-col items-center gap-6">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-yellow-400/20 blur-xl rounded-full" />
+                  <div className="size-20 rounded-full bg-zinc-900 border border-yellow-400/30 flex items-center justify-center relative z-10 shadow-inner group-hover:bg-yellow-400 transition-colors">
+                    <span className="material-symbols-outlined text-yellow-500 text-4xl font-black fill-1 group-hover:text-black transition-colors">stars</span>
+                  </div>
                 </div>
-                <div className={`p-4 rounded-2xl border ${isIziBlackMembership ? 'bg-white/5 border-white/10' : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800'}`}>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Benefícios Ativos</p>
-                  <p className={`text-xl font-black tracking-tighter ${isIziBlackMembership ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
-                    {isIziBlackMembership ? 'Entrega Grátis*' : 'Ver Vantagens'}
-                  </p>
+                
+                <div className="flex flex-col items-center gap-2">
+                  <h3 className="text-[14px] font-black text-white uppercase tracking-[0.5em] leading-none mb-1">Membro Elite Black</h3>
+                  <div className="flex items-center gap-3 py-2 px-5 bg-white/[0.03] rounded-full border border-white/5">
+                    <span className="size-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_10px_rgba(255,184,0,0.8)]" />
+                    <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em]">Acesso Prioritário Conectado</p>
+                  </div>
+                </div>
+
+                <div className="mt-2 w-full max-w-[140px] h-10 rounded-full bg-yellow-400 flex items-center justify-center shadow-2xl active:scale-95 transition-all">
+                   <span className="text-[10px] font-black text-black uppercase tracking-[0.2em]">Painel VIP</span>
                 </div>
               </div>
 
-              {isIziBlackMembership ? (
-                <button 
-                  onClick={() => setShowIziBlackCard(true)}
-                  className="w-full mt-6 bg-primary dark:bg-primary text-slate-900 dark:text-slate-900 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-2"
-                >
-                  <span className="material-symbols-outlined text-sm">workspace_premium</span>
-                  Acessar Painel VIP Izi Black
-                </button>
-              ) : (
-                <button 
-                  onClick={() => { setIziBlackOrigin('home'); setIziBlackStep('info'); setSubView('izi_black_purchase'); }}
-                  className="w-full mt-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-black/20 dark:shadow-white/5"
-                >
-                  Conhecer Benefícios Izi Black
-                </button>
-              )}
-            </div>
-          </motion.div>
+              {/* Stealth Texture Overlays */}
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03] pointer-events-none" />
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => { setIziBlackOrigin('home'); setIziBlackStep('info'); setSubView('izi_black_purchase'); }}
+              className="relative overflow-hidden rounded-[50px] bg-zinc-950 p-1 border border-white/5 group shadow-2xl"
+            >
+              <div className="relative rounded-[46px] overflow-hidden bg-gradient-to-br from-zinc-900 to-black p-10">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/[0.08] blur-[100px] -mr-20 -mt-20 group-hover:bg-yellow-400/20 transition-all duration-700" />
+                
+                <div className="flex flex-col gap-6 relative z-10">
+                  <div className="flex items-center gap-4">
+                    <div className="size-16 rounded-3xl bg-zinc-800/80 backdrop-blur-xl border border-white/5 flex items-center justify-center shadow-2xl">
+                      <span className="material-symbols-outlined text-yellow-500 text-4xl font-black fill-1 group-hover:scale-125 transition-transform">bolt</span>
+                    </div>
+                    <div className="flex flex-col">
+                       <span className="text-[11px] font-black text-yellow-400 uppercase tracking-[0.5em] mb-1">Privilégio</span>
+                       <h3 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">IZI BLACK</h3>
+                    </div>
+                  </div>
+
+                  <p className="text-zinc-500 text-sm font-bold leading-relaxed max-w-[240px] uppercase tracking-wide">
+                    O passe de elite para quem exige <span className="text-white">entrega zero</span> e <span className="text-white">vips flash</span>.
+                  </p>
+
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="px-6 py-4 bg-white text-black rounded-[24px] font-black text-[11px] uppercase tracking-[0.2em] shadow-xl group-hover:bg-yellow-400 transition-colors">
+                      Ativar Convite
+                    </div>
+                    <div className="flex -space-x-3 pr-2">
+                       {[1,2,3].map(i => <div key={i} className="size-9 rounded-full border-4 border-zinc-900 bg-zinc-800 overflow-hidden shadow-2xl">
+                          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i+10}`} className="size-full" />
+                       </div>)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </div>
 
-        {/* IZI FLASH — Grid Vitrine */}
-        {flashOffers.length > 0 && (
+        {/* IZI FLASH — Grid Vitrine Extra Exclusive Check */}
+        {isIziBlackMembership && flashOffers.length > 0 && (
           <div className="mt-8 px-5">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
@@ -2451,34 +2508,157 @@ function App() {
                     setSelectedItem(activeOrder);
                     setSubView("active_order");
                   }}
-                  className="bg-primary text-slate-900 p-6 rounded-[35px] flex items-center gap-5 shadow-2xl shadow-primary/30 cursor-pointer active:scale-[0.98] transition-all relative overflow-hidden group"
+                  className={`p-6 rounded-[35px] flex items-center gap-5 shadow-2xl cursor-pointer active:scale-[0.98] transition-all relative overflow-hidden group ${activeOrder.service_type === 'subscription' ? 'bg-zinc-950 border border-white/5 shadow-black/40' : 'bg-primary text-slate-900 shadow-primary/30'}`}
                 >
-                  <div className="absolute top-0 right-0 size-32 bg-white/20 rounded-full blur-3xl -mr-16 -mt-16 animate-pulse" />
-                  <div className="size-16 rounded-[22px] bg-white/20 flex items-center justify-center backdrop-blur-md relative overflow-hidden shrink-0 border border-white/20 shadow-xl">
-                    <div className="absolute inset-x-0 bottom-0 h-1 bg-white/40 animate-progress-fast" />
-                    <span className="material-symbols-outlined text-3xl animate-bounce-slow">
-                      {activeOrderIcon}
+                  <div className={`absolute top-0 right-0 size-32 rounded-full blur-3xl -mr-16 -mt-16 animate-pulse ${activeOrder.service_type === 'subscription' ? 'bg-yellow-400/5' : 'bg-white/20'}`} />
+                  
+                  <div className={`size-16 rounded-[22px] flex items-center justify-center backdrop-blur-md relative overflow-hidden shrink-0 border shadow-xl ${activeOrder.service_type === 'subscription' ? 'bg-white/5 border-white/10' : 'bg-white/20 border-white/20'}`}>
+                    <div className={`absolute inset-x-0 bottom-0 h-1 animate-progress-fast ${activeOrder.service_type === 'subscription' ? 'bg-yellow-400/40' : 'bg-white/40'}`} />
+                    <span className={`material-symbols-outlined text-3xl animate-bounce-slow ${activeOrder.service_type === 'subscription' ? 'text-yellow-400 fill-1' : ''}`}>
+                      {activeOrder.service_type === 'subscription' ? "verified_user" : activeOrderIcon}
                     </span>
                   </div>
+
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-900/60 leading-none">
-                        {isCarService ? "Acompanhar Viagem" : "Acompanhar Entrega"}
+                      <span className={`text-[10px] font-black uppercase tracking-widest leading-none ${activeOrder.service_type === 'subscription' ? 'text-white/40' : 'text-slate-900/60'}`}>
+                        {activeOrder.service_type === 'subscription' ? "Ativação VIP" : (isCarService ? "Acompanhar Viagem" : "Acompanhar Entrega")}
                       </span>
-                      <div className="size-2 bg-red-500 rounded-full animate-ping" />
+                      <div className={`size-2 rounded-full animate-ping ${activeOrder.service_type === 'subscription' ? 'bg-yellow-400 shadow-[0_0_10px_rgba(255,184,0,0.8)]' : 'bg-red-500'}`} />
                     </div>
-                    <h4 className="font-black text-lg leading-tight tracking-tight">
-                      {isCarService ? "Motorista a caminho" : "Pedido em andamento"}
+                    <h4 className={`font-black text-lg leading-tight tracking-tight ${activeOrder.service_type === 'subscription' ? 'text-white italic' : ''}`}>
+                      {activeOrder.service_type === 'subscription' ? (activeOrder.status === 'pendente_pagamento' ? 'Verificando pagamento...' : 'Sincronizando privilégios...') : (isCarService ? "Motorista a caminho" : "Pedido em andamento")}
                     </h4>
-                    <p className="text-[11px] font-bold text-slate-900/70 mt-0.5">Clique para ver o mapa em tempo real</p>
+                    <p className={`text-[11px] font-bold mt-0.5 ${activeOrder.service_type === 'subscription' ? 'text-zinc-500' : 'text-slate-900/70'}`}>
+                      {activeOrder.service_type === 'subscription' ? 'Clique para ver o status da ativação' : 'Clique para ver o mapa em tempo real'}
+                    </p>
                   </div>
-                  <div className="size-10 rounded-full bg-slate-900/10 flex items-center justify-center group-hover:translate-x-1 transition-transform">
-                    <span className="material-symbols-outlined font-black">map</span>
+
+                  <div className={`size-10 rounded-full flex items-center justify-center group-hover:translate-x-1 transition-transform ${activeOrder.service_type === 'subscription' ? 'bg-white/5 text-yellow-400' : 'bg-slate-900/10'}`}>
+                    <span className="material-symbols-outlined font-black">{activeOrder.service_type === 'subscription' ? 'bolt' : 'map'}</span>
                   </div>
                 </motion.div>
               </div>
             );
           })()}
+
+          {/* ═══ SEÇÃO: OFERTAS VIP (Izi Black) ═══ */}
+          {isIziBlackMembership && availableCoupons.filter(p => p.is_vip).length > 0 && (
+            <section className="px-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                    <span className="material-symbols-outlined text-amber-500 text-lg fill-1">workspace_premium</span>
+                  </div>
+                  <div>
+                    <h3 className="text-[15px] font-black tracking-tight text-slate-900 dark:text-white">Ofertas VIP</h3>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-amber-500">Exclusivo Izi Black</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black text-amber-500 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
+                  {availableCoupons.filter(p => p.is_vip).length} {availableCoupons.filter(p => p.is_vip).length === 1 ? 'oferta' : 'ofertas'}
+                </span>
+              </div>
+              <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-4 px-4 pb-3">
+                {availableCoupons.filter(p => p.is_vip).map((cpn, i) => (
+                  <motion.div
+                    initial={{ opacity: 0, x: 40 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    key={cpn.id || i}
+                    className="min-w-[310px] h-[175px] rounded-[45px] p-8 flex flex-col items-center justify-center text-center relative overflow-hidden group shrink-0 bg-zinc-950 shadow-none"
+                  >
+                    {/* Efeitos de Iluminação Interna (Luxury Glow) */}
+                    <div className="absolute inset-0 z-0">
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-40 bg-yellow-400/[0.03] blur-[60px] rounded-full" />
+                    </div>
+
+                    <div className="relative z-10 flex flex-col items-center gap-1.5">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="material-symbols-outlined text-yellow-400 text-[12px] opacity-60">stars</span>
+                        <span className="text-yellow-400 font-black text-[8px] uppercase tracking-[0.4em]">
+                          {cpn.title || "Membro Izi Black"}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-baseline gap-2">
+                        <h4 className="text-5xl font-black text-white tracking-tighter leading-none">
+                          {cpn.discount_type === 'percent' ? `${cpn.discount_value}%` : `R$ ${cpn.discount_value}`}
+                        </h4>
+                        <span className="text-yellow-400 text-sm font-black italic uppercase tracking-[0.2em]">OFF</span>
+                      </div>
+                      
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.15em] mb-4">
+                        {cpn.description || "Benefício Exclusivo"}
+                      </p>
+
+                      {cpn.coupon_code ? (
+                        <div
+                          onClick={() => {
+                            navigator.clipboard.writeText(cpn.coupon_code);
+                            setCopiedCoupon(cpn.id || cpn.coupon_code);
+                            setTimeout(() => setCopiedCoupon(null), 2000);
+                          }}
+                          className="flex flex-col items-center gap-1.5 cursor-pointer group/copy active:scale-95 transition-all"
+                        >
+                          <div className="flex flex-col items-center">
+                            <span className="text-[7px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-1">Código de Resgate</span>
+                            <div className="flex items-center gap-2 border border-white/5 bg-white/[0.03] px-5 py-2 rounded-full group-hover/copy:border-yellow-400/30 group-hover/copy:bg-yellow-400/5 transition-all">
+                              <span className="text-sm font-black text-yellow-400 tracking-[0.2em] uppercase">{cpn.coupon_code}</span>
+                              <span className="material-symbols-outlined text-base text-zinc-600 group-hover/copy:text-yellow-400 transition-colors">
+                                {!!copiedCoupon && copiedCoupon === (cpn.id || cpn.coupon_code) ? 'done_all' : 'content_copy'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 bg-yellow-400/5 px-4 py-2 rounded-full border border-yellow-400/10">
+                          <span className="size-1 rounded-full bg-yellow-400 animate-pulse" />
+                          <span className="text-yellow-400 text-[8px] font-black uppercase tracking-[0.2em]">
+                            Aplicado Automática
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Feedback Flutuante de Cópia */}
+                    <AnimatePresence>
+                      {!!copiedCoupon && copiedCoupon === (cpn.id || cpn.coupon_code) && (
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                          className="absolute inset-0 z-20 flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm"
+                        >
+                          <div className="flex flex-col items-center gap-2">
+                             <div className="size-10 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                               <span className="material-symbols-outlined text-emerald-400">check_circle</span>
+                             </div>
+                             <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Código Copiado</span>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Mensagem para não-membros */}
+              {!isIziBlackMembership && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  onClick={() => { setIziBlackOrigin('home'); setIziBlackStep('info'); setSubView('izi_black_purchase'); }}
+                  className="mt-2 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-all"
+                >
+                  <span className="material-symbols-outlined text-amber-500 fill-1">lock</span>
+                  <div className="flex-1">
+                    <p className="text-[11px] font-black text-slate-900 dark:text-white">Assine o Izi Black para usar cupons VIP</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Toque aqui para conhecer os benefícios</p>
+                  </div>
+                  <span className="material-symbols-outlined text-amber-500">arrow_forward</span>
+                </motion.div>
+              )}
+            </section>
+          )}
 
           {/* ═══ SEÇÃO: CUPONS DISPONÍVEIS ═══ */}
           {availableCoupons.length > 0 && (
@@ -2489,12 +2669,12 @@ function App() {
                   <h3 className="text-[15px] font-black tracking-tight text-slate-900 dark:text-white">Cupons Disponíveis</h3>
                 </div>
                 <span className="text-[10px] font-black text-primary bg-primary/10 px-3 py-1.5 rounded-full">
-                  {availableCoupons.length} {availableCoupons.length === 1 ? 'cupom' : 'cupons'}
+                  {availableCoupons.filter(c => !c.is_vip).length} {availableCoupons.filter(c => !c.is_vip).length === 1 ? 'cupom' : 'cupons'}
                 </span>
               </div>
               <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
-                {availableCoupons.map((coupon, i) => {
-                  const isCopied = copiedCoupon === coupon.coupon_code;
+                {availableCoupons.filter(c => !c.is_vip).map((coupon, i) => {
+                  const isCopied = !!copiedCoupon && copiedCoupon === (coupon.id || coupon.coupon_code);
                   const isExpiringSoon = coupon.expires_at && (() => {
                     const diff = new Date(coupon.expires_at).getTime() - Date.now();
                     return diff > 0 && diff < 3 * 24 * 60 * 60 * 1000; // < 3 days
@@ -2513,10 +2693,13 @@ function App() {
                         <div className="h-1.5 w-full bg-gradient-to-r from-primary via-yellow-400 to-primary" />
                         <div className="p-4">
                           {/* Badges */}
-                          <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                          <div className="flex items-center gap-1.5 mb-3">
+                            <span className="text-[9px] font-black text-primary bg-primary/10 px-2 py-1 rounded-lg uppercase tracking-widest border border-primary/20">
+                              {coupon.discount_type === 'percent' ? `${coupon.discount_value}% OFF` : `R$ ${coupon.discount_value} OFF`}
+                            </span>
                             {isExpiringSoon && (
-                              <span className="text-[8px] font-black uppercase tracking-wider bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 px-2 py-0.5 rounded-full animate-pulse">
-                                Expira em breve
+                              <span className="text-[9px] font-black text-rose-500 bg-rose-50 dark:bg-rose-500/10 px-2 py-1 rounded-lg uppercase tracking-widest border border-rose-200 dark:border-rose-500/20">
+                                Expira logo
                               </span>
                             )}
                             {coupon.min_order_value > 0 && (
@@ -2526,12 +2709,6 @@ function App() {
                             )}
                           </div>
 
-                          {/* Discount value — big and prominent */}
-                          <p className="text-2xl font-black text-primary leading-none mb-0.5">
-                            {coupon.discount_type === 'fixed'
-                              ? `R$ ${coupon.discount_value?.toFixed(2)}`
-                              : `${coupon.discount_value}% OFF`}
-                          </p>
                           <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-tight mb-3">
                             {coupon.title}
                           </p>
@@ -2540,7 +2717,7 @@ function App() {
                           <button
                             onClick={() => {
                               navigator.clipboard.writeText(coupon.coupon_code).catch(() => {});
-                              setCopiedCoupon(coupon.coupon_code);
+                              setCopiedCoupon(coupon.id || coupon.coupon_code);
                               setTimeout(() => setCopiedCoupon(null), 2000);
                             }}
                             className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-2xl border-2 border-dashed transition-all active:scale-95 ${
@@ -2738,26 +2915,58 @@ function App() {
             );
           })()}
 
-          {/* Banner Promo: Luxury Style */}
-          <div className="px-4">
+          {/* Banner Promo: Stealth Luxury Style - Only for Izi Black Members */}
+          {isIziBlackMembership && (
+            <div className="px-4">
             <div 
               onClick={() => navigateSubView('exclusive_offer')}
-              className="relative h-60 rounded-[50px] overflow-hidden bg-slate-100 dark:bg-slate-800 shadow-2xl group cursor-pointer border border-white/5"
+              className="relative h-64 rounded-[50px] overflow-hidden bg-zinc-950 flex flex-col items-center justify-center text-center p-10 group cursor-pointer shadow-none border-none"
             >
-              <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=800" alt="Promo" className="size-full object-cover group-hover:scale-110 transition-transform duration-[2000ms]" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent flex flex-col justify-end p-10 gap-3">
-                <div className="flex items-center gap-2.5 mb-1">
-                  <span className="bg-primary text-slate-900 font-black text-[10px] uppercase tracking-[0.25em] px-4 py-2 rounded-full shadow-2xl">Oferta Exclusiva</span>
-                  <div className="size-2 bg-red-500 rounded-full animate-ping" />
+              {/* Luxury Ambient Glow */}
+              <div className="absolute inset-0 z-0">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-48 bg-yellow-400/[0.04] blur-[80px] rounded-full" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0)_0%,rgba(0,0,0,0.4)_100%)]" />
+              </div>
+
+              <div className="relative z-10 flex flex-col items-center gap-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="h-px w-8 bg-yellow-400/20" />
+                  <span className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.4em]">Oferta Exclusiva</span>
+                  <span className="h-px w-8 bg-yellow-400/20" />
                 </div>
-                <h3 className="text-white text-4xl font-black leading-none max-w-[280px] tracking-tighter mb-1">Burgers Gourmet <br /><span className="text-primary text-5xl">50% OFF</span></h3>
-                <p className="text-white/60 text-xs font-bold uppercase tracking-widest leading-relaxed">Válido apenas para membros do clube de fidelidade hoje!</p>
+
+                <div className="flex flex-col items-center">
+                  <h3 className="text-white text-3xl font-black leading-tight tracking-tighter mb-1">
+                    {globalSettings?.flash_offer_title || 'Burgers Gourmet'}
+                  </h3>
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-yellow-400 text-6xl font-black tracking-tighter tabular-nums text-shadow-glow">
+                      {globalSettings?.flash_offer_discount || '50'}%
+                    </span>
+                    <span className="text-white text-2xl font-black italic uppercase tracking-widest">OFF</span>
+                  </div>
+                </div>
+
+                <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] max-w-[240px] leading-relaxed">
+                  Válido apenas para membros <span className="text-white">Izi Black</span> hoje!
+                </p>
+
+                <div className="mt-2 bg-yellow-400 text-black px-8 py-3 rounded-full font-black text-[11px] uppercase tracking-[0.2em] shadow-lg shadow-yellow-400/10 group-hover:scale-105 transition-transform duration-500">
+                  Resgatar Agora
+                </div>
               </div>
-              <div className="absolute top-8 right-8 size-14 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 group-hover:rotate-45 transition-transform duration-700">
-                <span className="material-symbols-outlined text-white text-2xl">bolt</span>
+
+              {/* Lightning Icon Accent */}
+              <div className="absolute top-8 right-10 opacity-20 group-hover:opacity-100 group-hover:rotate-12 transition-all duration-700">
+                <span className="material-symbols-outlined text-yellow-400 text-3xl">bolt</span>
               </div>
+              
+              {/* Top/Bottom Light Lines */}
+              <div className="absolute inset-x-12 top-0 h-px bg-gradient-to-r from-transparent via-yellow-400/10 to-transparent" />
+              <div className="absolute inset-x-12 bottom-0 h-px bg-gradient-to-r from-transparent via-yellow-400/5 to-transparent" />
             </div>
           </div>
+        )}
 
           {/* Establishments Scroller: Premium Cards */}
           <section className="space-y-8 pb-10">
@@ -3525,74 +3734,125 @@ function App() {
   };
 
   const renderExclusiveOffer = () => {
-    const exclusiveDeals: any[] = [];
+    const displayDeals = flashOffers.length > 0 ? flashOffers.map(f => ({
+      id: f.id,
+      name: f.product_name,
+      store: f.admin_users?.store_name || 'Loja Parceira',
+      img: f.product_image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600',
+      oldPrice: Number(f.original_price),
+      price: Number(f.discounted_price),
+      off: `${f.discount_percent}% OFF`,
+      desc: f.description || 'Oferta exclusiva e por tempo limitado para membros Izi Black.'
+    })) : [
+      {
+        id: 'vip-burger-1',
+        name: 'The Ultimate Izi Black Burger',
+        store: 'Burger Gourmet Lab',
+        img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600',
+        oldPrice: 59.90,
+        price: 29.95,
+        off: '50% OFF',
+        desc: 'Blend de carne Angus 180g, queijo brie maçaricado, cebola caramelizada no Jack Daniels e pão brioche artesanal.'
+      },
+      {
+        id: 'vip-pizza-1',
+        name: 'Pizza Trufada Individual',
+        store: 'Forneria d\'Oro',
+        img: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600',
+        oldPrice: 72.00,
+        price: 36.00,
+        off: '50% OFF',
+        desc: 'Massa de fermentação natural, mozzarella fior di latte, azeite de trufas brancas e manjericão fresco.'
+      }
+    ];
 
     return (
-      <div className="absolute inset-0 z-40 bg-slate-900 text-white flex flex-col hide-scrollbar overflow-y-auto pb-40">
-        <header className="sticky top-0 z-50 bg-slate-900/90 backdrop-blur-3xl border-b border-primary/20 pb-8 px-8 pt-10">
-          <div className="flex items-center justify-between mb-8">
+      <div className="absolute inset-0 z-[100] bg-zinc-950 text-white flex flex-col hide-scrollbar overflow-y-auto pb-40">
+        {/* Luxury Background Effects */}
+        <div className="fixed inset-0 pointer-events-none z-0">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 size-[600px] bg-yellow-400/[0.02] blur-[120px] rounded-full -translate-y-1/2" />
+        </div>
+
+        <header className="relative z-10 p-8 flex flex-col items-center gap-8 pt-12">
+          <div className="w-full flex items-center justify-between">
             <button 
               onClick={() => setSubView("none")} 
-              className="size-16 rounded-[28px] bg-white/5 border border-white/10 flex items-center justify-center active:scale-90 transition-all group"
+              className="size-12 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center active:scale-90 transition-all group"
             >
-              <span className="material-symbols-outlined font-black group-hover:-translate-x-1 transition-transform">arrow_back</span>
+              <span className="material-symbols-outlined font-black text-zinc-400 group-hover:text-white transition-colors">arrow_back</span>
             </button>
-            <div className="text-center">
-              <h1 className="text-3xl font-black tracking-tighter leading-none mb-1 text-primary">Ofertas Flash</h1>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Exclusivo: Membros VIP</p>
+            
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="material-symbols-outlined text-yellow-400 text-sm fill-1">bolt</span>
+                <span className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.4em]">Ofertas Flash</span>
+              </div>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">Exclusivo Membros Izi Black</p>
             </div>
-            <div className="size-16 rounded-[28px] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-2xl shadow-primary/20">
-              <span className="material-symbols-outlined text-primary font-black animate-pulse">bolt</span>
+
+            <div className="size-12 rounded-full bg-yellow-400/5 border border-yellow-400/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-yellow-400 font-black animate-pulse">stars</span>
             </div>
           </div>
-          
-          <div className="bg-gradient-to-r from-primary to-orange-500 rounded-[35px] p-6 flex items-center justify-between shadow-2xl shadow-primary/20">
-            <div className="flex items-center gap-4">
-              <div className="size-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md">
-                <span className="material-symbols-outlined font-black">timer</span>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-slate-900/60 leading-none mb-1">Termina em</p>
-                <p className="text-xl font-black text-slate-900 tracking-tighter leading-none">02:45:12</p>
-              </div>
-            </div>
-            <span className="text-[11px] font-black uppercase tracking-[0.1em] text-slate-900 bg-white/30 px-4 py-2 rounded-full border border-white/20 backdrop-blur-md">Aproveite agora!</span>
+
+          {/* Luxury Timer Panel */}
+          <div className="relative w-full max-w-[340px] rounded-[40px] bg-white/[0.02] border border-white/[0.05] p-8 flex flex-col items-center justify-center gap-2 overflow-hidden shadow-none">
+             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent" />
+             <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-2">As ofertas terminam em:</p>
+             <div className="flex items-center gap-4">
+                <div className="flex flex-col items-center">
+                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{timeLeft.h}</span>
+                  <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">Horas</span>
+                </div>
+                <span className="text-4xl font-black text-yellow-400 -mt-2">:</span>
+                <div className="flex flex-col items-center">
+                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{timeLeft.m}</span>
+                  <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">Minutos</span>
+                </div>
+                <span className="text-4xl font-black text-yellow-400 -mt-2">:</span>
+                <div className="flex flex-col items-center">
+                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{timeLeft.s}</span>
+                  <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">Segundos</span>
+                </div>
+             </div>
           </div>
         </header>
 
-        <main className="p-8 space-y-8">
-          {exclusiveDeals.map((deal, i) => (
+        <main className="relative z-10 px-6 py-4 flex flex-col items-center gap-10">
+          {displayDeals.map((deal, i) => (
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1, duration: 0.6, ease: "easeOut" }}
+              transition={{ delay: i * 0.1, duration: 0.6 }}
               key={deal.id}
               onClick={() => { handleAddToCart(deal); }}
-              className="relative bg-white/5 rounded-[50px] overflow-hidden border border-white/10 group cursor-pointer active:scale-[0.98] transition-all hover:bg-white/[0.08]"
+              className="w-full max-w-[340px] bg-zinc-900/50 rounded-[50px] overflow-hidden border border-white/[0.05] flex flex-col items-center group cursor-pointer active:scale-[0.98] transition-all hover:bg-zinc-900"
             >
-              <div className="h-72 relative overflow-hidden">
-                <img src={deal.img} className="size-full object-cover group-hover:scale-110 transition-transform duration-[4000ms]" />
-                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent" />
-                <div className="absolute top-6 left-6 bg-red-600 px-5 py-2.5 rounded-[20px] shadow-2xl animate-bounce-slow">
-                  <span className="text-xs font-black uppercase tracking-widest">{deal.off}</span>
-                </div>
-                <div className="absolute bottom-6 left-8 right-8">
-                   <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">{deal.store}</p>
-                   <h3 className="text-2xl font-black tracking-tighter leading-tight drop-shadow-md">{deal.name}</h3>
+              <div className="w-full h-80 relative">
+                <img src={deal.img} className="size-full object-cover group-hover:scale-105 transition-transform duration-[3000ms]" />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
+                <div className="absolute top-6 left-6 bg-yellow-400 px-6 py-2 rounded-full shadow-lg shadow-yellow-400/20">
+                  <span className="text-[10px] text-black font-black uppercase tracking-widest">{deal.off}</span>
                 </div>
               </div>
               
-              <div className="p-8">
-                <p className="text-sm text-white/50 font-medium mb-8 leading-relaxed line-clamp-2">{deal.desc}</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-white/30 line-through tracking-tighter leading-none">R$ {deal.oldPrice.toFixed(2).replace('.', ',')}</span>
-                      <span className="text-3xl font-black text-white tracking-tighter leading-none">R$ {deal.price.toFixed(2).replace('.', ',')}</span>
-                    </div>
+              <div className="p-10 flex flex-col items-center text-center -mt-16 relative z-10 w-full">
+                <h3 className="text-2xl font-black text-white tracking-tighter leading-tight mb-2 drop-shadow-xl">{deal.name}</h3>
+                <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-4 opacity-80">{deal.store}</p>
+                <p className="text-[11px] text-zinc-500 font-medium mb-8 max-w-[260px] line-clamp-2">{deal.desc}</p>
+                
+                <div className="w-full flex flex-col items-center gap-6">
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-black text-zinc-700 line-through tracking-widest mb-1">R$ {deal.oldPrice.toFixed(2).replace('.', ',')}</span>
+                    <span className="text-4xl font-black text-white tracking-tighter flex items-center gap-2">
+                      <span className="text-yellow-400 text-lg uppercase font-black">R$</span>
+                      {deal.price.toFixed(2).replace('.', ',')}
+                    </span>
                   </div>
-                  <div className="size-16 rounded-[28px] bg-primary text-slate-900 flex items-center justify-center shadow-2xl shadow-primary/20 group-hover:scale-110 transition-transform duration-500">
-                    <span className="material-symbols-outlined text-3xl font-black">add</span>
+                  
+                  <div className="w-full bg-white/[0.03] border border-white/5 py-4 rounded-full group-hover:bg-yellow-400 group-hover:border-yellow-400 transition-all flex items-center justify-center gap-3">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 group-hover:text-black transition-colors">Adicionar ao Carrinho</span>
+                    <span className="material-symbols-outlined text-base text-yellow-400 group-hover:text-black transition-colors">add_circle</span>
                   </div>
                 </div>
               </div>
@@ -4091,13 +4351,13 @@ function App() {
                         <div 
                           onClick={() => {
                             navigator.clipboard.writeText(cpn.coupon_code);
-                            setCopiedCoupon(cpn.coupon_code);
+                            setCopiedCoupon(cpn.id || cpn.coupon_code);
                             setTimeout(() => setCopiedCoupon(null), 2000);
                           }}
                           className="bg-white text-slate-900 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl cursor-pointer active:scale-95 transition-all"
                         >
                            <span className="text-sm font-black tracking-widest uppercase">{cpn.coupon_code}</span>
-                           <span className="material-symbols-outlined text-lg">{copiedCoupon === cpn.coupon_code ? 'check' : 'content_copy'}</span>
+                           <span className="material-symbols-outlined text-lg">{!!copiedCoupon && copiedCoupon === (cpn.id || cpn.coupon_code) ? 'check' : 'content_copy'}</span>
                         </div>
                       ) : (
                         <div className="text-white/80 text-[10px] font-bold uppercase tracking-widest bg-black/20 backdrop-blur px-4 py-2 rounded-xl">
@@ -5564,26 +5824,44 @@ function App() {
     const taxaBase = isFree ? 0 : 5.0;
     const taxaTotalCheckout = isFree ? 0 : calculateDynamicPrice(taxaBase);
 
-    // Banner de incentivo Izi Black no checkout
+    // Banner de incentivo Izi Black no checkout - Novo Design High-End
     const renderBlackIncentive = () => {
-      if (isIziBlackMembership) return null;
-      return (
+      if (isIziBlackMembership) return (
         <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          onClick={() => { setIziBlackOrigin('checkout'); setIziBlackStep('info'); setSubView('izi_black_purchase'); }}
-          className="mx-6 mb-8 p-6 rounded-[35px] bg-slate-900 border-2 border-primary/30 relative overflow-hidden group cursor-pointer"
+          className="mx-6 mt-8 mb-4 p-8 rounded-[45px] bg-zinc-950 border border-yellow-400/10 relative overflow-hidden group shadow-2xl"
         >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl -mr-10 -mt-10" />
-          <div className="flex items-start gap-5 relative z-10">
-            <div className="size-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-               <span className="material-symbols-outlined text-primary font-black fill-1">workspace_premium</span>
+          <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-400/5 blur-[80px] -mr-12 -mt-12" />
+          <div className="flex items-center gap-6 relative z-10">
+            <div className="size-16 rounded-3xl bg-zinc-900 flex items-center justify-center shrink-0 border border-yellow-400/20 shadow-inner">
+               <span className="material-symbols-outlined text-yellow-500 text-3xl fill-1">stars</span>
             </div>
             <div>
-               <h4 className="text-white font-black text-sm italic mb-1 uppercase tracking-tight">Economize R$ {taxaTotalCheckout.toFixed(2).replace('.', ',')} agora!</h4>
-               <p className="text-white/40 text-[10px] font-medium leading-relaxed">Membros <span className="text-primary font-black">Izi Black</span> não pagam frete neste pedido. Assine agora por apenas R$ 29,90.</p>
+               <h4 className="text-white font-black text-base italic mb-1 uppercase tracking-tighter">Status: Membro Elite</h4>
+               <p className="text-zinc-500 text-[10px] font-bold leading-relaxed uppercase tracking-widest">Você está economizando R$ {taxaTotalCheckout.toFixed(2).replace('.', ',')} e ganhando R$ {cashbackEstimado.toFixed(2).replace('.', ',')} em cashback agora.</p>
             </div>
-            <span className="material-symbols-outlined text-primary ml-auto self-center group-hover:translate-x-1 transition-transform">arrow_forward</span>
+          </div>
+        </motion.div>
+      );
+      
+      return (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          onClick={() => { setIziBlackOrigin('checkout'); setIziBlackStep('info'); setSubView('izi_black_purchase'); }}
+          className="mx-6 mt-8 mb-4 p-8 rounded-[45px] bg-zinc-950 border-2 border-yellow-400/30 relative overflow-hidden group cursor-pointer shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]"
+        >
+          <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 blur-[100px] -mr-20 -mt-20 group-hover:bg-yellow-400/10 transition-colors" />
+          <div className="flex items-center gap-6 relative z-10">
+            <div className="size-16 rounded-[28px] bg-yellow-400 flex items-center justify-center shrink-0 shadow-[0_15px_30px_-5px_rgba(255,214,0,0.4)] group-hover:scale-110 transition-transform">
+               <span className="material-symbols-outlined text-black font-black text-3xl">bolt</span>
+            </div>
+            <div className="flex-1">
+               <h4 className="text-white font-black text-lg italic mb-1 uppercase tracking-tighter">Taxa de entrega GRÁTIS?</h4>
+               <p className="text-zinc-500 text-[10px] font-bold leading-relaxed uppercase tracking-widest">Ative o Izi Black agora para zerar o frete e ganhar 5% de cashback neste pedido.</p>
+            </div>
+            <span className="material-symbols-outlined text-yellow-400 text-3xl group-hover:translate-x-2 transition-transform">chevron_right</span>
           </div>
         </motion.div>
       );
@@ -5598,19 +5876,31 @@ function App() {
       <Elements stripe={stripePromise}>
         <div className="absolute inset-0 z-[80] bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 flex flex-col hide-scrollbar overflow-y-auto antialiased">
           {/* Header */}
-          <header className="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-center p-4">
+          <header className={`sticky top-0 z-50 backdrop-blur-md border-b transition-all duration-500 ${isIziBlackMembership ? 'bg-zinc-950/90 border-yellow-400/20 py-6' : 'bg-white/80 dark:bg-background-dark/80 border-slate-100 dark:border-slate-800 p-4'}`}>
+            <div className="flex items-center px-4 relative">
               <button
                 onClick={handleBack}
-                className="size-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95"
+                className={`size-12 flex items-center justify-center rounded-2xl transition-all active:scale-95 border ${isIziBlackMembership ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-slate-100/50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-transparent'}`}
               >
-                <span className="material-symbols-outlined text-slate-900 dark:text-slate-100">
-                  arrow_back
-                </span>
+                <span className="material-symbols-outlined font-black">arrow_back</span>
               </button>
-              <h1 className="flex-1 text-center mr-10 text-lg font-black tracking-tight uppercase tracking-widest text-sm">
-                Finalizar Pedido
-              </h1>
+              
+              <div className="flex-1 text-center">
+                <h1 className={`font-black uppercase tracking-[0.2em] text-sm italic ${isIziBlackMembership ? 'text-yellow-400' : 'text-slate-900 dark:text-white'}`}>
+                  {isIziBlackMembership ? 'Checkout VIP Elite' : 'Finalizar Pedido'}
+                </h1>
+                {isIziBlackMembership && (
+                  <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.4em] mt-1">Conexão Segura Izi Black</p>
+                )}
+              </div>
+
+              {isIziBlackMembership ? (
+                <div className="size-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-yellow-500 fill-1">verified_user</span>
+                </div>
+              ) : (
+                <div className="size-12" />
+              )}
             </div>
           </header>
 
@@ -5941,6 +6231,7 @@ function App() {
 
   const renderLightningPayment = () => {
     if (!lightningData) return null;
+    const isVIP = paymentsOrigin === "izi_black";
 
     const copyToClipboard = (text: string) => {
       navigator.clipboard.writeText(text);
@@ -5948,78 +6239,87 @@ function App() {
     };
 
     return (
-      <div className="absolute inset-0 z-[100] bg-slate-50 dark:bg-slate-950 flex flex-col animate-in fade-in zoom-in duration-500">
+      <div className={`absolute inset-0 z-[100] ${isVIP ? 'bg-zinc-950' : 'bg-slate-50 dark:bg-slate-950'} flex flex-col animate-in fade-in zoom-in duration-500`}>
         <header className="p-6 flex items-center justify-between">
           <button 
             onClick={() => {
               if (paymentsOrigin === "izi_black") setSubView("izi_black_purchase");
               else setSubView("checkout");
             }}
-            className="size-12 rounded-2xl bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center active:scale-90 transition-all"
+            className={`size-12 rounded-2xl ${isVIP ? 'bg-white/5 border border-white/10' : 'bg-white dark:bg-slate-900 shadow-sm'} flex items-center justify-center active:scale-90 transition-all`}
           >
-            <span className="material-symbols-outlined">close</span>
+            <span className={`material-symbols-outlined ${isVIP ? 'text-white' : ''}`}>close</span>
           </button>
           <div className="text-center">
-            <h2 className="text-sm font-black uppercase tracking-widest text-orange-500">Bitcoin Lightning</h2>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Aguardando Confirmação</p>
+            <h2 className={`text-sm font-black uppercase tracking-widest ${isVIP ? 'text-yellow-400' : 'text-orange-500'}`}>Bitcoin Lightning</h2>
+            <p className={`text-[10px] ${isVIP ? 'text-white/40' : 'text-slate-400'} font-bold uppercase tracking-tighter`}>Aguardando Confirmação</p>
           </div>
           <div className="size-12" /> {/* Spacer */}
         </header>
 
         <main className="flex-1 overflow-y-auto px-8 py-4 flex flex-col items-center">
-          <div className="w-full aspect-square max-w-[280px] bg-white rounded-[40px] p-6 shadow-2xl shadow-orange-500/10 border-4 border-orange-500/20 relative mb-10">
+          <div className={`w-full aspect-square max-w-[280px] bg-white rounded-[40px] p-6 shadow-2xl ${isVIP ? 'shadow-yellow-400/10 border-4 border-yellow-400/20' : 'shadow-orange-500/10 border-4 border-orange-500/20'} relative mb-10`}>
             <img 
               src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${lightningData.payment_request}`} 
               alt="Lightning Invoice QR" 
               className="w-full h-full object-contain"
             />
-            <div className="absolute -top-3 -right-3 size-12 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg animate-bounce">
-              <span className="material-symbols-outlined text-white font-black">bolt</span>
+            <div className={`absolute -top-3 -right-3 size-12 ${isVIP ? 'bg-yellow-400' : 'bg-orange-500'} rounded-2xl flex items-center justify-center shadow-lg animate-bounce`}>
+              <span className={`material-symbols-outlined ${isVIP ? 'text-black' : 'text-white'} font-black`}>bolt</span>
             </div>
           </div>
 
           <div className="w-full space-y-6">
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
+            <div className={`${isVIP ? 'bg-zinc-900 border-white/5 shadow-2xl' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm'} p-6 rounded-[32px] border`}>
                 <div className="flex justify-between items-center mb-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Invoice Lightning (BOLT11)</p>
-                    <p className="text-[10px] font-black uppercase text-orange-500">{lightningData.satoshis} SATS</p>
+                    <p className={`text-[10px] font-black uppercase tracking-widest ${isVIP ? 'text-zinc-500' : 'text-slate-400'}`}>Invoice Lightning (BOLT11)</p>
+                    <p className={`text-[10px] font-black uppercase ${isVIP ? 'text-yellow-400' : 'text-orange-500'}`}>{lightningData.satoshis} SATS</p>
                 </div>
-              <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-                <p className="flex-1 text-[11px] font-mono break-all line-clamp-2 text-slate-500 text-left">
+              <div className={`flex items-center gap-3 ${isVIP ? 'bg-black/40 border-white/5' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'} p-4 rounded-2xl border border-dashed`}>
+                <p className={`flex-1 text-[11px] font-mono break-all line-clamp-2 ${isVIP ? 'text-zinc-500' : 'text-slate-500'} text-left`}>
                   {lightningData.payment_request}
                 </p>
                 <button 
                   onClick={() => copyToClipboard(lightningData.payment_request)}
-                  className="size-10 bg-orange-500 text-white rounded-xl flex items-center justify-center shrink-0 active:scale-90 transition-all shadow-lg shadow-orange-500/20"
+                  className={`size-10 ${isVIP ? 'bg-yellow-400 text-black shadow-yellow-400/20' : 'bg-orange-500 text-white shadow-orange-500/20'} rounded-xl flex items-center justify-center shrink-0 active:scale-90 transition-all shadow-lg`}
                 >
                   <span className="material-symbols-outlined text-sm font-black">content_copy</span>
                 </button>
               </div>
             </div>
 
-            <div className="bg-orange-500/5 border border-orange-500/20 p-6 rounded-[32px] flex items-center gap-5">
-              <div className="size-12 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-500">
+            <div className={`${isVIP ? 'bg-yellow-400/5 border-yellow-400/20' : 'bg-orange-500/5 border-orange-500/20'} border p-6 rounded-[32px] flex items-center gap-5`}>
+              <div className={`size-12 rounded-2xl ${isVIP ? 'bg-yellow-400/20 text-yellow-400' : 'bg-orange-500/20 text-orange-500'} flex items-center justify-center`}>
                 <span className="material-symbols-outlined animate-pulse">speed</span>
               </div>
               <div className="flex-1">
-                <p className="text-xs font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">Pagamento Instantâneo</p>
-                <p className="text-[10px] font-medium text-orange-600/70 dark:text-orange-400/50 uppercase mt-1">Sua invoice será detectada em milissegundos.</p>
+                <p className={`text-xs font-black ${isVIP ? 'text-yellow-400' : 'text-orange-600 dark:text-orange-400'} uppercase tracking-widest`}>Pagamento Instantâneo</p>
+                <p className={`text-[10px] font-medium ${isVIP ? 'text-yellow-400/40' : 'text-orange-600/70 dark:text-orange-400/50'} uppercase mt-1`}>Sua invoice será detectada em milissegundos.</p>
               </div>
             </div>
           </div>
 
-          <p className="mt-12 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center max-w-[200px] leading-relaxed">
-            Escaneie com sua carteira <span className="text-orange-500">Lightning</span> preferida
+          <p className={`mt-12 text-[10px] font-black ${isVIP ? 'text-zinc-600' : 'text-slate-400'} uppercase tracking-[0.3em] text-center max-w-[200px] leading-relaxed`}>
+            Escaneie com sua carteira <span className={isVIP ? 'text-yellow-400' : 'text-orange-500'}>Lightning</span> preferida
           </p>
         </main>
 
         <footer className="p-8 pb-12">
-          <button 
-            onClick={() => setTab("orders")}
-            className="w-full py-5 bg-slate-900 dark:bg-slate-800 text-white font-black rounded-[24px] uppercase tracking-widest text-[11px] shadow-xl active:scale-95 transition-all"
-          >
-            Ver Meus Pedidos
-          </button>
+          {isVIP ? (
+             <button 
+                onClick={() => setSubView("none")}
+                className="w-full py-6 bg-yellow-400 text-black font-black rounded-[35px] uppercase tracking-widest text-xs shadow-[0_20px_40px_-10px_rgba(255,184,0,0.3)] active:scale-95 transition-all"
+              >
+                Retornar ao Hub Izi
+              </button>
+          ) : (
+            <button 
+              onClick={() => setTab("orders")}
+              className="w-full py-5 bg-slate-900 dark:bg-slate-800 text-white font-black rounded-[24px] uppercase tracking-widest text-[11px] shadow-xl active:scale-95 transition-all"
+            >
+              Ver Meus Pedidos
+            </button>
+          )}
         </footer>
       </div>
     );
@@ -6027,6 +6327,7 @@ function App() {
 
   const renderPixPayment = () => {
     if (!pixData) return null;
+    const isVIP = paymentsOrigin === "izi_black";
 
     const copyToClipboard = () => {
       navigator.clipboard.writeText(pixData.copyPaste);
@@ -6034,75 +6335,84 @@ function App() {
     };
 
     return (
-      <div className="absolute inset-0 z-[100] bg-slate-50 dark:bg-slate-950 flex flex-col animate-in fade-in zoom-in duration-500">
+      <div className={`absolute inset-0 z-[100] ${isVIP ? 'bg-zinc-950' : 'bg-slate-50 dark:bg-slate-950'} flex flex-col animate-in fade-in zoom-in duration-500`}>
         <header className="p-6 flex items-center justify-between">
           <button 
             onClick={() => {
               if (paymentsOrigin === "izi_black") setSubView("izi_black_purchase");
               else setSubView("checkout");
             }}
-            className="size-12 rounded-2xl bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center active:scale-90 transition-all"
+            className={`size-12 rounded-2xl ${isVIP ? 'bg-white/5 border border-white/10' : 'bg-white dark:bg-slate-900 shadow-sm'} flex items-center justify-center active:scale-90 transition-all`}
           >
-            <span className="material-symbols-outlined">close</span>
+            <span className={`material-symbols-outlined ${isVIP ? 'text-white' : ''}`}>close</span>
           </button>
           <div className="text-center">
-            <h2 className="text-sm font-black uppercase tracking-widest">Pagamento PIX</h2>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Aguardando confirmação</p>
+            <h2 className={`text-sm font-black uppercase tracking-widest ${isVIP ? 'text-yellow-400' : ''}`}>Pagamento PIX</h2>
+            <p className={`text-[10px] ${isVIP ? 'text-white/40' : 'text-slate-400'} font-bold uppercase tracking-tighter`}>Aguardando confirmação</p>
           </div>
           <div className="size-12" /> {/* Spacer */}
         </header>
 
         <main className="flex-1 overflow-y-auto px-8 py-4 flex flex-col items-center">
-          <div className="w-full aspect-square max-w-[280px] bg-white rounded-[40px] p-6 shadow-2xl shadow-primary/10 border-4 border-primary/20 relative mb-10">
+          <div className={`w-full aspect-square max-w-[280px] bg-white rounded-[40px] p-6 shadow-2xl ${isVIP ? 'shadow-yellow-400/10 border-4 border-yellow-400/20' : 'shadow-primary/10 border-4 border-primary/20'} relative mb-10`}>
             <img 
               src={`data:image/png;base64,${(pixData as any).qrCodeBase64}`} 
               alt="QR Code PIX" 
               className="w-full h-full object-contain"
             />
-            <div className="absolute -top-3 -right-3 size-12 bg-primary rounded-2xl flex items-center justify-center shadow-lg animate-bounce">
-              <span className="material-symbols-outlined text-slate-900 font-black">qr_code_2</span>
+            <div className={`absolute -top-3 -right-3 size-12 ${isVIP ? 'bg-yellow-400' : 'bg-primary'} rounded-2xl flex items-center justify-center shadow-lg animate-bounce`}>
+              <span className={`material-symbols-outlined ${isVIP ? 'text-black' : 'text-slate-900'} font-black`}>qr_code_2</span>
             </div>
           </div>
 
           <div className="w-full space-y-6">
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm text-center">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 text-center">Código Copia e Cola</p>
-              <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-                <p className="flex-1 text-[11px] font-mono break-all line-clamp-2 text-slate-500 text-left">
+            <div className={`${isVIP ? 'bg-zinc-900 border-white/5 shadow-2xl' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm'} p-6 rounded-[32px] border text-center`}>
+              <p className={`text-[10px] font-black uppercase tracking-widest ${isVIP ? 'text-zinc-500' : 'text-slate-400'} mb-4 text-center`}>Código Copia e Cola</p>
+              <div className={`flex items-center gap-3 ${isVIP ? 'bg-black/40 border-white/5' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'} p-4 rounded-2xl border border-dashed`}>
+                <p className={`flex-1 text-[11px] font-mono break-all line-clamp-2 ${isVIP ? 'text-zinc-500' : 'text-slate-500'} text-left`}>
                   {pixData.copyPaste}
                 </p>
                 <button 
                   onClick={copyToClipboard}
-                  className="size-10 bg-primary text-slate-900 rounded-xl flex items-center justify-center shrink-0 active:scale-90 transition-all shadow-lg shadow-primary/20"
+                  className={`size-10 ${isVIP ? 'bg-yellow-400 text-black shadow-yellow-400/20' : 'bg-primary text-slate-900 shadow-primary/20'} rounded-xl flex items-center justify-center shrink-0 active:scale-90 transition-all shadow-lg`}
                 >
                   <span className="material-symbols-outlined text-sm font-black">content_copy</span>
                 </button>
               </div>
             </div>
 
-            <div className="bg-emerald-500/5 border border-emerald-500/20 p-6 rounded-[32px] flex items-center gap-5">
-              <div className="size-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-500">
+            <div className={`${isVIP ? 'bg-yellow-400/5 border-yellow-400/20' : 'bg-emerald-500/5 border-emerald-500/20'} border p-6 rounded-[32px] flex items-center gap-5`}>
+              <div className={`size-12 rounded-2xl ${isVIP ? 'bg-yellow-400/20 text-yellow-400' : 'bg-emerald-500/20 text-emerald-500'} flex items-center justify-center`}>
                 <span className="material-symbols-outlined animate-pulse">timer</span>
               </div>
               <div className="flex-1">
-                <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Pagamento Instantâneo</p>
-                <p className="text-[10px] font-medium text-emerald-600/70 dark:text-emerald-400/50 uppercase mt-1">O pedido será confirmado assim que o PIX for detectado.</p>
+                <p className={`text-xs font-black ${isVIP ? 'text-yellow-400' : 'text-emerald-600 dark:text-emerald-400'} uppercase tracking-widest`}>Pagamento Instantâneo</p>
+                <p className={`text-[10px] font-medium ${isVIP ? 'text-yellow-400/40' : 'text-emerald-600/70 dark:text-emerald-400/50'} uppercase mt-1`}>O pedido será confirmado assim que o PIX for detectado.</p>
               </div>
             </div>
           </div>
 
-          <p className="mt-12 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center max-w-[200px] leading-relaxed">
-            Abra o app do seu banco e escolha a opção pagar com <span className="text-primary">QR Code</span>
+          <p className={`mt-12 text-[10px] font-black ${isVIP ? 'text-zinc-600' : 'text-slate-400'} uppercase tracking-[0.3em] text-center max-w-[200px] leading-relaxed`}>
+            Abra o app do seu banco e escolha a opção pagar com <span className={isVIP ? 'text-yellow-400' : 'text-primary'}>QR Code</span>
           </p>
         </main>
 
         <footer className="p-8 pb-12">
-          <button 
-            onClick={() => setTab("orders")}
-            className="w-full py-5 bg-slate-900 dark:bg-slate-800 text-white font-black rounded-[24px] uppercase tracking-widest text-[11px] shadow-xl active:scale-95 transition-all"
-          >
-            Ver Meus Pedidos
-          </button>
+          {isVIP ? (
+            <button 
+                onClick={() => setSubView("none")}
+                className="w-full py-6 bg-yellow-400 text-black font-black rounded-[35px] uppercase tracking-widest text-xs shadow-[0_20px_40px_-10px_rgba(255,184,0,0.3)] active:scale-95 transition-all"
+              >
+                Retornar ao Hub Izi
+              </button>
+          ) : (
+            <button 
+              onClick={() => setTab("orders")}
+              className="w-full py-5 bg-slate-900 dark:bg-slate-800 text-white font-black rounded-[24px] uppercase tracking-widest text-[11px] shadow-xl active:scale-95 transition-all"
+            >
+              Ver Meus Pedidos
+            </button>
+          )}
         </footer>
       </div>
     );
@@ -7399,6 +7709,74 @@ function App() {
 
     const labels = isTransit ? mobilityLabels : deliveryLabels;
 
+    // Premium Subscription-only View (Izi Black)
+    if (selectedItem.service_type === 'subscription') {
+      return (
+        <div className="absolute inset-0 z-[100] bg-zinc-950 flex flex-col hide-scrollbar overflow-y-auto antialiased">
+          <OrderSync orderId={selectedItem.id} onUpdate={(newOrder) => setSelectedItem(newOrder)} />
+          
+          <div className="absolute inset-0 pointer-events-none">
+             <div className="absolute inset-0 bg-gradient-to-b from-yellow-400/5 via-transparent to-transparent opacity-50" />
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-[600px] bg-yellow-400/5 rounded-full blur-[120px] animate-pulse" />
+          </div>
+
+          <header className="relative z-50 p-8 flex items-center justify-between">
+            <button onClick={() => setSubView("none")} className="size-14 rounded-3xl bg-white/5 backdrop-blur-3xl flex items-center justify-center text-white border border-white/10 active:scale-90 transition-all">
+              <span className="material-symbols-outlined font-black text-2xl">close</span>
+            </button>
+            <div className="bg-white/5 backdrop-blur-3xl px-6 py-3 rounded-full border border-white/10 flex items-center gap-3">
+               <div className="size-2 bg-yellow-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(255,184,0,0.5)]" />
+               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Ativação em Progresso</span>
+            </div>
+          </header>
+
+          <main className="flex-1 relative z-10 px-10 py-12 flex flex-col items-center">
+             <div className="relative mb-20">
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className="absolute inset-[-40px] border border-white/5 rounded-full" />
+                <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="size-48 rounded-[55px] bg-zinc-900 flex items-center justify-center border border-yellow-400/20 shadow-[0_50px_100px_-20px_rgba(255,184,0,0.15)]">
+                   <span className="material-symbols-outlined text-7xl text-yellow-400 fill-1">verified_user</span>
+                </motion.div>
+                <div className="absolute -inset-4 border-2 border-yellow-400/10 rounded-[60px]" />
+             </div>
+
+             <div className="text-center space-y-4 mb-20">
+                <span className="text-[11px] font-black text-yellow-400 uppercase tracking-[0.5em] opacity-60">Elite Membership Protocol</span>
+                <h1 className="text-5xl font-black text-white italic tracking-tighter leading-none">
+                  {selectedItem.status === 'concluido' ? 'BEM-VINDO AO TOPO' : 'SINCRONIZANDO ACESSO'}
+                </h1>
+                <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest max-w-[280px] mx-auto leading-relaxed">
+                   Estamos processando sua credencial VIP na rede Izi Black. Quase tudo pronto.
+                </p>
+             </div>
+
+             <div className="w-full space-y-8">
+                {[
+                  { label: "Pagamento Recebido", status: "Concluído", icon: "check_circle", active: true },
+                  { label: "Verificação de Perfil", status: "Em Progresso", icon: "security", active: true },
+                  { label: "Ativação de Benefícios", status: "Aguardando", icon: "stars", active: false }
+                ].map((step, i) => (
+                  <div key={i} className={`flex items-center gap-6 p-6 bg-zinc-900/40 border border-white/5 rounded-[35px] backdrop-blur-sm ${!step.active ? 'grayscale opacity-40' : ''}`}>
+                     <div className={`size-14 rounded-2xl flex items-center justify-center ${step.active ? 'bg-yellow-400/10 text-yellow-400' : 'bg-zinc-800 text-zinc-600'}`}>
+                        <span className="material-symbols-outlined font-black">{step.icon}</span>
+                     </div>
+                     <div className="flex-1">
+                        <p className="text-white font-black text-sm italic uppercase tracking-wider">{step.label}</p>
+                        <p className={`text-[9px] font-black uppercase tracking-widest mt-1 ${step.active ? 'text-yellow-400' : 'text-zinc-500'}`}>{step.status}</p>
+                     </div>
+                  </div>
+                ))}
+             </div>
+          </main>
+
+          <footer className="p-10 pb-16">
+             <button onClick={() => setSubView("none")} className="w-full h-20 bg-white text-black font-black rounded-[35px] uppercase tracking-[0.3em] text-xs shadow-[0_30px_60px_-15px_rgba(255,255,255,0.1)] active:scale-95 transition-all">
+                Explorar Benefícios Elite
+             </button>
+          </footer>
+        </div>
+      );
+    }
+
     return (
       <div className="absolute inset-0 z-[100] bg-white dark:bg-slate-950 flex flex-col hide-scrollbar overflow-hidden antialiased">
         {/* Black Box Telemetria Overlay */}
@@ -8213,18 +8591,30 @@ function App() {
 
     if (iziBlackStep === 'success') {
       return (
-        <div className="h-full w-full bg-primary flex flex-col items-center justify-center text-center p-12">
+        <div className="h-full w-full bg-zinc-950 flex flex-col items-center justify-center p-12 text-center relative overflow-hidden antialiased">
+           {/* Success Background Effects */}
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[500px] bg-yellow-400/[0.08] blur-[100px] rounded-full" />
+           
            <motion.div 
-             initial={{ scale: 0, rotate: -20 }}
+             initial={{ scale: 0, rotate: -45 }}
              animate={{ scale: 1, rotate: 0 }}
-             className="size-36 rounded-[45px] bg-slate-900 flex items-center justify-center mb-10 shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)]"
+             className="relative z-10 size-48 rounded-[55px] bg-zinc-900 flex items-center justify-center mb-12 shadow-[0_45px_100px_-20px_rgba(255,184,0,0.3)] border border-yellow-400/20"
            >
-              <span className="material-symbols-outlined text-primary text-7xl fill-1">workspace_premium</span>
+              <span className="material-symbols-outlined text-yellow-500 text-8xl fill-1">verified</span>
            </motion.div>
-           <h2 className="text-5xl font-black text-slate-900 italic tracking-tighter leading-[0.9] mb-6 text-center">VOCÊ AGORA É<br/>IZI BLACK!</h2>
-           <p className="text-slate-800 font-bold text-sm max-w-[280px] mb-14 leading-relaxed">Sua conta foi elevada ao nível VIP. Aproveite todos os benefícios exclusivos agora mesmo.</p>
-           <button onClick={handleClose} className="w-full bg-slate-900 text-primary h-20 rounded-[35px] font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all">
-              Começar a Usar
+           
+           <div className="relative z-10 space-y-6">
+              <h2 className="text-5xl font-black text-white italic tracking-tighter leading-[0.8] mb-2">BEM-VINDO À<br/>ELITE <span className="text-yellow-400">BLACK</span></h2>
+              <p className="text-zinc-500 font-bold text-sm max-w-[300px] mx-auto leading-relaxed">
+                Sua conta foi elevada. Agora você faz parte do seleto grupo com benefícios de luxo e privilégios exclusivos.
+              </p>
+           </div>
+           
+           <button 
+             onClick={handleClose} 
+             className="mt-20 w-full bg-yellow-400 text-black h-20 rounded-[35px] font-black uppercase tracking-[0.2em] shadow-[0_20px_40px_-10px_rgba(255,184,0,0.4)] active:scale-95 transition-all relative z-10"
+           >
+              Começar minha Experiência
            </button>
         </div>
       );
@@ -8232,182 +8622,227 @@ function App() {
 
     if (iziBlackStep === 'payment') {
       return (
-        <div className="h-full w-full bg-[#020617] flex flex-col antialiased overflow-y-auto hide-scrollbar">
-           <header className="p-8 flex items-center gap-4 shrink-0">
-              <button onClick={() => setIziBlackStep('info')} className="size-10 rounded-xl bg-white/5 flex items-center justify-center text-white active:scale-90 transition-all">
-                 <span className="material-symbols-outlined">arrow_back</span>
-              </button>
-              <h2 className="text-white font-black italic uppercase tracking-tight">Checkout VIP</h2>
+        <div className="h-full w-full bg-zinc-950 flex flex-col antialiased overflow-hidden">
+           {/* Minimalist Header */}
+           <header className="p-8 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-4">
+                <button onClick={() => setIziBlackStep('info')} className="size-12 rounded-[20px] bg-white/5 flex items-center justify-center text-white active:scale-90 transition-all border border-white/10 hover:border-white/20">
+                   <span className="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div>
+                  <h2 className="text-white font-black italic uppercase tracking-tighter text-lg leading-none">Checkout VIP</h2>
+                  <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mt-1 opacity-60">Elite Access Protocol</p>
+                </div>
+              </div>
+              <div className="flex -space-x-3">
+                 {[1,2,3].map(i => <div key={i} className="size-8 rounded-full border-2 border-zinc-950 bg-zinc-800" />)}
+              </div>
            </header>
            
-           <main className="flex-1 px-8 space-y-8 flex flex-col pt-4">
-              <div className="bg-gradient-to-br from-primary/20 to-orange-500/20 border border-white/10 rounded-[40px] p-8 text-center relative overflow-hidden shrink-0">
-                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl opacity-50" />
-                 <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mb-2 relative z-10">Assinatura Mensal</p>
-                 <p className="text-5xl font-black text-white italic relative z-10 tracking-tighter">R$ 29,90</p>
+           <main className="flex-1 px-8 space-y-10 flex flex-col pt-4 overflow-y-auto no-scrollbar pb-32">
+              <div className="relative group">
+                <div className="absolute inset-0 bg-yellow-400/10 blur-[50px] rounded-full opacity-50 transition-opacity group-hover:opacity-100" />
+                <div className="bg-zinc-900 border border-white/5 rounded-[45px] p-10 text-center relative overflow-hidden shadow-2xl">
+                   <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.4em] mb-3">Membership Mensal</p>
+                   <div className="flex items-baseline justify-center gap-2">
+                     <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">R$ 29,90</span>
+                     <span className="text-yellow-400 text-sm font-black italic uppercase">/mês</span>
+                   </div>
+                </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                   <div className="flex items-center justify-between px-2">
-                    <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">Forma de Pagamento</h3>
+                    <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Método de Ativação</h3>
                     <button 
-                      onClick={() => {
-                        setPaymentsOrigin("izi_black");
-                        setSubView("payments");
-                      }}
-                      className="text-[10px] font-black text-primary uppercase tracking-widest bg-primary/10 px-4 py-1.5 rounded-full"
+                      onClick={() => { setPaymentsOrigin("izi_black"); setSubView("payments"); }}
+                      className="text-[9px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/10 px-4 py-2 rounded-full border border-yellow-400/20"
                     >
                       Alterar
                     </button>
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 rounded-[35px] overflow-hidden">
+                  <div className="bg-zinc-900/50 border border-white/5 rounded-[35px] overflow-hidden backdrop-blur-sm">
                     {paymentMethod === "cartao" && (
-                      <div className="flex items-center gap-4 p-6">
-                        <div className="size-12 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/30">
-                          <span className="material-symbols-outlined text-primary text-2xl">credit_card</span>
+                      <div className="flex items-center gap-5 p-7">
+                        <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
+                          <span className="material-symbols-outlined text-yellow-400 text-3xl">contactless</span>
                         </div>
                         <div className="flex-1">
-                          <p className="text-white font-black text-sm uppercase tracking-tight">Cartão de Crédito</p>
-                          <p className="text-[10px] text-white/30 font-bold uppercase">•••• {savedCards.find(c => c.active)?.last4 || '—'}</p>
+                          <p className="text-white font-black text-sm uppercase tracking-tight italic">Cartão de Elite</p>
+                          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">•••• {savedCards.find(c => c.active)?.last4 || '—'}</p>
                         </div>
-                        <span className="material-symbols-outlined text-primary">check_circle</span>
+                        <span className="material-symbols-outlined text-yellow-400 fill-1">verified_user</span>
                       </div>
                     )}
                     {paymentMethod === "pix" && (
-                      <div className="flex items-center gap-4 p-6">
-                        <div className="size-12 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
-                          <img src="https://logopng.com.br/logos/pix-128.png" className="size-6 object-contain" />
+                      <div className="flex items-center gap-5 p-7">
+                        <div className="size-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                          <img src="https://logopng.com.br/logos/pix-128.png" className="size-7 object-contain brightness-0 invert" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-white font-black text-sm uppercase tracking-tight">PIX Instantâneo</p>
-                          <p className="text-[10px] text-emerald-500 font-bold uppercase">Aprovação imediata</p>
+                          <p className="text-white font-black text-sm uppercase tracking-tight italic">PIX Instantâneo</p>
+                          <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest mt-0.5">Liberação em 1s</p>
                         </div>
-                        <span className="material-symbols-outlined text-emerald-500">check_circle</span>
+                        <span className="material-symbols-outlined text-emerald-500 fill-1">speed</span>
                       </div>
                     )}
                     {paymentMethod === "bitcoin_lightning" && (
-                      <div className="flex items-center gap-4 p-6">
-                        <div className="size-12 rounded-xl bg-orange-500/20 flex items-center justify-center border border-orange-500/30">
-                          <span className="material-symbols-outlined text-orange-500 text-2xl">bolt</span>
+                      <div className="flex items-center gap-5 p-7">
+                        <div className="size-14 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+                          <span className="material-symbols-outlined text-orange-400 text-3xl fill-1">bolt</span>
                         </div>
                         <div className="flex-1">
-                          <p className="text-white font-black text-sm uppercase tracking-tight">Bitcoin Lightning</p>
-                          <p className="text-[10px] text-orange-500 font-bold uppercase">Privacidade & Velocidade</p>
+                          <p className="text-white font-black text-sm uppercase tracking-tight italic">LN Payments</p>
+                          <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest mt-0.5">Privacy First Layer</p>
                         </div>
-                        <span className="material-symbols-outlined text-orange-500">check_circle</span>
+                        <span className="material-symbols-outlined text-orange-500">lock</span>
                       </div>
                     )}
-                    {(!paymentMethod || (paymentMethod !== "cartao" && paymentMethod !== "pix" && paymentMethod !== "bitcoin_lightning")) && (
-                      <button 
-                        onClick={() => {
-                          setPaymentsOrigin("izi_black");
-                          setSubView("payments");
-                        }}
-                        className="w-full p-8 text-white/30 font-black uppercase tracking-widest text-xs flex flex-col items-center gap-2"
-                      >
-                        <span className="material-symbols-outlined text-3xl">payments</span>
-                        Selecione um método
+                    {!paymentMethod && (
+                      <button onClick={() => { setPaymentsOrigin("izi_black"); setSubView("payments"); }} className="w-full p-10 text-zinc-600 font-black uppercase tracking-[0.3em] text-[10px] flex flex-col items-center gap-4">
+                        <div className="size-14 rounded-full bg-zinc-800 flex items-center justify-center border border-white/5">
+                           <span className="material-symbols-outlined text-3xl">add_card</span>
+                        </div>
+                        Escolher Canal de Pagamento
                       </button>
                     )}
                   </div>
               </div>
 
-              <div className="pt-4">
-                 <button 
-                   onClick={handleSubscribeReal}
-                   disabled={isLoading || !paymentMethod || (paymentMethod === "cartao" && !savedCards.some(c => c.active))}
-                   className="w-full bg-primary text-slate-900 h-20 rounded-[30px] font-black uppercase tracking-[0.2em] text-sm shadow-2xl shadow-primary/30 flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale"
-                 >
-                    {isLoading ? (
-                       <span className="material-symbols-outlined animate-spin font-black text-2xl">sync</span>
-                    ) : (
-                       <>
-                          <span>Ativar Izi Black</span>
-                          <span className="material-symbols-outlined font-black">bolt</span>
-                       </>
-                    )}
-                 </button>
-                 <p className="text-center text-[10px] font-bold text-white/20 uppercase tracking-widest mt-6 bg-white/5 py-4 rounded-2xl">
-                    Seguro • Criptografado • SSL
-                 </p>
+              <div className="bg-zinc-900 border border-white/5 rounded-[40px] p-6 space-y-4">
+                 {[
+                   { label: 'Token de Segurança', status: 'Verificado', icon: 'shield' },
+                   { label: 'Certificado SSL 256-bit', status: 'Ativo', icon: 'lock' }
+                 ].map((s, i) => (
+                   <div key={i} className="flex items-center justify-between">
+                     <div className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-zinc-700 text-lg">{s.icon}</span>
+                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{s.label}</span>
+                     </div>
+                     <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">{s.status}</span>
+                   </div>
+                 ))}
               </div>
            </main>
+           
+           <footer className="p-8 pb-12 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent fixed bottom-0 inset-x-0">
+              <button 
+                onClick={handleSubscribeReal}
+                disabled={isLoading || !paymentMethod || (paymentMethod === "cartao" && !savedCards.some(c => c.active))}
+                className="w-full bg-white text-black h-20 rounded-[35px] font-black uppercase tracking-[0.2em] text-sm shadow-[0_20px_50px_-10px_rgba(255,255,255,0.1)] active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center gap-4 group"
+              >
+                 {isLoading ? (
+                    <span className="material-symbols-outlined animate-spin font-black text-2xl">sync</span>
+                 ) : (
+                    <>
+                       <span className="font-black">Ativar Membership Black</span>
+                       <span className="material-symbols-outlined font-black group-hover:translate-x-1 transition-transform">bolt</span>
+                    </>
+                 )}
+              </button>
+           </footer>
         </div>
       );
     }
 
     return (
-      <div className="h-full w-full bg-[#020617] flex flex-col hide-scrollbar overflow-y-auto antialiased">
-         {/* Premium Banner */}
-         <div className="relative h-[48vh] shrink-0 overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1550745165-9bc0b252728f?q=80&w=1200" className="w-full h-full object-cover opacity-60" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#020617]/50 to-[#020617]" />
+      <div className="h-full w-full bg-zinc-950 flex flex-col hide-scrollbar overflow-y-auto antialiased">
+         {/* Premium Cinematic Banner */}
+         <div className="relative h-[60vh] shrink-0 overflow-hidden">
+            <motion.img 
+              initial={{ scale: 1.2, opacity: 0 }}
+              animate={{ scale: 1, opacity: 0.7 }}
+              transition={{ duration: 2 }}
+              src="https://images.unsplash.com/photo-1550745165-9bc0b252728f?q=80&w=1200" 
+              className="w-full h-full object-cover grayscale" 
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-950/40 to-zinc-950" />
+            <div className="absolute inset-0 bg-zinc-950/20 backdrop-brightness-75" />
             
-            <header className="absolute top-0 inset-x-0 p-8 flex items-center justify-between">
-               <button onClick={handleClose} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl flex items-center justify-center text-white border border-white/10 active:scale-90 transition-all">
-                  <span className="material-symbols-outlined">close</span>
+            <header className="absolute top-0 inset-x-0 p-8 flex items-center justify-between z-20">
+               <button onClick={handleClose} className="size-14 rounded-3xl bg-black/60 backdrop-blur-2xl flex items-center justify-center text-white border border-white/10 active:scale-90 transition-all hover:bg-black/80">
+                  <span className="material-symbols-outlined font-black">close</span>
                </button>
+               <div className="size-14 rounded-3xl bg-yellow-400/20 backdrop-blur-2xl flex items-center justify-center border border-yellow-400/30">
+                  <span className="material-symbols-outlined text-yellow-400 fill-1">stars</span>
+               </div>
             </header>
 
-            <div className="absolute bottom-10 inset-x-0 px-8">
-               <div className="bg-primary/20 border border-primary/30 w-fit px-4 py-1.5 rounded-full mb-4">
-                  <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Convite Exclusivo</span>
-               </div>
-               <h1 className="text-5xl font-black text-white italic tracking-tighter leading-none mb-4">
-                  IZI <span className="text-primary">BLACK</span>
+            <div className="absolute bottom-12 inset-x-10 z-20 space-y-4">
+               <motion.div 
+                 initial={{ opacity: 0, x: -20 }}
+                 animate={{ opacity: 1, x: 0 }}
+                 className="bg-zinc-900/80 backdrop-blur-xl border border-white/10 w-fit px-5 py-2 rounded-2xl mb-4"
+               >
+                  <span className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.5em]">Exclusive Invitation</span>
+               </motion.div>
+               <h1 className="text-7xl font-black text-white italic tracking-tighter leading-[0.8] drop-shadow-2xl">
+                  IZI <span className="text-yellow-400">BLACK</span>
                </h1>
-               <p className="text-white/60 text-sm font-medium leading-relaxed max-w-[280px]">
-                  Eleve sua experiência para o nível máximo com benefícios que se pagam sozinhos.
+               <p className="text-zinc-400 text-sm font-bold leading-relaxed max-w-[260px] uppercase tracking-wider opacity-80">
+                  Entre para o círculo premium e resgate privilégios de alto escalão.
                </p>
             </div>
          </div>
 
-         <main className="px-8 pb-40 space-y-10 relative z-10 -mt-6">
-            <div className="grid grid-cols-1 gap-4">
+         <main className="px-10 pb-52 space-y-12 relative z-10 -mt-8">
+            <div className="grid grid-cols-1 gap-5">
                {[
-                  { icon: 'local_shipping', title: 'Fretes Grátis Ilimitados', desc: 'Não pague taxa de entrega em pedidos acima de R$50.' },
-                  { icon: 'payments', title: '5% de Cashback Real', desc: 'Dinheiro de volta em todos os seus pedidos na plataforma.' },
-                  { icon: 'star', title: 'Ofertas Antecipadas', desc: 'Acesso exclusivo às Izi Flash antes de todo mundo.' },
-                  { icon: 'support_agent', title: 'Suporte VIP 24h', desc: 'Atendimento prioritário com nossa equipe de elite.' }
+                  { icon: 'flight_takeoff', title: 'LOGÍSTICA ZERO', desc: 'Isenção de taxa de entrega em pedidos acima de R$50 sem limites.', color: 'text-blue-400' },
+                  { icon: 'account_balance_wallet', title: 'CASHBACK ELITE', desc: '5% de retorno real em todas as transações, direto na sua Izi Wallet.', color: 'text-emerald-400' },
+                  { icon: 'speed', title: 'IZI FLASH VIP', desc: 'Acesso instantâneo a ofertas de até 70% OFF exclusivas para o círculo.', color: 'text-yellow-400' },
+                  { icon: 'shield_person', title: 'PERSONAL CONCIERGE', desc: 'Atendimento prioritário humano pronto para resolver qualquer demanda.', color: 'text-purple-400' }
                ].map((item, i) => (
-                  <div key={i} className="flex gap-5 p-6 bg-white/5 border border-white/10 rounded-[35px] backdrop-blur-md">
-                     <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
-                        <span className="material-symbols-outlined text-primary">{item.icon}</span>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    key={i} 
+                    className="flex gap-6 p-8 bg-zinc-900/60 border border-white/5 rounded-[45px] backdrop-blur-2xl hover:bg-zinc-900 transition-colors"
+                  >
+                     <div className={`size-14 rounded-3xl bg-zinc-800 flex items-center justify-center shrink-0 border border-white/5`}>
+                        <span className={`material-symbols-outlined ${item.color} text-2xl`}>{item.icon}</span>
                      </div>
-                     <div>
-                        <h4 className="text-white font-black text-sm mb-1 italic">{item.title}</h4>
-                        <p className="text-white/40 text-[11px] leading-relaxed font-medium">{item.desc}</p>
+                     <div className="flex flex-col justify-center">
+                        <h4 className="text-white font-black text-sm mb-1 italic uppercase tracking-wider">{item.title}</h4>
+                        <p className="text-zinc-500 text-[11px] leading-relaxed font-bold uppercase tracking-tight">{item.desc}</p>
                      </div>
-                  </div>
+                  </motion.div>
                ))}
             </div>
 
-            <div className="bg-gradient-to-r from-primary/20 to-orange-500/20 border border-primary/30 rounded-[40px] p-8 text-center">
-               <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-2">Plano Standard</p>
-               <div className="flex items-center justify-center gap-2 mb-2">
-                  <span className="text-white/40 text-lg font-black line-through">R$ 49,90</span>
-                  <span className="text-4xl font-black text-white italic">R$ 29,90</span>
-                  <span className="text-white/40 text-sm font-bold">/mês</span>
+            <div className="relative group p-1">
+               <div className="absolute inset-0 bg-yellow-400/20 blur-[60px] rounded-full opacity-30" />
+               <div className="bg-zinc-900 border border-yellow-400/20 rounded-[50px] p-10 text-center relative overflow-hidden backdrop-blur-3xl">
+                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.6em] mb-4">Membro Standard</p>
+                  <div className="flex flex-col items-center gap-1 mb-4">
+                     <span className="text-zinc-700 text-lg font-black line-through italic">R$ 49,90</span>
+                     <div className="flex items-baseline gap-2">
+                        <span className="text-6xl font-black text-white italic tracking-tighter">R$ 29,90</span>
+                        <span className="text-yellow-400 text-sm font-black italic uppercase">/mês</span>
+                     </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 py-3 px-6 bg-yellow-400/10 rounded-full border border-yellow-400/20 w-fit mx-auto">
+                     <span className="size-1.5 bg-yellow-400 rounded-full animate-pulse" />
+                     <p className="text-yellow-400 text-[9px] font-black uppercase tracking-[0.2em]">Oferta de Lançamento por tempo limitado</p>
+                  </div>
                </div>
-               <p className="text-white/60 text-[10px] font-medium">Cancele quando quiser. Sem fidelidade.</p>
             </div>
          </main>
 
-         <footer className="fixed bottom-0 inset-x-0 p-8 pt-4 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent z-50">
+         <footer className="fixed bottom-0 inset-x-0 p-10 pt-4 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent z-50">
             <button 
-               onClick={() => {
-                 setIziBlackStep('payment');
-               }}
+               onClick={() => setIziBlackStep('payment')}
                disabled={isLoading}
-               className="w-full bg-primary text-slate-900 h-20 rounded-[35px] font-black uppercase tracking-[0.2em] text-sm shadow-[0_20px_40px_-10px_rgba(255,214,0,0.3)] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+               className="w-full bg-yellow-400 text-black h-24 rounded-[45px] font-black uppercase tracking-[0.3em] text-sm shadow-[0_30px_60px_-15px_rgba(255,184,0,0.4)] active:scale-95 transition-all flex items-center justify-center gap-4 hover:shadow-yellow-400/60"
             >
                {isLoading ? (
-                  <span className="material-symbols-outlined animate-spin text-slate-900">sync</span>
+                  <span className="material-symbols-outlined animate-spin text-black text-3xl">sync</span>
                ) : (
                   <>
-                     <span className="font-black">Quero ser Izi Black</span>
-                     <span className="material-symbols-outlined font-black">arrow_forward</span>
+                     <span className="font-black">Ativar Membership Elite</span>
+                     <span className="material-symbols-outlined font-black text-2xl">bolt</span>
                   </>
                )}
             </button>
@@ -8416,114 +8851,331 @@ function App() {
     );
   };
 
+  const renderIziBlackWelcome = () => {
+    return (
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 sm:p-12">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-black/95 backdrop-blur-3xl"
+        />
+        
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0, y: 50 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.9, opacity: 0, y: -20 }}
+          transition={{ type: "spring", damping: 25, stiffness: 200, delay: 0.2 }}
+          className="relative w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-[56px] p-12 overflow-hidden shadow-[0_0_100px_rgba(234,179,8,0.07)]"
+        >
+          {/* Decorative Elements */}
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent shadow-[0_0_20px_rgba(234,179,8,0.5)]" />
+          <div className="absolute -top-40 -right-40 size-80 bg-yellow-600/10 rounded-full blur-[100px]" />
+          <div className="absolute -bottom-40 -left-40 size-80 bg-yellow-600/10 rounded-full blur-[100px]" />
+
+          <div className="flex flex-col items-center text-center relative z-10">
+            <motion.div
+              initial={{ rotate: -20, scale: 0 }}
+              animate={{ rotate: 0, scale: 1 }}
+              transition={{ type: "spring", delay: 0.5, bounce: 0.6 }}
+              className="size-24 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-[32px] flex items-center justify-center shadow-[0_15px_40px_rgba(234,179,8,0.3)] mb-10"
+            >
+              <span className="material-symbols-rounded text-5xl text-black font-black">workspace_premium</span>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+            >
+              <h1 className="text-4xl font-black text-white mb-4 tracking-tight">
+                VOCÊ ESTÁ <span className="text-yellow-500">DENTRO</span>.
+              </h1>
+              <p className="text-zinc-400 font-medium text-lg leading-relaxed mb-12">
+                Seja bem-vindo ao <span className="text-white font-bold">Izi Black</span>. 
+                Seus privilégios exclusivos foram ativados com sucesso.
+              </p>
+            </motion.div>
+
+            {/* Perks Preview */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.2 }}
+              className="grid grid-cols-2 gap-4 w-full mb-12"
+            >
+              {[
+                { icon: 'bolt', label: 'Cashback 5%' },
+                { icon: 'local_shipping', label: 'Frete Grátis' },
+                { icon: 'star', label: 'VIP Perks' },
+                { icon: 'support_agent', label: 'Suporte Elite' }
+              ].map((perk, i) => (
+                <div key={i} className="bg-white/5 border border-white/10 rounded-3xl p-4 flex items-center gap-3">
+                  <span className="material-symbols-outlined text-yellow-500 text-lg">{perk.icon}</span>
+                  <span className="text-[10px] font-black text-white uppercase tracking-widest">{perk.label}</span>
+                </div>
+              ))}
+            </motion.div>
+
+            <motion.button
+              whileHover={{ scale: 1.03, brightness: 1.2 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => {
+                setShowIziBlackWelcome(false);
+                // Forçar refresh total do usuário para carregar badges e perks
+                if (userId) {
+                  fetchWalletBalance(userId);
+                  fetchMyOrders(userId);
+                }
+              }}
+              className="w-full bg-white text-black font-black py-7 rounded-[32px] text-xs uppercase tracking-[0.2em] shadow-[0_10px_30px_rgba(255,255,255,0.1)] active:scale-95 transition-all"
+            >
+              Começar Experiência Elite
+            </motion.button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+
   const renderIziBlackCard = () => {
+    const iziCoins = Math.floor(userXP * 2.5);
+    const nextTierCoins = Math.floor(nextLevelXP * 2.5);
+    const progressPercent = Math.min(100, (iziCoins / nextTierCoins) * 100);
+    
+    const tierNames = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master'];
+    const currentTierName = tierNames[Math.min(userLevel - 1, tierNames.length - 1)] || 'Bronze';
+    const nextTierName = tierNames[Math.min(userLevel, tierNames.length - 1)] || 'Master';
+    const circumference = 2 * Math.PI * 54;
+    const dashOffset = circumference - (progressPercent / 100) * circumference;
+
     const perks = [
-      { icon: 'speed', label: 'Entrega Grátis Izi Black', desc: 'Em todos os pedidos acima de R$50' },
-      { icon: 'potted_plant', label: 'Cashback em Dobro', desc: 'Ganhe mais em cada real gasto' },
-      { icon: 'headset_mic', label: 'Suporte VIP Priority', desc: 'Atendimento humano em < 2 min' },
-      { icon: 'shield_check', label: 'Seguro Izi Black', desc: 'Proteção total em todas as suas entregas' },
+      { id: 'frete', icon: 'local_shipping', label: 'Frete Grátis', active: true },
+      { id: 'cashback', icon: 'monetization_on', label: 'Cashback 5%', active: true },
+      { id: 'priority', icon: 'support_agent', label: 'Priority', active: true },
+      { id: 'seguro', icon: 'shield', label: 'Seguro', active: userLevel >= 2 },
+      { id: 'surprise', icon: 'card_giftcard', label: 'Surprise', active: userLevel >= 3 },
+      { id: 'fastmatch', icon: 'bolt', label: 'Fast Match', active: userLevel >= 4 },
     ];
 
     return (
-      <div className="absolute inset-0 z-[170] bg-slate-900 flex flex-col hide-scrollbar overflow-y-auto pb-32">
-        <header className="p-8 pt-12 flex items-center justify-between sticky top-0 bg-slate-900/80 backdrop-blur-2xl z-20">
-           <div>
-              <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">Izi Black</h2>
-              <p className="text-[10px] text-primary font-black uppercase tracking-[0.4em]">Sua Patente de Elite</p>
-           </div>
-           <button 
-             onClick={() => setShowIziBlackCard(false)}
-             className="size-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 active:scale-90 transition-all border border-white/10"
-           >
-             <span className="material-symbols-outlined font-black">close</span>
-           </button>
+      <div className="absolute inset-0 z-[170] bg-[#050505] flex flex-col hide-scrollbar overflow-y-auto">
+        <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.025]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }} />
+        <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] -mt-72 pointer-events-none z-0">
+          <div className="absolute inset-0 rounded-full bg-primary/[0.06] blur-[150px]" style={{ animation: 'pulse 6s ease-in-out infinite alternate' }} />
+        </div>
+
+        <header className="px-7 pt-12 pb-4 flex items-center justify-between sticky top-0 z-20" style={{ background: 'linear-gradient(to bottom, #050505 70%, transparent)' }}>
+          <p className="text-[10px] font-black text-primary/50 uppercase tracking-[0.4em]">Izi Black</p>
+          <button onClick={() => setShowIziBlackCard(false)} className="size-9 rounded-full bg-white/[0.04] flex items-center justify-center text-white/20 active:scale-90 transition-all">
+            <span className="material-symbols-outlined text-base">close</span>
+          </button>
         </header>
 
-        <main className="px-8 space-y-10">
-           {/* Level Hero */}
-           <div className="relative aspect-square w-full max-w-[300px] mx-auto flex items-center justify-center">
-              <div className="absolute inset-0 bg-primary/20 rounded-full blur-[100px] animate-pulse" />
-              <div className="relative size-full rounded-full border-4 border-dashed border-primary/20 flex flex-col items-center justify-center p-8 text-center bg-slate-800/40 backdrop-blur-xl shadow-2xl">
-                 <span className="material-symbols-outlined text-7xl text-primary animate-bounce fill-1 mb-4">diamond</span>
-                 <p className="text-5xl font-black text-white italic leading-none mb-2">LVL {userLevel}</p>
-                 <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Membro Fundador</p>
+        <main className="relative z-10 pb-40">
+          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="text-center pt-4 pb-12 px-7">
+            <div className="relative inline-block mb-6">
+              <svg width="140" height="140" viewBox="0 0 120 120" className="-rotate-90">
+                <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="4" />
+                <motion.circle cx="60" cy="60" r="54" fill="none" stroke="url(#coinGrad2)" strokeWidth="4" strokeLinecap="round" strokeDasharray={circumference} initial={{ strokeDashoffset: circumference }} animate={{ strokeDashoffset: dashOffset }} transition={{ duration: 2.5, ease: "easeOut", delay: 0.3 }} />
+                <defs><linearGradient id="coinGrad2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#FFD900" /><stop offset="50%" stopColor="#F59E0B" /><stop offset="100%" stopColor="#FFD900" /></linearGradient></defs>
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.2, type: "spring", bounce: 0.4 }} className="text-5xl font-black text-white leading-none tracking-tighter">{userLevel}</motion.span>
               </div>
-           </div>
+            </div>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+              <p className="text-[9px] font-black text-primary uppercase tracking-[0.5em] mb-2">{currentTierName}</p>
+              <h1 className="text-2xl font-black text-white tracking-tight leading-none mb-1">Membro Fundador</h1>
+              <p className="text-[10px] text-white/15 font-bold">{progressPercent.toFixed(0)}% para {nextTierName}</p>
+            </motion.div>
+          </motion.section>
 
-            {/* XP Stats */}
-            <div className="bg-white/5 rounded-[40px] p-8 border border-white/10 space-y-6">
-               <div className="flex justify-between items-end">
-                  <div>
-                     <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">XP Atual</p>
-                     <p className="text-2xl font-black text-white tabular-nums italic">{userXP} <span className="text-xs text-white/20 not-italic">/ {nextLevelXP}</span></p>
-                  </div>
-                  <div className="text-right">
-                     <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">Tier Next</p>
-                     <p className="text-sm font-black text-white italic">MASTER</p>
-                  </div>
-               </div>
-               <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                 <motion.div 
-                   initial={{ width: 0 }}
-                   animate={{ width: `${(userXP / nextLevelXP) * 100}%` }}
-                   className="h-full bg-gradient-to-r from-primary via-orange-400 to-rose-500 shadow-[0_0_20px_rgba(255,217,0,0.3)]"
-                 />
-               </div>
+          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-center pb-12 px-7">
+            <div className="inline-flex items-center gap-2 mb-3 px-4 py-1.5 rounded-full bg-primary/[0.06]">
+              <span className="text-sm">🪙</span>
+              <span className="text-[9px] font-black text-primary/70 uppercase tracking-[0.3em]">IziCoin</span>
+            </div>
+            <motion.h2 initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.6, type: "spring" }} className="text-6xl font-black text-white tabular-nums tracking-tighter leading-none mb-2">{iziCoins.toLocaleString('pt-BR')}</motion.h2>
+            <p className="text-[10px] text-white/15 font-bold">+5 coins a cada R$ 1 gasto</p>
+          </motion.section>
+
+          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="flex items-center justify-center gap-6 pb-12">
+            {[
+              { value: myOrders.length, label: 'Pedidos' },
+              { value: `R$${iziCashbackEarned.toFixed(0)}`, label: 'Cashback' },
+              { value: `R$${(myOrders.length * 5).toFixed(0)}`, label: 'Economia' },
+            ].map((stat, i) => (
+              <Fragment key={i}>
+                {i > 0 && <div className="w-px h-8 bg-white/[0.06]" />}
+                <div className="text-center">
+                  <p className="text-lg font-black text-white tracking-tight leading-none mb-0.5">{stat.value}</p>
+                  <p className="text-[8px] font-black text-white/15 uppercase tracking-widest">{stat.label}</p>
+                </div>
+              </Fragment>
+            ))}
+          </motion.section>
+
+          <div className="mx-7 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+
+          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="py-10">
+            <p className="text-[9px] font-black text-white/10 uppercase tracking-[0.4em] px-7 mb-5">Benefícios ativos</p>
+            <div className="flex gap-2.5 overflow-x-auto no-scrollbar px-7">
+              {perks.map((perk, i) => (
+                <motion.div 
+                  key={i} 
+                  initial={{ opacity: 0, y: 15 }} 
+                  animate={{ opacity: perk.active ? 1 : 0.25, y: 0 }} 
+                  transition={{ delay: 0.9 + i * 0.06 }} 
+                  whileTap={{ scale: 0.95 }} 
+                  onClick={() => perk.active && perk.id ? setActivePerkDetail(activePerkDetail === perk.id ? null : perk.id) : null}
+                  className={`shrink-0 flex items-center gap-2.5 py-3 px-5 rounded-full cursor-pointer transition-all ${
+                    activePerkDetail === perk.id 
+                      ? 'bg-primary/[0.12] ring-1 ring-primary/30' 
+                      : perk.active ? 'bg-white/[0.04]' : 'bg-white/[0.015]'
+                  }`}
+                >
+                  <span className={`material-symbols-outlined text-base fill-1 ${perk.active ? 'text-primary' : 'text-white/15'}`}>{perk.icon}</span>
+                  <span className={`text-[11px] font-black tracking-tight whitespace-nowrap ${perk.active ? 'text-white' : 'text-white/20'}`}>{perk.label}</span>
+                  {!perk.active && <span className="text-[9px]">🔒</span>}
+                  {perk.active && perk.id && <span className={`material-symbols-outlined text-[10px] ${activePerkDetail === perk.id ? 'text-primary' : 'text-white/15'}`}>{activePerkDetail === perk.id ? 'expand_less' : 'expand_more'}</span>}
+                </motion.div>
+              ))}
             </div>
 
-            {/* Battle Pass Access */}
-            <motion.div 
-              whileTap={{ scale: 0.98 }}
-              onClick={() => { setShowIziBlackCard(false); setSubView("quest_center"); }}
-              className="bg-primary/10 border border-primary/20 p-6 rounded-[35px] flex items-center justify-between group cursor-pointer"
-            >
-               <div className="flex items-center gap-5">
-                  <div className="size-12 rounded-2xl bg-primary text-slate-900 flex items-center justify-center">
-                     <span className="material-symbols-outlined font-black">military_tech</span>
+            {/* ── Painel expandível do benefício selecionado ── */}
+            <AnimatePresence>
+              {activePerkDetail === 'frete' && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }} className="overflow-hidden px-7"
+                >
+                  <div className="pt-6 pb-2">
+                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-4">Cupons de Frete Grátis</p>
+                    {availableCoupons.filter(c => c.is_vip && (c.title?.toLowerCase().includes('frete') || c.discount_type === 'shipping')).length > 0 ? (
+                      <div className="space-y-2.5">
+                        {availableCoupons.filter(c => c.is_vip && (c.title?.toLowerCase().includes('frete') || c.discount_type === 'shipping')).map((cpn, ci) => (
+                          <div key={ci} className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/[0.03]">
+                            <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                              <span className="material-symbols-outlined text-emerald-400 text-base fill-1">local_shipping</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[12px] font-black text-white tracking-tight leading-none mb-0.5">{cpn.title || 'Frete Grátis'}</p>
+                              <p className="text-[9px] text-white/20 font-bold">{cpn.coupon_code ? `Código: ${cpn.coupon_code}` : 'Aplicado automaticamente'}</p>
+                            </div>
+                            {cpn.coupon_code && (
+                              <button onClick={() => { navigator.clipboard.writeText(cpn.coupon_code); setCopiedCoupon(cpn.id || cpn.coupon_code); setTimeout(() => setCopiedCoupon(null), 2000); }} className="px-3 py-1.5 rounded-xl bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">
+                                {!!copiedCoupon && copiedCoupon === (cpn.id || cpn.coupon_code) ? 'Copiado!' : 'Copiar'}
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <span className="material-symbols-outlined text-white/10 text-3xl mb-2 block">local_shipping</span>
+                        <p className="text-[11px] text-white/20 font-bold">Frete grátis automático em pedidos acima de R$ 50</p>
+                        <p className="text-[9px] text-white/10 mt-1">Aplicado automaticamente no checkout</p>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                     <h4 className="text-sm font-black text-white uppercase tracking-tight">Izi Battle Pass</h4>
-                     <p className="text-[9px] text-primary font-black uppercase tracking-widest">Ver Quests e Ranking</p>
+                </motion.div>
+              )}
+
+              {activePerkDetail === 'cashback' && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }} className="overflow-hidden px-7"
+                >
+                  <div className="pt-6 pb-2">
+                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-4">Detalhes do Cashback</p>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.03]">
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center"><span className="material-symbols-outlined text-primary text-base fill-1">trending_up</span></div>
+                          <div>
+                            <p className="text-[12px] font-black text-white">5% em todos os pedidos</p>
+                            <p className="text-[9px] text-white/20 font-bold">Crédito automático na carteira</p>
+                          </div>
+                        </div>
+                        <p className="text-lg font-black text-primary">R${iziCashbackEarned.toFixed(0)}</p>
+                      </div>
+                      <p className="text-[9px] text-white/10 text-center">O cashback é creditado automaticamente após a confirmação da entrega</p>
+                    </div>
                   </div>
-               </div>
-               <span className="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">chevron_right</span>
-            </motion.div>
+                </motion.div>
+              )}
 
-           {/* Perks Grid */}
-           <div className="space-y-6">
-              <h3 className="text-[11px] font-black text-white/20 uppercase tracking-[0.4em] ml-2 italic">Benefícios Ativos</h3>
-              <div className="grid grid-cols-1 gap-4">
-                 {perks.map((perk, i) => (
-                    <motion.div 
-                      key={i}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className="flex items-center gap-6 p-6 bg-white/5 rounded-[35px] border border-white/5 group"
-                    >
-                       <div className="size-14 rounded-2xl bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                          <span className="material-symbols-outlined text-2xl fill-1">{perk.icon}</span>
-                       </div>
-                       <div>
-                          <p className="text-sm font-black text-white uppercase tracking-tight">{perk.label}</p>
-                          <p className="text-[10px] font-medium text-white/40 uppercase tracking-widest mt-1 leading-relaxed">{perk.desc}</p>
-                       </div>
-                    </motion.div>
-                 ))}
-              </div>
-           </div>
+              {activePerkDetail === 'surprise' && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }} className="overflow-hidden px-7"
+                >
+                  <div className="pt-6 pb-2">
+                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-4">Surpresas Disponíveis</p>
+                    {availableCoupons.filter(c => c.is_vip).length > 0 ? (
+                      <div className="space-y-2.5">
+                        {availableCoupons.filter(c => c.is_vip).map((cpn, ci) => (
+                          <div key={ci} className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/[0.03]">
+                            <div className="size-10 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
+                              <span className="material-symbols-outlined text-violet-400 text-base fill-1">redeem</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[12px] font-black text-white tracking-tight leading-none mb-0.5">{cpn.title || 'Surpresa VIP'}</p>
+                              <p className="text-[9px] text-white/20 font-bold">
+                                {cpn.discount_type === 'percent' ? `${cpn.discount_value}% OFF` : `R$ ${cpn.discount_value} OFF`}
+                              </p>
+                            </div>
+                            {cpn.coupon_code && (
+                              <button onClick={() => { navigator.clipboard.writeText(cpn.coupon_code); setCopiedCoupon(cpn.id || cpn.coupon_code); setTimeout(() => setCopiedCoupon(null), 2000); }} className="px-3 py-1.5 rounded-xl bg-violet-500/10 text-violet-400 text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">
+                                {!!copiedCoupon && copiedCoupon === (cpn.id || cpn.coupon_code) ? 'Copiado!' : 'Resgatar'}
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <span className="material-symbols-outlined text-white/10 text-3xl mb-2 block">card_giftcard</span>
+                        <p className="text-[11px] text-white/20 font-bold">Nenhuma surpresa disponível agora</p>
+                        <p className="text-[9px] text-white/10 mt-1">Novas surpresas são adicionadas todo mês!</p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.section>
 
-           {/* Call to Action */}
-           <div className="py-10 text-center space-y-4">
-              <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Deseja acelerar sua subida para o Tier MASTER?</p>
-              <button 
-                onClick={() => setShowMasterPerks(true)}
-                className="w-full h-16 bg-primary text-slate-900 font-black text-xs uppercase tracking-[0.2em] rounded-[25px] active:scale-95 transition-all shadow-2xl shadow-primary/20"
-              >
-                Explorar Benefícios MASTER
-              </button>
-              <button className="w-full h-16 bg-white/5 text-white/60 font-black text-xs uppercase tracking-[0.2em] rounded-[25px] active:scale-95 transition-all border border-white/10">Compartilhar Código</button>
-           </div>
+          <div className="mx-7 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+
+          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="py-10 px-7 space-y-1">
+            {[
+              { icon: 'military_tech', title: 'Izi Battle Pass', sub: 'Missões e ranking', action: () => { setShowIziBlackCard(false); setSubView("quest_center"); }, active: true },
+              { icon: 'workspace_premium', title: 'Próximas Recompensas', sub: 'Desbloqueie mais benefícios', action: () => setShowMasterPerks(true), active: true },
+              { icon: 'share', title: 'Indicar Amigos', sub: 'Ganhe coins por indicação', action: () => {}, active: false },
+            ].map((item, i) => (
+              <Fragment key={i}>
+                <motion.div whileTap={{ scale: 0.98 }} onClick={item.action} className={`flex items-center justify-between py-5 cursor-pointer group ${!item.active ? 'opacity-30' : ''}`}>
+                  <div className="flex items-center gap-4">
+                    <div className={`size-10 rounded-xl flex items-center justify-center ${item.active ? 'bg-primary/[0.08]' : 'bg-white/[0.03]'}`}>
+                      <span className={`material-symbols-outlined text-lg fill-1 ${item.active ? 'text-primary' : 'text-white/20'}`}>{item.icon}</span>
+                    </div>
+                    <div>
+                      <h4 className="text-[13px] font-black text-white tracking-tight">{item.title}</h4>
+                      <p className="text-[9px] text-white/15 font-bold uppercase tracking-widest">{item.sub}</p>
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-white/10 text-base group-hover:text-primary group-hover:translate-x-1 transition-all">arrow_forward_ios</span>
+                </motion.div>
+                {i < 2 && <div className="h-px bg-white/[0.03]" />}
+              </Fragment>
+            ))}
+          </motion.section>
+
+          <div className="text-center pt-8 pb-4 px-7">
+            <p className="text-[8px] font-black text-white/[0.06] uppercase tracking-[0.5em]">Izi Black · Membro desde 2026</p>
+          </div>
         </main>
       </div>
     );
@@ -8531,79 +9183,72 @@ function App() {
 
   const renderMasterPerks = () => {
     const tierPerks = [
-      { icon: 'genetics', label: 'Cashback Izi Elite', desc: '5% de volta em todos os pedidos via Carteira Digital', premium: true },
-      { icon: 'rocket_launch', label: 'Priority Match Instantâneo', desc: 'Fure a fila em horários de pico sem taxa extra', premium: true },
-      { icon: 'support_agent', label: 'Concierge Humano 24/7', desc: 'Atendimento exclusivo via WhatsApp direto', premium: true },
-      { icon: 'card_giftcard', label: 'Izi Surprise Box', desc: 'Um presente físico mensal na sua porta', premium: true },
+      { icon: 'monetization_on', label: 'Cashback Elite 5%', desc: 'Em todos os pedidos via Carteira Digital' },
+      { icon: 'bolt', label: 'Priority Match', desc: 'Fure a fila em horários de pico' },
+      { icon: 'support_agent', label: 'Concierge 24/7', desc: 'Atendimento exclusivo via WhatsApp' },
+      { icon: 'card_giftcard', label: 'Surprise Box', desc: 'Presente exclusivo mensal' },
     ];
 
     return (
-      <div className="absolute inset-0 z-[180] bg-slate-950 flex flex-col hide-scrollbar overflow-y-auto pb-32">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,217,0,0.15),transparent_70%)]" />
+      <div className="absolute inset-0 z-[180] bg-black flex flex-col hide-scrollbar overflow-y-auto">
+        <div className="absolute top-0 left-0 right-0 h-60 bg-gradient-to-b from-primary/[0.06] to-transparent pointer-events-none" />
         
-        <header className="p-8 pt-12 flex items-center justify-between sticky top-0 bg-slate-950/80 backdrop-blur-2xl z-20">
-           <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary group animate-pulse">
-                 <span className="material-symbols-outlined text-xl fill-1">workspace_premium</span>
-              </div>
-              <div>
-                 <h2 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">Status Master</h2>
-                 <p className="text-[9px] text-primary font-black uppercase tracking-[0.3em]">A Elite Izi</p>
-              </div>
-           </div>
-           <button 
-             onClick={() => setShowMasterPerks(false)}
-             className="size-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 active:scale-90 transition-all border border-white/10"
-           >
-             <span className="material-symbols-outlined font-black">close</span>
-           </button>
+        <header className="p-6 pt-10 flex items-center justify-between sticky top-0 bg-black/90 backdrop-blur-xl z-20 border-b border-white/[0.04]">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-primary text-xl fill-1">workspace_premium</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-black text-white tracking-tight leading-none">Recompensas</h2>
+              <p className="text-[9px] font-black text-primary/70 uppercase tracking-[0.3em]">Desbloqueáveis</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setShowMasterPerks(false)}
+            className="size-10 rounded-xl bg-white/[0.04] flex items-center justify-center text-white/30 active:scale-90 transition-all border border-white/[0.06]"
+          >
+            <span className="material-symbols-outlined text-lg">close</span>
+          </button>
         </header>
 
-        <main className="px-8 space-y-12 relative z-10">
-           {/* Tier Hero */}
-           <div className="text-center space-y-4 pt-4">
-              <div className="relative inline-block">
-                 <div className="absolute inset-0 bg-primary blur-3xl opacity-20 scale-150" />
-                 <h1 className="text-7xl font-black text-white italic tracking-tighter uppercase leading-none relative">MASTER</h1>
-              </div>
-              <p className="text-xs font-medium text-white/40 max-w-[250px] mx-auto uppercase tracking-widest leading-relaxed">Onde a tecnologia encontra o luxo absoluto em serviços.</p>
-           </div>
+        <main className="px-6 pb-32 space-y-8 relative z-10">
+          {/* Tier Visual */}
+          <div className="text-center py-8">
+            <p className="text-[9px] font-black text-primary/50 uppercase tracking-[0.4em] mb-3">Próximo Tier</p>
+            <h1 className="text-5xl font-black text-white tracking-tighter leading-none mb-2">Master</h1>
+            <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest max-w-[240px] mx-auto">Onde tecnologia encontra o luxo em serviços</p>
+          </div>
 
-           {/* Rewards Showcase */}
-           <div className="space-y-6">
-              <h3 className="text-[11px] font-black text-primary uppercase tracking-[0.4em] ml-2 italic">Exclusividades Desbloqueáveis</h3>
-              <div className="grid grid-cols-1 gap-4">
-                 {tierPerks.map((perk, i) => (
-                    <motion.div 
-                      key={i}
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className="p-8 bg-gradient-to-br from-white/10 to-transparent rounded-[45px] border border-white/5 relative overflow-hidden group shadow-2xl"
-                    >
-                       <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-30 transition-opacity">
-                          <span className="material-symbols-outlined text-6xl text-white fill-1">{perk.icon}</span>
-                       </div>
-                       <div className="size-16 rounded-2xl bg-primary text-slate-900 flex items-center justify-center mb-6 shadow-xl shadow-primary/20">
-                          <span className="material-symbols-outlined text-3xl font-black">{perk.icon}</span>
-                       </div>
-                       <h4 className="text-xl font-black text-white uppercase tracking-tight mb-2">{perk.label}</h4>
-                       <p className="text-xs font-medium text-white/40 uppercase tracking-widest leading-relaxed">{perk.desc}</p>
-                    </motion.div>
-                 ))}
-              </div>
-           </div>
+          {/* Rewards */}
+          <div className="space-y-3">
+            {tierPerks.map((perk, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white/[0.03] rounded-2xl p-5 border border-white/[0.06] flex items-start gap-4"
+              >
+                <div className="size-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0 mt-0.5">
+                  <span className="material-symbols-outlined fill-1">{perk.icon}</span>
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-white tracking-tight mb-1">{perk.label}</h4>
+                  <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest leading-relaxed">{perk.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
 
-           {/* Master Boost Feature */}
-           <div className="bg-primary/5 rounded-[40px] p-8 border border-primary/20 relative overflow-hidden group">
-              <div className="absolute inset-0 bg-primary/5 animate-pulse" />
-              <div className="relative z-10 text-center">
-                 <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-4">Combo Master Speed</p>
-                 <h3 className="text-2xl font-black text-white italic tracking-tighter mb-4">GANHE +200% XP</h3>
-                 <p className="text-[11px] text-white/40 font-medium uppercase tracking-widest leading-relaxed mb-8">Ative o boost por 24h e chegue ao Tier Master hoje mesmo.</p>
-                 <button className="w-full h-16 bg-white text-slate-900 font-black text-xs uppercase tracking-[0.2em] rounded-[22px] active:scale-95 transition-all">Ativar Boost XP</button>
-              </div>
-           </div>
+          {/* Boost */}
+          <div className="bg-white/[0.03] rounded-2xl p-6 border border-primary/10 text-center">
+            <p className="text-[9px] font-black text-primary/50 uppercase tracking-[0.3em] mb-2">Boost Ativo</p>
+            <h3 className="text-2xl font-black text-white tracking-tight mb-1">+200% IziCoins</h3>
+            <p className="text-[9px] text-white/20 font-bold uppercase tracking-widest mb-5">Ative por 24h e suba de tier mais rápido</p>
+            <button className="w-full py-4 bg-primary text-black font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl active:scale-[0.98] transition-all">
+              Ativar Boost
+            </button>
+          </div>
         </main>
       </div>
     );
@@ -10785,6 +11430,16 @@ function App() {
                   className="fixed inset-0 z-[160]"
                 >
                   {renderAIConcierge()}
+                </motion.div>
+              )}
+              {showIziBlackWelcome && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[2000]"
+                >
+                  {renderIziBlackWelcome()}
                 </motion.div>
               )}
               {showIziBlackCard && (
