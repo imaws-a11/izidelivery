@@ -709,7 +709,7 @@ function App() {
   const [chatInput, setChatInput] = useState("");
 
   const [exploreCategoryState, setExploreCategoryState] = useState<{
-    id: 'flowers' | 'sweets' | 'pets';
+    id: 'flowers' | 'sweets' | 'pets' | 'gas' | 'butcher';
     title: string;
     tagline: string;
     primaryColor: string;
@@ -2275,37 +2275,34 @@ function App() {
   };
 
   const renderHome = () => {
-    // â”€â”€ Serviços Principais (Entregas) â”€â”€
+    // ── Serviços Principais (Entregas) ──
     const deliveryServices = [
-      { emoji: "ðŸ½ï¸", label: "Food", desc: "Peça o melhor da cidade", type: "restaurant", gradient: "linear-gradient(135deg, #f97316, #ef4444)", bgColor: "#fff7ed", tagColor: "#ea580c", tag: "Populares" },
-      { emoji: "ðŸº", label: "Bebidas", desc: "Distribuidoras e adegas", type: "beverages", gradient: "linear-gradient(135deg, #f59e0b, #eab308)", bgColor: "#fffbeb", tagColor: "#d97706", tag: "Geladas" },
-      {
-        emoji: "ðŸ“¦", label: "Envios", desc: "Entregas e encomendas", gradient: "linear-gradient(135deg, #8b5cf6, #9333ea)", bgColor: "#f5f3ff", tagColor: "#7c3aed", tag: "Express",
-        action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("transit_selection"); },
-      },
-      { emoji: "ðŸ›’", label: "Mercado", desc: "Compras do dia a dia", type: "market", gradient: "linear-gradient(135deg, #10b981, #0d9488)", bgColor: "#ecfdf5", tagColor: "#059669", tag: "Rápido" },
-      { emoji: "ðŸ’Š", label: "Farmácia", desc: "Medicamentos e saúde", type: "pharmacy", gradient: "linear-gradient(135deg, #3b82f6, #06b6d4)", bgColor: "#eff6ff", tagColor: "#2563eb", tag: "24h" },
-      { emoji: "ðŸ¾", label: "Petshop", desc: "Cuidados para seu pet", type: "generic", gradient: "linear-gradient(135deg, #ec4899, #f43f5e)", bgColor: "#fdf2f8", tagColor: "#db2777", tag: "Novo", action: () => { setExploreCategoryState({ id: 'pets', title: 'Pet Shop Premium', tagline: 'Mimo para seu melhor amigo', primaryColor: 'rose-500', icon: 'pets', banner: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=1200' }); navigateSubView('explore_category'); } },
-      { emoji: "ðŸŽ‚", label: "Doces & Bolos", desc: "Confeitarias e padarias", type: "generic", gradient: "linear-gradient(135deg, #d946ef, #ec4899)", bgColor: "#fdf4ff", tagColor: "#c026d3", action: () => { setExploreCategoryState({ id: 'sweets', title: 'Doces & Bolos', tagline: 'Momentos mais doces', primaryColor: 'fuchsia-500', icon: 'cake', banner: 'https://images.unsplash.com/photo-1578985542846-399fe5c5f47d?q=80&w=1200' }); navigateSubView('explore_category'); } },
-      { emoji: "ðŸ’", label: "Flores", desc: "Buquês e arranjos", type: "generic", gradient: "linear-gradient(135deg, #fb7185, #f43f5e)", bgColor: "#fff1f2", tagColor: "#e11d48", action: () => { setExploreCategoryState({ id: 'flowers', title: 'Floricultura', tagline: 'Flores que encantam', primaryColor: 'rose-400', icon: 'local_florist', banner: 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1200' }); navigateSubView('explore_category'); } },
+      { id: 'food', label: "Comida", desc: "Melhor da cidade", type: "restaurant", color: "#f97316", icon3d: "https://cdn3d.iconscout.com/3d/premium/thumb/burger-8291414-6600985.png", tag: "Populares" },
+      { id: 'market', label: "Mercado", desc: "Compras do dia", type: "market", color: "#10b981", icon3d: "https://cdn3d.iconscout.com/3d/premium/thumb/shopping-basket-5115982-4277494.png", tag: "Rápido" },
+      { id: 'pharmacy', label: "Farmácia", desc: "Saúde e bem-estar", type: "pharmacy", color: "#0ea5e9", icon3d: "https://cdn3d.iconscout.com/3d/premium/thumb/medicine-box-5011703-4171221.png", tag: "24h" },
+      { id: 'petshop', label: "Petshops", desc: "Para seu pet", type: "generic", color: "#ec4899", icon3d: "https://cdn3d.iconscout.com/3d/premium/thumb/dog-food-8395758-6688771.png", tag: "Novo", action: () => { setExploreCategoryState({ id: 'pets', title: 'Pet Shop Premium', tagline: 'Mimo para seu melhor amigo', primaryColor: 'rose-500', icon: 'pets', banner: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=1200' }); navigateSubView('explore_category'); } },
+      { id: 'beverages', label: "Bebidas", desc: "Adega & Geladas", type: "beverages", color: "#8b5cf6", icon3d: "https://cdn3d.iconscout.com/3d/premium/thumb/beer-glass-5115978-4277490.png", tag: "Geladas" },
+      { id: 'gas', label: "Gás e Água", desc: "Cilindro e Galão", type: "generic", color: "#3b82f6", icon3d: "https://cdn3d.iconscout.com/3d/premium/thumb/water-gallon-5011707-4171225.png", action: () => { setExploreCategoryState({ id: 'gas', title: 'Gás & Água', tagline: 'Abasteça sua casa', primaryColor: 'blue-500', icon: 'local_fire_department', banner: 'https://images.unsplash.com/photo-1519750783826-e2420f4d687f?q=80&w=1200' }); navigateSubView('explore_category'); } },
+      { id: 'butcher', label: "Açougue", desc: "Carnes de Elite", type: "generic", color: "#ef4444", icon3d: "https://cdn3d.iconscout.com/3d/premium/thumb/meat-tray-5115984-4277496.png", action: () => { setExploreCategoryState({ id: 'butcher', title: 'Açougue Premium', tagline: 'Cortes exclusivos', primaryColor: 'red-500', icon: 'restaurant', banner: 'https://images.unsplash.com/photo-1607623273574-0fec58bfdec2?q=80&w=1200' }); navigateSubView('explore_category'); } },
+      { id: 'shipping', label: "Envios", desc: "Entregas Express", type: "utilitario", color: "#6366f1", icon3d: "https://cdn3d.iconscout.com/3d/premium/thumb/parcel-box-5011705-4171223.png", tag: "Express", action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("transit_selection"); } },
     ];
 
-    // â”€â”€ Serviços de Mobilidade â”€â”€
+    // ── Serviços de Mobilidade ──
     const mobilityServices = [
       {
-        emoji: "ðŸï¸", label: "Mototáxi", desc: "Rápido e econômico", gradient: "linear-gradient(135deg, #facc15, #f97316)", bgColor: "#fefce8", tagColor: "#ca8a04", tag: "Promo",
+        emoji: "ðŸ  ï¸ ", label: "Mototáxi", desc: "Rápido e econômico", color: "#facc15", bgColor: "#fefce8", tagColor: "#ca8a04", tag: "Promo",
         action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("transit_selection"); },
       },
       {
-        emoji: "ðŸš—", label: "Motorista Particular", desc: "Conforto para sua viagem", gradient: "linear-gradient(135deg, #334155, #0f172a)", bgColor: "#f1f5f9", tagColor: "#334155", tag: "Premium",
+        emoji: "ðŸš—", label: "Particular", desc: "Conforto VIP", color: "#334155", bgColor: "#f1f5f9", tagColor: "#334155", tag: "Premium",
         action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("transit_selection"); },
       },
       {
-        emoji: "ðŸš", label: "Van / Utilitário", desc: "Mudanças e cargas", gradient: "linear-gradient(135deg, #6366f1, #2563eb)", bgColor: "#eef2ff", tagColor: "#4f46e5",
+        emoji: "ðŸš ", label: "Van / Grupo", desc: "Cargas e Mudanças", color: "#6366f1", bgColor: "#eef2ff", tagColor: "#4f46e5",
         action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("transit_selection"); },
       },
       {
-        emoji: "ðŸšš", label: "Frete", desc: "Transporte de volumes", gradient: "linear-gradient(135deg, #06b6d4, #3b82f6)", bgColor: "#ecfeff", tagColor: "#0891b2",
+        emoji: "ðŸšš", label: "Frete", desc: "Volumes Maiores", color: "#06b6d4", bgColor: "#ecfeff", tagColor: "#0891b2",
         action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("transit_selection"); },
       },
     ];
@@ -2827,30 +2824,44 @@ function App() {
                 <p className="text-[11px] text-slate-400 font-semibold">Entregas na sua porta em minutos</p>
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-4 px-4 pb-6 mt-2">
               {deliveryServices.filter(cat => 
                 cat.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
                 (cat.desc && cat.desc.toLowerCase().includes(searchQuery.toLowerCase()))
               ).map((cat, i) => (
                 <motion.div
-                  initial={{ opacity: 0, y: 15, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: i * 0.04, type: "spring", stiffness: 300 }}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.05, type: "spring", damping: 12 }}
                   key={`delivery-${i}`}
                   onClick={() => handleServiceSelection(cat)}
-                  className="flex flex-col items-center group cursor-pointer active:scale-90 transition-all duration-200"
+                  className="flex flex-col items-center shrink-0 w-32 group cursor-pointer active:scale-90 transition-all duration-300"
                 >
-                  <div className="relative w-full aspect-square rounded-[24px] flex items-center justify-center shadow-lg mb-2 overflow-hidden" style={{ background: cat.gradient }}>
-                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <span className="text-3xl relative z-10 drop-shadow-sm">{cat.emoji}</span>
+                  <div 
+                    className="relative w-full aspect-square rounded-[40px] flex items-center justify-center shadow-2xl mb-3 overflow-visible group-hover:-translate-y-2 transition-transform duration-500" 
+                    style={{ background: cat.color }}
+                  >
+                    {/* Shadow base inside */}
+                    <div className="absolute inset-0 bg-black/5 rounded-[40px] pointer-events-none" />
+                    
+                    {/* 3D Icon popping out */}
+                    <img 
+                      src={cat.icon3d} 
+                      className="w-24 h-24 object-contain absolute -top-8 group-hover:scale-110 group-hover:-rotate-3 transition-all duration-700 drop-shadow-[0_20px_20px_rgba(0,0,0,0.3)]" 
+                      alt={cat.label} 
+                    />
+                    
+                    {/* Dynamic Label at bottom of card */}
+                    <div className="absolute bottom-6 left-0 right-0 text-center px-1">
+                       <span className="text-[13px] font-black text-white leading-tight tracking-tight drop-shadow-md">{cat.label}</span>
+                    </div>
+
                     {cat.tag && (
-                      <span className="absolute top-1.5 right-1.5 bg-white/90 backdrop-blur-sm text-[7px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full text-slate-700 shadow-sm">
+                      <span className="absolute -top-2 -right-2 bg-white text-[7px] font-black uppercase tracking-wider px-2 py-1 rounded-full text-slate-900 shadow-xl border border-slate-100 z-20">
                         {cat.tag}
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] font-black text-slate-800 dark:text-slate-200 text-center leading-tight tracking-tight">{cat.label}</span>
-                  <span className="text-[8px] font-semibold text-slate-400 text-center leading-tight mt-0.5 hidden sm:block">{cat.desc}</span>
                 </motion.div>
               ))}
             </div>
@@ -4633,11 +4644,11 @@ function App() {
 
   const renderMarketList = () => {
     const marketCategories = [
-      { id: 'hortifruti', name: 'Hortifruti', icon: 'eco', color: 'bg-emerald-500', gradient: 'linear-gradient(135deg, #10b981, #059669)' },
-      { id: 'carnes', name: 'Carnes', icon: 'restaurant', color: 'bg-red-500', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)' },
-      { id: 'bebidas', name: 'Bebidas', icon: 'local_bar', color: 'bg-indigo-500', gradient: 'linear-gradient(135deg, #6366f1, #4f46e5)' },
-      { id: 'higiene', name: 'Higiene', icon: 'clean_hands', color: 'bg-purple-500', gradient: 'linear-gradient(135deg, #a855f7, #9333ea)' },
-      { id: 'padaria', name: 'Padaria', icon: 'bakery_dining', color: 'bg-orange-500', gradient: 'linear-gradient(135deg, #f97316, #ea580c)' },
+      { id: 'hortifruti', name: 'Hortifruti', icon3d: 'https://cdn3d.iconscout.com/3d/premium/thumb/apple-5115980-4277492.png', color: '#10b981' },
+      { id: 'carnes', name: 'Carnes', icon3d: 'https://cdn3d.iconscout.com/3d/premium/thumb/meat-tray-5115984-4277496.png', color: '#ef4444' },
+      { id: 'bebidas', name: 'Bebidas', icon3d: 'https://cdn3d.iconscout.com/3d/premium/thumb/beer-glass-5115978-4277490.png', color: '#8b5cf6' },
+      { id: 'padaria', name: 'Padaria', icon3d: 'https://cdn3d.iconscout.com/3d/premium/thumb/croissant-5663327-4712437.png', color: '#f97316' },
+      { id: 'limpeza', name: 'Limpeza', icon3d: 'https://cdn3d.iconscout.com/3d/premium/thumb/soap-bottle-5011711-4171229.png', color: '#0ea5e9' },
     ];
 
     const dailyDeals: any[] = [];
@@ -4682,24 +4693,29 @@ function App() {
         <main className="flex flex-col gap-12 py-8">
           {/* Categories Horizontal */}
           <section>
-            <div className="flex gap-6 px-5 overflow-x-auto no-scrollbar">
-              {marketCategories.map((cat, i) => (
+            <div className="flex gap-4 px-5 overflow-x-auto no-scrollbar pb-6">
+              {marketCategories.map((cat: any, i) => (
                 <motion.div
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}
                   key={cat.id}
                   onClick={() => {
                     setActiveService({ ...activeService, subType: cat.id });
                     navigateSubView('generic_list');
                   }}
-                  className="flex flex-col items-center gap-3 shrink-0 group cursor-pointer active:scale-95 transition-all"
+                  className="flex flex-col items-center shrink-0 w-24 group cursor-pointer active:scale-95 transition-all"
                 >
-                  <div className="size-20 rounded-[30px] flex items-center justify-center shadow-xl relative overflow-hidden group-hover:scale-105 transition-transform" style={{ background: cat.gradient }}>
-                    <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-                    <Icon name={cat.icon} />
+                  <div className="relative size-20 rounded-[30px] flex items-center justify-center shadow-xl group-hover:scale-105 transition-transform" style={{ background: cat.color }}>
+                    <img 
+                      src={cat.icon3d} 
+                      className="absolute -top-4 w-16 h-16 object-contain drop-shadow-lg group-hover:scale-110 transition-transform" 
+                      alt={cat.name} 
+                    />
+                    <div className="absolute bottom-2.5 inset-x-0 text-center">
+                      <span className="text-[9px] font-black text-white uppercase tracking-tight">{cat.name}</span>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 group-hover:text-primary transition-colors">{cat.name}</span>
                 </motion.div>
               ))}
             </div>
@@ -9469,9 +9485,9 @@ function App() {
 
   const renderExploreMobility = () => {
     const categories = [
-      { id: 'mototaxi', name: 'MotoTáxi', icon: 'motorcycle', priceRange: 'R$ 8-15', eta: '3 min', desc: 'Agilidade total', gradient: 'linear-gradient(135deg, #facc15, #f97316)' },
-      { id: 'carro', name: 'Premium Car', icon: 'directions_car', priceRange: 'R$ 15-30', eta: '6 min', desc: 'Conforto executivo', gradient: 'linear-gradient(135deg, #334155, #0f172a)' },
-      { id: 'van', name: 'Luxury Van', icon: 'airport_shuttle', priceRange: 'R$ 40-80', eta: '12 min', desc: 'Espaço para grupos', gradient: 'linear-gradient(135deg, #6366f1, #2563eb)' },
+      { id: 'mototaxi', name: 'MotoTáxi', icon3d: 'https://cdn3d.iconscout.com/3d/premium/thumb/motorcycle-8616149-6815332.png', priceRange: 'R$ 8-15', eta: '3 min', desc: 'Agilidade total', color: '#facc15' },
+      { id: 'carro', name: 'Carro Premium', icon3d: 'https://cdn3d.iconscout.com/3d/premium/thumb/car-6330962-5208681.png', priceRange: 'R$ 15-30', eta: '6 min', desc: 'Conforto executivo', color: '#334155' },
+      { id: 'van', name: 'Van de Luxo', icon3d: 'https://cdn3d.iconscout.com/3d/premium/thumb/van-5115985-4277497.png', priceRange: 'R$ 40-80', eta: '12 min', desc: 'Espaço para grupos', color: '#6366f1' },
     ];
 
     return (
@@ -9548,8 +9564,8 @@ function App() {
                   }}
                   className="bg-white dark:bg-slate-800 p-6 rounded-[45px] border border-slate-100 dark:border-white/5 shadow-xl flex items-center gap-6 group active:scale-[0.98] transition-all relative overflow-hidden"
                 >
-                  <div className="size-20 rounded-[28px] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-500" style={{ background: cat.gradient }}>
-                    <Icon name={cat.icon} />
+                  <div className="size-24 rounded-[30px] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-500 relative" style={{ background: cat.color }}>
+                    <img src={cat.icon3d} className="absolute -top-6 w-20 h-20 object-contain drop-shadow-2xl" alt={cat.name} />
                   </div>
                   <div className="flex-1">
                     <h4 className="font-black text-slate-900 dark:text-white text-lg tracking-tight mb-1">{cat.name}</h4>
