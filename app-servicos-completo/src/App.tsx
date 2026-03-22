@@ -1740,7 +1740,8 @@ function App() {
         });
 
         if (lnErr || !lnData?.payment_request) {
-          console.error("Lightning error:", lnErr, lnData);
+          const errMsg = lnErr?.message || JSON.stringify(lnData) || "Erro desconhecido";
+          alert("Erro Lightning: " + errMsg);
           navigateSubView("payment_error");
           return;
         }
