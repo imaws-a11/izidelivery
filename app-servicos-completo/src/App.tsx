@@ -4287,6 +4287,7 @@ function App() {
             <input type="text" inputMode="numeric" value={pixCpf} onChange={(e) => setPixCpf(formatCpf(e.target.value))} placeholder="000.000.000-00"
               className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-4 px-5 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium tracking-widest" />
           </div>
+          {pixCpf.replace(/\D/g,'').length === 11 && (
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full flex flex-col items-center gap-4">
               <div className="w-44 h-44 bg-white rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(255,215,9,0.15)]">
                 <span className="material-symbols-outlined text-[120px] text-zinc-800">qr_code_2</span>
@@ -4297,6 +4298,7 @@ function App() {
               </div>
             </motion.div>
           )}
+          {pixCpf.replace(/\D/g,'').length === 11 && (
             <button onClick={handlePixConfirm} className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all" style={{ background: 'linear-gradient(135deg, #ffd709 0%, #efc900 100%)', color: '#000' }}>
               Confirmar Pagamento PIX
             </button>
