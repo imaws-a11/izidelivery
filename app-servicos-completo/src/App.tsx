@@ -2124,7 +2124,7 @@ function App() {
         <header className="sticky top-0 z-50 px-5 pt-5 pb-4" style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("restaurant_list")} className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+              <button onClick={() => setSubView("restaurant_list")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
                 <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
               </button>
               <div>
@@ -2192,7 +2192,7 @@ function App() {
         <header className="sticky top-0 z-50 px-5 pt-5 pb-4" style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("restaurant_list")} className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+              <button onClick={() => setSubView("restaurant_list")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
                 <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
               </button>
               <div>
@@ -2260,7 +2260,7 @@ function App() {
         <header className="sticky top-0 z-50 px-5 pt-5 pb-4" style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("restaurant_list")} className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+              <button onClick={() => setSubView("restaurant_list")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
                 <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
               </button>
               <div>
@@ -2328,7 +2328,7 @@ function App() {
         <header className="sticky top-0 z-50 px-5 pt-5 pb-4" style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("restaurant_list")} className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+              <button onClick={() => setSubView("restaurant_list")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
                 <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
               </button>
               <div>
@@ -2535,7 +2535,7 @@ function App() {
               <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
             </div>
             <input
-              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-10 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
+              className="w-full bg-zinc-900/50 border-0 border-b border-zinc-900 rounded-2xl py-3.5 pl-12 pr-10 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-yellow-400/20 text-sm font-medium transition-all"
               placeholder="Buscar por gênero ou nome..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -2792,7 +2792,7 @@ function App() {
         <header className="sticky top-0 z-50 px-5 pt-5 pb-4" style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("restaurant_list")} className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+              <button onClick={() => setSubView("restaurant_list")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
                 <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
               </button>
               <div>
@@ -3009,7 +3009,7 @@ function App() {
           style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("none")} className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+              <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
                 <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
               </button>
               <div>
@@ -3054,7 +3054,7 @@ function App() {
           <section>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-lg font-black tracking-tight text-white">Próximos de você</h3>
+                <h3 className="font-extrabold text-base tracking-tight text-white uppercase">Próximos de você</h3>
                 <div className="w-8 h-1 bg-yellow-400 rounded-full mt-1" />
               </div>
             </div>
@@ -3152,7 +3152,7 @@ function App() {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setSubView("none")}
-                className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+                className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
               >
                 <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
               </button>
@@ -3180,7 +3180,7 @@ function App() {
               <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
             </div>
             <input
-              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-10 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
+              className="w-full bg-zinc-900/50 border-0 border-b border-zinc-900 rounded-2xl py-3.5 pl-12 pr-10 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-yellow-400/20 text-sm font-medium transition-all"
               placeholder="Qual sua vontade hoje?"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -3274,7 +3274,7 @@ function App() {
           <section>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-lg font-black tracking-tight text-white">Mais Próximos</h3>
+                <h3 className="font-extrabold text-base tracking-tight text-white uppercase">Mais Próximos</h3>
                 <div className="w-8 h-1 bg-yellow-400 rounded-full mt-1" />
               </div>
               <button className="text-[10px] font-black uppercase tracking-widest text-yellow-400 flex items-center gap-1">
@@ -3349,7 +3349,7 @@ function App() {
           style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("none")} className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+              <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
                 <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
               </button>
               <div>
@@ -3431,7 +3431,7 @@ function App() {
           style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("none")} className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+              <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
                 <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
               </button>
               <div>
@@ -3637,7 +3637,7 @@ function App() {
           style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("none")} className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+              <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
                 <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
               </button>
               <div>
@@ -4011,7 +4011,7 @@ function App() {
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
-        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-md flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
+        <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
           <button onClick={() => setSubView("checkout")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
             <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
           </button>
@@ -4083,12 +4083,12 @@ function App() {
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
 
         {/* HEADER */}
-        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-between px-5 py-4 border-b border-zinc-900">
+        <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
           <div className="flex items-center gap-4">
             <button onClick={() => setSubView("none")} className="active:scale-90 transition-all">
               <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
             </button>
-            <h1 className="text-lg font-black tracking-tight text-white uppercase">Sua Sacola</h1>
+            <h1 className="font-extrabold text-base tracking-tight text-white uppercase">Sua Sacola</h1>
           </div>
           <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-3 py-1 rounded-full">
             {cart.length} {cart.length === 1 ? "item" : "itens"}
@@ -4147,7 +4147,7 @@ function App() {
           <button
             onClick={() => navigateSubView("checkout")}
             className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 shadow-[0_0_20px_rgba(255,215,9,0.2)]"
-            style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000" }}
+            style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}
           >
             Ir para Checkout — R$ {total.toFixed(2).replace(".", ",")}
           </button>
@@ -4159,207 +4159,212 @@ function App() {
 
   const renderCheckout = () => {
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const deliveryFee = 0;
     const discount = appliedCoupon
       ? appliedCoupon.discount_type === "fixed"
         ? appliedCoupon.discount_value
         : (subtotal * appliedCoupon.discount_value) / 100
       : 0;
-    const total = Math.max(0, subtotal + deliveryFee - discount);
+    const total = Math.max(0, subtotal + 0 - discount);
+    const walletBal = walletTransactions.reduce((acc: number, t: any) =>
+      ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
+
+    const paymentOptions = [
+      { id: "cartao",           icon: "credit_card", label: "Cartão de Crédito/Débito", sub: savedCards.length > 0 ? `${savedCards[0].brand} •••• ${savedCards[0].last4}` : "Adicionar cartão" },
+      { id: "pix",              icon: "pix",         label: "PIX", sub: "Mercado Pago • Aprovação imediata" },
+      { id: "saldo",            icon: "account_balance_wallet", label: "Saldo IZI", sub: `R$ ${walletBal.toFixed(2).replace(".",",")} disponível`, disabled: walletBal < total },
+      { id: "dinheiro",         icon: "payments",    label: "Dinheiro na Entrega", sub: "Pague ao receber" },
+      { id: "bitcoin_lightning",icon: "bolt",        label: "Bitcoin Lightning", sub: "Pagamento instantâneo em BTC" },
+    ];
 
     return (
-      <div className="absolute inset-0 z-40 bg-zinc-950 text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
+      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
 
         {/* HEADER */}
-        <header className="sticky top-0 z-50 bg-black text-yellow-400 flex justify-between items-center px-5 py-4 shadow-[0_12px_24px_rgba(255,215,0,0.05)]">
+        <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSubView("cart")} className="active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-yellow-400">arrow_back</span>
+            <button onClick={() => setSubView("cart")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+              <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
             </button>
-            <h1 className="text-yellow-400 font-black text-xl tracking-tighter uppercase">Checkout</h1>
+            <h1 className="text-lg font-black text-white uppercase tracking-tight">Checkout</h1>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigateSubView("cart")} className="active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-yellow-400">shopping_bag</span>
-            </button>
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-zinc-800">
-              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" className="w-full h-full object-cover" />
-            </div>
+          <div className="size-10 rounded-full overflow-hidden border border-zinc-800">
+            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" className="size-full" />
           </div>
         </header>
 
-        <main className="max-w-4xl mx-auto px-5 py-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="max-w-2xl mx-auto px-5 py-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
 
           {/* LEFT COLUMN */}
-          <div className="lg:col-span-7 space-y-8">
+          <div className="lg:col-span-7 space-y-10">
 
             {/* ENDEREÇO */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="font-extrabold text-xl tracking-tight text-white uppercase">Endereço de Entrega</h2>
-                <button onClick={() => setSubView("addresses")} className="text-yellow-400 text-xs font-black tracking-widest uppercase hover:opacity-80 transition-opacity">Alterar</button>
+                <h2 className="font-extrabold text-base tracking-tight text-white uppercase">Entregar em</h2>
+                <button onClick={() => setSubView("addresses")} className="text-yellow-400 text-[10px] font-black tracking-widest uppercase hover:opacity-80">Alterar</button>
               </div>
-              <div className="bg-white/5 rounded-2xl p-5 flex items-start gap-4">
-                <div className="bg-yellow-400/10 p-3 rounded-xl">
-                  <span className="material-symbols-outlined text-yellow-400">location_on</span>
+              <div className="flex items-start gap-4">
+                <div className="size-10 rounded-2xl bg-yellow-400/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="material-symbols-outlined text-yellow-400 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
                 </div>
                 <div>
-                  <p className="text-white font-bold text-base leading-tight">{userLocation.address || "Endereço não definido"}</p>
-                  <p className="text-zinc-400 text-sm mt-1">Entrega estimada: 25-40 min</p>
+                  <p className="text-white font-bold text-sm leading-tight">{userLocation.address || "Endereço não definido"}</p>
+                  <p className="text-zinc-500 text-xs mt-1">Estimativa: 25-40 min</p>
                 </div>
               </div>
             </section>
 
             {/* PAGAMENTO */}
-            <section className="space-y-4">
+            <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="font-extrabold text-xl tracking-tight text-white uppercase">Pagamento</h2>
-                <button
-                  onClick={() => { setPaymentsOrigin("checkout"); setSubView("payments"); }}
-                  className="text-yellow-400 text-xs font-black tracking-widest uppercase hover:opacity-80 transition-opacity"
-                >
-                  Gerenciar
+                <h2 className="font-extrabold text-base tracking-tight text-white uppercase">Pagamento</h2>
+              </div>
+
+              {paymentOptions.map((m) => (
+                <button key={m.id} onClick={() => !m.disabled && setPaymentMethod(m.id as any)}
+                  disabled={m.disabled}
+                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all active:scale-[0.98] ${
+                    paymentMethod === m.id
+                      ? "bg-yellow-400/5 shadow-[inset_0_0_0_1.5px_rgba(255,215,9,0.4)]"
+                      : m.disabled
+                        ? "opacity-40 cursor-not-allowed"
+                        : "hover:bg-zinc-900/50"
+                  }`}>
+                  <span className={`material-symbols-outlined text-xl ${paymentMethod === m.id ? "text-yellow-400" : "text-zinc-500"}`}
+                    style={{ fontVariationSettings: paymentMethod === m.id ? "'FILL' 1" : "'FILL' 0" }}>
+                    {m.icon}
+                  </span>
+                  <div className="flex-1 text-left">
+                    <p className={`font-black text-sm ${paymentMethod === m.id ? "text-white" : "text-zinc-400"}`}>{m.label}</p>
+                    <p className="text-zinc-600 text-xs mt-0.5">{m.sub}</p>
+                  </div>
+                  <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${paymentMethod === m.id ? "border-yellow-400" : "border-zinc-700"}`}>
+                    {paymentMethod === m.id && <div className="size-2.5 rounded-full bg-yellow-400" />}
+                  </div>
                 </button>
-              </div>
+              ))}
 
-              {/* Métodos */}
-              <div className="space-y-3">
-                {[
-                  { id: "cartao", icon: "credit_card", label: "Cartão de Crédito/Débito" },
-                  { id: "pix", icon: "pix", label: "PIX — Mercado Pago" },
-                  { id: "saldo", icon: "account_balance_wallet", label: `Saldo IZI — R$ ${(walletTransactions.reduce((a:number,t:any)=>["deposito","reembolso"].includes(t.type)?a+Number(t.amount):a-Number(t.amount),0)).toFixed(2).replace(".",",")}` },
-                  { id: "dinheiro", icon: "payments", label: "Dinheiro na Entrega" },
-                  { id: "bitcoin_lightning", icon: "bolt", label: "Bitcoin Lightning" },
-                ].map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => setPaymentMethod(m.id)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all active:scale-[0.98] border ${paymentMethod === m.id ? "border-yellow-400/40 bg-yellow-400/5 shadow-[0_0_15px_rgba(255,215,9,0.1)]" : "border-white/5 bg-white/5 hover:border-white/10"}`}
-                  >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === m.id ? "bg-yellow-400/20" : "bg-zinc-800"}`}>
-                      <span className={`material-symbols-outlined text-xl ${paymentMethod === m.id ? "text-yellow-400" : "text-zinc-400"}`} style={{ fontVariationSettings: paymentMethod === m.id ? "'FILL' 1" : "'FILL' 0" }}>{m.icon}</span>
-                    </div>
-                    <span className={`font-bold text-sm flex-1 text-left ${paymentMethod === m.id ? "text-white" : "text-zinc-400"}`}>{m.label}</span>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${paymentMethod === m.id ? "border-yellow-400" : "border-zinc-700"}`}>
-                      {paymentMethod === m.id && <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />}
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {/* Cartão salvo */}
-              {paymentMethod === "cartao" && savedCards.length > 0 && (
-                <div className="mt-4 space-y-2">
+              {/* Cartões salvos expandidos quando cartao selecionado */}
+              {paymentMethod === "cartao" && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="overflow-hidden space-y-2 pl-14">
                   {savedCards.map((card: any) => (
-                    <button
-                      key={card.id}
-                      onClick={() => setSelectedCard(card)}
-                      className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all active:scale-[0.98] border ${selectedCard?.id === card.id ? "border-yellow-400/40 bg-yellow-400/5" : "border-white/5 bg-white/5"}`}
-                    >
-                      <div className="w-12 h-8 rounded-lg bg-zinc-900 flex items-center justify-center">
-                        <span className="material-symbols-outlined text-yellow-400 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>credit_card</span>
-                      </div>
+                    <button key={card.id} onClick={() => setSelectedCard(card)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${selectedCard?.id === card.id ? "bg-yellow-400/10 shadow-[inset_0_0_0_1px_rgba(255,215,9,0.3)]" : "bg-zinc-900/50"}`}>
+                      <span className="material-symbols-outlined text-base text-zinc-400" style={{ fontVariationSettings: "'FILL' 1" }}>credit_card</span>
                       <span className="text-zinc-300 text-sm font-bold flex-1 text-left">{card.brand} •••• {card.last4}</span>
-                      {selectedCard?.id === card.id && <span className="material-symbols-outlined text-yellow-400 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>}
+                      {selectedCard?.id === card.id && <span className="material-symbols-outlined text-yellow-400 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>}
                     </button>
                   ))}
-                  <button
-                    onClick={() => { setPaymentsOrigin("checkout"); setSubView("payments"); }}
-                    className="w-full flex items-center gap-3 p-4 rounded-2xl border border-dashed border-zinc-700 hover:border-yellow-400/30 transition-all text-zinc-500 hover:text-yellow-400"
-                  >
-                    <span className="material-symbols-outlined text-xl">add</span>
-                    <span className="text-sm font-black uppercase tracking-wider">Novo cartão</span>
-                  </button>
-                </div>
+                </motion.div>
               )}
             </section>
 
             {/* RESUMO DOS ITENS */}
             <section className="space-y-4">
-              <h2 className="font-extrabold text-xl tracking-tight text-white uppercase">Resumo dos Itens</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <h2 className="font-extrabold text-base tracking-tight text-white uppercase">Resumo do Pedido</h2>
+              <div className="space-y-3">
                 {cart.map((item: any, i: number) => (
-                  <div key={i} className="bg-white/5 rounded-2xl p-4 flex gap-4 items-center">
-                    <div className="w-14 h-14 rounded-xl bg-zinc-900 overflow-hidden shrink-0">
-                      {item.img && <img src={item.img} alt={item.name} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500" />}
+                  <div key={i} className="flex items-center gap-4">
+                    <div className="relative w-16 h-16 rounded-2xl overflow-hidden shrink-0 bg-zinc-900">
+                      {item.img
+                        ? <img src={item.img} alt={item.name} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500" />
+                        : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-zinc-700">fastfood</span></div>
+                      }
+                      <div className="absolute top-1 left-1 size-5 bg-yellow-400 rounded-full flex items-center justify-center">
+                        <span className="text-[8px] font-black text-black">1x</span>
+                      </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-white font-bold text-sm truncate">{item.name}</p>
-                      <p className="text-yellow-400 font-mono text-xs mt-0.5">R$ {Number(item.price || 0).toFixed(2).replace(".", ",")}</p>
+                      <p className="text-white font-black text-sm truncate">{item.name}</p>
+                      {item.desc && <p className="text-zinc-600 text-[10px] mt-0.5 truncate">{item.desc}</p>}
+                      {item.options && <p className="text-zinc-500 text-[10px] mt-0.5">{item.options}</p>}
                     </div>
-                    <p className="text-zinc-500 font-bold shrink-0">1x</p>
+                    <p className="text-yellow-400 font-black text-sm shrink-0">R$ {Number(item.price || 0).toFixed(2).replace(".",",")}</p>
                   </div>
                 ))}
               </div>
-            </section>
-          </div>
-
-          {/* RIGHT COLUMN — Finalização */}
-          <div className="lg:col-span-5">
-            <div className="sticky top-24 bg-black/50 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/5 space-y-6">
-              <h3 className="font-extrabold text-lg text-white uppercase tracking-tight">Confirmar Pedido</h3>
 
               {/* Cupom */}
-              <div>
-                <label className="block text-zinc-500 text-[10px] uppercase font-black tracking-widest mb-2">Cupom de Desconto</label>
-                <div className="relative">
+              <div className="pt-2">
+                <div className="flex items-center gap-2 bg-zinc-900/50 rounded-2xl overflow-hidden border border-zinc-800 focus-within:border-yellow-400/30 transition-all">
+                  <span className="material-symbols-outlined text-zinc-500 text-lg pl-4">confirmation_number</span>
                   <input
-                    className="w-full bg-white/10 border-none rounded-2xl py-3.5 px-5 text-yellow-400 font-bold focus:ring-1 focus:ring-yellow-400/30 transition-all placeholder:text-zinc-600 text-sm"
-                    placeholder="Digite seu cupom"
-                    value={couponInput || (appliedCoupon?.coupon_code || "")}
-                    onChange={(e) => setCouponInput(e.target.value)}
+                    className="flex-1 bg-transparent py-3.5 px-2 text-white placeholder:text-zinc-600 focus:outline-none text-sm font-medium"
+                    placeholder="Código de cupom"
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                   />
-                  <button
-                    onClick={() => handleApplyCoupon(couponInput)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-yellow-400 text-black text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl active:scale-95 transition-all"
-                  >
+                  <button onClick={() => handleApplyCoupon(couponInput)}
+                    className="bg-yellow-400 text-black text-[10px] font-black uppercase tracking-wider px-4 py-3.5 shrink-0 hover:bg-yellow-300 transition-colors">
                     Aplicar
                   </button>
                 </div>
                 {appliedCoupon && (
-                  <p className="text-emerald-400 text-xs font-bold mt-2 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                    Cupom aplicado! -{appliedCoupon.discount_type === "fixed" ? `R$ ${appliedCoupon.discount_value.toFixed(2)}` : `${appliedCoupon.discount_value}%`}
-                  </p>
+                  <div className="flex items-center gap-2 mt-2 px-1">
+                    <span className="material-symbols-outlined text-emerald-400 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                    <p className="text-emerald-400 text-xs font-black">
+                      {appliedCoupon.coupon_code} — {appliedCoupon.discount_type === "fixed" ? `R$ ${appliedCoupon.discount_value.toFixed(2)} OFF` : `${appliedCoupon.discount_value}% OFF`}
+                    </p>
+                    <button onClick={() => { setAppliedCoupon(null); setCouponInput(""); }} className="text-zinc-600 hover:text-red-400 transition-colors ml-auto">
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
                 )}
               </div>
+            </section>
+          </div>
+
+          {/* RIGHT COLUMN — Resumo financeiro + botão */}
+          <div className="lg:col-span-5">
+            <div className="sticky top-20 space-y-4">
 
               {/* Totais */}
-              <div className="space-y-3 border-t border-white/5 pt-5">
+              <div className="space-y-3">
+                <div className="h-px bg-zinc-900" />
                 {[
-                  { label: "Subtotal", value: `R$ ${subtotal.toFixed(2).replace(".", ",")}` },
-                  { label: "Taxa de Entrega", value: deliveryFee === 0 ? "Grátis" : `R$ ${deliveryFee.toFixed(2)}`, green: deliveryFee === 0 },
-                  ...(discount > 0 ? [{ label: "Desconto", value: `-R$ ${discount.toFixed(2).replace(".", ",")}`, green: true }] : []),
+                  { label: "Subtotal", value: `R$ ${subtotal.toFixed(2).replace(".",",")}`, muted: true },
+                  { label: "Entrega", value: "Grátis", green: true },
+                  ...(discount > 0 ? [{ label: `Desconto (${appliedCoupon?.coupon_code})`, value: `-R$ ${discount.toFixed(2).replace(".",",")}`, green: true }] : []),
                 ].map((row: any) => (
                   <div key={row.label} className="flex justify-between items-center">
-                    <span className="text-zinc-400 text-sm">{row.label}</span>
-                    <span className={`text-sm font-bold ${row.green ? "text-emerald-400" : "text-white"}`}>{row.value}</span>
+                    <span className="text-zinc-500 text-sm">{row.label}</span>
+                    <span className={`text-sm font-bold ${row.green ? "text-emerald-400" : "text-zinc-300"}`}>{row.value}</span>
                   </div>
                 ))}
-                <div className="flex justify-between items-center pt-3 border-t border-white/5">
+                <div className="h-px bg-zinc-900" />
+                <div className="flex justify-between items-center">
                   <span className="text-white font-black text-base uppercase tracking-wider">Total</span>
-                  <span className="text-yellow-400 font-black text-xl" style={{ textShadow: "0 0 15px rgba(255,215,9,0.4)" }}>
-                    R$ {total.toFixed(2).replace(".", ",")}
+                  <span className="text-yellow-400 font-black text-2xl" style={{ textShadow: "0 0 20px rgba(255,215,9,0.4)" }}>
+                    R$ {total.toFixed(2).replace(".",",")}
                   </span>
                 </div>
               </div>
 
-              {/* Botão Confirmar */}
-              <button
-                onClick={() => handlePlaceOrder()}
-                disabled={!paymentMethod}
-                className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(255,215,9,0.2)]"
-                style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000" }}
-              >
-                Confirmar Pedido — R$ {total.toFixed(2).replace(".", ",")}
+              {/* Botão confirmar */}
+              <button onClick={() => handlePlaceOrder()} disabled={!paymentMethod}
+                className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.2)" }}>
+                {paymentMethod === "pix" ? "Gerar QR PIX" :
+                 paymentMethod === "bitcoin_lightning" ? "Gerar Invoice Lightning" :
+                 paymentMethod === "dinheiro" ? "Confirmar — Pagar na Entrega" :
+                 `Confirmar Pedido — R$ ${total.toFixed(2).replace(".",",")}`}
               </button>
 
-              <p className="text-zinc-600 text-[10px] text-center leading-relaxed">
-                Ao confirmar, você concorda com nossos <span className="text-yellow-400/60">Termos de Uso</span> e <span className="text-yellow-400/60">Política de Privacidade</span>.
+              {/* Adicionar cartão — só aparece aqui quando cartao selecionado */}
+              {paymentMethod === "cartao" && (
+                <button onClick={() => { setPaymentsOrigin("checkout"); setSubView("payments"); }}
+                  className="w-full py-3 rounded-2xl border border-dashed border-zinc-800 text-zinc-500 hover:border-yellow-400/30 hover:text-yellow-400 transition-all text-xs font-black uppercase tracking-wider active:scale-95 flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined text-sm">add</span>
+                  Adicionar novo cartão
+                </button>
+              )}
+
+              <p className="text-zinc-700 text-[10px] text-center leading-relaxed">
+                Ao confirmar você concorda com os <span className="text-yellow-400/40">Termos de Uso</span> e <span className="text-yellow-400/40">Política de Privacidade</span>.
               </p>
             </div>
           </div>
-        </main>
+        </div>
       </div>
     );
   };
@@ -4441,7 +4446,7 @@ function App() {
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
-        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-md flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
+        <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
           <button onClick={() => { setSubView("checkout"); setPixConfirmed(false); setPixCpf(""); }}
             className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
             <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
@@ -4478,7 +4483,7 @@ function App() {
           {pixCpf.replace(/\D/g,"").length === 11 && !pixConfirmed && (
             <button onClick={handlePixConfirm}
               className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
-              style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000" }}>
+              style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
               Gerar QR Code PIX
             </button>
           )}
@@ -4715,102 +4720,80 @@ function App() {
 
   const renderProfile = () => {
     const menuItems = [
-      { icon: "location_on",          label: "Endereços",          desc: "Gerenciar endereços salvos",       action: () => setSubView("addresses") },
-      { icon: "credit_card",          label: "Pagamentos",         desc: "Cartões e métodos de pagamento",   action: () => { setPaymentsOrigin("profile"); setSubView("payments"); } },
-      { icon: "account_balance_wallet", label: "Minha Carteira",   desc: "Saldo e extrato",                  action: () => setTab("wallet") },
-      { icon: "workspace_premium",    label: "IZI Black",          desc: "Plano premium e benefícios",       action: () => setSubView("master_perks") },
-      { icon: "military_tech",        label: "Quests & Ranking",   desc: "Missões e conquistas",             action: () => setSubView("quest_center") },
-      { icon: "support_agent",        label: "Suporte",            desc: "Central de ajuda",                 action: () => setSubView("order_support") },
-      { icon: "settings",             label: "Configurações",      desc: "Preferências da conta",            action: () => {} },
+      { icon: "location_on",            label: "Endereços",        desc: "Seus endereços salvos",          action: () => setSubView("addresses") },
+      { icon: "account_balance_wallet", label: "Carteira",         desc: "Saldo e extrato",                action: () => setTab("wallet") },
+      { icon: "workspace_premium",      label: "IZI Black",        desc: "Benefícios do plano premium",    action: () => { setIziBlackStep("info"); setSubView("izi_black_purchase"); } },
+      { icon: "military_tech",          label: "Quests & Ranking", desc: "Missões e conquistas",           action: () => setSubView("quest_center") },
+      { icon: "support_agent",          label: "Suporte",          desc: "Central de ajuda",               action: () => setSubView("order_support") },
+      { icon: "settings",               label: "Configurações",    desc: "Preferências da conta",          action: () => {} },
     ];
 
     return (
       <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32">
 
-        {/* HEADER */}
-        <div className="relative px-5 pt-12 pb-6">
-          <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/50 to-transparent pointer-events-none" />
-          <div className="relative z-10 flex items-center gap-5">
+        {/* HERO DO PERFIL */}
+        <div className="px-5 pt-14 pb-8 border-b border-zinc-900">
+          <div className="flex items-center gap-5">
             <div className="relative">
-              <div className="size-20 rounded-3xl overflow-hidden border-2 border-yellow-400/20 shadow-[0_0_20px_rgba(255,215,9,0.1)]">
+              <div className="size-20 rounded-3xl overflow-hidden border border-zinc-800">
                 <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" className="size-full bg-zinc-900" />
               </div>
               {userLevel >= 10 && (
-                <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-[0_0_10px_rgba(255,215,9,0.5)]">
+                <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
                   <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
                   VIP
                 </div>
               )}
             </div>
-            <div>
-              <h1 className="text-xl font-black text-white tracking-tight">
-                {userName || "Usuário"}
-              </h1>
-              <p className="text-zinc-500 text-xs mt-0.5">{userId ? `ID: ${userId.slice(0,8)}...` : "Visitante"}</p>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-black text-white tracking-tight truncate">{userName || "Usuário"}</h1>
+              <p className="text-zinc-600 text-xs mt-0.5">{userId ? `ID: ${userId.slice(0,8)}...` : "Visitante"}</p>
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-[10px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Nível {userLevel}
-                </span>
-                <span className="text-[10px] font-black text-zinc-600 uppercase tracking-wider">
-                  {userXP} XP
-                </span>
+                <span className="text-[10px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Nível {userLevel}</span>
+                <span className="text-[10px] font-black text-zinc-600 uppercase">{userXP} XP</span>
               </div>
             </div>
           </div>
 
           {/* XP Bar */}
-          <div className="relative z-10 mt-5 space-y-1.5">
-            <div className="flex justify-between items-center">
-              <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">XP Progress</span>
-              <span className="text-[9px] font-black text-yellow-400 italic">{userXP} / {nextLevelXP}</span>
+          <div className="mt-6 space-y-1.5">
+            <div className="flex justify-between">
+              <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">Progresso</span>
+              <span className="text-[9px] font-black text-yellow-400">{userXP} / {nextLevelXP} XP</span>
             </div>
-            <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min((userXP / nextLevelXP) * 100, 100)}%` }}
-                className="h-full bg-gradient-to-r from-yellow-400 to-orange-400 shadow-[0_0_8px_rgba(255,165,0,0.4)]"
-              />
+            <div className="h-px w-full bg-zinc-900 rounded-full overflow-hidden">
+              <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((userXP/nextLevelXP)*100,100)}%` }}
+                className="h-full bg-gradient-to-r from-yellow-400 to-orange-400" />
             </div>
           </div>
         </div>
 
-        {/* MENU ITENS */}
-        <div className="px-5 flex flex-col gap-2">
+        {/* MENU */}
+        <div className="px-5 py-4 flex flex-col">
           {menuItems.map((item, i) => (
-            <motion.button
-              key={i}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.04 }}
+            <motion.button key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
               onClick={item.action}
-              className="flex items-center gap-4 p-4 bg-zinc-900/50 border border-zinc-800/60 rounded-2xl active:scale-[0.98] transition-all hover:border-yellow-400/20 group text-left"
-            >
-              <div className="size-11 rounded-xl bg-zinc-800 group-hover:bg-yellow-400/10 flex items-center justify-center transition-colors shrink-0">
-                <span className="material-symbols-outlined text-zinc-400 group-hover:text-yellow-400 transition-colors">{item.icon}</span>
-              </div>
+              className="flex items-center gap-4 px-0 py-4 border-b border-zinc-900/60 active:opacity-60 transition-all text-left group last:border-0">
+              <span className="material-symbols-outlined text-zinc-600 group-hover:text-yellow-400 transition-colors text-xl">{item.icon}</span>
               <div className="flex-1 min-w-0">
                 <p className="font-black text-sm text-white">{item.label}</p>
-                <p className="text-zinc-500 text-xs mt-0.5 truncate">{item.desc}</p>
+                <p className="text-zinc-600 text-xs mt-0.5">{item.desc}</p>
               </div>
-              <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors shrink-0">chevron_right</span>
+              <span className="material-symbols-outlined text-zinc-800 group-hover:text-yellow-400/50 transition-colors text-lg">chevron_right</span>
             </motion.button>
           ))}
         </div>
 
         {/* LOGOUT */}
-        <div className="px-5 mt-6 pb-4">
-          <button
-            onClick={() => supabase.auth.signOut()}
-            className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 transition-all active:scale-[0.98] text-red-400 group"
-          >
-            <span className="material-symbols-outlined text-red-400">logout</span>
+        <div className="px-5 mt-2 pb-4">
+          <button onClick={() => supabase.auth.signOut()}
+            className="w-full flex items-center justify-center gap-3 py-4 text-red-400/60 hover:text-red-400 transition-all active:scale-[0.98] group">
+            <span className="material-symbols-outlined text-lg">logout</span>
             <span className="font-black text-sm uppercase tracking-wider">Sair da Conta</span>
           </button>
         </div>
 
-        {/* VERSION */}
-        <p className="text-center text-zinc-800 text-[10px] font-bold uppercase tracking-widest pb-4">IZI Delivery v2.0 • Stealth Luxury</p>
-
+        <p className="text-center text-zinc-900 text-[10px] font-bold uppercase tracking-widest pb-6">IZI Delivery • Stealth Luxury</p>
       </div>
     );
   };
@@ -4818,41 +4801,39 @@ function App() {
   const renderAddresses = () => {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
-        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-between px-5 py-4 border-b border-zinc-900">
+        <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSubView("none")} className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+            <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
               <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
             </button>
-            <h1 className="text-lg font-black tracking-tight text-white uppercase">Endereços</h1>
+            <h1 className="font-extrabold text-base text-white uppercase tracking-tight">Endereços</h1>
           </div>
           <button className="text-yellow-400 active:scale-90 transition-all">
             <span className="material-symbols-outlined">add</span>
           </button>
         </header>
-        <main className="px-5 pt-6 flex flex-col gap-3">
+        <main className="px-5 pt-2 flex flex-col">
           {savedAddresses.length === 0 ? (
-            <div className="flex flex-col items-center py-20 gap-3">
-              <span className="material-symbols-outlined text-5xl text-zinc-800">location_off</span>
-              <p className="text-zinc-600 text-sm font-bold uppercase tracking-widest">Nenhum endereço salvo</p>
+            <div className="flex flex-col items-center py-24 gap-4">
+              <span className="material-symbols-outlined text-5xl text-zinc-900">location_off</span>
+              <p className="text-zinc-700 text-sm font-bold uppercase tracking-widest">Nenhum endereço salvo</p>
             </div>
           ) : savedAddresses.map((addr: any, i: number) => (
-            <motion.div key={addr.id || i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              className="flex items-center gap-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 group hover:border-yellow-400/20 transition-all">
-              <div className="size-11 rounded-xl bg-zinc-800 group-hover:bg-yellow-400/10 flex items-center justify-center transition-colors shrink-0">
-                <span className="material-symbols-outlined text-zinc-400 group-hover:text-yellow-400 transition-colors" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  {addr.label?.toLowerCase().includes("casa") ? "home" : addr.label?.toLowerCase().includes("trabalho") ? "work" : "location_on"}
-                </span>
-              </div>
+            <motion.button key={addr.id || i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+              className="flex items-center gap-4 px-0 py-4 border-b border-zinc-900/60 active:opacity-60 transition-all text-left group last:border-0 w-full">
+              <span className="material-symbols-outlined text-zinc-600 group-hover:text-yellow-400 transition-colors text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                {addr.label?.toLowerCase().includes("casa") ? "home" : addr.label?.toLowerCase().includes("trabalho") ? "work" : "location_on"}
+              </span>
               <div className="flex-1 min-w-0">
                 <p className="font-black text-sm text-white">{addr.label || "Endereço"}</p>
-                <p className="text-zinc-500 text-xs mt-0.5 truncate">{addr.street}{addr.details ? `, ${addr.details}` : ""}</p>
+                <p className="text-zinc-600 text-xs mt-0.5 truncate">{addr.street}{addr.details ? `, ${addr.details}` : ""}</p>
               </div>
-              {addr.active && <span className="text-[9px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Ativo</span>}
-            </motion.div>
+              {addr.active && <span className="text-[9px] font-black text-yellow-400 uppercase tracking-wider">Ativo</span>}
+            </motion.button>
           ))}
-          <button className="flex items-center justify-center gap-3 py-4 rounded-2xl border border-dashed border-zinc-800 hover:border-yellow-400/30 transition-all text-zinc-600 hover:text-yellow-400 mt-2 active:scale-95">
-            <span className="material-symbols-outlined">add_location</span>
-            <span className="text-sm font-black uppercase tracking-wider">Adicionar Endereço</span>
+          <button className="flex items-center gap-3 py-5 text-zinc-700 hover:text-yellow-400 transition-all active:scale-[0.98] mt-2">
+            <span className="material-symbols-outlined text-xl">add_location</span>
+            <span className="text-sm font-black uppercase tracking-wider">Adicionar novo endereço</span>
           </button>
         </main>
       </div>
@@ -4860,227 +4841,218 @@ function App() {
   };
 
   const renderPayments = () => {
-    return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
-        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-between px-5 py-4 border-b border-zinc-900">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSubView(paymentsOrigin === "checkout" ? "checkout" : "none")}
-              className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
-            </button>
-            <h1 className="text-lg font-black tracking-tight text-white uppercase">Pagamentos</h1>
-          </div>
-          <button className="text-yellow-400 active:scale-90 transition-all">
-            <span className="material-symbols-outlined">add</span>
-          </button>
-        </header>
-        <main className="px-5 pt-6 flex flex-col gap-4">
-
-          {/* Cartões salvos */}
-          <div className="space-y-3">
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-1">Cartões Salvos</p>
-            {savedCards.length === 0 ? (
-              <div className="flex flex-col items-center py-10 gap-3">
-                <span className="material-symbols-outlined text-4xl text-zinc-800">credit_card_off</span>
-                <p className="text-zinc-600 text-sm font-bold">Nenhum cartão salvo</p>
-              </div>
-            ) : savedCards.map((card: any) => (
-              <div key={card.id} className="flex items-center gap-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 group hover:border-yellow-400/20 transition-all">
-                <div className="size-12 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>credit_card</span>
-                </div>
-                <div className="flex-1">
-                  <p className="font-black text-sm text-white">{card.brand} •••• {card.last4}</p>
-                  <p className="text-zinc-500 text-xs mt-0.5">Válido até {card.expiry}</p>
-                </div>
-                <button onClick={() => setSelectedCard(card)}
-                  className={`size-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedCard?.id === card.id ? "border-yellow-400 bg-yellow-400/20" : "border-zinc-700"}`}>
-                  {selectedCard?.id === card.id && <div className="size-2.5 rounded-full bg-yellow-400" />}
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* Adicionar novo cartão */}
-          <div className="mt-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-1 mb-3">Novo Cartão</p>
-            <Elements stripe={stripePromise}>
-              <StripePaymentForm
-                total={cart.reduce((a: number, b: any) => a + (b.price || 0), 0)}
-                userId={userId}
-                onConfirm={(pmId: string) => { setStripePaymentMethodId(pmId); setSubView(paymentsOrigin === "checkout" ? "checkout" : "none"); }}
-                onCardSaved={(card: any) => setSavedCards((prev: any[]) => [card, ...prev])}
-              />
-            </Elements>
-          </div>
-
-          {/* Outros métodos */}
-          <div className="mt-4 space-y-3">
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-1">Outros Métodos</p>
-            {[
-              { id: "pix", icon: "pix", label: "PIX", desc: "Pagamento instantâneo" },
-              { id: "saldo", icon: "account_balance_wallet", label: "Saldo IZI", desc: "Use seu saldo disponível" },
-            ].map((m) => (
-              <button key={m.id} onClick={() => { setPaymentMethod(m.id); setSubView(paymentsOrigin === "checkout" ? "checkout" : "none"); }}
-                className="w-full flex items-center gap-4 p-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl hover:border-yellow-400/20 transition-all active:scale-[0.98] group">
-                <div className="size-11 rounded-xl bg-zinc-800 group-hover:bg-yellow-400/10 flex items-center justify-center transition-colors">
-                  <span className="material-symbols-outlined text-zinc-400 group-hover:text-yellow-400 transition-colors">{m.icon}</span>
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="font-black text-sm text-white">{m.label}</p>
-                  <p className="text-zinc-500 text-xs">{m.desc}</p>
-                </div>
-                <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors">chevron_right</span>
-              </button>
-            ))}
-          </div>
-        </main>
-      </div>
-    );
+    // Redireciona para a carteira que agora contém o gerenciamento de pagamentos
+    useEffect(() => { setTab("wallet"); setSubView("none"); }, []);
+    return null;
   };
 
   const renderWallet = () => {
-    const walletBalance = walletTransactions.reduce((acc: number, t: any) => {
-      if (t.type === "deposito" || t.type === "reembolso") return acc + Number(t.amount);
-      return acc - Number(t.amount);
-    }, 0);
+    const walletBalance = walletTransactions.reduce((acc: number, t: any) =>
+      ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
 
-    const txIcon: Record<string, string> = {
-      deposito: "add_circle", reembolso: "refresh", pagamento: "restaurant", saque: "arrow_outward",
+    const txIcon: Record<string, { icon: string; color: string }> = {
+      deposito:  { icon: "add_circle",           color: "text-emerald-400" },
+      reembolso: { icon: "refresh",              color: "text-blue-400" },
+      pagamento: { icon: "shopping_bag",         color: "text-zinc-400" },
+      saque:     { icon: "arrow_outward",        color: "text-red-400" },
     };
+
+    const totalGasto = walletTransactions
+      .filter((t: any) => t.type === "pagamento")
+      .reduce((a: number, t: any) => a + Number(t.amount), 0);
+
+    const totalRecebido = walletTransactions
+      .filter((t: any) => ["deposito","reembolso"].includes(t.type))
+      .reduce((a: number, t: any) => a + Number(t.amount), 0);
+
+    const pedidosMes = myOrders.filter((o: any) => {
+      const d = new Date(o.created_at);
+      const now = new Date();
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).length;
 
     return (
       <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32">
-        <main className="pt-12 pb-10 px-5 max-w-md mx-auto w-full space-y-10">
 
-          {/* SALDO */}
-          <section className="flex flex-col items-center text-center">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-yellow-400 font-extrabold italic tracking-widest text-xs">IZI BLACK VIP</span>
-              <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
-            </div>
-            <span className="text-zinc-500 text-[10px] tracking-[0.3em] uppercase mb-1">Saldo Disponível</span>
-            <div className="flex items-baseline gap-2">
-              <span className="font-extrabold text-2xl text-yellow-400 opacity-60">R$</span>
-              <span className="font-extrabold text-5xl tracking-tighter text-white"
-                style={{ textShadow: "0 0 15px rgba(255,215,9,0.5), 0 0 30px rgba(255,215,9,0.2)" }}>
-                {Math.abs(walletBalance).toFixed(2).replace(".", ",")}
-              </span>
-            </div>
-          </section>
+        {/* HERO SALDO */}
+        <div className="px-5 pt-14 pb-8 border-b border-zinc-900">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-yellow-400 font-extrabold italic tracking-widest text-xs">IZI BLACK VIP</span>
+            <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
+          </div>
+          <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-1">Saldo Disponível</p>
+          <div className="flex items-baseline gap-2 mb-6">
+            <span className="font-extrabold text-2xl text-yellow-400 opacity-60">R$</span>
+            <span className="font-extrabold text-5xl tracking-tighter text-white"
+              style={{ textShadow: "0 0 20px rgba(255,215,9,0.3)" }}>
+              {Math.abs(walletBalance).toFixed(2).replace(".", ",")}
+            </span>
+          </div>
 
           {/* AÇÕES RÁPIDAS */}
-          <section className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-4 gap-2">
             {[
-              { icon: "add", label: "Adicionar Saldo" },
+              { icon: "add",           label: "Adicionar" },
               { icon: "arrow_outward", label: "Transferir" },
+              { icon: "history",       label: "Extrato" },
+              { icon: "qr_code_2",     label: "Meu QR" },
             ].map((a) => (
-              <button key={a.icon} className="flex flex-col items-center justify-center p-6 bg-zinc-900/50 rounded-2xl active:scale-95 transition-all group shadow-[0_0_20px_rgba(255,215,9,0.1)] border border-white/5 hover:border-yellow-400/20">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-black mb-3 border border-yellow-400/20">
-                  <span className="material-symbols-outlined text-yellow-400 text-2xl group-hover:scale-110 transition-transform">{a.icon}</span>
+              <button key={a.icon} className="flex flex-col items-center gap-2 py-4 active:scale-95 transition-all group">
+                <div className="size-12 rounded-2xl bg-zinc-900/60 border border-zinc-900 flex items-center justify-center group-hover:border-yellow-400/20 transition-all">
+                  <span className="material-symbols-outlined text-zinc-500 group-hover:text-yellow-400 transition-colors text-xl">{a.icon}</span>
                 </div>
-                <span className="text-[10px] font-black text-white uppercase tracking-widest">{a.label}</span>
+                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-400 transition-colors">{a.label}</span>
               </button>
             ))}
-          </section>
+          </div>
+        </div>
+
+        <main className="px-5 py-8 space-y-10">
+
+          {/* STATS */}
+          <div className="grid grid-cols-3 gap-0 border border-zinc-900 rounded-2xl overflow-hidden">
+            {[
+              { label: "Gasto total",  value: `R$ ${totalGasto.toFixed(0)}`,    icon: "shopping_bag" },
+              { label: "Recebido",     value: `R$ ${totalRecebido.toFixed(0)}`, icon: "add_circle" },
+              { label: "Pedidos/mês",  value: `${pedidosMes}`,                  icon: "receipt_long" },
+            ].map((s, i) => (
+              <div key={i} className={`flex flex-col items-center py-5 gap-1 ${i < 2 ? "border-r border-zinc-900" : ""}`}>
+                <span className="material-symbols-outlined text-zinc-700 text-lg">{s.icon}</span>
+                <p className="font-extrabold text-sm text-white">{s.value}</p>
+                <p className="text-[9px] text-zinc-700 uppercase tracking-widest">{s.label}</p>
+              </div>
+            ))}
+          </div>
 
           {/* CARTÕES */}
           <section>
-            <div className="flex items-center justify-between mb-5 px-1">
-              <h2 className="font-extrabold text-sm tracking-[0.1em] uppercase text-white">Meus Cartões</h2>
-              <span className="material-symbols-outlined text-yellow-400 text-xl cursor-pointer active:scale-90 transition-all">add</span>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Meus Cartões</h2>
+              <button onClick={() => { setPaymentsOrigin("profile"); setSubView("payments"); }}
+                className="text-yellow-400 text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity">
+                Gerenciar
+              </button>
             </div>
-            <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-5 px-5">
-              <div className="min-w-[280px] h-44 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between border border-white/5 group"
-                style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)", backdropFilter: "blur(12px)" }}>
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-400/5 rounded-full blur-3xl group-hover:bg-yellow-400/10 transition-colors" />
-                <div className="flex justify-between items-start relative z-10">
-                  <span className="font-extrabold italic text-yellow-400/40 tracking-tighter text-lg">IZI</span>
-                  <span className="material-symbols-outlined text-zinc-700">contactless</span>
-                </div>
-                <div className="relative z-10">
-                  <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-600 mb-1">Cartão Digital</p>
-                  <p className="font-extrabold text-lg tracking-[0.2em] mb-3 text-white">•••• •••• •••• 8820</p>
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <p className="text-[7px] text-zinc-600 uppercase tracking-widest">Validade</p>
-                      <p className="text-[10px] font-bold text-white">12/28</p>
-                    </div>
-                    <div className="w-8 h-8 rounded-full bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
-                      <span className="material-symbols-outlined text-yellow-400 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="min-w-[280px] h-44 bg-zinc-900/60 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between border border-white/5">
+            <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-5 px-5 pb-2">
+              {/* Card IZI Digital */}
+              <div className="min-w-[260px] h-40 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between border border-zinc-900/80 shrink-0"
+                style={{ background: "linear-gradient(135deg, rgba(255,215,9,0.04) 0%, rgba(0,0,0,0) 100%)" }}>
+                <div className="absolute -top-8 -right-8 w-28 h-28 bg-yellow-400/5 rounded-full blur-2xl" />
                 <div className="flex justify-between items-start">
-                  <span className="font-extrabold italic text-zinc-600 tracking-tighter text-lg">BLACK</span>
-                  <span className="material-symbols-outlined text-zinc-700">contactless</span>
+                  <span className="font-extrabold italic text-yellow-400/40 tracking-tighter">IZI</span>
+                  <span className="material-symbols-outlined text-zinc-800 text-base">contactless</span>
                 </div>
                 <div>
-                  <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-600 mb-1">Físico</p>
-                  <p className="font-extrabold text-lg tracking-[0.2em] mb-3 text-white">•••• •••• •••• 4412</p>
-                  <div className="flex justify-between items-end">
-                    <p className="text-[8px] text-zinc-600 uppercase tracking-widest">Visa Platinum</p>
-                    <div className="w-8 h-5 bg-zinc-700/30 rounded-sm" />
+                  <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Digital</p>
+                  <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">•••• •••• •••• 8820</p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-[8px] text-zinc-700 uppercase tracking-widest">Val. 12/28</p>
+                    <div className="size-7 rounded-full bg-yellow-400/10 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-yellow-400 text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
+                    </div>
                   </div>
                 </div>
               </div>
+              {savedCards.map((card: any) => (
+                <div key={card.id} className="min-w-[260px] h-40 border border-zinc-900/80 rounded-2xl p-5 flex flex-col justify-between shrink-0">
+                  <div className="flex justify-between items-start">
+                    <span className="font-extrabold italic text-zinc-700 tracking-tighter">{card.brand}</span>
+                    <span className="material-symbols-outlined text-zinc-800 text-base">contactless</span>
+                  </div>
+                  <div>
+                    <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Físico</p>
+                    <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">•••• •••• •••• {card.last4}</p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-[8px] text-zinc-700 uppercase">{card.brand}</p>
+                      <p className="text-[9px] text-zinc-600">Val. {card.expiry}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => { setPaymentsOrigin("profile"); setSubView("payments"); }}
+                className="min-w-[120px] h-40 border border-dashed border-zinc-900 rounded-2xl flex flex-col items-center justify-center gap-2 shrink-0 active:scale-95 transition-all hover:border-yellow-400/20 group">
+                <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors text-2xl">add</span>
+                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-500 transition-colors">Novo Cartão</span>
+              </button>
             </div>
           </section>
 
-          {/* IZI POINTS + CASHBACK */}
-          <section className="grid grid-cols-2 gap-4">
-            <div className="p-5 rounded-2xl bg-zinc-900/50 border border-white/5 shadow-[0_0_20px_rgba(255,215,9,0.1)] flex flex-col gap-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="material-symbols-outlined text-yellow-400 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">IZI Points</span>
+          {/* PONTOS E CASHBACK */}
+          <div className="grid grid-cols-2 gap-0 border border-zinc-900 rounded-2xl overflow-hidden">
+            <div className="flex flex-col gap-1 p-5 border-r border-zinc-900">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="material-symbols-outlined text-yellow-400 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">IZI Points</span>
               </div>
-              <p className="text-xl font-extrabold text-white">{(userXP * 10).toLocaleString("pt-BR")}</p>
-              <p className="text-[9px] text-yellow-400/70 font-medium">Equivale a R$ {(userXP * 0.1).toFixed(2).replace(".", ",")}</p>
+              <p className="text-2xl font-extrabold text-white">{(userXP * 10).toLocaleString("pt-BR")}</p>
+              <p className="text-[9px] text-yellow-400/50">≈ R$ {(userXP * 0.1).toFixed(2).replace(".",",")} em descontos</p>
             </div>
-            <div className="p-5 rounded-2xl bg-zinc-900/50 border border-white/5 shadow-[0_0_20px_rgba(255,215,9,0.1)] flex flex-col gap-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="material-symbols-outlined text-yellow-400 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Cashback</span>
+            <div className="flex flex-col gap-1 p-5">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="material-symbols-outlined text-emerald-400 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Cashback</span>
               </div>
-              <p className="text-xl font-extrabold text-white">R$ 42,10</p>
-              <p className="text-[9px] text-zinc-500 font-medium">Liberado para uso</p>
+              <p className="text-2xl font-extrabold text-white">R$ 42,10</p>
+              <p className="text-[9px] text-zinc-700">Disponível para usar</p>
+            </div>
+          </div>
+
+          {/* MÉTODOS DE PAGAMENTO */}
+          <section>
+            <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-2">Formas de Pagamento</h2>
+            <div className="flex flex-col">
+              {[
+                { icon: "pix",                    label: "PIX",             desc: "Mercado Pago • Instantâneo",    id: "pix" },
+                { icon: "bolt",                   label: "Bitcoin Lightning", desc: "LNbits • Satoshis",           id: "bitcoin_lightning" },
+                { icon: "payments",               label: "Dinheiro",        desc: "Pague na entrega",              id: "dinheiro" },
+                { icon: "account_balance_wallet", label: "Saldo IZI",       desc: `R$ ${Math.abs(walletBalance).toFixed(2).replace(".",",")} disponível`, id: "saldo" },
+              ].map((m) => (
+                <div key={m.id} className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0">
+                  <span className="material-symbols-outlined text-zinc-600 text-xl">{m.icon}</span>
+                  <div className="flex-1">
+                    <p className="font-black text-sm text-white">{m.label}</p>
+                    <p className="text-zinc-600 text-xs mt-0.5">{m.desc}</p>
+                  </div>
+                  <div className={`size-2 rounded-full ${paymentMethod === m.id ? "bg-yellow-400" : "bg-zinc-800"}`} />
+                </div>
+              ))}
             </div>
           </section>
 
           {/* HISTÓRICO */}
-          <section className="pb-6">
-            <div className="flex items-center justify-between mb-7 px-1">
-              <h2 className="font-extrabold text-sm tracking-[0.1em] uppercase text-white">Histórico</h2>
-              <button className="text-[10px] uppercase font-black tracking-[0.2em] text-yellow-400">Ver Tudo</button>
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Histórico</h2>
+              <button className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Ver Tudo</button>
             </div>
-            <div className="space-y-7">
+            <div className="flex flex-col">
               {walletTransactions.length === 0 ? (
-                <div className="flex flex-col items-center py-10 gap-3">
-                  <span className="material-symbols-outlined text-4xl text-zinc-800">receipt_long</span>
-                  <p className="text-zinc-600 text-sm">Nenhuma transação ainda</p>
+                <div className="py-10 flex flex-col items-center gap-3">
+                  <span className="material-symbols-outlined text-4xl text-zinc-900">receipt_long</span>
+                  <p className="text-zinc-700 text-sm">Nenhuma transação ainda</p>
                 </div>
-              ) : walletTransactions.slice(0, 10).map((t: any, i: number) => (
-                <div key={t.id || i} className="flex items-center justify-between group">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-zinc-900/60 rounded-2xl flex items-center justify-center border border-white/5">
-                      <span className="material-symbols-outlined text-yellow-400/80" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        {txIcon[t.type] || "payments"}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">{t.description || t.type}</p>
-                      <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
-                        {new Date(t.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+              ) : walletTransactions.slice(0, 20).map((t: any, i: number) => {
+                const tx = txIcon[t.type] || { icon: "payments", color: "text-zinc-400" };
+                return (
+                  <div key={t.id || i} className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0">
+                    <span className={`material-symbols-outlined text-xl ${tx.color}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                      {tx.icon}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-black text-white truncate">{t.description || t.type}</p>
+                      <p className="text-[10px] text-zinc-600 uppercase tracking-widest mt-0.5">
+                        {new Date(t.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} • {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                       </p>
                     </div>
+                    <div className="text-right shrink-0">
+                      <p className={`font-extrabold text-sm ${["deposito","reembolso"].includes(t.type) ? "text-emerald-400" : "text-zinc-300"}`}>
+                        {["deposito","reembolso"].includes(t.type) ? "+" : "-"} R$ {Number(t.amount).toFixed(2).replace(".",",")}
+                      </p>
+                      <p className="text-[9px] text-zinc-700 capitalize">{t.type}</p>
+                    </div>
                   </div>
-                  <p className={`font-extrabold text-sm ${["deposito","reembolso"].includes(t.type) ? "text-yellow-400" : "text-white"}`}>
-                    {["deposito","reembolso"].includes(t.type) ? "+" : "-"} R$ {Number(t.amount).toFixed(2).replace(".", ",")}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
 
@@ -5090,242 +5062,164 @@ function App() {
   };
 
   const renderOrderFeedback = () => {
-    const stars = [1, 2, 3, 4, 5];
-    const shop = (typeof selectedItem === 'object' && selectedItem !== null) ? (ESTABLISHMENTS.find((s: any) => s.id === (selectedItem as any).shop_id) || { name: "Estabelecimento", img: "https://images.unsplash.com/photo-1552566626-52f8b828add9?q=80&w=200" }) : { name: "Estabelecimento", img: "https://images.unsplash.com/photo-1552566626-52f8b828add9?q=80&w=200" };
+    const [rating, setRating] = (useState as any)<number>(0);
+    const [comment, setComment] = (useState as any)<string>("");
+
+    const handleSubmit = async () => {
+      if (rating === 0) { alert("Selecione uma avaliação."); return; }
+      try {
+        if (selectedItem?.id) {
+          await supabase.from("orders_delivery").update({ rating, feedback: comment }).eq("id", selectedItem.id);
+        }
+        setUserXP((prev: number) => prev + 20);
+        setSubView("none");
+      } catch (e) { console.error(e); }
+    };
 
     return (
-      <div className="absolute inset-0 z-[110] bg-black backdrop-blur-xl flex flex-col items-center justify-center p-8 overflow-y-auto text-zinc-100">
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0, y: 50 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          className="w-full max-w-md bg-white bg-zinc-900 rounded-[60px] p-10 text-center shadow-2xl relative overflow-hidden"
-        >
-          {/* Background Decorative */}
-          <div className="absolute -top-24 -right-24 size-48 bg-yellow-400/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute -bottom-24 -left-24 size-48 bg-blue-500/10 rounded-full blur-3xl" />
-          
-          <div className="size-24 rounded-[30px] bg-slate-50 bg-zinc-900 p-1.5 mx-auto mb-8 border border-zinc-800 border-zinc-700 shadow-xl relative z-10">
-             <img src={(shop as any).img} className="size-full object-cover rounded-[22px]" />
+      <div className="absolute inset-0 z-50 bg-black text-zinc-100 flex flex-col items-center justify-center px-6 gap-8">
+        <div className="text-center space-y-2">
+          <div className="size-16 rounded-2xl bg-yellow-400/10 flex items-center justify-center mx-auto mb-3">
+            <span className="material-symbols-outlined text-3xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
           </div>
+          <h2 className="text-2xl font-black text-white uppercase tracking-tight">Como foi sua experiência?</h2>
+          <p className="text-zinc-600 text-sm">{selectedItem?.merchant_name || "Pedido"}</p>
+        </div>
 
-          <h2 className="text-4xl font-black text-white tracking-tighter mb-2 italic relative z-10">O que achou?</h2>
-          <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-10 leading-relaxed px-4 relative z-10 italic">
-            Sua avaliação ajuda o <span className="text-white">{(shop as any).name}</span> a melhorar e você ganha <span className="text-yellow-400 font-black tracking-widest">+50 XP Izi</span>!
-          </p>
-
-          <div className="flex justify-center gap-3 mb-12 relative z-10">
-            {stars.map((star) => (
-              <motion.button
-                key={star}
-                whileTap={{ scale: 0.8 }}
-                onClick={() => setRating(star)}
-                className={`size-14 rounded-[22px] flex items-center justify-center transition-all duration-300 ${rating >= star ? 'bg-yellow-400 text-white shadow-xl shadow-primary/30 scale-110' : 'bg-slate-100 bg-zinc-900 text-slate-300'}`}
-              >
-                <span className={`material-symbols-outlined text-3xl ${rating >= star ? 'fill-1' : ''}`}>{rating >= star ? 'star' : 'star_border'}</span>
-              </motion.button>
-            ))}
-          </div>
-
-          <div className="space-y-4 text-left relative z-10">
-            <div className="flex items-center justify-between px-2">
-              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.25em]">Comentário adicional</label>
-              <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Opcional</span>
-            </div>
-            <textarea 
-              placeholder="Conte-nos como foi sua experiência..."
-              className="w-full bg-slate-50 bg-zinc-900/50 border-none rounded-[35px] p-6 text-sm font-bold focus:ring-2 focus:ring-primary shadow-inner text-white resize-none h-32 transition-all"
-              value={feedbackText}
-              onChange={(e) => setFeedbackText(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-4 mt-10 relative z-10">
-            <button 
-              onClick={() => {
-                showToast("Obrigado pela sua avaliação! ðŸŒŸ", "success");
-                setUserXP(prev => prev + 50);
-                setSubView("none");
-                setRating(0);
-                setFeedbackText("");
-              }}
-              disabled={rating === 0}
-              className={`w-full py-6 rounded-[30px] font-black uppercase tracking-[.25em] text-[11px] shadow-2xl transition-all active:scale-95 ${rating > 0 ? 'bg-slate-900  text-white  shadow-primary/20' : 'bg-slate-200 text-zinc-500 cursor-not-allowed shadow-none'}`}
-            >
-              Enviar Avaliação
+        {/* RATING STARS */}
+        <div className="flex items-center gap-3">
+          {[1,2,3,4,5].map((star) => (
+            <button key={star} onClick={() => setRating(star)} className="active:scale-90 transition-all">
+              <span className="material-symbols-outlined text-4xl transition-colors"
+                style={{ color: star <= rating ? "#ffd709" : "#27272a", fontVariationSettings: star <= rating ? "'FILL' 1" : "'FILL' 0" }}>
+                star
+              </span>
             </button>
-            <button 
-              onClick={() => { setSubView("none"); setRating(0); setFeedbackText(""); }}
-              className="w-full py-4 text-zinc-500 font-black text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity"
-            >
-              Agora não, talvez depois
-            </button>
-          </div>
-        </motion.div>
+          ))}
+        </div>
+
+        {/* COMMENT */}
+        <div className="w-full max-w-sm">
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Deixe um comentário (opcional)..."
+            rows={3}
+            className="w-full bg-zinc-900/50 border-b border-zinc-900 rounded-2xl px-4 py-3 text-sm font-medium text-white placeholder:text-zinc-700 focus:outline-none focus:border-yellow-400/20 resize-none transition-all"
+          />
+        </div>
+
+        <div className="w-full max-w-sm space-y-3">
+          <button onClick={handleSubmit}
+            className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
+            style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
+            Enviar Avaliação
+          </button>
+          <button onClick={() => setSubView("none")} className="w-full text-zinc-700 text-sm font-black uppercase tracking-widest hover:text-zinc-500 transition-colors py-2">
+            Pular
+          </button>
+        </div>
       </div>
     );
   };
 
   const renderOrderChat = () => {
-    const scrollRef = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }, [chatMessages]);
+    const [msg, setMsg] = (useState as any)<string>("");
+    const [messages, setMessages] = (useState as any)<any[]>([
+      { from: "driver", text: "Olá! Estou a caminho do seu endereço.", time: "agora" },
+    ]);
 
-    const sendMessage = async () => {
-      if (!chatInput.trim() || !selectedItem) return;
-      const text = chatInput;
-      setChatInput("");
-
-      const { error } = await supabase
-        .from("order_messages")
-        .insert({
-          order_id: selectedItem.id,
-          sender_id: userId,
-          text: text
-        });
-
-      if (error) showToast("Erro ao enviar mensagem", "warning");
+    const sendMsg = () => {
+      if (!msg.trim()) return;
+      setMessages((prev: any[]) => [...prev, { from: "user", text: msg, time: "agora" }]);
+      setMsg("");
     };
 
     return (
-      <div className="absolute inset-0 z-[120] bg-white bg-zinc-900 flex flex-col hide-scrollbar overflow-hidden">
-        <header className="px-8 pt-12 pb-6 bg-white/80 bg-zinc-900/80 sticky top-0 z-30 border-b border-zinc-800/50 backdrop-blur-3xl flex items-center justify-between">
-           <div className="flex items-center gap-4">
-              <button 
-                onClick={() => setSubView("active_order")}
-                className="size-11 rounded-2xl bg-slate-50 bg-zinc-900 flex items-center justify-center text-white border border-zinc-800 border-zinc-700 active:scale-90 transition-all"
-              >
-                <Icon name="arrow_back" />
-              </button>
-              <div>
-                 <h2 className="text-xl font-black text-white tracking-tighter leading-none mb-1">Chat Izi</h2>
-                 <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-[0.2em] flex items-center gap-1.5">
-                    <span className="size-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                    Online agora
-                 </p>
-              </div>
-           </div>
-           <div className="size-12 rounded-2xl bg-slate-50 bg-zinc-900 flex items-center justify-center overflow-hidden border border-zinc-800">
-              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=driver-123" className="size-full object-cover" />
-           </div>
+      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col">
+        <header className="bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
+          <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          </button>
+          <div>
+            <h1 className="font-extrabold text-base text-white uppercase tracking-tight">Chat</h1>
+            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-widest">Entregador Online</p>
+          </div>
         </header>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#f8f9fc] bg-black/20">
-           {chatMessages.length === 0 && (
-             <div className="flex flex-col items-center justify-center h-full opacity-20 text-center px-10">
-                <Icon name="chat_bubble" />
-                <p className="text-xs font-black uppercase tracking-[0.3em]">Nenhuma mensagem ainda.<br/>Inicie a conversa!</p>
-             </div>
-           )}
-           {chatMessages.map((msg) => {
-              const isMine = msg.sender === userId;
-              return (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9, x: isMine ? 20 : -20 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  key={msg.id} 
-                  className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
-                >
-                   <div className={`max-w-[80%] p-5 rounded-[30px] shadow-sm ${
-                     isMine 
-                      ? 'bg-slate-900  text-white  rounded-tr-lg' 
-                      : 'bg-white bg-zinc-900 text-slate-800 text-white rounded-tl-lg'
-                   }`}>
-                      <p className="text-sm font-bold leading-relaxed">{msg.text}</p>
-                      <p className={`text-[8px] font-black uppercase tracking-widest mt-2 opacity-40 ${isMine ? 'text-white ' : 'text-zinc-500 text-right'}`}>
-                        {msg.time}
-                      </p>
-                   </div>
-                </motion.div>
-              );
-           })}
+        <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-6 space-y-4">
+          {messages.map((m: any, i: number) => (
+            <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm font-medium ${m.from === "user" ? "bg-yellow-400 text-black" : "bg-zinc-900 text-zinc-300"}`}>
+                <p>{m.text}</p>
+                <p className={`text-[9px] mt-1 ${m.from === "user" ? "text-black/50" : "text-zinc-600"} text-right`}>{m.time}</p>
+              </div>
+            </div>
+          ))}
         </div>
 
-        <footer className="p-6 pb-12 bg-white bg-zinc-900 border-t border-zinc-800 flex items-center gap-4">
-           <div className="flex-1 relative">
-              <input 
-                type="text" 
-                placeholder="Digite sua mensagem..."
-                className="w-full bg-slate-50 bg-zinc-900 border-none rounded-[30px] py-5 px-8 text-sm font-bold focus:ring-2 focus:ring-primary shadow-inner text-white"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-              />
-              <button className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300">
-                <Icon name="mood" />
-              </button>
-           </div>
-           <button 
-             onClick={sendMessage}
-             disabled={!chatInput.trim()}
-             className="size-14 rounded-2xl bg-yellow-400 text-white flex items-center justify-center shadow-xl shadow-primary/20 active:scale-90 transition-all disabled:opacity-50"
-           >
-             <Icon name="send" />
-           </button>
-        </footer>
+        <div className="px-5 py-4 border-t border-zinc-900 flex items-center gap-3">
+          <input
+            value={msg}
+            onChange={(e) => setMsg(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMsg()}
+            placeholder="Digite uma mensagem..."
+            className="flex-1 bg-zinc-900/50 border-b border-zinc-900 rounded-2xl py-3 px-4 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-yellow-400/20 transition-all"
+          />
+          <button onClick={sendMsg} className="size-11 rounded-full bg-yellow-400 flex items-center justify-center active:scale-90 transition-all shrink-0">
+            <span className="material-symbols-outlined text-black" style={{ fontVariationSettings: "'FILL' 1" }}>send</span>
+          </button>
+        </div>
       </div>
     );
   };
 
   const renderOrderSupport = () => {
+    const topics = [
+      { icon: "local_shipping", label: "Meu pedido está atrasado" },
+      { icon: "cancel",         label: "Quero cancelar meu pedido" },
+      { icon: "swap_horiz",     label: "Item errado ou faltando" },
+      { icon: "payments",       label: "Problema com pagamento" },
+      { icon: "help",           label: "Outro problema" },
+    ];
+
     return (
-      <div className="absolute inset-0 z-[110] bg-white bg-zinc-900 flex flex-col hide-scrollbar overflow-y-auto pb-20">
-        <header className="px-8 pt-12 pb-8 bg-white/80 bg-zinc-900/80 sticky top-0 z-30 border-b border-zinc-800/50 backdrop-blur-3xl flex items-center gap-6">
-          <button 
-            onClick={() => setSubView("none")}
-            className="size-12 rounded-2xl bg-slate-50 bg-zinc-900 flex items-center justify-center text-white border border-zinc-800 border-zinc-700 active:scale-90 transition-all"
-          >
-            <Icon name="arrow_back" />
+      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
+        <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
+          <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
           </button>
-          <div>
-            <h1 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Central de Ajuda</h1>
-            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em]">Pedido #{selectedItem?.id?.slice(0, 6) || "---"}</p>
-          </div>
+          <h1 className="font-extrabold text-base text-white uppercase tracking-tight">Suporte</h1>
         </header>
 
-        <main className="p-8 space-y-8">
-           <div className="bg-yellow-400/5 rounded-[40px] p-8 border border-yellow-400/20 text-center relative overflow-hidden group">
-              <div className="absolute -right-10 -top-10 size-32 bg-yellow-400/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000" />
-              <div className="size-20 rounded-[30px] bg-yellow-400 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/30">
-                 <Icon name="support_agent" />
-              </div>
-              <h2 className="text-xl font-black text-white mb-2 tracking-tight">Estamos aqui para ajudar!</h2>
-              <p className="text-xs font-medium text-zinc-500 text-zinc-400 leading-relaxed max-w-[200px] mx-auto opacity-80 uppercase tracking-widest leading-loose">Atendimento 24/7 disponível para sua melhor experiência.</p>
-           </div>
+        <main className="px-5 py-8 space-y-10">
+          <div>
+            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-2">Central de Ajuda</p>
+            <h2 className="text-2xl font-extrabold text-white tracking-tighter">Como podemos<br/>te ajudar?</h2>
+          </div>
 
-           <div className="space-y-4">
-              <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] ml-2 mb-6 text-center lg:text-left">Como podemos ajudar hoje?</h3>
-              {[
-                { icon: "schedule", label: "Onde está meu pedido?", desc: "Acompanhamento em tempo real", color: "blue" },
-                { icon: "assignment_return", label: "Problema com os itens", desc: "Faltou algo ou veio errado", color: "orange" },
-                { icon: "credit_card_off", label: "Questões de Pagamento", desc: "Cobranças, estornos e taxas", color: "purple" },
-                { icon: "chat", label: "Falar com Atendente", desc: "Chat ao vivo com suporte", color: "emerald", premium: true },
-              ].map((item, i) => (
-                <motion.div
-                  whileTap={{ scale: 0.98 }}
-                  key={i}
-                  className={`p-6 rounded-[32px] border transition-all cursor-pointer group flex items-center gap-5 ${item.premium ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white bg-zinc-900 border-slate-50 border-zinc-700 hover:border-yellow-400/30 shadow-xl shadow-slate-200/20 '}`}
-                >
-                  <div className={`size-14 rounded-2xl flex items-center justify-center ${item.premium ? 'bg-yellow-400 text-white' : 'bg-slate-50 bg-zinc-900 text-zinc-500 group-hover:text-yellow-400 transition-colors'}`}>
-                    <Icon name={item.icon} />
-                  </div>
-                  <div className="flex-1">
-                    <p className={`font-black text-[15px] tracking-tight ${item.premium ? 'text-white' : 'text-white'}`}>{item.label}</p>
-                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1 opacity-70">{item.desc}</p>
-                  </div>
-                  <span className={`material-symbols-outlined ${item.premium ? 'text-yellow-400' : 'text-slate-300'}`}>chevron_right</span>
-                </motion.div>
-              ))}
-           </div>
+          <div className="flex flex-col">
+            {topics.map((t, i) => (
+              <motion.button key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
+                className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0 active:opacity-60 transition-all text-left group w-full">
+                <span className="material-symbols-outlined text-zinc-600 group-hover:text-yellow-400 transition-colors text-xl">{t.icon}</span>
+                <p className="font-black text-sm text-white flex-1">{t.label}</p>
+                <span className="material-symbols-outlined text-zinc-800 group-hover:text-yellow-400/50 transition-colors text-lg">chevron_right</span>
+              </motion.button>
+            ))}
+          </div>
 
-           <div className="pt-10 border-t border-zinc-800 text-center">
-              <p className="text-[10px] font-bold text-slate-300  uppercase tracking-widest">Protocolo de Segurança Ativo</p>
-           </div>
+          <div className="pt-4">
+            <p className="text-zinc-700 text-xs text-center mb-4">Ou fale diretamente com nosso time</p>
+            <button className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-3 border border-zinc-900 text-zinc-400 hover:border-yellow-400/20 hover:text-yellow-400 transition-all">
+              <span className="material-symbols-outlined text-xl">chat_bubble</span>
+              Iniciar Chat com Suporte
+            </button>
+          </div>
         </main>
       </div>
     );
   };
-
 
   const renderAIConcierge = () => {
     return <AIConciergePanel
@@ -5342,69 +5236,77 @@ function App() {
   const renderQuestCenter = () => {
     const quests = [
       { id: 1, title: "Explorador Urbano", desc: "Faça 3 pedidos em categorias diferentes", xp: 150, progress: 33, icon: "explore" },
-      { id: 2, title: "Cliente Fiel", desc: "Peça do mesmo restaurante 3x", xp: 100, progress: 66, icon: "favorite" },
-      { id: 3, title: "Madrugador", desc: "Faça um pedido antes das 9h", xp: 80, progress: 0, icon: "wb_sunny" },
+      { id: 2, title: "Cliente Fiel",      desc: "Peça do mesmo restaurante 3 vezes",        xp: 100, progress: 66, icon: "favorite" },
+      { id: 3, title: "Madrugador",        desc: "Faça um pedido antes das 9h",              xp: 80,  progress: 0,  icon: "wb_sunny" },
+      { id: 4, title: "Gourmet",           desc: "Experimente 5 restaurantes diferentes",    xp: 200, progress: 20, icon: "restaurant" },
     ];
+
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
-        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-between px-5 py-4 border-b border-zinc-900">
+        <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSubView("none")} className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+            <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
               <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
             </button>
             <div>
-              <h1 className="text-lg font-black tracking-tight text-white">Quests & Ranking</h1>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Nível {userLevel} • {userXP} XP</p>
+              <h1 className="font-extrabold text-base text-white uppercase tracking-tight">Quests & Ranking</h1>
+              <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">Nível {userLevel} • {userXP} XP</p>
             </div>
           </div>
         </header>
-        <main className="px-5 pt-6 flex flex-col gap-6 pb-10">
 
-          {/* XP Card */}
-          <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 space-y-4">
+        <main className="px-5 py-8 space-y-10">
+
+          {/* XP PROGRESS */}
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="size-12 rounded-2xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center">
-                <span className="material-symbols-outlined text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>diamond</span>
+              <div>
+                <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Infinity Tier</p>
+                <p className="font-black text-white text-lg">Nível {userLevel}</p>
               </div>
-              <span className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] animate-pulse">Infinity Tier</span>
+              <div className="size-14 rounded-2xl bg-yellow-400/10 border border-yellow-400/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-2xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>diamond</span>
+              </div>
             </div>
-            <div>
-              <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1.5">XP Progress — Nível {userLevel}</p>
-              <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((userXP / nextLevelXP) * 100, 100)}%` }}
-                  className="h-full bg-gradient-to-r from-yellow-400 to-orange-400 shadow-[0_0_8px_rgba(255,165,0,0.4)]" />
+            <div className="space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">XP Progress</span>
+                <span className="text-[9px] font-black text-yellow-400">{userXP} / {nextLevelXP}</span>
               </div>
-              <p className="text-[9px] font-black text-yellow-400 italic mt-1 text-right">{userXP} / {nextLevelXP} XP</p>
+              <div className="h-px w-full bg-zinc-900 rounded-full overflow-hidden">
+                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((userXP/nextLevelXP)*100,100)}%` }}
+                  className="h-full bg-gradient-to-r from-yellow-400 to-orange-400" />
+              </div>
             </div>
           </div>
 
-          {/* Quests ativas */}
-          <div className="space-y-3">
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-1">Missões Ativas</p>
-            {quests.map((q) => (
-              <motion.div key={q.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 space-y-3 hover:border-yellow-400/20 transition-all">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="size-10 rounded-xl bg-yellow-400/10 flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-yellow-400 text-lg">{q.icon}</span>
+          {/* QUESTS */}
+          <div>
+            <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-4">Missões Ativas</h2>
+            <div className="flex flex-col">
+              {quests.map((q, i) => (
+                <motion.div key={q.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                  className="flex items-start gap-4 py-5 border-b border-zinc-900/60 last:border-0">
+                  <span className="material-symbols-outlined text-zinc-600 text-xl mt-0.5">{q.icon}</span>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-black text-sm text-white">{q.title}</p>
+                        <p className="text-zinc-600 text-xs mt-0.5">{q.desc}</p>
+                      </div>
+                      <span className="text-yellow-400 text-[10px] font-black shrink-0">+{q.xp} XP</span>
                     </div>
-                    <div>
-                      <p className="font-black text-sm text-white">{q.title}</p>
-                      <p className="text-zinc-500 text-xs mt-0.5">{q.desc}</p>
+                    <div className="space-y-1">
+                      <div className="h-px w-full bg-zinc-900 rounded-full overflow-hidden">
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${q.progress}%` }}
+                          className="h-full bg-gradient-to-r from-yellow-400 to-orange-400" />
+                      </div>
+                      <p className="text-[9px] font-bold text-zinc-700 text-right">{q.progress}%</p>
                     </div>
                   </div>
-                  <span className="text-yellow-400 text-xs font-black bg-yellow-400/10 px-2 py-0.5 rounded-full whitespace-nowrap">+{q.xp} XP</span>
-                </div>
-                <div className="space-y-1">
-                  <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${q.progress}%` }}
-                      className="h-full bg-gradient-to-r from-yellow-400 to-orange-400" />
-                  </div>
-                  <p className="text-[9px] font-bold text-zinc-600 text-right">{q.progress}%</p>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))}
+            </div>
           </div>
 
         </main>
@@ -5543,264 +5445,218 @@ function App() {
       }
     };
 
+    // ── SUCESSO ────────────────────────────────────────────────────────────────
     if (iziBlackStep === 'success') {
       return (
-        <div className="h-full w-full bg-zinc-950 flex flex-col items-center justify-center p-12 text-center relative overflow-hidden antialiased">
-           {/* Success Background Effects */}
-           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[500px] bg-yellow-400/[0.08] blur-[100px] rounded-full" />
-           
-           <motion.div 
-             initial={{ scale: 0, rotate: -45 }}
-             animate={{ scale: 1, rotate: 0 }}
-             className="relative z-10 size-48 rounded-[55px] bg-zinc-900 flex items-center justify-center mb-12 shadow-[0_45px_100px_-20px_rgba(255,184,0,0.3)] border border-yellow-400/20"
-           >
-              <Icon name="verified" />
-           </motion.div>
-           
-           <div className="relative z-10 space-y-6">
-              <h2 className="text-5xl font-black text-white italic tracking-tighter leading-[0.8] mb-2">BEM-VINDO À<br/>ELITE <span className="text-yellow-400">BLACK</span></h2>
-              <p className="text-zinc-500 font-bold text-sm max-w-[300px] mx-auto leading-relaxed">
-                Sua conta foi elevada. Agora você faz parte do seleto grupo com benefícios de luxo e privilégios exclusivos.
-              </p>
-           </div>
-           
-           <button 
-             onClick={handleClose} 
-             className="mt-20 w-full bg-yellow-400 text-black h-20 rounded-[35px] font-black uppercase tracking-[0.2em] shadow-[0_20px_40px_-10px_rgba(255,184,0,0.4)] active:scale-95 transition-all relative z-10"
-           >
-              Começar minha Experiência
-           </button>
+        <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center px-6 gap-10">
+          <motion.div initial={{ scale: 0, rotate: -10 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 200 }}>
+            <div className="size-28 rounded-full flex items-center justify-center"
+              style={{ background: "radial-gradient(circle, rgba(255,215,9,0.15) 0%, rgba(255,215,9,0.03) 100%)", boxShadow: "0 0 60px rgba(255,215,9,0.2), inset 0 0 40px rgba(255,215,9,0.05)" }}>
+              <span className="material-symbols-outlined text-6xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+            </div>
+          </motion.div>
+          <div className="text-center space-y-3">
+            <p className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.5em]">Protocolo Ativado</p>
+            <h2 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">IZI Black</h2>
+            <p className="text-zinc-600 text-sm max-w-xs mx-auto">Bem-vindo ao clube de privilégios. Seus benefícios já estão ativos.</p>
+          </div>
+          <button onClick={() => { setSubView("none"); setIziBlackStep("info"); }}
+            className="w-full max-w-xs py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
+            style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 40px rgba(255,215,9,0.2)" }}>
+            Começar a Usar
+          </button>
         </div>
       );
     }
 
+    // ── PAGAMENTO ───────────────────────────────────────────────────────────────
     if (iziBlackStep === 'payment') {
       return (
-        <div className="h-full w-full bg-zinc-950 flex flex-col antialiased overflow-hidden">
-           {/* Minimalist Header */}
-           <header className="p-8 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-4">
-                <button onClick={() => setIziBlackStep('info')} className="size-12 rounded-[20px] bg-white/5 flex items-center justify-center text-white active:scale-90 transition-all border border-white/10 hover:border-white/20">
-                   <Icon name="arrow_back" />
+        <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
+          <header className="bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
+            <button onClick={() => setIziBlackStep("info")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+              <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+            </button>
+            <h1 className="font-extrabold text-base text-white uppercase tracking-tight">Assinatura IZI Black</h1>
+          </header>
+          <main className="px-5 py-10 max-w-sm mx-auto w-full space-y-8">
+            <div className="text-center space-y-1">
+              <p className="text-zinc-600 text-xs uppercase tracking-widest">Investimento mensal</p>
+              <p className="font-black text-white leading-none" style={{ fontSize: "64px", textShadow: "0 0 30px rgba(255,215,9,0.2)" }}>
+                29<span className="text-3xl text-yellow-400/60">,90</span>
+              </p>
+              <p className="text-zinc-700 text-xs">Cancele quando quiser • Renovação automática</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest mb-3">Forma de pagamento</p>
+              {[
+                { id: "cartao", icon: "credit_card", label: "Cartão de Crédito" },
+                { id: "pix",    icon: "pix",         label: "PIX" },
+              ].map((m) => (
+                <button key={m.id} onClick={() => setPaymentMethod(m.id as any)}
+                  className={`w-full flex items-center gap-4 px-0 py-4 border-b transition-all active:opacity-60 text-left ${paymentMethod === m.id ? "border-yellow-400/30" : "border-zinc-900"}`}>
+                  <span className={`material-symbols-outlined text-xl ${paymentMethod === m.id ? "text-yellow-400" : "text-zinc-700"}`}>{m.icon}</span>
+                  <span className={`font-black text-sm flex-1 ${paymentMethod === m.id ? "text-white" : "text-zinc-600"}`}>{m.label}</span>
+                  <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${paymentMethod === m.id ? "border-yellow-400" : "border-zinc-800"}`}>
+                    {paymentMethod === m.id && <div className="size-2.5 rounded-full bg-yellow-400" />}
+                  </div>
                 </button>
-                <div>
-                  <h2 className="text-white font-black italic uppercase tracking-tighter text-lg leading-none">Checkout VIP</h2>
-                  <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mt-1 opacity-60">Elite Access Protocol</p>
-                </div>
-              </div>
-              <div className="flex -space-x-3">
-                 {[1,2,3].map(i => <div key={i} className="size-8 rounded-full border-2 border-zinc-950 bg-zinc-800" />)}
-              </div>
-           </header>
-           
-           <main className="flex-1 px-8 space-y-10 flex flex-col pt-4 overflow-y-auto no-scrollbar pb-32">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-yellow-400/10 blur-[50px] rounded-full opacity-50 transition-opacity group-hover:opacity-100" />
-                <div className="bg-zinc-900 border border-white/5 rounded-[45px] p-10 text-center relative overflow-hidden shadow-2xl">
-                   <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.4em] mb-3">Membership Mensal</p>
-                   <div className="flex items-baseline justify-center gap-2">
-                     <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums">R$ 29,90</span>
-                     <span className="text-yellow-400 text-sm font-black italic uppercase">/mês</span>
-                   </div>
-                </div>
-              </div>
+              ))}
+            </div>
 
-              <div className="space-y-6">
-                  <div className="flex items-center justify-between px-2">
-                    <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Método de Ativação</h3>
-                    <button 
-                      onClick={() => { setPaymentsOrigin("izi_black"); setSubView("payments"); }}
-                      className="text-[9px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/10 px-4 py-2 rounded-full border border-yellow-400/20"
-                    >
-                      Alterar
-                    </button>
-                  </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest">CPF</p>
+              <input type="text" inputMode="numeric" value={cpf} onChange={(e) => setCpf(e.target.value)}
+                placeholder="000.000.000-00"
+                className="w-full bg-transparent border-b border-zinc-900 py-3 text-white placeholder:text-zinc-800 focus:outline-none focus:border-yellow-400/30 text-sm font-medium tracking-widest transition-all" />
+            </div>
 
-                  <div className="bg-zinc-900/50 border border-white/5 rounded-[35px] overflow-hidden backdrop-blur-sm">
-                    {paymentMethod === "cartao" && (
-                      <div className="flex items-center gap-5 p-7">
-                        <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
-                          <Icon name="contactless" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-white font-black text-sm uppercase tracking-tight italic">Cartão de Elite</p>
-                          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">•••• {savedCards.find(c => c.active)?.last4 || '—'}</p>
-                        </div>
-                        <Icon name="verified_user" />
-                      </div>
-                    )}
-                    {paymentMethod === "pix" && (
-                      <div className="flex items-center gap-5 p-7">
-                        <div className="size-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                          <img src="https://logopng.com.br/logos/pix-128.png" className="size-7 object-contain brightness-0 invert" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-white font-black text-sm uppercase tracking-tight italic">PIX Instantâneo</p>
-                          <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest mt-0.5">Liberação em 1s</p>
-                        </div>
-                        <Icon name="speed" />
-                      </div>
-                    )}
-                    {paymentMethod === "bitcoin_lightning" && (
-                      <div className="flex items-center gap-5 p-7">
-                        <div className="size-14 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
-                          <Icon name="bolt" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-white font-black text-sm uppercase tracking-tight italic">LN Payments</p>
-                          <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest mt-0.5">Privacy First Layer</p>
-                        </div>
-                        <Icon name="lock" />
-                      </div>
-                    )}
-                    {!paymentMethod && (
-                      <button onClick={() => { setPaymentsOrigin("izi_black"); setSubView("payments"); }} className="w-full p-10 text-zinc-600 font-black uppercase tracking-[0.3em] text-[10px] flex flex-col items-center gap-4">
-                        <div className="size-14 rounded-full bg-zinc-800 flex items-center justify-center border border-white/5">
-                           <Icon name="add_card" />
-                        </div>
-                        Escolher Canal de Pagamento
-                      </button>
-                    )}
-                  </div>
-              </div>
-
-              <div className="bg-zinc-900 border border-white/5 rounded-[40px] p-6 space-y-4">
-                 {[
-                   { label: 'Token de Segurança', status: 'Verificado', icon: 'shield' },
-                   { label: 'Certificado SSL 256-bit', status: 'Ativo', icon: 'lock' }
-                 ].map((s, i) => (
-                   <div key={i} className="flex items-center justify-between">
-                     <div className="flex items-center gap-3">
-                        <Icon name={s.icon} />
-                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{s.label}</span>
-                     </div>
-                     <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">{s.status}</span>
-                   </div>
-                 ))}
-              </div>
-           </main>
-           
-           <footer className="p-8 pb-12 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent fixed bottom-0 inset-x-0">
-              <button 
-                onClick={handleSubscribeReal}
-                disabled={isLoading || !paymentMethod || (paymentMethod === "cartao" && !savedCards.some(c => c.active))}
-                className="w-full bg-white text-black h-20 rounded-[35px] font-black uppercase tracking-[0.2em] text-sm shadow-[0_20px_50px_-10px_rgba(255,255,255,0.1)] active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center gap-4 group"
-              >
-                 {isLoading ? (
-                    <Icon name="sync" />
-                 ) : (
-                    <>
-                       <span className="font-black">Ativar Membership Black</span>
-                       <Icon name="bolt" />
-                    </>
-                 )}
-              </button>
-           </footer>
+            <button onClick={handleSubscribeReal} disabled={isLoading}
+              className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all disabled:opacity-30"
+              style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
+              {isLoading ? "Processando..." : "Confirmar — R$ 29,90/mês"}
+            </button>
+          </main>
         </div>
       );
     }
 
+    // ── TELA PRINCIPAL ──────────────────────────────────────────────────────────
+    const perks = [
+      { icon: "delivery_dining",    title: "Taxa Zero",        desc: "Entrega grátis em toda a cidade, sem limite",    highlight: true },
+      { icon: "bolt",               title: "Prioridade",       desc: "Seus pedidos sempre primeiro na fila",           highlight: false },
+      { icon: "stars",              title: "Cashback 5%",      desc: "Pontos dobrados em todos os pedidos",            highlight: false },
+      { icon: "support_agent",      title: "Suporte VIP",      desc: "Canal exclusivo 24 horas por dia",               highlight: false },
+      { icon: "confirmation_number",title: "Cupons Black",     desc: "Ofertas exclusivas só para membros",             highlight: false },
+      { icon: "qr_code_scanner",    title: "Early Access",     desc: "Novidades e lançamentos antes de todos",         highlight: false },
+    ];
+
     return (
-      <div className="h-full w-full bg-zinc-950 flex flex-col hide-scrollbar overflow-y-auto antialiased">
-         {/* Premium Cinematic Banner */}
-         <div className="relative h-[60vh] shrink-0 overflow-hidden">
-            <motion.img 
-              initial={{ scale: 1.2, opacity: 0 }}
-              animate={{ scale: 1, opacity: 0.7 }}
-              transition={{ duration: 2 }}
-              src="https://images.unsplash.com/photo-1550745165-9bc0b252728f?q=80&w=1200" 
-              className="w-full h-full object-cover grayscale" 
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-950/40 to-zinc-950" />
-            <div className="absolute inset-0 bg-zinc-950/20 backdrop-brightness-75" />
-            
-            <header className="absolute top-0 inset-x-0 p-8 flex items-center justify-between z-20">
-               <button onClick={handleClose} className="size-14 rounded-3xl bg-black/60 backdrop-blur-2xl flex items-center justify-center text-white border border-white/10 active:scale-90 transition-all hover:bg-black/80">
-                  <Icon name="close" />
-               </button>
-               <div className="size-14 rounded-3xl bg-yellow-400/20 backdrop-blur-2xl flex items-center justify-center border border-yellow-400/30">
-                  <Icon name="stars" />
-               </div>
-            </header>
+      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
+        <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
+          <button onClick={() => setSubView(iziBlackOrigin === "checkout" ? "checkout" : "none")}
+            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+            <span className="material-symbols-outlined text-zinc-100">close</span>
+          </button>
+          <h1 className="font-extrabold text-base text-white uppercase tracking-tight">IZI Black</h1>
+          <div className="size-10" />
+        </header>
 
-            <div className="absolute bottom-12 inset-x-10 z-20 space-y-4">
-               <motion.div 
-                 initial={{ opacity: 0, x: -20 }}
-                 animate={{ opacity: 1, x: 0 }}
-                 className="bg-zinc-900/80 backdrop-blur-xl border border-white/10 w-fit px-5 py-2 rounded-2xl mb-4"
-               >
-                  <span className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.5em]">Exclusive Invitation</span>
-               </motion.div>
-               <h1 className="text-7xl font-black text-white italic tracking-tighter leading-[0.8] drop-shadow-2xl">
-                  IZI <span className="text-yellow-400">BLACK</span>
-               </h1>
-               <p className="text-zinc-400 text-sm font-bold leading-relaxed max-w-[260px] uppercase tracking-wider opacity-80">
-                  Entre para o círculo premium e resgate privilégios de alto escalão.
-               </p>
-            </div>
-         </div>
+        <main className="px-5 flex flex-col gap-10 pb-8">
 
-         <main className="px-10 pb-52 space-y-12 relative z-10 -mt-8">
-            <div className="grid grid-cols-1 gap-5">
-               {[
-                  { icon: 'flight_takeoff', title: 'LOGÃSTICA ZERO', desc: 'Isenção de taxa de entrega em pedidos acima de R$50 sem limites.', color: 'text-blue-400' },
-                  { icon: 'account_balance_wallet', title: 'CASHBACK ELITE', desc: '5% de retorno real em todas as transações, direto na sua Izi Wallet.', color: 'text-emerald-400' },
-                  { icon: 'speed', title: 'IZI FLASH VIP', desc: 'Acesso instantâneo a ofertas de até 70% OFF exclusivas para o círculo.', color: 'text-yellow-400' },
-                  { icon: 'shield_person', title: 'PERSONAL CONCIERGE', desc: 'Atendimento prioritário humano pronto para resolver qualquer demanda.', color: 'text-purple-400' }
-               ].map((item, i) => (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.1 }}
-                    key={i} 
-                    className="flex gap-6 p-8 bg-zinc-900/60 border border-white/5 rounded-[45px] backdrop-blur-2xl hover:bg-zinc-900 transition-colors"
-                  >
-                     <div className={`size-14 rounded-3xl bg-zinc-800 flex items-center justify-center shrink-0 border border-white/5`}>
-                        <span className={`material-symbols-outlined ${item.color} text-2xl`}>{item.icon}</span>
-                     </div>
-                     <div className="flex flex-col justify-center">
-                        <h4 className="text-white font-black text-sm mb-1 italic uppercase tracking-wider">{item.title}</h4>
-                        <p className="text-zinc-500 text-[11px] leading-relaxed font-bold uppercase tracking-tight">{item.desc}</p>
-                     </div>
-                  </motion.div>
-               ))}
-            </div>
-
-            <div className="relative group p-1">
-               <div className="absolute inset-0 bg-yellow-400/20 blur-[60px] rounded-full opacity-30" />
-               <div className="bg-zinc-900 border border-yellow-400/20 rounded-[50px] p-10 text-center relative overflow-hidden backdrop-blur-3xl">
-                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.6em] mb-4">Membro Standard</p>
-                  <div className="flex flex-col items-center gap-1 mb-4">
-                     <span className="text-zinc-700 text-lg font-black line-through italic">R$ 49,90</span>
-                     <div className="flex items-baseline gap-2">
-                        <span className="text-6xl font-black text-white italic tracking-tighter">R$ 29,90</span>
-                        <span className="text-yellow-400 text-sm font-black italic uppercase">/mês</span>
-                     </div>
+          {/* BANNER VIP — para membros */}
+          {isIziBlackMembership ? (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              className="relative overflow-hidden rounded-3xl mt-4 px-7 py-8"
+              style={{ background: "linear-gradient(135deg, #0d0d00 0%, #1a1500 50%, #0d0d00 100%)" }}>
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-40 -mt-20 rounded-full blur-[80px]"
+                  style={{ background: "rgba(255,215,9,0.08)" }} />
+                <div className="absolute bottom-0 left-0 right-0 h-px"
+                  style={{ background: "linear-gradient(90deg, transparent, rgba(255,215,9,0.3), transparent)" }} />
+              </div>
+              <div className="relative z-10 flex items-start justify-between mb-6">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="material-symbols-outlined text-yellow-400 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+                    <span className="text-yellow-400 text-[9px] font-black uppercase tracking-[0.4em]">Membro Ativo</span>
                   </div>
-                  <div className="flex items-center justify-center gap-2 py-3 px-6 bg-yellow-400/10 rounded-full border border-yellow-400/20 w-fit mx-auto">
-                     <span className="size-1.5 bg-yellow-400 rounded-full animate-pulse" />
-                     <p className="text-yellow-400 text-[9px] font-black uppercase tracking-[0.2em]">Oferta de Lançamento por tempo limitado</p>
+                  <h2 className="text-2xl font-black text-white tracking-tighter uppercase leading-none">IZI Black</h2>
+                  <p className="text-zinc-600 text-xs mt-1">Protocolo de Privilégio Elite</p>
+                </div>
+                <div className="size-12 rounded-2xl flex items-center justify-center"
+                  style={{ background: "rgba(255,215,9,0.06)", border: "1px solid rgba(255,215,9,0.12)" }}>
+                  <span className="material-symbols-outlined text-xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>diamond</span>
+                </div>
+              </div>
+              <div className="relative z-10 grid grid-cols-3 border-t border-zinc-800/40 pt-4 gap-0">
+                {[
+                  { label: "Nível",    value: String(userLevel) },
+                  { label: "XP",       value: String(userXP) },
+                  { label: "Cashback", value: "5%" },
+                ].map((s, i) => (
+                  <div key={i} className={`flex flex-col items-center gap-0.5 ${i < 2 ? "border-r border-zinc-800/40" : ""}`}>
+                    <p className="font-black text-base text-white">{s.value}</p>
+                    <p className="text-[9px] text-zinc-700 uppercase tracking-widest">{s.label}</p>
                   </div>
-               </div>
+                ))}
+              </div>
+            </motion.div>
+          ) : (
+            /* HERO para não-membros */
+            <div className="text-center pt-8 space-y-5">
+              <div className="size-20 rounded-3xl flex items-center justify-center mx-auto"
+                style={{ background: "rgba(255,215,9,0.06)", border: "1px solid rgba(255,215,9,0.1)" }}>
+                <span className="material-symbols-outlined text-4xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+              </div>
+              <div>
+                <p className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.4em] mb-2">Privilégio Elite</p>
+                <h2 className="text-4xl font-extrabold text-white leading-none tracking-tighter">O melhor do<br/>ecossistema IZI.</h2>
+              </div>
+              <div className="inline-flex items-baseline gap-1 px-6 py-3 rounded-2xl"
+                style={{ background: "rgba(255,215,9,0.04)", border: "1px solid rgba(255,215,9,0.08)" }}>
+                <span className="font-black text-4xl text-white">29</span>
+                <span className="font-black text-xl text-yellow-400/40">,90</span>
+                <span className="text-zinc-600 text-sm font-bold">/mês</span>
+              </div>
             </div>
-         </main>
+          )}
 
-         <footer className="fixed bottom-0 inset-x-0 p-10 pt-4 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent z-50">
-            <button 
-               onClick={() => setIziBlackStep('payment')}
-               disabled={isLoading}
-               className="w-full bg-yellow-400 text-black h-24 rounded-[45px] font-black uppercase tracking-[0.3em] text-sm shadow-[0_30px_60px_-15px_rgba(255,184,0,0.4)] active:scale-95 transition-all flex items-center justify-center gap-4 hover:shadow-yellow-400/60"
-            >
-               {isLoading ? (
-                  <Icon name="sync" />
-               ) : (
-                  <>
-                     <span className="font-black">Ativar Membership Elite</span>
-                     <Icon name="bolt" />
-                  </>
-               )}
+          {/* BENEFÍCIOS — sem cards, estilo lista premium */}
+          <div>
+            <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest mb-2">
+              {isIziBlackMembership ? "Benefícios Ativos" : "Incluso no plano"}
+            </p>
+            <div className="flex flex-col">
+              {perks.map((p, i) => (
+                <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                  className={`flex items-center gap-5 py-5 ${i < perks.length - 1 ? "border-b border-zinc-900/60" : ""} ${p.highlight ? "relative" : ""}`}>
+                  {p.highlight && (
+                    <div className="absolute inset-0 -mx-5 pointer-events-none"
+                      style={{ background: "rgba(255,215,9,0.02)" }} />
+                  )}
+                  <div className="size-11 rounded-2xl flex items-center justify-center shrink-0 relative z-10"
+                    style={{ background: p.highlight ? "rgba(255,215,9,0.08)" : "transparent" }}>
+                    <span className="material-symbols-outlined text-xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>{p.icon}</span>
+                  </div>
+                  <div className="flex-1 relative z-10">
+                    <div className="flex items-center gap-2">
+                      <p className="font-black text-sm text-white">{p.title}</p>
+                      {p.highlight && <span className="text-[8px] font-black text-yellow-400 uppercase tracking-wider">Exclusivo</span>}
+                    </div>
+                    <p className="text-zinc-600 text-xs mt-0.5">{p.desc}</p>
+                  </div>
+                  {isIziBlackMembership && (
+                    <div className="size-1.5 rounded-full bg-emerald-400 shrink-0 relative z-10" />
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA */}
+          {!isIziBlackMembership ? (
+            <button onClick={() => setIziBlackStep("payment")}
+              className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
+              style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
+              Assinar por R$ 29,90/mês
             </button>
-         </footer>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-2">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-emerald-400" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                <span className="text-emerald-400 font-black text-sm uppercase tracking-wider">Membro Ativo</span>
+              </div>
+              <button className="text-zinc-700 text-[10px] font-black uppercase tracking-widest hover:text-zinc-500 transition-colors">
+                Gerenciar Assinatura
+              </button>
+            </div>
+          )}
+
+          <p className="text-zinc-900 text-[10px] text-center">Cancele quando quiser • Sem fidelidade</p>
+
+        </main>
       </div>
     );
   };
@@ -6132,54 +5988,55 @@ function App() {
 
   const renderMasterPerks = () => {
     const perks = [
-      { icon: "delivery_dining", title: "Taxa Zero", desc: "Entrega grátis em toda a cidade, sem limite de pedidos" },
-      { icon: "bolt",            title: "Prioridade Máxima", desc: "Seus pedidos são processados primeiro, sempre" },
-      { icon: "workspace_premium", title: "Suporte VIP 24/7", desc: "Atendimento exclusivo via canal prioritário" },
-      { icon: "confirmation_number", title: "Cupons Exclusivos", desc: "Ofertas e descontos só para membros Black" },
-      { icon: "stars",           title: "Cashback Duplo", desc: "2x mais pontos em todos os pedidos" },
+      { icon: "delivery_dining",    title: "Taxa Zero",          desc: "Entrega grátis em toda a cidade, sem limite de pedidos" },
+      { icon: "bolt",              title: "Prioridade Máxima",  desc: "Seus pedidos são processados primeiro, sempre" },
+      { icon: "workspace_premium", title: "Suporte VIP 24/7",   desc: "Atendimento exclusivo via canal prioritário" },
+      { icon: "confirmation_number","title": "Cupons Exclusivos", desc: "Ofertas e descontos só para membros Black" },
+      { icon: "stars",             title: "Cashback Duplo",     desc: "2x mais pontos em todos os pedidos" },
+      { icon: "qr_code_scanner",   title: "Acesso Antecipado",  desc: "Novidades e lançamentos antes de todos" },
     ];
+
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
-        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-between px-5 py-4 border-b border-zinc-900">
-          <button onClick={() => setSubView("none")} className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+        <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
+          <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
             <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
           </button>
-          <h1 className="text-lg font-black tracking-tight text-white uppercase">IZI Black</h1>
-          <div className="size-11" />
+          <h1 className="font-extrabold text-base text-white uppercase tracking-tight">IZI Black</h1>
+          <div className="size-10" />
         </header>
-        <main className="px-5 pt-6 pb-10 space-y-6">
 
-          {/* Hero card */}
-          <div className="relative overflow-hidden rounded-3xl h-52 flex items-center p-7 bg-gradient-to-br from-zinc-900 to-black border border-white/5">
-            <div className="relative z-10 space-y-2">
-              <span className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.3em]">Privilégio Elite</span>
-              <h2 className="text-2xl font-extrabold text-white leading-tight tracking-tight">O melhor do<br/>ecossistema IZI.</h2>
-              <button onClick={() => setSubView("izi_black_purchase")}
-                className="mt-2 px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider active:scale-95 transition-all"
-                style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000" }}>
-                Assinar IZI Black
-              </button>
-            </div>
-            <div className="absolute right-[-5%] top-1/2 -translate-y-1/2 opacity-15 pointer-events-none">
-              <span className="material-symbols-outlined text-[160px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 0" }}>workspace_premium</span>
-            </div>
+        <main className="px-5 py-8 space-y-10">
+
+          {/* HERO */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em]">Privilégio Elite</p>
+            <h2 className="text-3xl font-extrabold text-white leading-tight tracking-tighter">O melhor do<br/>ecossistema IZI.</h2>
+            <p className="text-zinc-600 text-sm">Acesso completo a todos os benefícios premium da plataforma.</p>
           </div>
 
-          {/* Benefícios */}
-          <div className="space-y-3">
-            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-1">Benefícios Inclusos</p>
-            {perks.map((p, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                className="flex items-center gap-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 hover:border-yellow-400/20 transition-all">
-                <div className="size-11 rounded-xl bg-yellow-400/10 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>{p.icon}</span>
-                </div>
-                <div>
-                  <p className="font-black text-sm text-white">{p.title}</p>
-                  <p className="text-zinc-500 text-xs mt-0.5">{p.desc}</p>
-                </div>
-              </motion.div>
-            ))}
+          {/* CTA */}
+          <button onClick={() => setSubView("izi_black_purchase")}
+            className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
+            style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
+            Assinar IZI Black
+          </button>
+
+          {/* BENEFÍCIOS */}
+          <div>
+            <h3 className="font-extrabold text-base text-white uppercase tracking-tight mb-2">O que está incluso</h3>
+            <div className="flex flex-col">
+              {perks.map((p, i) => (
+                <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
+                  className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0">
+                  <span className="material-symbols-outlined text-yellow-400 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>{p.icon}</span>
+                  <div>
+                    <p className="font-black text-sm text-white">{p.title}</p>
+                    <p className="text-zinc-600 text-xs mt-0.5">{p.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
 
         </main>
@@ -6426,9 +6283,9 @@ function App() {
     ];
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
-        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-between px-5 py-4 border-b border-zinc-900">
+        <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSubView("none")} className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+            <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
               <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
             </button>
             <div>
@@ -7034,7 +6891,7 @@ function App() {
     return (
       <div className="absolute inset-0 z-[115] bg-black bg-black flex flex-col hide-scrollbar overflow-y-auto">
         {/* Header */}
-        <header className="sticky top-0 z-50 bg-white/80 bg-black/80 backdrop-blur-2xl border-b border-zinc-800 border-zinc-800 px-6 py-5 flex items-center gap-4">
+        <header className="sticky top-0 z-50 bg-white/80 bg-black/80 backdrop-blur-2xl border-b border-zinc-900 border-zinc-800 px-6 py-5 flex items-center gap-4">
           <button onClick={() => setSubView("transit_selection")} className="size-11 rounded-2xl bg-slate-50  border border-zinc-800  flex items-center justify-center active:scale-90 transition-all">
             <Icon name="arrow_back" />
           </button>
@@ -7305,7 +7162,7 @@ function App() {
 
     return (
       <div className="absolute inset-0 z-[120] bg-[#f8fafc] bg-black flex flex-col overflow-hidden">
-        <header className="px-6 py-5 bg-white bg-zinc-900 border-b border-zinc-800 flex items-center gap-4 shrink-0">
+        <header className="px-6 py-5 bg-white bg-zinc-900 border-b border-zinc-900 flex items-center gap-4 shrink-0">
           <button onClick={() => { setSubView('none'); setFilterTab('agendados' as any); }} className="size-11 rounded-2xl bg-slate-50  border border-zinc-800  flex items-center justify-center active:scale-90 transition-all">
             <Icon name="arrow_back" />
           </button>
@@ -7373,7 +7230,7 @@ function App() {
 
           {/* Chat */}
           <div className="bg-white bg-zinc-900 rounded-[28px] border border-zinc-800 border-zinc-700 overflow-hidden shadow-sm">
-            <div className="px-5 py-4 border-b border-zinc-800 border-zinc-700 flex items-center gap-3">
+            <div className="px-5 py-4 border-b border-zinc-900 border-zinc-700 flex items-center gap-3">
               <Icon name="chat" />
               <p className="text-sm font-black text-white">Chat com o Motorista</p>
             </div>
@@ -7459,25 +7316,28 @@ function App() {
   const renderPaymentError = () => {
     return (
       <div className="absolute inset-0 z-50 bg-black text-zinc-100 flex flex-col items-center justify-center px-6 gap-8">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200 }}
-          className="size-24 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(239,68,68,0.3)]">
-          <span className="material-symbols-outlined text-5xl text-red-400" style={{ fontVariationSettings: "'FILL' 1" }}>cancel</span>
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200 }}>
+          <div className="size-24 rounded-full flex items-center justify-center" style={{ background: "rgba(239,68,68,0.1)", boxShadow: "0 0 40px rgba(239,68,68,0.2)" }}>
+            <span className="material-symbols-outlined text-5xl text-red-400" style={{ fontVariationSettings: "'FILL' 1" }}>cancel</span>
+          </div>
         </motion.div>
+
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-black text-white uppercase tracking-tight">Pagamento Recusado</h2>
-          <p className="text-zinc-500 text-sm">Houve um problema ao processar seu pagamento</p>
+          <p className="text-zinc-600 text-sm">Houve um problema ao processar seu pagamento</p>
         </div>
+
         <div className="w-full max-w-sm space-y-3">
           <button onClick={() => setSubView("checkout")}
-            className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
-            style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000" }}>
+            className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
+            style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
             Tentar Novamente
           </button>
           <button onClick={() => { setPaymentsOrigin("checkout"); setSubView("payments"); }}
-            className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-zinc-800 text-zinc-400 hover:border-yellow-400/30 hover:text-yellow-400 transition-all active:scale-95">
+            className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-zinc-900 text-zinc-500 hover:border-yellow-400/20 hover:text-yellow-400 transition-all active:scale-95">
             Trocar Forma de Pagamento
           </button>
-          <button onClick={() => setSubView("none")} className="w-full text-zinc-600 text-sm font-black uppercase tracking-widest hover:text-zinc-400 transition-colors py-3">
+          <button onClick={() => setSubView("none")} className="w-full text-zinc-700 text-sm font-black uppercase tracking-widest hover:text-zinc-500 transition-colors py-2">
             Cancelar
           </button>
         </div>
@@ -7488,37 +7348,44 @@ function App() {
   const renderPaymentSuccess = () => {
     return (
       <div className="absolute inset-0 z-50 bg-black text-zinc-100 flex flex-col items-center justify-center px-6 gap-8">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200 }}
-          className="size-24 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.3)]">
-          <span className="material-symbols-outlined text-5xl text-emerald-400" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200 }}>
+          <div className="size-24 rounded-full flex items-center justify-center" style={{ background: "rgba(16,185,129,0.1)", boxShadow: "0 0 40px rgba(16,185,129,0.2)" }}>
+            <span className="material-symbols-outlined text-5xl text-emerald-400" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+          </div>
         </motion.div>
+
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-black text-white uppercase tracking-tight">Pedido Confirmado!</h2>
-          <p className="text-zinc-500 text-sm">Seu pedido foi recebido e está sendo preparado</p>
+          <p className="text-zinc-600 text-sm">Seu pedido está sendo preparado</p>
         </div>
-        <div className="w-full max-w-sm bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 space-y-3">
+
+        <div className="w-full max-w-sm space-y-0">
           {[
-            { label: "Status", value: "Confirmado", color: "text-emerald-400" },
-            { label: "Tempo estimado", value: "25-40 min", color: "text-yellow-400" },
-            { label: "Entrega em", value: userLocation.address || "Seu endereço", color: "text-white" },
-          ].map((row) => (
-            <div key={row.label} className="flex justify-between items-center">
-              <span className="text-zinc-500 text-sm">{row.label}</span>
-              <span className={`text-sm font-black ${row.color}`}>{row.value}</span>
+            { label: "Status",          value: "Confirmado",                   color: "text-emerald-400" },
+            { label: "Estabelecimento", value: selectedItem?.merchant_name || "Pedido", color: "text-white" },
+            { label: "Tempo estimado",  value: "25-40 min",                    color: "text-yellow-400" },
+            { label: "Entrega em",      value: userLocation.address || "Seu endereço", color: "text-zinc-300" },
+          ].map((row: any) => (
+            <div key={row.label} className="flex justify-between items-center py-3 border-b border-zinc-900/60 last:border-0">
+              <span className="text-zinc-600 text-sm">{row.label}</span>
+              <span className={`text-sm font-black ${row.color} text-right max-w-[55%] truncate`}>{row.value}</span>
             </div>
           ))}
         </div>
-        <button
-          onClick={() => { setTab("orders"); setSubView("none"); }}
-          className="w-full max-w-sm py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
-          style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000" }}
-        >
-          Acompanhar Pedido
-        </button>
+
+        <div className="w-full max-w-sm space-y-3">
+          <button onClick={() => { setTab("orders"); setSubView("none"); }}
+            className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
+            style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
+            Acompanhar Pedido
+          </button>
+          <button onClick={() => setSubView("none")} className="w-full text-zinc-700 text-sm font-black uppercase tracking-widest hover:text-zinc-500 transition-colors py-2">
+            Voltar ao Início
+          </button>
+        </div>
       </div>
     );
   };
-
 
   const BottomNav = () => {
     const navItems = [
