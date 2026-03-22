@@ -1379,6 +1379,27 @@ function App() {
       }
     });
 
+
+
+    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        setUserId(session.user.id);
+        setView("app");
+        setAuthInitLoading(false);
+        window.history.replaceState({ view: "app", tab: "home", subView: "none" }, "");
+        fetchMyOrders(session.user.id);
+        fetchWalletBalance(session.user.id);
+        fetchSavedCards(session.user.id);
+        fetchSavedAddresses(session.user.id);
+        fetchCoupons();
+      } else if (event === "SIGNED_OUT") {
+        setUserId(null);
+        setView("login");
+        setTab("home");
+        setSubView("none");
+      }
+
+    });
     const sub = supabase
       .channel("orders_tracking")
       .on(
@@ -1910,12 +1931,29 @@ function App() {
       else navigateSubView("generic_list");
     };
 
-    const activeStories = [
-      { id: 1, merchant: "Burger King", discount: "30% OFF", timeLeft: "2h", img: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=400", isMaster: false },
-      { id: 2, merchant: "Pizza Hut", discount: "2x1", timeLeft: "45min", img: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=400", isMaster: false },
-      { id: 3, merchant: "Sushi Premium", discount: "20% OFF", timeLeft: "1h", img: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=400", isMaster: true },
-      { id: 4, merchant: "Outback", discount: "Frete Grátis", timeLeft: "3h", img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=400", isMaster: false },
-    ];
+    // IZI Flash — usa dados reais do Supabase (tabela flash_offers)
+    const activeStories = flashOffers.map((offer: any) => {
+      const expiresAt = new Date(offer.expires_at);
+      const now = new Date();
+      const diffMs = expiresAt.getTime() - now.getTime();
+      const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      const timeLeft = diffHrs > 0 ? diffHrs + "h" : diffMins + "min";
+      const discount = offer.discount_percent
+        ? offer.discount_percent + "% OFF"
+        : offer.discounted_price && offer.original_price
+          ? "R$ " + Number(offer.discounted_price).toFixed(0)
+          : "Oferta";
+      return {
+        id: offer.id,
+        merchant: offer.admin_users?.store_name || offer.merchant_name || "Loja",
+        discount,
+        timeLeft,
+        img: offer.product_image || offer.admin_users?.store_logo || "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=400",
+        isMaster: userLevel >= 10 && offer.is_vip,
+        offer,
+      };
+    });
 
     const activeOrder = myOrders.find(o => !["concluido", "cancelado"].includes(o.status));
 
@@ -2088,7 +2126,8 @@ function App() {
             </section>
           )}
 
-          {/* FLASH OFFERS */}
+          {/* FLASH OFFERS — só aparece se tiver ofertas ativas */}
+          {activeStories.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black text-zinc-100 uppercase tracking-[0.2em]">Izi Flash</h3>
@@ -2117,6 +2156,7 @@ function App() {
               ))}
             </div>
           </section>
+          )}
 
           {/* FAVORITOS DA REGIÃO */}
           <section>
@@ -4116,7 +4156,11 @@ function App() {
           {invoice ? (
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full flex flex-col items-center gap-4">
               <div className="w-52 h-52 bg-white rounded-3xl flex items-center justify-center p-3 shadow-[0_0_30px_rgba(249,115,22,0.2)]">
-                <span className="material-symbols-outlined text-[120px] text-zinc-800">qr_code_2</span>
+                <img
+                  src={"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(invoice)}
+                  alt="Lightning QR"
+                  className="w-full h-full rounded-2xl"
+                />
               </div>
               <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between gap-3">
                 <p className="text-zinc-400 text-xs font-mono truncate flex-1">{invoice.slice(0, 40)}...</p>
