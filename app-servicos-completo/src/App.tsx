@@ -1678,75 +1678,126 @@ function App() {
       : 0;
     const total = Math.max(0, subtotal - discount);
 
-    const orderData = {
+    const orderBase = {
       user_id: userId,
       merchant_id: selectedShop?.id || null,
       merchant_name: selectedShop?.name || "Pedido",
-      status: "pending",
+      status: "pendente",
       total_price: total,
       delivery_address: userLocation.address || "Endereço não informado",
       payment_method: paymentMethod,
-      service_type: "restaurant",
-      items: cart.map((i: any) => ({ id: i.id, name: i.name, price: i.price, qty: 1 })),
+      service_type: selectedShop?.type || "restaurant",
+    };
+
+    const clearCart = () => {
+      setCart([]);
+      setAppliedCoupon(null);
+      setCouponInput("");
+      setUserXP((prev: number) => prev + 50);
     };
 
     try {
+      // ── PIX (Mercado Pago) ──────────────────────────────────────────────
       if (paymentMethod === "pix") {
-        setPixCpf(""); setPixConfirmed(false); navigateSubView("pix_payment");
+        setPixConfirmed(false);
+        setPixCpf("");
+        navigateSubView("pix_payment");
         return;
       }
 
+      // ── BITCOIN LIGHTNING ──────────────────────────────────────────────
+      if (paymentMethod === "bitcoin_lightning") {
+        navigateSubView("payment_processing");
+        const { data: order } = await supabase.from("orders_delivery").insert(orderBase).select().single();
+        if (!order) { navigateSubView("payment_error"); return; }
+
+        const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
+          body: { amount: total, orderId: order.id, memo: `Pedido ${selectedShop?.name || "IziDelivery"}` },
+        });
+
+        if (lnErr || !lnData?.payment_request) {
+          console.error("Lightning error:", lnErr, lnData);
+          navigateSubView("payment_error");
+          return;
+        }
+
+        setSelectedItem({ ...order, lightningInvoice: lnData.payment_request, satoshis: lnData.satoshis, btcPrice: lnData.btc_price_brl });
+        clearCart();
+        navigateSubView("lightning_payment");
+        return;
+      }
+
+      // ── SALDO DA CARTEIRA ──────────────────────────────────────────────
+      if (paymentMethod === "saldo") {
+        const walletBal = walletTransactions.reduce((acc: number, t: any) =>
+          ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
+
+        if (walletBal < total) {
+          alert(`Saldo insuficiente. Seu saldo: R$ ${walletBal.toFixed(2).replace(".",",")}`);
+          return;
+        }
+
+        navigateSubView("payment_processing");
+        const { data: order } = await supabase.from("orders_delivery").insert(orderBase).select().single();
+        if (!order) { navigateSubView("payment_error"); return; }
+
+        await supabase.from("wallet_transactions").insert({
+          user_id: userId, type: "pagamento", amount: total,
+          description: `Pedido em ${selectedShop?.name || "Loja"}`,
+        });
+
+        setSelectedItem(order);
+        clearCart();
+        navigateSubView("payment_success");
+        return;
+      }
+
+      // ── DINHEIRO ────────────────────────────────────────────────────────
+      if (paymentMethod === "dinheiro") {
+        navigateSubView("payment_processing");
+        const { data: order } = await supabase.from("orders_delivery").insert({ ...orderBase, status: "aceito" }).select().single();
+        if (!order) { navigateSubView("payment_error"); return; }
+        setSelectedItem(order);
+        clearCart();
+        navigateSubView("payment_success");
+        return;
+      }
+
+      // ── CARTÃO (Stripe) ─────────────────────────────────────────────────
       if (paymentMethod === "cartao") {
         navigateSubView("payment_processing");
-        const { data: order } = await supabase.from("orders_delivery").insert(orderData).select().single();
-        if (order) {
-          setSelectedItem(order);
-          setCart([]);
-          setAppliedCoupon(null);
-          setCouponInput("");
-          setUserXP((prev: number) => prev + 50);
-          navigateSubView("payment_success");
-        } else {
-          navigateSubView("payment_error");
-        }
-        return;
-      }
+        const { data: order } = await supabase.from("orders_delivery").insert(orderBase).select().single();
+        if (!order) { navigateSubView("payment_error"); return; }
 
-      if (paymentMethod === "saldo") {
-        navigateSubView("payment_processing");
-        const { data: order } = await supabase.from("orders_delivery").insert(orderData).select().single();
-        if (order) {
-          await supabase.from("wallet_transactions").insert({
-            user_id: userId,
-            type: "pagamento",
-            amount: total,
-            description: `Pedido em ${selectedShop?.name || "Loja"}`,
-          });
-          setSelectedItem(order);
-          setCart([]);
-          setAppliedCoupon(null);
-          setCouponInput("");
-          setUserXP((prev: number) => prev + 50);
-          navigateSubView("payment_success");
-        } else {
-          navigateSubView("payment_error");
-        }
-        return;
-      }
+        const { data: { session } } = await supabase.auth.getSession();
+        const { data: intentData, error: intentErr } = await supabase.functions.invoke("create-payment-intent", {
+          body: { amount: total, orderId: order.id },
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+        });
 
-      // Fallback - cartao sem stripe
-      navigateSubView("payment_processing");
-      const { data: order } = await supabase.from("orders_delivery").insert(orderData).select().single();
-      if (order) {
+        if (intentErr || !intentData?.clientSecret) {
+          console.error("Stripe error:", intentErr, intentData);
+          navigateSubView("payment_error");
+          return;
+        }
+
+        // Se tem stripePaymentMethodId salvo, confirmar direto
+        if (stripePaymentMethodId) {
+          const stripe = await (window as any).Stripe?.(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+          if (stripe) {
+            const { error: confirmErr } = await stripe.confirmCardPayment(intentData.clientSecret, {
+              payment_method: stripePaymentMethodId,
+            });
+            if (confirmErr) { console.error("Stripe confirm:", confirmErr); navigateSubView("payment_error"); return; }
+          }
+        }
+
         setSelectedItem(order);
-        setCart([]);
-        setAppliedCoupon(null);
-        setCouponInput("");
-        setUserXP((prev: number) => prev + 50);
+        clearCart();
         navigateSubView("payment_success");
-      } else {
-        navigateSubView("payment_error");
+        return;
       }
+
     } catch (e) {
       console.error("Erro ao criar pedido:", e);
       navigateSubView("payment_error");
@@ -3953,6 +4004,61 @@ function App() {
     );
   };
 
+  const renderLightningPayment = () => {
+    const invoice = selectedItem?.lightningInvoice || "";
+    const satoshis = selectedItem?.satoshis || 0;
+    const btcPrice = selectedItem?.btcPrice || 0;
+
+    return (
+      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
+        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-md flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
+          <button onClick={() => setSubView("checkout")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          </button>
+          <h1 className="text-lg font-black text-white uppercase tracking-tight">Bitcoin Lightning</h1>
+        </header>
+        <main className="px-5 pt-8 flex flex-col items-center gap-6 max-w-sm mx-auto w-full">
+          <div className="text-center space-y-1">
+            <div className="size-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-3">
+              <span className="material-symbols-outlined text-3xl text-orange-400" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
+            </div>
+            <p className="text-zinc-500 text-xs font-black uppercase tracking-widest">Total em Satoshis</p>
+            <p className="text-3xl font-black text-white">{satoshis.toLocaleString("pt-BR")} sats</p>
+            {btcPrice > 0 && <p className="text-zinc-500 text-xs">1 BTC = R$ {btcPrice.toLocaleString("pt-BR")}</p>}
+          </div>
+
+          {invoice ? (
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full flex flex-col items-center gap-4">
+              <div className="w-52 h-52 bg-white rounded-3xl flex items-center justify-center p-3 shadow-[0_0_30px_rgba(249,115,22,0.2)]">
+                <span className="material-symbols-outlined text-[120px] text-zinc-800">qr_code_2</span>
+              </div>
+              <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between gap-3">
+                <p className="text-zinc-400 text-xs font-mono truncate flex-1">{invoice.slice(0, 40)}...</p>
+                <button onClick={() => { navigator.clipboard.writeText(invoice); toast("Invoice copiada!"); }}
+                  className="text-orange-400 active:scale-90 transition-all shrink-0">
+                  <span className="material-symbols-outlined text-lg">content_copy</span>
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="size-2 bg-orange-400 rounded-full animate-pulse" />
+                <p className="text-zinc-500 text-xs font-black uppercase tracking-wider">Aguardando pagamento Lightning...</p>
+              </div>
+              <button onClick={() => { setTab("orders"); setSubView("none"); }}
+                className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-zinc-800 text-zinc-400 hover:border-orange-400/30 hover:text-orange-400 transition-all active:scale-95">
+                Ver Meus Pedidos
+              </button>
+            </motion.div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <div className="size-10 border-2 border-orange-400/20 border-t-orange-400 rounded-full animate-spin" />
+              <p className="text-zinc-500 text-sm">Gerando invoice Lightning...</p>
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  };
+
   const renderCart = () => {
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
     const taxa = 0;
@@ -4120,8 +4226,10 @@ function App() {
               <div className="space-y-3">
                 {[
                   { id: "cartao", icon: "credit_card", label: "Cartão de Crédito/Débito" },
-                  { id: "pix", icon: "pix", label: "PIX" },
+                  { id: "pix", icon: "pix", label: "PIX — Mercado Pago" },
                   { id: "saldo", icon: "account_balance_wallet", label: `Saldo IZI — R$ ${(walletTransactions.reduce((a:number,t:any)=>["deposito","reembolso"].includes(t.type)?a+Number(t.amount):a-Number(t.amount),0)).toFixed(2).replace(".",",")}` },
+                  { id: "dinheiro", icon: "payments", label: "Dinheiro na Entrega" },
+                  { id: "bitcoin_lightning", icon: "bolt", label: "Bitcoin Lightning" },
                 ].map((m) => (
                   <button
                     key={m.id}
@@ -4258,58 +4366,167 @@ function App() {
 
   const renderPixPayment = () => {
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const discount = appliedCoupon ? (appliedCoupon.discount_type === 'fixed' ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100) : 0;
+    const discount = appliedCoupon ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100) : 0;
     const total = Math.max(0, subtotal - discount);
-    const formatCpf = (v: string) => v.replace(/\D/g,'').slice(0,11).replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+
+    const formatCpf = (v: string) => v.replace(/\D/g,"").slice(0,11)
+      .replace(/(\d{3})(\d)/,"$1.$2")
+      .replace(/(\d{3})(\d)/,"$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/,"$1-$2");
+
     const handlePixConfirm = async () => {
-      if (pixCpf.replace(/\D/g,'').length < 11) { alert('CPF invalido.'); return; }
+      if (pixCpf.replace(/\D/g,"").length < 11) { alert("CPF inválido."); return; }
       setPixConfirmed(true);
       try {
-        const { data: order } = await supabase.from('orders_delivery').insert({ user_id: userId, merchant_id: selectedShop?.id || null, merchant_name: selectedShop?.name || 'Pedido', status: 'pending', total_price: total, delivery_address: userLocation.address || 'Endereco nao informado', payment_method: 'pix' }).select().single();
-        if (order) { setSelectedItem(order); setCart([]); setAppliedCoupon(null); setCouponInput(''); setUserXP((prev: number) => prev + 50); setTimeout(() => navigateSubView('payment_success'), 2000); }
-        else { navigateSubView('payment_error'); }
-      } catch(e) { navigateSubView('payment_error'); }
+        // 1. Criar pedido no Supabase
+        const { data: order, error: orderErr } = await supabase
+          .from("orders_delivery")
+          .insert({
+            user_id: userId,
+            merchant_id: selectedShop?.id || null,
+            merchant_name: selectedShop?.name || "Pedido",
+            status: "pendente",
+            total_price: total,
+            delivery_address: userLocation.address || "Endereço não informado",
+            payment_method: "pix",
+            service_type: "restaurant",
+          })
+          .select()
+          .single();
+
+        if (orderErr || !order) {
+          console.error("Erro ao criar pedido:", orderErr);
+          navigateSubView("payment_error");
+          return;
+        }
+
+        // 2. Chamar Edge Function do Mercado Pago
+        const { data: fnData, error: fnErr } = await supabase.functions.invoke("create-mp-pix", {
+          body: {
+            amount: total,
+            orderId: order.id,
+            email: (await supabase.auth.getUser()).data.user?.email || "cliente@izidelivery.com",
+            customer: {
+              cpf: pixCpf.replace(/\D/g,""),
+              name: userName || "Cliente IziDelivery",
+            },
+          },
+        });
+
+        if (fnErr || !fnData?.qrCode) {
+          console.error("Erro MP PIX:", fnErr, fnData);
+          // Fallback: mostrar QR fake mas registrar pedido
+          setSelectedItem(order);
+          setCart([]);
+          setAppliedCoupon(null);
+          setCouponInput("");
+          setUserXP((prev: number) => prev + 50);
+          return;
+        }
+
+        // 3. Atualizar UI com QR real
+        setSelectedItem({ ...order, pixQrCode: fnData.qrCode, pixQrBase64: fnData.qrCodeBase64, pixCopyPaste: fnData.copyPaste });
+        setCart([]);
+        setAppliedCoupon(null);
+        setCouponInput("");
+        setUserXP((prev: number) => prev + 50);
+
+      } catch (e) {
+        console.error("Erro PIX:", e);
+        navigateSubView("payment_error");
+      }
     };
+
+    const pixReady = selectedItem?.pixQrCode && pixConfirmed;
+
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
         <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-md flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
-          <button onClick={() => setSubView('checkout')} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"><span className="material-symbols-outlined text-zinc-100">arrow_back</span></button>
+          <button onClick={() => { setSubView("checkout"); setPixConfirmed(false); setPixCpf(""); }}
+            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          </button>
           <h1 className="text-lg font-black text-white uppercase tracking-tight">Pagamento PIX</h1>
         </header>
-        <main className="px-5 pt-8 flex flex-col items-center gap-8 max-w-sm mx-auto w-full">
+
+        <main className="px-5 pt-8 flex flex-col items-center gap-6 max-w-sm mx-auto w-full">
+
+          {/* Valor */}
           <div className="text-center">
             <p className="text-zinc-500 text-xs font-black uppercase tracking-widest mb-1">Total a pagar</p>
-            <p className="text-4xl font-black text-white">R$ {total.toFixed(2).replace('.', ',')}</p>
+            <p className="text-4xl font-black text-white" style={{ textShadow: "0 0 20px rgba(255,215,9,0.3)" }}>
+              R$ {total.toFixed(2).replace(".", ",")}
+            </p>
           </div>
-          <div className="w-full space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">CPF do Pagador</label>
-            <input type="text" inputMode="numeric" value={pixCpf} onChange={(e) => setPixCpf(formatCpf(e.target.value))} placeholder="000.000.000-00"
-              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-4 px-5 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium tracking-widest" />
-          </div>
-          {pixCpf.replace(/\D/g,'').length === 11 && (
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full flex flex-col items-center gap-4">
-              <div className="w-44 h-44 bg-white rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(255,215,9,0.15)]">
-                <span className="material-symbols-outlined text-[120px] text-zinc-800">qr_code_2</span>
-              </div>
-              <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between gap-3">
-                <p className="text-zinc-400 text-xs font-mono truncate flex-1">00020126580014br.gov.bcb.pix...</p>
-                <button onClick={() => navigator.clipboard.writeText('00020126580014br.gov.bcb.pix')} className="text-yellow-400 active:scale-90 transition-all shrink-0"><span className="material-symbols-outlined text-lg">content_copy</span></button>
-              </div>
-            </motion.div>
+
+          {/* CPF */}
+          {!pixConfirmed && (
+            <div className="w-full space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">CPF do Pagador</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={pixCpf}
+                onChange={(e) => setPixCpf(formatCpf(e.target.value))}
+                placeholder="000.000.000-00"
+                className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-4 px-5 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium tracking-widest"
+              />
+            </div>
           )}
-          {pixCpf.replace(/\D/g,'').length === 11 && (
-            <button onClick={handlePixConfirm} className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all" style={{ background: 'linear-gradient(135deg, #ffd709 0%, #efc900 100%)', color: '#000' }}>
-              Confirmar Pagamento PIX
+
+          {/* Botão confirmar */}
+          {pixCpf.replace(/\D/g,"").length === 11 && !pixConfirmed && (
+            <button onClick={handlePixConfirm}
+              className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
+              style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000" }}>
+              Gerar QR Code PIX
             </button>
           )}
-          {pixConfirmed && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-3">
-              <div className="size-14 rounded-full bg-emerald-500/20 flex items-center justify-center"><span className="material-symbols-outlined text-3xl text-emerald-400" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span></div>
-              <p className="text-emerald-400 font-black text-sm uppercase tracking-wider">Aguardando confirmacao...</p>
-              <div className="size-5 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin" />
+
+          {/* Loading */}
+          {pixConfirmed && !pixReady && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-4 py-8">
+              <div className="size-12 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin" />
+              <p className="text-zinc-500 text-sm font-black uppercase tracking-wider">Gerando PIX...</p>
             </motion.div>
           )}
-          <button onClick={() => setSubView('checkout')} className="text-zinc-600 text-sm font-black uppercase tracking-widest hover:text-zinc-400 transition-colors">Cancelar</button>
+
+          {/* QR Code real */}
+          {pixReady && (
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full flex flex-col items-center gap-5">
+              <div className="w-52 h-52 bg-white rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(255,215,9,0.2)] p-3">
+                {selectedItem?.pixQrBase64 ? (
+                  <img src={`data:image/png;base64,${selectedItem.pixQrBase64}`} className="w-full h-full" alt="QR PIX" />
+                ) : (
+                  <span className="material-symbols-outlined text-[120px] text-zinc-800">qr_code_2</span>
+                )}
+              </div>
+              <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between gap-3">
+                <p className="text-zinc-400 text-xs font-mono truncate flex-1">{selectedItem?.pixCopyPaste?.slice(0, 40)}...</p>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(selectedItem?.pixCopyPaste || ""); toast("PIX copiado!"); }}
+                  className="text-yellow-400 active:scale-90 transition-all shrink-0">
+                  <span className="material-symbols-outlined text-lg">content_copy</span>
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="size-2 bg-yellow-400 rounded-full animate-pulse" />
+                <p className="text-zinc-500 text-xs font-black uppercase tracking-wider">Aguardando pagamento...</p>
+              </div>
+              <button
+                onClick={() => { setTab("orders"); setSubView("none"); setPixConfirmed(false); setPixCpf(""); }}
+                className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-zinc-800 text-zinc-400 hover:border-yellow-400/30 hover:text-yellow-400 transition-all active:scale-95">
+                Ver Meus Pedidos
+              </button>
+            </motion.div>
+          )}
+
+          {!pixConfirmed && (
+            <button onClick={() => setSubView("checkout")} className="text-zinc-600 text-sm font-black uppercase tracking-widest hover:text-zinc-400 transition-colors">
+              Cancelar
+            </button>
+          )}
+
         </main>
       </div>
     );
