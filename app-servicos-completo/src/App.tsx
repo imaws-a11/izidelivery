@@ -5548,14 +5548,8 @@ function App() {
           {/* BANNER VIP — para membros */}
           {isIziBlackMembership ? (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              className="relative overflow-hidden rounded-3xl mt-4 px-7 py-8"
-              style={{ background: "linear-gradient(135deg, #0d0d00 0%, #1a1500 50%, #0d0d00 100%)" }}>
-              <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-40 -mt-20 rounded-full blur-[80px]"
-                  style={{ background: "rgba(255,215,9,0.08)" }} />
-                <div className="absolute bottom-0 left-0 right-0 h-px"
-                  style={{ background: "linear-gradient(90deg, transparent, rgba(255,215,9,0.3), transparent)" }} />
-              </div>
+              className="relative overflow-hidden mt-4 px-0 py-8 border-b border-zinc-900">
+
               <div className="relative z-10 flex items-start justify-between mb-6">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -5611,21 +5605,21 @@ function App() {
             <div className="flex flex-col">
               {perks.map((p, i) => (
                 <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                  className={`flex items-center gap-5 py-5 ${i < perks.length - 1 ? "border-b border-zinc-900/60" : ""} ${p.highlight ? "relative" : ""}`}>
+                  className={`flex items-center gap-5 py-6 ${i < perks.length - 1 ? "border-b border-zinc-900" : ""} ${p.highlight ? "relative" : ""}`}>
                   {p.highlight && (
                     <div className="absolute inset-0 -mx-5 pointer-events-none"
                       style={{ background: "rgba(255,215,9,0.02)" }} />
                   )}
-                  <div className="size-11 rounded-2xl flex items-center justify-center shrink-0 relative z-10"
-                    style={{ background: p.highlight ? "rgba(255,215,9,0.08)" : "transparent" }}>
-                    <span className="material-symbols-outlined text-xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>{p.icon}</span>
+                  <div className="size-12 rounded-2xl flex items-center justify-center shrink-0 relative z-10"
+                    style={{ background: "rgba(255,215,9,0.06)", border: "1px solid rgba(255,215,9,0.08)" }}>
+                    <span className="material-symbols-outlined text-2xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>{p.icon}</span>
                   </div>
                   <div className="flex-1 relative z-10">
                     <div className="flex items-center gap-2">
-                      <p className="font-black text-sm text-white">{p.title}</p>
-                      {p.highlight && <span className="text-[8px] font-black text-yellow-400 uppercase tracking-wider">Exclusivo</span>}
+                      <p className="font-black text-base text-white tracking-tight">{p.title}</p>
+                      {p.highlight && <span className="text-[8px] font-black text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded uppercase tracking-wider">Top</span>}
                     </div>
-                    <p className="text-zinc-600 text-xs mt-0.5">{p.desc}</p>
+                    <p className="text-zinc-500 text-sm mt-0.5">{p.desc}</p>
                   </div>
                   {isIziBlackMembership && (
                     <div className="size-1.5 rounded-full bg-emerald-400 shrink-0 relative z-10" />
