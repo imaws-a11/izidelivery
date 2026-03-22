@@ -834,6 +834,9 @@ function App() {
   }, []);
 
   const [userId, setUserId] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<string>("");
+  const [loginPassword, setLoginPassword] = useState<string>("");
+  const [loginEmail, setLoginEmail] = useState<string>("");
   const userIdRef = useRef(userId);
   useEffect(() => { userIdRef.current = userId; }, [userId]);
   const [ESTABLISHMENTS, setESTABLISHMENTS] = useState<any[]>([]);
@@ -1802,6 +1805,40 @@ function App() {
       console.error("Erro ao criar pedido:", e);
       navigateSubView("payment_error");
     }
+  };
+
+
+  const handleLogin = async () => {
+    setLoginError("");
+    if (!loginEmail || !loginPassword) { setLoginError("Preencha email e senha."); return; }
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
+    if (error) { console.error("Login error:", error); setLoginError(error.message); }
+    else { console.log("Login OK!"); }
+  };
+
+  const handleSignUp = async () => {
+    setLoginError("");
+    if (!loginEmail || !loginPassword) { setLoginError("Preencha email e senha."); return; }
+    if (loginPassword.length < 6) { setLoginError("Senha deve ter pelo menos 6 caracteres."); return; }
+    const { data, error } = await supabase.auth.signUp({ email: loginEmail, password: loginPassword });
+    if (error) {
+      console.error("SignUp error:", error);
+      setLoginError(error.message);
+      return;
+    }
+    // Salvar usuário na tabela users_delivery
+    if (data?.user) {
+      const { error: dbErr } = await supabase.from("users_delivery").insert({
+        id: data.user.id,
+        name: loginEmail.split("@")[0],
+        email: loginEmail,
+        is_active: true,
+        wallet_balance: 0,
+      });
+      if (dbErr) console.error("DB insert error:", dbErr);
+      else console.log("Usuário salvo no banco!");
+    }
+    setLoginError("Cadastro realizado! Verifique seu email para confirmar.");
   };
 
   const renderLogin = () => (
@@ -4835,7 +4872,7 @@ function App() {
 
         {/* LOGOUT */}
         <div className="px-5 mt-2 pb-4">
-          <button onClick={() => supabase.auth.signOut()}
+          <button onClick={async () => { await supabase.auth.signOut(); setView("login"); setTab("home"); setSubView("none"); }}
             className="w-full flex items-center justify-center gap-3 py-4 text-red-400/60 hover:text-red-400 transition-all active:scale-[0.98] group">
             <span className="material-symbols-outlined text-lg">logout</span>
             <span className="font-black text-sm uppercase tracking-wider">Sair da Conta</span>
