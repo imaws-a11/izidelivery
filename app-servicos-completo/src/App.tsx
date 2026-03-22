@@ -776,6 +776,8 @@ function App() {
   };
   const [activeService, setActiveService] = useState<any>(null);
   const [selectedShop, setSelectedShop] = useState<any>(null);
+  const [pixConfirmed, setPixConfirmed] = useState<boolean>(false);
+  const [pixCpf, setPixCpf] = useState<string>("");
   const [stripePaymentMethodId, setStripePaymentMethodId] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState<string>("Destaques");
@@ -1690,13 +1692,12 @@ function App() {
 
     try {
       if (paymentMethod === "pix") {
-        navigateSubView("pix_payment");
+        setPixCpf(""); setPixConfirmed(false); navigateSubView("pix_payment");
         return;
       }
 
-      if (paymentMethod === "cartao" && stripePaymentMethodId) {
+      if (paymentMethod === "cartao") {
         navigateSubView("payment_processing");
-        // Insert order
         const { data: order } = await supabase.from("orders_delivery").insert(orderData).select().single();
         if (order) {
           setSelectedItem(order);
@@ -4259,8 +4260,6 @@ function App() {
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
     const discount = appliedCoupon ? (appliedCoupon.discount_type === 'fixed' ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100) : 0;
     const total = Math.max(0, subtotal - discount);
-    const [pixCpf, setPixCpf] = (useState as any)('');
-    const [pixConfirmed, setPixConfirmed] = (useState as any)(false);
     const formatCpf = (v: string) => v.replace(/\D/g,'').slice(0,11).replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
     const handlePixConfirm = async () => {
       if (pixCpf.replace(/\D/g,'').length < 11) { alert('CPF invalido.'); return; }
