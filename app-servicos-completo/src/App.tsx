@@ -1662,6 +1662,96 @@ function App() {
     else { alert("Cupom invalido ou expirado."); }
   };
 
+
+  const handlePlaceOrder = async () => {
+    if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
+    if (!userId) { alert("Faça login para continuar."); return; }
+    if (cart.length === 0) { alert("Seu carrinho está vazio."); return; }
+
+    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+    const discount = appliedCoupon
+      ? appliedCoupon.discount_type === "fixed"
+        ? appliedCoupon.discount_value
+        : (subtotal * appliedCoupon.discount_value) / 100
+      : 0;
+    const total = Math.max(0, subtotal - discount);
+
+    const orderData = {
+      user_id: userId,
+      merchant_id: selectedShop?.id || null,
+      merchant_name: selectedShop?.name || "Pedido",
+      status: "pending",
+      total_price: total,
+      delivery_address: userLocation.address || "Endereço não informado",
+      payment_method: paymentMethod,
+      service_type: "restaurant",
+      items: cart.map((i: any) => ({ id: i.id, name: i.name, price: i.price, qty: 1 })),
+    };
+
+    try {
+      if (paymentMethod === "pix") {
+        navigateSubView("pix_payment");
+        return;
+      }
+
+      if (paymentMethod === "cartao" && stripePaymentMethodId) {
+        navigateSubView("payment_processing");
+        // Insert order
+        const { data: order } = await supabase.from("orders_delivery").insert(orderData).select().single();
+        if (order) {
+          setSelectedItem(order);
+          setCart([]);
+          setAppliedCoupon(null);
+          setCouponInput("");
+          setUserXP((prev: number) => prev + 50);
+          navigateSubView("payment_success");
+        } else {
+          navigateSubView("payment_error");
+        }
+        return;
+      }
+
+      if (paymentMethod === "saldo") {
+        navigateSubView("payment_processing");
+        const { data: order } = await supabase.from("orders_delivery").insert(orderData).select().single();
+        if (order) {
+          await supabase.from("wallet_transactions").insert({
+            user_id: userId,
+            type: "pagamento",
+            amount: total,
+            description: `Pedido em ${selectedShop?.name || "Loja"}`,
+          });
+          setSelectedItem(order);
+          setCart([]);
+          setAppliedCoupon(null);
+          setCouponInput("");
+          setUserXP((prev: number) => prev + 50);
+          navigateSubView("payment_success");
+        } else {
+          navigateSubView("payment_error");
+        }
+        return;
+      }
+
+      // Fallback - cartao sem stripe
+      navigateSubView("payment_processing");
+      const { data: order } = await supabase.from("orders_delivery").insert(orderData).select().single();
+      if (order) {
+        setSelectedItem(order);
+        setCart([]);
+        setAppliedCoupon(null);
+        setCouponInput("");
+        setUserXP((prev: number) => prev + 50);
+        navigateSubView("payment_success");
+      } else {
+        navigateSubView("payment_error");
+      }
+    } catch (e) {
+      console.error("Erro ao criar pedido:", e);
+      navigateSubView("payment_error");
+    }
+  };
+
   const renderHome = () => {
     const deliveryServices = [
       { icon: "restaurant",     label: "Restaurantes", type: "restaurant", action: null },
@@ -4166,33 +4256,60 @@ function App() {
   };
 
   const renderPixPayment = () => {
+    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+    const discount = appliedCoupon ? (appliedCoupon.discount_type === 'fixed' ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100) : 0;
+    const total = Math.max(0, subtotal - discount);
+    const [pixCpf, setPixCpf] = (useState as any)('');
+    const [pixConfirmed, setPixConfirmed] = (useState as any)(false);
+    const formatCpf = (v: string) => v.replace(/\D/g,'').slice(0,11).replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+    const handlePixConfirm = async () => {
+      if (pixCpf.replace(/\D/g,'').length < 11) { alert('CPF invalido.'); return; }
+      setPixConfirmed(true);
+      try {
+        const { data: order } = await supabase.from('orders_delivery').insert({ user_id: userId, merchant_id: selectedShop?.id || null, merchant_name: selectedShop?.name || 'Pedido', status: 'pending', total_price: total, delivery_address: userLocation.address || 'Endereco nao informado', payment_method: 'pix' }).select().single();
+        if (order) { setSelectedItem(order); setCart([]); setAppliedCoupon(null); setCouponInput(''); setUserXP((prev: number) => prev + 50); setTimeout(() => navigateSubView('payment_success'), 2000); }
+        else { navigateSubView('payment_error'); }
+      } catch(e) { navigateSubView('payment_error'); }
+    };
     return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col items-center justify-center px-6 gap-8">
-        <div className="text-center space-y-2">
-          <div className="size-20 rounded-3xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center mx-auto mb-4">
-            <span className="material-symbols-outlined text-4xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>pix</span>
+      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
+        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-md flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
+          <button onClick={() => setSubView('checkout')} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"><span className="material-symbols-outlined text-zinc-100">arrow_back</span></button>
+          <h1 className="text-lg font-black text-white uppercase tracking-tight">Pagamento PIX</h1>
+        </header>
+        <main className="px-5 pt-8 flex flex-col items-center gap-8 max-w-sm mx-auto w-full">
+          <div className="text-center">
+            <p className="text-zinc-500 text-xs font-black uppercase tracking-widest mb-1">Total a pagar</p>
+            <p className="text-4xl font-black text-white">R$ {total.toFixed(2).replace('.', ',')}</p>
           </div>
-          <h2 className="text-2xl font-black text-white uppercase tracking-tight">Pagamento via PIX</h2>
-          <p className="text-zinc-500 text-sm">Escaneie o QR Code ou copie a chave</p>
-        </div>
-        <div className="w-48 h-48 bg-white rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(255,215,9,0.2)]">
-          <span className="material-symbols-outlined text-[120px] text-zinc-800">qr_code_2</span>
-        </div>
-        <div className="w-full max-w-sm space-y-3">
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between gap-3">
-            <p className="text-zinc-400 text-xs font-mono truncate flex-1">00020126580014br.gov.bcb.pix...</p>
-            <button className="text-yellow-400 active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-lg">content_copy</span>
+          <div className="w-full space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">CPF do Pagador</label>
+            <input type="text" inputMode="numeric" value={pixCpf} onChange={(e) => setPixCpf(formatCpf(e.target.value))} placeholder="000.000.000-00"
+              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-4 px-5 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium tracking-widest" />
+          </div>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full flex flex-col items-center gap-4">
+              <div className="w-44 h-44 bg-white rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(255,215,9,0.15)]">
+                <span className="material-symbols-outlined text-[120px] text-zinc-800">qr_code_2</span>
+              </div>
+              <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between gap-3">
+                <p className="text-zinc-400 text-xs font-mono truncate flex-1">00020126580014br.gov.bcb.pix...</p>
+                <button onClick={() => navigator.clipboard.writeText('00020126580014br.gov.bcb.pix')} className="text-yellow-400 active:scale-90 transition-all shrink-0"><span className="material-symbols-outlined text-lg">content_copy</span></button>
+              </div>
+            </motion.div>
+          )}
+            <button onClick={handlePixConfirm} className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all" style={{ background: 'linear-gradient(135deg, #ffd709 0%, #efc900 100%)', color: '#000' }}>
+              Confirmar Pagamento PIX
             </button>
-          </div>
-          <div className="flex items-center gap-2 justify-center">
-            <div className="size-2 bg-yellow-400 rounded-full animate-pulse" />
-            <span className="text-zinc-500 text-xs font-black uppercase tracking-widest">Aguardando confirmação...</span>
-          </div>
-        </div>
-        <button onClick={() => setSubView("none")} className="text-zinc-600 text-sm font-black uppercase tracking-widest hover:text-zinc-400 transition-colors active:scale-95">
-          Cancelar
-        </button>
+          )}
+          {pixConfirmed && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-3">
+              <div className="size-14 rounded-full bg-emerald-500/20 flex items-center justify-center"><span className="material-symbols-outlined text-3xl text-emerald-400" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span></div>
+              <p className="text-emerald-400 font-black text-sm uppercase tracking-wider">Aguardando confirmacao...</p>
+              <div className="size-5 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin" />
+            </motion.div>
+          )}
+          <button onClick={() => setSubView('checkout')} className="text-zinc-600 text-sm font-black uppercase tracking-widest hover:text-zinc-400 transition-colors">Cancelar</button>
+        </main>
       </div>
     );
   };
