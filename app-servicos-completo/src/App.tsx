@@ -1804,6 +1804,55 @@ function App() {
     }
   };
 
+  const renderLogin = () => (
+    <div className="flex flex-col min-h-screen bg-black text-zinc-100 items-center justify-center px-6">
+      <div className="w-full max-w-sm space-y-10">
+        <div className="text-center space-y-2">
+          <h1 className="text-5xl font-black tracking-[0.4em] italic text-yellow-400 uppercase"
+            style={{ textShadow: "0 0 30px rgba(255,215,9,0.4), 0 0 60px rgba(255,215,9,0.2)" }}>
+            IZI
+          </h1>
+          <p className="text-zinc-700 text-xs font-black uppercase tracking-[0.3em]">Stealth Luxury Delivery</p>
+        </div>
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-700">Email</p>
+            <input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)}
+              placeholder="seu@email.com"
+              className="w-full bg-transparent border-b border-zinc-900 py-3 text-white placeholder:text-zinc-800 focus:outline-none focus:border-yellow-400/30 text-sm font-medium transition-all" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-700">Senha</p>
+            <input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full bg-transparent border-b border-zinc-900 py-3 text-white placeholder:text-zinc-800 focus:outline-none focus:border-yellow-400/30 text-sm font-medium transition-all" />
+          </div>
+          <div className="pt-4 space-y-3">
+            <button onClick={() => handleLogin()}
+              className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95"
+              style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 20px rgba(255,215,9,0.15)" }}>
+              Entrar
+            </button>
+            <button onClick={() => handleSignUp()}
+              className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-zinc-900 text-zinc-500 hover:border-yellow-400/20 hover:text-yellow-400 transition-all active:scale-95">
+              Criar Conta
+            </button>
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex-1 h-px bg-zinc-900" />
+          <span className="text-zinc-800 text-[10px] font-black uppercase tracking-widest">ou</span>
+          <div className="flex-1 h-px bg-zinc-900" />
+        </div>
+        <button className="w-full flex items-center justify-center gap-3 py-4 text-zinc-700 hover:text-yellow-400 transition-all active:scale-95 text-sm font-black uppercase tracking-wider">
+          <span className="material-symbols-outlined text-xl">mail</span>
+          Entrar com Magic Link
+        </button>
+        {loginError && <p className="text-red-400 text-xs text-center font-bold">{loginError}</p>}
+      </div>
+    </div>
+  );
+
   const renderHome = () => {
     const deliveryServices = [
       { icon: "restaurant",     label: "Restaurantes", type: "restaurant", action: null },
