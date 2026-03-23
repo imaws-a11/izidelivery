@@ -4029,7 +4029,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                             Recusar
                                         </button>
                                         <button 
-                                            onClick={async () => { try { await supabase.from('orders_delivery').update({ status: 'pendente' }).eq('id', o.id); fetchAllOrders(); toastSuccess('Pedido Aceito! Buscando Flash...'); } catch(err) { console.error(err); } }}
+                                            onClick={async () => { try { await supabase.from('orders_delivery').update({ status: 'confirmado' }).eq('id', o.id); fetchAllOrders(); toastSuccess('Pedido Aceito! Buscando Flash...'); } catch(err) { console.error(err); } }}
                                             className="flex-1 w-full h-16 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-[28px] font-black text-xs uppercase tracking-[0.2em] shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all outline-none"
                                         >
                                             Aceitar Pedido ⚡
@@ -4052,23 +4052,23 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && ['pendente', 'preparando', 'confirmado', 'picked_up', 'em_rota', 'a_caminho'].includes(o.status)).map((o: any) => (
+                            {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && ['confirmado', 'preparando', 'pronto', 'pendente', 'picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega'].includes(o.status)).map((o: any) => (
                                 <div key={o.id} className="bg-white dark:bg-slate-900 rounded-[38px] p-8 border border-slate-100 dark:border-white/5 shadow-xl shadow-black/5 flex flex-col gap-6 relative overflow-hidden group">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="size-10 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-black text-xs">#{o.id.slice(-3)}</div>
                                             <h4 className="text-base font-black text-slate-900 dark:text-white tracking-tighter">R$ {o.total_price?.toFixed(2).replace('.', ',')}</h4>
                                         </div>
-                                        <span className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest ${o.status === 'pendente' ? 'bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20' : 'bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20'}`}>
-                                            {o.status === 'pendente' ? 'Aguardando Lojista' : o.status === 'picked_up' ? 'Flash Coletou' : 'Em Rota'}
+                                        <span className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest ${o.status === 'pendente' ? 'bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20' : o.status === 'confirmado' ? 'bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/20' : o.status === 'preparando' ? 'bg-violet-500/10 text-violet-500 ring-1 ring-violet-500/20' : o.status === 'pronto' ? 'bg-green-500/10 text-green-600 ring-1 ring-green-500/20' : 'bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20'}`}>
+                                            {o.status === 'pendente' ? 'Aguardando Lojista' : o.status === 'confirmado' ? 'Aceito ✅' : o.status === 'preparando' ? 'Em Preparo 🍳' : o.status === 'pronto' ? 'Pronto 📦' : o.status === 'picked_up' ? 'Flash Coletou' : o.status === 'a_caminho' ? 'Flash a Caminho' : 'Em Rota'}
                                         </span>
                                     </div>
 
                                     <div className="space-y-2">
                                         <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-                                            <motion.div initial={{ width: 0 }} animate={{ width: o.status === 'pendente' ? '25%' : o.status === 'picked_up' ? '75%' : '100%' }} className="h-full bg-primary" />
+                                            <motion.div initial={{ width: 0 }} animate={{ width: o.status === 'pendente' ? '15%' : o.status === 'confirmado' ? '30%' : o.status === 'preparando' ? '45%' : o.status === 'pronto' ? '55%' : o.status === 'a_caminho' ? '65%' : o.status === 'picked_up' ? '80%' : '95%' }} className="h-full bg-primary" />
                                         </div>
-                                        <p className="text-[8px] font-black text-slate-400 uppercase text-center tracking-widest">{o.status === 'pendente' ? 'Seu pedido está no forno' : 'Flash está entregando sua felicidade'}</p>
+                                        <p className="text-[8px] font-black text-slate-400 uppercase text-center tracking-widest">{o.status === 'pendente' ? 'Aguardando aceitação' : o.status === 'confirmado' ? 'Pedido aceito, preparando...' : o.status === 'preparando' ? 'Em preparo no estabelecimento' : o.status === 'pronto' ? 'Pronto! Aguardando Flash' : 'Flash está entregando sua felicidade'}</p>
                                     </div>
 
                                     <div className="flex flex-col gap-3">
@@ -4077,7 +4077,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                             <p className="text-[11px] font-bold text-slate-600 dark:text-slate-300 leading-tight">{o.delivery_address}</p>
                                         </div>
                                         
-                                        {o.status === 'pendente' && (
+                                        {['confirmado', 'preparando'].includes(o.status) && (
                                             <button 
                                                 onClick={async () => { await supabase.from('orders_delivery').update({ status: 'pronto' }).eq('id', o.id); fetchAllOrders(); toastSuccess('Status PRONTO! Flash notificado.'); }} 
                                                 className="w-full h-14 bg-gradient-to-r from-emerald-500 to-emerald-400 text-white rounded-[24px] font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/30 active:scale-95 transition-all outline-none flex items-center justify-center gap-3"
@@ -4088,7 +4088,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                     </div>
                                 </div>
                             ))}
-                            {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && ['pendente', 'preparando', 'confirmado', 'picked_up', 'em_rota', 'a_caminho'].includes(o.status)).length === 0 && (
+                            {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && ['confirmado', 'preparando', 'pronto', 'pendente', 'picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega'].includes(o.status)).length === 0 && (
                                 <div className="md:col-span-2 lg:col-span-3 py-20 bg-slate-50/50 dark:bg-white/[0.02] border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[44px] flex flex-col items-center justify-center text-center gap-4 opacity-50">
                                     <span className="material-symbols-outlined text-5xl text-slate-200">moped</span>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Fluxo de entregas limpo no momento</p>

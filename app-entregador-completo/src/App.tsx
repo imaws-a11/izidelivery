@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from './lib/supabase';
 import { playIziSound } from './lib/iziSounds';
@@ -228,6 +228,8 @@ function App() {
         const saved = localStorage.getItem('Izi_active_mission');
         return saved ? JSON.parse(saved) : null;
     });
+    const activeMissionRef = useRef(activeMission);
+    useEffect(() => { activeMissionRef.current = activeMission; }, [activeMission]);
 
     // Sistema de Monitoramento de GPS em Tempo Real
     useEffect(() => {
@@ -440,13 +442,20 @@ function App() {
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 const o = payload.new as any;
                 const declinedIds = JSON.parse(localStorage.getItem('Izi_declined') || '[]');
+                const currentMission = activeMissionRef.current;
                 
-                // Se a missão ativa mudar para 'pronto', notificar o motoboy
-                if (activeMission && o.id === activeMission.id && o.status === 'pronto') {
-                    playIziSound('driver');
-                    toastSuccess('🔥 O Pedido está PRONTO para coleta!');
-                    if (Notification.permission === 'granted') new Notification('📦 Pedido Pronto!', { body: 'O estabelecimento finalizou o preparo. Pode coletar!' });
-                    setActiveMission({ ...activeMission, status: 'pronto' });
+                // Se a missão ativa recebeu uma atualização do servidor, sincronizar o status
+                if (currentMission && o.id === currentMission.id) {
+                    if (o.status === 'pronto') {
+                        playIziSound('driver');
+                        toastSuccess('🔥 O Pedido está PRONTO para coleta!');
+                        if (Notification.permission === 'granted') new Notification('📦 Pedido Pronto!', { body: 'O estabelecimento finalizou o preparo. Pode coletar!' });
+                    }
+                    // Sincronizar o status da missão ativa com o servidor
+                    const updatedMission = { ...currentMission, status: o.status };
+                    setActiveMission(updatedMission);
+                    localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
+                    return;
                 }
 
                 if (['pendente', 'pronto'].includes(o.status) && !declinedIds.includes(o.id)) {
@@ -454,14 +463,14 @@ function App() {
                         if (prev.find(x => x.realId === o.id)) return prev;
                         return [{ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev];
                     });
-                } else if (!['pendente', 'pronto'].includes(o.status) && (!activeMission || o.id !== activeMission.id)) {
+                } else if (!['pendente', 'pronto'].includes(o.status) && (!currentMission || o.id !== currentMission.id)) {
                     setOrders(prev => prev.filter((order: any) => order.realId !== o.id));
                 }
             })
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, [isOnline, activeMission]);
+    }, [isOnline]);
 
 
 
@@ -477,7 +486,7 @@ function App() {
             if (!driverId) { toastError('Sessão expirada. Faça login novamente.'); return; }
             const { error } = await supabase.from('orders_delivery').update({ status: 'a_caminho', driver_id: driverId }).eq('id', realOrder.id);
             if (error) { toastError('Erro ao aceitar corrida.'); return; }
-            const mission = { ...order, ...realOrder, id: realOrder.id, realId: realOrder.id };
+            const mission = { ...order, ...realOrder, id: realOrder.id, realId: realOrder.id, status: 'a_caminho' };
             setActiveMission(mission);
             localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
             setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
