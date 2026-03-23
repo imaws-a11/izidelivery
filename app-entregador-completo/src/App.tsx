@@ -1121,13 +1121,13 @@ function App() {
                         <button onClick={() => setIsSOSActive(true)} className="size-14 bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"><Icon name="emergency" className="text-xl" /></button>
                     </div>
                     {/* BOTÕES DINÂMICOS DE PROGRESSO */}
-                    {(!activeMission.status || activeMission.status === 'a_caminho') && (
+                    {(!activeMission.status || ['a_caminho', 'pronto', 'confirmado', 'preparando'].includes(activeMission.status)) && (
                         <button 
                             onClick={() => handleUpdateStatus('picked_up')} 
                             disabled={isAccepting}
-                            className="w-full h-16 bg-gradient-to-r from-blue-500 to-blue-400 text-white font-black text-sm uppercase tracking-widest rounded-[22px] shadow-2xl shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                            className={`w-full h-16 font-black text-sm uppercase tracking-widest rounded-[22px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 ${activeMission.status === 'pronto' ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-emerald-500/20 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-blue-500/20'}`}
                         >
-                            <Icon name="package_2" className="text-2xl" />Confirmar Coleta
+                            <Icon name="package_2" className="text-2xl" />{activeMission.status === 'pronto' ? '📦 Coletar Pedido Pronto!' : 'Confirmar Coleta'}
                         </button>
                     )}
 
