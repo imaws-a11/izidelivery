@@ -67,7 +67,7 @@ function Icon({ name, className = "", size = 20, ...props }: any) {
     'map': BespokeIcons.Map,
     'emergency': BespokeIcons.Help,
     'moped': BespokeIcons.Motorcycle,
-    'chevron_right': BespokeIcons.ArrowRight,
+    'chevron_right': BespokeIcons.ChevronRight,
   };
 
   const IconComp = icons[name] || BespokeIcons.Help;

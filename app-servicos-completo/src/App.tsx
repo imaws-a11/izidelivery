@@ -4,37 +4,63 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "./lib/supabase";
 import { toast, toastSuccess, toastError, toastWarning, showConfirm } from "./lib/useToast";
-import { GoogleMap, Marker, Autocomplete } from '@react-google-maps/api';
+import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-// Leaflet imports
-import { MapContainer, TileLayer, Marker as LeafletMarker, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 
-// Corrigir ícones do Leaflet que quebram no build
-const defaultIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
-});
-L.Marker.prototype.options.icon = defaultIcon;
+function IziTrackingMap({ driverLoc, userLoc }: any) {
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: "AIzaSyBi3EJ41-Kh7-ZXjNQ9K1d9AqmoD8UNiO8"
+  });
 
-const motoboyIcon = L.divIcon({
-  html: `<div class="bg-primary p-2 rounded-full border-2 border-black shadow-lg shadow-primary/40"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M21 16.5C21 16.88 20.79 17.21 20.47 17.38L12.57 21.82C12.41 21.94 12.21 22 12 22C11.79 22 11.59 21.94 11.43 21.82L3.53 17.38C3.21 17.21 3 16.88 3 16.5V7.5L12 2.5L21 7.5V16.5Z"/></svg></div>`,
-  className: '',
-  iconSize: [36, 36],
-  iconAnchor: [18, 18]
-});
+  if (!isLoaded || !driverLoc) return (
+    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center backdrop-blur-sm z-10">
+      <div className="flex flex-col items-center gap-3">
+        <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] animate-pulse">Buscando Sinal do Flash...</p>
+      </div>
+    </div>
+  );
 
-const destinationIcon = L.divIcon({
-  html: `<div class="bg-red-500 p-2 rounded-full border-2 border-black shadow-lg shadow-red-500/40"><svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg></div>`,
-  className: '',
-  iconSize: [36, 36],
-  iconAnchor: [18, 18]
-});
+  const center = driverLoc ? { lat: driverLoc.lat, lng: driverLoc.lng } : { lat: -23.5505, lng: -46.6333 };
+
+  return (
+    <div className="w-full h-full relative z-0">
+      <GoogleMap
+        mapContainerStyle={{ width: '100%', height: '100%' }}
+        center={center}
+        zoom={16}
+        options={{
+            disableDefaultUI: true,
+            zoomControl: false,
+            styles: [
+                { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
+                { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
+                { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+                { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+                { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+                { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#263c3f' }] },
+                { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#6b9a76' }] },
+                { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#38414e' }] },
+                { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212a37' }] },
+                { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
+                { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#746855' }] },
+                { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#1f2835' }] },
+                { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#f3d19c' }] },
+                { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] },
+                { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#515c6d' }] },
+                { featureType: 'water', elementType: 'labels.text.stroke', stylers: [{ color: '#17263c' }] }
+            ]
+        }}
+      >
+        <Marker position={center} />
+        {userLoc && <Marker position={{ lat: userLoc.lat, lng: userLoc.lng }} />}
+      </GoogleMap>
+    </div>
+  );
+}
 
 
 
@@ -8684,41 +8710,3 @@ function App() {
 
 export default App;
 
-const RecenterMap = ({ coords }: { coords: [number, number] }) => {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(coords, map.getZoom() || 16);
-  }, [coords]);
-  return null;
-};
-
-const IziTrackingMap = ({ driverLoc, userLoc }: any) => {
-  if (!driverLoc) return (
-    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center backdrop-blur-sm z-10">
-      <div className="flex flex-col items-center gap-3">
-        <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-        <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] animate-pulse">Buscando Sinal do Flash...</p>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="w-full h-full relative z-0">
-      <MapContainer 
-        center={[driverLoc.lat, driverLoc.lng]} 
-        zoom={16} 
-        scrollWheelZoom={false}
-        className="h-full w-full grayscale-[0.5] contrast-[1.2]"
-        zoomControl={false}
-        attributionControl={false}
-      >
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        />
-        <LeafletMarker position={[driverLoc.lat, driverLoc.lng]} icon={motoboyIcon} />
-        {userLoc && <LeafletMarker position={[userLoc.lat, userLoc.lng]} icon={destinationIcon} />}
-        <RecenterMap coords={[driverLoc.lat, driverLoc.lng]} />
-      </MapContainer>
-    </div>
-  );
-};
