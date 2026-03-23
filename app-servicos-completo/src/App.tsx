@@ -1450,6 +1450,17 @@ function App() {
             // Se o usuário estiver vendo os detalhes deste pedido, atualizar o item selecionado
             if (selectedItem?.id === newOrder.id) {
               setSelectedItem(newOrder);
+
+              // Se estava na tela de aguardando loja e ela aceitou (aceito, confirmado ou já preparando)
+              if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando"].includes(newOrder.status)) {
+                setTimeout(() => setSubView("payment_success"), 1000);
+              }
+              // Se estava na tela de aguardando loja e ela recusou
+              if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
+                showToast("Seu pedido foi recusado.", "warning");
+                setSubView("none");
+                fetchMyOrders(userId!);
+              }
               // Se estava na tela de aguardando e motorista aceitou, ir para acompanhamento
               if (subViewRef.current === "waiting_driver" && 
                   ["a_caminho", "aceito", "confirmado", "em_rota", "no_local"].includes(newOrder.status)) {
@@ -1711,6 +1722,7 @@ function App() {
       delivery_address: userLocation.address || "Endereço não informado",
       payment_method: paymentMethod,
       service_type: selectedShop?.type || "restaurant",
+      package_details: cart.map(i => `${i.name} (R$ ${Number(i.price).toFixed(2)})`).join(', '),
     };
 
     const clearCart = () => {
@@ -1777,17 +1789,30 @@ function App() {
         return;
       }
 
-      // ── DINHEIRO ────────────────────────────────────────────────────────
+      // ── DINHEIRO (PAGAMENTO NA ENTREGA) ─────────────────────────────────
       if (paymentMethod === "dinheiro") {
-        navigateSubView("payment_processing");
-        const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ ...orderBase, status: "aceito" }).select().single();
+        // O usuário quer que para pagamento físico, o status inicialmente seja aguardando merchant
+        const { data: order, error: insertError } = await supabase
+          .from("orders_delivery")
+          .insert({ ...orderBase, status: "waiting_merchant" })
+          .select()
+          .single();
+
         if (insertError) {
           console.error("Erro insert dinheiro:", insertError);
+          navigateSubView("payment_error");
+          return;
         }
-        if (!order) { navigateSubView("payment_error"); return; }
+
+        if (!order) {
+          navigateSubView("payment_error");
+          return;
+        }
+
         setSelectedItem(order);
         clearCart();
-        navigateSubView("payment_success");
+        // Navega para a tela de animação de espera (izi rapidez)
+        navigateSubView("waiting_merchant");
         return;
       }
 
@@ -5201,64 +5226,120 @@ function App() {
   };
 
   const renderOrderFeedback = () => {
-    const [rating, setRating] = (useState as any)<number>(0);
+    const [shopRating, setShopRating] = (useState as any)<number>(0);
+    const [driverRating, setDriverRating] = (useState as any)<number>(0);
     const [comment, setComment] = (useState as any)<string>("");
+    const [isSubmitting, setIsSubmitting] = (useState as any)<boolean>(false);
 
     const handleSubmit = async () => {
-      if (rating === 0) { alert("Selecione uma avaliação."); return; }
+      if (shopRating === 0 || driverRating === 0) { 
+        showToast("Por favor, avalie o estabelecimento e o entregador.", "warning");
+        return; 
+      }
+      
+      setIsSubmitting(true);
       try {
         if (selectedItem?.id) {
-          await supabase.from("orders_delivery").update({ rating, feedback: comment }).eq("id", selectedItem.id);
+          await supabase.from("orders_delivery").update({ 
+            rating: shopRating, 
+            feedback: comment,
+            driver_rating: driverRating
+          }).eq("id", selectedItem.id);
         }
-        setUserXP((prev: number) => prev + 20);
+        
+        setUserXP((prev: number) => prev + 50);
+        showToast("Obrigado pelo seu feedback! +50 XP", "success");
         setSubView("none");
-      } catch (e) { console.error(e); }
+      } catch (e) { 
+        console.error(e); 
+        showToast("Erro ao enviar avaliação.", "error");
+      } finally {
+        setIsSubmitting(false);
+      }
     };
 
     return (
-      <div className="absolute inset-0 z-50 bg-black text-zinc-100 flex flex-col items-center justify-center px-6 gap-8">
-        <div className="text-center space-y-2">
-          <div className="size-16 rounded-2xl bg-yellow-400/10 flex items-center justify-center mx-auto mb-3">
-            <span className="material-symbols-outlined text-3xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+      <motion.div 
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }} 
+        className="fixed inset-0 z-[100] bg-black flex flex-col pt-12"
+      >
+        <div className="px-6 flex justify-between items-center mb-8">
+          <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 flex items-center justify-center text-white">
+            <span className="material-symbols-outlined">close</span>
+          </button>
+          <div className="text-right">
+            <p className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.2em]">Feedback Izi</p>
+            <p className="text-xs text-zinc-500 font-bold">Pedido #DT-{selectedItem?.id?.slice(0,6).toUpperCase()}</p>
           </div>
-          <h2 className="text-2xl font-black text-white uppercase tracking-tight">Como foi sua experiência?</h2>
-          <p className="text-zinc-600 text-sm">{selectedItem?.merchant_name || "Pedido"}</p>
         </div>
 
-        {/* RATING STARS */}
-        <div className="flex items-center gap-3">
-          {[1,2,3,4,5].map((star) => (
-            <button key={star} onClick={() => setRating(star)} className="active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-4xl transition-colors"
-                style={{ color: star <= rating ? "#ffd709" : "#27272a", fontVariationSettings: star <= rating ? "'FILL' 1" : "'FILL' 0" }}>
-                star
-              </span>
-            </button>
-          ))}
+        <div className="flex-1 overflow-y-auto px-6 space-y-10 pb-10">
+          <header className="text-center space-y-2">
+            <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">Sua Experiência</h2>
+            <p className="text-zinc-500 text-sm font-medium">Como foi o serviço hoje?</p>
+          </header>
+
+          <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-[32px] space-y-5">
+            <div className="flex items-center gap-4">
+              <div className="size-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-yellow-500">storefront</span>
+              </div>
+              <div className="flex-1">
+                <h4 className="text-white font-black text-sm uppercase tracking-wider">{selectedItem?.merchant_name || 'Estabelecimento'}</h4>
+                <p className="text-[10px] text-zinc-500 font-bold uppercase">Avalie os produtos e preparo</p>
+              </div>
+            </div>
+            <div className="flex justify-center gap-2">
+              {[1,2,3,4,5].map(s => (
+                <button key={s} onClick={() => setShopRating(s)} className="p-1">
+                  <span className={`material-symbols-outlined text-4xl transition-all duration-300 ${s <= shopRating ? 'text-yellow-500 scale-110 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]' : 'text-zinc-800'}`} style={{ fontVariationSettings: s <= shopRating ? "'FILL' 1" : "'FILL' 0" }}>star</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-[32px] space-y-5">
+            <div className="flex items-center gap-4">
+              <div className="size-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-yellow-500">delivery_dining</span>
+              </div>
+              <div className="flex-1">
+                <h4 className="text-white font-black text-sm uppercase tracking-wider">O Entregador</h4>
+                <p className="text-[10px] text-zinc-500 font-bold uppercase">Avalie a agilidade e educação</p>
+              </div>
+            </div>
+            <div className="flex justify-center gap-2">
+              {[1,2,3,4,5].map(s => (
+                <button key={s} onClick={() => setDriverRating(s)} className="p-1">
+                  <span className={`material-symbols-outlined text-4xl transition-all duration-300 ${s <= driverRating ? 'text-yellow-500 scale-110 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]' : 'text-zinc-800'}`} style={{ fontVariationSettings: s <= driverRating ? "'FILL' 1" : "'FILL' 0" }}>star</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Observações adicionais</label>
+            <textarea 
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Escreva algo sobre sua experiência..."
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-[24px] p-5 text-zinc-100 text-sm focus:border-yellow-500 outline-none transition-all min-h-[120px] resize-none"
+            />
+          </div>
         </div>
 
-        {/* COMMENT */}
-        <div className="w-full max-w-sm">
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Deixe um comentário (opcional)..."
-            rows={3}
-            className="w-full bg-zinc-900/50 border-b border-zinc-900 rounded-2xl px-4 py-3 text-sm font-medium text-white placeholder:text-zinc-700 focus:outline-none focus:border-yellow-400/20 resize-none transition-all"
-          />
-        </div>
-
-        <div className="w-full max-w-sm space-y-3">
-          <button onClick={handleSubmit}
-            className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
-            style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
-            Enviar Avaliação
+        <div className="p-6 bg-black border-t border-zinc-900">
+          <button 
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className={`w-full py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${isSubmitting ? 'bg-zinc-800 text-zinc-500' : 'bg-yellow-500 text-black hover:shadow-[0_0_30px_rgba(234,179,8,0.3)] active:scale-95'}`}
+          >
+            {isSubmitting ? 'Enviando...' : 'Confirmar Avaliação'}
+            {!isSubmitting && <span className="material-symbols-outlined text-sm">arrow_forward</span>}
           </button>
-          <button onClick={() => setSubView("none")} className="w-full text-zinc-700 text-sm font-black uppercase tracking-widest hover:text-zinc-500 transition-colors py-2">
-            Pular
-          </button>
         </div>
-      </div>
+      </motion.div>
     );
   };
 
@@ -7478,6 +7559,228 @@ function App() {
     );
   };
 
+  const renderActiveOrder = () => {
+    if (!selectedItem) return null;
+
+    const steps = [
+      { id: 'confirmado', label: 'Pedido Confirmado', icon: 'check_circle', status: ['aceito', 'confirmado', 'preparando', 'picked_up', 'em_rota', 'a_caminho', 'no_local', 'concluido'] },
+      { id: 'preparando', label: 'Em Preparação',    icon: 'restaurant',     status: ['preparando', 'picked_up', 'em_rota', 'a_caminho', 'no_local', 'concluido'] },
+      { id: 'coletado',   label: 'Pedido Coletado',  icon: 'local_shipping', status: ['picked_up', 'em_rota', 'a_caminho', 'no_local', 'concluido'] },
+      { id: 'no_caminho', label: 'A Caminho',        icon: 'moped',          status: ['em_rota', 'a_caminho', 'no_local', 'concluido'] },
+      { id: 'entregue',   label: 'Entregue',         icon: 'verified',       status: ['concluido'] },
+    ];
+
+    const currentIdx = steps.findLastIndex(s => s.status.includes(selectedItem.status));
+    
+    return (
+      <div className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-hidden pb-32">
+        {/* MAPA PLACEHOLDER OU REAL-TIME */}
+        <div className="relative w-full h-[35vh] bg-zinc-900 overflow-hidden shrink-0">
+           {/* Fundo animado suave */}
+           <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-yellow-400/20 via-black to-black" />
+           
+           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black z-10 pointer-events-none" />
+           <div className="absolute inset-0 flex items-center justify-center opacity-10">
+              <span className="material-symbols-outlined text-[120px] text-yellow-400" 
+                style={{ fontVariationSettings: "'FILL' 0" }}>map</span>
+           </div>
+           
+           {/* Botão flutuante voltar */}
+           <div className="absolute top-8 left-6 z-20">
+              <button 
+                onClick={() => setSubView("none")}
+                className="size-12 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all"
+              >
+                <Icon name="arrow_back" />
+              </button>
+           </div>
+
+           {/* Badge flutuante de status */}
+           <div className="absolute bottom-8 left-6 right-6 z-20">
+              <div className="bg-black/60 backdrop-blur-xl border border-white/10 p-5 rounded-[32px] flex items-center gap-5 shadow-2xl">
+                 <div className="size-14 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-lg shadow-primary/20">
+                    <span className="material-symbols-outlined text-black text-2xl animate-bounce">
+                      {steps[currentIdx]?.icon || 'sync'}
+                    </span>
+                 </div>
+                 <div className="flex-1">
+                    <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-1">Logística Ativa</p>
+                    <h3 className="text-lg font-black text-white tracking-tighter leading-none">
+                      {steps[currentIdx]?.label || 'Sintonizando...'}
+                    </h3>
+                 </div>
+                 <div className="text-right">
+                    <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1">Previsão</p>
+                    <p className="text-lg font-black text-white italic">{(selectedItem.delivery_time || "15-25")}</p>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        {/* DETALHES COMPLEMENTARES */}
+        <main className="flex-1 overflow-y-auto no-scrollbar px-6 py-10 space-y-12">
+           
+           {/* TRACKING TIMELINE */}
+           <section className="space-y-10">
+              <div className="flex items-center justify-between px-2">
+                 <h2 className="text-[11px] font-black text-zinc-600 uppercase tracking-[0.4em]">Fluxo Operacional</h2>
+                 <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Real-time</span>
+                    <span className="size-2 bg-emerald-500 rounded-full animate-pulse" />
+                 </div>
+              </div>
+
+              <div className="relative space-y-12 pl-4">
+                 {/* Linha vertical tracejada */}
+                 <div className="absolute left-[38px] top-6 bottom-6 w-[2px] bg-zinc-900 border-l border-dashed border-zinc-800" />
+                 
+                 {steps.map((s, i) => {
+                    const isActive = i <= currentIdx;
+                    const isCurrent = i === currentIdx;
+                    return (
+                       <div key={s.id} className={`flex items-start gap-8 relative z-10 transition-all duration-500 ${isActive ? 'opacity-100 scale-100' : 'opacity-20 scale-95'}`}>
+                          <div className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${isActive ? 'bg-yellow-400 text-black shadow-lg shadow-primary/30 border border-yellow-300/20' : 'bg-zinc-900 text-zinc-700'}`}>
+                             <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>{s.icon}</span>
+                          </div>
+                          <div className="flex-1 pt-1">
+                             <h4 className={`text-base font-black tracking-tight ${isActive ? 'text-white' : 'text-zinc-600'}`}>{s.label}</h4>
+                             {isCurrent && (
+                               <motion.p 
+                                 initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }}
+                                 className="text-yellow-400/60 text-[10px] uppercase font-black tracking-widest mt-1"
+                               >
+                                 Sendo processado agora
+                               </motion.p>
+                             )}
+                          </div>
+                          {isActive && (
+                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="mt-2.5">
+                               <span className="material-symbols-outlined text-emerald-400 text-lg">check_circle</span>
+                            </motion.div>
+                          )}
+                       </div>
+                    );
+                 })}
+              </div>
+           </section>
+
+           {/* ESTABELECIMENTO / MOTORISTA */}
+           <section className="bg-zinc-900/40 border border-white/5 rounded-[40px] p-8 space-y-8 shadow-inner">
+              <div className="flex items-center justify-between">
+                 <div className="flex items-center gap-5">
+                    <div className="size-16 rounded-[24px] bg-cover bg-center border border-white/10 shadow-float"
+                      style={{ backgroundImage: `url('https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedItem.driver_id || selectedItem.merchant_name || 'izi'}')` }} />
+                    <div className="space-y-1">
+                       <h4 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none">
+                         {selectedItem.driver_id ? (selectedItem.driver_name || 'Entregador Izi') : (selectedItem.merchant_name || 'Estabelecimento')}
+                       </h4>
+                       <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">
+                            {selectedItem.driver_id ? 'Entregador Parceiro' : 'Protocolo Izi'} #{String(selectedItem.id).slice(-6)}
+                          </span>
+                       </div>
+                    </div>
+                 </div>
+                 <button className="size-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 active:scale-90 transition-all">
+                    <Icon name="support_agent" size={20} className="text-zinc-500" />
+                 </button>
+              </div>
+
+              {selectedItem.driver_id && (
+                <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+                   <div className="size-10 rounded-xl bg-yellow-400/10 flex items-center justify-center">
+                      <Icon name="two_wheeler" className="text-yellow-400" />
+                   </div>
+                   <div className="flex-1">
+                      <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Veículo Selecionado</p>
+                      <p className="text-xs font-bold text-white">Moto / Placa {String(selectedItem.id).slice(-4).toUpperCase()}</p>
+                   </div>
+                   <div className="text-right">
+                      <div className="flex items-center gap-1">
+                         <span className="material-symbols-outlined text-yellow-400 text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                         <span className="text-xs font-black text-white">4.9</span>
+                      </div>
+                   </div>
+                </div>
+              )}
+
+              <div className="h-px bg-white/5 mx-2" />
+
+              <div className="grid grid-cols-2 gap-4">
+                 <button 
+                  onClick={() => setSubView("order_chat")}
+                  className="bg-zinc-900/80 border border-zinc-800 py-5 rounded-[24px] flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest text-zinc-400 active:scale-[0.98] transition-all hover:bg-zinc-800 hover:text-white"
+                 >
+                    <Icon name="chat" size={18} className="text-yellow-400" />
+                    Abrir Canal Chat
+                 </button>
+                 <button className="bg-zinc-900/80 border border-zinc-800 py-5 rounded-[24px] flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest text-zinc-400 active:scale-[0.98] transition-all hover:bg-zinc-800 hover:text-white">
+                    <span className="material-symbols-outlined text-yellow-400 text-xl">call</span>
+                    Ligar Agora
+                 </button>
+              </div>
+           </section>
+
+           {/* DADOS DE ENTREGA */}
+           <section className="px-2 space-y-4">
+              <h2 className="text-[11px] font-black text-zinc-600 uppercase tracking-[0.4em]">Destino Final</h2>
+              <div className="flex items-start gap-4 bg-zinc-900/40 p-6 rounded-[32px] border border-white/5">
+                 <div className="size-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
+                    <Icon name="location_on" className="text-orange-500" />
+                 </div>
+                 <div>
+                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Receber em</p>
+                    <p className="text-sm font-bold text-zinc-300 leading-tight">{selectedItem.delivery_address}</p>
+                 </div>
+              </div>
+           </section>
+
+           {/* AJUDA */}
+           <button 
+            onClick={() => setSubView("order_support")}
+            className="w-full py-6 rounded-[32px] border-2 border-dashed border-zinc-900/60 text-zinc-800 font-black text-[10px] uppercase tracking-[0.3em] active:scale-95 transition-all flex items-center justify-center gap-3 group hover:border-white/10 hover:text-white mt-10"
+           >
+              <Icon name="help" className="group-hover:text-yellow-400 transition-colors" />
+              Central de Protocolos e Ajuda
+           </button>
+        </main>
+      </div>
+    );
+  };
+
+  const renderWaitingMerchant = () => {
+    return (
+      <div className="absolute inset-0 z-[120] bg-black text-zinc-100 flex flex-col items-center justify-center px-6 gap-8 overflow-hidden">
+        {/* Fundo animado suave */}
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-yellow-400 via-black to-black animate-pulse" />
+        
+        <motion.div 
+          animate={{ scale: [1, 1.1, 1], opacity: [0.8, 1, 0.8] }}
+          transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+          className="relative size-32"
+        >
+          <div className="absolute inset-0 rounded-full bg-yellow-400/20 blur-xl" />
+          <div className="absolute inset-0 border border-yellow-400/30 rounded-full animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]" />
+          <div className="absolute inset-2 border-2 border-dashed border-yellow-400/40 rounded-full animate-[spin_4s_linear_infinite]" />
+          
+          <div className="relative size-full rounded-full flex items-center justify-center bg-zinc-900 border border-yellow-400/50 shadow-[0_0_30px_rgba(255,215,9,0.4)]">
+            <span className="material-symbols-outlined text-6xl text-yellow-400 drop-shadow-[0_0_15px_rgba(255,215,9,1)]" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
+          </div>
+        </motion.div>
+
+        <div className="text-center space-y-3 z-10 max-w-xs">
+          <h2 className="text-3xl font-black text-white uppercase tracking-tighter drop-shadow-md">IZI FAST</h2>
+          <div className="flex items-center justify-center gap-2">
+            <div className="size-2 bg-yellow-400 rounded-full animate-[bounce_1s_infinite]" />
+            <p className="text-yellow-400 text-sm font-black tracking-widest uppercase">Aguardando Loja</p>
+            <div className="size-2 bg-yellow-400 rounded-full animate-[bounce_1s_infinite_0.2s]" />
+          </div>
+          <p className="text-zinc-500 text-xs font-medium">O estabelecimento está analisando seu pedido para pagamento na entrega. Confirmação em poucos segundos...</p>
+        </div>
+      </div>
+    );
+  };
+
   const renderPaymentSuccess = () => {
     return (
       <div className="absolute inset-0 z-50 bg-black text-zinc-100 flex flex-col items-center justify-center px-6 gap-8">
@@ -8039,6 +8342,17 @@ function App() {
                   className="absolute inset-0 z-[150]"
                 >
                   {renderPaymentSuccess()}
+                </motion.div>
+              )}
+              {subView === "waiting_merchant" && (
+                <motion.div
+                  key="wmerchant"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[150]"
+                >
+                  {renderWaitingMerchant()}
                 </motion.div>
               )}
               {subView === "izi_black_purchase" && (
