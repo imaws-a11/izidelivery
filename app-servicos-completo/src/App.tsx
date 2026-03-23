@@ -1843,24 +1843,31 @@ function App() {
     if (!loginEmail || !loginPassword) { setLoginError("Preencha email e senha."); return; }
     if (loginPassword.length < 6) { setLoginError("Senha deve ter pelo menos 6 caracteres."); return; }
     const { data, error } = await supabase.auth.signUp({ email: loginEmail, password: loginPassword });
+    
     if (error) {
       console.error("SignUp error:", error);
       setLoginError(error.message);
       return;
     }
+    
     // Salvar usuário na tabela users_delivery
     if (data?.user) {
       const { error: dbErr } = await supabase.from("users_delivery").insert({
         id: data.user.id,
         name: loginEmail.split("@")[0],
-        email: loginEmail,
         is_active: true,
-        wallet_balance: 0,
+        wallet_balance: 100 // Saldo inicial de cortesia
       });
-      if (dbErr) console.error("DB insert error:", dbErr);
-      else console.log("Usuário salvo no banco!");
+      
+      if (dbErr) {
+        console.error("DB insert error:", dbErr);
+        setLoginError("Erro ao criar perfil. Tente novamente.");
+        return;
+      }
+      
+      console.log("Usuário salvo no banco!");
+      setLoginError("Conta criada com sucesso! Verifique seu e-mail para confirmar.");
     }
-    setLoginError("Cadastro realizado! Verifique seu email para confirmar.");
   };
 
   const renderLogin = () => (
@@ -1898,16 +1905,7 @@ function App() {
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex-1 h-px bg-zinc-900" />
-          <span className="text-zinc-800 text-[10px] font-black uppercase tracking-widest">ou</span>
-          <div className="flex-1 h-px bg-zinc-900" />
-        </div>
-        <button className="w-full flex items-center justify-center gap-3 py-4 text-zinc-700 hover:text-yellow-400 transition-all active:scale-95 text-sm font-black uppercase tracking-wider">
-          <span className="material-symbols-outlined text-xl">mail</span>
-          Entrar com Magic Link
-        </button>
-        {loginError && <p className="text-red-400 text-xs text-center font-bold">{loginError}</p>}
+        {loginError && <p className="text-red-400 text-xs text-center font-bold mt-4">{loginError}</p>}
       </div>
     </div>
   );
@@ -2138,9 +2136,9 @@ function App() {
               {activeStories.map(story => (
                 <div key={story.id}
                   onClick={() => {
-                    if (story.isMaster && userLevel < 10) toast("Esta oferta é exclusiva para membros Tier MASTER.");
+                    if (story.isMaster && userLevel < 10) showToast("Esta oferta é exclusiva para membros Tier MASTER.", "info");
                     else if (story.isMaster) setShowMasterPerks(true);
-                    else toast(`Izi Flash: Oferta de ${story.discount} ativada para ${story.merchant}!`);
+                    else showToast(`Izi Flash: Oferta de ${story.discount} ativada para ${story.merchant}!`, "success");
                   }}
                   className={`relative flex-shrink-0 size-24 rounded-[28px] p-[2px] bg-gradient-to-tr ${story.isMaster ? "from-amber-400 via-yellow-400 to-orange-600" : "from-yellow-400 via-orange-400 to-rose-500"} cursor-pointer active:scale-95 transition-all group`}>
                   <div className="size-full rounded-[26px] overflow-hidden bg-zinc-900 border-2 border-zinc-900 relative">
