@@ -162,12 +162,21 @@ function App() {
 
     // Sistema de Monitoramento de GPS em Tempo Real
     useEffect(() => {
-        if (!isAuthenticated || !driverId || !isOnline) return;
+        if (!isAuthenticated || !driverId) return;
+        // Permite GPS se estiver ONLINE ou em uma MISSÃO ATIVA
+        if (!isOnline && !activeMission) return;
         
         const updateLocation = async (lat: number, lng: number) => {
           setDriverCoords({ lat, lng });
           await supabase.from('drivers_delivery').update({ lat, lng }).eq('id', driverId);
         };
+
+        // Obter posição IMEDIATA para agilizar o mapa
+        navigator.geolocation.getCurrentPosition(
+            (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
+            (err) => console.log("Init GPS Error (ignoring):", err),
+            { enableHighAccuracy: true }
+        );
 
         const watchId = navigator.geolocation.watchPosition(
             (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
@@ -176,16 +185,19 @@ function App() {
         );
         
         return () => navigator.geolocation.clearWatch(watchId);
-    }, [isAuthenticated, driverId, isOnline]);
+    }, [isAuthenticated, driverId, isOnline, activeMission]);
     useEffect(() => {
         const ensureDriverRecord = async (user: any) => {
-            const { data } = await supabase.from('drivers_delivery').select('name').eq('id', user.id).maybeSingle();
+            const { data } = await supabase.from('drivers_delivery').select('name, lat, lng').eq('id', user.id).maybeSingle();
             if (!data) {
                 await supabase.from('drivers_delivery').upsert({
                     id: user.id, name: user.user_metadata?.name || 'Entregador Izi',
                     email: user.email, is_online: true, is_active: true, vehicle_type: 'mototaxi'
                 });
-            } else if (data.name) setDriverName(data.name);
+            } else {
+                if (data.name) setDriverName(data.name);
+                if (data.lat && data.lng) setDriverCoords({ lat: data.lat, lng: data.lng });
+            }
         };
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session?.user) { setDriverId(session.user.id); setIsAuthenticated(true); ensureDriverRecord(session.user); }
@@ -294,7 +306,7 @@ function App() {
                 .from('orders_delivery')
                 .select('*, merchant_id')
                 .not('scheduled_date', 'is', null)
-                .in('status', ['pendente', 'novo', 'agendado', 'a_caminho', 'preparando'])
+                .in('status', ['pendente', 'agendado', 'a_caminho', 'preparando'])
                 .gte('scheduled_date', today)
                 .order('scheduled_date', { ascending: true })
                 .order('scheduled_time', { ascending: true });
@@ -335,7 +347,7 @@ function App() {
 
     useEffect(() => {
         const fetchOrders = async () => {
-            const { data, error } = await supabase.from('orders_delivery').select('*').eq('status', 'pendente');
+            const { data, error } = await supabase.from('orders_delivery').select('*').in('status', ['pendente', 'pronto']);
             if (error || !data) return;
             const declinedIds = JSON.parse(localStorage.getItem('Izi_declined') || '[]');
             setOrders(data.map((o: any) => ({ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type as ServiceType, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' })).filter((o: any) => !declinedIds.includes(o.realId)));
@@ -351,7 +363,7 @@ function App() {
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 const o = payload.new;
                 const declinedIds = JSON.parse(localStorage.getItem('Izi_declined') || '[]');
-                if (o.status !== 'pendente' || declinedIds.includes(o.id)) return;
+                if (!['pendente', 'pronto'].includes(o.status) || declinedIds.includes(o.id)) return;
                 playIziSound('driver');
                 if (Notification.permission === 'granted') new Notification('🚀 Nova Missão Izi!', { body: `Coleta: ${o.pickup_address}`, icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' });
                 setOrders(prev => [{ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev]);
@@ -368,12 +380,12 @@ function App() {
                     setActiveMission({ ...activeMission, status: 'pronto' });
                 }
 
-                if (o.status === 'pendente' && !declinedIds.includes(o.id)) {
+                if (['pendente', 'pronto'].includes(o.status) && !declinedIds.includes(o.id)) {
                     setOrders(prev => {
                         if (prev.find(x => x.realId === o.id)) return prev;
                         return [{ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev];
                     });
-                } else if (o.status !== 'pendente' && (!activeMission || o.id !== activeMission.id)) {
+                } else if (!['pendente', 'pronto'].includes(o.status) && (!activeMission || o.id !== activeMission.id)) {
                     setOrders(prev => prev.filter((order: any) => order.realId !== o.id));
                 }
             })
@@ -392,7 +404,7 @@ function App() {
         try {
             const targetId = order.realId || order.id;
             const { data: realOrder, error: findError } = await supabase.from('orders_delivery').select('id, status').eq('id', targetId).single();
-            if (findError || !realOrder || realOrder.status !== 'pendente') { toastError('Pedido indisponível ou já aceito.'); setOrders(prev => prev.filter((o: any) => o.id !== order.id)); return; }
+            if (findError || !realOrder || !['pendente', 'pronto'].includes(realOrder.status)) { toastError('Pedido indisponível ou já aceito.'); setOrders(prev => prev.filter((o: any) => o.id !== order.id)); return; }
             if (!driverId) { toastError('Sessão expirada. Faça login novamente.'); return; }
             const { error } = await supabase.from('orders_delivery').update({ status: 'a_caminho', driver_id: driverId }).eq('id', realOrder.id);
             if (error) { toastError('Erro ao aceitar corrida.'); return; }
@@ -635,7 +647,7 @@ function App() {
                 ) : (
                     <div className="space-y-3">
                         {scheduledOrders.map((order: any) => {
-                            const isPending = order.status === 'pendente' || order.status === 'novo' || order.status === 'agendado';
+                            const isPending = order.status === 'pendente' ||  order.status === 'agendado';
                             const isAccepted = order.driver_id === driverId;
                             const statusColor = isAccepted ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : isPending ? 'text-blue-400 bg-blue-400/10 border-blue-400/20' : 'text-white/40 bg-white/5 border-white/10';
                             const statusLabel = isAccepted ? 'Aceito por você' : isPending ? 'Disponível' : order.status;
@@ -834,7 +846,7 @@ function App() {
                     <p className="text-[10px] text-white/10 mt-1">Novos agendamentos aparecem aqui em tempo real</p>
                 </div>
             ) : scheduledOrders.map((order: any, i: number) => {
-                const isPending = order.status === 'pendente' || order.status === 'novo' || order.status === 'agendado';
+                const isPending = order.status === 'pendente' ||  order.status === 'agendado';
                 const isAccepted = order.driver_id === driverId;
                 const isMyAccepted = isAccepted;
                 const statusColor = isMyAccepted ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : isPending ? 'text-blue-400 bg-blue-400/10 border-blue-400/20' : 'text-white/40 bg-white/5 border-white/10';
