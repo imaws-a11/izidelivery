@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { BespokeIcons } from "./lib/BespokeIcons";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";

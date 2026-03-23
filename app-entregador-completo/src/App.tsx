@@ -130,6 +130,35 @@ function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [driverId, setDriverId] = useState<string | null>(null);
     const [driverCoords, setDriverCoords] = useState<{lat: number, lng: number} | null>(null);
+    const [driverName, setDriverName] = useState('Entregador');
+    const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+    const [authEmail, setAuthEmail] = useState('');
+    const [authPassword, setAuthPassword] = useState('');
+    const [authName, setAuthName] = useState('');
+    const [authVehicle, setAuthVehicle] = useState<'mototaxi' | 'carro' | 'bicicleta'>('mototaxi');
+    const [authPhone, setAuthPhone] = useState('');
+    const [authLoading, setAuthLoading] = useState(false);
+    const [authError, setAuthError] = useState('');
+    const [authInitLoading, setAuthInitLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<View>(() => {
+        const saved = localStorage.getItem('Izi_active_mission');
+        return saved ? 'active_mission' : 'dashboard';
+    });
+    const [isOnline, setIsOnline] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isSOSActive, setIsSOSActive] = useState(false);
+    const [isAccepting, setIsAccepting] = useState(false);
+    const [filter, setFilter] = useState<ServiceType | 'all'>('all');
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
+    const [scheduledOrders, setScheduledOrders] = useState<any[]>([]);
+    const [history, setHistory] = useState<Order[]>([]);
+    const [stats, setStats] = useState({ balance: 0, today: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
+
+    const [activeMission, setActiveMission] = useState<Order | null>(() => {
+        const saved = localStorage.getItem('Izi_active_mission');
+        return saved ? JSON.parse(saved) : null;
+    });
 
     // Sistema de Monitoramento de GPS em Tempo Real
     useEffect(() => {
@@ -148,17 +177,6 @@ function App() {
         
         return () => navigator.geolocation.clearWatch(watchId);
     }, [isAuthenticated, driverId, isOnline]);
-    const [driverName, setDriverName] = useState('Entregador');
-    const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-    const [authEmail, setAuthEmail] = useState('');
-    const [authPassword, setAuthPassword] = useState('');
-    const [authName, setAuthName] = useState('');
-    const [authVehicle, setAuthVehicle] = useState<'mototaxi' | 'carro' | 'bicicleta'>('mototaxi');
-    const [authPhone, setAuthPhone] = useState('');
-    const [authLoading, setAuthLoading] = useState(false);
-    const [authError, setAuthError] = useState('');
-    const [authInitLoading, setAuthInitLoading] = useState(true);
-
     useEffect(() => {
         const ensureDriverRecord = async (user: any) => {
             const { data } = await supabase.from('drivers_delivery').select('name').eq('id', user.id).maybeSingle();
@@ -204,26 +222,6 @@ function App() {
             setAuthError(e.message.includes('already registered') ? 'Este email já está cadastrado. Faça login.' : e.message);
         } finally { setAuthLoading(false); }
     };
-
-    const [activeTab, setActiveTab] = useState<View>(() => {
-        const saved = localStorage.getItem('Izi_active_mission');
-        return saved ? 'active_mission' : 'dashboard';
-    });
-    const [isOnline, setIsOnline] = useState(false);
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isSOSActive, setIsSOSActive] = useState(false);
-    const [isAccepting, setIsAccepting] = useState(false);
-    const [filter, setFilter] = useState<ServiceType | 'all'>('all');
-    const [orders, setOrders] = useState<Order[]>([]);
-    const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
-    const [scheduledOrders, setScheduledOrders] = useState<any[]>([]);
-    const [history, setHistory] = useState<Order[]>([]);
-    const [stats, setStats] = useState({ balance: 0, today: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
-
-    const [activeMission, setActiveMission] = useState<Order | null>(() => {
-        const saved = localStorage.getItem('Izi_active_mission');
-        return saved ? JSON.parse(saved) : null;
-    });
 
     useEffect(() => {
         if (activeMission) { localStorage.setItem('Izi_active_mission', JSON.stringify(activeMission)); }
