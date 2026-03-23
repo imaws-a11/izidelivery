@@ -1056,8 +1056,18 @@ function App() {
                         <div className="flex items-start gap-3"><div className="mt-1.5 size-2 rounded-full bg-primary shrink-0 shadow-[0_0_8px_rgba(255,217,0,0.5)]" /><div><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Destino Final</p><p className="text-xs font-black text-white leading-tight">{activeMission.destination}</p></div></div>
                     </div>
                     <div className="flex gap-3">
-                        <button onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activeMission.destination)}`, '_blank')} className="flex-1 h-14 bg-white/5 border border-white/10 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
-                            <Icon name="map" className="text-primary text-lg" />GPS Externo
+                        <button 
+                          onClick={() => {
+                            const isDelivering = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega';
+                            const target = isDelivering ? activeMission.destination : activeMission.origin;
+                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(target)}`, '_blank');
+                          }} 
+                          className="flex-1 h-16 bg-primary text-slate-900 font-black text-xs uppercase tracking-[0.15em] rounded-[24px] flex items-center justify-center gap-3 shadow-[0_12px_30px_rgba(255,215,9,0.3)] active:scale-95 transition-all border-b-4 border-yellow-600"
+                        >
+                            <Icon name="navigation" className="text-xl" />
+                            {activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega' 
+                              ? 'Navegar para Entrega' 
+                              : 'Navegar para Coleta'}
                         </button>
                         <button onClick={() => setIsSOSActive(true)} className="size-14 bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"><Icon name="emergency" className="text-xl" /></button>
                     </div>
