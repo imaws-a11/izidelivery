@@ -377,6 +377,18 @@ function App() {
   }, [fixedGridCenter, HEX_SIZE, hexToLatLng]);
 
   const [categoriesState, setCategoriesState] = useState<Category[]>([]);
+  const [showSegmentModal, setShowSegmentModal] = useState(false);
+  const [newSegmentName, setNewSegmentName] = useState('');
+  const [isSavingSegment, setIsSavingSegment] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showCategoryPromptModal, setShowCategoryPromptModal] = useState(false);
+  const [categoryPromptType, setCategoryPromptType] = useState<'category' | 'subcategory'>('category');
+  const [categoryPromptName, setCategoryPromptName] = useState('');
+  const [isSavingCategoryPrompt, setIsSavingCategoryPrompt] = useState(false);
+  const [productForm, setProductForm] = useState<any>({
+    name: '', description: '', price: '', category: '', sub_category: '', image_url: '', is_available: true
+  });
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [selectedCategoryStudio, setSelectedCategoryStudio] = useState<Category | null>(null);
   const [promotionsList, setPromotionsList] = useState<Promotion[]>([]);
   const [promoFilter, setPromoFilter] = useState<'all' | 'banner' | 'coupon' | 'active' | 'expired'>('all');
@@ -629,7 +641,7 @@ function App() {
         setSubscriptionOrdersPage(1);
         await fetchSubscriptionOrders(1);
       }
-      if (activeTab === 'categories') await fetchCategories();
+      if (activeTab === 'categories' || activeTab === 'merchants') await fetchCategories();
       if (activeTab === 'dynamic_rates') await fetchDynamicRates();
       if (activeTab === 'promotions' || activeTab === 'my_store') {
         await fetchPromotions();
@@ -1306,6 +1318,61 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     }
   };
 
+  const handleCepFetch = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) return;
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await response.json();
+      if (!data.erro) {
+         setEditingItem((prev: any) => ({
+           ...prev,
+           zip_code: cep,
+           store_address: data.logradouro,
+           neighborhood: data.bairro,
+           city: data.localidade,
+           state: data.uf
+         }));
+      }
+    } catch (error) {
+       console.error('Erro ao buscar CEP:', error);
+    }
+  };
+
+  const handleAddSegment = () => {
+    setNewSegmentName('');
+    setShowSegmentModal(true);
+  };
+
+  const handleSaveNewSegment = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newSegmentName.trim()) return;
+    setIsSavingSegment(true);
+    try {
+      // Slug simples para o store_type
+      const slug = newSegmentName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_');
+      
+      const { error } = await supabase.from('categories_delivery').insert({
+        name: newSegmentName,
+        type: 'service',
+        icon: 'storefront',
+        is_active: true
+      });
+      
+      if (error) throw error;
+      
+      await fetchCategories();
+      setEditingItem((prev: any) => ({ ...prev, store_type: slug }));
+      toastSuccess(`Segmento "${newSegmentName}" criado com sucesso!`);
+      setShowSegmentModal(false);
+    } catch (err: any) {
+      console.error('Add segment error:', err);
+      toastError('Erro ao adicionar segmento: ' + err.message);
+    } finally {
+      setIsSavingSegment(false);
+    }
+  };
+
   const fetchAppSettings = async () => {
     const { data } = await supabase.from('admin_settings_delivery').select('*').eq('id', '00000000-0000-0000-0000-000000000000' as any).single();
     if (data) {
@@ -1633,37 +1700,122 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
   // Removed duplicate handleUpdateCategory manually by replacing it with a comment
   // Duplicate at 568 removed.
 
-  const handleUpdateMyProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!session?.user?.email || !editingItem) return;
-    setIsSaving(true);
-    try {
-      const { data: adminData } = await supabase.from('admin_users').select('id').eq('email', session.user.email).single();
-      if (!adminData) {
-        toastError('Sessão inválida. Recarregue a página e tente novamente.');
-        return;
-      }
-      const productData = {
-        name: editingItem.name,
-        description: editingItem.description,
-        price: parseFloat(editingItem.price),
-        category: editingItem.category,
-        image_url: editingItem.image_url,
-        merchant_id: adminData.id,
-        is_available: editingItem.is_active ?? true
-      };
-      let res;
-      if (editingItem.id) res = await supabase.from('products_delivery').update(productData).eq('id', editingItem.id);
-      else res = await supabase.from('products_delivery').insert([productData]);
-      if (res.error) throw res.error;
-      toastSuccess(editingItem.id ? 'Produto atualizado!' : 'Produto criado!');
-      setEditingItem(null); setEditType(null); fetchProducts();
-      logAction(editingItem.id ? 'Update Product' : 'Create Product', 'Products', productData);
-    } catch (err: any) {
-      toastError('Erro: ' + err.message);
-    } finally {
-      setIsSaving(false);
+  const handleSaveProduct = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!productForm.name || !productForm.price) {
+      toastError('Preencha pelo menos Nome e Preço.');
+      return;
     }
+    setIsSavingProduct(true);
+    try {
+      let targetMerchantId = productForm.merchant_id;
+      if (!targetMerchantId) {
+        const { data: adminData } = await supabase.from('admin_users').select('id').eq('email', session?.user?.email).single();
+        if (!adminData) throw new Error('Sessão inválida');
+        targetMerchantId = adminData.id;
+      }
+
+      const dataToSave = {
+        name: productForm.name,
+        description: productForm.description,
+        price: parseFloat(productForm.price.toString().replace(',', '.')),
+        category: productForm.category,
+        sub_category: productForm.sub_category,
+        image_url: productForm.image_url,
+        merchant_id: targetMerchantId,
+        is_available: productForm.is_available,
+        featured: !!productForm.featured
+      };
+
+      let res;
+      if (productForm.id && !productForm.id.startsWith('new-')) {
+        res = await supabase.from('products_delivery').update(dataToSave).eq('id', productForm.id).select();
+      } else {
+        res = await supabase.from('products_delivery').insert([dataToSave]).select();
+      }
+
+      if (res.error) throw res.error;
+      toastSuccess(productForm.id && !productForm.id.startsWith('new-') ? 'Produto atualizado!' : 'Produto criado!');
+      setShowProductModal(false);
+      
+      if (userRole === 'admin' && selectedMerchantPreview) {
+         openMerchantPreview(selectedMerchantPreview);
+      } else {
+         fetchProducts();
+      }
+    } catch (err: any) {
+      console.error('Save product error:', err);
+      toastError('Erro ao salvar produto: ' + err.message);
+    } finally {
+      setIsSavingProduct(false);
+    }
+  };
+
+  const handleSaveCategoryPrompt = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!categoryPromptName.trim()) return;
+
+    let targetMerchantId = productForm.merchant_id;
+    if (!targetMerchantId) {
+      targetMerchantId = (userRole === 'admin' && selectedMerchantPreview) ? selectedMerchantPreview.id : session?.user?.email ? (await supabase.from('admin_users').select('id').eq('email', session?.user?.email).single()).data?.id : null;
+    }
+    if (!targetMerchantId) return toastError('ID do lojista não encontrado.');
+
+    setIsSavingCategoryPrompt(true);
+
+    let parent_id = null;
+    if (categoryPromptType === 'subcategory') {
+      const activeCategories = userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList;
+      const parent = activeCategories.find(c => c.name === productForm.category && !c.parent_id);
+      if (!parent) {
+        setIsSavingCategoryPrompt(false);
+        return toastError('Selecione uma categoria pai primeiro.');
+      }
+      parent_id = parent.id;
+    }
+
+    const { data, error } = await supabase.from('merchant_categories_delivery').insert([{
+      name: categoryPromptName.trim(),
+      parent_id,
+      merchant_id: targetMerchantId,
+      sort_order: 99,
+      is_active: true
+    }]).select().single();
+    
+    setIsSavingCategoryPrompt(false);
+    if (error) return toastError(`Erro ao criar ${categoryPromptType === 'subcategory' ? 'subcategoria' : 'categoria'}.`);
+    
+    toastSuccess(`${categoryPromptType === 'subcategory' ? 'Subcategoria' : 'Categoria'} criada!`);
+    
+    if (userRole === 'admin' && selectedMerchantPreview) {
+      setPreviewCategories([...previewCategories, data]);
+    } else {
+      setMenuCategoriesList([...menuCategoriesList, data]);
+    }
+    
+    if (categoryPromptType === 'subcategory') {
+      setProductForm({...productForm, sub_category: categoryPromptName.trim()});
+    } else {
+      setProductForm({...productForm, category: categoryPromptName.trim(), sub_category: ''});
+    }
+    
+    setShowCategoryPromptModal(false);
+  };
+
+  const handleCreateNewProduct = (forcedMerchantId?: string | React.MouseEvent) => {
+    const mId = typeof forcedMerchantId === 'string' ? forcedMerchantId : null;
+    setProductForm({
+      name: '',
+      description: '',
+      price: '',
+      category: menuCategoriesList[0]?.name || '',
+      sub_category: '',
+      image_url: '',
+      is_available: true,
+      featured: false,
+      merchant_id: mId
+    });
+    setShowProductModal(true);
   };
 
   const handleUpdateMenuCategory = async (cat: any) => {
@@ -1732,27 +1884,15 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     }
   };
 
-  const handleCreateNewProduct = async () => {
-    try {
-      const { data: adminData } = await supabase.from('admin_users').select('id').eq('email', session?.user?.email).single();
-      if (!adminData) return;
-
-      const newProduct = {
-          name: 'Novo Produto',
-          description: '',
-          price: 0,
-          category: menuCategoriesList[0]?.name || '',
-          merchant_id: adminData.id,
-          is_available: false
-      };
-
-      const { error } = await supabase.from('products_delivery').insert([newProduct]).select().single();
-      if (error) throw error;
-
-      fetchProducts();
-    } catch (err) {
-      console.error('Create product error:', err);
-    }
+  const handleEditProduct = (p: any, forcedMerchantId?: string) => {
+    setProductForm({
+      ...p,
+      price: p.price?.toString().replace('.', ',') || '',
+      is_available: p.is_available ?? p.is_active ?? true,
+      featured: !!p.featured,
+      merchant_id: p.merchant_id || (typeof forcedMerchantId === 'string' ? forcedMerchantId : null)
+    });
+    setShowProductModal(true);
   };
 
   const handleUpdatePromotion = async (e: React.FormEvent) => {
@@ -1810,6 +1950,12 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         commission_percent: editingItem.commission_percent || appSettings.appCommission,
         service_fee: editingItem.service_fee || appSettings.serviceFee,
         store_address: editingItem.store_address,
+        zip_code: editingItem.zip_code,
+        address_number: editingItem.address_number,
+        address_complement: editingItem.address_complement,
+        neighborhood: editingItem.neighborhood,
+        city: editingItem.city,
+        state: editingItem.state,
         document: editingItem.document,
         password: editingItem.password,
         updated_at: new Date().toISOString()
@@ -2529,7 +2675,12 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                              const file = e.target.files?.[0];
                              if (file) {
                                const url = await handleFileUpload(file, 'banners');
-                               if (url) updateItem({...targetItem, store_banner: url});
+                               if (url) {
+                                  updateItem({...targetItem, store_banner: url});
+                                  const { error } = await supabase.from('admin_users').update({ store_banner: url }).eq('id', targetItem.id);
+                                  if (!error) toastSuccess('Banner salvo com sucesso!');
+                                  else toastError('Erro ao salvar o banner: ' + error.message);
+                               }
                              }
                           }}
                         />
@@ -2549,7 +2700,12 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                              const file = e.target.files?.[0];
                              if (file) {
                                const url = await handleFileUpload(file, 'logos');
-                               if (url) updateItem({...targetItem, store_logo: url});
+                               if (url) {
+                                  updateItem({...targetItem, store_logo: url});
+                                  const { error } = await supabase.from('admin_users').update({ store_logo: url }).eq('id', targetItem.id);
+                                  if (!error) toastSuccess('Logotipo salvo com sucesso!');
+                                  else toastError('Erro ao salvar o logotipo: ' + error.message);
+                               }
                              }
                           }}
                         />
@@ -2583,6 +2739,26 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                          onChange={e => updateItem({...targetItem, store_description: e.target.value})}
                        />
                     </div>
+                  </div>
+
+                  <div className="flex justify-end pt-6">
+                     <button
+                       onClick={async () => {
+                          const { error } = await supabase.from('admin_users').update({
+                             store_name: targetItem.store_name,
+                             store_phone: targetItem.store_phone,
+                             store_description: targetItem.store_description,
+                             store_logo: targetItem.store_logo,
+                             store_banner: targetItem.store_banner
+                          }).eq('id', targetItem.id);
+                          if (!error) toastSuccess('Dados do estabelecimento salvos com sucesso!');
+                          else toastError('Erro ao salvar os dados: ' + error.message);
+                       }}
+                       className="bg-primary text-slate-900 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2"
+                     >
+                       <span className="material-symbols-outlined text-lg">save</span>
+                       Salvar Informações
+                     </button>
                   </div>
                 </section>
               </div>
@@ -2619,9 +2795,9 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                     <div className="flex items-center gap-3">
                        <button 
                          className="bg-primary text-slate-900 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2"
-                         onClick={userRole === 'merchant' ? handleCreateNewProduct : () => {
-                            const newP = { id: `new-${Date.now()}`, name: 'Novo Produto', price: '0.00', description: '', image_url: '', category: '', is_active: true, featured: false };
-                            setPreviewProducts([newP, ...previewProducts]);
+                         onClick={() => {
+                            const merchantId = userRole === 'merchant' ? merchantProfile?.merchant_id : selectedMerchantPreview?.id;
+                            handleCreateNewProduct(merchantId);
                          }}
                        >
                           <span className="material-symbols-outlined text-lg">add_circle</span>
@@ -2667,10 +2843,8 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                   key={p.id} 
                                   className="bg-white dark:bg-slate-800 p-4 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm flex gap-4 items-center group hover:border-primary/30 transition-all cursor-pointer relative overflow-hidden"
                                   onClick={() => {
-                                    if (userRole === 'merchant') {
-                                       setEditingItem(p);
-                                       setEditType('my_product');
-                                    }
+                                    const merchantId = userRole === 'merchant' ? merchantProfile?.merchant_id : selectedMerchantPreview?.id;
+                                    handleEditProduct(p, merchantId);
                                   }}
                                 >
                                   {p.featured && (
@@ -4816,7 +4990,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                             </td>
                             <td className="px-8 py-6">
                               <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{m.document || 'S/ DOCUMENTO'}</p>
-                              <p className="text-[10px] font-bold text-slate-400 truncate max-w-[150px]">{m.store_address || 'Endereço não informado'}</p>
+                              <p className="text-[10px] font-bold text-slate-400 truncate max-w-[150px]">{m.store_address ? `${m.store_address}${m.address_number ? `, ${m.address_number}` : ''}${m.city ? ` - ${m.city}` : ''}` : 'Endereço não informado'}</p>
                             </td>
                             <td className="px-8 py-6">
                               <div className="flex flex-col gap-1">
@@ -4855,13 +5029,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                     <span className="material-symbols-outlined text-lg">forum</span>
                                   </button>
                                 )}
-                                <button
-                                  onClick={() => openMerchantPreview(m)}
-                                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-primary hover:text-slate-900 transition-all shadow-sm"
-                                  title="Visão do Usuário"
-                                >
-                                  <span className="material-symbols-outlined text-lg">visibility</span>
-                                </button>
+
                                 <button
                                   onClick={() => {
                                     setEditingItem(m);
@@ -7804,9 +7972,9 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 text-slate-900">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setEditingItem(null)}></div>
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className={`w-full ${editType === 'merchant' ? 'max-w-3xl' : 'max-w-lg'} bg-white dark:bg-slate-950 rounded-[48px] p-10 shadow-2xl relative z-10 overflow-y-auto max-h-[90vh]`}
             >
               <div className="flex justify-between items-center mb-10">
                 <div>
@@ -7837,175 +8005,289 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
               } className="space-y-6">
 
                 {/* Common fields for User, Driver, Category */}
-                {(editType === 'user' || editType === 'driver' || editType === 'my_driver' || editType === 'category' || editType === 'promotion' || editType === 'merchant' || editType === 'my_product') && (
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">
-                        {editType === 'merchant' ? 'E-mail de Acesso (Login)' : 
-                         editType === 'my_product' ? 'Nome do Produto' : 'Nome / Título'}
-                      </label>
-                      <input
-                        type={editType === 'merchant' ? 'email' : 'text'}
-                        required
-                        value={editType === 'merchant' ? (editingItem.email || '') : (editingItem.name || editingItem.title || '')}
-                        onChange={e => {
-                          if (editType === 'merchant') setEditingItem({ ...editingItem, email: e.target.value });
-                          else setEditingItem({ ...editingItem, name: e.target.value, title: e.target.value });
-                        }}
-                        placeholder={editType === 'merchant' ? 'lojista@exemplo.com' : 
-                                     editType === 'my_product' ? 'Ex: Pizza Calabresa' : ''}
-                        className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      />
-                    </div>
-
-                    {editType === 'merchant' && (
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center ml-4">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Senha de Acesso</label>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
-                              let pass = "";
-                              for(let i=0; i<10; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
-                              setEditingItem({...editingItem, password: pass});
-                            }}
-                            className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
-                          >
-                            Gerar Aleatória
-                          </button>
-                        </div>
-                        <input
-                          type="text"
-                          value={editingItem.password || ''}
-                          onChange={e => setEditingItem({ ...editingItem, password: e.target.value })}
-                          placeholder="Nova senha para o lojista"
-                          className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {editType === 'merchant' && (
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Nome do Estabelecimento</label>
-                      <input
-                        type="text"
-                        required
-                        value={editingItem.store_name || ''}
-                        onChange={e => setEditingItem({ ...editingItem, store_name: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      />
+                  <div className="space-y-8">
+                    {/* Seção 1: Credenciais de Acesso */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="size-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                          <span className="material-symbols-outlined text-base">key</span>
+                        </div>
+                        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Acesso ao Painel</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">E-mail de Login</label>
+                          <input
+                            type="email"
+                            required
+                            value={editingItem.email || ''}
+                            onChange={e => setEditingItem({ ...editingItem, email: e.target.value })}
+                            placeholder="exemplo@lojista.com"
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center ml-4">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Senha</label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+                                let pass = "";
+                                for(let i=0; i<10; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+                                setEditingItem({...editingItem, password: pass});
+                              }}
+                              className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
+                            >
+                              Gerar Nova
+                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            value={editingItem.password || ''}
+                            onChange={e => setEditingItem({ ...editingItem, password: e.target.value })}
+                            placeholder="••••••••"
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Tipo de Estabelecimento</label>
-                      <select
-                        value={editingItem.store_type || 'restaurant'}
-                        onChange={e => setEditingItem({ ...editingItem, store_type: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      >
-                        <option value="restaurant">Restaurante / Lanchonete</option>
-                        <option value="pharmacy">Farmácia</option>
-                        <option value="market">Mercado / Hortifruti</option>
-                        <option value="beverages">Bebidas</option>
-                      </select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
+
+                    {/* Seção 2: Perfil da Loja */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="size-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                          <span className="material-symbols-outlined text-base">storefront</span>
+                        </div>
+                        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Perfil do Estabelecimento</h3>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1 md:col-span-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Nome Fantasia</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingItem.store_name || ''}
+                            onChange={e => setEditingItem({ ...editingItem, store_name: e.target.value })}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Segmento</label>
+                            <button 
+                              type="button" 
+                              onClick={handleAddSegment}
+                              className="text-[10px] font-black text-primary hover:text-primary/70 uppercase tracking-widest flex items-center gap-1 px-3 py-1 group transition-colors"
+                              title="Adicionar novo segmento ao sistema"
+                            >
+                              <span className="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">add_circle</span>
+                              Novo
+                            </button>
+                          </div>
+                          <div className="relative">
+                            <select
+                              value={editingItem.store_type || 'restaurant'}
+                              onChange={e => setEditingItem({ ...editingItem, store_type: e.target.value })}
+                              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all cursor-pointer appearance-none"
+                            >
+                              {/* Fallback caso a lista esteja vazia */}
+                              {categoriesState.filter(c => !c.parent_id && c.type === 'service').length === 0 && (
+                                <>
+                                  <option value="restaurant">Restaurante / Lanchonete</option>
+                                  <option value="pharmacy">Farmácia</option>
+                                  <option value="market">Mercado / Hortifruti</option>
+                                  <option value="beverages">Bebidas</option>
+                                  <option value="pet">Petshop</option>
+                                </>
+                              )}
+                              
+                              {/* Opções dinâmicas das categorias de serviço */}
+                              {categoriesState
+                                .filter(c => !c.parent_id && c.type === 'service')
+                                .map(c => {
+                                  const slug = c.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_');
+                                  return (
+                                    <option key={c.id} value={slug}>
+                                      {c.name}
+                                    </option>
+                                  );
+                                })}
+                            </select>
+                            <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                              <span className="material-symbols-outlined text-base">expand_more</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Documento (CPF/CNPJ)</label>
+                          <input
+                            type="text"
+                            value={editingItem.document || ''}
+                            onChange={e => setEditingItem({ ...editingItem, document: e.target.value })}
+                            placeholder="00.000.000/0001-00"
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Telefone Loja</label>
+                          <input
+                            type="text"
+                            value={editingItem.store_phone || ''}
+                            onChange={e => setEditingItem({ ...editingItem, store_phone: e.target.value })}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
+                          />
+                        </div>
+                      </div>
+
                       <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Telefone Loja</label>
-                        <input
-                          type="text"
-                          value={editingItem.store_phone || ''}
-                          onChange={e => setEditingItem({ ...editingItem, store_phone: e.target.value })}
-                          className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Descrição curta</label>
+                        <textarea
+                          value={editingItem.store_description || ''}
+                          onChange={e => setEditingItem({ ...editingItem, store_description: e.target.value })}
+                          placeholder="Fale um pouco sobre o estabelecimento..."
+                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all min-h-[80px]"
                         />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Logo do Estabelecimento</label>
-                        <div className="relative group">
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">CEP</label>
                           <input
-                            type="file"
-                            accept=".png,.jpg,.jpeg,.svg,.webp"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                setIsSaving(true);
-                                const url = await handleFileUpload(file, 'logos');
-                                if (url) setEditingItem({ ...editingItem, store_logo: url });
-                                setIsSaving(false);
-                              }
+                            type="text"
+                            value={editingItem.zip_code || ''}
+                            onChange={e => {
+                               const val = e.target.value;
+                               setEditingItem({ ...editingItem, zip_code: val });
+                               if (val.replace(/\D/g, '').length === 8) handleCepFetch(val);
                             }}
-                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                            placeholder="00000-000"
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
                           />
-                          <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-3xl px-6 py-4 font-bold text-sm flex items-center gap-3 group-hover:border-primary/50 transition-colors">
-                            <span className="material-symbols-outlined text-primary">cloud_upload</span>
-                            <span className="text-slate-400 truncate">
-                              {editingItem.store_logo ? 'Imagem Carregada ✓' : 'PNG, JPG, SVG, WebP'}
-                            </span>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Logradouro / Endereço</label>
+                          <input
+                            type="text"
+                            value={editingItem.store_address || ''}
+                            onChange={e => setEditingItem({ ...editingItem, store_address: e.target.value })}
+                            placeholder="Ex: Av. Brasil"
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Número</label>
+                          <input
+                            type="text"
+                            value={editingItem.address_number || ''}
+                            onChange={e => setEditingItem({ ...editingItem, address_number: e.target.value })}
+                            placeholder="123"
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Complemento</label>
+                          <input
+                            type="text"
+                            value={editingItem.address_complement || ''}
+                            onChange={e => setEditingItem({ ...editingItem, address_complement: e.target.value })}
+                            placeholder="Apt 101, Fundos..."
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Bairro</label>
+                          <input
+                            type="text"
+                            value={editingItem.neighborhood || ''}
+                            onChange={e => setEditingItem({ ...editingItem, neighborhood: e.target.value })}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Cidade</label>
+                          <input
+                            type="text"
+                            value={editingItem.city || ''}
+                            onChange={e => setEditingItem({ ...editingItem, city: e.target.value })}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Estado</label>
+                          <input
+                            type="text"
+                            value={editingItem.state || ''}
+                            onChange={e => setEditingItem({ ...editingItem, state: e.target.value.toUpperCase() })}
+                            maxLength={2}
+                            placeholder="UF"
+                            className="initial w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Identidade Visual (Logo)</label>
+                        <div className="flex items-center gap-6 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-[32px] border border-dashed border-slate-200 dark:border-slate-800">
+                          <div className="size-20 rounded-[24px] bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center overflow-hidden shrink-0 border border-slate-100 dark:border-slate-700">
+                            {editingItem.store_logo ? (
+                              <img src={editingItem.store_logo} className="size-full object-cover" />
+                            ) : (
+                              <span className="material-symbols-outlined text-slate-300 text-3xl">add_photo_alternate</span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                             <label className="cursor-pointer bg-white dark:bg-slate-800 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:shadow-md transition-all inline-block border border-slate-100 dark:border-slate-700">
+                               Trocar Logotipo
+                               <input 
+                                 type="file" 
+                                 className="hidden" 
+                                 accept="image/*"
+                                 onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    setIsSaving(true);
+                                    const url = await handleFileUpload(file, 'logos');
+                                    if (url) setEditingItem({ ...editingItem, store_logo: url });
+                                    setIsSaving(false);
+                                  }
+                                }} 
+                               />
+                             </label>
+                             <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Recomendado: Quadrado (512x512)</p>
                           </div>
                         </div>
                       </div>
                     </div>
+
+                  </div>
+                )}
+
+                {(editType === 'user' || editType === 'driver' || editType === 'my_driver' || editType === 'category' || editType === 'promotion' || editType === 'my_product') && (
+                  <div className="space-y-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Descrição da Loja</label>
-                      <textarea
-                        value={editingItem.store_description || ''}
-                        onChange={e => setEditingItem({ ...editingItem, store_description: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[80px]"
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">
+                        {editType === 'my_product' ? 'Nome do Produto' : 'Nome / Título'}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={editingItem.name || editingItem.title || ''}
+                        onChange={e => setEditingItem({ ...editingItem, name: e.target.value, title: e.target.value })}
+                        placeholder={editType === 'my_product' ? 'Ex: Pizza Calabresa' : ''}
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                       />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Documento (CPF/CNPJ)</label>
-                        <input
-                          type="text"
-                          value={editingItem.document || ''}
-                          onChange={e => setEditingItem({ ...editingItem, document: e.target.value })}
-                          placeholder="00.000.000/0001-00"
-                          className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Endereço Completo</label>
-                        <input
-                          type="text"
-                          value={editingItem.store_address || ''}
-                          onChange={e => setEditingItem({ ...editingItem, store_address: e.target.value })}
-                          placeholder="Rua, Número, Bairro, Cidade"
-                          className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1 border-t border-slate-50 pt-4">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-emerald-500 ml-4">Comissão Personalizada (%)</label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            value={editingItem.commission_percent ?? appSettings.appCommission}
-                            onChange={e => setEditingItem({ ...editingItem, commission_percent: parseFloat(e.target.value) })}
-                            className="w-full bg-emerald-50/30 border border-emerald-100 rounded-3xl px-6 py-4 font-black text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                          />
-                          <span className="absolute right-6 top-1/2 -translate-y-1/2 text-emerald-500 font-black">%</span>
-                        </div>
-                      </div>
-                      <div className="space-y-1 border-t border-slate-50 pt-4">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-emerald-500 ml-4">Taxa de Serviço (R$)</label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={editingItem.service_fee ?? appSettings.serviceFee}
-                            onChange={e => setEditingItem({ ...editingItem, service_fee: parseFloat(e.target.value) })}
-                            className="w-full bg-emerald-50/30 border border-emerald-100 rounded-3xl px-6 py-4 font-black text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                          />
-                          <span className="absolute left-6 top-1/2 -translate-y-1/2 text-emerald-500 font-black">R$</span>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 )}
@@ -8022,7 +8304,6 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                     />
                   </div>
                 )}
-
                 {(editType === 'driver' || editType === 'my_driver') && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
@@ -8340,6 +8621,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   </div>
                 )}
 
+                {editType !== 'merchant' && (
                 <div className="flex items-center gap-4 p-6 bg-slate-50 rounded-[32px] border border-slate-100">
                   <div className="flex-1">
                     <p className="text-sm font-black text-slate-900">
@@ -8357,6 +8639,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                     <div className={`absolute top-1 w-8 h-8 bg-white rounded-full shadow-md transition-all ${editingItem.is_active ? 'left-7' : 'left-1'}`}></div>
                   </button>
                 </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4 mt-8">
                   {editType === 'my_product' && editingItem && editingItem.id ? (
@@ -9947,6 +10230,399 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Toque para abrir a tela de pedidos</p>
                 </div>
               </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Modal Novo Segmento (Stealth Luxury All Black Yellow) */}
+          <AnimatePresence>
+            {showSegmentModal && (
+              <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowSegmentModal(false)}
+                  className="absolute inset-0 bg-black/80 backdrop-blur-xl"
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                  className="relative w-full max-w-md bg-slate-950 border border-yellow-500/10 rounded-[32px] overflow-hidden shadow-[0_32px_120px_-20px_rgba(234,179,8,0.1)] p-8"
+                >
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+                        <span className="material-symbols-outlined text-xl">category</span>
+                      </div>
+                      <h2 className="text-xl font-black text-white uppercase tracking-wider">Novo Segmento</h2>
+                    </div>
+                    <button 
+                      onClick={() => setShowSegmentModal(false)}
+                      className="size-10 flex items-center justify-center rounded-full bg-slate-900 text-slate-400 hover:text-white transition-colors"
+                    >
+                      <span className="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveNewSegment} className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Nome do Segmento</label>
+                      <input
+                        type="text"
+                        autoFocus
+                        value={newSegmentName}
+                        onChange={e => setNewSegmentName(e.target.value)}
+                        placeholder="Ex: Sushibar, Barbearia..."
+                        className="w-full bg-black border border-slate-800 rounded-2xl px-6 py-4 font-bold text-white placeholder:text-slate-600 focus:outline-none focus:border-yellow-500/50 transition-all"
+                      />
+                    </div>
+
+                    <p className="text-[10px] text-slate-500 font-medium px-4 leading-relaxed uppercase tracking-widest text-center">
+                      O novo segmento será adicionado à base global e poderá ser selecionado em todos os novos cadastros.
+                    </p>
+
+                    <button
+                      type="submit"
+                      disabled={isSavingSegment || !newSegmentName.trim()}
+                      className="w-full py-5 bg-yellow-400 hover:bg-yellow-300 disabled:bg-slate-800 disabled:text-slate-500 text-black rounded-2xl font-black uppercase tracking-[2px] transition-all flex items-center justify-center gap-2 group"
+                    >
+                      {isSavingSegment ? (
+                        <div className="size-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          Salvar Segmento
+                          <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Modal Novo/Editar Produto (Allblack Design) */}
+          <AnimatePresence>
+            {showProductModal && (
+              <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowProductModal(false)}
+                  className="absolute inset-0 bg-black/90 backdrop-blur-2xl"
+                />
+                
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 30 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 30 }}
+                  className="relative w-full max-w-2xl bg-[#000000] border border-yellow-500/10 rounded-[48px] overflow-hidden shadow-[0_32px_120px_-20px_rgba(234,179,8,0.15)] flex flex-col max-h-[90vh]"
+                >
+                  {/* Header */}
+                  <div className="p-8 pb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="size-12 rounded-[22px] bg-yellow-400 flex items-center justify-center text-black">
+                        <span className="material-symbols-outlined text-2xl font-black">inventory_2</span>
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-black text-white uppercase tracking-tight">{productForm.id && !productForm.id.startsWith('new-') ? 'Editar Produto' : 'Novo Produto'}</h2>
+                        <p className="text-[10px] font-black text-yellow-500/60 uppercase tracking-[0.2em] mt-0.5">Gestão de Inventário Premium</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setShowProductModal(false)}
+                      className="size-12 flex items-center justify-center rounded-full bg-white/5 text-slate-400 hover:text-white transition-all hover:rotate-90"
+                    >
+                      <span className="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
+
+                  {/* Scrollable Form */}
+                  <div className="flex-1 overflow-y-auto p-8 pt-0 custom-scrollbar">
+                    <form id="productForm" onSubmit={handleSaveProduct} className="space-y-8 mt-4">
+                      
+                      {/* Upload Section */}
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-4">Visual do Produto</p>
+                        <div className="relative group/upload h-48 rounded-[38px] bg-white/5 border border-dashed border-white/10 flex flex-col items-center justify-center gap-4 hover:border-yellow-400/40 transition-all overflow-hidden">
+                          {productForm.image_url ? (
+                            <>
+                              <img src={productForm.image_url} className="absolute inset-0 size-full object-cover opacity-40 group-hover/upload:opacity-60 transition-opacity" />
+                              <div className="relative z-10 size-16 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/10 shadow-xl group-hover/upload:scale-110 transition-transform">
+                                <span className="material-symbols-outlined text-2xl">add_photo_alternate</span>
+                              </div>
+                              <p className="relative z-10 text-[10px] font-black text-white uppercase tracking-widest bg-black/60 px-4 py-2 rounded-full backdrop-blur-sm border border-white/5">Alterar Imagem</p>
+                            </>
+                          ) : (
+                            <>
+                              <div className="size-16 rounded-[24px] bg-yellow-400/10 flex items-center justify-center text-yellow-400 border border-yellow-400/20 group-hover/upload:scale-110 transition-transform">
+                                <span className="material-symbols-outlined text-3xl">add_photo_alternate</span>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-[10px] font-black text-white uppercase tracking-widest leading-loose">Solte a imagem aqui ou <span className="text-yellow-400 underline underline-offset-4">escolha o arquivo</span></p>
+                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Sugerido: 800x800px (Máx 5MB)</p>
+                              </div>
+                            </>
+                          )}
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                setIsSavingProduct(true);
+                                const url = await handleFileUpload(file, 'products');
+                                if (url) setProductForm({ ...productForm, image_url: url });
+                                setIsSavingProduct(false);
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Nome do Produto</label>
+                          <input
+                            type="text"
+                            required
+                            value={productForm.name}
+                            onChange={e => setProductForm({ ...productForm, name: e.target.value })}
+                            placeholder="Ex: Coca-Cola 350ml, X-Burguer Duplo..."
+                            className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Preço (R$)</label>
+                          <input
+                            type="text"
+                            required
+                            value={productForm.price}
+                            onChange={e => setProductForm({ ...productForm, price: e.target.value })}
+                            placeholder="0,00"
+                            className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4 flex justify-between items-center pr-2">
+                            <span>Categoria</span>
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                setCategoryPromptType('category');
+                                setCategoryPromptName('');
+                                setShowCategoryPromptModal(true);
+                              }}
+                              className="text-yellow-400 hover:text-white flex items-center gap-1 transition-colors normal-case tracking-normal"
+                            >
+                              <span className="material-symbols-outlined text-[12px]">add</span> Adicionar categoria
+                            </button>
+                          </label>
+                          <div className="relative">
+                            <select
+                              required
+                              value={productForm.category}
+                              onChange={e => setProductForm({ ...productForm, category: e.target.value, sub_category: '' })}
+                              className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all appearance-none cursor-pointer"
+                            >
+                               <option value="" disabled>Selecione</option>
+                               {(userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList).filter(c => !c.parent_id).map(cat => (
+                                 <option key={cat.id} value={cat.name}>{cat.name}</option>
+                               ))}
+                            </select>
+                            <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">expand_more</span>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4 flex justify-between items-center pr-2">
+                            <span>Subcategoria</span>
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                const activeCategories = userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList;
+                                const parent = activeCategories.find(c => c.name === productForm.category && !c.parent_id);
+                                if (!parent) return toastError('Selecione uma categoria pai primeiro.');
+                                
+                                setCategoryPromptType('subcategory');
+                                setCategoryPromptName('');
+                                setShowCategoryPromptModal(true);
+                              }}
+                              className="text-yellow-400 hover:text-white flex items-center gap-1 transition-colors normal-case tracking-normal"
+                            >
+                              <span className="material-symbols-outlined text-[12px]">add</span> Adicionar subcategoria
+                            </button>
+                          </label>
+                          <div className="relative">
+                            <select
+                              value={productForm.sub_category}
+                              onChange={e => setProductForm({ ...productForm, sub_category: e.target.value })}
+                              className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all appearance-none cursor-pointer"
+                            >
+                               <option value="">Nenhuma</option>
+                               {(userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList).filter(c => c.parent_id && c.parent_id === (userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList).find(parent => parent.name === productForm.category)?.id).map(sub => (
+                                 <option key={sub.id} value={sub.name}>{sub.name}</option>
+                               ))}
+                            </select>
+                            <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">expand_more</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Disponibilidade</label>
+                          <button
+                            type="button"
+                            onClick={() => setProductForm({ ...productForm, is_available: !productForm.is_available })}
+                            className={`w-full h-[58px] rounded-2xl border transition-all flex items-center px-6 gap-3 ${productForm.is_available ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' : 'bg-rose-500/10 border-rose-500/30 text-rose-500'}`}
+                          >
+                             <span className="material-symbols-outlined">{productForm.is_available ? 'check_circle' : 'cancel'}</span>
+                             <span className="text-[10px] font-black uppercase tracking-widest">{productForm.is_available ? 'Item Disponível' : 'Item Indisponível'}</span>
+                          </button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Promoções e Destaques</label>
+                          <button
+                            type="button"
+                            onClick={() => setProductForm({ ...productForm, featured: !productForm.featured })}
+                            className={`w-full h-[58px] rounded-2xl border transition-all flex items-center px-6 gap-3 ${productForm.featured ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-[#0a0a0a] border-white/10 text-slate-600'}`}
+                          >
+                             <span className="material-symbols-outlined">{productForm.featured ? 'star' : 'star_border'}</span>
+                             <span className="text-[10px] font-black uppercase tracking-widest">{productForm.featured ? 'Produto em Destaque/Oferta' : 'Produto Normal'}</span>
+                          </button>
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Descrição</label>
+                          <textarea
+                            value={productForm.description}
+                            onChange={e => setProductForm({ ...productForm, description: e.target.value })}
+                            placeholder="Ingredientes, peso, tamanho..."
+                            className="w-full bg-[#0a0a0a] border border-white/10 rounded-3xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all min-h-[120px] resize-none"
+                          />
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="p-8 bg-black/50 backdrop-blur-xl border-t border-white/10 flex items-center justify-between gap-4">
+                    <div className="hidden sm:block">
+                       <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Padrão de Qualidade • Izi Delivery Systems</p>
+                    </div>
+                    <div className="flex-1 sm:flex-initial flex items-center gap-3">
+                       <button
+                         type="button"
+                         onClick={() => setShowProductModal(false)}
+                         className="flex-1 sm:flex-initial px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                       >
+                         Cancelar
+                       </button>
+                       <button
+                         form="productForm"
+                         type="submit"
+                         disabled={isSavingProduct}
+                         className="flex-1 sm:flex-initial px-10 py-4 bg-yellow-400 hover:bg-yellow-300 disabled:bg-slate-800 disabled:text-slate-500 text-black rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-yellow-400/20 active:scale-95 flex items-center justify-center gap-2"
+                       >
+                         {isSavingProduct ? (
+                           <div className="size-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                         ) : (
+                           <>
+                             {productForm.id && !productForm.id.startsWith('new-') ? 'Salvar Alterações' : 'Criar Produto'}
+                             <span className="material-symbols-outlined text-lg">check_circle</span>
+                           </>
+                         )}
+                       </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Modal Nova Categoria/Subcategoria (Allblack Design) */}
+          <AnimatePresence>
+            {showCategoryPromptModal && (
+              <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                  onClick={() => !isSavingCategoryPrompt && setShowCategoryPromptModal(false)}
+                />
+
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                  className="relative w-full max-w-md bg-[#000000] border border-yellow-500/10 rounded-[32px] overflow-hidden shadow-[0_32px_120px_-20px_rgba(234,179,8,0.15)]"
+                >
+                  <div className="p-8 pb-6 border-b border-white/10 flex justify-between items-center">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500 mb-1">
+                        Izi Delivery Forms
+                      </p>
+                      <h2 className="text-2xl font-black text-white uppercase tracking-tight">
+                        {categoryPromptType === 'subcategory' ? 'Nova Subcategoria' : 'Nova Categoria'}
+                      </h2>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => !isSavingCategoryPrompt && setShowCategoryPromptModal(false)}
+                      className="size-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                    >
+                      <span className="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveCategoryPrompt} className="p-8 space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">
+                        Nome da {categoryPromptType === 'subcategory' ? 'Subcategoria' : 'Categoria'}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        value={categoryPromptName}
+                        onChange={e => setCategoryPromptName(e.target.value)}
+                        placeholder={categoryPromptType === 'subcategory' ? "Ex: Refrigerantes, Tradicionais..." : "Ex: Bebidas, Hambúrgueres..."}
+                        className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowCategoryPromptModal(false)}
+                        className="flex-1 px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSavingCategoryPrompt}
+                        className="flex-1 px-8 py-4 bg-yellow-400 hover:bg-yellow-300 disabled:bg-slate-800 disabled:text-slate-500 text-black rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-yellow-400/20 active:scale-95 flex items-center justify-center gap-2"
+                      >
+                        {isSavingCategoryPrompt ? (
+                          <div className="size-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            Salvar
+                            <span className="material-symbols-outlined text-lg">check_circle</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              </div>
             )}
           </AnimatePresence>
 
