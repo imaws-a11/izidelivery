@@ -3929,209 +3929,226 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
 
 {/* â â â â â â â MERCHANT ORDERS â â â â â â â */}
 {/* ─── MERCHANT ORDERS ─── */}
-            {activeTab === 'orders' && userRole === 'merchant' && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                  <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="material-symbols-outlined text-3xl text-primary">shopping_cart</span>
-                      <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Gestão de Pedidos</h1>
+                        {activeTab === 'orders' && userRole === 'merchant' && (
+              <div className="space-y-10 p-2 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                {/* Cabeçalho da Gestão de Pedidos Premium */}
+                <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-[40px] p-10 text-white relative overflow-hidden ring-1 ring-white/10 shadow-3xl shadow-slate-900/40">
+                    <div className="absolute top-0 right-0 p-8 opacity-10"><span className="material-symbols-outlined text-[140px] -rotate-12 select-none">shopping_cart</span></div>
+                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div className="text-center md:text-left">
+                            <h2 className="text-4xl font-black tracking-tight mb-2">Central de Pedidos</h2>
+                            <p className="text-white/60 text-sm font-bold max-w-md italic leading-relaxed">Gerencie suas vendas, acompanhe a coleta do Flash e mantenha o cliente informado em tempo real.</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-6 py-3 rounded-2xl flex items-center gap-3">
+                                <span className="size-2.5 bg-emerald-400 rounded-full animate-ping" />
+                                <span className="text-xs font-black uppercase tracking-[0.2em]">Fluxo em Tempo Real</span>
+                            </div>
+                        </div>
                     </div>
-                    <p className="text-slate-500 dark:text-slate-400">Gerencie e aceite pedidos em tempo real para seu estabelecimento.</p>
-                  </div>
-                  <span className="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-rose-600 shadow-sm">
-                    <span className="size-2 rounded-full bg-rose-500 animate-ping"></span>
-                    {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'novo' || o.status === 'pending' || o.status === 'waiting_merchant')).length} NOVOS PEDIDOS
-                  </span>
                 </div>
 
-                {/* SEÇÃO: NOVOS PEDIDOS (AGUARDANDO AÇÃO) */}
-                {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'novo' || o.status === 'pending' || o.status === 'waiting_merchant')).length > 0 && (
-                  <div className="space-y-6">
-                    <h3 className="text-sm font-black text-orange-500 uppercase tracking-widest flex items-center gap-2">
-                      <span className="material-symbols-outlined text-lg animate-bounce">notifications_active</span>
-                      Solicitações Pendentes
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'novo' || o.status === 'pending' || o.status === 'waiting_merchant')).map((o: any) => (
-                        <motion.div key={o.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-slate-900 overflow-hidden rounded-[32px] border-2 border-orange-100 dark:border-orange-500/20 shadow-xl shadow-orange-500/5">
-                          <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-4 flex justify-between items-center">
-                            <span className="text-white text-[10px] font-black uppercase tracking-widest">DT-{o.id.slice(0, 8).toUpperCase()}</span>
-                            <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em]">{o.payment_method === 'dinheiro' ? 'PAGAMENTO NA ENTREGA' : 'PAGAMENTO DIGITAL'}</span>
-                          </div>
-                          
-                          <div className="p-6 space-y-5">
-                            <div className="flex justify-between items-start border-b border-slate-50 dark:border-slate-800 pb-4">
-                              <div>
-                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Itens do Pedido</h4>
-                                <p className="text-sm font-black text-slate-900 dark:text-white line-clamp-2 leading-relaxed">
-                                  {o.package_details || 'Nenhum detalhe informado'}
-                                </p>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total</p>
-                                <p className="text-xl font-black text-orange-500 tracking-tighter">R$ {Number(o.total_price || 0).toFixed(2).replace('.', ',')}</p>
-                              </div>
-                            </div>
-
-                            <div className="space-y-3">
-                              <div className="flex items-start gap-3">
-                                <span className="material-symbols-outlined text-slate-300 text-lg">location_on</span>
-                                <div>
-                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Endereço de Entrega</p>
-                                  <p className="text-xs font-bold text-slate-600 dark:text-slate-400 italic">{o.delivery_address}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className="material-symbols-outlined text-slate-300 text-lg">schedule</span>
-                                <p className="text-xs font-bold text-slate-600 dark:text-slate-400">{new Date(o.created_at).toLocaleString('pt-BR')}</p>
-                              </div>
-                            </div>
-
-                            <div className="flex gap-4 pt-2">
-                              <button 
-                                onClick={async () => { 
-                                  if (!confirm('Deseja realmente recusar este pedido?')) return;
-                                  try { 
-                                    await supabase.from('orders_delivery').update({ status: 'cancelado' }).eq('id', o.id); 
-                                    fetchAllOrders(); 
-                                    toastWarning('Pedido recusado');
-                                  } catch(err) { console.error(err); } 
-                                }} 
-                                className="flex-1 py-4 rounded-2xl border-2 border-red-50 dark:border-red-500/10 text-red-500 font-black text-[10px] uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-500/5 transition-all outline-none"
-                              >
-                                Recusar
-                              </button>
-                              <button 
-                                onClick={async () => { try { 
-                                  // Ao aceitar, já deixa em status pendente para o Flash (motoboy) ver na hora
-                                  await supabase.from('orders_delivery').update({ status: 'pendente' }).eq('id', o.id); 
-                                  fetchAllOrders(); 
-                                  toastSuccess('Pedido Aceito! Motoboy Flash em busca...');
-                                } catch(err) { console.error(err); } }} 
-                                className="flex-[2] py-4 rounded-full bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest hover:shadow-lg hover:shadow-emerald-500/30 transition-all outline-none"
-                              >
-                                Aceitar e Chamar Flash ⚡
-                              </button>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && ['pendente', 'preparando', 'confirmado', 'picked_up', 'em_rota', 'a_caminho'].includes(o.status)).length > 0 && (
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-black text-blue-500 uppercase tracking-widest flex items-center gap-2"><span className="material-symbols-outlined text-lg">local_shipping</span>Em andamento</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && ['pendente', 'preparando', 'confirmado', 'picked_up', 'em_rota', 'a_caminho'].includes(o.status)).map((o: any) => (
-                        <div key={o.id} className="bg-white dark:bg-slate-900 p-5 rounded-[28px] border border-slate-200 dark:border-slate-800 shadow-sm">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex flex-col">
-                              <p className="text-[10px] font-black text-slate-400">#{o.id.slice(0, 8).toUpperCase()}</p>
-                              <p className="text-xs font-black text-slate-900 dark:text-white uppercase">Flash Em Rota</p>
-                            </div>
-                            <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 text-[9px] font-black uppercase tracking-widest">{o.status === 'pendente' ? 'Em Preparo/Flash' : o.status === 'picked_up' ? 'Pedido Coletado' : 'Em Rota'}</span>
-                          </div>
-                          
-                          <div className="flex items-center justify-between mt-3">
-                            <span className="text-sm font-black text-primary">R$ {o.total_price?.toFixed(2).replace('.', ',')}</span>
-                            {o.status === 'pendente' && (
-                              <button 
-                                onClick={async () => { try { await supabase.from('orders_delivery').update({ status: 'pronto' }).eq('id', o.id); fetchAllOrders(); toastSuccess('Pedido pronto! Flash notificado!'); } catch(err) { console.error(err); } }} 
-                                className="px-6 py-2 rounded-2xl bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20"
-                              >
-                                Marcar Pronto ⚡
-                              </button>
-                            )}
-                          </div>
+                <div className="space-y-12">
+                    
+                    {/* ⚡ SOLICITAÇÕES PENDENTES (AÇÃO IMEDIATA) */}
+                    <div className="space-y-8">
+                        <div className="flex items-center justify-between px-4">
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-4">
+                                <span className="size-10 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/30">
+                                    <span className="material-symbols-outlined text-lg animate-bounce">priority_high</span>
+                                </span>
+                                Pedidos Aguardando Aceite
+                            </h3>
+                            <span className="text-[10px] font-black text-orange-500 bg-orange-500/10 px-4 py-2 rounded-full border border-orange-500/20">
+                                {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'novo' || o.status === 'pending' || o.status === 'waiting_merchant')).length} Pendentes
+                            </span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
-                <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                  <div className="p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/20">
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-3"><span className="material-symbols-outlined text-slate-400">history</span>Histórico Completo</h3>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead className="bg-slate-50 dark:bg-slate-800/50">
-                        <tr>
-                          <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Pedido</th>
-                          <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Destino</th>
-                          <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Valor</th>
-                          <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
-                          <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Data</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {allOrders.map((o: any) => (
-                          <tr key={o.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                            <td className="px-8 py-5 font-bold text-slate-400 text-sm">#DT-{o.id.slice(0, 8).toUpperCase()}</td>
-                            <td className="px-8 py-5 font-black text-slate-900 dark:text-white truncate max-w-[250px]">{o.delivery_address}</td>
-                            <td className="px-8 py-5 font-black text-primary">R$ {o.total_price?.toFixed(2).replace('.', ',')}</td>
-                            <td className="px-8 py-5">
-                              <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${o.status === 'concluido' ? 'bg-green-100 text-green-600 border border-green-200' : o.status === 'cancelado' ? 'bg-red-100 text-red-600 border border-red-200' : o.status === 'preparando' ? 'bg-blue-100 text-blue-600 border border-blue-200' : 'bg-primary/20 text-slate-800 dark:text-primary border border-primary/30'}`}>
-                                {o.status === 'pending' ? 'Novo' : o.status === 'preparando' ? 'Preparando' : o.status === 'picked_up' ? 'Coletado' : o.status === 'em_rota' ? 'Em Rota' : o.status}
-                              </span>
-                            </td>
-                            <td className="px-8 py-5 font-bold text-slate-500 text-xs">{new Date(o.created_at).toLocaleString('pt-BR')}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {allOrders.length === 0 && (
-                      <div className="px-8 py-16 text-center"><span className="material-symbols-outlined text-5xl text-slate-300 mb-4">inbox</span><p className="text-sm font-black text-slate-400">Nenhum pedido encontrado</p></div>
-                    )}
-                  </div>
-                  {/* Paginação lojista */}
-                  {merchantOrdersTotalCount > ORDERS_PER_PAGE && (
-                    <div className="px-8 py-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/30">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                        Exibindo {((merchantOrdersPage - 1) * ORDERS_PER_PAGE) + 1}–{Math.min(merchantOrdersPage * ORDERS_PER_PAGE, merchantOrdersTotalCount)} de {merchantOrdersTotalCount} pedidos
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <button
-                          disabled={merchantOrdersPage <= 1 || isLoadingList}
-                          onClick={() => fetchAllOrders(merchantOrdersPage - 1)}
-                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          <span className="material-symbols-outlined">chevron_left</span>
-                        </button>
-                        {Array.from({ length: Math.min(5, Math.ceil(merchantOrdersTotalCount / ORDERS_PER_PAGE)) }, (_, i) => {
-                          const totalPages = Math.ceil(merchantOrdersTotalCount / ORDERS_PER_PAGE);
-                          let pageNum: number;
-                          if (totalPages <= 5) pageNum = i + 1;
-                          else if (merchantOrdersPage <= 3) pageNum = i + 1;
-                          else if (merchantOrdersPage >= totalPages - 2) pageNum = totalPages - 4 + i;
-                          else pageNum = merchantOrdersPage - 2 + i;
-                          return (
-                            <button
-                              key={pageNum}
-                              onClick={() => fetchAllOrders(pageNum)}
-                              className={`w-10 h-10 flex items-center justify-center rounded-xl font-black text-xs transition-all ${merchantOrdersPage === pageNum ? 'bg-primary text-slate-900 shadow-lg shadow-primary/20' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary hover:border-primary/30'}`}
-                            >
-                              {pageNum}
-                            </button>
-                          );
-                        })}
-                        <button
-                          disabled={merchantOrdersPage >= Math.ceil(merchantOrdersTotalCount / ORDERS_PER_PAGE) || isLoadingList}
-                          onClick={() => fetchAllOrders(merchantOrdersPage + 1)}
-                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          <span className="material-symbols-outlined">chevron_right</span>
-                        </button>
-                      </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'novo' || o.status === 'pending' || o.status === 'waiting_merchant')).map((o: any) => (
+                                <motion.div key={o.id} whileHover={{ y: -5 }} className="bg-white dark:bg-slate-900 rounded-[44px] shadow-2xl shadow-black/5 border border-slate-100 dark:border-white/5 overflow-hidden flex flex-col">
+                                    <div className="bg-gradient-to-r from-orange-500/10 to-transparent p-8 flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="size-14 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-black text-sm">#{o.id.slice(-4).toUpperCase()}</div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">SÉRIE PEDIDO</p>
+                                                <p className="text-sm font-black text-slate-900 dark:text-white">DT-{o.id.slice(0, 8).toUpperCase()}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-2xl font-black text-orange-500 tracking-tighter">R$ {Number(o.total_price || 0).toFixed(2).replace('.', ',')}</p>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase">{o.payment_method === 'dinheiro' ? 'Dinheiro na Entrega' : 'Pagamento Online'}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-8 space-y-6 flex-1">
+                                        <div className="space-y-4">
+                                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">📋 Especificações do Pedido</h4>
+                                            <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-[32px] ring-1 ring-inset ring-slate-100 dark:ring-white/10">
+                                                <p className="text-sm font-bold text-slate-900 dark:text-white leading-relaxed">{o.package_details || 'Produto do Catálogo Izi'}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">📍 Informações de Entrega</h4>
+                                            <div className="flex items-start gap-4 p-2">
+                                                <span className="material-symbols-outlined text-slate-300">location_on</span>
+                                                <p className="text-xs font-bold text-slate-600 dark:text-slate-400 italic leading-relaxed">{o.delivery_address}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-8 pt-0 flex flex-col md:flex-row gap-4">
+                                        <button 
+                                            onClick={() => { const phone = (o as any).customer_phone || (o as any).user_phone || merchantProfile?.store_phone; if(phone) window.open(`https://wa.me/55${phone.replace(/\D/g, '')}`, '_blank'); else toastError('Telefone não disponível'); }}
+                                            className="w-full md:w-fit h-14 px-8 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-[24px] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-emerald-500/20 transition-all outline-none"
+                                        >
+                                            <span className="material-symbols-outlined text-xl">chat</span> Contato
+                                        </button>
+                                        <button 
+                                            onClick={async () => { if(confirm('Cancelar fornecimento?')) { await supabase.from('orders_delivery').update({ status: 'cancelado' }).eq('id', o.id); fetchAllOrders(); toastWarning('Pedido Cancelado'); } }}
+                                            className="w-full md:w-32 h-14 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-all outline-none"
+                                        >
+                                            Recusar
+                                        </button>
+                                        <button 
+                                            onClick={async () => { try { await supabase.from('orders_delivery').update({ status: 'pendente' }).eq('id', o.id); fetchAllOrders(); toastSuccess('Pedido Aceito! Buscando Flash...'); } catch(err) { console.error(err); } }}
+                                            className="flex-1 w-full h-16 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-[28px] font-black text-xs uppercase tracking-[0.2em] shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all outline-none"
+                                        >
+                                            Aceitar Pedido ⚡
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
                     </div>
-                  )}
+
+                    {/* 🚚 ACOMPANHAMENTO ATIVO */}
+                    <div className="space-y-8">
+                        <div className="flex items-center gap-4 px-4">
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-4">
+                                <span className="size-10 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/30">
+                                    <span className="material-symbols-outlined text-lg">moped</span>
+                                </span>
+                                Pedidos em Preparação / Rota
+                            </h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && ['pendente', 'preparando', 'confirmado', 'picked_up', 'em_rota', 'a_caminho'].includes(o.status)).map((o: any) => (
+                                <div key={o.id} className="bg-white dark:bg-slate-900 rounded-[38px] p-8 border border-slate-100 dark:border-white/5 shadow-xl shadow-black/5 flex flex-col gap-6 relative overflow-hidden group">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="size-10 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-black text-xs">#{o.id.slice(-3)}</div>
+                                            <h4 className="text-base font-black text-slate-900 dark:text-white tracking-tighter">R$ {o.total_price?.toFixed(2).replace('.', ',')}</h4>
+                                        </div>
+                                        <span className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest ${o.status === 'pendente' ? 'bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20' : 'bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20'}`}>
+                                            {o.status === 'pendente' ? 'Aguardando Lojista' : o.status === 'picked_up' ? 'Flash Coletou' : 'Em Rota'}
+                                        </span>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                            <motion.div initial={{ width: 0 }} animate={{ width: o.status === 'pendente' ? '25%' : o.status === 'picked_up' ? '75%' : '100%' }} className="h-full bg-primary" />
+                                        </div>
+                                        <p className="text-[8px] font-black text-slate-400 uppercase text-center tracking-widest">{o.status === 'pendente' ? 'Seu pedido está no forno' : 'Flash está entregando sua felicidade'}</p>
+                                    </div>
+
+                                    <div className="flex flex-col gap-3">
+                                        <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Entregar em:</p>
+                                            <p className="text-[11px] font-bold text-slate-600 dark:text-slate-300 leading-tight">{o.delivery_address}</p>
+                                        </div>
+                                        
+                                        {o.status === 'pendente' && (
+                                            <button 
+                                                onClick={async () => { await supabase.from('orders_delivery').update({ status: 'pronto' }).eq('id', o.id); fetchAllOrders(); toastSuccess('Status PRONTO! Flash notificado.'); }} 
+                                                className="w-full h-14 bg-gradient-to-r from-emerald-500 to-emerald-400 text-white rounded-[24px] font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/30 active:scale-95 transition-all outline-none flex items-center justify-center gap-3"
+                                            >
+                                                <span className="material-symbols-outlined text-lg">check_circle</span> Marcar como Pronto ⚡
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                            {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && ['pendente', 'preparando', 'confirmado', 'picked_up', 'em_rota', 'a_caminho'].includes(o.status)).length === 0 && (
+                                <div className="md:col-span-2 lg:col-span-3 py-20 bg-slate-50/50 dark:bg-white/[0.02] border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[44px] flex flex-col items-center justify-center text-center gap-4 opacity-50">
+                                    <span className="material-symbols-outlined text-5xl text-slate-200">moped</span>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Fluxo de entregas limpo no momento</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 📜 HISTÓRlCO DE TRANSAÇÕES PREMIUM */}
+                    <div className="bg-white dark:bg-slate-900 rounded-[50px] shadow-3xl shadow-black/5 border border-slate-100 dark:border-white/5 overflow-hidden">
+                      <div className="p-12 border-b border-slate-100 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 bg-slate-50/30 dark:bg-white/[0.02]">
+                        <div className="space-y-1">
+                            <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-4">
+                                <span className="size-14 rounded-3xl bg-slate-100 dark:bg-white/10 text-slate-400 flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-2xl">history</span>
+                                </span>
+                                Arquivo Cronológico
+                            </h3>
+                            <p className="text-xs font-bold text-slate-400 pl-18 italic">Acompanhe seu faturamento e performance histórica na plataforma.</p>
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                          <thead className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
+                            <tr>
+                              <th className="px-12 py-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Transação</th>
+                              <th className="px-12 py-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente / Destino</th>
+                              <th className="px-12 py-8 text-[10px) font-black uppercase tracking-widest text-slate-400 text-right">Montante</th>
+                              <th className="px-12 py-8 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Estado</th>
+                              <th className="px-12 py-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Registro</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50 dark:divide-white/5">
+                            {allOrders.map((o: any) => (
+                              <tr key={o.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors group">
+                                <td className="px-12 py-8">
+                                    <span className="text-sm font-black text-slate-400 mb-0.5 group-hover:text-primary transition-colors">#DT-{o.id.slice(0, 8).toUpperCase()}</span>
+                                </td>
+                                <td className="px-12 py-8">
+                                    <div className="flex flex-col max-w-[350px]">
+                                        <span className="text-xs font-black text-slate-900 dark:text-white truncate">{o.delivery_address}</span>
+                                        <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mt-1">Concluído via Flash</span>
+                                    </div>
+                                </td>
+                                <td className="px-12 py-8 text-right">
+                                    <span className="text-xl font-black text-slate-900 dark:text-primary tracking-tighter">R$ {o.total_price?.toFixed(2).replace('.', ',')}</span>
+                                </td>
+                                <td className="px-12 py-8 text-center">
+                                  <span className={`inline-flex px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.1em] border ${o.status === 'concluido' ? 'bg-emerald-500/5 text-emerald-600 border-emerald-500/10' : o.status === 'cancelado' ? 'bg-red-500/5 text-red-500 border-red-500/10' : 'bg-slate-100 dark:bg-white/5 text-slate-400 border-white/5'}`}>
+                                    {o.status === 'concluido' ? 'Sucesso' : o.status === 'cancelado' ? 'Anulado' : o.status.toUpperCase()}
+                                  </span>
+                                </td>
+                                <td className="px-12 py-8">
+                                    <span className="text-xs font-bold text-slate-400">{new Date(o.created_at).toLocaleString('pt-BR')}</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Paginação Premium */}
+                      {merchantOrdersTotalCount > ORDERS_PER_PAGE && (
+                        <div className="p-12 bg-slate-950 text-white flex items-center justify-between">
+                            <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">
+                                Página {merchantOrdersPage} de {Math.ceil(merchantOrdersTotalCount/ORDERS_PER_PAGE)}
+                            </p>
+                            <div className="flex gap-4">
+                                <button onClick={() => fetchAllOrders(merchantOrdersPage - 1)} disabled={merchantOrdersPage <= 1} className="h-14 px-8 bg-white/10 border border-white/10 rounded-2xl flex items-center gap-3 font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-all disabled:opacity-20"><span className="material-symbols-outlined">west</span> Anterior</button>
+                                <button onClick={() => fetchAllOrders(merchantOrdersPage + 1)} disabled={merchantOrdersPage >= Math.ceil(merchantOrdersTotalCount/ORDERS_PER_PAGE)} className="h-14 px-8 bg-white text-slate-900 rounded-2xl flex items-center gap-3 font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all disabled:opacity-20">Próximo <span className="material-symbols-outlined">east</span></button>
+                            </div>
+                        </div>
+                      )}
+                    </div>
                 </div>
               </div>
             )}
-
 {/* â â â â â â â ADMIN ORDERS â â â â â â â */}
             {activeTab === 'orders' && userRole !== 'merchant' && (
               <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative">
