@@ -8,7 +8,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 // Leaflet imports
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker as LeafletMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -66,8 +66,8 @@ const IziTrackingMap = ({ driverLoc, userLoc }: any) => {
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
-        <Marker position={[driverLoc.lat, driverLoc.lng]} icon={motoboyIcon} />
-        {userLoc && <Marker position={[userLoc.lat, userLoc.lng]} icon={destinationIcon} />}
+        <LeafletMarker position={[driverLoc.lat, driverLoc.lng]} icon={motoboyIcon} />
+        {userLoc && <LeafletMarker position={[userLoc.lat, userLoc.lng]} icon={destinationIcon} />}
         <RecenterMap coords={[driverLoc.lat, driverLoc.lng]} />
       </MapContainer>
     </div>
