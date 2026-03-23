@@ -3983,13 +3983,14 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                               </button>
                               <button 
                                 onClick={async () => { try { 
-                                  await supabase.from('orders_delivery').update({ status: 'preparando' }).eq('id', o.id); 
+                                  // Ao aceitar, já deixa em status pendente para o Flash (motoboy) ver na hora
+                                  await supabase.from('orders_delivery').update({ status: 'pendente' }).eq('id', o.id); 
                                   fetchAllOrders(); 
-                                  toastSuccess('Pedido em preparação!');
+                                  toastSuccess('Pedido Aceito! Motoboy Flash em busca...');
                                 } catch(err) { console.error(err); } }} 
                                 className="flex-[2] py-4 rounded-full bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest hover:shadow-lg hover:shadow-emerald-500/30 transition-all outline-none"
                               >
-                                Aceitar e Preparar
+                                Aceitar e Chamar Flash ⚡
                               </button>
                             </div>
                           </div>
@@ -3999,21 +4000,29 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   </div>
                 )}
 
-                {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'preparando' || o.status === 'pendente' || o.status === 'picked_up' || o.status === 'em_rota' || o.status === 'a_caminho')).length > 0 && (
+                {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && ['pendente', 'preparando', 'confirmado', 'picked_up', 'em_rota', 'a_caminho'].includes(o.status)).length > 0 && (
                   <div className="space-y-4">
                     <h3 className="text-sm font-black text-blue-500 uppercase tracking-widest flex items-center gap-2"><span className="material-symbols-outlined text-lg">local_shipping</span>Em andamento</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'preparando' || o.status === 'pendente' || o.status === 'picked_up' || o.status === 'em_rota' || o.status === 'a_caminho')).map((o: any) => (
+                      {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && ['pendente', 'preparando', 'confirmado', 'picked_up', 'em_rota', 'a_caminho'].includes(o.status)).map((o: any) => (
                         <div key={o.id} className="bg-white dark:bg-slate-900 p-5 rounded-[28px] border border-slate-200 dark:border-slate-800 shadow-sm">
                           <div className="flex items-center justify-between mb-3">
-                            <p className="text-sm font-black text-slate-900 dark:text-white">#DT-{o.id.slice(0, 8).toUpperCase()}</p>
-                            <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-500/10 text-blue-600 text-[9px] font-black uppercase tracking-widest">{o.status === 'preparando' ? 'Preparando' : o.status === 'pendente' ? 'Buscando Motoboy' : o.status === 'a_caminho' ? 'Motoboy a caminho' : o.status === 'em_rota' ? 'Em Entrega' : o.status}</span>
+                            <div className="flex flex-col">
+                              <p className="text-[10px] font-black text-slate-400">#{o.id.slice(0, 8).toUpperCase()}</p>
+                              <p className="text-xs font-black text-slate-900 dark:text-white uppercase">Flash Em Rota</p>
+                            </div>
+                            <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 text-[9px] font-black uppercase tracking-widest">{o.status === 'pendente' ? 'Em Preparo/Flash' : o.status === 'picked_up' ? 'Pedido Coletado' : 'Em Rota'}</span>
                           </div>
-                          <p className="text-[10px] font-bold text-slate-400 truncate mb-3">{o.delivery_address}</p>
-                          <div className="flex items-center justify-between">
+                          
+                          <div className="flex items-center justify-between mt-3">
                             <span className="text-sm font-black text-primary">R$ {o.total_price?.toFixed(2).replace('.', ',')}</span>
-                            {o.status === 'preparando' && (
-                              <button onClick={async () => { try { await supabase.from('orders_delivery').update({ status: 'pendente' }).eq('id', o.id); fetchAllOrders(); } catch(err) { console.error(err); } }} className="px-4 py-1.5 rounded-xl bg-blue-500 text-white text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all">Chamar Motoboy</button>
+                            {o.status === 'pendente' && (
+                              <button 
+                                onClick={async () => { try { await supabase.from('orders_delivery').update({ status: 'pronto' }).eq('id', o.id); fetchAllOrders(); toastSuccess('Pedido pronto! Flash notificado!'); } catch(err) { console.error(err); } }} 
+                                className="px-6 py-2 rounded-2xl bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20"
+                              >
+                                Marcar Pronto ⚡
+                              </button>
                             )}
                           </div>
                         </div>

@@ -1,10 +1,44 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from './lib/supabase';
 import { playIziSound } from './lib/iziSounds';
 import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
-
 import { BespokeIcons } from './lib/BespokeIcons';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Corrigir ícones do Leaflet que quebram no build
+const defaultIcon = L.icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = defaultIcon;
+
+const motoboyIcon = L.divIcon({
+  html: `<div class="bg-primary p-2 rounded-full border-2 border-black shadow-lg shadow-primary/40"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M21 16.5C21 16.88 20.79 17.21 20.47 17.38L12.57 21.82C12.41 21.94 12.21 22 12 22C11.79 22 11.59 21.94 11.43 21.82L3.53 17.38C3.21 17.21 3 16.88 3 16.5V7.5L12 2.5L21 7.5V16.5Z"/></svg></div>`,
+  className: '',
+  iconSize: [36, 36],
+  iconAnchor: [18, 18]
+});
+
+const destinationIcon = L.divIcon({
+  html: `<div class="bg-red-500 p-2 rounded-full border-2 border-black shadow-lg shadow-red-500/40"><svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg></div>`,
+  className: '',
+  iconSize: [36, 36],
+  iconAnchor: [18, 18]
+});
+
+// Componente para auto-centralizar o mapa
+const RecenterMap = ({ coords }: { coords: [number, number] }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(coords, 16);
+  }, [coords]);
+  return null;
+};
 
 const Icon = ({ name, className = "", size = 20, ...props }: any) => {
   const icons: Record<string, any> = {
@@ -37,6 +71,12 @@ const Icon = ({ name, className = "", size = 20, ...props }: any) => {
     'event_available': BespokeIcons.Check,
     'history_edu': BespokeIcons.History,
     'sentiment_dissatisfied': BespokeIcons.Help,
+    'satellite_alt': BespokeIcons.Map,
+    'navigation': BespokeIcons.Pin,
+    'map': BespokeIcons.Map,
+    'emergency': BespokeIcons.Help,
+    'moped': BespokeIcons.Motorcycle,
+    'chevron_right': BespokeIcons.ArrowRight,
   };
 
   const IconComp = icons[name] || BespokeIcons.Help;
@@ -59,11 +99,64 @@ interface Order {
     distance?: string;
     time?: string;
     rating? : number;
+    status? : string;
+    pickup_lat? : number;
+    pickup_lng? : number;
+    delivery_lat? : number;
+    delivery_lng? : number;
 }
+const IziRealTimeMap = ({ driverCoords, destCoords }: any) => {
+  if (!driverCoords) return (
+    <div className="absolute inset-0 bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 animate-pulse">
+            <Icon name="radar" className="text-primary text-4xl" />
+            <p className="text-[10px] font-black text-primary uppercase tracking-widest">Sincronizando GPS...</p>
+        </div>
+    </div>
+  );
+
+  return (
+    <div className="absolute inset-0 z-0">
+      <MapContainer 
+        center={[driverCoords.lat, driverCoords.lng]} 
+        zoom={16} 
+        scrollWheelZoom={false}
+        className="h-full w-full"
+        zoomControl={false}
+        attributionControl={false}
+      >
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        />
+        <Marker position={[driverCoords.lat, driverCoords.lng]} icon={motoboyIcon} />
+        {destCoords && <Marker position={[destCoords.lat, destCoords.lng]} icon={destinationIcon} />}
+        <RecenterMap coords={[driverCoords.lat, driverCoords.lng]} />
+      </MapContainer>
+    </div>
+  );
+};
 
 function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [driverId, setDriverId] = useState<string | null>(null);
+    const [driverCoords, setDriverCoords] = useState<{lat: number, lng: number} | null>(null);
+
+    // Sistema de Monitoramento de GPS em Tempo Real
+    useEffect(() => {
+        if (!isAuthenticated || !driverId || !isOnline) return;
+        
+        const updateLocation = async (lat: number, lng: number) => {
+          setDriverCoords({ lat, lng });
+          await supabase.from('drivers_delivery').update({ lat, lng }).eq('id', driverId);
+        };
+
+        const watchId = navigator.geolocation.watchPosition(
+            (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
+            (err) => console.error("GPS Error:", err),
+            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+        );
+        
+        return () => navigator.geolocation.clearWatch(watchId);
+    }, [isAuthenticated, driverId, isOnline]);
     const [driverName, setDriverName] = useState('Entregador');
     const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
     const [authEmail, setAuthEmail] = useState('');
@@ -264,24 +357,41 @@ function App() {
             setDedicatedSlots((data || []).filter((s: any) => !declinedIds.includes(s.id)));
         };
         fetchOrders(); fetchDedicatedSlots();
+        
         const channel = supabase.channel('realtime_orders')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 const o = payload.new;
                 const declinedIds = JSON.parse(localStorage.getItem('Izi_declined') || '[]');
                 if (o.status !== 'pendente' || declinedIds.includes(o.id)) return;
                 playIziSound('driver');
-                if (Notification.permission === 'granted') new Notification('🚀 Nova Missão Izi!', { body: `Coleta: ${o.pickup_address}\nValor: R$ ${o.total_price?.toFixed(2)}`, icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' });
+                if (Notification.permission === 'granted') new Notification('🚀 Nova Missão Izi!', { body: `Coleta: ${o.pickup_address}`, icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' });
                 setOrders(prev => [{ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev]);
             })
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders_delivery' }, (payload) => {
-                const o = payload.new;
-                if (o.status !== 'pendente') setOrders(prev => prev.filter((order: any) => order.realId !== o.id));
-            })
+                const o = payload.new as any;
+                const declinedIds = JSON.parse(localStorage.getItem('Izi_declined') || '[]');
+                
+                // Se a missão ativa mudar para 'pronto', notificar o motoboy
+                if (activeMission && o.id === activeMission.id && o.status === 'pronto') {
+                    playIziSound('driver');
+                    toastSuccess('🔥 O Pedido está PRONTO para coleta!');
+                    if (Notification.permission === 'granted') new Notification('📦 Pedido Pronto!', { body: 'O estabelecimento finalizou o preparo. Pode coletar!' });
+                    setActiveMission({ ...activeMission, status: 'pronto' });
+                }
 
+                if (o.status === 'pendente' && !declinedIds.includes(o.id)) {
+                    setOrders(prev => {
+                        if (prev.find(x => x.realId === o.id)) return prev;
+                        return [{ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev];
+                    });
+                } else if (o.status !== 'pendente' && (!activeMission || o.id !== activeMission.id)) {
+                    setOrders(prev => prev.filter((order: any) => order.realId !== o.id));
+                }
+            })
             .subscribe();
-        if ('Notification' in window) Notification.requestPermission();
+
         return () => { supabase.removeChannel(channel); };
-    }, [isOnline]);
+    }, [isOnline, activeMission]);
 
 
 
@@ -901,21 +1011,33 @@ function App() {
                         <div className="size-1.5 bg-emerald-400 rounded-full animate-pulse" /><span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Ativo</span>
                     </div>
                 </div>
-                <div className="flex-1 bg-[#030a1a] relative overflow-hidden">
-                    <div className="absolute inset-0 opacity-5 bg-[linear-gradient(rgba(255,217,0,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,217,0,0.08)_1px,transparent_1px)] bg-[size:32px_32px]" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="relative flex flex-col items-center gap-4">
-                            <div className="size-40 border border-primary/10 rounded-full animate-ping opacity-10" />
-                            <div className="absolute size-28 border border-primary/20 rounded-full animate-ping opacity-20" style={{ animationDelay: '0.5s' }} />
-                            <div className="absolute flex flex-col items-center gap-2">
-                                <div className="size-14 bg-primary/20 border border-primary/40 rounded-full flex items-center justify-center backdrop-blur-md"><Icon name="navigation" className="text-primary text-2xl" /></div>
-                                <span className="text-[9px] font-black text-primary uppercase tracking-widest bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-primary/20">Navegando...</span>
-                            </div>
+                 <div className="flex-1 bg-[#030a1a] relative overflow-hidden">
+                    <IziRealTimeMap 
+                      driverCoords={driverCoords} 
+                      destCoords={activeMission.status === 'picked_up' || activeMission.status === 'em_rota' 
+                        ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng } 
+                        : { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng }
+                      } 
+                    />
+                    <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#020617]/40 via-transparent to-[#030712]/40" />
+                    <div className="absolute top-5 right-5 flex flex-col items-end gap-2">
+                        <div className="bg-black/70 backdrop-blur-md border border-white/10 rounded-2xl px-4 py-3 text-right">
+                            <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Ganho</p>
+                            <p className="text-xl font-black text-primary">R$ {activeMission.price.toFixed(2)}</p>
                         </div>
-                    </div>
-                    <div className="absolute top-5 right-5 bg-black/70 backdrop-blur-md border border-white/10 rounded-2xl px-4 py-3 text-right">
-                        <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Ganho</p>
-                        <p className="text-xl font-black text-primary">R$ {activeMission.price.toFixed(2)}</p>
+                        
+                        {/* Status do Estabelecimento para o Motoboy Flash */}
+                        {activeMission.status === 'pronto' ? (
+                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-emerald-500 text-white rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-lg shadow-emerald-500/20">
+                                <Icon name="check_circle" className="text-xs" />
+                                <span className="text-[9px] font-black uppercase tracking-widest">Pedido Pronto!</span>
+                            </motion.div>
+                        ) : (
+                            <div className="bg-blue-500/20 backdrop-blur-md border border-blue-500/30 text-blue-400 rounded-xl px-3 py-1.5 flex items-center gap-2">
+                                <div className="size-1.5 bg-blue-400 rounded-full animate-pulse" />
+                                <span className="text-[9px] font-black uppercase tracking-widest">Em Preparo...</span>
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div className="px-5 pt-5 pb-8 bg-[#030712] border-t border-white/5 space-y-4 shrink-0">
