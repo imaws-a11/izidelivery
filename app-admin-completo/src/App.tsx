@@ -651,7 +651,8 @@ function App() {
       if (activeTab === 'users') await fetchUsers();
       if (activeTab === 'merchants') await fetchMerchants();
       if (activeTab === 'drivers' || activeTab === 'tracking' || activeTab === 'dashboard') await fetchDrivers();
-      if (activeTab === 'orders' || activeTab === 'tracking' || activeTab === 'dashboard') {
+      // Lojista: SEMPRE carregar pedidos na inicialização
+      if (userRole === 'merchant' || activeTab === 'orders' || activeTab === 'tracking' || activeTab === 'dashboard') {
         setOrdersPage(1);
         setMerchantOrdersPage(1);
         await fetchAllOrders(1);
@@ -704,16 +705,32 @@ function App() {
     // Subscribe to realtime changes with automatic refresh
     const channel = supabase.channel('admin_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders_delivery' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          playOrderNotification();
-          setNewOrderNotification({ show: true, orderId: payload.new.id?.toString() });
-          setTimeout(() => {
-            setNewOrderNotification({ show: false });
-          }, 5000);
+        const isMerchant = userRole === 'merchant';
+        const newRow = payload.new as any;
+        
+        // Para lojistas: só notificar se o pedido for do próprio merchant
+        if (isMerchant && merchantProfile?.merchant_id) {
+          if (newRow?.merchant_id === merchantProfile.merchant_id || payload.eventType === 'DELETE') {
+            if (payload.eventType === 'INSERT') {
+              playOrderNotification();
+              setNewOrderNotification({ show: true, orderId: newRow.id?.toString() });
+              setTimeout(() => setNewOrderNotification({ show: false }), 5000);
+            }
+            // SEMPRE atualizar pedidos do lojista, independente da aba
+            fetchAllOrders(merchantOrdersPage);
+            fetchStats();
+          }
+        } else {
+          // Admin: comportamento normal
+          if (payload.eventType === 'INSERT') {
+            playOrderNotification();
+            setNewOrderNotification({ show: true, orderId: newRow.id?.toString() });
+            setTimeout(() => setNewOrderNotification({ show: false }), 5000);
+          }
+          fetchStats();
+          if (activeTab === 'dashboard' || activeTab === 'orders' || activeTab === 'tracking') fetchAllOrders(ordersPage);
+          if (activeTab === 'izi_black') fetchSubscriptionOrders(subscriptionOrdersPage);
         }
-        fetchStats();
-        if (activeTab === 'dashboard' || activeTab === 'orders' || activeTab === 'tracking') fetchAllOrders(ordersPage);
-        if (activeTab === 'izi_black') fetchSubscriptionOrders(subscriptionOrdersPage);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers_delivery' }, () => {
         fetchStats();
@@ -730,13 +747,15 @@ function App() {
 
     const interval = setInterval(() => {
       fetchStats();
+      // Backup polling: lojista sempre atualiza pedidos
+      if (userRole === 'merchant') fetchAllOrders(merchantOrdersPage);
     }, 30000); // 30s backup polling
 
     return () => {
       supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, [session, activeTab]);
+  }, [session, activeTab, userRole, merchantProfile]);
 
   useEffect(() => {
     if (activeTab === 'my_studio' && userRole === 'merchant' && merchantProfile) {
