@@ -12,7 +12,31 @@ const mapOptions = {
     disableDefaultUI: true,
     zoomControl: false,
     styles: [
-        { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
+        { elementType: "geometry", stylers: [{ color: "#f0ebe3" }] },
+        { elementType: "labels.text.fill", stylers: [{ color: "#523735" }] },
+        { elementType: "labels.text.stroke", stylers: [{ color: "#f5f1ee" }] },
+        { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#c9b2a6" }] },
+        { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#dde9d0" }] },
+        { featureType: "poi", elementType: "geometry", stylers: [{ color: "#dde9d0" }] },
+        { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#93817c" }] },
+        { featureType: "poi.park", elementType: "geometry.fill", stylers: [{ color: "#a5b076" }] },
+        { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#447530" }] },
+        { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+        { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#f8c967" }] },
+        { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#f3d19c" }] },
+        { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#fafafb" }] },
+        { featureType: "road.arterial", elementType: "geometry.stroke", stylers: [{ color: "#ff8c00" }] },
+        { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#f8c967" }] },
+        { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#e9bc62" }] },
+        { featureType: "road.highway.controlled_access", elementType: "geometry", stylers: [{ color: "#e98d58" }] },
+        { featureType: "road.highway.controlled_access", elementType: "geometry.stroke", stylers: [{ color: "#db8555" }] },
+        { featureType: "road.local", elementType: "labels.text.fill", stylers: [{ color: "#806b63" }] },
+        { featureType: "transit", elementType: "geometry", stylers: [{ color: "#dde9d0" }] },
+        { featureType: "transit.line", elementType: "geometry", stylers: [{ color: "#dfd2ae" }] },
+        { featureType: "transit.station", elementType: "geometry", stylers: [{ color: "#dfd2ae" }] },
+        { featureType: "water", elementType: "geometry.fill", stylers: [{ color: "#b9d3c2" }] },
+        { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#92998d" }] }
+    ] },
         { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
         { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
         { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
@@ -306,7 +330,7 @@ function App() {
                 .from('orders_delivery')
                 .select('*, merchant_id')
                 .not('scheduled_date', 'is', null)
-                .in('status', ['pendente', 'agendado', 'a_caminho', 'preparando'])
+                .in('status', ['pendente', 'agendado', 'a_caminho', 'preparando']).not('status', 'eq', 'novo')
                 .gte('scheduled_date', today)
                 .order('scheduled_date', { ascending: true })
                 .order('scheduled_time', { ascending: true });
@@ -347,7 +371,7 @@ function App() {
 
     useEffect(() => {
         const fetchOrders = async () => {
-            const { data, error } = await supabase.from('orders_delivery').select('*').in('status', ['pendente', 'pronto']);
+            const { data, error } = await supabase.from('orders_delivery').select('*').in('status', ['pendente', 'pronto']).not('status', 'eq', 'novo').not('status', 'eq', 'waiting_merchant');
             if (error || !data) return;
             const declinedIds = JSON.parse(localStorage.getItem('Izi_declined') || '[]');
             setOrders(data.map((o: any) => ({ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type as ServiceType, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' })).filter((o: any) => !declinedIds.includes(o.realId)));
@@ -403,12 +427,12 @@ function App() {
         setIsAccepting(true);
         try {
             const targetId = order.realId || order.id;
-            const { data: realOrder, error: findError } = await supabase.from('orders_delivery').select('id, status').eq('id', targetId).single();
+            const { data: realOrder, error: findError } = await supabase.from('orders_delivery').select('id, status, pickup_lat, pickup_lng, delivery_lat, delivery_lng').eq('id', targetId).single();
             if (findError || !realOrder || !['pendente', 'pronto'].includes(realOrder.status)) { toastError('Pedido indisponível ou já aceito.'); setOrders(prev => prev.filter((o: any) => o.id !== order.id)); return; }
             if (!driverId) { toastError('Sessão expirada. Faça login novamente.'); return; }
             const { error } = await supabase.from('orders_delivery').update({ status: 'a_caminho', driver_id: driverId }).eq('id', realOrder.id);
             if (error) { toastError('Erro ao aceitar corrida.'); return; }
-            const mission = { ...order, id: realOrder.id, realId: realOrder.id };
+            const mission = { ...order, ...realOrder, id: realOrder.id, realId: realOrder.id };
             setActiveMission(mission);
             localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
             setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
@@ -647,7 +671,7 @@ function App() {
                 ) : (
                     <div className="space-y-3">
                         {scheduledOrders.map((order: any) => {
-                            const isPending = order.status === 'pendente' ||  order.status === 'agendado';
+                            const isPending = (order.status === 'pendente' || order.status === 'agendado' || order.status === 'pronto') && order.status !== 'novo' && order.status !== 'waiting_merchant';
                             const isAccepted = order.driver_id === driverId;
                             const statusColor = isAccepted ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : isPending ? 'text-blue-400 bg-blue-400/10 border-blue-400/20' : 'text-white/40 bg-white/5 border-white/10';
                             const statusLabel = isAccepted ? 'Aceito por você' : isPending ? 'Disponível' : order.status;
