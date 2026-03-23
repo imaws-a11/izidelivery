@@ -36,44 +36,7 @@ const destinationIcon = L.divIcon({
   iconAnchor: [18, 18]
 });
 
-const RecenterMap = ({ coords }: { coords: [number, number] }) => {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(coords, map.getZoom());
-  }, [coords]);
-  return null;
-};
 
-const IziTrackingMap = ({ driverLoc, userLoc }: any) => {
-  if (!driverLoc) return (
-    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center backdrop-blur-sm z-10">
-      <div className="flex flex-col items-center gap-3">
-        <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-        <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] animate-pulse">Buscando Sinal do Flash...</p>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="w-full h-full relative z-0">
-      <MapContainer 
-        center={[driverLoc.lat, driverLoc.lng]} 
-        zoom={16} 
-        scrollWheelZoom={false}
-        className="h-full w-full grayscale-[0.5] contrast-[1.2]"
-        zoomControl={false}
-        attributionControl={false}
-      >
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        />
-        <LeafletMarker position={[driverLoc.lat, driverLoc.lng]} icon={motoboyIcon} />
-        {userLoc && <LeafletMarker position={[userLoc.lat, userLoc.lng]} icon={destinationIcon} />}
-        <RecenterMap coords={[driverLoc.lat, driverLoc.lng]} />
-      </MapContainer>
-    </div>
-  );
-};
 
 
 
@@ -8720,3 +8683,42 @@ function App() {
 
 
 export default App;
+
+const RecenterMap = ({ coords }: { coords: [number, number] }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(coords, map.getZoom() || 16);
+  }, [coords]);
+  return null;
+};
+
+const IziTrackingMap = ({ driverLoc, userLoc }: any) => {
+  if (!driverLoc) return (
+    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center backdrop-blur-sm z-10">
+      <div className="flex flex-col items-center gap-3">
+        <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] animate-pulse">Buscando Sinal do Flash...</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="w-full h-full relative z-0">
+      <MapContainer 
+        center={[driverLoc.lat, driverLoc.lng]} 
+        zoom={16} 
+        scrollWheelZoom={false}
+        className="h-full w-full grayscale-[0.5] contrast-[1.2]"
+        zoomControl={false}
+        attributionControl={false}
+      >
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        />
+        <LeafletMarker position={[driverLoc.lat, driverLoc.lng]} icon={motoboyIcon} />
+        {userLoc && <LeafletMarker position={[userLoc.lat, userLoc.lng]} icon={destinationIcon} />}
+        <RecenterMap coords={[driverLoc.lat, driverLoc.lng]} />
+      </MapContainer>
+    </div>
+  );
+};
