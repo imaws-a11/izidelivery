@@ -1099,20 +1099,7 @@ function App() {
                         <div className="flex items-start gap-3"><div className="mt-1.5 size-2 rounded-full bg-primary shrink-0 shadow-[0_0_8px_rgba(255,217,0,0.5)]" /><div><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Destino Final</p><p className="text-xs font-black text-white leading-tight">{activeMission.destination}</p></div></div>
                     </div>
                     <div className="flex gap-3">
-                        <button 
-                          onClick={() => {
-                            // A rota já é interna e automática no componente IziRealTimeMap.
-                            // Este botão agora serve para centralizar a visão no trajeto.
-                            setDriverCoords({...driverCoords!}); 
-                            toastSuccess('Navegação interna ativa no mapa acima!');
-                          }} 
-                          className="flex-1 h-16 bg-primary text-slate-900 font-black text-xs uppercase tracking-[0.15em] rounded-[24px] flex items-center justify-center gap-3 shadow-[0_12px_30px_rgba(255,215,9,0.3)] active:scale-95 transition-all border-b-4 border-yellow-600"
-                        >
-                            <Icon name="navigation" className="text-xl" />
-                            {activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega' 
-                              ? 'Navegar para Entrega' 
-                              : 'Navegar para Coleta'}
-                        </button>
+                        
                         <button onClick={() => setIsSOSActive(true)} className="size-14 bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"><Icon name="emergency" className="text-xl" /></button>
                     </div>
                     {/* BOTÕES DINÂMICOS DE PROGRESSO */}
