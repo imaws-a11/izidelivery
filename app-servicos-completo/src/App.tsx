@@ -7,6 +7,73 @@ import { GoogleMap, Marker, Autocomplete } from '@react-google-maps/api';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
+// Leaflet imports
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Corrigir ícones do Leaflet que quebram no build
+const defaultIcon = L.icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = defaultIcon;
+
+const motoboyIcon = L.divIcon({
+  html: `<div class="bg-primary p-2 rounded-full border-2 border-black shadow-lg shadow-primary/40"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M21 16.5C21 16.88 20.79 17.21 20.47 17.38L12.57 21.82C12.41 21.94 12.21 22 12 22C11.79 22 11.59 21.94 11.43 21.82L3.53 17.38C3.21 17.21 3 16.88 3 16.5V7.5L12 2.5L21 7.5V16.5Z"/></svg></div>`,
+  className: '',
+  iconSize: [36, 36],
+  iconAnchor: [18, 18]
+});
+
+const destinationIcon = L.divIcon({
+  html: `<div class="bg-red-500 p-2 rounded-full border-2 border-black shadow-lg shadow-red-500/40"><svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg></div>`,
+  className: '',
+  iconSize: [36, 36],
+  iconAnchor: [18, 18]
+});
+
+const RecenterMap = ({ coords }: { coords: [number, number] }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(coords, map.getZoom());
+  }, [coords]);
+  return null;
+};
+
+const IziTrackingMap = ({ driverLoc, userLoc }: any) => {
+  if (!driverLoc) return (
+    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center backdrop-blur-sm z-10">
+      <div className="flex flex-col items-center gap-3">
+        <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] animate-pulse">Buscando Sinal do Flash...</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="w-full h-full relative z-0">
+      <MapContainer 
+        center={[driverLoc.lat, driverLoc.lng]} 
+        zoom={16} 
+        scrollWheelZoom={false}
+        className="h-full w-full grayscale-[0.5] contrast-[1.2]"
+        zoomControl={false}
+        attributionControl={false}
+      >
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        />
+        <Marker position={[driverLoc.lat, driverLoc.lng]} icon={motoboyIcon} />
+        {userLoc && <Marker position={[userLoc.lat, userLoc.lng]} icon={destinationIcon} />}
+        <RecenterMap coords={[driverLoc.lat, driverLoc.lng]} />
+      </MapContainer>
+    </div>
+  );
+};
+
 // Chave pública do Stripe (Placeholder - Usuário deve substituir pela sua real)
 import { BespokeIcons } from "./lib/BespokeIcons";
 
@@ -783,6 +850,36 @@ function App() {
   const [activeCategory, setActiveCategory] = useState<string>("Destaques");
   const [activeMenuCategory, setActiveMenuCategory] = useState("Destaques");
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [driverLocation, setDriverLocation] = useState<{lat: number, lng: number} | null>(null);
+
+  // Sistema de rastreamento do motoboy em tempo real para o cliente
+  useEffect(() => {
+    if (!selectedItem?.driver_id) {
+      setDriverLocation(null);
+      return;
+    }
+
+    const fetchDriverInitialLoc = async () => {
+      const { data } = await supabase.from('drivers_delivery').select('lat, lng').eq('id', selectedItem.driver_id).maybeSingle();
+      if (data?.lat) setDriverLocation({ lat: data.lat, lng: data.lng });
+    };
+    fetchDriverInitialLoc();
+
+    const channel = supabase.channel(`driver_loc_${selectedItem.driver_id}`)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'drivers_delivery',
+        filter: `id=eq.${selectedItem.driver_id}` 
+      }, (payload) => {
+        const newLoc = payload.new as any;
+        if (newLoc.lat) setDriverLocation({ lat: newLoc.lat, lng: newLoc.lng });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedItem?.driver_id]);
+
   const [tempQuantity, setTempQuantity] = useState(1);
   const [filterTab, setFilterTab] = useState<"ativos" | "historico">("ativos");
   const [transitData, setTransitData] = useState({
@@ -1452,34 +1549,40 @@ function App() {
               }, 2000);
             }
 
-            // Se o usuário estiver vendo os detalhes deste pedido, atualizar o item selecionado
-            if (selectedItem?.id === newOrder.id) {
+            // Transições automáticas de tela baseadas no status
+            
+            // 1. Se estava na tela de aguardando loja e ela aceitou (aceito, confirmado ou já preparando)
+            if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando"].includes(newOrder.status)) {
+              showToast("Loja aceitou seu pedido! 🎉", "success");
+              setSelectedItem(newOrder); 
+              setTimeout(() => setSubView("payment_success"), 1000);
+            }
+            // 2. Se estava na tela de aguardando loja e ela recusou
+            if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
+              showToast("Seu pedido foi recusado.", "warning");
+              setSubView("none");
+              fetchMyOrders(userId!);
+            }
+            // 3. Se estava na tela de aguardando motorista e ele aceitou
+            if (subViewRef.current === "waiting_driver" && 
+                ["a_caminho", "aceito", "confirmado", "em_rota", "no_local", "picked_up", "saiu_para_entrega"].includes(newOrder.status)) {
               setSelectedItem(newOrder);
+              setTimeout(() => setSubView("active_order"), 1500);
+            }
+            // 4. Se estava na tela de aguardando motorista e o pedido foi cancelado
+            if (subViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {
+              setSubView("none");
+              fetchMyOrders(userId!);
+            }
 
-              // Se estava na tela de aguardando loja e ela aceitou (aceito, confirmado ou já preparando)
-              if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando"].includes(newOrder.status)) {
-                setTimeout(() => setSubView("payment_success"), 1000);
-              }
-              // Se estava na tela de aguardando loja e ela recusou
-              if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
-                showToast("Seu pedido foi recusado.", "warning");
-                setSubView("none");
-                fetchMyOrders(userId!);
-              }
-              // Se estava na tela de aguardando e motorista aceitou, ir para acompanhamento
-              if (subViewRef.current === "waiting_driver" && 
-                  ["a_caminho", "aceito", "confirmado", "em_rota", "no_local", "picked_up", "saiu_para_entrega"].includes(newOrder.status)) {
-                setTimeout(() => setSubView("active_order"), 1500);
-              }
-              // Se pedido foi cancelado e estava aguardando, voltar para home
-              if (subViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {
-                setSubView("none");
-                fetchMyOrders(userId!);
-              }
+            // ATUALIZAÇÃO GLOBAL DE STATUS DO PEDIDO ATUAL (Tracking em tempo real)
+            // Se o usuário estiver vendo os detalhes DESTE pedido específico, OU se o pedido for o mais recente dele
+            if (selectedItem?.id === newOrder.id || !selectedItem) {
+              setSelectedItem(newOrder);
             }
           }
-
-          // Atualizar lista completa de pedidos
+          
+          // Atualizar lista completa de pedidos em background
           if (userId) fetchMyOrders(userId);
         },
       )
@@ -5263,6 +5366,22 @@ function App() {
       }
     };
 
+    if (!selectedItem) {
+      console.warn("Feedback tentou carregar sem selectedItem");
+      return (
+        <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-10 text-center">
+          <div className="size-20 bg-yellow-400/10 rounded-full flex items-center justify-center mb-6 animate-pulse">
+            <span className="material-symbols-outlined text-yellow-500 text-4xl">inventory_2</span>
+          </div>
+          <h2 className="text-white font-black uppercase text-lg tracking-widest mb-2">Carregando Pedido...</h2>
+          <p className="text-zinc-600 text-xs">Sintonizando com a central Izi Delivery</p>
+          <button onClick={() => setSubView("none")} className="mt-8 text-yellow-500 text-[10px] font-black uppercase tracking-widest">Fechar</button>
+        </div>
+      );
+    }
+
+    const orderId = selectedItem?.id || activeOrderId || "000000";
+
     return (
       <motion.div 
         initial={{ opacity: 0 }} 
@@ -5275,7 +5394,7 @@ function App() {
           </button>
           <div className="text-right">
             <p className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.2em]">Feedback Izi</p>
-            <p className="text-xs text-zinc-500 font-bold">Pedido #DT-{selectedItem?.id?.slice(0,6).toUpperCase()}</p>
+            <p className="text-xs text-zinc-500 font-bold">Pedido #DT-{String(orderId).slice(0,6).toUpperCase()}</p>
           </div>
         </div>
 
@@ -7582,14 +7701,13 @@ function App() {
       <div className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-hidden pb-32">
         {/* MAPA PLACEHOLDER OU REAL-TIME */}
         <div className="relative w-full h-[35vh] bg-zinc-900 overflow-hidden shrink-0">
-           {/* Fundo animado suave */}
-           <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-yellow-400/20 via-black to-black" />
+           {/* MAPA REAL-TIME IZI FLASH */}
+           <IziTrackingMap 
+             driverLoc={driverLocation} 
+             userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} 
+           />
            
            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black z-10 pointer-events-none" />
-           <div className="absolute inset-0 flex items-center justify-center opacity-10">
-              <span className="material-symbols-outlined text-[120px] text-yellow-400" 
-                style={{ fontVariationSettings: "'FILL' 0" }}>map</span>
-           </div>
            
            {/* Botão flutuante voltar */}
            <div className="absolute top-8 left-6 z-20">
