@@ -2271,7 +2271,7 @@ function App() {
           </div>
         </header>
         <main className="px-5 flex flex-col gap-4 pb-10">
-          {ESTABLISHMENTS.filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((shop: any, i: number) => (
+          {ESTABLISHMENTS.filter((s: any) => (s.tag || s.type || "").toLowerCase().includes("burger") && s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((shop: any, i: number) => (
             <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
               onClick={() => handleShopClick({ ...shop, type: "restaurant" })} className="group cursor-pointer active:scale-[0.98] transition-all">
               <div className="relative h-44 rounded-2xl overflow-hidden mb-3">
@@ -2300,7 +2300,7 @@ function App() {
               </div>
             </motion.div>
           ))}
-          {ESTABLISHMENTS.filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+          {ESTABLISHMENTS.filter((s: any) => (s.tag || s.type || "").toLowerCase().includes("burger") && s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
             <div className="flex flex-col items-center py-16 gap-3">
               <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
               <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum resultado</p>
@@ -2339,7 +2339,7 @@ function App() {
           </div>
         </header>
         <main className="px-5 flex flex-col gap-4 pb-10">
-          {ESTABLISHMENTS.filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((shop: any, i: number) => (
+          {ESTABLISHMENTS.filter((s: any) => (s.tag || s.type || "").toLowerCase().includes("pizza") && s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((shop: any, i: number) => (
             <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
               onClick={() => handleShopClick({ ...shop, type: "restaurant" })} className="group cursor-pointer active:scale-[0.98] transition-all">
               <div className="relative h-44 rounded-2xl overflow-hidden mb-3">
@@ -2368,7 +2368,7 @@ function App() {
               </div>
             </motion.div>
           ))}
-          {ESTABLISHMENTS.filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+          {ESTABLISHMENTS.filter((s: any) => (s.tag || s.type || "").toLowerCase().includes("pizza") && s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
             <div className="flex flex-col items-center py-16 gap-3">
               <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
               <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum resultado</p>
@@ -2407,7 +2407,7 @@ function App() {
           </div>
         </header>
         <main className="px-5 flex flex-col gap-4 pb-10">
-          {ESTABLISHMENTS.filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((shop: any, i: number) => (
+          {ESTABLISHMENTS.filter((s: any) => ((s.tag || s.type || "").toLowerCase().includes("açai") || (s.tag || s.type || "").toLowerCase().includes("açaí") || (s.tag || s.type || "").toLowerCase().includes("acai")) && s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((shop: any, i: number) => (
             <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
               onClick={() => handleShopClick({ ...shop, type: "restaurant" })} className="group cursor-pointer active:scale-[0.98] transition-all">
               <div className="relative h-44 rounded-2xl overflow-hidden mb-3">
@@ -2436,7 +2436,7 @@ function App() {
               </div>
             </motion.div>
           ))}
-          {ESTABLISHMENTS.filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+          {ESTABLISHMENTS.filter((s: any) => ((s.tag || s.type || "").toLowerCase().includes("açai") || (s.tag || s.type || "").toLowerCase().includes("açaí") || (s.tag || s.type || "").toLowerCase().includes("acai")) && s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
             <div className="flex flex-col items-center py-16 gap-3">
               <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
               <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum resultado</p>
@@ -2475,7 +2475,7 @@ function App() {
           </div>
         </header>
         <main className="px-5 flex flex-col gap-4 pb-10">
-          {ESTABLISHMENTS.filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((shop: any, i: number) => (
+          {ESTABLISHMENTS.filter((s: any) => ((s.tag || s.type || "").toLowerCase().includes("japones") || (s.tag || s.type || "").toLowerCase().includes("sushi") || (s.tag || s.type || "").toLowerCase().includes("temaki")) && s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((shop: any, i: number) => (
             <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
               onClick={() => handleShopClick({ ...shop, type: "restaurant" })} className="group cursor-pointer active:scale-[0.98] transition-all">
               <div className="relative h-44 rounded-2xl overflow-hidden mb-3">
@@ -2504,7 +2504,7 @@ function App() {
               </div>
             </motion.div>
           ))}
-          {ESTABLISHMENTS.filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+          {ESTABLISHMENTS.filter((s: any) => ((s.tag || s.type || "").toLowerCase().includes("japones") || (s.tag || s.type || "").toLowerCase().includes("sushi") || (s.tag || s.type || "").toLowerCase().includes("temaki")) && s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
             <div className="flex flex-col items-center py-16 gap-3">
               <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
               <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum resultado</p>
@@ -2939,7 +2939,7 @@ function App() {
           </div>
         </header>
         <main className="px-5 flex flex-col gap-4 pb-10">
-          {ESTABLISHMENTS.filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((shop: any, i: number) => (
+          {ESTABLISHMENTS.filter((s: any) => ((s.tag || s.type || "").toLowerCase().includes("brasileira") || (s.tag || s.type || "").toLowerCase().includes("caseira") || (s.tag || s.type || "").toLowerCase().includes("marmita")) && s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((shop: any, i: number) => (
             <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
               onClick={() => handleShopClick({ ...shop, type: "restaurant" })} className="group cursor-pointer active:scale-[0.98] transition-all">
               <div className="relative h-44 rounded-2xl overflow-hidden mb-3">
@@ -2968,7 +2968,7 @@ function App() {
               </div>
             </motion.div>
           ))}
-          {ESTABLISHMENTS.filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+          {ESTABLISHMENTS.filter((s: any) => ((s.tag || s.type || "").toLowerCase().includes("brasileira") || (s.tag || s.type || "").toLowerCase().includes("caseira") || (s.tag || s.type || "").toLowerCase().includes("marmita")) && s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
             <div className="flex flex-col items-center py-16 gap-3">
               <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
               <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum resultado</p>
@@ -3185,10 +3185,12 @@ function App() {
             </div>
 
             <div className="flex flex-col gap-4 pb-10">
-              {ESTABLISHMENTS.filter((shop: any) =>
-                shop.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (shop.tag || "").toLowerCase().includes(searchQuery.toLowerCase())
-              ).map((shop: any, i: number) => (
+              {ESTABLISHMENTS.filter((shop: any) => {
+                const sType = (shop.type || "").toLowerCase();
+                const sTag = (shop.tag || "").toLowerCase();
+                const filterMatch = sType === (activeService?.type || "").toLowerCase() || sType === (activeService?.label || "").toLowerCase() || sTag.includes((activeService?.type || "").toLowerCase()) || sTag.includes((activeService?.label || "").toLowerCase());
+                return filterMatch && (shop.name.toLowerCase().includes(searchQuery.toLowerCase()) || sTag.includes(searchQuery.toLowerCase()));
+              }).map((shop: any, i: number) => (
                 <motion.div
                   key={shop.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -3225,7 +3227,12 @@ function App() {
                 </motion.div>
               ))}
 
-              {ESTABLISHMENTS.filter((s: any) => s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+              {ESTABLISHMENTS.filter((shop: any) => {
+                const sType = (shop.type || "").toLowerCase();
+                const sTag = (shop.tag || "").toLowerCase();
+                const filterMatch = sType === (activeService?.type || "").toLowerCase() || sType === (activeService?.label || "").toLowerCase() || sTag.includes((activeService?.type || "").toLowerCase()) || sTag.includes((activeService?.label || "").toLowerCase());
+                return filterMatch && (shop.name.toLowerCase().includes(searchQuery.toLowerCase()) || sTag.includes(searchQuery.toLowerCase()));
+              }).length === 0 && (
                 <div className="flex flex-col items-center justify-center py-16 gap-3">
                   <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
                   <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum resultado encontrado</p>
@@ -3515,7 +3522,7 @@ function App() {
 
           <div className="flex flex-col gap-4 pb-10">
             {ESTABLISHMENTS.filter((shop: any) =>
-              shop.name.toLowerCase().includes(searchQuery.toLowerCase())
+              (shop.type === 'market' || shop.type === 'mercado' || (shop.tag || "").toLowerCase().includes("mercado")) && shop.name.toLowerCase().includes(searchQuery.toLowerCase())
             ).map((shop: any, i: number) => (
               <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                 onClick={() => handleShopClick({ ...shop, type: "generic" })}
@@ -3803,7 +3810,7 @@ function App() {
 
           <div className="flex flex-col gap-4 pb-10">
             {ESTABLISHMENTS.filter((shop: any) =>
-              shop.name.toLowerCase().includes(searchQuery.toLowerCase())
+              (shop.type === 'pharmacy' || shop.type === 'farmacia' || (shop.tag || "").toLowerCase().includes("farmácia")) && shop.name.toLowerCase().includes(searchQuery.toLowerCase())
             ).map((shop: any, i: number) => (
               <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                 onClick={() => handleShopClick({ ...shop, type: "generic" })}
