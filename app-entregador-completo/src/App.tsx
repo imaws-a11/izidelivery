@@ -130,7 +130,6 @@ function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [driverId, setDriverId] = useState<string | null>(null);
     const [driverCoords, setDriverCoords] = useState<{lat: number, lng: number} | null>(null);
-    const [isOnline, setIsOnline] = useState(false);
 
     // Sistema de Monitoramento de GPS em Tempo Real
     useEffect(() => {
