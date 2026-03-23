@@ -1414,17 +1414,19 @@ function App() {
           // Se o status mudou, mostrar notificação personalizada
           if (newOrder.status !== oldOrder.status) {
             const statusMessages: Record<string, string> = {
-              'novo': 'Seu pedido foi recebido! ðŸ™Œ',
-              'pendente_pagamento': 'Aguardando confirmação do pagamento... ðŸ’³',
-              'aceito': 'O estabelecimento aceitou seu pedido! ðŸ“',
-              'confirmado': 'Pedido confirmado e pronto para começar! âœ…',
-              'preparando': 'O restaurante começou a preparar seu pedido! ðŸ³',
-              'pronto': 'Seu pedido está pronto e aguardando coleta! ðŸ›ï¸',
-              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! ðŸ›µ',
-              'em_rota': 'O motorista está a caminho do destino! ðŸš—',
-              'no_local': 'O motorista chegou ao local! ðŸ“',
-              'concluido': 'Pedido finalizado com sucesso! Obrigado por usar Izi. âœ¨',
-              'cancelado': 'Ah não, seu pedido foi cancelado. ðŸ›‘'
+              'novo': 'Recebemos seu pedido! Já estamos processando. ⚡',
+              'pendente_pagamento': 'Aguardando confirmação do pagamento... 💳',
+              'aceito': 'O estabelecimento aceitou seu pedido! 🎉',
+              'confirmado': 'Pedido confirmado! O preparo começou. ✅',
+              'preparando': 'Seu pedido está sendo preparado com carinho! 🍳',
+              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. 📦',
+              'a_caminho': 'O motoboy aceitou e está indo coletar seu pedido! 🏍️',
+              'picked_up': 'Pedido coletado! O motoboy está iniciando a entrega. 🚀',
+              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! 🛵',
+              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. 🏁',
+              'no_local': 'O motoboy chegou ao seu endereço! 🔔',
+              'concluido': 'Pedido entregue com sucesso! Bom apetite. ✨',
+              'cancelado': 'Ah não! Seu pedido foi cancelado. ⚠️'
             };
 
             const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
@@ -1437,6 +1439,9 @@ function App() {
 
             // Abrir tela de avaliação ao concluir (exceto para assinaturas Izi Black)
             if (newOrder.status === 'concluido') {
+              // Garantir que o item concluído seja o selecionado para o feedback
+              setSelectedItem(newOrder);
+              
               setTimeout(() => {
                 if (newOrder.service_type === 'subscription') {
                   setShowIziBlackWelcome(true);
@@ -1463,7 +1468,7 @@ function App() {
               }
               // Se estava na tela de aguardando e motorista aceitou, ir para acompanhamento
               if (subViewRef.current === "waiting_driver" && 
-                  ["a_caminho", "aceito", "confirmado", "em_rota", "no_local"].includes(newOrder.status)) {
+                  ["a_caminho", "aceito", "confirmado", "em_rota", "no_local", "picked_up", "saiu_para_entrega"].includes(newOrder.status)) {
                 setTimeout(() => setSubView("active_order"), 1500);
               }
               // Se pedido foi cancelado e estava aguardando, voltar para home
@@ -7563,10 +7568,11 @@ function App() {
     if (!selectedItem) return null;
 
     const steps = [
-      { id: 'confirmado', label: 'Pedido Confirmado', icon: 'check_circle', status: ['aceito', 'confirmado', 'preparando', 'picked_up', 'em_rota', 'a_caminho', 'no_local', 'concluido'] },
-      { id: 'preparando', label: 'Em Preparação',    icon: 'restaurant',     status: ['preparando', 'picked_up', 'em_rota', 'a_caminho', 'no_local', 'concluido'] },
-      { id: 'coletado',   label: 'Pedido Coletado',  icon: 'local_shipping', status: ['picked_up', 'em_rota', 'a_caminho', 'no_local', 'concluido'] },
-      { id: 'no_caminho', label: 'A Caminho',        icon: 'moped',          status: ['em_rota', 'a_caminho', 'no_local', 'concluido'] },
+      { id: 'confirmado', label: 'Pedido Confirmado', icon: 'check_circle', status: ['aceito', 'confirmado', 'preparando', 'pronto', 'a_caminho', 'picked_up', 'saiu_para_entrega', 'em_rota', 'no_local', 'concluido'] },
+      { id: 'preparando', label: 'Em Preparação',    icon: 'restaurant',     status: ['preparando', 'pronto', 'a_caminho', 'picked_up', 'saiu_para_entrega', 'em_rota', 'no_local', 'concluido'] },
+      { id: 'aceito_ent', label: 'Indo Coletar',     icon: 'moped',          status: ['a_caminho', 'picked_up', 'saiu_para_entrega', 'em_rota', 'no_local', 'concluido'] },
+      { id: 'coletado',   label: 'Pedido Coletado',  icon: 'package_2',      status: ['picked_up', 'saiu_para_entrega', 'em_rota', 'no_local', 'concluido'] },
+      { id: 'em_rota',    label: 'A Caminho',        icon: 'delivery_dining', status: ['saiu_para_entrega', 'em_rota', 'no_local', 'concluido'] },
       { id: 'entregue',   label: 'Entregue',         icon: 'verified',       status: ['concluido'] },
     ];
 
