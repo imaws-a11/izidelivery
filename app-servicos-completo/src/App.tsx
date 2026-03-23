@@ -1507,6 +1507,7 @@ function App() {
             const statusMessages: Record<string, string> = {
               'novo': 'Recebemos seu pedido! Já estamos processando. ⚡',
               'pendente_pagamento': 'Aguardando confirmação do pagamento... 💳',
+              'pendente': 'O lojista recebeu seu pedido! 🎉',
               'aceito': 'O estabelecimento aceitou seu pedido! 🎉',
               'confirmado': 'Pedido confirmado! O preparo começou. ✅',
               'preparando': 'Seu pedido está sendo preparado com carinho! 🍳',
@@ -1546,7 +1547,7 @@ function App() {
             // Transições automáticas de tela baseadas no status
             
             // 1. Se estava na tela de aguardando loja e ela aceitou (aceito, confirmado ou já preparando)
-            if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando"].includes(newOrder.status)) {
+            if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
               showToast("Loja aceitou seu pedido! 🎉", "success");
               setSelectedItem(newOrder); 
               setTimeout(() => setSubView("payment_success"), 1000);
