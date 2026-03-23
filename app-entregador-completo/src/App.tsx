@@ -1066,12 +1066,16 @@ function App() {
         </motion.div>
     );
 
+    const [isMapOnly, setIsMapOnly] = useState(false);
+
     const renderActiveMissionView = () => {
         if (!activeMission) return null;
         const details = getTypeDetails(activeMission.type);
         const isMobility = activeMission.type === 'mototaxi' || activeMission.type === 'car_ride';
         return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-[#020617] flex flex-col overflow-hidden">
+                {/* Header - esconde em modo mapa */}
+                {!isMapOnly && (
                 <div className="px-6 py-5 bg-black/40 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-4">
                         <div className={`size-12 rounded-[18px] ${details.bg} ${details.color} flex items-center justify-center border border-current/10`}><Icon name="satellite_alt" className="text-2xl animate-pulse" /></div>
@@ -1081,6 +1085,7 @@ function App() {
                         <div className="size-1.5 bg-emerald-400 rounded-full animate-pulse" /><span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Ativo</span>
                     </div>
                 </div>
+                )}
                  <div className="flex-1 bg-[#030a1a] relative overflow-hidden">
                     <IziRealTimeMap 
                       driverCoords={driverCoords} 
@@ -1090,6 +1095,8 @@ function App() {
                       } 
                     />
                     <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#020617]/40 via-transparent to-[#030712]/40" />
+                    
+                    {/* Info overlay no canto superior direito */}
                     <div className="absolute top-5 right-5 flex flex-col items-end gap-2">
                         <div className="bg-black/70 backdrop-blur-md border border-white/10 rounded-2xl px-4 py-3 text-right">
                             <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Ganho</p>
@@ -1109,7 +1116,24 @@ function App() {
                             </div>
                         )}
                     </div>
+
+                    {/* Botão flutuante para alternar modo mapa / painel completo */}
+                    <button 
+                        onClick={() => setIsMapOnly(!isMapOnly)}
+                        className={`absolute bottom-6 left-6 z-50 h-14 px-5 rounded-2xl flex items-center justify-center gap-2.5 border shadow-2xl transition-all active:scale-90 ${isMapOnly ? 'bg-primary text-slate-950 border-primary/50 shadow-primary/30' : 'bg-slate-900/80 text-white border-white/10 backdrop-blur-md shadow-black/30'}`}
+                        title={isMapOnly ? 'Voltar ao Painel' : 'Modo Mapa'}
+                    >
+                        <span className="material-symbols-outlined text-xl">
+                            {isMapOnly ? 'expand_less' : 'map'}
+                        </span>
+                        <span className="text-[9px] font-black uppercase tracking-widest">
+                            {isMapOnly ? 'Painel' : 'Só Mapa'}
+                        </span>
+                    </button>
                 </div>
+
+                {/* Painel inferior - esconde em modo mapa */}
+                {!isMapOnly && (
                 <div className="px-5 pt-5 pb-8 bg-[#030712] border-t border-white/5 space-y-4 shrink-0">
                     <div className="bg-white/[0.03] border border-white/8 rounded-[24px] p-5 space-y-3">
                         <div className="flex items-start gap-3"><div className="mt-1.5 size-2 rounded-full bg-white/30 shrink-0" /><div><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Coleta</p><p className="text-xs font-bold text-white/60 leading-tight">{activeMission.origin}</p></div></div>
@@ -1151,6 +1175,7 @@ function App() {
                         </button>
                     )}
                 </div>
+                )}
             </motion.div>
         );
     };
