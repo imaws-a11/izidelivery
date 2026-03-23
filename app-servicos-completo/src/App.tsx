@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { BespokeIcons } from "./lib/BespokeIcons";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "./lib/supabase";
@@ -74,8 +75,7 @@ const IziTrackingMap = ({ driverLoc, userLoc }: any) => {
   );
 };
 
-// Chave pública do Stripe (Placeholder - Usuário deve substituir pela sua real)
-import { BespokeIcons } from "./lib/BespokeIcons";
+
 
 const Icon = ({ name, className = "", size = 20 }: { name: string; className?: string; size?: number }) => {
   const icons: Record<string, any> = {
