@@ -1705,9 +1705,9 @@ function App() {
     const orderBase = {
       user_id: userId,
       merchant_id: selectedShop?.id || null,
-      merchant_name: selectedShop?.name || "Pedido",
       status: "pendente",
       total_price: total,
+      pickup_address: selectedShop?.name || "Endereço do Estabelecimento",
       delivery_address: userLocation.address || "Endereço não informado",
       payment_method: paymentMethod,
       service_type: selectedShop?.type || "restaurant",
@@ -1780,7 +1780,10 @@ function App() {
       // ── DINHEIRO ────────────────────────────────────────────────────────
       if (paymentMethod === "dinheiro") {
         navigateSubView("payment_processing");
-        const { data: order } = await supabase.from("orders_delivery").insert({ ...orderBase, status: "aceito" }).select().single();
+        const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ ...orderBase, status: "aceito" }).select().single();
+        if (insertError) {
+          console.error("Erro insert dinheiro:", insertError);
+        }
         if (!order) { navigateSubView("payment_error"); return; }
         setSelectedItem(order);
         clearCart();
@@ -4525,9 +4528,9 @@ function App() {
           .insert({
             user_id: userId,
             merchant_id: selectedShop?.id || null,
-            merchant_name: selectedShop?.name || "Pedido",
             status: "pendente",
             total_price: total,
+            pickup_address: selectedShop?.name || "Endereço do Estabelecimento",
             delivery_address: userLocation.address || "Endereço não informado",
             payment_method: "pix",
             service_type: "restaurant",
