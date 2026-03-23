@@ -580,7 +580,7 @@ function App() {
             free_delivery: data.free_delivery ?? false,
             store_type: data.store_type || 'restaurant'
           });
-          setActiveTab('my_store');
+          // // setActiveTab('my_store'); // Navegação livre // Liberado pelo usuário
         } else {
           setMerchantProfile(null);
           setActiveTab('dashboard');
@@ -770,7 +770,7 @@ function App() {
             : Promise.resolve({ count: 0, data: null, error: null }),
         isAdmin
           ? supabase.from('orders_delivery').select('*', { count: 'exact', head: true })
-          : supabase.from('orders_delivery').select('id', { count: 'exact', head: true }).order('created_at', { ascending: false }),
+          : adminId ? supabase.from('orders_delivery').select('id', { count: 'exact', head: true }).eq('merchant_id', adminId) : supabase.from('orders_delivery').select('id', { count: 'exact', head: true }),
         isAdmin
           ? supabase.from('drivers_delivery').select('*', { count: 'exact', head: true }).eq('is_online', true)
           : adminId
@@ -778,7 +778,7 @@ function App() {
             : Promise.resolve({ count: 0, data: null, error: null }),
         isAdmin
           ? supabase.from('orders_delivery').select('*').order('created_at', { ascending: false }).limit(5)
-          : supabase.from('orders_delivery').select('*').limit(5),
+          : adminId ? supabase.from('orders_delivery').select('*').eq('merchant_id', adminId).order('created_at', { ascending: false }).limit(5) : supabase.from('orders_delivery').select('*').limit(5),
         // Receita real: soma de total_price dos pedidos concluídos
         isAdmin
           ? supabase.from('orders_delivery').select('total_price').eq('status', 'concluido')

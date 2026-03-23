@@ -674,6 +674,7 @@ function App() {
     | "order_support"
     | "order_feedback"
     | "mobility_payment"
+    | "waiting_merchant"
     | "waiting_driver"
     | "scheduled_order"
     | "lightning_payment"
@@ -1495,7 +1496,7 @@ function App() {
           const newOrder = payload.new as any;
           const oldOrder = payload.old as any;
           
-          if (newOrder.user_id !== userId) return;
+          if (newOrder.user_id !== userIdRef.current) return;
 
           // Se o status mudou, mostrar notificação personalizada
           if (newOrder.status !== oldOrder.status) {
@@ -1572,7 +1573,7 @@ function App() {
           }
           
           // Atualizar lista completa de pedidos em background
-          if (userId) fetchMyOrders(userId);
+          if (userIdRef.current) fetchMyOrders(userIdRef.current);
         },
       )
       .subscribe();
@@ -1813,7 +1814,7 @@ function App() {
     const orderBase = {
       user_id: userId,
       merchant_id: selectedShop?.id || null,
-      status: "pendente",
+      status: "novo",
       total_price: total,
       pickup_address: selectedShop?.name || "Endereço do Estabelecimento",
       delivery_address: userLocation.address || "Endereço não informado",
@@ -1882,7 +1883,7 @@ function App() {
 
         setSelectedItem(order);
         clearCart();
-        navigateSubView("payment_success");
+        navigateSubView("waiting_merchant");
         return;
       }
 
@@ -1944,7 +1945,7 @@ function App() {
 
         setSelectedItem(order);
         clearCart();
-        navigateSubView("payment_success");
+        navigateSubView("waiting_merchant");
         return;
       }
 
@@ -4650,7 +4651,7 @@ function App() {
           .insert({
             user_id: userId,
             merchant_id: selectedShop?.id || null,
-            status: "pendente",
+            status: "novo",
             total_price: total,
             pickup_address: selectedShop?.name || "Endereço do Estabelecimento",
             delivery_address: userLocation.address || "Endereço não informado",
@@ -7888,7 +7889,12 @@ function App() {
             <p className="text-yellow-400 text-sm font-black tracking-widest uppercase">Aguardando Loja</p>
             <div className="size-2 bg-yellow-400 rounded-full animate-[bounce_1s_infinite_0.2s]" />
           </div>
-          <p className="text-zinc-500 text-xs font-medium">O estabelecimento está analisando seu pedido para pagamento na entrega. Confirmação em poucos segundos...</p>
+          <p className="text-zinc-500 text-xs font-medium">
+            {paymentMethod === 'dinheiro' 
+              ? "O estabelecimento está analisando seu pedido para pagamento na entrega." 
+              : "Seu pagamento foi confirmado! Aguardando a loja aceitar o pedido..."}
+            Confirmação em poucos segundos...
+          </p>
         </div>
       </div>
     );
