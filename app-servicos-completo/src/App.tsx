@@ -620,6 +620,10 @@ function App() {
   
   const [authInitLoading, setAuthInitLoading] = useState(true);
   const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
+  const [shopRating, setShopRating] = useState<number>(0);
+  const [driverRating, setDriverRating] = useState<number>(0);
+  const [fbComment, setFbComment] = useState<string>("");
+  const [fbIsSubmitting, setFbIsSubmitting] = useState<boolean>(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
   const [depositPixCode, setDepositPixCode] = useState("");
@@ -800,7 +804,7 @@ function App() {
             { view: "app", tab: t || tabRef.current, subView: "none" },
             "",
           );
-          setSubView("none");
+          setSubView("none"); setShopRating(0); setDriverRating(0); setFbComment("");
           return;
         }
         if (v) setView(v);
@@ -5324,23 +5328,18 @@ function App() {
   };
 
   const renderOrderFeedback = () => {
-    const [shopRating, setShopRating] = (useState as any)<number>(0);
-    const [driverRating, setDriverRating] = (useState as any)<number>(0);
-    const [comment, setComment] = (useState as any)<string>("");
-    const [isSubmitting, setIsSubmitting] = (useState as any)<boolean>(false);
-
     const handleSubmit = async () => {
       if (shopRating === 0 || driverRating === 0) { 
         showToast("Por favor, avalie o estabelecimento e o entregador.", "warning");
         return; 
       }
       
-      setIsSubmitting(true);
+      setFbIsSubmitting(true);
       try {
         if (selectedItem?.id) {
           await supabase.from("orders_delivery").update({ 
             rating: shopRating, 
-            feedback: comment,
+            feedback: fbComment,
             driver_rating: driverRating
           }).eq("id", selectedItem.id);
         }
@@ -5352,7 +5351,7 @@ function App() {
         console.error(e); 
         showToast("Erro ao enviar avaliação.", "error");
       } finally {
-        setIsSubmitting(false);
+        setFbIsSubmitting(false);
       }
     };
 
@@ -5435,8 +5434,8 @@ function App() {
           <div className="space-y-3">
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Observações adicionais</label>
             <textarea 
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
+              value={fbComment}
+              onChange={(e) => setFbComment(e.target.value)}
               placeholder="Escreva algo sobre sua experiência..."
               className="w-full bg-zinc-900 border border-zinc-800 rounded-[24px] p-5 text-zinc-100 text-sm focus:border-yellow-500 outline-none transition-all min-h-[120px] resize-none"
             />
@@ -5446,11 +5445,11 @@ function App() {
         <div className="p-6 bg-black border-t border-zinc-900">
           <button 
             onClick={handleSubmit}
-            disabled={isSubmitting}
-            className={`w-full py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${isSubmitting ? 'bg-zinc-800 text-zinc-500' : 'bg-yellow-500 text-black hover:shadow-[0_0_30px_rgba(234,179,8,0.3)] active:scale-95'}`}
+            disabled={fbIsSubmitting}
+            className={`w-full py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${fbIsSubmitting ? 'bg-zinc-800 text-zinc-500' : 'bg-yellow-500 text-black hover:shadow-[0_0_30px_rgba(234,179,8,0.3)] active:scale-95'}`}
           >
-            {isSubmitting ? 'Enviando...' : 'Confirmar Avaliação'}
-            {!isSubmitting && <span className="material-symbols-outlined text-sm">arrow_forward</span>}
+            {fbIsSubmitting ? 'Enviando...' : 'Confirmar Avaliação'}
+            {!fbIsSubmitting && <span className="material-symbols-outlined text-sm">arrow_forward</span>}
           </button>
         </div>
       </motion.div>

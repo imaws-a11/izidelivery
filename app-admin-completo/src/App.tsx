@@ -53,6 +53,7 @@ const MASTER_ADMIN_EMAIL = (import.meta.env.VITE_MASTER_ADMIN_EMAIL as string ??
 const FlashOffersSection = ({ supabase, userRole, merchantId }: { supabase: any, userRole: string, merchantId?: string }) => {
   const [offers, setOffers] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [merchantSearch, setMerchantSearch] = React.useState('');
   const [showForm, setShowForm] = React.useState(false);
   const [merchants, setMerchants] = React.useState<any[]>([]);
   const [uploadingImage, setUploadingImage] = React.useState(false);
@@ -128,11 +129,14 @@ const FlashOffersSection = ({ supabase, userRole, merchantId }: { supabase: any,
               <input value={form.product_name} onChange={e => setForm({...form, product_name: e.target.value})} placeholder="Nome do produto" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lojista</label>
-              <select value={form.merchant_id} onChange={e => setForm({...form, merchant_id: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400">
-                <option value="">Selecionar lojista</option>
-                {merchants.map((m: any) => <option key={m.id} value={m.id}>{m.store_name}</option>)}
-              </select>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lojista (Filtrar)</label>
+              <div className="space-y-2">
+                <input type="text" placeholder="Pesquisar lojista..." value={merchantSearch} onChange={e => setMerchantSearch(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2 text-xs font-bold dark:text-white focus:outline-none focus:border-rose-400" />
+                <select value={form.merchant_id} onChange={e => setForm({...form, merchant_id: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400">
+                  <option value="">Selecionar lojista</option>
+                  {merchants.filter(m => m.store_name?.toLowerCase().includes(merchantSearch.toLowerCase())).map((m: any) => <option key={m.id} value={m.id}>{m.store_name}</option>)}
+                </select>
+              </div>
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preço Original (R$) *</label>
@@ -152,8 +156,21 @@ const FlashOffersSection = ({ supabase, userRole, merchantId }: { supabase: any,
               <input type="datetime-local" value={form.expires_at} onChange={e => setForm({...form, expires_at: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Imagem do Produto (URL)</label>
-              <input value={form.product_image} onChange={e => setForm({...form, product_image: e.target.value})} placeholder="https://..." className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400" />
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Imagem do Produto (PNG/JPG)</label>
+              <div className="flex gap-2">
+                <input value={form.product_image} onChange={e => setForm({...form, product_image: e.target.value})} placeholder="URL ou selecione arquivo" className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400" />
+                <input type="file" accept="image/*" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => setForm({...form, product_image: reader.result as string});
+                    reader.readAsDataURL(file);
+                  }
+                }} className="hidden" id="offer-file-loader" />
+                <button onClick={() => document.getElementById('offer-file-loader')?.click()} className="px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-rose-500 transition-all">
+                  <span className="material-symbols-outlined">attachment</span>
+                </button>
+              </div>
             </div>
           </div>
           <div className="flex gap-3 pt-2">
@@ -1111,7 +1128,8 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     setPromoSaving(true);
     if (promoSaveTimer.current) clearTimeout(promoSaveTimer.current);
     try {
-      const payload: Record<string, unknown> = {
+      if (!promo.title || (promo.discount_value <= 0)) { alert('Preencha os campos obrigatórios.'); return; }
+    const payload: Record<string, unknown> = {
         title: promo.title,
         description: promo.description,
         image_url: promo.image_url || null,
@@ -1120,7 +1138,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         discount_value: promo.discount_value,
         min_order_value: promo.min_order_value,
         max_usage: promo.max_usage,
-        expires_at: promo.expires_at ? new Date(promo.expires_at + 'T23:59:59').toISOString() : null,
+        expires_at: (promo.expires_at && promo.expires_at.length >= 10) ? new Date(promo.expires_at + (promo.expires_at.includes('T') ? '' : 'T23:59:59')).toISOString() : null,
         is_active: promo.is_active,
         is_vip: promo.is_vip || false,
         updated_at: new Date().toISOString()
