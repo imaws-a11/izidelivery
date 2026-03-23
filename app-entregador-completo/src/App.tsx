@@ -312,20 +312,36 @@ function App() {
         setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
     };
 
-    const handleComplete = async () => {
+    const handleUpdateStatus = async (newStatus: string) => {
         if (!activeMission) return;
-        const { error } = await supabase.from('orders_delivery').update({ status: 'concluido' }).eq('id', activeMission.id);
-        if (error) { toastError('Erro ao concluir entrega.'); return; }
-        setHistory(prev => [{ ...activeMission, id: activeMission.id.slice(0, 8).toUpperCase() }, ...prev]);
-        setStats(prev => {
-            const bonusXp = 25 + (prev.level * 5); const newXp = prev.xp + bonusXp; const levelUp = newXp >= prev.nextXp;
-            if (levelUp) setTimeout(() => toast(`🎉 Nível ${prev.level + 1} desbloqueado!`), 500);
-            return { ...prev, balance: prev.balance + activeMission.price, today: prev.today + activeMission.price, count: prev.count + 1, xp: levelUp ? newXp - prev.nextXp : newXp, level: levelUp ? prev.level + 1 : prev.level, nextXp: levelUp ? prev.nextXp + 50 : prev.nextXp };
-        });
-        setActiveMission(null);
-        localStorage.removeItem('Izi_active_mission');
-        setActiveTab('dashboard');
-        toastSuccess('Entrega concluída! 🎉');
+        setIsAccepting(true); // Reusando loading state
+        try {
+            const { error } = await supabase.from('orders_delivery').update({ status: newStatus }).eq('id', activeMission.id);
+            if (error) throw error;
+            
+            const updatedMission = { ...activeMission, status: newStatus };
+            setActiveMission(updatedMission);
+            localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
+            
+            if (newStatus === 'concluido') {
+                setHistory(prev => [{ ...activeMission, id: activeMission.id.slice(0, 8).toUpperCase() }, ...prev]);
+                setStats(prev => {
+                    const bonusXp = 25 + (prev.level * 5); const newXp = prev.xp + bonusXp; const levelUp = newXp >= prev.nextXp;
+                    if (levelUp) setTimeout(() => toast(`🎉 Nível ${prev.level + 1} desbloqueado!`), 500);
+                    return { ...prev, balance: prev.balance + activeMission.price, today: prev.today + activeMission.price, count: prev.count + 1, xp: levelUp ? newXp - prev.nextXp : newXp, level: levelUp ? prev.level + 1 : prev.level, nextXp: levelUp ? prev.nextXp + 50 : prev.nextXp };
+                });
+                setActiveMission(null);
+                localStorage.removeItem('Izi_active_mission');
+                setActiveTab('dashboard');
+                toastSuccess('Entrega concluída! 🎉');
+            } else {
+                toastSuccess('Status atualizado!');
+            }
+        } catch (e: any) {
+            toastError('Erro ao atualizar status: ' + e.message);
+        } finally {
+            setIsAccepting(false);
+        }
     };
 
     const handleLogout = async () => {
@@ -914,9 +930,36 @@ function App() {
                         </button>
                         <button onClick={() => setIsSOSActive(true)} className="size-14 bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"><Icon name="emergency" className="text-xl" /></button>
                     </div>
-                    <button onClick={handleComplete} className="w-full h-16 bg-gradient-to-r from-primary to-yellow-400 text-slate-900 font-black text-sm uppercase tracking-widest rounded-[22px] shadow-2xl shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
-                        <Icon name="check_circle" className="text-2xl" />{isMobility ? 'Concluir Corrida' : 'Finalizar Entrega'}
-                    </button>
+                    {/* BOTÕES DINÂMICOS DE PROGRESSO */}
+                    {(!activeMission.status || activeMission.status === 'a_caminho') && (
+                        <button 
+                            onClick={() => handleUpdateStatus('picked_up')} 
+                            disabled={isAccepting}
+                            className="w-full h-16 bg-gradient-to-r from-blue-500 to-blue-400 text-white font-black text-sm uppercase tracking-widest rounded-[22px] shadow-2xl shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                        >
+                            <Icon name="package_2" className="text-2xl" />Confirmar Coleta
+                        </button>
+                    )}
+
+                    {activeMission.status === 'picked_up' && (
+                        <button 
+                            onClick={() => handleUpdateStatus('em_rota')} 
+                            disabled={isAccepting}
+                            className="w-full h-16 bg-gradient-to-r from-yellow-500 to-yellow-400 text-black font-black text-sm uppercase tracking-widest rounded-[22px] shadow-2xl shadow-yellow-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                        >
+                            <Icon name="moped" className="text-2xl" />Iniciar Entrega
+                        </button>
+                    )}
+
+                    {(activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega') && (
+                        <button 
+                            onClick={() => handleUpdateStatus('concluido')} 
+                            disabled={isAccepting}
+                            className="w-full h-16 bg-gradient-to-r from-primary to-yellow-400 text-slate-900 font-black text-sm uppercase tracking-widest rounded-[22px] shadow-2xl shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                        >
+                            <Icon name="check_circle" className="text-2xl" />{isMobility ? 'Concluir Corrida' : 'Finalizar Entrega'}
+                        </button>
+                    )}
                 </div>
             </motion.div>
         );
