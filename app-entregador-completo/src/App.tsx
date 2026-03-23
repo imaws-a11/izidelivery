@@ -4,7 +4,7 @@ import { supabase } from './lib/supabase';
 import { playIziSound } from './lib/iziSounds';
 import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
-import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
 
 
 const mapContainerStyle = { width: '100%', height: '100%' };
@@ -110,6 +110,28 @@ function IziRealTimeMap({ driverCoords, destCoords }: any) {
     googleMapsApiKey: "AIzaSyBi3EJ41-Kh7-ZXjNQ9K1d9AqmoD8UNiO8"
   });
 
+  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
+
+  useEffect(() => {
+    if (isLoaded && driverCoords && destCoords) {
+      const service = new google.maps.DirectionsService();
+      service.route(
+        {
+          origin: driverCoords,
+          destination: destCoords,
+          travelMode: google.maps.TravelMode.DRIVING,
+        },
+        (result, status) => {
+          if (status === google.maps.DirectionsStatus.OK && result) {
+            setDirections(result);
+          } else {
+            console.error("Erro ao calcular rota interna:", status);
+          }
+        }
+      );
+    }
+  }, [isLoaded, driverCoords, destCoords]);
+
   if (!isLoaded || !driverCoords) return (
     <div className="absolute inset-0 bg-slate-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-pulse">
@@ -127,8 +149,29 @@ function IziRealTimeMap({ driverCoords, destCoords }: any) {
         zoom={16}
         options={mapOptions}
       >
-        <Marker position={driverCoords} />
-        {destCoords && <Marker position={destCoords} />}
+        <Marker 
+          position={driverCoords} 
+          icon={{
+            url: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
+            scaledSize: new google.maps.Size(40, 40)
+          }}
+        />
+        
+        {directions ? (
+          <DirectionsRenderer
+            directions={directions}
+            options={{
+              polylineOptions: {
+                strokeColor: "#ffd700",
+                strokeWeight: 6,
+                strokeOpacity: 0.8
+              },
+              suppressMarkers: false
+            }}
+          />
+        ) : (
+          destCoords && <Marker position={destCoords} />
+        )}
       </GoogleMap>
     </div>
   );
@@ -1058,9 +1101,10 @@ function App() {
                     <div className="flex gap-3">
                         <button 
                           onClick={() => {
-                            const isDelivering = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega';
-                            const target = isDelivering ? activeMission.destination : activeMission.origin;
-                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(target)}`, '_blank');
+                            // A rota já é interna e automática no componente IziRealTimeMap.
+                            // Este botão agora serve para centralizar a visão no trajeto.
+                            setDriverCoords({...driverCoords!}); 
+                            toastSuccess('Navegação interna ativa no mapa acima!');
                           }} 
                           className="flex-1 h-16 bg-primary text-slate-900 font-black text-xs uppercase tracking-[0.15em] rounded-[24px] flex items-center justify-center gap-3 shadow-[0_12px_30px_rgba(255,215,9,0.3)] active:scale-95 transition-all border-b-4 border-yellow-600"
                         >

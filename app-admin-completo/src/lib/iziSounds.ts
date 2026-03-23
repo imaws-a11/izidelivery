@@ -1,26 +1,28 @@
 export const playIziSound = (role: 'merchant' | 'driver') => {
   try {
-    // URLs de sons premium selecionados para alta visibilidade e profissionalismo
+    // Endereços de sons públicos e estáveis (estilo Ringtone e Alerta)
     const sounds = {
-      merchant: "https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3", // Ringtone de telefone digital (Atencioso e Alto)
-      driver: "https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3"     // Notificação "Pop" rápida e energética
+      merchant: "https://www.soundjay.com/phone/phone-ringing-08.mp3", // Ringtone de telefone ALTO e insistente para o lojista
+      driver: "https://www.soundjay.com/communication/beep-07.mp3"     // Alerta de comunicação agudo e rápido para o entregador
     };
 
     const audio = new Audio(sounds[role] || sounds.merchant);
-    audio.volume = role === 'merchant' ? 1.0 : 0.8; // Lojista volume máximo (conforme solicitado)
+    audio.setAttribute('preload', 'auto');
+    audio.volume = 1.0; // Volume máximo para garantir a audição
     
-    // Tenta tocar, tratando bloqueio de autopaly do navegador
+    // Tentativa de execução com tratamento de erro e carregamento explícito
+    audio.load();
     const playPromise = audio.play();
     
     if (playPromise !== undefined) {
       playPromise.catch(error => {
-        console.warn("Autoplay bloqueado ou falha no áudio:", error);
-        // Fallback para tom sintético se a URL falhar
+        console.warn("Autoplay bloqueado pelo navegador. É necessária uma interação prévia na página.", error);
+        // Tenta tocar o sintético se o arquivo falhar ou for bloqueado
         playSyntheticFallback(role);
       });
     }
   } catch (err) {
-    console.error("Erro ao reproduzir som:", err);
+    console.error("Erro no som:", err);
     playSyntheticFallback(role);
   }
 };
@@ -28,8 +30,12 @@ export const playIziSound = (role: 'merchant' | 'driver') => {
 const playSyntheticFallback = (role: 'merchant' | 'driver') => {
   try {
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const now = audioCtx.currentTime;
     
+    // Se o AudioContext estiver suspenso (comum em navegadores modernos), tenta resumir
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
     const playTone = (freq: number, type: OscillatorType, start: number, duration: number, volume: number) => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -43,12 +49,17 @@ const playSyntheticFallback = (role: 'merchant' | 'driver') => {
       osc.stop(start + duration);
     };
 
+    const now = audioCtx.currentTime;
     if (role === 'merchant') {
-      playTone(880, 'sine', now, 0.4, 0.3);
-      playTone(1108, 'sine', now + 0.1, 0.5, 0.2);
+      // Tom de telefone sintético (Ring Ring)
+      playTone(440, 'sine', now, 0.5, 0.5);
+      playTone(480, 'sine', now, 0.5, 0.5);
+      playTone(440, 'sine', now + 0.6, 0.5, 0.5);
+      playTone(480, 'sine', now + 0.6, 0.5, 0.5);
     } else {
-      playTone(1320, 'square', now, 0.1, 0.1);
-      playTone(1760, 'square', now + 0.15, 0.2, 0.1);
+      // Alerta rápido
+      playTone(1320, 'square', now, 0.1, 0.15);
+      playTone(1760, 'square', now + 0.15, 0.2, 0.15);
     }
   } catch (e) {}
 };
