@@ -1270,11 +1270,13 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
   const fetchMerchants = async () => {
     setIsLoadingList(true);
     try {
-      const { data } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('role', 'merchant')
-        .order('created_at', { ascending: false });
+      let query = supabase.from('admin_users').select('*').eq('role', 'merchant');
+      
+      if (userRole === 'merchant' && merchantProfile?.merchant_id) {
+        query = query.eq('id', merchantProfile.merchant_id);
+      }
+
+      const { data } = await query.order('created_at', { ascending: false });
       if (data) setMerchantsList(data);
     } catch (err) {
       console.error('Merchants fetch error:', err);
@@ -3361,10 +3363,10 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
             </div>
 
             <nav className="flex flex-col gap-1">
-{/* â â Merchant Sidebar â Â */}
               {userRole === 'merchant' ? (
                 <>
                   <SidebarItem id="my_store" icon="dashboard" label="Dashboard & Loja" />
+                  <SidebarItem id="merchants" icon="storefront" label="Lojistas" />
                   <SidebarItem id="my_drivers" icon="delivery_dining" label="Motoboys Próprios" />
                   <SidebarItem id="orders" icon="shopping_cart" label="Meus Pedidos" />
                   <SidebarItem id="my_studio" icon="inventory_2" label="Estúdio do Lojista" />
@@ -3373,11 +3375,10 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                 </>
               ) : (
                 <>
-{/* â â Admin Sidebar â Â */}
                   <p className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mt-4">Principal</p>
-                  <SidebarItem id="dashboard" icon="dashboard" label="Dashboard" />
+                  <SidebarItem id="dashboard" icon="dashboard" label="Dashboard Geral" />
                   <SidebarItem id="merchants" icon="storefront" label="Lojistas" />
-                  <SidebarItem id="my_studio" icon="inventory_2" label="Estúdio do Lojista" />
+                  <SidebarItem id="my_studio" icon="inventory_2" label="Gerenciar Estúdios" />
                   <SidebarItem id="tracking" icon="map" label="Rastreamento" />
                   <SidebarItem id="orders" icon="shopping_cart" label="Pedidos" />
                   <SidebarItem id="drivers" icon="person_pin_circle" label="Entregadores" />
@@ -3387,9 +3388,9 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   <SidebarItem id="categories" icon="layers" label="Categorias" />
                   <SidebarItem id="promotions" icon="percent" label="Promoções" />
                   <SidebarItem id="izi_black" icon="workspace_premium" label="Izi Black VIP" />
-<SidebarItem id="dynamic_rates" icon="payments" label="Taxas Dinâmicas" />
-                  <SidebarItem id="financial" icon="bar_chart" label="Financeiro" />
-                  <SidebarItem id="support" icon="support_agent" label="Suporte" />
+                  <SidebarItem id="dynamic_rates" icon="payments" label="Taxas Dinâmicas" />
+                  <SidebarItem id="financial" icon="bar_chart" label="Financeiro Geral" />
+                  <SidebarItem id="support" icon="support_agent" label="Suporte Central" />
                   <SidebarItem id="audit_logs" icon="history_toggle_off" label="Logs do Sistema" />
                   <SidebarItem id="settings" icon="settings" label="Configurações" />
                 </>
