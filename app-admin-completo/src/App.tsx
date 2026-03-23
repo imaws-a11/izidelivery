@@ -644,8 +644,10 @@ function App() {
     if (!session) return;
 
     const loadInitialData = async () => {
-      await fetchStats();
-      await fetchAppSettings();
+      try {
+        console.log('Iniciando carga de dados...');
+        await fetchStats();
+        await fetchAppSettings();
       if (activeTab === 'users') await fetchUsers();
       if (activeTab === 'merchants') await fetchMerchants();
       if (activeTab === 'drivers' || activeTab === 'tracking' || activeTab === 'dashboard') await fetchDrivers();
@@ -675,7 +677,7 @@ function App() {
       }
       if (activeTab === 'audit_logs') await fetchAuditLogs();
       if (activeTab === 'my_drivers') await fetchMyDrivers();
-      setIsInitialLoading(false);
+      } catch (err) { console.error('Erro no loading:', err); } finally { setIsInitialLoading(false); }
     };
 
     loadInitialData();
@@ -773,7 +775,7 @@ function App() {
       const isAdmin = userRole === 'admin';
       let adminId = null;
 
-      if (!isAdmin && session?.user?.email) {
+      if (!isAdmin && session?.user?.email && !adminId) {
         const { data } = await supabase.from('admin_users').select('id').eq('email', session.user.email).maybeSingle();
         adminId = data?.id;
       }
