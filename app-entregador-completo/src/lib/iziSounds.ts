@@ -1,13 +1,15 @@
 export const playIziSound = (role: 'merchant' | 'driver') => {
   try {
     const sounds = {
-      merchant: "https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3", // Ringtone de telefone digital
-      driver: "https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3"     // Alerta pop energético
+      merchant: "https://www.soundjay.com/phone/phone-ringing-08.mp3", // Ringtone
+      driver: "https://www.soundjay.com/communication/beep-07.mp3"     // Alerta bip
     };
 
     const audio = new Audio(sounds[role] || sounds.driver);
-    audio.volume = role === 'merchant' ? 1.0 : 0.8; 
+    audio.setAttribute('preload', 'auto');
+    audio.volume = 1.0;
     
+    audio.load();
     const playPromise = audio.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => playSyntheticFallback(role));
@@ -20,8 +22,9 @@ export const playIziSound = (role: 'merchant' | 'driver') => {
 const playSyntheticFallback = (role: 'merchant' | 'driver') => {
   try {
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const now = audioCtx.currentTime;
-    
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
     const playTone = (freq: number, type: OscillatorType, start: number, duration: number, volume: number) => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -35,11 +38,12 @@ const playSyntheticFallback = (role: 'merchant' | 'driver') => {
       osc.stop(start + duration);
     };
 
+    const now = audioCtx.currentTime;
     if (role === 'merchant') {
-      playTone(880, 'sine', now, 0.4, 0.3);
+      playTone(440, 'sine', now, 0.5, 0.5);
     } else {
-      playTone(1320, 'square', now, 0.1, 0.1);
-      playTone(1760, 'square', now + 0.15, 0.2, 0.1);
+      playTone(1320, 'square', now, 0.1, 0.15);
+      playTone(1760, 'square', now + 0.15, 0.2, 0.15);
     }
   } catch (e) {}
 };
