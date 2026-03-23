@@ -3907,60 +3907,91 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
             )}
 
 {/* â â â â â â â MERCHANT ORDERS â â â â â â â */}
+{/* ─── MERCHANT ORDERS ─── */}
             {activeTab === 'orders' && userRole === 'merchant' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                   <div>
                     <div className="flex items-center gap-3 mb-2">
                       <span className="material-symbols-outlined text-3xl text-primary">shopping_cart</span>
-                      <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Meus Pedidos</h1>
+                      <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Gestão de Pedidos</h1>
                     </div>
-                    <p className="text-slate-500 dark:text-slate-400">Gerencie pedidos do seu estabelecimento em tempo real.</p>
+                    <p className="text-slate-500 dark:text-slate-400">Gerencie e aceite pedidos em tempo real para seu estabelecimento.</p>
                   </div>
-                  <span className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 dark:bg-orange-500/10 border border-orange-100 dark:border-orange-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-orange-600">
-                    <span className="size-2 rounded-full bg-orange-500 animate-pulse"></span>
-                    {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'novo' || o.status === 'pending' || o.status === 'aceito')).length} pendentes
+                  <span className="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-rose-600 shadow-sm">
+                    <span className="size-2 rounded-full bg-rose-500 animate-ping"></span>
+                    {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'novo' || o.status === 'pending' || o.status === 'waiting_merchant')).length} NOVOS PEDIDOS
                   </span>
                 </div>
 
-                {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'novo' || o.status === 'pending' || o.status === 'aceito')).length > 0 && (
-                  <div className="space-y-4">
+                {/* SEÇÃO: NOVOS PEDIDOS (AGUARDANDO AÇÃO) */}
+                {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'novo' || o.status === 'pending' || o.status === 'waiting_merchant')).length > 0 && (
+                  <div className="space-y-6">
                     <h3 className="text-sm font-black text-orange-500 uppercase tracking-widest flex items-center gap-2">
-                      <span className="material-symbols-outlined text-lg">notifications_active</span>
-                      Aguardando sua ação
+                      <span className="material-symbols-outlined text-lg animate-bounce">notifications_active</span>
+                      Solicitações Pendentes
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'novo' || o.status === 'pending' || o.status === 'aceito')).map((o: any) => (
-                        <motion.div key={o.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-500/5 dark:to-amber-500/5 p-6 rounded-[32px] border-2 border-orange-200 dark:border-orange-500/30 shadow-lg shadow-orange-500/5">
-                          <div className="flex items-start justify-between mb-4">
-                            <div>
-                              <p className="text-lg font-black text-slate-900 dark:text-white">#DT-{o.id.slice(0, 8).toUpperCase()}</p>
-                              <p className="text-[10px] font-bold text-slate-500 mt-1">{new Date(o.created_at).toLocaleString('pt-BR')}</p>
-                            </div>
-                            <span className="px-3 py-1 rounded-full bg-orange-500 text-white text-[9px] font-black uppercase tracking-widest animate-pulse">NOVO PEDIDO</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'novo' || o.status === 'pending' || o.status === 'waiting_merchant')).map((o: any) => (
+                        <motion.div key={o.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-slate-900 overflow-hidden rounded-[32px] border-2 border-orange-100 dark:border-orange-500/20 shadow-xl shadow-orange-500/5">
+                          <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-4 flex justify-between items-center">
+                            <span className="text-white text-[10px] font-black uppercase tracking-widest">DT-{o.id.slice(0, 8).toUpperCase()}</span>
+                            <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em]">{o.payment_method === 'dinheiro' ? 'PAGAMENTO NA ENTREGA' : 'PAGAMENTO DIGITAL'}</span>
                           </div>
-                          <div className="space-y-2 mb-4">
-                            <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-                              <span className="material-symbols-outlined text-sm text-red-500">pin_drop</span>
-                              <span className="font-bold truncate">{o.delivery_address}</span>
-                            </div>
-                            {o.payment_method && (
-                              <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-                                <span className="material-symbols-outlined text-sm text-blue-500">credit_card</span>
-                                <span className="font-bold capitalize">{o.payment_method}</span>
+                          
+                          <div className="p-6 space-y-5">
+                            <div className="flex justify-between items-start border-b border-slate-50 dark:border-slate-800 pb-4">
+                              <div>
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Itens do Pedido</h4>
+                                <p className="text-sm font-black text-slate-900 dark:text-white line-clamp-2 leading-relaxed">
+                                  {o.package_details || 'Nenhum detalhe informado'}
+                                </p>
                               </div>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between mb-4">
-                            <span className="text-2xl font-black text-primary">R$ {o.total_price?.toFixed(2).replace('.', ',')}</span>
-                          </div>
-                          <div className="flex gap-3">
-                            <button onClick={async () => { try { await supabase.from('orders_delivery').update({ status: 'cancelado' }).eq('id', o.id); fetchAllOrders(); } catch(err) { console.error(err); } }} className="flex-1 py-3 rounded-2xl bg-red-100 dark:bg-red-500/10 text-red-600 font-black text-[10px] uppercase tracking-widest hover:bg-red-200 transition-all border border-red-200 dark:border-red-500/20">
-                              <span className="flex items-center justify-center gap-1.5"><span className="material-symbols-outlined text-sm">close</span>Recusar</span>
-                            </button>
-                            <button onClick={async () => { try { await supabase.from('orders_delivery').update({ status: 'preparando' }).eq('id', o.id); fetchAllOrders(); } catch(err) { console.error(err); } }} className="flex-[2] py-3 rounded-2xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20">
-                              <span className="flex items-center justify-center gap-1.5"><span className="material-symbols-outlined text-sm">check</span>Aceitar Pedido</span>
-                            </button>
+                              <div className="text-right shrink-0">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total</p>
+                                <p className="text-xl font-black text-orange-500 tracking-tighter">R$ {Number(o.total_price || 0).toFixed(2).replace('.', ',')}</p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              <div className="flex items-start gap-3">
+                                <span className="material-symbols-outlined text-slate-300 text-lg">location_on</span>
+                                <div>
+                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Endereço de Entrega</p>
+                                  <p className="text-xs font-bold text-slate-600 dark:text-slate-400 italic">{o.delivery_address}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="material-symbols-outlined text-slate-300 text-lg">schedule</span>
+                                <p className="text-xs font-bold text-slate-600 dark:text-slate-400">{new Date(o.created_at).toLocaleString('pt-BR')}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-4 pt-2">
+                              <button 
+                                onClick={async () => { 
+                                  if (!confirm('Deseja realmente recusar este pedido?')) return;
+                                  try { 
+                                    await supabase.from('orders_delivery').update({ status: 'cancelado' }).eq('id', o.id); 
+                                    fetchAllOrders(); 
+                                    toastWarning('Pedido recusado');
+                                  } catch(err) { console.error(err); } 
+                                }} 
+                                className="flex-1 py-4 rounded-2xl border-2 border-red-50 dark:border-red-500/10 text-red-500 font-black text-[10px] uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-500/5 transition-all outline-none"
+                              >
+                                Recusar
+                              </button>
+                              <button 
+                                onClick={async () => { try { 
+                                  await supabase.from('orders_delivery').update({ status: 'preparando' }).eq('id', o.id); 
+                                  fetchAllOrders(); 
+                                  toastSuccess('Pedido em preparação!');
+                                } catch(err) { console.error(err); } }} 
+                                className="flex-[2] py-4 rounded-full bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest hover:shadow-lg hover:shadow-emerald-500/30 transition-all outline-none"
+                              >
+                                Aceitar e Preparar
+                              </button>
+                            </div>
                           </div>
                         </motion.div>
                       ))}
