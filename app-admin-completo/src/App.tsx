@@ -3365,12 +3365,10 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
             <nav className="flex flex-col gap-1">
               {userRole === 'merchant' ? (
                 <>
-                  <SidebarItem id="my_store" icon="dashboard" label="Dashboard & Loja" />
-                  <SidebarItem id="merchants" icon="storefront" label="Lojistas" />
-                  <SidebarItem id="my_drivers" icon="delivery_dining" label="Motoboys Próprios" />
-                  <SidebarItem id="orders" icon="shopping_cart" label="Meus Pedidos" />
-                  <SidebarItem id="my_studio" icon="inventory_2" label="Estúdio do Lojista" />
-                  <SidebarItem id="promotions" icon="percent" label="Minhas Promoções" />
+                  <SidebarItem id="orders" icon="shopping_cart" label="Pedidos e Entregas" />
+                  <SidebarItem id="my_studio" icon="inventory_2" label="Minha Loja Digital" />
+                  <SidebarItem id="my_drivers" icon="delivery_dining" label="Meus Motoboys" />
+                  <SidebarItem id="promotions" icon="percent" label="Promoções" />
                   <SidebarItem id="financial" icon="bar_chart" label="Meu Financeiro" />
                 </>
               ) : (
@@ -4105,7 +4103,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                            {allOrders.map((o: any) => (
+                            {allOrders.filter((o: any) => userRole === 'admin' || o.merchant_id === merchantProfile?.merchant_id).map((o: any) => (
                               <tr key={o.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors group">
                                 <td className="px-12 py-8">
                                     <span className="text-sm font-black text-slate-400 mb-0.5 group-hover:text-primary transition-colors">#DT-{o.id.slice(0, 8).toUpperCase()}</span>
@@ -4150,7 +4148,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
               </div>
             )}
 {/* â â â â â â â ADMIN ORDERS â â â â â â â */}
-            {activeTab === 'orders' && userRole !== 'merchant' && (
+            {activeTab === 'orders' && userRole === 'admin' && (
               <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative">
                 {isLoadingList && (
                   <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm z-10 flex items-center justify-center">
@@ -4236,7 +4234,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
               </div>
             )}
 
-            {activeTab === 'drivers' && (
+            {activeTab === 'drivers' && userRole === 'admin' && (
               <div className="space-y-8">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                   <div>
@@ -4798,7 +4796,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
               </motion.div>
             )}
 
-            {activeTab === 'users' && !selectedUser && (
+            {activeTab === 'users' && userRole === 'admin' && !selectedUser && (
               <div className="space-y-8">
                 {/* Page Title & Main Actions */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -5012,7 +5010,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
               </div>
             )}
 
-            {activeTab === 'merchants' && (
+            {activeTab === 'merchants' && userRole === 'admin' && (
               <div className="space-y-8">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                   <div>
@@ -5154,7 +5152,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
               </div>
             )}
 
-            {activeTab === 'support' && (
+            {activeTab === 'support' && userRole === 'admin' && (
               <div className="space-y-8">
                 {/* Support Header & Stats */}
                 <div className="flex flex-wrap justify-between items-end gap-6">
@@ -5956,7 +5954,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
               </div>
             )}
 
-            {activeTab === 'izi_black' && (
+            {activeTab === 'izi_black' && userRole === 'admin' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div>
@@ -6196,7 +6194,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
               </div>
             )}
 
-            {activeTab === 'categories' && (
+            {activeTab === 'categories' && userRole === 'admin' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {/* Categories Header */}
                 <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
@@ -6403,7 +6401,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
               </div>
             )}
 
-            {activeTab === 'dynamic_rates' && (
+            {activeTab === 'dynamic_rates' && userRole === 'admin' && (
               <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000">
                 {/* Dynamic Rates Pro Header */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 bg-white dark:bg-slate-900 p-10 rounded-[48px] border border-slate-100 dark:border-slate-800 shadow-xl relative overflow-hidden">
@@ -6884,7 +6882,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   </div>
                 )}
 
-            {activeTab === 'audit_logs' && (
+            {activeTab === 'audit_logs' && userRole === 'admin' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {/* Audit Logs Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -7039,7 +7037,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
               </div>
             )}
 
-            {activeTab === 'settings' && (
+            {activeTab === 'settings' && userRole === 'admin' && (
               <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -7912,7 +7910,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
             {/* ── Merchant/Admin: Estúdio do Lojista (Consolidado) ── */}
             {activeTab === 'my_studio' && (
               <div className="flex flex-col h-[calc(100vh-160px)] -m-8 relative overflow-hidden bg-white dark:bg-slate-900 shadow-2xl rounded-[40px] border border-slate-100 dark:border-slate-800">
-                {((userRole === 'merchant' && merchantProfile) || (userRole === 'admin' && selectedMerchantPreview)) ? (
+                {(userRole === 'merchant' && merchantProfile) || (userRole === 'admin' && selectedMerchantPreview) ? (
                   <div className="flex-1 flex overflow-hidden">
                     {/* Digital Preview Column (Simulates App) */}
                     <div className="w-[480px] border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 flex flex-col items-center justify-center p-12 overflow-hidden relative">

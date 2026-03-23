@@ -111,6 +111,7 @@ function IziRealTimeMap({ driverCoords, destCoords }: any) {
   });
 
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
+  const [isNavMode, setIsNavMode] = useState(true);
 
   useEffect(() => {
     if (isLoaded && driverCoords && destCoords) {
@@ -145,7 +146,7 @@ function IziRealTimeMap({ driverCoords, destCoords }: any) {
     <div className="absolute inset-0 z-0">
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
-        center={driverCoords}
+        center={isNavMode ? driverCoords : undefined}
         zoom={16}
         options={mapOptions}
       >
@@ -173,6 +174,23 @@ function IziRealTimeMap({ driverCoords, destCoords }: any) {
           destCoords && <Marker position={destCoords} />
         )}
       </GoogleMap>
+
+      {/* Botão para Sair do Modo de Rota Ativa (Recentralizar) */}
+      <button 
+        onClick={() => setIsNavMode(!isNavMode)}
+        className={`absolute top-6 right-6 z-50 size-14 rounded-2xl flex items-center justify-center border shadow-2xl transition-all active:scale-90 ${isNavMode ? 'bg-primary text-slate-950 border-white/20' : 'bg-slate-900/80 text-white border-white/10 backdrop-blur-md'}`}
+        title={isNavMode ? 'Mudar para Mapa Livre' : 'Voltar para Navegação'}
+      >
+        <span className="material-symbols-outlined text-2xl">
+          {isNavMode ? 'explore' : 'near_me'}
+        </span>
+      </button>
+
+      {!isNavMode && (
+        <div className="absolute top-24 right-6 z-50 px-4 py-2 bg-slate-900/80 backdrop-blur-md rounded-xl border border-white/10 text-[8px] font-black text-white uppercase tracking-[0.2em] shadow-2xl animate-in fade-in slide-in-from-right-4">
+          Modo Mapa Livre Ativo
+        </div>
+      )}
     </div>
   );
 }
