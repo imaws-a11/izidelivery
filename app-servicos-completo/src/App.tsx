@@ -40,7 +40,7 @@ const destinationIcon = L.divIcon({
 
 
 
-const Icon = ({ name, className = "", size = 20 }: { name: string; className?: string; size?: number }) => {
+function Icon({ name, className = "", size = 20 }: { name: string; className?: string; size?: number }) {
   const icons: Record<string, any> = {
     'home': BespokeIcons.Home,
     'search': BespokeIcons.Search,
@@ -102,7 +102,7 @@ const Icon = ({ name, className = "", size = 20 }: { name: string; className?: s
 
   const IconComp = icons[name] || BespokeIcons.Help;
   return <IconComp size={size} className={className} />;
-};
+}
 
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY as string || "";
 const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;

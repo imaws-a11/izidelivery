@@ -4,43 +4,34 @@ import { supabase } from './lib/supabase';
 import { playIziSound } from './lib/iziSounds';
 import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 
-// Corrigir ícones do Leaflet que quebram no build
-const defaultIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
-});
-L.Marker.prototype.options.icon = defaultIcon;
 
-const motoboyIcon = L.divIcon({
-  html: `<div class="bg-primary p-2 rounded-full border-2 border-black shadow-lg shadow-primary/40"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M21 16.5C21 16.88 20.79 17.21 20.47 17.38L12.57 21.82C12.41 21.94 12.21 22 12 22C11.79 22 11.59 21.94 11.43 21.82L3.53 17.38C3.21 17.21 3 16.88 3 16.5V7.5L12 2.5L21 7.5V16.5Z"/></svg></div>`,
-  className: '',
-  iconSize: [36, 36],
-  iconAnchor: [18, 18]
-});
-
-const destinationIcon = L.divIcon({
-  html: `<div class="bg-red-500 p-2 rounded-full border-2 border-black shadow-lg shadow-red-500/40"><svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg></div>`,
-  className: '',
-  iconSize: [36, 36],
-  iconAnchor: [18, 18]
-});
-
-// Componente para auto-centralizar o mapa
-const RecenterMap = ({ coords }: { coords: [number, number] }) => {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(coords, 16);
-  }, [coords]);
-  return null;
+const mapContainerStyle = { width: '100%', height: '100%' };
+const mapOptions = {
+    disableDefaultUI: true,
+    zoomControl: false,
+    styles: [
+        { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
+        { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
+        { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+        { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+        { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
+        { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#263c3f' }] },
+        { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#6b9a76' }] },
+        { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#38414e' }] },
+        { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212a37' }] },
+        { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
+        { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#746855' }] },
+        { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#1f2835' }] },
+        { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#f3d19c' }] },
+        { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] },
+        { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#515c6d' }] },
+        { featureType: 'water', elementType: 'labels.text.stroke', stylers: [{ color: '#17263c' }] }
+    ]
 };
 
-const Icon = ({ name, className = "", size = 20, ...props }: any) => {
+function Icon({ name, className = "", size = 20, ...props }: any) {
   const icons: Record<string, any> = {
     'grid_view': BespokeIcons.Home,
     'stars': BespokeIcons.Star,
@@ -81,7 +72,7 @@ const Icon = ({ name, className = "", size = 20, ...props }: any) => {
 
   const IconComp = icons[name] || BespokeIcons.Help;
   return <IconComp size={size} className={className} />;
-};
+}
 
 type View = 'dashboard' | 'history' | 'earnings' | 'profile' | 'active_mission' | 'dedicated' | 'scheduled' | 'sos';
 type ServiceType = 'package' | 'mototaxi' | 'car_ride' | string;
@@ -105,8 +96,13 @@ interface Order {
     delivery_lat? : number;
     delivery_lng? : number;
 }
-const IziRealTimeMap = ({ driverCoords, destCoords }: any) => {
-  if (!driverCoords) return (
+function IziRealTimeMap({ driverCoords, destCoords }: any) {
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: "AIzaSyBi3EJ41-Kh7-ZXjNQ9K1d9AqmoD8UNiO8"
+  });
+
+  if (!isLoaded || !driverCoords) return (
     <div className="absolute inset-0 bg-slate-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-pulse">
             <Icon name="radar" className="text-primary text-4xl" />
@@ -117,29 +113,24 @@ const IziRealTimeMap = ({ driverCoords, destCoords }: any) => {
 
   return (
     <div className="absolute inset-0 z-0">
-      <MapContainer 
-        center={[driverCoords.lat, driverCoords.lng]} 
-        zoom={16} 
-        scrollWheelZoom={false}
-        className="h-full w-full"
-        zoomControl={false}
-        attributionControl={false}
+      <GoogleMap
+        mapContainerStyle={mapContainerStyle}
+        center={driverCoords}
+        zoom={16}
+        options={mapOptions}
       >
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        />
-        <Marker position={[driverCoords.lat, driverCoords.lng]} icon={motoboyIcon} />
-        {destCoords && <Marker position={[destCoords.lat, destCoords.lng]} icon={destinationIcon} />}
-        <RecenterMap coords={[driverCoords.lat, driverCoords.lng]} />
-      </MapContainer>
+        <Marker position={driverCoords} />
+        {destCoords && <Marker position={destCoords} />}
+      </GoogleMap>
     </div>
   );
-};
+}
 
 function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [driverId, setDriverId] = useState<string | null>(null);
     const [driverCoords, setDriverCoords] = useState<{lat: number, lng: number} | null>(null);
+    const [isOnline, setIsOnline] = useState(false);
 
     // Sistema de Monitoramento de GPS em Tempo Real
     useEffect(() => {
