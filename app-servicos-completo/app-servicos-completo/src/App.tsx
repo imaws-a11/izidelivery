@@ -1323,7 +1323,7 @@ function App() {
                 `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
               );
               const data = await response.json();
-              let address = data.display_name.split(",")[0];
+              const address = data.display_name.split(",")[0];
               setUserLocation({ address, loading: false });
               setTransitData((prev) => ({ ...prev, origin: address }));
             }
