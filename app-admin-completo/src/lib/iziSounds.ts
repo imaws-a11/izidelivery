@@ -1,65 +1,79 @@
-export const playIziSound = (role: 'merchant' | 'driver') => {
-  try {
-    // Endereços de sons públicos e estáveis (estilo Ringtone e Alerta)
-    const sounds = {
-      merchant: "https://www.soundjay.com/phone/phone-ringing-08.mp3", // Ringtone de telefone ALTO e insistente para o lojista
-      driver: "https://www.soundjay.com/communication/beep-07.mp3"     // Alerta de comunicação agudo e rápido para o entregador
-    };
+// Sistema de som Izi Delivery - Admin / Lojista
+// Usa AudioContext sintético como método principal (100% confiável, sem dependência externa)
 
-    const audio = new Audio(sounds[role] || sounds.merchant);
-    audio.setAttribute('preload', 'auto');
-    audio.volume = 1.0; // Volume máximo para garantir a audição
-    
-    // Tentativa de execução com tratamento de erro e carregamento explícito
-    audio.load();
-    const playPromise = audio.play();
-    
-    if (playPromise !== undefined) {
-      playPromise.catch(error => {
-        console.warn("Autoplay bloqueado pelo navegador. É necessária uma interação prévia na página.", error);
-        // Tenta tocar o sintético se o arquivo falhar ou for bloqueado
-        playSyntheticFallback(role);
-      });
+let audioCtxInstance: AudioContext | null = null;
+
+const getAudioContext = (): AudioContext | null => {
+  try {
+    if (!audioCtxInstance || audioCtxInstance.state === 'closed') {
+      audioCtxInstance = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
-  } catch (err) {
-    console.error("Erro no som:", err);
-    playSyntheticFallback(role);
+    if (audioCtxInstance.state === 'suspended') {
+      audioCtxInstance.resume();
+    }
+    return audioCtxInstance;
+  } catch {
+    return null;
   }
 };
 
-const playSyntheticFallback = (role: 'merchant' | 'driver') => {
-  try {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    
-    // Se o AudioContext estiver suspenso (comum em navegadores modernos), tenta resumir
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-
-    const playTone = (freq: number, type: OscillatorType, start: number, duration: number, volume: number) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq, start);
-      gain.gain.setValueAtTime(volume, start);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(start);
-      osc.stop(start + duration);
-    };
-
-    const now = audioCtx.currentTime;
-    if (role === 'merchant') {
-      // Tom de telefone sintético (Ring Ring)
-      playTone(440, 'sine', now, 0.5, 0.5);
-      playTone(480, 'sine', now, 0.5, 0.5);
-      playTone(440, 'sine', now + 0.6, 0.5, 0.5);
-      playTone(480, 'sine', now + 0.6, 0.5, 0.5);
-    } else {
-      // Alerta rápido
-      playTone(1320, 'square', now, 0.1, 0.15);
-      playTone(1760, 'square', now + 0.15, 0.2, 0.15);
-    }
-  } catch (e) {}
+const playTone = (
+  ctx: AudioContext,
+  freq: number,
+  type: OscillatorType,
+  startOffset: number,
+  duration: number,
+  volume: number
+) => {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
+  gain.gain.setValueAtTime(volume, ctx.currentTime + startOffset);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startOffset + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(ctx.currentTime + startOffset);
+  osc.stop(ctx.currentTime + startOffset + duration);
 };
+
+export const playIziSound = (role: 'merchant' | 'driver') => {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    if (role === 'merchant') {
+      // Som de telefone tocando - forte e insistente (ring ring ring x3)
+      for (let i = 0; i < 3; i++) {
+        const offset = i * 0.7;
+        // Tom duplo clássico de telefone
+        playTone(ctx, 440, 'sine', offset, 0.3, 0.5);
+        playTone(ctx, 480, 'sine', offset, 0.3, 0.5);
+        // Segundo toque no mesmo ciclo
+        playTone(ctx, 440, 'sine', offset + 0.35, 0.25, 0.4);
+        playTone(ctx, 480, 'sine', offset + 0.35, 0.25, 0.4);
+      }
+    } else {
+      // Som de alerta para driver - 3 bips crescentes
+      playTone(ctx, 880, 'square', 0, 0.08, 0.12);
+      playTone(ctx, 1100, 'square', 0.12, 0.08, 0.14);
+      playTone(ctx, 1320, 'square', 0.24, 0.08, 0.16);
+      playTone(ctx, 880, 'square', 0.5, 0.08, 0.14);
+      playTone(ctx, 1100, 'square', 0.62, 0.08, 0.16);
+      playTone(ctx, 1760, 'square', 0.74, 0.15, 0.2);
+    }
+  } catch (e) {
+    console.warn('Erro ao reproduzir som:', e);
+  }
+};
+
+// Habilitar AudioContext após primeira interação do usuário (obrigatório nos navegadores modernos)
+if (typeof window !== 'undefined') {
+  const enableAudio = () => {
+    getAudioContext();
+    window.removeEventListener('click', enableAudio);
+    window.removeEventListener('touchstart', enableAudio);
+  };
+  window.addEventListener('click', enableAudio, { once: true });
+  window.addEventListener('touchstart', enableAudio, { once: true });
+}

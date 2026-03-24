@@ -104,7 +104,7 @@ interface Order {
     delivery_lat? : number;
     delivery_lng? : number;
 }
-function IziRealTimeMap({ driverCoords, destCoords }: any) {
+function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: "AIzaSyBi3EJ41-Kh7-ZXjNQ9K1d9AqmoD8UNiO8"
@@ -114,16 +114,19 @@ function IziRealTimeMap({ driverCoords, destCoords }: any) {
   const [isNavMode, setIsNavMode] = useState(true);
   const lastDestRef = useRef<string>('');
 
+  // Resolver destino: coordenadas OU endereço texto
+  const resolvedDest = (destCoords?.lat && destCoords?.lng) ? destCoords : (destAddress || null);
+
   // Calcular rota: imediato na 1a vez e ao mudar destino, depois a cada 30s
   useEffect(() => {
-    if (!isLoaded || !driverCoords || !destCoords) return;
+    if (!isLoaded || !driverCoords || !resolvedDest) return;
     
     const calcRoute = () => {
       const service = new google.maps.DirectionsService();
       service.route(
         {
           origin: driverCoords,
-          destination: destCoords,
+          destination: resolvedDest,
           travelMode: google.maps.TravelMode.DRIVING,
         },
         (result, status) => {
@@ -135,7 +138,7 @@ function IziRealTimeMap({ driverCoords, destCoords }: any) {
     };
 
     // Recalcular imediatamente se o destino mudou
-    const destKey = `${destCoords.lat},${destCoords.lng}`;
+    const destKey = typeof resolvedDest === 'string' ? resolvedDest : `${resolvedDest.lat},${resolvedDest.lng}`;
     if (destKey !== lastDestRef.current) {
       lastDestRef.current = destKey;
       calcRoute();
@@ -144,7 +147,7 @@ function IziRealTimeMap({ driverCoords, destCoords }: any) {
     // Recalcular a cada 30s para atualizar com a posição do motorista
     const interval = setInterval(calcRoute, 30000);
     return () => clearInterval(interval);
-  }, [isLoaded, driverCoords, destCoords]);
+  }, [isLoaded, driverCoords, resolvedDest]);
 
   if (!isLoaded || !driverCoords) return (
     <div className="absolute inset-0 bg-slate-950 flex items-center justify-center">
@@ -489,8 +492,14 @@ function App() {
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
                 if (['pendente', 'pronto'].includes(o.status) && !(Date.now() - (declinedMap[o.id] || 0) < 5000)) {
                     setOrders(prev => {
-                        if (prev.find(x => x.realId === o.id)) return prev;
-                        return [{ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev];
+                        const isNew = !prev.find(x => x.realId === o.id);
+                        if (isNew) {
+                            // Tocar som quando um pedido novo aparece na lista (ex: lojista marcou como pronto)
+                            playIziSound('driver');
+                            if (Notification.permission === 'granted') new Notification('📦 Pedido Disponível!', { body: `Coleta: ${o.pickup_address}`, icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' });
+                            return [{ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev];
+                        }
+                        return prev;
                     });
                 } else if (!['pendente', 'pronto'].includes(o.status) && (!currentMission || o.id !== currentMission.id)) {
                     setOrders(prev => prev.filter((order: any) => order.realId !== o.id));
@@ -585,7 +594,7 @@ function App() {
         if (driverId) await supabase.from('drivers_delivery').update({ is_online: false }).eq('id', driverId);
         await supabase.auth.signOut();
         setIsMenuOpen(false); setIsOnline(false);
-        localStorage.removeItem('Izi_online'); localStorage.removeItem('Izi_declined'); localStorage.removeItem('Izi_active_mission');
+        localStorage.removeItem('Izi_online'); localStorage.removeItem('Izi_declined'); localStorage.removeItem('Izi_declined_timed'); localStorage.removeItem('Izi_active_mission');
     };
 
     const getTypeDetails = (type: ServiceType) => {
@@ -1154,7 +1163,11 @@ function App() {
                       destCoords={activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega'
                         ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng } 
                         : { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng }
-                      } 
+                      }
+                      destAddress={activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega'
+                        ? (activeMission.destination || activeMission.delivery_address)
+                        : (activeMission.origin || activeMission.pickup_address)
+                      }
                     />
                     <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#020617]/40 via-transparent to-[#030712]/40" />
                     
@@ -1196,11 +1209,18 @@ function App() {
                     {/* Botão flutuante para abrir navegação externa */}
                     <button 
                         onClick={() => {
-                            const dest = (activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega')
-                                ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng }
-                                : { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng };
-                            if (dest.lat && dest.lng) {
-                                window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}&travelmode=driving`, '_blank');
+                            const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega';
+                            const lat = isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat;
+                            const lng = isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng;
+                            const addressText = isDeliveryPhase ? (activeMission.destination || activeMission.delivery_address) : (activeMission.origin || activeMission.pickup_address);
+                            let destination = '';
+                            if (lat && lng) {
+                                destination = `${lat},${lng}`;
+                            } else if (addressText) {
+                                destination = encodeURIComponent(addressText);
+                            }
+                            if (destination) {
+                                window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
                             }
                         }}
                         className="absolute bottom-6 right-6 z-50 h-14 px-5 rounded-2xl flex items-center justify-center gap-2.5 bg-blue-600 text-white border border-blue-500/50 shadow-2xl shadow-blue-600/30 transition-all active:scale-90"
@@ -1222,11 +1242,18 @@ function App() {
                     <div className="flex gap-3">
                         <button 
                             onClick={() => {
-                                const dest = (activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega')
-                                    ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng }
-                                    : { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng };
-                                if (dest.lat && dest.lng) {
-                                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}&travelmode=driving`, '_blank');
+                                const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega';
+                                const lat = isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat;
+                                const lng = isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng;
+                                const addressText = isDeliveryPhase ? (activeMission.destination || activeMission.delivery_address) : (activeMission.origin || activeMission.pickup_address);
+                                let destination = '';
+                                if (lat && lng) {
+                                    destination = `${lat},${lng}`;
+                                } else if (addressText) {
+                                    destination = encodeURIComponent(addressText);
+                                }
+                                if (destination) {
+                                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
                                 }
                             }}
                             className="flex-1 h-14 bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
