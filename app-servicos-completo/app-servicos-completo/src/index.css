@@ -1,0 +1,141 @@
+@import "tailwindcss";
+@reference "tailwindcss";
+
+@theme {
+  --color-primary: #ffd900;
+  --color-background-light: #f8f8f5;
+  --color-background-dark: #23200f;
+  --color-brand-50: #fff9db;
+  --color-brand-100: #fff0b3;
+  --color-brand-500: #ffd900;
+  --color-brand-600: #e6c300;
+
+  --shadow-float: 0 20px 48px -12px rgba(0, 0, 0, 0.12);
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.04);
+
+  --radius-4xl: 2.5rem;
+  --radius-5xl: 3rem;
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-gradient-spin: gradient-spin 3s linear infinite;
+  --animate-scanner: scanner 3.5s ease-in-out infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  @keyframes gradient-spin {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  @keyframes scanner {
+    0%, 100% { top: 0%; opacity: 0; }
+    10%, 90% { opacity: 1; }
+    50% { top: 100%; }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-xl border border-white/20;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .fill-1 {
+    font-variation-settings: 'FILL' 1;
+  }
+}
+
+body {
+  @apply font-sans antialiased bg-[#f8f8f5] dark:bg-[#23200f];
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Google Maps Autocomplete Styles */
+.pac-container {
+  border-radius: 24px;
+  border: none !important;
+  margin-top: 8px;
+  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.15) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  padding: 12px !important;
+  z-index: 9999 !important;
+  background-color: #ffffff;
+}
+
+.dark .pac-container {
+  background-color: #1e293b;
+  border: 1px solid rgba(255,255,255,0.05) !important;
+}
+
+.pac-item {
+  padding: 12px 16px !important;
+  border-top: none !important;
+  cursor: pointer;
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  border-radius: 16px;
+  margin-bottom: 4px;
+  transition: all 0.2s;
+}
+
+.pac-item:hover {
+  background-color: #f1f5f9;
+}
+
+.dark .pac-item:hover {
+  background-color: #334155;
+}
+
+.pac-item-query {
+  font-size: 14px !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+.dark .pac-item-query {
+  color: #ffffff !important;
+}
+
+.pac-matched {
+  color: #ffd900 !important;
+}
+
+.pac-icon {
+  margin-top: 0 !important;
+  margin-right: 0 !important;
+}
