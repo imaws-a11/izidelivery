@@ -30,6 +30,8 @@ export default function OrdersMerchantTab() {
   // Pedidos em PRODUÇÃO ou ENTREGA
   const ongoingOrders = myOrders.filter((o: any) => ['preparando', 'pronto', 'pendente', 'waiting_driver', 'accepted', 'picked_up', 'em_rota', 'a_caminho'].includes(o.status));
 
+  const totalActionableOrders = pendingOrders.length + waitingPaymentOrders.length;
+
   const [localProcessingId, setLocalProcessingId] = React.useState<string | null>(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = React.useState<any>(null);
 
@@ -88,7 +90,7 @@ export default function OrdersMerchantTab() {
         <div className="flex items-center gap-4">
           <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-orange-50 dark:bg-orange-500/10 border border-orange-100 dark:border-orange-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-orange-600 shadow-sm">
             <span className="size-2 rounded-full bg-orange-500 animate-ping"></span>
-            {pendingOrders.length} novos pedidos
+            {totalActionableOrders} ações pendentes
           </span>
           <button 
             onClick={() => fetchAllOrders(merchantOrdersPage)}
@@ -417,6 +419,7 @@ export default function OrdersMerchantTab() {
                       <div className="p-8 overflow-y-auto flex-1 custom-scrollbar space-y-8">
                           {/* Status Banner */}
                           <div className={`p-6 rounded-[32px] border flex items-center justify-between ${
+                              selectedOrderDetails.status === 'pendente_pagamento' ? 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-500/5' :
                               selectedOrderDetails.status === 'waiting_merchant' ? 'bg-orange-50 border-orange-100 text-orange-600 dark:bg-orange-500/5' :
                               selectedOrderDetails.status === 'preparando' ? 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-500/5' :
                               selectedOrderDetails.status === 'concluido' ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-500/5' :
@@ -425,7 +428,8 @@ export default function OrdersMerchantTab() {
                               <div className="flex items-center gap-4">
                                   <div className="size-12 rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center">
                                       <span className="material-symbols-outlined text-2xl">
-                                          {selectedOrderDetails.status === 'waiting_merchant' ? 'pending' : 
+                                          {selectedOrderDetails.status === 'pendente_pagamento' ? 'payments' :
+                                           selectedOrderDetails.status === 'waiting_merchant' ? 'pending' : 
                                            selectedOrderDetails.status === 'preparando' ? 'restaurant' : 
                                            selectedOrderDetails.status === 'concluido' ? 'check_circle' : 'local_shipping'}
                                       </span>
@@ -433,7 +437,8 @@ export default function OrdersMerchantTab() {
                                   <div>
                                       <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Status Atual</p>
                                       <p className="text-base font-black uppercase tracking-widest">
-                                          {selectedOrderDetails.status === 'waiting_merchant' ? 'Aguardando Aprovação' : 
+                                          {selectedOrderDetails.status === 'pendente_pagamento' ? 'Aguardando Confirmação do Pagamento' :
+                                           selectedOrderDetails.status === 'waiting_merchant' ? 'Aguardando Aprovação' : 
                                            selectedOrderDetails.status === 'preparando' ? 'Em Preparação' : 
                                            selectedOrderDetails.status === 'waiting_driver' ? 'Aguardando Entregador' : 
                                            selectedOrderDetails.status === 'concluido' ? 'Pedido Finalizado' : selectedOrderDetails.status}
@@ -491,37 +496,89 @@ export default function OrdersMerchantTab() {
 
                       {/* Footer Actions */}
                       <div className="p-8 border-t border-slate-100 dark:border-slate-800 flex gap-4 bg-slate-50/50 dark:bg-slate-800/20">
+                          {selectedOrderDetails.status === 'pendente_pagamento' && (
+                              <>
+                                <button
+                                    disabled={localProcessingId === selectedOrderDetails.id}
+                                    onClick={() => handleAction(selectedOrderDetails.id, 'cancelado', 'Cancelado pelo lojista')}
+                                    className="flex-1 py-4 rounded-3xl bg-white dark:bg-slate-800 text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] border border-slate-200 dark:border-slate-700 hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm disabled:opacity-50"
+                                >
+                                    {localProcessingId === selectedOrderDetails.id ? '...' : 'Cancelar Pedido'}
+                                </button>
+                                <button
+                                    disabled={localProcessingId === selectedOrderDetails.id}
+                                    onClick={() => handleAction(selectedOrderDetails.id, 'waiting_driver')}
+                                    className="flex-[2] py-4 rounded-3xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {localProcessingId === selectedOrderDetails.id ? '...' : (
+                                      <>
+                                        <span className="material-symbols-outlined text-sm">payments</span>
+                                        Confirmar Pagamento
+                                      </>
+                                    )}
+                                </button>
+                              </>
+                          )}
                           {selectedOrderDetails.status === 'waiting_merchant' && (
                               <>
                                 <button 
+                                    disabled={localProcessingId === selectedOrderDetails.id}
                                     onClick={() => handleAction(selectedOrderDetails.id, 'cancelado', 'Recusado pelo lojista')}
-                                    className="flex-1 py-4 rounded-3xl bg-white dark:bg-slate-800 text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] border border-slate-200 dark:border-slate-700 hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm"
+                                    className="flex-1 py-4 rounded-3xl bg-white dark:bg-slate-800 text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] border border-slate-200 dark:border-slate-700 hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm disabled:opacity-50"
                                 >
-                                    Recusar
+                                    {localProcessingId === selectedOrderDetails.id ? '...' : 'Cancelar Pedido'}
                                 </button>
                                 <button 
+                                    disabled={localProcessingId === selectedOrderDetails.id}
                                     onClick={() => handleAction(selectedOrderDetails.id, 'waiting_driver')}
-                                    className="flex-[2] py-4 rounded-3xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2"
+                                    className="flex-[2] py-4 rounded-3xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
-                                    <span className="material-symbols-outlined text-sm">delivery_dining</span>
-                                    Aceitar e Chamar
+                                    {localProcessingId === selectedOrderDetails.id ? '...' : (
+                                      <>
+                                        <span className="material-symbols-outlined text-sm">delivery_dining</span>
+                                        Aceitar e Chamar
+                                      </>
+                                    )}
                                 </button>
                               </>
                           )}
                           {selectedOrderDetails.status === 'preparando' && (
-                              <button 
-                                onClick={() => handleAction(selectedOrderDetails.id, 'waiting_driver')}
-                                className="flex-1 py-4 rounded-3xl bg-blue-500 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
-                            >
-                                <span className="material-symbols-outlined text-sm">delivery_dining</span>
-                                Pronto! Chamar Entregador
-                            </button>
+                              <>
+                                <button
+                                  disabled={localProcessingId === selectedOrderDetails.id}
+                                  onClick={() => handleAction(selectedOrderDetails.id, 'cancelado', 'Cancelado pelo lojista durante o preparo')}
+                                  className="flex-1 py-4 rounded-3xl bg-white dark:bg-slate-800 text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] border border-slate-200 dark:border-slate-700 hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm disabled:opacity-50"
+                                >
+                                  {localProcessingId === selectedOrderDetails.id ? '...' : 'Cancelar Pedido'}
+                                </button>
+                                <button 
+                                  disabled={localProcessingId === selectedOrderDetails.id}
+                                  onClick={() => handleAction(selectedOrderDetails.id, 'waiting_driver')}
+                                  className="flex-[2] py-4 rounded-3xl bg-blue-500 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                  {localProcessingId === selectedOrderDetails.id ? '...' : (
+                                    <>
+                                      <span className="material-symbols-outlined text-sm">delivery_dining</span>
+                                      Pronto! Chamar Entregador
+                                    </>
+                                  )}
+                                </button>
+                              </>
                           )}
                           {(selectedOrderDetails.status === 'waiting_driver' || selectedOrderDetails.status === 'accepted') && (
-                               <div className="flex-1 flex items-center justify-center p-4 rounded-3xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20">
-                                   <span className="material-symbols-outlined text-blue-500 animate-spin mr-3">autorenew</span>
-                                   <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Buscando entregador próximo...</p>
-                               </div>
+                               <>
+                                 <button
+                                   disabled={localProcessingId === selectedOrderDetails.id}
+                                   onClick={() => handleAction(selectedOrderDetails.id, 'cancelado', 'Cancelado pelo lojista enquanto aguardava entregador')}
+                                   className="flex-1 py-4 rounded-3xl bg-white dark:bg-slate-800 text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] border border-slate-200 dark:border-slate-700 hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm disabled:opacity-50"
+                                 >
+                                   {localProcessingId === selectedOrderDetails.id ? '...' : 'Cancelar Pedido'}
+                                 </button>
+                                 <div className="flex-[2] flex items-center justify-center p-4 rounded-3xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20">
+                                     <span className="material-symbols-outlined text-blue-500 animate-spin mr-3">autorenew</span>
+                                     <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Buscando entregador próximo...</p>
+                                 </div>
+                               </>
                           )}
                       </div>
                   </motion.div>
