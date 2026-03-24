@@ -962,7 +962,7 @@ function App() {
                 `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
               );
               const data = await response.json();
-              let address = data.display_name.split(",")[0];
+              const address = data.display_name.split(",")[0];
               setUserLocation({ address, loading: false });
               setTransitData((prev) => ({ ...prev, origin: address }));
             }
@@ -1433,7 +1433,7 @@ function App() {
     // Preço: usa calculado por distância se disponível, senão dinâmico base
     const bv = marketConditions.settings.baseValues;
     const basePrices: Record<string, number> = { mototaxi: bv.mototaxi_min, carro: bv.carro_min, van: bv.van_min, utilitario: bv.utilitario_min };
-    let price = transitData.estPrice > 0 ? transitData.estPrice : calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min);
+    const price = transitData.estPrice > 0 ? transitData.estPrice : calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min);
 
     if (!userId) {
       // Se não estiver logado, mostrar tela de resultado sem criar no banco
@@ -1729,7 +1729,7 @@ function App() {
       });
     }
 
-    let categorizedShop = { ...shop, categories: categoriesArray };
+    const categorizedShop = { ...shop, categories: categoriesArray };
 
     setSelectedShop(categorizedShop);
     setActiveMenuCategory(categoriesArray[0]?.name || "Destaques");

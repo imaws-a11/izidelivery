@@ -5,9 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "./lib/supabase";
 import { toast, toastSuccess, toastError, toastWarning, showConfirm } from "./lib/useToast";
 import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from '@react-google-maps/api';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-
+// Mercado Pago
+import { MercadoPagoCardForm } from "./components/MercadoPagoCardForm";
 
 function IziTrackingMap({ driverLoc, userLoc }: any) {
   const { isLoaded } = useJsApiLoader({
@@ -130,121 +129,6 @@ function Icon({ name, className = "", size = 20 }: { name: string; className?: s
   return <IconComp size={size} className={className} />;
 }
 
-const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY as string || "";
-const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
-
-const StripePaymentForm = ({ onConfirm, total, userId, onCardSaved }: {
-  onConfirm: (paymentMethodId: string) => void;
-  total: number;
-  userId?: string | null;
-  onCardSaved?: (card: { id: string; brand: string; last4: string; expiry: string; stripe_payment_method_id: string }) => void;
-}) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [error, setError] = useState<string | null>(null);
-  const [processing, setProcessing] = useState(false);
-  const [saveCard, setSaveCard] = useState(true);
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!stripe || !elements) return;
-
-    setProcessing(true);
-    setError(null);
-    const cardElement = elements.getElement(CardElement);
-    if (!cardElement) { setProcessing(false); return; }
-
-    const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
-      type: 'card',
-      card: cardElement,
-    });
-
-    if (pmError) {
-      setError(pmError.message || "Erro ao processar cartão");
-      setProcessing(false);
-      return;
-    }
-
-    // Salvar cartão no Supabase se usuário marcou a opção
-    if (saveCard && userId && onCardSaved) {
-      const card = paymentMethod.card;
-      const expiry = card ? `${String(card.exp_month).padStart(2, '0')}/${String(card.exp_year).slice(-2)}` : '';
-      const brand = card?.brand ? card.brand.charAt(0).toUpperCase() + card.brand.slice(1) : 'Cartão';
-
-      const { data: inserted } = await supabase
-        .from('payment_methods')
-        .insert({
-          user_id: userId,
-          stripe_payment_method_id: paymentMethod.id,
-          brand,
-          last4: card?.last4 || '????',
-          expiry,
-          is_default: true,
-        })
-        .select()
-        .single();
-
-      // Remove padrão dos outros cartões
-      await supabase
-        .from('payment_methods')
-        .update({ is_default: false })
-        .eq('user_id', userId)
-        .neq('id', inserted?.id || '');
-
-      if (inserted) {
-        onCardSaved({
-          id: inserted.id,
-          brand,
-          last4: card?.last4 || '????',
-          expiry,
-          stripe_payment_method_id: paymentMethod.id,
-        });
-      }
-    }
-
-    onConfirm(paymentMethod.id);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-slate-50 bg-zinc-900 rounded-2xl border border-zinc-800">
-      <div className="p-4 bg-white bg-zinc-900 rounded-xl border border-zinc-800 border-zinc-700">
-        <CardElement options={{
-          style: {
-            base: {
-              fontSize: '16px',
-              color: '#1e293b',
-              '::placeholder': { color: '#94a3b8' },
-              fontFamily: 'Inter, sans-serif',
-            },
-            invalid: { color: '#ef4444' },
-          }
-        }} />
-      </div>
-      {error && <p className="text-red-500 text-xs font-bold uppercase tracking-widest">{error}</p>}
-      {userId && (
-        <label className="flex items-center gap-3 cursor-pointer group">
-          <div
-            onClick={() => setSaveCard(!saveCard)}
-            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${saveCard ? 'bg-yellow-400 border-primary' : 'border-slate-300 '}`}
-          >
-            {saveCard && <Icon name="check" />}
-          </div>
-          <span className="text-xs font-bold text-zinc-500 text-zinc-400">Salvar cartão para próximas compras</span>
-        </label>
-      )}
-      <button
-        type="submit"
-        disabled={!stripe || processing}
-        className="w-full bg-yellow-400 text-white font-black py-4 rounded-xl shadow-lg shadow-primary/20 active:scale-95 transition-all text-xs uppercase tracking-[0.2em] disabled:opacity-50 flex items-center justify-center gap-2"
-      >
-        {processing
-          ? <><div className="size-4 border-2 border-slate-900/20 border-t-slate-900 rounded-full animate-spin" />Processando...</>
-          : `Pagar R$ ${total.toFixed(2).replace('.', ',')}`
-        }
-      </button>
-    </form>
-  );
-};
 
 interface SavedAddress {
   id: string | number;
@@ -1434,6 +1318,29 @@ function App() {
     }
     setIsLoadingCards(false);
   };
+  const handleSetPrimaryCard = async (cardId: string) => {
+    if (!userId) return;
+    await supabase.from("payment_methods").update({ is_default: false }).eq("user_id", userId);
+    await supabase.from("payment_methods").update({ is_default: true }).eq("id", cardId);
+    setSavedCards((prev: any[]) => prev.map((c: any) => ({ ...c, active: c.id === cardId })));
+    setPaymentMethod("cartao");
+  };
+
+  const handleDeleteCard = async (cardId: string) => {
+    if (!userId) return;
+    if (await showConfirm({ message: "Remover este cartão?" })) {
+      await supabase.from("payment_methods").delete().eq("id", cardId).eq("user_id", userId);
+      const updated = savedCards.filter((c: any) => c.id !== cardId);
+      setSavedCards(updated);
+      const wasActive = savedCards.find((c: any) => c.id === cardId)?.active;
+      if (wasActive && updated.length > 0) {
+        await handleSetPrimaryCard(updated[0].id);
+      } else if (updated.length === 0) {
+        setPaymentMethod("pix");
+      }
+    }
+  };
+
   const fetchSavedAddresses = async (uid: string) => {
     const { data, error } = await supabase
       .from("saved_addresses")
@@ -2021,6 +1928,10 @@ function App() {
     };
 
     try {
+      // ── PAGAMENTOS DIGITAIS (Pendente Confirmação) ───────────────────────
+      const isDigital = ["pix", "cartao", "bitcoin_lightning"].includes(paymentMethod);
+      const initialStatus = isDigital ? "pendente_pagamento" : (paymentMethod === "dinheiro" ? "waiting_merchant" : "novo");
+
       // ── PIX (Mercado Pago) ──────────────────────────────────────────────
       if (paymentMethod === "pix") {
         setPixConfirmed(false);
@@ -2032,7 +1943,7 @@ function App() {
       // ── BITCOIN LIGHTNING ──────────────────────────────────────────────
       if (paymentMethod === "bitcoin_lightning") {
         navigateSubView("payment_processing");
-        const { data: order } = await supabase.from("orders_delivery").insert(orderBase).select().single();
+        const { data: order } = await supabase.from("orders_delivery").insert({ ...orderBase, status: initialStatus }).select().single();
         if (!order) { navigateSubView("payment_error"); return; }
 
         const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
@@ -2040,8 +1951,7 @@ function App() {
         });
 
         if (lnErr || !lnData?.payment_request) {
-          const errMsg = lnErr?.message || JSON.stringify(lnData) || "Erro desconhecido";
-          alert("Erro Lightning: " + errMsg);
+          alert("Erro Lightning: " + (lnErr?.message || "Serviço indisponível"));
           navigateSubView("payment_error");
           return;
         }
@@ -2063,7 +1973,7 @@ function App() {
         }
 
         navigateSubView("payment_processing");
-        const { data: order } = await supabase.from("orders_delivery").insert(orderBase).select().single();
+        const { data: order } = await supabase.from("orders_delivery").insert({ ...orderBase, status: "novo" }).select().single();
         if (!order) { navigateSubView("payment_error"); return; }
 
         await supabase.from("wallet_transactions").insert({
@@ -2079,63 +1989,27 @@ function App() {
 
       // ── DINHEIRO (PAGAMENTO NA ENTREGA) ─────────────────────────────────
       if (paymentMethod === "dinheiro") {
-        // O usuário quer que para pagamento físico, o status inicialmente seja aguardando merchant
         const { data: order, error: insertError } = await supabase
           .from("orders_delivery")
           .insert({ ...orderBase, status: "waiting_merchant" })
           .select()
           .single();
 
-        if (insertError) {
+        if (insertError || !order) {
           console.error("Erro insert dinheiro:", insertError);
           navigateSubView("payment_error");
           return;
         }
 
-        if (!order) {
-          navigateSubView("payment_error");
-          return;
-        }
-
         setSelectedItem(order);
         clearCart();
-        // Navega para a tela de animação de espera (izi rapidez)
         navigateSubView("waiting_merchant");
         return;
       }
 
-      // ── CARTÃO (Stripe) ─────────────────────────────────────────────────
+      // ── CARTÃO (Mercado Pago) ──────────────────────────────────────────
       if (paymentMethod === "cartao") {
-        navigateSubView("payment_processing");
-        const { data: order } = await supabase.from("orders_delivery").insert(orderBase).select().single();
-        if (!order) { navigateSubView("payment_error"); return; }
-
-        const { data: { session } } = await supabase.auth.getSession();
-        const { data: intentData, error: intentErr } = await supabase.functions.invoke("create-payment-intent", {
-          body: { amount: total, orderId: order.id },
-          headers: { Authorization: `Bearer ${session?.access_token}` },
-        });
-
-        if (intentErr || !intentData?.clientSecret) {
-          console.error("Stripe error:", intentErr, intentData);
-          navigateSubView("payment_error");
-          return;
-        }
-
-        // Se tem stripePaymentMethodId salvo, confirmar direto
-        if (stripePaymentMethodId) {
-          const stripe = await (window as any).Stripe?.(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
-          if (stripe) {
-            const { error: confirmErr } = await stripe.confirmCardPayment(intentData.clientSecret, {
-              payment_method: stripePaymentMethodId,
-            });
-            if (confirmErr) { console.error("Stripe confirm:", confirmErr); navigateSubView("payment_error"); return; }
-          }
-        }
-
-        setSelectedItem(order);
-        clearCart();
-        navigateSubView("waiting_merchant");
+        setSubView("card_payment");
         return;
       }
 
@@ -4981,11 +4855,12 @@ function App() {
           return;
         }
 
-        // 2. Chamar Edge Function do Mercado Pago
-        const { data: fnData, error: fnErr } = await supabase.functions.invoke("create-mp-pix", {
+        // 2. Chamar Edge Function do Mercado Pago (Unificada)
+        const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
           body: {
             amount: total,
             orderId: order.id,
+            payment_method_id: 'pix',
             email: (await supabase.auth.getUser()).data.user?.email || "cliente@izidelivery.com",
             customer: {
               cpf: pixCpf.replace(/\D/g,""),
@@ -4996,12 +4871,7 @@ function App() {
 
         if (fnErr || !fnData?.qrCode) {
           console.error("Erro MP PIX:", fnErr, fnData);
-          // Fallback: mostrar QR fake mas registrar pedido
-          setSelectedItem(order);
-          setCart([]);
-          setAppliedCoupon(null);
-          setCouponInput("");
-          setUserXP((prev: number) => prev + 50);
+          toastError("Ocorreu um erro ao gerar o PIX. Tente novamente.");
           return;
         }
 
@@ -5108,6 +4978,107 @@ function App() {
             </button>
           )}
 
+        </main>
+      </div>
+    );
+  };
+
+  const renderCardPayment = () => {
+    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+    const discount = appliedCoupon ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100) : 0;
+    const total = Math.max(0, subtotal - discount);
+
+    const handleConfirmCard = async (token: string, _issuer: string, _installments: number, brand: string, _last4: string) => {
+        setIsLoading(true);
+        try {
+            const isSubscription = paymentsOrigin === "izi_black";
+            const orderBase = {
+                user_id: userId,
+                merchant_id: isSubscription ? null : (selectedShop?.id || null),
+                total_price: total,
+                status: "pendente_pagamento",
+                pickup_address: isSubscription ? "Assinatura Izi Black" : (selectedShop?.name || "Estabelecimento"),
+                delivery_address: isSubscription ? "Serviço Digital" : (userLocation.address || "Endereço não informado"),
+                payment_method: "cartao",
+                service_type: isSubscription ? "subscription" : "restaurant",
+            };
+
+            const { data: order } = await supabase.from("orders_delivery").insert(orderBase).select().single();
+            if (!order) { toastError("Erro ao criar pedido."); return; }
+
+            const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
+                body: {
+                    amount: total,
+                    orderId: order.id,
+                    payment_method_id: brand.toLowerCase().includes('visa') ? 'visa' : 'master',
+                    token: token,
+                    email: (await supabase.auth.getUser()).data.user?.email || "cliente@izidelivery.com",
+                    installments: 1
+                },
+            });
+
+            if (fnErr || (fnData && fnData.status !== 'approved')) {
+                const msg = fnData?.status_detail || fnErr?.message || "O cartão foi recusado pela operadora.";
+                toastError(`Pagamento não aprovado: ${msg}`);
+                setSubView(isSubscription ? "izi_black_purchase" : "checkout");
+                return;
+            }
+
+            if (isSubscription) {
+                await supabase.from('users_delivery').update({ is_izi_black: true }).eq('id', userId);
+                setIsIziBlackMembership(true);
+                setIziBlackStep('success');
+                setSubView("izi_black_purchase");
+            } else {
+                setSelectedItem(order);
+                setCart([]);
+                setAppliedCoupon(null);
+                setTab("orders");
+                setSubView("none");
+            }
+            toastSuccess(isSubscription ? "Assinatura IZI Black ativada!" : "Pedido aprovado!");
+
+        } catch (err: any) {
+            console.error("Card processing error:", err);
+            toastError("Instabilidade na rede. Tente novamente.");
+            setSubView(paymentsOrigin === "izi_black" ? "izi_black_purchase" : "checkout");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+      <div className="absolute inset-0 z-40 bg-black text-white flex flex-col overflow-y-auto no-scrollbar pb-10">
+        <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-6 border-b border-zinc-900 text-white">
+          <button onClick={() => setSubView("checkout")}
+            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          </button>
+          <div className="flex flex-col text-left">
+              <h1 className="text-lg font-black text-white uppercase tracking-tight leading-none">Cartão de Crédito</h1>
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">{selectedShop?.name || 'Venda Digital'}</p>
+          </div>
+        </header>
+
+        <main className="px-5 pt-10 max-w-sm mx-auto w-full space-y-10">
+          <div className="text-center">
+            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1">Valor Final</p>
+            <p className="text-5xl font-black text-white" style={{ textShadow: "0 0 20px rgba(255,215,9,0.2)" }}>R$ {total.toFixed(2).replace(".", ",")}</p>
+          </div>
+
+          <div className="bg-zinc-900/10 border border-zinc-900/50 p-6 rounded-[40px] shadow-2xl">
+              <MercadoPagoCardForm onConfirm={handleConfirmCard} />
+          </div>
+          
+          <div className="flex flex-col items-center gap-4 py-4">
+             <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-zinc-700 text-sm">enhanced_encryption</span>
+                <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-black">Certificado pela PCI DSS</p>
+             </div>
+             <p className="text-[10px] text-center text-zinc-700 uppercase tracking-widest font-bold max-w-[200px] leading-relaxed">
+               Seus dados são encriptados de ponta a ponta e nunca armazenados em nossos servidores.
+             </p>
+          </div>
         </main>
       </div>
     );
@@ -5565,10 +5536,166 @@ function App() {
   };
 
   const renderPayments = () => {
-    // Redireciona para a carteira que agora contém o gerenciamento de pagamentos
-    useEffect(() => { setTab("wallet"); setSubView("none"); }, []);
-    return null;
+    return (
+      <div className="absolute inset-0 z-40 bg-black text-white flex flex-col overflow-y-auto no-scrollbar pb-32">
+        {/* HEADER */}
+        <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-6 border-b border-zinc-900">
+          <button onClick={() => {
+              if (paymentsOrigin === "checkout") setSubView("checkout");
+              else if (paymentsOrigin === "izi_black") setSubView("izi_black_purchase");
+              else setSubView("none");
+            }} 
+            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          </button>
+          <h1 className="text-xl font-black text-white uppercase tracking-tight">Pagamentos</h1>
+        </header>
+
+        <main className="px-5 py-8 space-y-10">
+          {/* MÉTODOS SMART */}
+          <div className="grid grid-cols-2 gap-4">
+             <button className="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl flex flex-col items-center gap-2 opacity-50">
+               <span className="material-symbols-outlined text-3xl">apple</span>
+               <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Apple Pay</span>
+             </button>
+             <button className="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl flex flex-col items-center gap-2 opacity-50">
+               <span className="material-symbols-outlined text-3xl">google</span>
+               <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Google Pay</span>
+             </button>
+          </div>
+
+          {/* LISTA DE CARTÕES */}
+          <section className="space-y-6">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Cartões Salvos</h3>
+              <button 
+                onClick={() => setIsAddingCard(true)}
+                className="text-[10px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/10 px-4 py-2 rounded-full">
+                + Adicionar
+              </button>
+            </div>
+
+            {isLoadingCards ? (
+              <div className="py-10 flex justify-center"><div className="size-6 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin" /></div>
+            ) : savedCards.length === 0 ? (
+               <div className="bg-zinc-900/40 border border-dashed border-zinc-800 rounded-3xl p-10 text-center">
+                 <p className="text-zinc-600 text-xs font-bold uppercase tracking-widest">Nenhum cartão salvo</p>
+               </div>
+            ) : (
+              <div className="space-y-4">
+                {savedCards.map((card: any) => (
+                  <div 
+                    key={card.id} 
+                    onClick={() => handleSetPrimaryCard(card.id)}
+                    className={`relative p-6 rounded-[32px] border-2 transition-all cursor-pointer ${card.active ? "border-yellow-400 bg-zinc-900/80" : "border-zinc-900 bg-zinc-900/30"}`}
+                  >
+                    <div className="flex justify-between items-start mb-6">
+                      <div className={`size-12 rounded-2xl flex items-center justify-center ${card.active ? "bg-yellow-400 text-black" : "bg-zinc-800 text-zinc-500"}`}>
+                        <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>credit_card</span>
+                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteCard(card.id); }} className="size-8 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-lg">delete</span>
+                      </button>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">{card.brand}</p>
+                      <p className="font-extrabold text-lg tracking-[0.2em] text-white">•••• •••• •••• {card.last4}</p>
+                    </div>
+                    {card.active && (
+                       <div className="absolute top-6 right-12 bg-yellow-400 text-black text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest">Padrão</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* OUTRAS OPÇÕES */}
+          <section className="space-y-4">
+            <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] px-1">Outros Métodos</h3>
+            <div className="bg-zinc-900/30 border border-zinc-900 rounded-[32px] overflow-hidden">
+               {[
+                 { id: "pix", icon: "pix", label: "PIX Instantâneo", color: "text-emerald-400" },
+                 { id: "bitcoin_lightning", icon: "bolt", label: "Bitcoin Lightning", color: "text-orange-400" },
+                 { id: "dinheiro", icon: "payments", label: "Dinheiro na Entrega", color: "text-zinc-500" }
+               ].map((m, i) => (
+                 <button key={m.id} onClick={() => setPaymentMethod(m.id as any)}
+                   className={`w-full flex items-center gap-4 p-5 hover:bg-zinc-900/50 transition-all ${i > 0 ? "border-t border-zinc-900" : ""}`}>
+                   <span className={`material-symbols-outlined text-xl ${m.color}`} style={{ fontVariationSettings: paymentMethod === m.id ? "'FILL' 1" : "'FILL' 0" }}>{m.icon}</span>
+                   <p className="flex-1 text-left font-black text-sm text-zinc-100">{m.label}</p>
+                   {paymentMethod === m.id && <span className="material-symbols-outlined text-yellow-400 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>}
+                 </button>
+               ))}
+            </div>
+          </section>
+
+          {/* BOTÃO CONFIRMAR (Se vier do checkout) */}
+          {paymentsOrigin === "checkout" && (
+            <button 
+              onClick={() => setSubView("checkout")}
+              className="w-full py-5 rounded-3xl bg-yellow-400 text-black font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-yellow-400/20 active:scale-95 transition-all"
+            >
+              Confirmar Escolha
+            </button>
+          )}
+        </main>
+
+        {/* MODAL: ADD CARD */}
+        <AnimatePresence>
+          {isAddingCard && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-end justify-center p-4">
+              <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+                className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[40px] p-8 shadow-2xl">
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-xl font-black text-white tracking-tight">Novo Cartão</h3>
+                  <button onClick={() => setIsAddingCard(false)} className="size-10 rounded-full bg-zinc-800 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-zinc-400">close</span>
+                  </button>
+                </div>
+                
+                <MercadoPagoCardForm onConfirm={async (token, issuer, _installments, brand, last4) => {
+                   setIsLoadingCards(true);
+                   try {
+                     const { data: inserted, error } = await supabase.from("payment_methods").insert({
+                       user_id: userId,
+                       brand: brand,
+                       last4: last4,
+                       expiry: "12/29",
+                       is_default: savedCards.length === 0,
+                       stripe_payment_method_id: token
+                     }).select().single();
+
+                     if (error) throw error;
+
+                     if (userId) await fetchSavedCards(userId);
+                     setIsAddingCard(false);
+                     toastSuccess("Cartão adicionado!");
+                     
+                     if (paymentsOrigin === "checkout") {
+                        setSubView("checkout");
+                        setPaymentMethod("cartao");
+                        if (inserted) setSelectedCard({
+                          id: inserted.id,
+                          brand: inserted.brand,
+                          last4: inserted.last4,
+                          stripe_payment_method_id: inserted.stripe_payment_method_id
+                        });
+                     }
+                   } catch (err: any) {
+                     toastError("Erro ao salvar: " + err.message);
+                   } finally {
+                     setIsLoadingCards(false);
+                   }
+                }} />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
   };
+
 
   const renderWallet = () => {
     const walletBalance = walletTransactions.reduce((acc: number, t: any) =>
@@ -6137,95 +6264,34 @@ function App() {
 
         // 2. Disparar o fluxo de pagamento correto
         if (paymentMethod === "cartao") {
-          const activeCard = savedCards.find((c: any) => c.active);
-          if (!activeCard?.stripe_payment_method_id) {
-            toastWarning("Selecione ou adicione um cartão de crédito.");
-            setIsLoading(false);
-            return;
-          }
-
-          setSubView("payment_processing");
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) throw new Error("Sessão expirada.");
-
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-          const intentResponse = await fetch(`${supabaseUrl}/functions/v1/create-payment-intent`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
-              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-            },
-            body: JSON.stringify({ amount: total, orderId: orderData.id }),
-          });
-
-          if (!intentResponse.ok) throw new Error("Erro ao processar pagamento com cartão.");
-
-          const intentData = await intentResponse.json();
-          const stripe = await stripePromise;
-          if (!stripe) throw new Error("Stripe não carregado.");
-
-          const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(intentData.clientSecret, {
-            payment_method: activeCard.stripe_payment_method_id
-          });
-
-          if (confirmError) throw confirmError;
-
-          if (paymentIntent.status === "succeeded") {
-            await supabase.from('users_delivery').update({ is_izi_black: true }).eq('id', userId);
-            setIsIziBlackMembership(true);
-            setIziBlackStep('success');
-            setSubView("izi_black_purchase");
-          } else {
-            setSubView("payment_error");
-          }
+          setIsLoading(false);
+          setPaymentsOrigin("izi_black");
+          setSubView("card_payment");
+          return;
         } else if (paymentMethod === "pix") {
           setSubView("payment_processing");
-          const { data: { session } } = await supabase.auth.getSession();
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-          const pixResponse = await fetch(`${supabaseUrl}/functions/v1/create-pagbank-payment`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session?.access_token}`,
-              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-            },
-            body: JSON.stringify({
+          const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
+            body: {
               amount: total,
               orderId: orderData.id,
-              email: email,
+              payment_method_id: 'pix',
+              email: (await supabase.auth.getUser()).data.user?.email || "cliente@izidelivery.com",
               customer: { name: userName, cpf: cpf }
-            }),
+            },
           });
 
-          if (!pixResponse.ok) throw new Error("Erro ao gerar PIX.");
+          if (fnErr || !fnData?.qrCode) throw new Error("Erro ao gerar PIX Mercado Pago.");
 
-          const pixResult = await pixResponse.json();
-          setPixData(pixResult);
+          setSelectedItem({ ...orderData, pixQrCode: fnData.qrCode, pixQrBase64: fnData.qrCodeBase64, pixCopyPaste: fnData.copyPaste });
           setPaymentsOrigin("izi_black");
           setSubView("pix_payment");
         } else if (paymentMethod === "bitcoin_lightning") {
           setSubView("payment_processing");
-          const { data: { session } } = await supabase.auth.getSession();
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-          const lnResponse = await fetch(`${supabaseUrl}/functions/v1/create-lightning-invoice`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session?.access_token}`,
-              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-            },
-            body: JSON.stringify({
-              amount: total,
-              orderId: orderData.id,
-              memo: "Recarga Izi Black VIP"
-            }),
+          const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
+            body: { amount: total, orderId: orderData.id, memo: "Assinatura Izi Black" },
           });
-
-          if (!lnResponse.ok) throw new Error("Erro ao gerar fatura Bitcoin.");
-
-          const lnResult = await lnResponse.json();
-          setLightningData(lnResult);
+          if (lnErr) throw lnErr;
+          setSelectedItem({ ...orderData, lightningInvoice: lnData.payment_request });
           setPaymentsOrigin("izi_black");
           setSubView("lightning_payment");
         }
@@ -9019,6 +9085,17 @@ function App() {
                   className="absolute inset-0 z-[150]"
                 >
                   {renderLightningPayment()}
+                </motion.div>
+              )}
+              {subView === "card_payment" && (
+                <motion.div
+                  key="cardpay"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[150]"
+                >
+                  {renderCardPayment()}
                 </motion.div>
               )}
             </AnimatePresence>

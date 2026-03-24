@@ -235,7 +235,7 @@ export default function CheckoutView() {
                     className="w-full bg-slate-100 dark:bg-slate-900 border-none rounded-2xl py-4 px-5 font-black text-xs tracking-widest dark:text-white focus:ring-2 focus:ring-primary shadow-inner"
                     value={cpf}
                     onChange={(e) => {
-                      let val = e.target.value.replace(/\D/g, "");
+                      const val = e.target.value.replace(/\D/g, "");
                       if (val.length <= 11) {
                         let masked = val;
                         if (val.length > 3) masked = val.replace(/^(\d{3})(\d)/, "$1.$2");
