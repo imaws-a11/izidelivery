@@ -745,10 +745,27 @@ function App() {
       })
       .subscribe();
 
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       fetchStats();
       // Backup polling: lojista sempre atualiza pedidos
       if (userRole === 'merchant') fetchAllOrders(merchantOrdersPage);
+
+      // Auto-cancelar pedidos que ficaram mais de 5 minutos aguardando aceite do lojista
+      try {
+        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const { data: expiredOrders } = await supabase
+          .from('orders_delivery')
+          .select('id')
+          .in('status', ['novo', 'pending', 'waiting_merchant'])
+          .lt('created_at', fiveMinAgo);
+        if (expiredOrders && expiredOrders.length > 0) {
+          await supabase
+            .from('orders_delivery')
+            .update({ status: 'cancelado', cancel_reason: 'Tempo expirado (5min sem aceite do lojista)' })
+            .in('id', expiredOrders.map(o => o.id));
+          if (expiredOrders.length > 0) fetchAllOrders(userRole === 'merchant' ? merchantOrdersPage : ordersPage);
+        }
+      } catch (e) { console.error('Auto-cancel check error:', e); }
     }, 30000); // 30s backup polling
 
     return () => {
