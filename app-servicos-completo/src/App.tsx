@@ -2027,7 +2027,6 @@ function App() {
         const { data: order } = await supabase.from("orders_delivery").insert({ 
           ...orderBase, 
           status: "pendente_pagamento",
-          payment_status: "pending"
         }).select().single();
         
         if (!order) { 
@@ -2038,7 +2037,11 @@ function App() {
 
         try {
           const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
-            body: { amount: total, orderId: order.id, memo: `Pedido ${selectedShop?.name || "IziDelivery"}` },
+            body: { 
+              amount: Number(total.toFixed(2)), 
+              orderId: order.id, 
+              memo: `Pedido ${selectedShop?.name || "IziDelivery"}` 
+            },
           });
 
           if (lnErr || !lnData?.payment_request) {
@@ -2072,12 +2075,22 @@ function App() {
 
         if (walletBal < total) {
           alert(`Saldo insuficiente. Seu saldo: R$ ${walletBal.toFixed(2).replace(".",",")}`);
+          setIsLoading(false);
           return;
         }
 
         navigateSubView("payment_processing");
-        const { data: order } = await supabase.from("orders_delivery").insert({ ...orderBase, status: "novo" }).select().single();
-        if (!order) { navigateSubView("payment_error"); return; }
+        const { data: order } = await supabase.from("orders_delivery").insert({ 
+          ...orderBase, 
+          status: "waiting_merchant",
+          payment_status: "paid"
+        }).select().single();
+        
+        if (!order) { 
+          alert("Erro ao debitar saldo. Tente novamente.");
+          navigateSubView("payment_error"); 
+          return; 
+        }
 
         await supabase.from("wallet_transactions").insert({
           user_id: userId, type: "pagamento", amount: total,
@@ -2092,19 +2105,22 @@ function App() {
 
       // ── DINHEIRO (PAGAMENTO NA ENTREGA) ─────────────────────────────────
       if (paymentMethod === "dinheiro") {
+        if (!selectedShop?.id) { alert("Erro: Estabelecimento não selecionado."); setIsLoading(false); return; }
+        
         const { data: order, error: insertError } = await supabase
           .from("orders_delivery")
           .insert({ 
             ...orderBase, 
+            merchant_id: selectedShop.id,
             status: "waiting_merchant",
-            payment_status: "pending" 
+            total_price: Number(total.toFixed(2))
           })
           .select()
           .single();
 
         if (insertError || !order) {
           console.error("Erro insert dinheiro:", insertError);
-          alert("Erro ao enviar pedido: " + (insertError?.message || "Tente novamente."));
+          alert("Não foi possível processar o pedido. Erro: " + (insertError?.message || "Tente novamente."));
           setIsLoading(false);
           return;
         }
@@ -4975,17 +4991,19 @@ function App() {
       setPixConfirmed(true);
       try {
         // 1. Criar pedido no Supabase
+        if (!selectedShop?.id) { alert("Erro: Estabelecimento não selecionado."); setPixConfirmed(false); return; }
+
         const { data: order, error: orderErr } = await supabase
           .from("orders_delivery")
           .insert({
             user_id: userId,
-            merchant_id: selectedShop?.id || null,
-            status: "novo",
-            total_price: total,
-            pickup_address: selectedShop?.name || "Endereço do Estabelecimento",
+            merchant_id: selectedShop.id,
+            status: "pendente_pagamento",
+            total_price: Number(total.toFixed(2)),
+            pickup_address: selectedShop.name || "Endereço do Estabelecimento",
             delivery_address: userLocation.address || "Endereço não informado",
             payment_method: "pix",
-            service_type: "restaurant",
+            service_type: selectedShop.type || "restaurant",
           })
           .select()
           .single();
@@ -4999,10 +5017,10 @@ function App() {
         // 2. Chamar Edge Function do Mercado Pago (Unificada)
         const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
           body: {
-            amount: total,
+            amount: Number(total.toFixed(2)),
             orderId: order.id,
             payment_method_id: 'pix',
-            email: (await supabase.auth.getUser()).data.user?.email || "cliente@izidelivery.com",
+            email: userEmail || (await supabase.auth.getUser()).data.user?.email || "cliente@izidelivery.com",
             customer: {
               cpf: pixCpf.replace(/\D/g,""),
               name: userName || "Cliente IziDelivery",
