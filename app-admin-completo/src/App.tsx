@@ -47,7 +47,7 @@ const wazeMapStyle = [
 
 type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'financial' | 'settings' | 'support' | 'promotions' | 'categories' | 'dynamic_rates' | 'audit_logs' | 'my_store' | 'my_drivers' | 'my_studio' | 'merchants' | 'izi_black';
 type UserRole = 'admin' | 'merchant';
-const MASTER_ADMIN_EMAIL = (import.meta.env.VITE_MASTER_ADMIN_EMAIL as string ?? '').trim().toLowerCase();
+const MASTER_ADMIN_EMAIL = (import.meta.env.VITE_MASTER_ADMIN_EMAIL as string || 'swmcapital@gmail.com').trim().toLowerCase();
 
 // ─── Flash Offers Section ────────────────────────────────────────────────────
 const FlashOffersSection = ({ supabase, userRole, merchantId }: { supabase: any, userRole: string, merchantId?: string }) => {
@@ -553,9 +553,11 @@ function App() {
 
   const fetchUserRole = async (userEmail: string) => {
     const cleanEmail = userEmail.trim().toLowerCase();
+    console.log('[RBAC] Iniciando verificação para:', cleanEmail);
     
     // Hard check for Master Admin
     if (cleanEmail === MASTER_ADMIN_EMAIL) {
+      console.log('[RBAC] Master Admin identificado!');
       setUserRole('admin');
       setMerchantProfile(null);
       setActiveTab('dashboard');
@@ -564,20 +566,31 @@ function App() {
     }
 
     try {
+      console.log('[RBAC] Buscando na tabela admin_users...');
       const { data, error } = await supabase
         .from('admin_users')
         .select('id, role, merchant_id, store_name, store_logo, store_description, store_banner, store_phone, delivery_radius, dispatch_priority, scheduling_priority, opening_hours, store_address, is_open, is_active, store_type, free_delivery')
-        .eq('email', cleanEmail)
+        .ilike('email', cleanEmail) 
         .maybeSingle();
 
       if (error) {
+        console.error('[RBAC] Erro ao buscar papel:', error.message);
+        toastError('Erro de permissão: ' + error.message);
         setUserRole('merchant');
         setIsInitialLoading(false);
         return;
       }
 
       if (data) {
+        if (data.is_active === false) {
+          console.warn('[RBAC] Conta desativada:', cleanEmail);
+          toastWarning('Sua conta de acesso está desativada. Entre em contato com o suporte.');
+          handleLogout();
+          return;
+        }
+
         const role = (data.role as UserRole) || 'merchant';
+        console.log('[RBAC] Papel encontrado:', role);
         setUserRole(role);
         
         if (role === 'merchant') {
@@ -597,20 +610,20 @@ function App() {
             free_delivery: data.free_delivery ?? false,
             store_type: data.store_type || 'restaurant'
           });
-          // // setActiveTab('my_store'); // Navegação livre // Liberado pelo usuário
+          setActiveTab('orders'); // Redirecionar para pedidos por padrão para lojistas
         } else {
           setMerchantProfile(null);
           setActiveTab('dashboard');
         }
       } else {
-        setUserRole('merchant');
-        setMerchantProfile(null);
-        setActiveTab('my_store');
+        console.warn('[RBAC] Usuário não encontrado no cadastro administrativo:', cleanEmail);
+        toastWarning('E-mail autenticado mas sem perfil administrativo vinculado.');
+        // Se o usuário não está na tabela admin_users, não deixamos entrar para evitar tela em branco
+        handleLogout();
       }
-    } catch (err) {
-      console.error('Falha crítica no RBAC:', err);
-      setUserRole('merchant');
-      setActiveTab('my_store');
+    } catch (err: any) {
+      console.error('[RBAC] Exceção na verificação de papel:', err);
+      setIsInitialLoading(false);
     } finally {
       setIsInitialLoading(false);
     }
@@ -645,40 +658,59 @@ function App() {
 
     const loadInitialData = async () => {
       try {
-        console.log('Iniciando carga de dados...');
-        await fetchStats();
-        await fetchAppSettings();
-      if (activeTab === 'users') await fetchUsers();
-      if (activeTab === 'merchants') await fetchMerchants();
-      if (activeTab === 'drivers' || activeTab === 'tracking' || activeTab === 'dashboard') await fetchDrivers();
-      // Lojista: SEMPRE carregar pedidos na inicialização
-      if (userRole === 'merchant' || activeTab === 'orders' || activeTab === 'tracking' || activeTab === 'dashboard') {
-        setOrdersPage(1);
-        setMerchantOrdersPage(1);
-        await fetchAllOrders(1);
-      }
-      if (activeTab === 'izi_black') {
-        setSubscriptionOrdersPage(1);
-        await fetchSubscriptionOrders(1);
-      }
-      if (activeTab === 'categories' || activeTab === 'merchants') await fetchCategories();
-      if (activeTab === 'dynamic_rates') await fetchDynamicRates();
-      if (activeTab === 'promotions' || activeTab === 'my_store') {
-        await fetchPromotions();
-        if (activeTab === 'my_store') {
-          await fetchProducts();
-          await fetchMenuCategories();
-          await fetchMyDedicatedSlots();
+        console.log('[Data] Iniciando carga paralela de dados...');
+        
+        // Carregar apenas o estritamente necessário para a primeira visualização
+        const baselineTasks = [
+          fetchStats(),
+          fetchAppSettings(),
+          fetchCategories()
+        ];
+
+        // Se estiver em uma aba específica, carregar os dados dela em paralelo também
+        if (activeTab === 'users') baselineTasks.push(fetchUsers());
+        if (activeTab === 'merchants') baselineTasks.push(fetchMerchants());
+        if (activeTab === 'drivers' || activeTab === 'tracking' || activeTab === 'dashboard') baselineTasks.push(fetchDrivers());
+        
+        if (userRole === 'merchant' || activeTab === 'orders' || activeTab === 'tracking' || activeTab === 'dashboard') {
+          setOrdersPage(1);
+          setMerchantOrdersPage(1);
+          baselineTasks.push(fetchAllOrders(1));
         }
+
+        if (activeTab === 'izi_black') {
+          setSubscriptionOrdersPage(1);
+          baselineTasks.push(fetchSubscriptionOrders(1));
+        }
+
+        if (activeTab === 'promotions' || activeTab === 'my_store') {
+          baselineTasks.push(fetchPromotions());
+          if (activeTab === 'my_store') {
+            baselineTasks.push(fetchProducts());
+            baselineTasks.push(fetchMenuCategories());
+            baselineTasks.push(fetchMyDedicatedSlots());
+          }
+        }
+
+        if (activeTab === 'my_studio') {
+          baselineTasks.push(fetchProducts());
+          baselineTasks.push(fetchMenuCategories());
+          baselineTasks.push(fetchMyDedicatedSlots());
+        }
+
+        // Executar tudo em paralelo sem 'await' individual para não bloquear a UI por causa de uma query lenta
+        Promise.allSettled(baselineTasks).then(() => {
+          console.log('[Data] Baseline carregado!');
+          setIsInitialLoading(false);
+        });
+
+        // timeout de segurança para garantir que o overlay suma em no máximo 5 segundos
+        setTimeout(() => setIsInitialLoading(false), 5000);
+
+      } catch (err) { 
+        console.error('Erro no loading de dados:', err); 
+        setIsInitialLoading(false);
       }
-      if (activeTab === 'my_studio') {
-        await fetchProducts();
-        await fetchMenuCategories();
-        await fetchMyDedicatedSlots();
-      }
-      if (activeTab === 'audit_logs') await fetchAuditLogs();
-      if (activeTab === 'my_drivers') await fetchMyDrivers();
-      } catch (err) { console.error('Erro no loading:', err); } finally { setIsInitialLoading(false); }
     };
 
     loadInitialData();
@@ -766,13 +798,13 @@ function App() {
           if (expiredOrders.length > 0) fetchAllOrders(userRole === 'merchant' ? merchantOrdersPage : ordersPage);
         }
       } catch (e) { console.error('Auto-cancel check error:', e); }
-    }, 30000); // 30s backup polling
+    }, 30000);
 
     return () => {
       supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, [session, activeTab, userRole, merchantProfile]);
+  }, [session, activeTab, userRole, merchantProfile, merchantOrdersPage, ordersPage, subscriptionOrdersPage]);
 
   useEffect(() => {
     if (activeTab === 'my_studio' && userRole === 'merchant' && merchantProfile) {
@@ -780,19 +812,38 @@ function App() {
         openMerchantPreview({ ...merchantProfile, id: merchantProfile.merchant_id });
       }
     }
-  }, [activeTab, userRole, merchantProfile]);
+  }, [activeTab, userRole, merchantProfile, selectedMerchantPreview]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email.trim() || !password.trim()) {
+      setAuthError('Preencha e-mail e senha para continuar.');
+      return;
+    }
     setAuthLoading(true);
     setAuthError('');
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      console.log('[Admin] Tentando login para:', email.trim());
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email: email.trim(), 
+        password 
+      });
+      
       if (error) {
-        setAuthError(error.message);
+        console.error('[Admin] Erro no login Supabase:', error.message);
+        const errMap: Record<string, string> = {
+          'Invalid login credentials': 'E-mail ou senha incorretos. Verifique seus dados.',
+          'Email not confirmed': 'Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada.',
+          'Too many requests': 'Muitas tentativas exageradas. Aguarde alguns minutos.',
+          'database error': 'Erro no banco de dados. Tente novamente.'
+        };
+        setAuthError(errMap[error.message] || error.message);
+      } else if (data.user) {
+        console.log('[Admin] Login Auth ok!');
       }
-    } catch (err) {
-      setAuthError('Falha na comunicação com o servidor.');
+    } catch (err: any) {
+      console.error('[Admin] Exceção crítica:', err);
+      setAuthError('Falha de comunicação. Verifique sua rede.');
     } finally {
       setAuthLoading(false);
     }
@@ -811,46 +862,43 @@ function App() {
       const isAdmin = userRole === 'admin';
       let adminId = null;
 
-      if (!isAdmin && session?.user?.email && !adminId) {
-        const { data } = await supabase.from('admin_users').select('id').eq('email', session.user.email).maybeSingle();
-        adminId = data?.id;
+      // Se for merchant, precisamos do ID numérico/uuid da tabela admin_users para filtrar
+      if (!isAdmin && session?.user?.email) {
+        if (merchantProfile?.merchant_id) {
+          adminId = merchantProfile.merchant_id;
+        } else {
+          const { data } = await supabase.from('admin_users').select('id').eq('email', session.user.email).maybeSingle();
+          adminId = data?.id;
+        }
       }
 
+      // Consultas leves (head: true) para counts rápidos
       const results = await Promise.all([
         supabase.from('users_delivery').select('*', { count: 'exact', head: true }),
         isAdmin
           ? supabase.from('drivers_delivery').select('*', { count: 'exact', head: true })
           : adminId 
             ? supabase.from('drivers_delivery').select('*', { count: 'exact', head: true }).eq('merchant_id', adminId)
-            : Promise.resolve({ count: 0, data: null, error: null }),
+            : Promise.resolve({ count: 0, error: null }),
         isAdmin
-          ? supabase.from('orders_delivery').select('*', { count: 'exact', head: true })
+          ? supabase.from('orders_delivery').select('id', { count: 'exact', head: true })
           : adminId ? supabase.from('orders_delivery').select('id', { count: 'exact', head: true }).eq('merchant_id', adminId) : supabase.from('orders_delivery').select('id', { count: 'exact', head: true }),
         isAdmin
           ? supabase.from('drivers_delivery').select('*', { count: 'exact', head: true }).eq('is_online', true)
           : adminId
             ? supabase.from('drivers_delivery').select('*', { count: 'exact', head: true }).eq('merchant_id', adminId).eq('is_online', true)
-            : Promise.resolve({ count: 0, data: null, error: null }),
+            : Promise.resolve({ count: 0, error: null }),
         isAdmin
           ? supabase.from('orders_delivery').select('*').order('created_at', { ascending: false }).limit(5)
           : adminId ? supabase.from('orders_delivery').select('*').eq('merchant_id', adminId).order('created_at', { ascending: false }).limit(5) : supabase.from('orders_delivery').select('*').limit(5),
-        // Receita real: soma de total_price dos pedidos concluídos
-        isAdmin
-          ? supabase.from('orders_delivery').select('total_price').eq('status', 'concluido')
-          : adminId
-            ? supabase.from('orders_delivery').select('total_price').eq('status', 'concluido').eq('merchant_id', adminId)
-            : Promise.resolve({ count: 0, data: [], error: null })
       ]);
-
-      const revenueData = results[5].data ?? [];
-      const revenue = revenueData.reduce((sum: number, o: { total_price?: number }) => sum + (Number(o.total_price) || 0), 0);
 
       setStats({
         users: results[0].count || 0,
         drivers: results[1].count || 0,
         orders: results[2].count || 0,
         onlineDrivers: results[3].count || 0,
-        revenue
+        revenue: 0 // Receita carregada sob demanda ou via RPC para evitar timeouts massivos
       } as any);
 
       if (results[4].data) setRecentOrders(results[4].data);
@@ -858,7 +906,6 @@ function App() {
       console.error('Stats fetch error:', err);
     }
   };
-
   const fetchUsers = async () => {
     setIsLoadingList(true);
     try {
@@ -3357,12 +3404,22 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   className="w-full bg-white/5 border border-white/5 rounded-full px-8 py-5 text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 shadow-inner placeholder:text-slate-700"
                 />
               </div>
-              {authError && <p className="text-red-500 text-xs font-bold text-center mt-4">⚠️ {authError}</p>}
+                            {authError && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-2xl px-5 py-4 mt-4">
+                  <p className="text-red-400 text-sm font-bold text-center">⚠️ {authError}</p>
+                </div>
+              )}
               <button
+                type="submit"
                 disabled={authLoading}
-                className="w-full bg-primary hover:bg-primary/90 text-slate-900 font-black py-6 rounded-full shadow-2xl shadow-primary/20 active:scale-[0.98] transition-all uppercase tracking-widest text-sm mt-8"
+                className="w-full bg-primary hover:bg-primary/90 text-slate-900 font-black py-6 rounded-full shadow-2xl shadow-primary/20 active:scale-[0.98] transition-all uppercase tracking-widest text-sm mt-8 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {authLoading ? 'Autenticando...' : 'Acessar Painel'}
+                {authLoading ? (
+                  <span className="flex items-center justify-center gap-3">
+                    <span className="size-4 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" />
+                    Autenticando...
+                  </span>
+                ) : 'Acessar Painel'}
               </button>
             </form>
             <p className="text-center text-[9px] font-bold text-slate-700 mt-10 uppercase tracking-[0.1em]">© 2026 Delivery de Tudo • Console Privada</p>
@@ -3372,9 +3429,12 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
 
       {/* Synchronizing Data Overlay */}
       {session && isInitialLoading && (
-        <div className="fixed inset-0 z-[90] bg-[#F4F5F7] flex flex-col items-center justify-center gap-4">
-          <div className="w-16 h-16 border-4 border-slate-200 border-t-brand-600 rounded-full animate-spin"></div>
-          <p className="text-sm font-black text-slate-400 uppercase tracking-widest animate-pulse">Sincronizando Sistema...</p>
+        <div className="fixed inset-0 z-[90] bg-[#111] flex flex-col items-center justify-center gap-6">
+          <div className="w-16 h-16 border-4 border-white/10 border-t-yellow-400 rounded-full animate-spin" />
+          <div className="text-center space-y-2">
+            <p className="text-sm font-black text-white uppercase tracking-widest animate-pulse">Carregando Painel...</p>
+            <p className="text-[10px] text-slate-500 font-medium">Sincronizando dados do sistema</p>
+          </div>
         </div>
       )}
 
@@ -9265,7 +9325,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                         <div className="md:col-span-2 space-y-8">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-3">
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nome Social / Razão</label>
+                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nome Completo</label>
                                <input 
                                  type="text" 
                                  value={selectedUserStudio.name || ''}
@@ -9275,7 +9335,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                />
                             </div>
                             <div className="space-y-3">
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Telefone de Contato</label>
+                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Telefone / WhatsApp</label>
                                <input 
                                  type="text" 
                                  value={selectedUserStudio.phone || ''}
@@ -9284,8 +9344,8 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                  placeholder="(00) 00000-0000"
                                />
                             </div>
-                            <div className="md:col-span-2 space-y-3">
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">E-mail Administrativo</label>
+                            <div className="space-y-3">
+                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">E-mail</label>
                                <input 
                                  type="email" 
                                  value={selectedUserStudio.email || ''}
@@ -9294,8 +9354,107 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                  placeholder="cliente@exemplo.com"
                                />
                             </div>
+                            <div className="space-y-3">
+                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">CPF</label>
+                               <input 
+                                 type="text" 
+                                 value={(selectedUserStudio as any).cpf || ''}
+                                 onChange={e => setSelectedUserStudio({...selectedUserStudio, cpf: e.target.value} as any)}
+                                 className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-primary/20 dark:text-white transition-all shadow-inner"
+                                 placeholder="000.000.000-00"
+                               />
+                            </div>
+                            <div className="space-y-3">
+                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Data de Nascimento</label>
+                               <input 
+                                 type="date" 
+                                 value={(selectedUserStudio as any).birth_date || ''}
+                                 onChange={e => setSelectedUserStudio({...selectedUserStudio, birth_date: e.target.value} as any)}
+                                 className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-primary/20 dark:text-white transition-all shadow-inner"
+                               />
+                            </div>
+                            <div className="space-y-3">
+                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Gênero</label>
+                               <div className="relative">
+                                 <select 
+                                   value={(selectedUserStudio as any).gender || ''}
+                                   onChange={e => setSelectedUserStudio({...selectedUserStudio, gender: e.target.value} as any)}
+                                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-primary/20 dark:text-white transition-all shadow-inner appearance-none cursor-pointer"
+                                 >
+                                   <option value="">Selecionar</option>
+                                   <option value="masculino">Masculino</option>
+                                   <option value="feminino">Feminino</option>
+                                   <option value="outro">Outro</option>
+                                   <option value="prefiro_nao_informar">Prefiro não informar</option>
+                                 </select>
+                                 <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+                               </div>
+                            </div>
                           </div>
                         </div>
+                      </div>
+
+                      {/* Endereço Completo */}
+                      <div className="p-10 rounded-[48px] bg-blue-50/30 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10 shadow-inner space-y-8">
+                        <div className="flex items-center gap-4 mb-2">
+                          <div className="size-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-600">
+                            <span className="material-symbols-outlined text-2xl font-bold">location_on</span>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Endereço Residencial</h4>
+                            <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest italic">Localização Principal do Cliente</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                          <div className="space-y-3">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">CEP</label>
+                             <input type="text" value={(selectedUserStudio as any).zip_code || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, zip_code: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-blue-500/20 dark:text-white transition-all shadow-sm" placeholder="00000-000" />
+                          </div>
+                          <div className="md:col-span-3 space-y-3">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Rua / Avenida / Logradouro</label>
+                             <input type="text" value={(selectedUserStudio as any).address || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, address: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-blue-500/20 dark:text-white transition-all shadow-sm" placeholder="Nome da rua" />
+                          </div>
+                          <div className="space-y-3">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Número</label>
+                             <input type="text" value={(selectedUserStudio as any).address_number || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, address_number: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-blue-500/20 dark:text-white transition-all shadow-sm" placeholder="123" />
+                          </div>
+                          <div className="space-y-3">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Complemento</label>
+                             <input type="text" value={(selectedUserStudio as any).address_complement || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, address_complement: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-blue-500/20 dark:text-white transition-all shadow-sm" placeholder="Apto 12, Bloco B" />
+                          </div>
+                          <div className="space-y-3">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Bairro</label>
+                             <input type="text" value={(selectedUserStudio as any).neighborhood || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, neighborhood: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-blue-500/20 dark:text-white transition-all shadow-sm" placeholder="Nome do bairro" />
+                          </div>
+                          <div className="space-y-3">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Cidade</label>
+                             <input type="text" value={(selectedUserStudio as any).city || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, city: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-blue-500/20 dark:text-white transition-all shadow-sm" placeholder="Nome da cidade" />
+                          </div>
+                          <div className="md:col-span-2 space-y-3">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Estado (UF)</label>
+                             <div className="relative">
+                               <select value={(selectedUserStudio as any).state || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, state: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-blue-500/20 dark:text-white transition-all shadow-sm appearance-none cursor-pointer">
+                                 <option value="">Selecionar UF</option>
+                                 {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                               </select>
+                               <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+                             </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Observações Internas */}
+                      <div className="p-10 rounded-[48px] bg-amber-50/30 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10 shadow-inner space-y-6">
+                        <div className="flex items-center gap-4 mb-2">
+                          <div className="size-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-600">
+                            <span className="material-symbols-outlined text-2xl font-bold">sticky_note_2</span>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Observações Internas</h4>
+                            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest italic">Visível apenas para administradores</p>
+                          </div>
+                        </div>
+                        <textarea value={(selectedUserStudio as any).notes || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, notes: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl px-8 py-5 font-bold text-sm focus:ring-4 focus:ring-amber-500/20 dark:text-white transition-all shadow-sm h-32 resize-none" placeholder="Anotações sobre o cliente, preferências, restrições, informações relevantes..." />
                       </div>
 
                       <div className="p-10 rounded-[48px] bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/50 shadow-inner">
@@ -9512,6 +9671,18 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                       const userData = {
                         name: selectedUserStudio.name,
                         phone: selectedUserStudio.phone,
+                        email: selectedUserStudio.email,
+                        cpf: (selectedUserStudio as any).cpf,
+                        birth_date: (selectedUserStudio as any).birth_date || null,
+                        gender: (selectedUserStudio as any).gender,
+                        address: (selectedUserStudio as any).address,
+                        address_number: (selectedUserStudio as any).address_number,
+                        address_complement: (selectedUserStudio as any).address_complement,
+                        neighborhood: (selectedUserStudio as any).neighborhood,
+                        city: (selectedUserStudio as any).city,
+                        state: (selectedUserStudio as any).state,
+                        zip_code: (selectedUserStudio as any).zip_code,
+                        notes: (selectedUserStudio as any).notes,
                         is_active: selectedUserStudio.is_active,
                         status: selectedUserStudio.status || 'active',
                         is_izi_black: selectedUserStudio.is_izi_black || false
@@ -10753,6 +10924,4 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
 }
 
 export default App;
-
-
 
