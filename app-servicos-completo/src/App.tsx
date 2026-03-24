@@ -2024,22 +2024,44 @@ function App() {
       // ── BITCOIN LIGHTNING ──────────────────────────────────────────────
       if (paymentMethod === "bitcoin_lightning") {
         navigateSubView("payment_processing");
-        const { data: order } = await supabase.from("orders_delivery").insert({ ...orderBase, status: initialStatus }).select().single();
-        if (!order) { navigateSubView("payment_error"); return; }
-
-        const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
-          body: { amount: total, orderId: order.id, memo: `Pedido ${selectedShop?.name || "IziDelivery"}` },
-        });
-
-        if (lnErr || !lnData?.payment_request) {
-          alert("Erro Lightning: " + (lnErr?.message || "Serviço indisponível"));
-          navigateSubView("payment_error");
-          return;
+        const { data: order } = await supabase.from("orders_delivery").insert({ 
+          ...orderBase, 
+          status: "pendente_pagamento",
+          payment_status: "pending"
+        }).select().single();
+        
+        if (!order) { 
+          alert("Não foi possível registrar o pedido para pagamento Lightning.");
+          navigateSubView("payment_error"); 
+          return; 
         }
 
-        setSelectedItem({ ...order, lightningInvoice: lnData.payment_request, satoshis: lnData.satoshis, btcPrice: lnData.btc_price_brl });
-        clearCart();
-        navigateSubView("lightning_payment");
+        try {
+          const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
+            body: { amount: total, orderId: order.id, memo: `Pedido ${selectedShop?.name || "IziDelivery"}` },
+          });
+
+          if (lnErr || !lnData?.payment_request) {
+            console.error("Erro Lightning:", lnErr);
+            // Se o pedido já foi criado, vamos mostrar ele mas com erro na invoice
+            setSelectedItem({ ...order, lightningError: true });
+            navigateSubView("lightning_payment");
+            return;
+          }
+
+          setSelectedItem({ 
+            ...order, 
+            lightningInvoice: lnData.payment_request, 
+            satoshis: lnData.satoshis, 
+            btcPrice: lnData.btc_price_brl 
+          });
+          clearCart();
+          navigateSubView("lightning_payment");
+        } catch (err) {
+          console.error("Exceção Lightning:", err);
+          setSelectedItem({ ...order, lightningError: true });
+          navigateSubView("lightning_payment");
+        }
         return;
       }
 
@@ -2072,13 +2094,18 @@ function App() {
       if (paymentMethod === "dinheiro") {
         const { data: order, error: insertError } = await supabase
           .from("orders_delivery")
-          .insert({ ...orderBase, status: "waiting_merchant" })
+          .insert({ 
+            ...orderBase, 
+            status: "waiting_merchant",
+            payment_status: "pending" 
+          })
           .select()
           .single();
 
         if (insertError || !order) {
           console.error("Erro insert dinheiro:", insertError);
-          navigateSubView("payment_error");
+          alert("Erro ao enviar pedido: " + (insertError?.message || "Tente novamente."));
+          setIsLoading(false);
           return;
         }
 
@@ -4575,7 +4602,7 @@ function App() {
             {btcPrice > 0 && <p className="text-zinc-500 text-xs">1 BTC = R$ {btcPrice.toLocaleString("pt-BR")}</p>}
           </div>
 
-          {invoice ? (
+          {invoice && !selectedItem?.lightningError ? (
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full flex flex-col items-center gap-4">
               <div className="w-52 h-52 bg-white rounded-3xl flex items-center justify-center p-3 shadow-[0_0_30px_rgba(249,115,22,0.2)]">
                 <img
@@ -4600,6 +4627,18 @@ function App() {
                 Ver Meus Pedidos
               </button>
             </motion.div>
+          ) : selectedItem?.lightningError ? (
+            <div className="w-full flex flex-col items-center gap-6 text-center py-6">
+               <div className="size-20 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-2">
+                  <span className="material-symbols-outlined text-4xl text-orange-500">bolt_slash</span>
+               </div>
+               <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Falha na Conexão Lightning</h3>
+               <p className="text-zinc-500 text-sm px-4">Não foi possível gerar sua fatura agora. O pedido foi registrado mas o pagamento via Bitcoin está indisponível.</p>
+               <button onClick={() => { setTab("orders"); setSubView("none"); }}
+                  className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-sm uppercase tracking-widest">
+                  Ver Meus Pedidos
+               </button>
+            </div>
           ) : (
             <div className="flex flex-col items-center gap-3 py-8">
               <div className="size-10 border-2 border-orange-400/20 border-t-orange-400 rounded-full animate-spin" />
@@ -4973,9 +5012,13 @@ function App() {
 
         if (fnErr || !fnData?.qrCode) {
           console.error("Erro MP PIX:", fnErr, fnData);
-          const errorMsg = fnData?.details || fnErr?.message || "Ocorreu um erro ao gerar o PIX. Tente novamente.";
-          toastError(errorMsg);
-          setPixConfirmed(false);
+          // O pedido já foi criado, não podemos simplesmente desistir.
+          // Vamos atualizar o item selecionado e mostrar um estado de erro amigável na tela de Pix
+          setSelectedItem({ ...order, pixError: true, pixErrorMessage: fnData?.details || fnErr?.message });
+          // Mesmo com erro, limpamos o carrinho para não duplicar se ele tentar novamente por outro caminho?
+          // Na verdade, se deu erro no QR, ele pode querer tentar outro método. 
+          // Mas o pedido JÁ ESTÁ no banco do lojista. Esse é o problema apontado pelo usuário.
+          setPixConfirmed(true); // Manter confirmado para mostrar o estado de erro
           return;
         }
 
@@ -5046,8 +5089,8 @@ function App() {
             </motion.div>
           )}
 
-          {/* QR Code real */}
-          {pixReady && (
+          {/* QR Code real ou Erro */}
+          {pixReady && !selectedItem?.pixError && (
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full flex flex-col items-center gap-5">
               <div className="w-52 h-52 bg-white rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(255,215,9,0.2)] p-3">
                 {selectedItem?.pixQrBase64 ? (
@@ -5059,7 +5102,7 @@ function App() {
               <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between gap-3">
                 <p className="text-zinc-400 text-xs font-mono truncate flex-1">{selectedItem?.pixCopyPaste?.slice(0, 40)}...</p>
                 <button
-                  onClick={() => { navigator.clipboard.writeText(selectedItem?.pixCopyPaste || ""); toast("PIX copiado!"); }}
+                  onClick={() => { navigator.clipboard.writeText(selectedItem?.pixCopyPaste || ""); toastSuccess("PIX copiado!"); }}
                   className="text-yellow-400 active:scale-90 transition-all shrink-0">
                   <span className="material-symbols-outlined text-lg">content_copy</span>
                 </button>
@@ -5069,10 +5112,35 @@ function App() {
                 <p className="text-zinc-500 text-xs font-black uppercase tracking-wider">Aguardando pagamento...</p>
               </div>
               <button
-                onClick={() => { setTab("orders"); setSubView("none"); setPixConfirmed(false); setPixCpf(""); }}
+                onClick={() => { setTab("orders"); setSubView("none"); setPixConfirmed(false); setPixCpf(""); setSelectedItem(null); }}
                 className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-zinc-800 text-zinc-400 hover:border-yellow-400/30 hover:text-yellow-400 transition-all active:scale-95">
                 Ver Meus Pedidos
               </button>
+            </motion.div>
+          )}
+
+          {pixConfirmed && selectedItem?.pixError && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full flex flex-col items-center gap-6 py-6 text-center">
+               <div className="size-20 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-2">
+                  <span className="material-symbols-outlined text-4xl text-rose-500">error</span>
+               </div>
+               <div>
+                  <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-2">Ops! Falha no QR Code</h3>
+                  <p className="text-zinc-400 text-sm font-medium leading-relaxed px-4">
+                     O pedido foi enviado ao lojista, mas não conseguimos gerar o QR Code Pix agora. 
+                     {selectedItem.pixErrorMessage ? ` Detalhe: ${selectedItem.pixErrorMessage}` : " Você pode tentar pagar através de outro método ou falar com o suporte."}
+                  </p>
+               </div>
+               <div className="w-full space-y-3">
+                  <button onClick={() => { setTab("orders"); setSubView("none"); setSelectedItem(null); }}
+                    className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-sm uppercase tracking-widest">
+                    Acompanhar Pedido
+                  </button>
+                  <button onClick={() => { setSubView("checkout"); setPixConfirmed(false); }}
+                    className="w-full py-4 rounded-2xl text-zinc-500 font-black text-[10px] uppercase tracking-widest">
+                    Tentar outro método
+                  </button>
+               </div>
             </motion.div>
           )}
 

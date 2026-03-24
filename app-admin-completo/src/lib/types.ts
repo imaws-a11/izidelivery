@@ -109,6 +109,7 @@ export interface MerchantProfile {
   scheduling_priority: 'exclusive' | 'global';
   is_open: boolean;
   store_type: string;
+  free_delivery?: boolean;
 }
 
 export interface Product {

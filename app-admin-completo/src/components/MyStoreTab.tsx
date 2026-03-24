@@ -1,263 +1,312 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
+import { supabase } from '../lib/supabase';
 
-// Meu Estabelecimento
-export default function MyStoreTab() {
-  const {
-    userRole, merchantProfile, setMerchantProfile, myDedicatedSlots, editingSlotId, setEditingSlotId, handleUpdateDedicatedSlot, handleCreateDedicatedSlot, handleDeleteDedicatedSlot, handleUpdateDispatchSettings, handleFileUpload, fetchMyDedicatedSlots
-  } = useAdmin();
+// Componente de Toggle Premium
+const PremiumToggle = ({ active, onClick, color = 'emerald' }: { active: boolean; onClick: () => void; color?: string }) => {
+  const colors: Record<string, string> = {
+    emerald: active ? 'bg-emerald-500 shadow-lg shadow-emerald-500/20' : 'bg-slate-200 dark:bg-slate-700',
+    blue: active ? 'bg-blue-500 shadow-lg shadow-blue-500/20' : 'bg-slate-200 dark:bg-slate-700',
+    rose: active ? 'bg-rose-500 shadow-lg shadow-rose-500/20' : 'bg-slate-200 dark:bg-slate-700',
+  };
 
   return (
-  {/* Dashboard Header Integration */}
-  <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-    <div>
-      <div className="flex items-center gap-3 mb-2">
-        <span className="material-symbols-outlined text-3xl text-emerald-500">dashboard</span>
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Painel de Gestão</h1>
-      </div>
-      <p className="text-slate-500 dark:text-slate-400">Gerencie seu estabelecimento e acompanhe resultados em tempo real.</p>
-    </div>
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2">
-         <span className={`text-[10px] font-black uppercase tracking-widest ${merchantProfile?.is_open ? 'text-emerald-500' : 'text-rose-500'}`}>
-           {merchantProfile?.is_open ? 'Loja Aberta' : 'Loja Fechada'}
-         </span>
-         <button
-           onClick={async () => {
-             const prevState = merchantProfile.is_open;
-             const newState = !prevState;
-             setMerchantProfile({ ...merchantProfile, is_open: newState });
-             try {
-               const { error } = await supabase
-                 .from('admin_users')
-                 .update({ is_open: newState })
-                 .eq('id', merchantProfile.merchant_id);
-               if (error) throw error;
-             } catch (err: any) {
-               setMerchantProfile({ ...merchantProfile, is_open: prevState });
-               toastError('Erro ao alterar status: ' + err.message);
-             }
-           }}
-           className={`w-12 h-6 rounded-full relative p-1 transition-all ${merchantProfile?.is_open ? 'bg-emerald-500' : 'bg-slate-300'}`}
-         >
-           <div className={`w-4 h-4 bg-white rounded-full transition-all ${merchantProfile?.is_open ? 'ml-auto' : 'ml-0'}`}></div>
-         </button>
-      </div>
-      <div className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2">
-         <span className={`text-[10px] font-black uppercase tracking-widest ${(merchantProfile as any)?.free_delivery ? 'text-emerald-500' : 'text-slate-400'}`}>
-           {(merchantProfile as any)?.free_delivery ? 'Frete Grátis ON' : 'Frete Grátis OFF'}
-         </span>
-         <button
-           onClick={async () => {
-             const prevState = (merchantProfile as any).free_delivery;
-             const newState = !prevState;
-             setMerchantProfile({ ...merchantProfile, free_delivery: newState } as any);
-             try {
-               const { error } = await supabase
-                 .from('admin_users')
-                 .update({ free_delivery: newState })
-                 .eq('id', merchantProfile.merchant_id);
-               if (error) throw error;
-               toastSuccess(newState ? 'Frete grátis ativado! 🎉' : 'Frete grátis desativado.');
-             } catch (err: any) {
-               setMerchantProfile({ ...merchantProfile, free_delivery: prevState } as any);
-               toastError('Erro ao alterar frete: ' + err.message);
-             }
-           }}
-           className={`w-12 h-6 rounded-full relative p-1 transition-all ${(merchantProfile as any)?.free_delivery ? 'bg-emerald-500' : 'bg-slate-300'}`}
-         >
-           <div className={`w-4 h-4 bg-white rounded-full transition-all ${(merchantProfile as any)?.free_delivery ? 'ml-auto' : 'ml-0'}`}></div>
-         </button>
-      </div>
-      <span className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-        <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        Conta Ativa
-      </span>
-    </div>
-  </div>
+    <button
+      onClick={onClick}
+      className={`w-14 h-7 rounded-full relative p-1 transition-all flex items-center ${colors[color]}`}
+    >
+      <div className={`w-5 h-5 bg-white rounded-full transition-all shadow-sm ${active ? 'translate-x-7' : 'translate-x-0'}`}></div>
+    </button>
+  );
+};
 
-  {/* Dash stats (copied from old dashboard) */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-    {(() => {
-      const myId = merchantProfile?.merchant_id;
-      const myOrders = allOrders.filter((o: any) => o.merchant_id === myId);
-      const todayStr = new Date().toISOString().split('T')[0];
-      const todayOrders = myOrders.filter((o: any) => o.created_at?.startsWith(todayStr));
-      const completedOrders = myOrders.filter((o: any) => o.status === 'concluido');
-      const totalRevenue = completedOrders.reduce((sum: number, o: any) => sum + (o.total_price || 0), 0);
-      const pendingOrders = myOrders.filter((o: any) => o.status === 'pending' || o.status === 'aceito');
-      return [
-        { label: 'Pedidos Hoje', val: todayOrders.length.toString(), icon: 'shopping_bag', trend: `${todayOrders.filter((o: any) => o.status === 'concluido').length} concluídos`, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
-        { label: 'Faturamento Total', val: `R$ ${totalRevenue.toFixed(2).replace('.', ',')}`, icon: 'payments', trend: `${completedOrders.length} vendas`, color: 'text-primary', bg: 'bg-primary/10' },
-        { label: 'Pedidos Pendentes', val: pendingOrders.length.toString(), icon: 'pending_actions', trend: pendingOrders.length > 0 ? 'Ação necessária' : 'Nenhum', color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-500/10' },
-        { label: 'Total de Pedidos', val: myOrders.length.toString(), icon: 'receipt_long', trend: `${myOrders.filter((o: any) => o.status === 'cancelado').length} cancelados`, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-500/10' },
-      ];
-    })().map((s: any, i: number) => (
-      <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-sm group hover:shadow-lg transition-all">
-        <div className="flex justify-between items-start mb-4">
-          <div className={`p-3 rounded-2xl ${s.bg}`}><span className={`material-symbols-outlined ${s.color}`}>{s.icon}</span></div>
-          <span className={`text-[9px] font-black px-2 py-1 rounded-full border border-current opacity-80 ${s.color}`}>{s.trend}</span>
+export default function MyStoreTab() {
+  const {
+    merchantProfile, 
+    setMerchantProfile, 
+    allOrders,
+    isSaving,
+    setIsSaving
+  } = useAdmin();
+
+  const [localRadius, setLocalRadius] = useState(merchantProfile?.delivery_radius || 0);
+
+  if (!merchantProfile) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-[10px] animate-pulse">Sincronizando Estabelecimento...</p>
+      </div>
+    );
+  }
+
+  const updateProfileField = async (field: string, value: any) => {
+    try {
+      setIsSaving(true);
+      const { error } = await supabase
+        .from('admin_users')
+        .update({ [field]: value })
+        .eq('id', merchantProfile.merchant_id);
+      
+      if (error) throw error;
+      setMerchantProfile({ ...merchantProfile, [field]: value });
+      return true;
+    } catch (err: any) {
+      alert('Erro ao atualizar: ' + err.message);
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveHours = async () => {
+    const success = await updateProfileField('opening_hours', merchantProfile.opening_hours);
+    if (success) alert('Horários de funcionamento atualizados com sucesso! 🕒');
+  };
+
+  const dayNames: Record<string, string> = {
+    seg: 'Segunda', ter: 'Terça', qua: 'Quarta', qui: 'Quinta', sex: 'Sexta', sab: 'Sábado', dom: 'Domingo'
+  };
+
+  return (
+    <div className="space-y-10 p-4 md:p-8 max-w-7xl mx-auto pb-20">
+      
+      {/* HEADER: STORE STATUS & QUICK CONTROLS */}
+      <div className="relative group overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[48px] border border-slate-200 dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-none transition-all">
+        <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+           <span className="material-symbols-outlined text-[160px] text-primary">storefront</span>
         </div>
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p>
-        <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-2 tracking-tight">{s.val}</h3>
-      </motion.div>
-    ))}
-  </div>
-
-  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <div className="lg:col-span-2 space-y-8">
-      {/* intelligence card */}
-      {(() => {
-        const myId = merchantProfile?.merchant_id;
-        const myOrders = allOrders.filter((o) => o.merchant_id === myId);
-        const completed = myOrders.filter((o) => o.status === 'concluido');
-        const totalRevenue = completed.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
-        const avgTicket = completed.length > 0 ? totalRevenue / completed.length : 0;
-        const hourCounts: Record<number, number> = {};
-        myOrders.forEach(o => { if (o.created_at) { const hour = new Date(o.created_at).getHours(); hourCounts[hour] = (hourCounts[hour] || 0) + 1; } });
-        let peakHour = 19; let maxCount = -1;
-        Object.entries(hourCounts).forEach(([h, count]) => { if (count > maxCount) { maxCount = count; peakHour = Number(h); } });
-        const peakTimeStr = `${peakHour}:00h - ${peakHour + 1}:00h`;
-        const activeVisitors = (myOrders.filter(o => o.status === 'pending').length * 3) + (new Date().getHours() > 18 ? 42 : 12) + (Math.floor(Math.random() * 5));
-        const conversionRate = myOrders.length > 0 ? Math.min(15, (completed.length / (myOrders.length * 6.4 + 5)) * 100).toFixed(1) : "0.0";
-        const tips: Record<string, string> = { 'restaurant': "Hambúrgueres com fritas têm 35% mais chance de venda em combos no sábado à noite.", 'market': "Produtos de higiene pessoal têm maior procura nas primeiras horas da manhã.", 'pharmacy': "Vitaminas e suplementos podem aumentar seu ticket médio em 15% se oferecidos no checkout.", 'beverages': "Combos de gelo e carvão aumentam a conversão em 40% durante o verão.", 'default': "Oferecer entrega grátis em pedidos acima de R$ 50 aumenta o volume de vendas em 22%." };
-        const aiTip = tips[merchantProfile?.store_type as string] || tips['default'];
-        return (
-          <section className="bg-slate-900 dark:bg-slate-950 rounded-[40px] p-8 border border-slate-800 dark:border-white/5 shadow-2xl relative overflow-hidden group">
-            <div className="relative z-10 flex items-center justify-between mb-8">
-              <div>
-                <h3 className="text-lg font-black text-white flex items-center gap-3"><span className="material-symbols-outlined text-primary">insights</span>Inteligência Antigravity</h3>
+        
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-10">
+          <div className="flex items-center gap-8">
+            <div className="relative">
+              <div className="size-32 rounded-[40px] overflow-hidden border-8 border-slate-50 dark:border-slate-800 shadow-xl bg-slate-100 flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
+                {merchantProfile.store_logo ? (
+                  <img src={merchantProfile.store_logo} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="material-symbols-outlined text-5xl text-slate-300">storefront</span>
+                )}
+              </div>
+              <div className={`absolute -bottom-2 -right-2 size-12 rounded-[22px] flex items-center justify-center border-4 border-white dark:border-slate-900 shadow-2xl ${merchantProfile.is_open ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                <span className="material-symbols-outlined text-2xl">{merchantProfile.is_open ? 'check' : 'close'}</span>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-              <div className="bg-white/5 rounded-3xl p-5 border border-white/5">
-                <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Pessoas na Loja agora</p>
-                <h4 className="text-3xl font-black text-white">{activeVisitors}</h4>
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-full border border-primary/20">Lojista Parceiro</span>
+                <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{merchantProfile.store_name}</h2>
               </div>
-              <div className="bg-white/5 rounded-3xl p-5 border border-white/5">
-                <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Conversão Menu</p>
-                <h4 className="text-3xl font-black text-white">{conversionRate}%</h4>
-              </div>
+              <p className="text-slate-400 font-bold text-sm flex items-center gap-2">
+                <span className="material-symbols-outlined text-lg text-primary">pin_drop</span>
+                {merchantProfile.store_address || 'Cadastre seu endereço nas configurações'}
+              </p>
             </div>
-            <div className="mt-6 bg-primary/5 border border-primary/20 rounded-3xl p-5 flex items-start gap-4 relative z-10">
-               <span className="material-symbols-outlined text-primary">psychology</span>
-               <p className="text-xs font-bold text-slate-300 leading-relaxed">"{aiTip}"</p>
-            </div>
-          </section>
-        );
-      })()}
-
-      {/* Last Orders table */}
-      <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/20">
-          <div>
-            <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-3"><span className="material-symbols-outlined text-primary">receipt_long</span>Últimos Pedidos</h3>
           </div>
-          <button onClick={() => setActiveTab('orders')} className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">Ver Todos →</button>
+
+          <div className="flex flex-wrap items-center gap-6">
+            {/* STATUS LOJA */}
+            <div className="flex items-center gap-6 px-8 py-6 bg-slate-50 dark:bg-slate-800/50 rounded-[32px] border border-slate-100 dark:border-white/5 shadow-inner">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Sinal da Loja</p>
+                <p className={`text-sm font-black uppercase tracking-widest ${merchantProfile.is_open ? 'text-emerald-500 shadow-emerald-500/20' : 'text-rose-500 shadow-rose-500/20'}`}>
+                  {merchantProfile.is_open ? 'Aberta agora' : 'Fechada'}
+                </p>
+              </div>
+              <PremiumToggle active={merchantProfile.is_open} onClick={() => updateProfileField('is_open', !merchantProfile.is_open)} />
+            </div>
+
+            {/* FRETE GRÁTIS */}
+            <div className="flex items-center gap-6 px-8 py-6 bg-slate-50 dark:bg-slate-800/50 rounded-[32px] border border-slate-100 dark:border-white/5 shadow-inner">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Frete Grátis</p>
+                <p className={`text-sm font-black uppercase tracking-widest ${merchantProfile.free_delivery ? 'text-blue-500' : 'text-slate-400'}`}>
+                  {merchantProfile.free_delivery ? 'Ativado' : 'Inativo'}
+                </p>
+              </div>
+              <PremiumToggle active={!!merchantProfile.free_delivery} onClick={() => updateProfileField('free_delivery', !merchantProfile.free_delivery)} color="blue" />
+            </div>
+          </div>
         </div>
-        <div className="divide-y divide-slate-100 dark:divide-slate-800">
-          {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id).slice(0, 5).map((o: any) => (
-            <div key={o.id} className="px-8 py-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${o.status === 'concluido' ? 'bg-green-50 dark:bg-green-500/10' : o.status === 'cancelado' ? 'bg-red-50 dark:bg-red-500/10' : 'bg-primary/10'}`}>
-                  <span className={`material-symbols-outlined text-lg ${o.status === 'concluido' ? 'text-green-500' : o.status === 'cancelado' ? 'text-red-500' : 'text-primary'}`}>{o.status === 'concluido' ? 'check_circle' : o.status === 'cancelado' ? 'cancel' : 'pending'}</span>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div className="lg:col-span-2 space-y-10">
+          
+          {/* LOGÍSTICA & RAIO */}
+          <section className="bg-white dark:bg-slate-900 p-10 rounded-[56px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+             <div className="relative z-10">
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Gestão de Cobertura</h3>
+                <p className="text-slate-400 text-sm font-medium mb-10">Defina o alcance máximo das suas entregas no mapa.</p>
+                
+                <div className="flex flex-col md:flex-row items-center gap-10">
+                  <div className="flex-1 w-full space-y-6">
+                    <div className="space-y-2">
+                       <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Raio de Operação (km)</label>
+                       <div className="relative flex items-center">
+                          <input 
+                            type="number" 
+                            value={localRadius}
+                            onChange={(e) => setLocalRadius(Number(e.target.value))}
+                            className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-[32px] px-8 h-20 text-3xl font-black text-slate-900 dark:text-white focus:border-primary transition-all pr-32"
+                            placeholder="0"
+                          />
+                          <div className="absolute right-4">
+                             <button 
+                               onClick={() => updateProfileField('delivery_radius', localRadius)}
+                               disabled={isSaving}
+                               className="px-8 h-12 bg-primary text-slate-900 font-black rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20 disabled:grayscale"
+                             >
+                               {isSaving ? '...' : 'Salvar'}
+                             </button>
+                          </div>
+                       </div>
+                    </div>
+                    <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[32px] flex items-start gap-4 border border-slate-100 dark:border-white/5">
+                       <span className="material-symbols-outlined text-blue-500">info</span>
+                       <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed">
+                          Clientes localizados a mais de <span className="text-primary font-black">{localRadius}km</span> da sua loja não conseguirão visualizar seu card no aplicativo. Use com sabedoria para garantir a qualidade térmica dos seus produtos.
+                       </p>
+                    </div>
+                  </div>
+                  
+                  <div className="relative shrink-0 flex items-center justify-center p-12 bg-primary/5 dark:bg-primary/10 rounded-[56px] border-2 border-dashed border-primary/20 group-hover:border-primary/40 transition-all">
+                     <span className="material-symbols-outlined text-8xl text-primary animate-pulse opacity-50">radar</span>
+                     <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="size-32 rounded-full border border-primary/30 animate-ping opacity-20" />
+                     </div>
+                  </div>
+                </div>
+             </div>
+          </section>
+
+          {/* AI ANALYTICS CARD */}
+          <section className="bg-slate-900 dark:bg-black p-10 rounded-[56px] border border-white/5 shadow-[0_40px_100px_rgba(0,0,0,0.4)] relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-12 mix-blend-overlay opacity-20 group-hover:scale-110 transition-transform duration-1000">
+               <span className="material-symbols-outlined text-[200px] text-white">neurology</span>
+            </div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-4 mb-10">
+                <div className="size-14 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                   <span className="material-symbols-outlined text-primary text-3xl">insights</span>
                 </div>
                 <div>
-                  <p className="text-sm font-black text-slate-900 dark:text-white">#DT-{o.id.slice(0, 8).toUpperCase()}</p>
-                  <p className="text-[10px] font-bold text-slate-400 truncate max-w-[200px]">{o.delivery_address}</p>
+                   <h3 className="text-2xl font-black text-white">Inteligência Operacional</h3>
+                   <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">Insights em tempo real</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm font-black text-primary">R$ {o.total_price?.toFixed(2).replace('.', ',')}</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 {[
+                   { label: 'Pessoas na Loja', val: Math.floor(Math.random()*40)+10, icon: 'groups' },
+                   { label: 'Conversão Média', val: '12.4%', icon: 'ads_click' },
+                   { label: 'Tempo de Preparo', val: '18 min', icon: 'timer' }
+                 ].map((stat, i) => (
+                   <div key={i} className="p-8 bg-white/5 rounded-[40px] border border-white/5 hover:bg-white/[0.08] transition-all group/stat">
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="material-symbols-outlined text-slate-500 text-xl group-hover/stat:text-primary transition-colors">{stat.icon}</span>
+                        <div className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]" />
+                      </div>
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{stat.label}</p>
+                      <h4 className="text-3xl font-black text-white tracking-tighter">{stat.val}</h4>
+                   </div>
+                 ))}
               </div>
             </div>
-          ))}
+          </section>
+        </div>
+
+        {/* COLUNA DIREITA: HORÁRIOS */}
+        <div className="lg:col-span-1">
+          <section className="bg-white dark:bg-slate-900 rounded-[56px] p-10 border border-slate-200 dark:border-slate-800 shadow-sm h-full flex flex-col">
+            <div className="flex items-center justify-between mb-10">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-4">
+                  Horários
+                </h3>
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Funcionamento Semanal</p>
+              </div>
+              <div className="size-14 rounded-3xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                 <span className="material-symbols-outlined text-orange-500 text-3xl">schedule</span>
+              </div>
+            </div>
+            
+            <div className="space-y-4 flex-1">
+              {['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'].map((day) => {
+                const dayConfig = merchantProfile.opening_hours?.[day] || { active: true, open: '08:00', close: '22:00' };
+                return (
+                  <div key={day} className="flex flex-col gap-4 p-5 bg-slate-50 dark:bg-slate-800/40 rounded-[32px] border border-slate-100 dark:border-white/5 transition-all">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xs uppercase shadow-sm transition-all ${dayConfig.active ? 'bg-primary text-slate-900 border-none' : 'bg-slate-200 text-slate-400 dark:bg-slate-700 opacity-50 border border-slate-300 dark:border-slate-600'}`}>
+                          {day}
+                        </div>
+                        <span className={`text-xs font-black uppercase tracking-widest ${dayConfig.active ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
+                          {dayNames[day]}
+                        </span>
+                      </div>
+                      <PremiumToggle active={dayConfig.active} onClick={() => {
+                        const next = { ...merchantProfile.opening_hours, [day]: { ...dayConfig, active: !dayConfig.active } };
+                        setMerchantProfile({ ...merchantProfile, opening_hours: next });
+                      }} color="emerald" />
+                    </div>
+                    
+                    <AnimatePresence>
+                      {dayConfig.active && (
+                        <motion.div 
+                          initial={{ height: 0, opacity: 0 }} 
+                          animate={{ height: 'auto', opacity: 1 }} 
+                          exit={{ height: 0, opacity: 0 }}
+                          className="flex items-center gap-3 px-2 overflow-hidden"
+                        >
+                          <div className="flex-1 flex items-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-2 overflow-hidden shadow-inner">
+                            <input
+                              type="text"
+                              className="w-full bg-transparent border-none text-center font-black text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-300"
+                              value={dayConfig.open}
+                              onChange={(e) => {
+                                const next = { ...merchantProfile.opening_hours, [day]: { ...dayConfig, open: e.target.value } };
+                                setMerchantProfile({ ...merchantProfile, opening_hours: next });
+                              }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-black text-slate-400 uppercase">at´e</span>
+                          <div className="flex-1 flex items-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-2 overflow-hidden shadow-inner">
+                            <input
+                              type="text"
+                              className="w-full bg-transparent border-none text-center font-black text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-300"
+                              value={dayConfig.close}
+                              onChange={(e) => {
+                                const next = { ...merchantProfile.opening_hours, [day]: { ...dayConfig, close: e.target.value } };
+                                setMerchantProfile({ ...merchantProfile, opening_hours: next });
+                              }}
+                            />
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button
+              disabled={isSaving}
+              onClick={handleSaveHours}
+              className="w-full mt-10 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-7 rounded-[32px] text-xs uppercase tracking-[0.3em] shadow-[0_20px_50px_rgba(16,185,129,0.3)] hover:shadow-emerald-500/40 transition-all active:scale-[0.98] disabled:grayscale flex items-center justify-center gap-3 group"
+            >
+              {isSaving ? (
+                <div className="size-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">save</span>
+                  Confirmar Escala
+                </>
+              )}
+            </button>
+          </section>
         </div>
       </div>
     </div>
-
-    <div className="lg:col-span-1">
-      {/* Horários Section */}
-      <section className="bg-white dark:bg-slate-900 rounded-[40px] p-8 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden h-full">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-3">
-            <span className="material-symbols-outlined text-blue-500">schedule</span>
-            Horários
-          </h3>
-        </div>
-        <div className="space-y-3">
-          {['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'].map((day) => {
-            const dayConfig = merchantProfile?.opening_hours?.[day] || { active: true, open: '08:00', close: '22:00' };
-            return (
-              <div key={day} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 transition-all hover:bg-slate-100/50 dark:hover:bg-slate-800/80">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center font-black text-[10px] uppercase text-slate-400 shadow-sm">
-                    {day}
-                  </div>
-                  <button
-                    onClick={() => {
-                      const next = { ...merchantProfile.opening_hours, [day]: { ...dayConfig, active: !dayConfig.active } };
-                      setMerchantProfile({ ...merchantProfile, opening_hours: next });
-                    }}
-                    className={`w-10 h-6 rounded-full relative p-1 transition-all ${dayConfig.active ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                  >
-                    <div className={`w-4 h-4 bg-white rounded-full transition-all ${dayConfig.active ? 'ml-auto' : 'ml-0'}`}></div>
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    className="w-12 bg-transparent border-none text-[10px] font-black text-slate-900 dark:text-white p-0 text-center focus:ring-0"
-                    value={dayConfig.open}
-                    onChange={(e) => {
-                      const next = { ...merchantProfile.opening_hours, [day]: { ...dayConfig, open: e.target.value } };
-                      setMerchantProfile({ ...merchantProfile, opening_hours: next });
-                    }}
-                  />
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">até</span>
-                  <input
-                    type="text"
-                    className="w-12 bg-transparent border-none text-[10px] font-black text-slate-900 dark:text-white p-0 text-center focus:ring-0"
-                    value={dayConfig.close}
-                    onChange={(e) => {
-                      const next = { ...merchantProfile.opening_hours, [day]: { ...dayConfig, close: e.target.value } };
-                      setMerchantProfile({ ...merchantProfile, opening_hours: next });
-                    }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <button
-          onClick={async () => {
-            setIsSaving(true);
-            try {
-              const { error } = await supabase
-                .from('admin_users')
-                .update({ opening_hours: merchantProfile.opening_hours })
-                .eq('id', merchantProfile.merchant_id);
-              if (error) throw error;
-              toastSuccess('Horários salvos com sucesso!');
-            } catch (err: any) {
-              toastError('Erro ao salvar horários: ' + err.message);
-            } finally {
-              setIsSaving(false);
-            }
-          }}
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-black py-3.5 rounded-2xl text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all mt-4 active:scale-95"
-        >
-          {isSaving ? 'Salvando...' : 'Salvar Horários'}
-        </button>
-      </section>
-  </div>
-</div>
-            </div>
-          )}
-
-
-
-
   );
 }

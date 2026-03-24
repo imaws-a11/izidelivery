@@ -28,7 +28,7 @@ export default function OrdersMerchantTab() {
   const waitingPaymentOrders = myOrders.filter((o: any) => o.status === 'pendente_pagamento');
   
   // Pedidos em PRODUÇÃO ou ENTREGA
-  const ongoingOrders = myOrders.filter((o: any) => ['preparando', 'pronto', 'pendente', 'accepted', 'picked_up', 'em_rota', 'a_caminho'].includes(o.status));
+  const ongoingOrders = myOrders.filter((o: any) => ['preparando', 'pronto', 'pendente', 'waiting_driver', 'accepted', 'picked_up', 'em_rota', 'a_caminho'].includes(o.status));
 
   const [localProcessingId, setLocalProcessingId] = React.useState<string | null>(null);
 
@@ -140,23 +140,31 @@ export default function OrdersMerchantTab() {
                     </div>
                   </div>
 
-                  <div className="flex gap-3 mt-auto">
+                  <div className="flex gap-2 mt-auto">
                     <button 
                       disabled={localProcessingId === o.id}
                       onClick={() => { 
                         if(!confirm('Deseja realmente recusar este pedido?')) return;
                         handleAction(o.id, 'cancelado', 'Recusado pelo lojista');
                       }} 
-                      className="flex-1 py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-red-50 hover:text-red-500 transition-all border border-transparent hover:border-red-100 disabled:opacity-50"
+                      className="flex-1 py-4 rounded-3xl bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-50 hover:text-rose-500 transition-all border border-transparent hover:border-rose-100 disabled:opacity-50"
                     >
                       {localProcessingId === o.id ? '...' : 'Recusar'}
                     </button>
                     <button 
                       disabled={localProcessingId === o.id}
                       onClick={() => handleAction(o.id, 'preparando')} 
-                      className="flex-[2] py-4 rounded-2xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 active:scale-95 disabled:opacity-50"
+                      className="flex-1 py-4 rounded-3xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-200 transition-all disabled:opacity-50"
                     >
-                      {localProcessingId === o.id ? 'Processando...' : 'Aceitar'}
+                      {localProcessingId === o.id ? '...' : 'Preparar'}
+                    </button>
+                    <button 
+                      disabled={localProcessingId === o.id}
+                      onClick={() => handleAction(o.id, 'waiting_driver')} 
+                      className="flex-[2] py-4 rounded-3xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-sm">local_shipping</span>
+                      {localProcessingId === o.id ? '...' : 'Aceitar e Chamar'}
                     </button>
                   </div>
                 </motion.div>
@@ -228,13 +236,13 @@ export default function OrdersMerchantTab() {
                   {o.status === 'preparando' && (
                     <button 
                       disabled={localProcessingId === o.id}
-                      onClick={() => handleAction(o.id, 'pendente')} 
+                      onClick={() => handleAction(o.id, 'waiting_driver')} 
                       className="px-4 py-2 rounded-xl bg-blue-500 text-white text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-md shadow-blue-500/20 disabled:opacity-50"
                     >
                       {localProcessingId === o.id ? '...' : 'Chamar Motoboy'}
                     </button>
                   )}
-                  {o.status === 'pendente' && (
+                  {o.status === 'waiting_driver' && (
                     <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest animate-pulse">Buscando Entregador...</span>
                   )}
                 </div>
