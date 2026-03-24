@@ -1,49 +1,76 @@
-export const playIziSound = (role: 'merchant' | 'driver') => {
-  try {
-    const sounds = {
-      merchant: "https://www.soundjay.com/phone/phone-ringing-08.mp3", // Ringtone
-      driver: "https://www.soundjay.com/communication/beep-07.mp3"     // Alerta bip
-    };
+// Sistema de som Izi Delivery - App Entregador
+// Usa AudioContext sintético como método principal (100% confiável, sem dependência externa)
 
-    const audio = new Audio(sounds[role] || sounds.driver);
-    audio.setAttribute('preload', 'auto');
-    audio.volume = 1.0;
-    
-    audio.load();
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(() => playSyntheticFallback(role));
+let audioCtxInstance: AudioContext | null = null;
+
+const getAudioContext = (): AudioContext | null => {
+  try {
+    if (!audioCtxInstance || audioCtxInstance.state === 'closed') {
+      audioCtxInstance = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
-  } catch (err) {
-    playSyntheticFallback(role);
+    if (audioCtxInstance.state === 'suspended') {
+      audioCtxInstance.resume();
+    }
+    return audioCtxInstance;
+  } catch {
+    return null;
   }
 };
 
-const playSyntheticFallback = (role: 'merchant' | 'driver') => {
-  try {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-    const playTone = (freq: number, type: OscillatorType, start: number, duration: number, volume: number) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq, start);
-      gain.gain.setValueAtTime(volume, start);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(start);
-      osc.stop(start + duration);
-    };
-
-    const now = audioCtx.currentTime;
-    if (role === 'merchant') {
-      playTone(440, 'sine', now, 0.5, 0.5);
-    } else {
-      playTone(1320, 'square', now, 0.1, 0.15);
-      playTone(1760, 'square', now + 0.15, 0.2, 0.15);
-    }
-  } catch (e) {}
+const playTone = (
+  ctx: AudioContext,
+  freq: number,
+  type: OscillatorType,
+  startOffset: number,
+  duration: number,
+  volume: number
+) => {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
+  gain.gain.setValueAtTime(volume, ctx.currentTime + startOffset);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startOffset + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(ctx.currentTime + startOffset);
+  osc.stop(ctx.currentTime + startOffset + duration);
 };
+
+export const playIziSound = (role: 'merchant' | 'driver') => {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    if (role === 'merchant') {
+      // Som de telefone tocando - insistente (ring ring ring)
+      for (let i = 0; i < 3; i++) {
+        const offset = i * 0.7;
+        playTone(ctx, 440, 'sine', offset, 0.3, 0.4);
+        playTone(ctx, 480, 'sine', offset, 0.3, 0.4);
+      }
+    } else {
+      // Som de alerta de missão pro entregador - 3 bips crescentes rápidos
+      playTone(ctx, 880, 'square', 0, 0.08, 0.12);
+      playTone(ctx, 1100, 'square', 0.12, 0.08, 0.14);
+      playTone(ctx, 1320, 'square', 0.24, 0.08, 0.16);
+      // Segundo grupo mais alto
+      playTone(ctx, 880, 'square', 0.5, 0.08, 0.14);
+      playTone(ctx, 1100, 'square', 0.62, 0.08, 0.16);
+      playTone(ctx, 1760, 'square', 0.74, 0.15, 0.2);
+    }
+  } catch (e) {
+    console.warn('Erro ao reproduzir som:', e);
+  }
+};
+
+// Habilitar AudioContext após primeira interação do usuário
+if (typeof window !== 'undefined') {
+  const enableAudio = () => {
+    getAudioContext();
+    window.removeEventListener('click', enableAudio);
+    window.removeEventListener('touchstart', enableAudio);
+  };
+  window.addEventListener('click', enableAudio, { once: true });
+  window.addEventListener('touchstart', enableAudio, { once: true });
+}
