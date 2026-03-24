@@ -1197,9 +1197,32 @@ function App() {
       utilitario: bv.utilitario_min || 10 
     };
     
-    // Calcular preço final
-    const rawP = distancePrices[transitData.type] || calculateDynamicPrice(basePrices[transitData.type] || 6);
-    const finalPrice = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || 6) : rawP;
+    // Calcular preço final usando o novo motor de precificação se disponível ou o fallback dinâmico
+    let finalPrice = 0;
+    if (transitData.type === 'utilitario') {
+       finalPrice = calculateFreightPrice({
+          baseFare: 45,
+          distanceInKm: 10,
+          distanceRate: 2.8,
+          helperCount: transitData.helpers,
+          helperRate: 35,
+          hasStairs: transitData.accessibility.stairsAtOrigin || transitData.accessibility.stairsAtDestination
+       }).totalPrice;
+    } else if (transitData.type === 'van') {
+       finalPrice = calculateVanPrice({
+          baseFare: 80,
+          distanceInKm: 15,
+          distanceRate: 3.5,
+          stopCount: transitData.stops.length,
+          stopRate: 15,
+          isDaily: transitData.tripType === 'hourly',
+          hours: 4,
+          hourlyRate: 45
+       }).totalPrice;
+    } else {
+       const rawP = distancePrices[transitData.type] || calculateDynamicPrice(basePrices[transitData.type] || 6);
+       finalPrice = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || 6) : rawP;
+    }
 
     setIsLoading(true);
 
@@ -1212,7 +1235,7 @@ function App() {
       pickup_address: transitData.origin,
       delivery_address: transitData.destination,
       payment_method: paymentMethod,
-      payment_status: (paymentMethod === 'dinheiro') ? 'pending' : 'paid',
+      payment_status: (paymentMethod === 'dinheiro' || paymentMethod === 'pix' || paymentMethod === 'bitcoin_lightning') ? 'pending' : 'paid',
       package_details: isShipping 
         ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
         : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`,
@@ -1220,28 +1243,23 @@ function App() {
     };
 
     try {
-      // Validar saldo se for o caso
+      // 1. Validar saldo se for saldo
       if (paymentMethod === "saldo") {
         if (walletBalance < finalPrice) {
           toastError("Saldo insuficiente na carteira");
           setIsLoading(false);
           return;
         }
-        
-        // Registrar transação de débito
         await supabase.from("wallet_transactions").insert({
           user_id: userId,
           type: "pagamento",
           amount: finalPrice,
           description: `Viagem: ${transitData.origin.split(',')[0]} para ${transitData.destination.split(',')[0]}`
         });
-        
-        // Atualizar saldo local (opcional, mas bom para UX)
         setWalletBalance(prev => prev - finalPrice);
       }
 
-      // Se for PIX, poderíamos chamar a função mp-pix, mas para mobilidade costuma ser imediato.
-      // Vamos manter o fluxo padrão de inserção.
+      // 2. Criar o pedido no banco
       const { data: order, error: insertError } = await supabase
         .from("orders_delivery")
         .insert(orderBase)
@@ -1250,19 +1268,63 @@ function App() {
 
       if (insertError) throw insertError;
 
+      // 3. Se for PIX ou Lightning, precisamos gerar a fatura real via Edge Function
+      if (paymentMethod === 'pix') {
+         try {
+            const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
+              body: {
+                amount: finalPrice,
+                orderId: order.id,
+                payment_method_id: 'pix',
+                email: email || "cliente@izidelivery.com",
+                customer: { name: userName, cpf: "000.000.000-00" }
+              },
+            });
+            
+            if (!fnErr && fnData?.qrCode) {
+               setPixData({ 
+                 qrCode: fnData.qrCode, 
+                 copyPaste: fnData.copyPaste, 
+                 expirationDate: new Date(Date.now() + 30 * 60 * 1000).toISOString() 
+               });
+               setShowPixPayment(true);
+            } else {
+               // Fallback para modal manual se a função falhar
+               setShowPixPayment(true);
+            }
+         } catch (e) {
+            setShowPixPayment(true); 
+         }
+      } else if (paymentMethod === 'bitcoin_lightning') {
+          try {
+            const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
+              body: { amount: finalPrice, orderId: order.id, memo: `Viagem Izi #${order.id}` },
+            });
+            if (!lnErr && lnData?.payment_request) {
+               setLightningData({ 
+                 payment_request: lnData.payment_request, 
+                 satoshis: Math.round(finalPrice * 2000), // Exemplo de conversão
+                 btc_price_brl: 350000 
+               });
+               setSubView("lightning_payment");
+            }
+          } catch(e) {}
+      }
+
       // Salvar no histórico
       const newHistory = [transitData.destination, ...transitHistory.filter(h => h !== transitData.destination)].slice(0, 10);
       setTransitHistory(newHistory);
       localStorage.setItem("transitHistory", JSON.stringify(newHistory));
 
       setSelectedItem(order);
-      toastSuccess(isShipping ? "Pedido de envio criado!" : "Procurando motorista mais próximo...");
       
-      // Se for agendado, talvez mostrar uma tela diferente ou apenas confirmar
-      if (transitData.scheduled) {
-        setSubView("payment_success");
-      } else {
-        setSubView("active_order");
+      if (paymentMethod !== 'pix' && paymentMethod !== 'bitcoin_lightning') {
+        toastSuccess(isShipping ? "Pedido de envio criado!" : "Procurando motorista mais próximo...");
+        if (transitData.scheduled) {
+          setSubView("payment_success");
+        } else {
+          setSubView("active_order");
+        }
       }
 
     } catch (err: any) {
@@ -4524,7 +4586,7 @@ function App() {
               </div>
               <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between gap-3">
                 <p className="text-zinc-400 text-xs font-mono truncate flex-1">{invoice.slice(0, 40)}...</p>
-                <button onClick={() => { navigator.clipboard.writeText(invoice); toast("Invoice copiada!"); }}
+                <button onClick={() => { navigator.clipboard.writeText(invoice); toastSuccess("Invoice copiada!"); }}
                   className="text-orange-400 active:scale-90 transition-all shrink-0">
                   <span className="material-symbols-outlined text-lg">content_copy</span>
                 </button>
@@ -4550,9 +4612,9 @@ function App() {
   };
 
   const renderCart = () => {
-    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const taxa = 0;
-    const total = subtotal + taxa;
+    const subtotal: number = cart.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0);
+    const taxa: number = 0;
+    const total: number = subtotal + taxa;
 
     if (cart.length === 0) {
       return (
