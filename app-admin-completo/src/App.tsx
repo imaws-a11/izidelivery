@@ -743,7 +743,8 @@ function App() {
         // Para lojistas: só notificar se o pedido for do próprio merchant
         if (isMerchant && merchantProfile?.merchant_id) {
           if (newRow?.merchant_id === merchantProfile.merchant_id || payload.eventType === 'DELETE') {
-            if (payload.eventType === 'INSERT') {
+            const isActionable = newRow?.status === 'novo' || newRow?.status === 'waiting_merchant';
+            if (payload.eventType === 'INSERT' && isActionable) {
               playOrderNotification();
               setNewOrderNotification({ show: true, orderId: newRow.id?.toString() });
               setTimeout(() => setNewOrderNotification({ show: false }), 5000);
