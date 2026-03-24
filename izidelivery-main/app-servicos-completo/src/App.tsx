@@ -1932,14 +1932,19 @@ function App() {
 
     const orderBase = {
       user_id: userId,
+      user_name: userName || "Cliente",
       merchant_id: selectedShop?.id || null,
+      merchant_name: selectedShop?.name || "Loja",
       status: "novo",
       total_price: total,
       pickup_address: selectedShop?.name || "Endereço do Estabelecimento",
       delivery_address: userLocation.address || "Endereço não informado",
       payment_method: paymentMethod,
       service_type: selectedShop?.type || "restaurant",
-      package_details: cart.map(i => `${i.name} (R$ ${Number(i.price).toFixed(2)})`).join(', '),
+      items: cart,
+      delivery_fee: 0,
+      discount: discount,
+      notes: "Pedido IziDelivery",
     };
 
     const clearCart = () => {
