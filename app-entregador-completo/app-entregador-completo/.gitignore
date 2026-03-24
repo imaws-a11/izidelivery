@@ -1,0 +1,6 @@
+.vercel
+
+# Variáveis de ambiente - NUNCA commitar
+.env
+.env.local
+.env.*.local
