@@ -38,14 +38,26 @@ export default function OrdersMerchantTab() {
       const updateData: any = { status: newStatus };
       if (reason) updateData.cancel_reason = reason;
       
-      const { error } = await supabase.from('orders_delivery').update(updateData).eq('id', id);
-      if (error) throw error;
+      const { data, error, status } = await supabase.from('orders_delivery').update(updateData).eq('id', id).select();
       
+      if (error) {
+        console.error('Erro detalhado Supabase:', error);
+        alert('Erro ao processar pedido: ' + error.message);
+        throw error;
+      }
+      
+      console.log('Update realizado. Status HTTP:', status, 'Dados retornados:', data);
+      
+      if (!data || data.length === 0) {
+        alert('O pedido foi atualizado, mas as alterações não refletiram. Verifique se você tem permissão de lojista.');
+      }
+
       // Forçar atualização do dashboard
       await fetchAllOrders(merchantOrdersPage);
-    } catch (err) {
+      alert('Pedido atualizado com sucesso!');
+    } catch (err: any) {
       console.error('Erro na ação do lojista:', err);
-      alert('Erro ao processar pedido. Tente novamente.');
+      // alert('Erro ao processar pedido. Tente novamente.');
     } finally {
       setLocalProcessingId(null);
     }
