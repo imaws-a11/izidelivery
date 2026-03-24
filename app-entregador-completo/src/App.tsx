@@ -430,11 +430,21 @@ function App() {
     }, [isAuthenticated, driverId]);
 
     useEffect(() => {
+        if (!isAuthenticated || !driverId) return;
+
         const fetchOrders = async () => {
             const { data, error } = await supabase.from('orders_delivery').select('*').in('status', ['pendente', 'pronto']).not('status', 'eq', 'novo').not('status', 'eq', 'waiting_merchant');
             if (error || !data) return;
-            const declinedIds = JSON.parse(localStorage.getItem('Izi_declined') || '[]');
-            setOrders(data.map((o: any) => ({ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type as ServiceType, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' })).filter((o: any) => !declinedIds.includes(o.realId)));
+            // Filtrar somente rejeições com menos de 5 segundos
+            const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
+            const now = Date.now();
+            // Limpar rejeições expiradas (>5s)
+            const cleanDeclined: Record<string, number> = {};
+            Object.entries(declinedMap).forEach(([id, ts]) => {
+                if (now - ts < 5000) cleanDeclined[id] = ts;
+            });
+            localStorage.setItem('Izi_declined_timed', JSON.stringify(cleanDeclined));
+            setOrders(data.map((o: any) => ({ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type as ServiceType, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' })).filter((o: any) => !cleanDeclined[o.realId]));
         };
         const fetchDedicatedSlots = async () => {
             const declinedIds = JSON.parse(localStorage.getItem('Izi_declined_slots') || '[]');
@@ -442,19 +452,24 @@ function App() {
             setDedicatedSlots((data || []).filter((s: any) => !declinedIds.includes(s.id)));
         };
         fetchOrders(); fetchDedicatedSlots();
+
+        // Polling a cada 5s para garantir que pedidos reapareçam após rejeição
+        const pollInterval = setInterval(fetchOrders, 5000);
         
         const channel = supabase.channel('realtime_orders')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 const o = payload.new;
-                const declinedIds = JSON.parse(localStorage.getItem('Izi_declined') || '[]');
-                if (!['pendente', 'pronto'].includes(o.status) || declinedIds.includes(o.id)) return;
+                const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
+                if (!['pendente', 'pronto'].includes(o.status) || (Date.now() - (declinedMap[o.id] || 0) < 5000)) return;
                 playIziSound('driver');
                 if (Notification.permission === 'granted') new Notification('🚀 Nova Missão Izi!', { body: `Coleta: ${o.pickup_address}`, icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' });
-                setOrders(prev => [{ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev]);
+                setOrders(prev => {
+                    if (prev.find(x => x.realId === o.id)) return prev;
+                    return [{ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev];
+                });
             })
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 const o = payload.new as any;
-                const declinedIds = JSON.parse(localStorage.getItem('Izi_declined') || '[]');
                 const currentMission = activeMissionRef.current;
                 
                 // Se a missão ativa recebeu uma atualização do servidor, sincronizar o status
@@ -471,7 +486,8 @@ function App() {
                     return;
                 }
 
-                if (['pendente', 'pronto'].includes(o.status) && !declinedIds.includes(o.id)) {
+                const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
+                if (['pendente', 'pronto'].includes(o.status) && !(Date.now() - (declinedMap[o.id] || 0) < 5000)) {
                     setOrders(prev => {
                         if (prev.find(x => x.realId === o.id)) return prev;
                         return [{ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev];
@@ -482,8 +498,24 @@ function App() {
             })
             .subscribe();
 
-        return () => { supabase.removeChannel(channel); };
+        return () => { clearInterval(pollInterval); supabase.removeChannel(channel); };
     }, [isOnline, isAuthenticated, driverId]);
+
+    // Função de sincronização manual
+    const [isSyncing, setIsSyncing] = useState(false);
+    const handleManualSync = async () => {
+        setIsSyncing(true);
+        try {
+            // Limpar todas as rejeições para forçar pedidos a aparecerem
+            localStorage.removeItem('Izi_declined_timed');
+            const { data } = await supabase.from('orders_delivery').select('*').in('status', ['pendente', 'pronto']);
+            if (data) {
+                setOrders(data.map((o: any) => ({ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type as ServiceType, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' })));
+            }
+            toastSuccess('Sincronizado! ' + (data?.length || 0) + ' pedidos encontrados.');
+        } catch { toastError('Erro ao sincronizar.'); }
+        finally { setTimeout(() => setIsSyncing(false), 1000); }
+    };
 
 
 
@@ -509,8 +541,10 @@ function App() {
     };
 
     const handleDecline = (order: Order) => {
-        const declined = JSON.parse(localStorage.getItem('Izi_declined') || '[]');
-        if (!declined.includes(order.realId)) { declined.push(order.realId); localStorage.setItem('Izi_declined', JSON.stringify(declined)); }
+        // Rejeição temporária: salva com timestamp, pedido reaparece após 5s no próximo poll
+        const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
+        declinedMap[order.realId] = Date.now();
+        localStorage.setItem('Izi_declined_timed', JSON.stringify(declinedMap));
         setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
     };
 
@@ -821,7 +855,13 @@ function App() {
             <div className="space-y-4">
                 <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2"><div className={`size-2 rounded-full ${isOnline ? 'bg-primary animate-ping' : 'bg-white/20'}`} /><h2 className="text-sm font-black text-white uppercase tracking-widest">{isOnline ? 'Chamadas' : 'Scanner Desativado'}</h2></div>
-                    <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{filteredOrders.length} disponíveis</span>
+                    <div className="flex items-center gap-2">
+                        <button onClick={handleManualSync} disabled={isSyncing} className="flex items-center gap-1.5 bg-white/[0.05] border border-white/10 px-3 py-1.5 rounded-xl active:scale-90 transition-all disabled:opacity-50" title="Sincronizar pedidos">
+                            <span className={`material-symbols-outlined text-sm text-primary ${isSyncing ? 'animate-spin' : ''}`}>sync</span>
+                            <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">{isSyncing ? 'Sync...' : 'Sync'}</span>
+                        </button>
+                        <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{filteredOrders.length} disponíveis</span>
+                    </div>
                 </div>
 
                 {!isOnline ? (
