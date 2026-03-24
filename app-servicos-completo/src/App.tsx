@@ -1233,12 +1233,11 @@ function App() {
       total_price: finalPrice,
       service_type: transitData.type,
       pickup_address: transitData.origin,
-      delivery_address: transitData.destination,
+      delivery_address: `${transitData.destination} | OBS: ${isShipping 
+        ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
+        : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`}`,
       payment_method: paymentMethod,
       payment_status: (paymentMethod === 'dinheiro' || paymentMethod === 'pix' || paymentMethod === 'bitcoin_lightning') ? 'pending' : 'paid',
-      package_details: isShipping 
-        ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
-        : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`,
       scheduled_at: transitData.scheduled ? `${transitData.scheduledDate}T${transitData.scheduledTime}:00` : null
     };
 
@@ -1995,10 +1994,9 @@ function App() {
       status: "novo",
       total_price: total,
       pickup_address: selectedShop?.name || "Endereço do Estabelecimento",
-      delivery_address: userLocation.address || "Endereço não informado",
+      delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map(i => `${i.name} (R$ ${Number(i.price).toFixed(2)})`).join(', ')}`,
       payment_method: paymentMethod,
       service_type: selectedShop?.type || "restaurant",
-      package_details: cart.map(i => `${i.name} (R$ ${Number(i.price).toFixed(2)})`).join(', '),
     };
 
     const clearCart = () => {
@@ -2024,13 +2022,13 @@ function App() {
       // ── BITCOIN LIGHTNING ──────────────────────────────────────────────
       if (paymentMethod === "bitcoin_lightning") {
         navigateSubView("payment_processing");
-        const { data: order } = await supabase.from("orders_delivery").insert({ 
+        const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ 
           ...orderBase, 
           status: "pendente_pagamento",
         }).select().single();
         
-        if (!order) { 
-          alert("Não foi possível registrar o pedido para pagamento Lightning.");
+        if (insertError || !order) { 
+          alert("Não foi possível registrar o pedido para pagamento Lightning: " + (insertError?.message || "Erro desconhecido"));
           navigateSubView("payment_error"); 
           return; 
         }
@@ -5001,7 +4999,7 @@ function App() {
             status: "pendente_pagamento",
             total_price: Number(total.toFixed(2)),
             pickup_address: selectedShop.name || "Endereço do Estabelecimento",
-            delivery_address: userLocation.address || "Endereço não informado",
+            delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map(i => `${i.name}`).join(', ')}`,
             payment_method: "pix",
             service_type: selectedShop.type || "restaurant",
           })
@@ -5010,6 +5008,7 @@ function App() {
 
         if (orderErr || !order) {
           console.error("Erro ao criar pedido:", orderErr);
+          alert("Não foi possível registrar o pedido no banco de dados. Verifique sua conexão. Detalhe: " + (orderErr?.message || "Erro desconhecido"));
           navigateSubView("payment_error");
           return;
         }
@@ -5028,20 +5027,22 @@ function App() {
           },
         });
 
-        if (fnErr || !fnData?.qrCode) {
+        if (fnErr || !(fnData?.qrCode || fnData?.qr_code)) {
           console.error("Erro MP PIX:", fnErr, fnData);
-          // O pedido já foi criado, não podemos simplesmente desistir.
-          // Vamos atualizar o item selecionado e mostrar um estado de erro amigável na tela de Pix
-          setSelectedItem({ ...order, pixError: true, pixErrorMessage: fnData?.details || fnErr?.message });
-          // Mesmo com erro, limpamos o carrinho para não duplicar se ele tentar novamente por outro caminho?
-          // Na verdade, se deu erro no QR, ele pode querer tentar outro método. 
-          // Mas o pedido JÁ ESTÁ no banco do lojista. Esse é o problema apontado pelo usuário.
-          setPixConfirmed(true); // Manter confirmado para mostrar o estado de erro
+          const detail = fnData?.details || fnData?.error || fnErr?.message || "Erro desconhecido na API do Mercado Pago.";
+          alert("Erro ao gerar PIX: " + detail + "\n\nVerifique as chaves MP_ACCESS_TOKEN no Supabase.");
+          
+          setSelectedItem({ ...order, pixError: true, pixErrorMessage: detail });
+          setPixConfirmed(true);
           return;
         }
 
         // 3. Atualizar UI com QR real
-        setSelectedItem({ ...order, pixQrCode: fnData.qrCode, pixQrBase64: fnData.qrCodeBase64, pixCopyPaste: fnData.copyPaste });
+        const qr = fnData.qrCode || fnData.qr_code;
+        const qrBase64 = fnData.qrCodeBase64 || fnData.qr_code_base64;
+        const copyPaste = fnData.copyPaste || fnData.copy_paste;
+
+        setSelectedItem({ ...order, pixQrCode: qr, pixQrBase64: qrBase64, pixCopyPaste: copyPaste });
         setCart([]);
         setAppliedCoupon(null);
         setCouponInput("");
