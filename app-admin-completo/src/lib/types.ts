@@ -28,6 +28,7 @@ export interface Driver {
   vehicle_color?: string;
   license_plate?: string;
   is_active: boolean;
+  password?: string;
   is_online?: boolean;
   status?: 'active' | 'inactive' | 'suspended';
   rating?: number;

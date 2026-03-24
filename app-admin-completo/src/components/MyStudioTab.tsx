@@ -722,6 +722,7 @@ export default function MyStudioTab() {
   } = useAdmin();
 
   return (
+    <>
 <div className="flex flex-col h-[calc(100vh-160px)] -m-8 relative overflow-hidden bg-white dark:bg-slate-900 shadow-2xl rounded-[40px] border border-slate-100 dark:border-slate-800">
   {((userRole === 'merchant' && merchantProfile) || (userRole === 'admin' && selectedMerchantPreview)) ? (
     <div className="flex-1 flex overflow-hidden">
@@ -758,8 +759,6 @@ export default function MyStudioTab() {
       </button>
     </div>
   )}
-</div>
-            )}
 
             {/* ── Merchant: Financeiro ── */}
             {
@@ -1551,7 +1550,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                    placeholder="(00) 00000-0000"
                  />
               </div>
-              <div className="md:col-span-2 space-y-2">
+              <div className="md:col-span-1 space-y-2">
                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">E-mail de Acesso</label>
                  <input 
                    type="email" 
@@ -1559,6 +1558,16 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                    onChange={e => setSelectedDriverStudio({...selectedDriverStudio, email: e.target.value})}
                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white transition-all shadow-inner"
                    placeholder="email@exemplo.com"
+                 />
+              </div>
+              <div className="md:col-span-1 space-y-2">
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nova Senha</label>
+                 <input 
+                   type="password" 
+                   value={selectedDriverStudio.password || ''}
+                   onChange={e => setSelectedDriverStudio({...selectedDriverStudio, password: e.target.value})}
+                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white transition-all shadow-inner"
+                   placeholder="Preencha apenas para alterar/criar"
                  />
               </div>
             </div>
@@ -1794,8 +1803,33 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
              if (adminData) mId = adminData.id;
            }
 
+           const isNew = !selectedDriverStudio.id || (typeof selectedDriverStudio.id === 'string' && selectedDriverStudio.id.startsWith('new-'));
+           let finalId = isNew ? undefined : selectedDriverStudio.id;
+
+           if (selectedDriverStudio.email) {
+             const { data: { session: authSession } } = await supabase.auth.getSession();
+             const payload = {
+               targetEmail: selectedDriverStudio.email,
+               targetPassword: selectedDriverStudio.password || undefined,
+               name: selectedDriverStudio.name,
+               phone: selectedDriverStudio.phone,
+               callerEmail: authSession?.user?.email
+             };
+
+             const res = await supabase.functions.invoke('manage-driver-auth', { body: payload });
+             
+             if (res.error) throw new Error('Falha de Autenticação: ' + res.error.message);
+             if (!res.data.success) throw new Error(res.data.error || 'Erro no setup da conta do entregador');
+             
+             finalId = res.data.user.id;
+           } else if (isNew) {
+             throw new Error('O e-mail é obrigatório para um novo entregador.');
+           }
+
            const driverData = {
+             id: finalId,
              name: selectedDriverStudio.name,
+             email: selectedDriverStudio.email,
              phone: selectedDriverStudio.phone,
              vehicle_type: selectedDriverStudio.vehicle_type,
              vehicle_model: selectedDriverStudio.vehicle_model,
@@ -1809,14 +1843,14 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
              merchant_id: mId
            };
 
-         const isNew = !selectedDriverStudio.id || (typeof selectedDriverStudio.id === 'string' && selectedDriverStudio.id.startsWith('new-'));
-         
          let error;
-         if (isNew) {
+         const { data: existingDriver } = await supabase.from('drivers_delivery').select('id').eq('id', finalId).maybeSingle();
+
+         if (!existingDriver) {
            const { error: err } = await supabase.from('drivers_delivery').insert([driverData]);
            error = err;
          } else {
-           const { error: err } = await supabase.from('drivers_delivery').update(driverData).eq('id', selectedDriverStudio.id);
+           const { error: err } = await supabase.from('drivers_delivery').update(driverData).eq('id', finalId);
            error = err;
          }
          if (error) throw error;
@@ -3166,8 +3200,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
 </motion.div>
             )}
           </AnimatePresence>
-
-          {/* Global Footer */}
-
+        </div>
+      </>
   );
 }
