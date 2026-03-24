@@ -7,7 +7,7 @@ import { createContext, useContext } from 'react';
 import type {
   Order, Driver, User, Merchant, MerchantProfile,
   Product, Category, Promotion, DedicatedSlot,
-  AuditLog, WalletTransaction, DynamicRate, MenuCategory
+  AuditLog, WalletTransaction, DynamicRate, MenuCategory, DynamicRatesState
 } from '../lib/types';
 
 export type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'financial' |
@@ -78,7 +78,8 @@ export interface AdminContextType {
   auditLogsList: AuditLog[];
   myDedicatedSlots: DedicatedSlot[];
   subscriptionOrders: Order[];
-  dynamicRatesState: DynamicRate[];
+  dynamicRatesState: DynamicRatesState;
+  setDynamicRatesState: (d: any) => void;
 
   // Loading
   isLoadingList: boolean;
@@ -263,6 +264,8 @@ export interface AdminContextType {
   handleConfirmSubscriptionPayment: (order: Order) => Promise<void>;
   handleAddPeakRule: () => Promise<void>;
   handleRemovePeakRule: (id: string) => Promise<void>;
+  saveDynamicRates: () => Promise<void>;
+  saveSpecificRateMetadata: (type: string, metadata: Record<string, unknown>) => Promise<void>;
   handleAddZone: () => Promise<void>;
   handleRemoveZone: (id: string) => Promise<void>;
   handleFileUpload: (file: File, bucket?: string) => Promise<string | null>;

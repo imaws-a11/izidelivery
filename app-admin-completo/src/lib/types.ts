@@ -50,9 +50,22 @@ export interface User {
   name?: string;
   phone?: string;
   email?: string;
+  cpf?: string;
+  birth_date?: string;
+  gender?: string;
+  address?: string;
+  address_number?: string;
+  address_complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  notes?: string;
   is_active: boolean;
   status?: 'active' | 'inactive' | 'suspended' | 'blocked';
   wallet_balance?: number;
+  cashback_earned?: number;
+  is_izi_black?: boolean;
   created_at: string;
 }
 
@@ -194,4 +207,34 @@ export interface MenuCategory {
   sort_order: number;
   is_active: boolean;
   parent_id?: string | null;
+}
+
+export interface DynamicRatesState {
+  peakHours: any[];
+  zones: any[];
+  weather: {
+    rain: { multiplier: number; active: boolean };
+    storm: { multiplier: number; active: boolean };
+    snow: { multiplier: number; active: boolean };
+  };
+  equilibrium: {
+    threshold: number;
+    sensitivity: number;
+    maxSurge: number;
+  };
+  baseValues: {
+    mototaxi_min: string;
+    mototaxi_km: string;
+    carro_min: string;
+    carro_km: string;
+    van_min: string;
+    van_km: string;
+    utilitario_min: string;
+    utilitario_km: string;
+    isDynamicActive: boolean;
+  };
+  flowControl: {
+    mode: 'auto' | 'manual';
+    highDemandActive: boolean;
+  };
 }
