@@ -1,0 +1,23 @@
+{
+    "name": "meu-super-app-delivery",
+    "version": "1.0.0",
+    "description": "Monorepo para o sistema de delivery completo",
+    "private": true,
+    "workspaces": [
+        "app-admin-completo",
+        "app-entregador-completo",
+        "app-servicos-completo"
+    ],
+    "scripts": {
+        "install:all": "npm install",
+        "dev:admin": "npm run dev -w app-admin-completo",
+        "dev:entregador": "npm run dev -w app-entregador-completo",
+        "dev:servicos": "npm run dev -w app-servicos-completo",
+        "dev:all": "concurrently \"npm run dev:admin\" \"npm run dev:entregador\" \"npm run dev:servicos\"",
+        "build": "npm run build:all",
+        "build:all": "npm run build --workspaces"
+    },
+    "devDependencies": {
+        "concurrently": "^9.2.1"
+    }
+}
