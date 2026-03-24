@@ -436,7 +436,7 @@ function App() {
         if (!isAuthenticated || !driverId) return;
 
         const fetchOrders = async () => {
-            const { data, error } = await supabase.from('orders_delivery').select('*').in('status', ['pendente', 'pronto']).not('status', 'eq', 'novo').not('status', 'eq', 'waiting_merchant');
+            const { data, error } = await supabase.from('orders_delivery').select('*').in('status', ['pendente', 'pronto', 'waiting_driver']).not('status', 'eq', 'novo').not('status', 'eq', 'waiting_merchant');
             if (error || !data) return;
             // Filtrar somente rejeições com menos de 5 segundos
             const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
@@ -463,7 +463,7 @@ function App() {
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 const o = payload.new;
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
-                if (!['pendente', 'pronto'].includes(o.status) || (Date.now() - (declinedMap[o.id] || 0) < 5000)) return;
+                if (!['pendente', 'pronto', 'waiting_driver'].includes(o.status) || (Date.now() - (declinedMap[o.id] || 0) < 5000)) return;
                 playIziSound('driver');
                 if (Notification.permission === 'granted') new Notification('🚀 Nova Missão Izi!', { body: `Coleta: ${o.pickup_address}`, icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' });
                 setOrders(prev => {
@@ -490,7 +490,7 @@ function App() {
                 }
 
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
-                if (['pendente', 'pronto'].includes(o.status) && !(Date.now() - (declinedMap[o.id] || 0) < 5000)) {
+                if (['pendente', 'pronto', 'waiting_driver'].includes(o.status) && !(Date.now() - (declinedMap[o.id] || 0) < 5000)) {
                     setOrders(prev => {
                         const isNew = !prev.find(x => x.realId === o.id);
                         if (isNew) {
@@ -501,7 +501,7 @@ function App() {
                         }
                         return prev;
                     });
-                } else if (!['pendente', 'pronto'].includes(o.status) && (!currentMission || o.id !== currentMission.id)) {
+                } else if (!['pendente', 'pronto', 'waiting_driver'].includes(o.status) && (!currentMission || o.id !== currentMission.id)) {
                     setOrders(prev => prev.filter((order: any) => order.realId !== o.id));
                 }
             })
@@ -517,7 +517,7 @@ function App() {
         try {
             // Limpar todas as rejeições para forçar pedidos a aparecerem
             localStorage.removeItem('Izi_declined_timed');
-            const { data } = await supabase.from('orders_delivery').select('*').in('status', ['pendente', 'pronto']);
+            const { data } = await supabase.from('orders_delivery').select('*').in('status', ['pendente', 'pronto', 'waiting_driver']);
             if (data) {
                 setOrders(data.map((o: any) => ({ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type as ServiceType, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' })));
             }
@@ -536,7 +536,7 @@ function App() {
         try {
             const targetId = order.realId || order.id;
             const { data: realOrder, error: findError } = await supabase.from('orders_delivery').select('id, status, pickup_lat, pickup_lng, delivery_lat, delivery_lng').eq('id', targetId).single();
-            if (findError || !realOrder || !['pendente', 'pronto'].includes(realOrder.status)) { toastError('Pedido indisponível ou já aceito.'); setOrders(prev => prev.filter((o: any) => o.id !== order.id)); return; }
+            if (findError || !realOrder || !['pendente', 'pronto', 'waiting_driver'].includes(realOrder.status)) { toastError('Pedido indisponível ou já aceito.'); setOrders(prev => prev.filter((o: any) => o.id !== order.id)); return; }
             if (!driverId) { toastError('Sessão expirada. Faça login novamente.'); return; }
             const { error } = await supabase.from('orders_delivery').update({ status: 'a_caminho', driver_id: driverId }).eq('id', realOrder.id);
             if (error) { toastError('Erro ao aceitar corrida.'); return; }

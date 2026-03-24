@@ -7,7 +7,7 @@ export interface Order {
   merchant_id?: string;
   merchant_name?: string;
   driver_id?: string;
-  status: 'pending' | 'aceito' | 'preparando' | 'pendente' | 'picked_up' | 'em_rota' | 'a_caminho' | 'concluido' | 'cancelado' | 'novo';
+  status: 'pending' | 'aceito' | 'preparando' | 'pendente' | 'picked_up' | 'em_rota' | 'a_caminho' | 'concluido' | 'cancelado' | 'novo' | 'pendente_pagamento' | 'waiting_merchant' | 'waiting_driver' | 'pronto' | 'no_local';
   service_type?: string;
   total_price: number;
   delivery_address: string;
