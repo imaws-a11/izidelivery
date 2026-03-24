@@ -1270,6 +1270,106 @@ function App() {
     }
   };
 
+  const handleRequestTransit = () => {
+    if (!transitData.origin || !transitData.destination) {
+      toastError("Defina origem e destino");
+      return;
+    }
+    setSubView("mobility_payment");
+  };
+
+  const handleConfirmMobility = async (paymentMethod: string) => {
+    if (!userId) {
+      toastWarning("Faça login para continuar");
+      setView("login");
+      return;
+    }
+
+    const isShipping = transitData.type === 'utilitario' || transitData.type === 'van';
+    const bv = marketConditions.settings.baseValues;
+    const basePrices: Record<string, number> = { 
+      mototaxi: bv.mototaxi_min || 6, 
+      carro: bv.carro_min || 14, 
+      van: bv.van_min || 35, 
+      utilitario: bv.utilitario_min || 10 
+    };
+    
+    // Calcular preço final
+    const rawP = distancePrices[transitData.type] || calculateDynamicPrice(basePrices[transitData.type] || 6);
+    const finalPrice = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || 6) : rawP;
+
+    setIsLoading(true);
+
+    const orderBase: any = {
+      user_id: userId,
+      merchant_id: null,
+      status: "waiting_driver",
+      total_price: finalPrice,
+      service_type: transitData.type,
+      pickup_address: transitData.origin,
+      delivery_address: transitData.destination,
+      payment_method: paymentMethod,
+      payment_status: (paymentMethod === 'dinheiro') ? 'pending' : 'paid',
+      package_details: isShipping 
+        ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
+        : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`,
+      scheduled_at: transitData.scheduled ? `${transitData.scheduledDate}T${transitData.scheduledTime}:00` : null
+    };
+
+    try {
+      // Validar saldo se for o caso
+      if (paymentMethod === "saldo") {
+        if (walletBalance < finalPrice) {
+          toastError("Saldo insuficiente na carteira");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Registrar transação de débito
+        await supabase.from("wallet_transactions").insert({
+          user_id: userId,
+          type: "pagamento",
+          amount: finalPrice,
+          description: `Viagem: ${transitData.origin.split(',')[0]} para ${transitData.destination.split(',')[0]}`
+        });
+        
+        // Atualizar saldo local (opcional, mas bom para UX)
+        setWalletBalance(prev => prev - finalPrice);
+      }
+
+      // Se for PIX, poderíamos chamar a função mp-pix, mas para mobilidade costuma ser imediato.
+      // Vamos manter o fluxo padrão de inserção.
+      const { data: order, error: insertError } = await supabase
+        .from("orders_delivery")
+        .insert(orderBase)
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Salvar no histórico
+      const newHistory = [transitData.destination, ...transitHistory.filter(h => h !== transitData.destination)].slice(0, 10);
+      setTransitHistory(newHistory);
+      localStorage.setItem("transitHistory", JSON.stringify(newHistory));
+
+      setSelectedItem(order);
+      toastSuccess(isShipping ? "Pedido de envio criado!" : "Procurando motorista mais próximo...");
+      
+      // Se for agendado, talvez mostrar uma tela diferente ou apenas confirmar
+      if (transitData.scheduled) {
+        setSubView("payment_success");
+      } else {
+        setSubView("active_order");
+      }
+
+    } catch (err: any) {
+      console.error("Erro no fluxo de mobilidade:", err);
+      toastError("Não foi possível criar seu pedido: " + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Auto-rotate ad banner
   useEffect(() => {
     const adTimer = setInterval(() => {
@@ -4892,13 +4992,16 @@ function App() {
     const pastOrders      = myOrders.filter(o => o && ["concluido", "cancelado"].includes(o.status));
 
     const statusLabel: Record<string, string> = {
-      pending: "Aguardando", pendente: "Aguardando", novo: "Novo",
-      aceito: "Confirmado", preparando: "Sendo Preparado",
-      picked_up: "Coletado", em_rota: "A Caminho", a_caminho: "A Caminho",
+      pending: "Aguardando", pendente: "Aguardando", novo: "Processando",
+      waiting_driver: "Buscando Condutor",
+      aceito: "Confirmado", confirmado: "Confirmado", preparando: "Em Preparação", pronto: "Pronto para Coleta",
+      a_caminho: "Em Rota de Coleta", at_pickup: "No Local",
+      picked_up: "Coletado / Em Viagem", 
+      em_rota: "A Caminho do Destino", saiu_para_entrega: "Saindo para Entrega",
       concluido: "Concluído", cancelado: "Cancelado",
     };
 
-    const isCarService = (o: any) => ["carro", "van", "utilitario"].includes(o.service_type);
+    const isMobility = (o: any) => ["mototaxi", "carro", "van", "utilitario"].includes(o.service_type);
 
     return (
       <div className="flex flex-col h-full bg-black text-zinc-100 pb-32 overflow-y-auto no-scrollbar">
@@ -4947,11 +5050,11 @@ function App() {
                   >
                     <div className="relative w-28 h-28 shrink-0 bg-zinc-900/50 rounded-3xl flex items-center justify-center border border-zinc-800 overflow-hidden">
                       <div className="absolute inset-0 bg-zinc-900/60" />
-                      <span
+                        <span
                         className="material-symbols-outlined absolute text-5xl text-yellow-400"
                         style={{ filter: "drop-shadow(0 0 15px rgba(255,215,9,0.5))", fontVariationSettings: "'FILL' 1" }}
                       >
-                        {isCarService(order) ? "directions_car" : "restaurant"}
+                        {isMobility(order) ? (order.service_type === 'mototaxi' ? "two_wheeler" : "directions_car") : "restaurant"}
                       </span>
                     </div>
                     <div className="flex-1 space-y-2">
@@ -4961,11 +5064,11 @@ function App() {
                             {statusLabel[order.status] || order.status}
                           </span>
                           <h3 className="font-extrabold text-xl text-white tracking-tight">
-                            {order.merchant_name || (isCarService(order) ? "Transporte" : "Pedido")}
+                            {order.merchant_name || (isMobility(order) ? (order.service_type === 'mototaxi' ? "Izi Moto" : "Izi Car") : "Pedido")}
                           </h3>
                         </div>
-                        <span className="text-yellow-400 text-sm font-black bg-yellow-400/10 px-3 py-1 rounded-full">
-                          {["em_rota", "a_caminho", "picked_up"].includes(order.status) ? "A caminho" : "Aguardando"}
+                        <span className="text-yellow-400 text-[10px] font-black bg-yellow-400/10 px-3 py-1 rounded-full uppercase tracking-widest whitespace-nowrap">
+                          {statusLabel[order.status] || order.status}
                         </span>
                       </div>
                       <p className="text-zinc-400 text-sm max-w-xs">
@@ -5034,7 +5137,7 @@ function App() {
                   >
                     <div className="w-14 h-14 rounded-2xl bg-zinc-800 flex items-center justify-center shrink-0">
                       <span className="material-symbols-outlined text-2xl text-zinc-500 group-hover:text-yellow-400 transition-colors" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        {isCarService(order) ? "directions_car" : "restaurant"}
+                        {isMobility(order) ? (order.service_type === 'mototaxi' ? "two_wheeler" : "directions_car") : "restaurant"}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -5205,14 +5308,21 @@ function App() {
                   />
                 </div>
 
-                {/* Campo Rua/Endereço */}
-                <div>
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">Endereço (Rua, número)</label>
-                  <input
-                    type="text"
-                    value={newAddrStreet}
-                    onChange={(e) => setNewAddrStreet(e.target.value)}
-                    placeholder="Rua das Flores, 123"
+                {/* Campo Rua/Endereço com Autocomplete */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Endereço Completo</label>
+                  <AddressSearchInput
+                    placeholder="Busque rua, número, bairro..."
+                    initialValue={newAddrStreet}
+                    onSelect={(place: any) => {
+                      setNewAddrStreet(place.formatted_address || "");
+                      // Tenta extrair cidade se disponível
+                      if (place.address_components) {
+                        const cityComp = place.address_components.find((c: any) => c.types.includes("administrative_area_level_2"));
+                        if (cityComp) setNewAddrCity(cityComp.long_name);
+                      }
+                    }}
+                    onClear={() => setNewAddrStreet("")}
                     className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3.5 text-sm text-white placeholder:text-zinc-700 outline-none focus:border-yellow-400/50 transition-colors"
                   />
                 </div>
@@ -7896,7 +8006,16 @@ function App() {
   const renderActiveOrder = () => {
     if (!selectedItem) return null;
 
-    const steps = [
+    const isMobility = ['mototaxi', 'carro', 'van', 'utilitario'].includes(selectedItem.service_type);
+
+    const steps = isMobility ? [
+      { id: 'procurando', label: 'Buscando Motorista', icon: 'search',           status: ['waiting_driver', 'novo'] },
+      { id: 'confirmed',  label: 'Motorista Confirmado', icon: 'check_circle',   status: ['aceito', 'confirmado'] },
+      { id: 'a_caminho',  label: 'Motorista em Rota',  icon: 'directions_bike',  status: ['a_caminho', 'at_pickup'] },
+      { id: 'em_curso',   label: 'Viagem Iniciada',    icon: 'location_on',     status: ['picked_up', 'em_rota', 'saiu_para_entrega'] },
+      { id: 'chegando',   label: 'Chegando ao Destino', icon: 'potted_plant',    status: ['no_local'] },
+      { id: 'concluido',  label: 'Viagem Concluída',   icon: 'verified',        status: ['concluido'] },
+    ] : [
       { id: 'confirmado', label: 'Pedido Confirmado', icon: 'check_circle', status: ['aceito', 'confirmado', 'preparando', 'pronto', 'a_caminho', 'picked_up', 'saiu_para_entrega', 'em_rota', 'no_local', 'concluido'] },
       { id: 'preparando', label: 'Em Preparação',    icon: 'restaurant',     status: ['preparando', 'pronto', 'a_caminho', 'picked_up', 'saiu_para_entrega', 'em_rota', 'no_local', 'concluido'] },
       { id: 'aceito_ent', label: 'Indo Coletar',     icon: 'moped',          status: ['a_caminho', 'picked_up', 'saiu_para_entrega', 'em_rota', 'no_local', 'concluido'] },

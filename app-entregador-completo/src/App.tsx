@@ -1205,30 +1205,6 @@ function App() {
                             {isMapOnly ? 'Painel' : 'Só Mapa'}
                         </span>
                     </button>
-
-                    {/* Botão flutuante para abrir navegação externa */}
-                    <button 
-                        onClick={() => {
-                            const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega';
-                            const lat = isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat;
-                            const lng = isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng;
-                            const addressText = isDeliveryPhase ? (activeMission.destination || activeMission.delivery_address) : (activeMission.origin || activeMission.pickup_address);
-                            let destination = '';
-                            if (lat && lng) {
-                                destination = `${lat},${lng}`;
-                            } else if (addressText) {
-                                destination = encodeURIComponent(addressText);
-                            }
-                            if (destination) {
-                                window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
-                            }
-                        }}
-                        className="absolute bottom-6 right-6 z-50 h-14 px-5 rounded-2xl flex items-center justify-center gap-2.5 bg-blue-600 text-white border border-blue-500/50 shadow-2xl shadow-blue-600/30 transition-all active:scale-90"
-                        title="Abrir Navegação"
-                    >
-                        <span className="material-symbols-outlined text-xl">navigation</span>
-                        <span className="text-[9px] font-black uppercase tracking-widest">Navegar</span>
-                    </button>
                 </div>
 
                 {/* Painel inferior - esconde em modo mapa */}
