@@ -112,9 +112,13 @@ function IziRealTimeMap({ driverCoords, destCoords }: any) {
 
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [isNavMode, setIsNavMode] = useState(true);
+  const lastDestRef = useRef<string>('');
 
+  // Calcular rota: imediato na 1a vez e ao mudar destino, depois a cada 30s
   useEffect(() => {
-    if (isLoaded && driverCoords && destCoords) {
+    if (!isLoaded || !driverCoords || !destCoords) return;
+    
+    const calcRoute = () => {
       const service = new google.maps.DirectionsService();
       service.route(
         {
@@ -125,12 +129,21 @@ function IziRealTimeMap({ driverCoords, destCoords }: any) {
         (result, status) => {
           if (status === google.maps.DirectionsStatus.OK && result) {
             setDirections(result);
-          } else {
-            console.error("Erro ao calcular rota interna:", status);
           }
         }
       );
+    };
+
+    // Recalcular imediatamente se o destino mudou
+    const destKey = `${destCoords.lat},${destCoords.lng}`;
+    if (destKey !== lastDestRef.current) {
+      lastDestRef.current = destKey;
+      calcRoute();
     }
+
+    // Recalcular a cada 30s para atualizar com a posição do motorista
+    const interval = setInterval(calcRoute, 30000);
+    return () => clearInterval(interval);
   }, [isLoaded, driverCoords, destCoords]);
 
   if (!isLoaded || !driverCoords) return (
@@ -470,7 +483,7 @@ function App() {
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, [isOnline]);
+    }, [isOnline, isAuthenticated, driverId]);
 
 
 
@@ -1098,7 +1111,7 @@ function App() {
                  <div className="flex-1 bg-[#030a1a] relative overflow-hidden">
                     <IziRealTimeMap 
                       driverCoords={driverCoords} 
-                      destCoords={activeMission.status === 'picked_up' || activeMission.status === 'em_rota' 
+                      destCoords={activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega'
                         ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng } 
                         : { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng }
                       } 
@@ -1139,6 +1152,23 @@ function App() {
                             {isMapOnly ? 'Painel' : 'Só Mapa'}
                         </span>
                     </button>
+
+                    {/* Botão flutuante para abrir navegação externa */}
+                    <button 
+                        onClick={() => {
+                            const dest = (activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega')
+                                ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng }
+                                : { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng };
+                            if (dest.lat && dest.lng) {
+                                window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}&travelmode=driving`, '_blank');
+                            }
+                        }}
+                        className="absolute bottom-6 right-6 z-50 h-14 px-5 rounded-2xl flex items-center justify-center gap-2.5 bg-blue-600 text-white border border-blue-500/50 shadow-2xl shadow-blue-600/30 transition-all active:scale-90"
+                        title="Abrir Navegação"
+                    >
+                        <span className="material-symbols-outlined text-xl">navigation</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest">Navegar</span>
+                    </button>
                 </div>
 
                 {/* Painel inferior - esconde em modo mapa */}
@@ -1150,7 +1180,20 @@ function App() {
                         <div className="flex items-start gap-3"><div className="mt-1.5 size-2 rounded-full bg-primary shrink-0 shadow-[0_0_8px_rgba(255,217,0,0.5)]" /><div><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Destino Final</p><p className="text-xs font-black text-white leading-tight">{activeMission.destination}</p></div></div>
                     </div>
                     <div className="flex gap-3">
-                        
+                        <button 
+                            onClick={() => {
+                                const dest = (activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega')
+                                    ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng }
+                                    : { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng };
+                                if (dest.lat && dest.lng) {
+                                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}&travelmode=driving`, '_blank');
+                                }
+                            }}
+                            className="flex-1 h-14 bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+                        >
+                            <Icon name="navigation" className="text-xl" />
+                            <span className="text-[8px] font-black uppercase tracking-widest">Navegar</span>
+                        </button>
                         <button onClick={() => setIsSOSActive(true)} className="size-14 bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"><Icon name="emergency" className="text-xl" /></button>
                     </div>
                     {/* BOTÕES DINÂMICOS DE PROGRESSO */}
