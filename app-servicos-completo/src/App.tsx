@@ -7,6 +7,7 @@ import { toast, toastSuccess, toastError, toastWarning, showConfirm } from "./li
 import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 // Mercado Pago
 import { MercadoPagoCardForm } from "./components/MercadoPagoCardForm";
+import { calculateFreightPrice, calculateVanPrice } from "./lib/pricing_engine";
 
 function IziTrackingMap({ driverLoc, userLoc }: any) {
   const { isLoaded } = useJsApiLoader({
@@ -533,6 +534,9 @@ function App() {
     | "addresses"
     | "payments"
     | "transit_selection"
+    | "taxi_wizard"
+    | "van_wizard"
+    | "freight_wizard"
     | "generic_list"
     | "wallet"
     | "payment_processing"
@@ -763,6 +767,7 @@ function App() {
   const [transitData, setTransitData] = useState({
     origin: "",
     destination: "",
+    stops: [] as string[],
     type: "mototaxi" as "mototaxi" | "carro" | "van" | "utilitario",
     estPrice: 0,
     scheduled: false,
@@ -772,12 +777,21 @@ function App() {
     receiverPhone: "",
     packageDesc: "",
     weightClass: "Pequeno (até 5kg)",
+    // Novos campos para Frete e Van
+    vehicleCategory: "Fiorino/Furgão",
+    helpers: 0,
+    accessibility: { stairsAtOrigin: false, stairsAtDestination: false, serviceElevator: false },
+    cargoPhotos: [] as string[],
+    passengers: 1,
+    tripType: "only_one_way" as "only_one_way" | "round_trip" | "hourly",
+    luggage: "none" as "none" | "medium" | "large",
+    purpose: "",
   });
   const [distancePrices, setDistancePrices] = useState<Record<string, number>>({});
   const [routeDistance, setRouteDistance] = useState<string>("");
   const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
   const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
-  const [nearbyDriversCount, setNearbyDriversCount] = useState(0);
+  const [mobilityStep, setMobilityStep] = useState(1);
 
   const [transitHistory, setTransitHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem("transitHistory");
@@ -2528,10 +2542,10 @@ function App() {
             </div>
             <div className="grid grid-cols-2 gap-y-12 gap-x-8">
               {[
-                { icon: "two_wheeler", label: "Mototáxi", action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("explore_mobility"); } },
-                { icon: "airport_shuttle", label: "Van", action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("explore_mobility"); } },
-                { icon: "directions_car", label: "Motorista\nParticular", action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("explore_mobility"); } },
-                { icon: "local_shipping", label: "Frete", action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("explore_mobility"); } },
+                { icon: "two_wheeler", label: "Mototáxi", action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("taxi_wizard"); } },
+                { icon: "airport_shuttle", label: "Van", action: () => { setTransitData({ ...transitData, type: "van", scheduled: false }); navigateSubView("van_wizard"); } },
+                { icon: "directions_car", label: "Motorista\nParticular", action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("taxi_wizard"); } },
+                { icon: "local_shipping", label: "Frete", action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("freight_wizard"); } },
               ].map((svc, i) => (
                 <motion.div
                   key={i}
@@ -7067,88 +7081,565 @@ function App() {
 
   const renderExploreMobility = () => {
     const services = [
-      { id: "mototaxi", name: "Mototáxi",  desc: "Agilidade urbana com estilo e segurança máxima.", icon: "two_wheeler",    type: "mototaxi"  },
-      { id: "carro",    name: "Particular", desc: "Conforto executivo para suas viagens importantes.", icon: "directions_car", type: "carro"     },
+      { id: "mototaxi", name: "Mototáxi",  desc: "Rapidez para driblar o trânsito.", icon: "two_wheeler",    type: "mototaxi"  },
+      { id: "carro",    name: "Motorista Particular", desc: "Viagens executivas exclusivas.", icon: "directions_car", type: "carro"     },
+      { id: "frete",    name: "Fretes & Mudanças", desc: "Força e espaço para volumes.", icon: "local_shipping", type: "utilitario"  },
+      { id: "van",      name: "Van / Grupos", desc: "Capacidade para até 20 pessoas.", icon: "airport_shuttle", type: "van"       },
     ];
 
     return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
+      <div className="absolute inset-0 z-40 bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
+        {/* MAPA NO FUNDO */}
+        <div className="absolute inset-0 z-0">
+           <IziTrackingMap 
+             driverLoc={driverLocation} 
+             userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} 
+           />
+           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
+        </div>
 
-        {/* TOP BAR */}
-        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-md flex justify-between items-center px-5 py-4 border-b border-zinc-900">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setSubView("none")} className="p-2 -ml-1 text-yellow-400 hover:bg-yellow-400/10 rounded-full transition-colors active:scale-90">
-              <span className="material-symbols-outlined">arrow_back</span>
-            </button>
+        {/* TOP BAR FLUTUANTE */}
+        <header className="relative z-50 flex justify-between items-center px-6 pt-10 pb-4">
+          <button onClick={() => { setSubView("none"); setMobilityStep(1); }} 
+            className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400 active:scale-90 transition-all">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <div className="text-center">
+             <h1 className="font-black tracking-tighter text-white text-xl uppercase italic">IZI GO</h1>
+             <p className="text-[10px] font-black text-yellow-400/80 tracking-[0.3em] uppercase">Mobilidade Premium</p>
           </div>
-          <h1 className="font-extrabold tracking-tight text-white text-lg">Mobilidade</h1>
-          <div className="w-10 h-10 rounded-full overflow-hidden border border-zinc-800">
-            <img className="w-full h-full object-cover" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" />
+          <div className="size-12 rounded-2xl overflow-hidden border border-white/10 shadow-xl bg-zinc-900">
+             <img className="size-full object-cover" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" />
           </div>
         </header>
 
-        <main className="flex-1 px-5 pb-10 space-y-10 mt-6">
+        {/* PAINEL INFERIOR (BOTTOM SHEET) */}
+        <motion.main 
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
+          className="relative z-40 mt-auto bg-zinc-900/90 backdrop-blur-2xl rounded-t-[40px] border-t border-white/10 p-6 pt-2 pb-12 flex flex-col gap-6"
+        >
+          {/* Alça do painel */}
+          <div className="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto mb-6" />
 
-          {/* SEARCH */}
-          <div className="bg-zinc-900/50 backdrop-blur-md rounded-2xl p-4 flex items-center gap-3 border border-zinc-800">
-            <span className="material-symbols-outlined text-zinc-500">search</span>
-            <span className="text-zinc-500 font-medium text-sm">Para onde vamos?</span>
+          <div className="px-2">
+            <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Para onde vamos?</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-6">Escolha o serviço ideal para você</p>
           </div>
 
-          {/* SERVICE CARDS */}
-          <section className="space-y-14">
-            {services.map((svc) => (
-              <div key={svc.id} className="relative group">
-                {/* Floating icon */}
-                <div className="absolute -top-10 right-0 w-44 h-44 z-10 transition-transform group-hover:scale-105 duration-500 pointer-events-none">
-                  <span className="material-symbols-outlined text-[140px] text-yellow-400/20 drop-shadow-[0_20px_30px_rgba(255,215,9,0.15)]">{svc.icon}</span>
-                </div>
-                <div
-                  onClick={() => { setTransitData({ ...transitData, type: svc.type, scheduled: false }); navigateSubView("transit_selection"); }}
-                  className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-7 pt-10 relative overflow-hidden cursor-pointer active:scale-[0.98] transition-all hover:border-yellow-400/20"
+          <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[50vh] no-scrollbar pb-6 px-1">
+             {services.map((svc, i) => (
+                <motion.div
+                  key={svc.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  onClick={() => {
+                    setTransitData({ ...transitData, type: svc.type as any, scheduled: false });
+                    setMobilityStep(1);
+                    if (svc.type === 'utilitario') navigateSubView("freight_wizard");
+                    else if (svc.type === 'van') navigateSubView("van_wizard");
+                    else navigateSubView("taxi_wizard");
+                  }}
+                  className="bg-white/5 border border-white/5 hover:border-yellow-400/30 p-5 rounded-3xl flex items-center gap-5 cursor-pointer active:scale-[0.98] transition-all group"
                 >
-                  <div className="relative z-20">
-                    <h2 className="font-extrabold text-2xl text-white mb-2">{svc.name}</h2>
-                    <p className="text-zinc-400 text-sm max-w-[180px] mb-6">{svc.desc}</p>
-                    <button className="bg-yellow-400 text-black px-6 py-3 rounded-xl font-black text-sm uppercase tracking-wider shadow-[0_0_15px_rgba(255,215,9,0.2)] active:scale-95 transition-all">
-                      Pedir Agora
-                    </button>
-                  </div>
-                  <div className="absolute bottom-0 right-0 opacity-10 pointer-events-none">
-                    <span className="material-symbols-outlined text-[120px] translate-y-8 translate-x-8">{svc.icon}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </section>
+                   <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center group-hover:bg-yellow-400 transition-colors">
+                      <span className="material-symbols-outlined text-3xl text-yellow-400 group-hover:text-black">{svc.icon}</span>
+                   </div>
+                   <div className="flex-1">
+                      <h3 className="font-black text-white group-hover:text-yellow-400 transition-colors">{svc.name}</h3>
+                      <p className="text-zinc-500 text-xs mt-0.5 line-clamp-1">{svc.desc}</p>
+                   </div>
+                   <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors">chevron_right</span>
+                </motion.div>
+             ))}
+          </div>
 
-          {/* RECENTES */}
+          {/* RECENTES NO PAINEL */}
           {transitHistory.length > 0 && (
-            <section className="pb-6">
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="font-extrabold text-base text-white/80">Recentes</h3>
-                <span className="text-[10px] text-yellow-400 uppercase tracking-widest font-black">Ver Tudo</span>
-              </div>
-              <div className="space-y-3">
-                {transitHistory.map((addr, i) => (
-                  <div
-                    key={i}
+             <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-6 px-6">
+                {transitHistory.slice(0, 3).map((addr, i) => (
+                   <div key={i} 
                     onClick={() => { setTransitData({ ...transitData, destination: addr, type: "mototaxi" }); navigateSubView("transit_selection"); }}
-                    className="flex items-center gap-4 bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl cursor-pointer active:scale-[0.98] transition-all hover:border-yellow-400/20"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-yellow-400/10 flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-yellow-400">history</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-white truncate">{addr}</p>
-                    </div>
-                    <span className="material-symbols-outlined text-zinc-600">chevron_right</span>
-                  </div>
+                    className="flex-shrink-0 bg-white/5 border border-white/5 px-4 py-3 rounded-2xl flex items-center gap-3">
+                      <span className="material-symbols-outlined text-zinc-600 text-lg">history</span>
+                      <span className="text-[11px] font-bold text-zinc-400 truncate max-w-[120px]">{addr}</span>
+                   </div>
                 ))}
-              </div>
-            </section>
+             </div>
           )}
+        </motion.main>
+      </div>
+    );
+  };
 
+  const renderFreightWizard = () => {
+    const categories = [
+      { id: 'fiorino', name: 'Fiorino/Furgão', desc: 'Cargas pequenas (ex: móvel pequeno, caixas)', icon: 'local_shipping' },
+      { id: 'caminhonete', name: 'Caminhonete', desc: 'Cargas médias / abertas (ex: geladeira, sofá)', icon: 'terminal' },
+      { id: 'caminhao', name: 'Caminhão Baú', desc: 'Mudanças completas / grandes volumes', icon: 'truck_front' }
+    ];
+
+    return (
+      <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
+        {/* MAPA NO FUNDO */}
+        <div className="absolute inset-0 z-0 h-[35vh]">
+           <IziTrackingMap driverLoc={driverLocation} />
+           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
+        </div>
+
+        <header className="relative z-50 flex items-center justify-between px-6 pt-10">
+          <button onClick={() => navigateSubView("explore_mobility")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
+            <Icon name="arrow_back" />
+          </button>
+          <div className="text-right">
+             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Frete & Mudança</h2>
+             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Logística Profissional</p>
+          </div>
+        </header>
+
+        <main className="relative z-40 mt-auto bg-zinc-950 border-t border-white/5 flex flex-col h-[70vh] rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
+           <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
+              {/* STEP 1: ENDEREÇOS E PARADAS */}
+              {mobilityStep === 1 && (
+                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
+                   <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-white tracking-tight">Roteiro do Frete</h3>
+                      <p className="text-zinc-500 text-xs font-medium">Defina origem, destino e até 2 paradas intermediárias.</p>
+                   </div>
+                   
+                   <div className="space-y-4">
+                      {/* ORIGEM */}
+                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5 focus-within:border-yellow-400/30 transition-all">
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Origem (Onde coletar?)</p>
+                         <AddressSearchInput 
+                           isLoaded={isLoaded}
+                           initialValue={transitData.origin}
+                           placeholder="Rua da Origem..."
+                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                           onSelect={(p) => setTransitData({...transitData, origin: p.formatted_address || ""})}
+                         />
+                      </div>
+
+                      {/* STOPS */}
+                      {transitData.stops.map((stop, idx) => (
+                         <div key={idx} className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5 flex items-center gap-3">
+                             <div className="flex-1">
+                                <p className="text-[9px] font-black uppercase text-yellow-400/60 tracking-widest mb-2 ml-1">Parada {idx + 1}</p>
+                                <AddressSearchInput 
+                                  isLoaded={isLoaded}
+                                  initialValue={stop}
+                                  placeholder="Rua da Parada..."
+                                  className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                                  onSelect={(p) => {
+                                    const newStops = [...transitData.stops];
+                                    newStops[idx] = p.formatted_address || "";
+                                    setTransitData({...transitData, stops: newStops});
+                                  }}
+                                />
+                             </div>
+                             <button onClick={() => setTransitData({...transitData, stops: transitData.stops.filter((_, i) => i !== idx)})} className="p-2 text-zinc-600 hover:text-red-400">
+                                <span className="material-symbols-outlined">delete</span>
+                             </button>
+                         </div>
+                      ))}
+
+                      {transitData.stops.length < 2 && (
+                        <button onClick={() => setTransitData({...transitData, stops: [...transitData.stops, ""]})} className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-zinc-800 rounded-[30px] text-zinc-500 hover:border-yellow-400/30 hover:text-yellow-400 transition-all">
+                           <span className="material-symbols-outlined text-lg">add_location_alt</span>
+                           <span className="text-[10px] font-black uppercase tracking-widest">+ Adicionar Parada</span>
+                        </button>
+                      )}
+
+                      {/* DESTINO */}
+                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5 focus-within:border-yellow-400/30 transition-all">
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Destino Final</p>
+                         <AddressSearchInput 
+                           isLoaded={isLoaded}
+                           initialValue={transitData.destination}
+                           placeholder="Para onde levar?"
+                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                           onSelect={(p) => setTransitData({...transitData, destination: p.formatted_address || ""})}
+                         />
+                      </div>
+                   </div>
+                </motion.section>
+              )}
+
+              {/* STEP 2: CATEGORIA DO VEÍCULO */}
+              {mobilityStep === 2 && (
+                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
+                   <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-white tracking-tight">Tipo de Veículo</h3>
+                      <p className="text-zinc-500 text-xs font-medium">Selecione o veículo ideal baseado na sua carga.</p>
+                   </div>
+
+                   <div className="space-y-4">
+                      {categories.map((cat) => (
+                        <div 
+                          key={cat.id}
+                          onClick={() => setTransitData({...transitData, vehicleCategory: cat.name})}
+                          className={`p-6 rounded-[35px] border-2 transition-all flex items-center gap-6 cursor-pointer ${transitData.vehicleCategory === cat.name ? 'border-yellow-400 bg-yellow-400/5 shadow-xl shadow-yellow-400/10' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}
+                        >
+                           <div className={`size-16 rounded-2xl flex items-center justify-center ${transitData.vehicleCategory === cat.name ? 'bg-yellow-400 text-black' : 'bg-zinc-800 text-white'}`}>
+                              <span className="material-symbols-outlined text-4xl">{cat.icon}</span>
+                           </div>
+                           <div className="flex-1">
+                              <h4 className="font-black text-lg text-white">{cat.name}</h4>
+                              <p className="text-zinc-500 text-xs font-medium">{cat.desc}</p>
+                           </div>
+                           {transitData.vehicleCategory === cat.name && <span className="material-symbols-outlined text-yellow-400">check_circle</span>}
+                        </div>
+                      ))}
+                   </div>
+                </motion.section>
+              )}
+
+              {/* STEP 3: DETALHES DA CARGA E FOTOS */}
+              {mobilityStep === 3 && (
+                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-10">
+                   <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-white tracking-tight">O que vamos transportar?</h3>
+                      <p className="text-zinc-500 text-xs font-medium">Descreva os itens e envie fotos para facilitar o orçamento.</p>
+                   </div>
+
+                   <div className="space-y-8">
+                      <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-3 ml-1">Descrição Breve</p>
+                         <textarea 
+                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 resize-none"
+                           rows={4}
+                           placeholder="Ex: 1 Geladeira, 1 Sofá de 3 lugares, 5 caixas de roupas..."
+                           value={transitData.packageDesc}
+                           onChange={(e) => setTransitData({...transitData, packageDesc: e.target.value})}
+                         />
+                      </div>
+
+                      <div className="space-y-4">
+                        <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Fotos da Carga (Opcional - Máx 3)</p>
+                        <div className="grid grid-cols-3 gap-4">
+                           {[1,2,3].map((_, i) => (
+                             <div key={i} className="aspect-square bg-zinc-900 rounded-[25px] border-2 border-dashed border-zinc-800 flex flex-col items-center justify-center gap-2 text-zinc-600 hover:border-yellow-400/30 hover:text-yellow-400 transition-all cursor-pointer">
+                                <span className="material-symbols-outlined">add_a_photo</span>
+                                <span className="text-[8px] font-black uppercase">Foto {i+1}</span>
+                             </div>
+                           ))}
+                        </div>
+                      </div>
+                   </div>
+                </motion.section>
+              )}
+
+              {/* STEP 4: AJUDANTES E AGENDAMENTO */}
+              {mobilityStep === 4 && (
+                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-10">
+                   <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-white tracking-tight">Ajuda & Acessibilidade</h3>
+                      <p className="text-zinc-500 text-xs font-medium">Defina se precisa de ajudantes e as condições do local.</p>
+                   </div>
+
+                   <div className="space-y-8">
+                      {/* AJUDANTES */}
+                      <div className="space-y-4">
+                         <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Ajudantes Adicionais</p>
+                         <div className="grid grid-cols-3 gap-3">
+                            {[
+                               { val: 0, label: "Apenas Motorista", desc: "Cliente carrega" },
+                               { val: 1, label: "Motorista +1", desc: "1 Ajudante" },
+                               { val: 2, label: "Motorista +2", desc: "2 Ajudantes" }
+                            ].map((h) => (
+                              <button key={h.val} onClick={() => setTransitData({...transitData, helpers: h.val})}
+                                className={`p-4 rounded-[28px] border-2 flex flex-col items-center gap-1 transition-all ${transitData.helpers === h.val ? 'border-yellow-400 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}>
+                                <span className="text-xs font-black text-white">{h.label}</span>
+                                <span className="text-[8px] text-zinc-500 font-bold uppercase">{h.desc}</span>
+                              </button>
+                            ))}
+                         </div>
+                      </div>
+
+                      {/* ACESSIBILIDADE */}
+                      <div className="space-y-4">
+                         <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Condições do Local</p>
+                         <div className="space-y-3">
+                            {[
+                               { key: 'stairsAtOrigin', label: "Possui escadas na origem?", icon: "stairs" },
+                               { key: 'stairsAtDestination', label: "Possui escadas no destino?", icon: "apartment" },
+                               { key: 'serviceElevator', label: "Tem elevador de serviço?", icon: "elevators" }
+                            ].map((item) => (
+                               <div key={item.key} onClick={() => setTransitData({...transitData, accessibility: {...transitData.accessibility, [item.key]: !((transitData.accessibility as any)[item.key]) } as any})}
+                                 className={`flex items-center justify-between p-5 rounded-[28px] border-2 transition-all cursor-pointer ${(transitData.accessibility as any)[item.key] ? 'border-yellow-400 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}>
+                                  <div className="flex items-center gap-4">
+                                     <span className="material-symbols-outlined text-zinc-500">{item.icon}</span>
+                                     <span className="text-sm font-bold text-white">{item.label}</span>
+                                  </div>
+                                  <div className={`size-6 rounded-full border-2 flex items-center justify-center ${(transitData.accessibility as any)[item.key] ? 'border-yellow-400 bg-yellow-400 text-black' : 'border-zinc-700'}`}>
+                                     {(transitData.accessibility as any)[item.key] && <span className="material-symbols-outlined text-base">check</span>}
+                                  </div>
+                               </div>
+                            ))}
+                         </div>
+                      </div>
+                   </div>
+                </motion.section>
+              )}
+            </div>
+
+            {/* PREVIEW & PRICE */}
+            <div className="px-8 mt-2">
+              <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5 space-y-4">
+                 <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Estimativa Izi</p>
+                    <span className="text-xl font-black text-white">
+                      R$ {(() => {
+                        const res = calculateFreightPrice({
+                          baseFare: 45,
+                          distanceInKm: 10,
+                          distanceRate: 2.8,
+                          helperCount: transitData.helpers,
+                          helperRate: 35,
+                          hasStairs: transitData.accessibility.stairsAtOrigin || transitData.accessibility.stairsAtDestination
+                        });
+                        return res.totalPrice.toFixed(2).replace(".", ",");
+                      })()}
+                    </span>
+                 </div>
+                 <div className="h-px bg-white/5" />
+                 <p className="text-[9px] font-medium text-zinc-500 italic">* Valor sujeito a alterações por distância real ou tempo de carga excedente.</p>
+              </div>
+            </div>
+
+           {/* ACTIONS FOOTER */}
+           <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent">
+              <div className="flex gap-4">
+                 {mobilityStep > 1 && (
+                   <button onClick={() => setMobilityStep(prev => prev - 1)} className="size-16 rounded-[28px] bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-95 transition-all">
+                      <Icon name="chevron_left" />
+                   </button>
+                 )}
+                 <button 
+                   onClick={() => mobilityStep < 4 ? setMobilityStep(prev => prev + 1) : navigateSubView("mobility_payment")}
+                   className="flex-1 bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px] shadow-2xl shadow-yellow-400/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
+                 >
+                    <span className="uppercase tracking-widest">{mobilityStep < 4 ? "Próximo Passo" : "Ver Preço & Pedir"}</span>
+                    <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">{mobilityStep < 4 ? 'arrow_forward' : 'bolt'}</span>
+                 </button>
+              </div>
+           </div>
+        </main>
+      </div>
+    );
+  };
+
+  const renderVanWizard = () => {
+    return (
+      <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
+        {/* MAPA NO FUNDO */}
+        <div className="absolute inset-0 z-0 h-[35vh]">
+           <IziTrackingMap driverLoc={driverLocation} />
+           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
+        </div>
+
+        <header className="relative z-50 flex items-center justify-between px-6 pt-10">
+          <button onClick={() => navigateSubView("explore_mobility")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
+            <Icon name="arrow_back" />
+          </button>
+          <div className="text-right">
+             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Van & Grupos</h2>
+             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Capacidade & Conforto</p>
+          </div>
+        </header>
+
+        <main className="relative z-40 mt-auto bg-zinc-950 border-t border-white/5 flex flex-col h-[70vh] rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
+           <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
+              {/* STEP 1: ROTEIRO E PARADAS */}
+              {mobilityStep === 1 && (
+                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
+                   <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-white tracking-tight">Roteiro da Viagem</h3>
+                      <p className="text-zinc-500 text-xs font-medium">Vans podem fazer várias paradas para pegar passageiros.</p>
+                   </div>
+                   
+                   <div className="space-y-4">
+                      {/* ORIGEM */}
+                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Início da Rota</p>
+                         <AddressSearchInput 
+                           isLoaded={isLoaded}
+                           initialValue={transitData.origin}
+                           placeholder="Partida..."
+                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                           onSelect={(p) => setTransitData({...transitData, origin: p.formatted_address || ""})}
+                         />
+                      </div>
+
+                      {/* STOPS */}
+                      {transitData.stops.map((stop, idx) => (
+                         <div key={idx} className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5 flex items-center gap-3">
+                             <div className="flex-1">
+                                <p className="text-[9px] font-black uppercase text-yellow-400/60 tracking-widest mb-2 ml-1">Parada Adicional</p>
+                                <AddressSearchInput 
+                                  isLoaded={isLoaded}
+                                  initialValue={stop}
+                                  placeholder="Recolher passageiro em..."
+                                  className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                                  onSelect={(p) => {
+                                    const newStops = [...transitData.stops];
+                                    newStops[idx] = p.formatted_address || "";
+                                    setTransitData({...transitData, stops: newStops});
+                                  }}
+                                />
+                             </div>
+                             <button onClick={() => setTransitData({...transitData, stops: transitData.stops.filter((_, i) => i !== idx)})} className="p-2 text-zinc-600 hover:text-red-400">
+                                <span className="material-symbols-outlined">close</span>
+                             </button>
+                         </div>
+                      ))}
+
+                      <button onClick={() => setTransitData({...transitData, stops: [...transitData.stops, ""]})} className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-zinc-800 rounded-[30px] text-zinc-500 hover:text-yellow-400 transition-all">
+                         <span className="material-symbols-outlined text-lg">add</span>
+                         <span className="text-[10px] font-black uppercase tracking-widest">+ Adicionar Parada</span>
+                      </button>
+
+                      {/* DESTINO */}
+                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Destino Final</p>
+                         <AddressSearchInput 
+                           isLoaded={isLoaded}
+                           initialValue={transitData.destination}
+                           placeholder="Onde termina a rota?"
+                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                           onSelect={(p) => setTransitData({...transitData, destination: p.formatted_address || ""})}
+                         />
+                      </div>
+                   </div>
+                </motion.section>
+              )}
+
+              {/* STEP 2: TIPO E PASSAGEIROS */}
+              {mobilityStep === 2 && (
+                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-10">
+                   <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-white tracking-tight">Tipo de Viagem</h3>
+                      <p className="text-zinc-500 text-xs font-medium">Defina a modalidade e a quantidade de pessoas.</p>
+                   </div>
+
+                   <div className="space-y-8">
+                      <div className="grid grid-cols-3 gap-3">
+                         {[
+                            { id: 'only_one_way', label: 'Ida', icon: 'trending_flat' },
+                            { id: 'round_trip', label: 'Ida e Volta', icon: 'sync' },
+                            { id: 'hourly', label: 'Diária', icon: 'schedule' }
+                         ].map((t) => (
+                           <div key={t.id} onClick={() => setTransitData({...transitData, tripType: t.id as any})}
+                             className={`p-4 rounded-3xl border-2 flex flex-col items-center gap-2 transition-all cursor-pointer ${transitData.tripType === t.id ? 'border-yellow-400 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}>
+                              <span className="material-symbols-outlined">{t.icon}</span>
+                              <span className="text-[10px] font-black uppercase">{t.label}</span>
+                           </div>
+                         ))}
+                      </div>
+
+                      <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
+                         <div className="flex items-center justify-between mb-4">
+                            <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">Nº de Passageiros</p>
+                            <span className="text-yellow-400 font-black text-lg">{transitData.passengers}</span>
+                         </div>
+                         <input 
+                           type="range" min="1" max="20" step="1"
+                           value={transitData.passengers}
+                           onChange={(e) => setTransitData({...transitData, passengers: parseInt(e.target.value)})}
+                           className="w-full accent-yellow-400 h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                         />
+                         <div className="flex justify-between mt-2 px-1">
+                            <span className="text-[9px] font-bold text-zinc-600">1 Pessoa</span>
+                            <span className="text-[9px] font-bold text-zinc-600">Até 20 Pessoas</span>
+                         </div>
+                      </div>
+                   </div>
+                </motion.section>
+              )}
+
+              {/* STEP 3: BAGAGEM E FINALIDADE */}
+              {mobilityStep === 3 && (
+                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-10">
+                   <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-white tracking-tight">Bagagem & Finalidade</h3>
+                      <p className="text-zinc-500 text-xs font-medium">Garanta que a Van tenha o bagageiro correto.</p>
+                   </div>
+
+                   <div className="space-y-8">
+                      <div className="space-y-4">
+                         <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Volume de Bagagem</p>
+                         <div className="grid grid-cols-3 gap-3">
+                            {[
+                               { id: 'none', label: 'Nenhuma', icon: 'check' },
+                               { id: 'medium', label: 'Bordo', icon: 'luggage' },
+                               { id: 'large', label: 'Grandes', icon: 'travel_luggage' }
+                            ].map((l) => (
+                              <div key={l.id} onClick={() => setTransitData({...transitData, luggage: l.id as any})}
+                                className={`p-4 rounded-3xl border-2 flex flex-col items-center gap-2 transition-all cursor-pointer ${transitData.luggage === l.id ? 'border-yellow-400 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}>
+                                 <span className="material-symbols-outlined">{l.icon}</span>
+                                 <span className="text-[10px] font-black uppercase">{l.label}</span>
+                              </div>
+                            ))}
+                         </div>
+                      </div>
+
+                      <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-3 ml-1">Finalidade / Observações</p>
+                         <textarea 
+                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 resize-none"
+                           rows={3}
+                           placeholder="Ex: Transfer para aeroporto, Evento corporativo..."
+                           value={transitData.purpose}
+                           onChange={(e) => setTransitData({...transitData, purpose: e.target.value})}
+                         />
+                      </div>
+                   </div>
+                </motion.section>
+              )}
+           </div>
+
+            {/* PREVIEW & PRICE */}
+            <div className="px-8 mt-2">
+              <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5 space-y-4">
+                 <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Estimativa do Fretamento</p>
+                    <span className="text-xl font-black text-white">
+                      R$ {(() => {
+                        const res = calculateVanPrice({
+                          baseFare: 80,
+                          distanceInKm: 15, // Por ser wizard demo usamos fixo
+                          distanceRate: 3.5,
+                          stopCount: transitData.stops.length,
+                          stopRate: 15,
+                          isDaily: transitData.tripType === 'hourly',
+                          hours: 4,
+                          hourlyRate: 45
+                        });
+                        return res.totalPrice.toFixed(2).replace(".", ",");
+                      })()}
+                    </span>
+                 </div>
+              </div>
+            </div>
+
+           {/* ACTIONS FOOTER */}
+           <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent">
+              <div className="flex gap-4">
+                 {mobilityStep > 1 && (
+                   <button onClick={() => setMobilityStep(prev => prev - 1)} className="size-16 rounded-[28px] bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-95 transition-all">
+                      <Icon name="chevron_left" />
+                   </button>
+                 )}
+                 <button 
+                   onClick={() => mobilityStep < 3 ? setMobilityStep(prev => prev + 1) : navigateSubView("mobility_payment")}
+                   className="flex-1 bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
+                 >
+                    <span className="uppercase tracking-widest">{mobilityStep < 3 ? "Próximo Passo" : "Ver Preço & Pedir"}</span>
+                    <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">{mobilityStep < 3 ? 'arrow_forward' : 'bolt'}</span>
+                 </button>
+              </div>
+           </div>
         </main>
       </div>
     );
@@ -7329,428 +7820,118 @@ function App() {
     );
   };
 
-  const renderTransitSelection = () => {
-    const isShippingView = transitData.type === 'utilitario' || transitData.type === 'van';
-
+  const renderTaxiWizard = () => {
     return (
-      <div className="absolute inset-0 z-[110] bg-slate-50 bg-zinc-900 flex flex-col hide-scrollbar overflow-y-auto animate-in fade-in duration-500">
-        <header className="px-6 py-8 flex items-center justify-between gap-4">
-          <button
-            onClick={() => setSubView("none")}
-            className="size-12 rounded-2xl bg-white bg-zinc-900 shadow-xl flex items-center justify-center text-white text-white active:scale-90 transition-all border border-zinc-800 border-zinc-700"
-          >
+      <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
+        {/* MAPA NO FUNDO */}
+        <div className="absolute inset-0 z-0 h-[45vh]">
+           <IziTrackingMap driverLoc={driverLocation} />
+           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
+        </div>
+
+        <header className="relative z-50 flex items-center justify-between px-6 pt-10">
+          <button onClick={() => navigateSubView("explore_mobility")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
             <Icon name="arrow_back" />
           </button>
           <div className="text-right">
-            <h2 className="text-2xl font-black text-white text-white tracking-tighter leading-none mb-1">
-              {isShippingView ? "Detalhes do Envio" : "Escolha sua Viagem"}
-            </h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
-              {isShippingView ? "Logística Digital" : "Transporte Executivo"}
-            </p>
+             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
+                {transitData.type === 'mototaxi' ? "MotoTáxi" : "Motorista Particular"}
+             </h2>
+             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Viagem Rápida & Segura</p>
           </div>
         </header>
 
-      <div className="px-6 space-y-8 flex-1 pb-40">
-        {/* Schedule Option: Segmented Control */}
-        <div className="flex bg-white bg-zinc-900 p-2 rounded-[28px] border border-zinc-800 border-zinc-700 shadow-xl">
-          <button 
-            onClick={() => setTransitData({...transitData, scheduled: false})}
-            className={`flex-1 py-4 rounded-[22px] text-[11px] font-black uppercase tracking-widest transition-all ${!transitData.scheduled ? 'bg-yellow-400 text-white shadow-lg' : 'text-zinc-500'}`}
-          >
-            Agora
-          </button>
-          <button 
-            onClick={() => setTransitData({...transitData, scheduled: true})}
-            className={`flex-1 py-4 rounded-[22px] text-[11px] font-black uppercase tracking-widest transition-all ${transitData.scheduled ? 'bg-yellow-400 text-white shadow-lg' : 'text-zinc-500'}`}
-          >
-            Agendar
-          </button>
-        </div>
-
-        {transitData.scheduled && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white bg-zinc-900 p-8 rounded-[45px] border border-zinc-800 border-zinc-700 shadow-2xl space-y-8 relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 size-40 bg-yellow-400/5 rounded-full blur-[60px] -mr-20 -mt-20" />
-            
-            <div className="flex items-center justify-between mb-2">
-               <h4 className="text-[11px] font-black uppercase text-zinc-500 tracking-[0.25em]">Detalhes do Agendamento</h4>
-               <span className="size-3 bg-yellow-400 rounded-full animate-pulse shadow-lg shadow-primary/50" />
-            </div>
-
-            <div className="flex items-center gap-6 relative z-10 p-5 bg-slate-50 bg-zinc-900/50 rounded-[30px] border border-zinc-800 border-zinc-800 group hover:border-yellow-400/30 transition-colors">
-              <div className="size-14 bg-white bg-zinc-900 rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
-                <Icon name="event" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-1.5 ml-1">Data Desejada</p>
-                <input 
-                  type="date" 
-                  value={transitData.scheduledDate}
-                  min={new Date(Date.now() + 30*60*1000).toISOString().split('T')[0]}
-                  onChange={(e) => setTransitData({...transitData, scheduledDate: e.target.value})}
-                  className="bg-transparent border-none p-0 text-lg font-black w-full focus:ring-0 text-white tracking-tighter"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-6 relative z-10 p-5 bg-slate-50 bg-zinc-900/50 rounded-[30px] border border-zinc-800 border-zinc-800 group hover:border-yellow-400/30 transition-colors">
-              <div className="size-14 bg-white bg-zinc-900 rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
-                <Icon name="alarm" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-1.5 ml-1">Horário Previsto</p>
-                <input 
-                  type="time" 
-                  value={transitData.scheduledTime}
-                  onChange={(e) => setTransitData({...transitData, scheduledTime: e.target.value})}
-                  className="bg-transparent border-none p-0 text-lg font-black w-full focus:ring-0 text-white tracking-tighter"
-                />
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Destination Input Section: Luxury Card */}
-        <div className="bg-white bg-zinc-900 p-8 rounded-[45px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)] space-y-6 border border-slate-50 border-zinc-700 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 size-32 bg-yellow-400/5 rounded-full blur-3xl -mr-16 -mt-16" />
-
-          <div className="flex items-center gap-5 relative">
-            <div className="size-12 bg-yellow-400 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
-              <Icon name="my_location" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-1.5 ml-1">
-                <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.25em]">Origem Atual</p>
-                <button
-                  onClick={() => {
-                    if (!navigator.geolocation) return;
-                    navigator.geolocation.getCurrentPosition((pos) => {
-                      const { latitude, longitude } = pos.coords;
-                      if (!(window as any).google?.maps) return;
-                      const geocoder = new (window as any).google.maps.Geocoder();
-                      geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results: any, status: any) => {
-                        if (status === "OK" && results[0]) {
-                          const addr = results[0].formatted_address;
-                          setTransitData(prev => ({ ...prev, origin: addr }));
-                          if (addr && transitData.destination) {
-                            setDistancePrices({});
-                            setRouteDistance("");
-                            calculateDistancePrices(addr, transitData.destination);
-                          }
-                        }
-                      });
-                    }, () => toastError("Não foi possível obter sua localização."));
-                  }}
-                  className="flex items-center gap-1 text-[9px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/10 px-2.5 py-1.5 rounded-xl active:scale-95 transition-all"
-                >
-                  <Icon name="my_location" />
-                  Usar minha localização
-                </button>
-              </div>
-              <AddressSearchInput 
-                isLoaded={isLoaded}
-                initialValue={transitData.origin}
-                placeholder="De onde você está saindo?"
-                className="w-full bg-slate-50 bg-zinc-900/50 border-none px-4 py-3.5 rounded-2xl text-[14px] font-bold text-white text-white focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                onSelect={(place: google.maps.places.PlaceResult) => {
-                  if (place.formatted_address) {
-                    const newOrigin = place.formatted_address;
-                    setTransitData(prev => ({ ...prev, origin: newOrigin }));
-                    if (newOrigin && transitData.destination) {
-                      setDistancePrices({});
-                      setRouteDistance("");
-                      calculateDistancePrices(newOrigin, transitData.destination);
-                    }
-                  }
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 py-1">
-            <div className="w-[2px] h-8 bg-gradient-to-b from-primary to-orange-500 ml-6 rounded-full opacity-30" />
-            <div className="h-px bg-slate-100  flex-1 ml-4" />
-          </div>
-
-          <div className="flex items-center gap-5 relative">
-            <div className="size-12 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/20 shrink-0">
-              <Icon name="location_on" />
-            </div>
-            <div className="flex-1">
-              <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.25em] mb-1.5 ml-1">Destino Final</p>
-              <AddressSearchInput 
-                initialValue={transitData.destination}
-                placeholder="Para onde deseja ir?"
-                className="w-full bg-slate-50 bg-zinc-900/50 border-none px-4 py-3.5 rounded-2xl text-[14px] font-bold text-white text-white focus:ring-2 focus:ring-orange-500/20 outline-none transition-all placeholder:text-zinc-500"
-                onSelect={(place: any) => {
-                  const addr = place.formatted_address || "";
-                  if (addr) {
-                    setTransitData(prev => ({ ...prev, destination: addr, estPrice: 0 }));
-                    setRouteDistance("");
-                    setDistancePrices({});
-                    calculateDistancePrices(transitData.origin, addr);
-                  } else {
-                    setTransitData(prev => ({ ...prev, destination: "", estPrice: 0 }));
-                    setRouteDistance("");
-                    setDistancePrices({});
-                  }
-                }}
-                onClear={() => {
-                  setTransitData(prev => ({ ...prev, destination: "", estPrice: 0 }));
-                  setRouteDistance("");
-                  setDistancePrices({});
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Route info badge */}
-        {routeDistance && (
-          <div className="flex items-center gap-3 px-5 py-3 bg-emerald-50  rounded-2xl border border-emerald-100 ">
-            <Icon name="route" />
-            <div>
-              <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest">Rota calculada</p>
-              <p className="text-[13px] font-bold text-emerald-700">{routeDistance}</p>
-            </div>
-          </div>
-        )}
-        {isCalculatingPrice && (
-          <div className="flex items-center gap-3 px-5 py-3 bg-slate-50 bg-zinc-900 rounded-2xl">
-            <div className="size-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[12px] font-bold text-zinc-500">Calculando preços pela distância...</p>
-          </div>
-        )}
-
-        {/* Resumo da Corrida Selecionada */}
-        {(() => {
-          const vehicles: Record<string, { label: string; icon: string; color: string; desc: string }> = {
-            mototaxi: { label: "MotoTáxi", icon: "motorcycle", color: "from-yellow-400 to-orange-500", desc: "Rápido e econômico" },
-            carro: { label: "Carro Executivo", icon: "directions_car", color: "from-slate-700 to-slate-900", desc: "Conforto e segurança" },
-            van: { label: "Van de Carga", icon: "airport_shuttle", color: "from-blue-600 to-indigo-700", desc: "Para volumes maiores" },
-            utilitario: { label: "Entrega Express", icon: "bolt", color: "from-violet-500 to-purple-700", desc: "Entrega urgente" },
-          };
-          const v = vehicles[transitData.type] || vehicles.mototaxi;
-          const hasDistance = Object.keys(distancePrices).length > 0;
-          const basePrice = parseFloat(String(marketConditions.settings?.baseValues?.[transitData.type + "_min"] ?? 6.0)) || 6.0;
-          const rawPrice = hasDistance ? (distancePrices[transitData.type] ?? basePrice) : calculateDynamicPrice(basePrice);
-          const displayPrice = isNaN(rawPrice) || !rawPrice ? basePrice : rawPrice;
-          const hasSurge = marketConditions.settings?.baseValues?.isDynamicActive && marketConditions.surgeMultiplier > 1.05;
-          const etaFromRoute = routeDistance ? routeDistance.split("•")[1]?.trim() : null;
-          const etaFallback = transitData.type === "mototaxi" ? "3–5 min" : transitData.type === "carro" ? "6–10 min" : transitData.type === "van" ? "10–15 min" : "5–8 min";
-          const eta = etaFromRoute || etaFallback;
-
-          return (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between px-2">
-                <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Resumo da Corrida</h3>
-                {hasSurge && (
-                  <span className="text-[10px] font-bold text-orange-500 flex items-center gap-1 bg-orange-50 px-2 py-1 rounded-full">
-                    <Icon name="local_fire_department" />
-                    Alta demanda Ã—{marketConditions.surgeMultiplier.toFixed(1)}
-                  </span>
-                )}
-                {!hasSurge && (
-                  <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-full">
-                    <Icon name="bolt" />
-                    Preço normal
-                  </span>
-                )}
-              </div>
-
-              {/* Card do veiculo selecionado */}
-              <div className="bg-white bg-zinc-900 rounded-[35px] border-2 border-primary shadow-2xl shadow-primary/10 p-6 flex items-center gap-5">
-                <div className={`size-16 rounded-[22px] flex items-center justify-center shadow-xl bg-gradient-to-br ${v.color}`}>
-                  <Icon name={v.icon} />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-black text-white text-white text-base tracking-tight">{v.label}</h4>
-                    <span className="text-[8px] font-black uppercase tracking-widest bg-yellow-400 text-white px-2 py-0.5 rounded-full">Selecionado</span>
-                  </div>
-                  <p className="text-[11px] font-bold text-zinc-500">{v.desc}</p>
-                </div>
-                <button
-                  onClick={() => navigateSubView("none")}
-                  className="text-[10px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/10 px-3 py-2 rounded-xl active:scale-95 transition-all"
-                >
-                  Trocar
-                </button>
-              </div>
-
-              {/* Detalhes da corrida — só aparecem após calcular rota */}
-              {routeDistance && <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white bg-zinc-900 rounded-[24px] p-4 text-center border border-zinc-800 border-zinc-700">
-                  <Icon name="schedule" />
-                  <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">Chegada</p>
-                  <p className="text-sm font-black text-white text-white">{eta}</p>
-                </div>
-                <div className="bg-white bg-zinc-900 rounded-[24px] p-4 text-center border border-zinc-800 border-zinc-700">
-                  <Icon name="route" />
-                  <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">Distância</p>
-                  <p className="text-sm font-black text-white text-white">{routeDistance ? routeDistance.split("•")[0].trim() : "—"}</p>
-                </div>
-                <div className={`rounded-[24px] p-4 text-center border ${hasSurge ? "bg-orange-50 border-orange-100" : "bg-white bg-zinc-900 border-zinc-800 border-zinc-700"}`}>
-                  <span className={`material-symbols-outlined text-xl block mb-1 ${hasSurge ? "text-orange-500" : "text-yellow-400"}`}>payments</span>
-                  <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">Valor</p>
-                  {isCalculatingPrice ? (
-                    <div className="size-4 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-                  ) : (
-                    <p className={`text-sm font-black ${hasSurge ? "text-orange-500" : "text-white text-white"}`}>
-                      R$ {(displayPrice ?? 0).toFixed(2).replace(".", ",")}
-                    </p>
-                  )}
-                </div>
-              </div>}
-
-              {/* Motoristas proximos reais — só aparecem após calcular rota */}
-              {routeDistance && <>
-              {nearbyDriversCount > 0 ? (
-                <div className="bg-white bg-zinc-900 rounded-[28px] p-5 border border-zinc-800 border-zinc-700 flex items-center gap-4">
-                  <div className="flex -space-x-3">
-                    {nearbyDrivers.slice(0, 3).map((d, i) => (
-                      <div key={i} className="size-9 rounded-full bg-gradient-to-br from-primary to-orange-400 flex items-center justify-center text-white text-[10px] font-black border-2 border-white border-zinc-800">
-                        {d.name?.charAt(0).toUpperCase() || "M"}
+        <main className="relative z-40 mt-auto bg-zinc-950 border-t border-white/5 flex flex-col h-[60vh] rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
+           <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
+              {mobilityStep === 1 && (
+                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
+                   <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-white tracking-tight">Qual o seu destino?</h3>
+                      <p className="text-zinc-500 text-xs font-medium">Confirme os pontos de partida e chegada.</p>
+                   </div>
+                   
+                   <div className="space-y-6">
+                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                         <div className="flex justify-between items-center mb-2">
+                            <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">Origem</p>
+                            <button onClick={() => {
+                               if (!navigator.geolocation) return;
+                               navigator.geolocation.getCurrentPosition((pos) => {
+                                  // Geocode...
+                                  showToast("Localização atualizada!", "success");
+                               });
+                            }} className="text-[8px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/5 px-2 py-1 rounded-lg">Meu Local</button>
+                         </div>
+                         <AddressSearchInput 
+                           isLoaded={isLoaded}
+                           initialValue={transitData.origin}
+                           placeholder="De onde você está saindo?"
+                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                           onSelect={(p) => setTransitData({...transitData, origin: p.formatted_address || ""})}
+                         />
                       </div>
-                    ))}
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-white text-white">{nearbyDriversCount} motorista{nearbyDriversCount > 1 ? "s" : ""} disponível{nearbyDriversCount > 1 ? "s" : ""}</p>
-                    <p className="text-[10px] font-bold text-zinc-500">
-                      {nearbyDrivers.filter(d => d.vehicle_type === transitData.type).length > 0
-                        ? `${nearbyDrivers.filter(d => d.vehicle_type === transitData.type).length} com ${transitData.type}`
-                        : "Todos os tipos disponíveis"}
-                    </p>
-                  </div>
-                  <div className="ml-auto size-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <div className="size-3 rounded-full bg-emerald-500 animate-pulse" />
-                  </div>
-                </div>
-              ) : isCalculatingPrice ? (
-                <div className="bg-white bg-zinc-900 rounded-[28px] p-5 border border-zinc-800 border-zinc-700 flex items-center gap-3">
-                  <div className="size-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  <p className="text-sm font-bold text-zinc-500">Buscando motoristas...</p>
-                </div>
-              ) : null}
-              </>}
-            </div>
-          );
-        })()}
 
-                {/* Dynamic History & Favorites */}
-        <div className="space-y-6">
-          {transitHistory.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between px-2">
-                <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">
-                  Endereços Recentes
-                </h3>
-              </div>
-              <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-2 px-2">
-                {transitHistory.slice(0, 5).map((address, i) => (
-                  <div
-                    key={i}
-                    className="min-w-[200px] bg-white bg-zinc-900 p-5 rounded-[35px] shadow-sm border border-zinc-800 border-zinc-700 cursor-pointer active:scale-95 transition-all group flex items-center gap-4"
-                    onClick={() => setTransitData({ ...transitData, destination: address })}
-                  >
-                    <div className="size-11 rounded-2xl bg-slate-50 bg-zinc-900 flex items-center justify-center shrink-0 group-hover:bg-yellow-400 transition-colors">
-                      <Icon name="history" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[9px] font-black uppercase text-yellow-400 tracking-widest leading-none mb-1">Anterior</p>
-                      <p className="text-[10px] font-bold text-white  truncate w-full">{address}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-4">
-            <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] px-2">
-              Sugestões Rápidas
-            </h3>
-            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-2 px-2">
-              {savedAddresses.length > 0 ? savedAddresses.map((addr, i) => {
-                const icons: Record<string, string> = { Casa: "home", Trabalho: "work" };
-                const icon = icons[addr.label] || "location_on";
-                return (
-                  <div
-                    key={i}
-                    className="min-w-[160px] bg-white bg-zinc-900 p-5 rounded-[30px] shadow-sm border border-zinc-800 border-zinc-700 cursor-pointer active:scale-95 transition-all group flex flex-col items-center text-center"
-                    onClick={() => {
-                      const dest = `${addr.street}${addr.details ? ', ' + addr.details : ''}`;
-                      setTransitData({ ...transitData, destination: dest });
-                      calculateDistancePrices(transitData.origin, dest);
-                    }}
-                  >
-                    <div className="size-12 rounded-2xl bg-yellow-400/10 flex items-center justify-center mb-3 group-hover:bg-yellow-400 transition-colors">
-                      <Icon name={icon} />
-                    </div>
-                    <p className="text-[11px] font-black text-slate-800  tracking-widest leading-none mb-1 uppercase">{addr.label}</p>
-                    <p className="text-[9px] font-bold text-zinc-500 truncate w-full">{addr.street}</p>
-                  </div>
-                );
-              }) : (
-                <div className="bg-white bg-zinc-900 p-5 rounded-[30px] border border-dashed border-slate-200 border-zinc-700 flex flex-col items-center text-center min-w-[220px]">
-                  <Icon name="location_on" />
-                  <p className="text-[11px] font-black text-zinc-500 uppercase tracking-widest">Nenhum endereço salvo</p>
-                  <p className="text-[10px] font-bold text-zinc-500 mt-1">Adicione endereços no perfil</p>
-                </div>
+                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Destino</p>
+                         <AddressSearchInput 
+                           isLoaded={isLoaded}
+                           initialValue={transitData.destination}
+                           placeholder="Para onde vamos?"
+                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                           onSelect={(p) => setTransitData({...transitData, destination: p.formatted_address || ""})}
+                         />
+                      </div>
+                   </div>
+                </motion.section>
               )}
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-6 pt-4 pb-safe-bottom bg-gradient-to-t from-slate-50 via-slate-50/95 to-transparent dark:from-slate-950 dark:via-slate-950/95 z-30">
-        {/* Preço do serviço selecionado */}
-        {transitData.destination && (
-          <div className="flex justify-center mb-4">
-            <div className="flex items-center gap-3 bg-white bg-zinc-900 px-5 py-2.5 rounded-2xl shadow-xl border border-zinc-800 border-zinc-700">
-              <span className="text-[11px] font-black text-zinc-500 uppercase tracking-widest">Serviço selecionado</span>
-              {isCalculatingPrice ? (
-                <div className="size-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <span className="text-[15px] font-black text-white text-white">
-                  R$ {(() => {
-                    const bv = marketConditions.settings.baseValues;
-                    const basePrices: Record<string, number> = { mototaxi: bv.mototaxi_min, carro: bv.carro_min, van: bv.van_min, utilitario: bv.utilitario_min };
-                    const rawP = distancePrices[transitData.type] || calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min);
-                    const p = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || bv.mototaxi_min || 6) : rawP;
-                    return (p ?? 0).toFixed(2).replace('.', ',');
-                  })()}
-                </span>
+              {mobilityStep === 2 && (
+                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
+                   <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-white tracking-tight">Resumo da Viagem</h3>
+                      <p className="text-zinc-500 text-xs font-medium">Confirme os detalhes e o preço antes de pedir.</p>
+                   </div>
+
+                   <div className="bg-white/5 border border-white/5 p-6 rounded-[35px] space-y-6">
+                      <div className="flex items-center gap-4">
+                         <div className="size-12 rounded-2xl bg-yellow-400/10 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-yellow-400 italic">local_atm</span>
+                         </div>
+                         <div className="flex-1">
+                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Preço Estimado</p>
+                            <p className="text-2xl font-black text-yellow-400">R$ 15,90</p>
+                         </div>
+                      </div>
+                      <div className="h-px bg-white/5 w-full" />
+                      <div className="space-y-4">
+                         <div className="flex gap-4 items-start">
+                            <span className="material-symbols-outlined text-zinc-600 text-sm">home</span>
+                            <p className="text-xs font-medium text-zinc-300 truncate">{transitData.origin}</p>
+                         </div>
+                         <div className="flex gap-4 items-start">
+                            <span className="material-symbols-outlined text-yellow-400 text-sm">location_on</span>
+                            <p className="text-xs font-medium text-white truncate">{transitData.destination}</p>
+                         </div>
+                      </div>
+                   </div>
+                </motion.section>
               )}
-            </div>
-          </div>
-        )}
-        <button
-          disabled={!transitData.destination || isLoading}
-          onClick={isShippingView ? () => setSubView('shipping_details') : handleRequestTransit}
-          className="w-full bg-slate-900  text-white  font-black text-lg py-6 rounded-[32px] shadow-[0_20px_40px_-10px_rgba(0,0,0,0.2)]  active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale flex justify-center items-center gap-4 group"
-        >
-          {isLoading ? (
-            <div className="size-7 border-4 border-white/30 border-t-white   rounded-full animate-spin"></div>
-          ) : (
-            <>
-              <span className="tracking-tighter">
-                {transitData.destination
-                  ? (isShippingView ? `Confirmar Envio` : `Buscar Prestador`)
-                  : "Defina o Destino"}
-              </span>
-              <Icon name="arrow_forward" />
-            </>
-          )}
-        </button>
+           </div>
+
+           <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent">
+              <button 
+                onClick={() => mobilityStep < 2 ? setMobilityStep(2) : navigateSubView("mobility_payment")}
+                className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
+              >
+                 <span className="uppercase tracking-widest">{mobilityStep === 1 ? "Próximo Passo" : "Solicitar Agora"}</span>
+                 <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">{mobilityStep === 1 ? 'arrow_forward' : 'bolt'}</span>
+              </button>
+           </div>
+        </main>
       </div>
-    </div>
     );
   };
+
 
   // â”€â”€â”€ Tela de Pagamento da Mobilidade â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const renderMobilityPayment = () => {
@@ -8245,7 +8426,8 @@ function App() {
       { id: 'entregue',   label: 'Entregue',         icon: 'verified',       status: ['concluido'] },
     ];
 
-    const currentIdx = steps.findLastIndex(s => s.status.includes(selectedItem.status));
+    const revIdx = steps.slice().reverse().findIndex(s => s.status.includes(selectedItem.status));
+    const currentIdx = revIdx === -1 ? 0 : steps.length - 1 - revIdx;
     
     return (
       <div className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-hidden pb-32">
@@ -8918,16 +9100,40 @@ function App() {
                   {renderExploreEnvios()}
                 </motion.div>
               )}
-              {subView === "transit_selection" && (
+               {subView === "taxi_wizard" && (
                 <motion.div
-                  key="transit"
+                  key="taxi_wiz"
                   initial={{ y: "100%" }}
                   animate={{ y: 0 }}
                   exit={{ y: "100%" }}
                   transition={{ type: "spring", bounce: 0, duration: 0.4 }}
                   className="absolute inset-0 z-[110]"
                 >
-                  {renderTransitSelection()}
+                  {renderTaxiWizard()}
+                </motion.div>
+              )}
+              {subView === "freight_wizard" && (
+                <motion.div
+                  key="freight"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[120]"
+                >
+                  {renderFreightWizard()}
+                </motion.div>
+              )}
+              {subView === "van_wizard" && (
+                <motion.div
+                  key="vanv"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[120]"
+                >
+                  {renderVanWizard()}
                 </motion.div>
               )}
               {subView === "mobility_payment" && (
