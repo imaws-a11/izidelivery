@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { playIziSound } from './lib/iziSounds';
 import { GoogleMap, useJsApiLoader, Marker, Autocomplete, Polygon } from '@react-google-maps/api';
 import { supabase } from './lib/supabase';
+import { AdminContext } from './context/AdminContext';
+import OrdersMerchantTab from './components/OrdersMerchantTab';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string ?? '';
 const libraries: ("places" | "geometry")[] = ["places"];
@@ -3363,8 +3365,81 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     </button>
   );
 
+  const contextValue = {
+    session, userRole, merchantProfile, setMerchantProfile,
+    activeTab, setActiveTab,
+    stats, recentOrders, usersList, driversList, allOrders, myDriversList, merchantsList, productsList, menuCategoriesList,
+    categoriesState, setCategoriesState, promotionsList, auditLogsList, myDedicatedSlots, subscriptionOrders,
+    dynamicRatesState, setDynamicRatesState,
+    isLoadingList, isInitialLoading,
+    ordersPage, setOrdersPage, ordersTotalCount,
+    merchantOrdersPage, setMerchantOrdersPage, merchantOrdersTotalCount,
+    subscriptionOrdersPage, setSubscriptionOrdersPage, subscriptionOrdersTotalCount,
+    driversPage, setDriversPage, filteredDrivers, paginatedDrivers,
+    driverSearch, setDriverSearch, driverFilter, setDriverFilter,
+    userStatusFilter, setUserStatusFilter, promoFilter, setPromoFilter, promoSearch, setPromoSearch,
+    categoryGroupFilter, setCategoryGroupFilter,
+    appSettings, setAppSettings, autoSaveStatus,
+    selectedUser, setSelectedUser, selectedMerchantPreview, setSelectedMerchantPreview,
+    selectedDriverStudio, setSelectedDriverStudio, selectedUserStudio, setSelectedUserStudio,
+    selectedCategoryStudio, setSelectedCategoryStudio, selectedZoneForMap, setSelectedZoneForMap,
+    selectedTrackingItem, setSelectedTrackingItem, selectedMenuCategory, setSelectedMenuCategory,
+    editingItem, setEditingItem, editType, setEditType, editingSlotId, setEditingSlotId,
+    isSaving, setIsSaving, activePreviewTab, setActivePreviewTab, activeStudioTab, setActiveStudioTab,
+    trackingListTab, setTrackingListTab, showActiveOrdersModal, setShowActiveOrdersModal,
+    showCategoryListModal, setShowCategoryListModal, showPromoForm, setShowPromoForm,
+    promoFormType, setPromoFormType, promoForm, setPromoForm, promoSaving, promoSaveStatus,
+    expandedLogId, setExpandedLogId, isCompletingOrder, setIsCompletingOrder, newOrderNotification, setNewOrderNotification,
+    walletTransactions, isWalletLoading, showAddCreditModal, setShowAddCreditModal,
+    creditToAdd, setCreditToAdd, isAddingCredit, showWalletStatementModal, setShowWalletStatementModal,
+    isAddingPeakRule, setIsAddingPeakRule, newPeakRule, setNewPeakRule, newZoneData, setNewZoneData,
+    mapSearch, setMapSearch, isGeolocating, setIsGeolocating, mapCenterView, setMapCenterView,
+    fixedGridCenter, setFixedGridCenter, selectedHexagons, setSelectedHexagons, hexGrid, getHexPath,
+    previewProducts, setPreviewProducts, previewCategories, setPreviewCategories,
+    dashboardData, mapsLoadError, isLoaded,
+    fetchStats, fetchUsers, fetchDrivers, fetchMyDrivers, fetchProducts, fetchMenuCategories,
+    fetchAllOrders, fetchSubscriptionOrders, fetchCategories, fetchDynamicRates, fetchPromotions,
+    fetchAuditLogs, fetchMerchants, fetchAppSettings, fetchMyDedicatedSlots, openMerchantPreview,
+    handleAddCredit, handleApplyCredit: async () => {}, // Placeholder if not used
+    handleUpdateDriver: async () => {},
+    handleUpdateCategory: async () => {},
+    handleUpdateMyDriver: async () => {},
+    handleDeleteMyDriver: async () => {},
+    handleUpdateUser: async () => {},
+    handleUpdateMyProduct: async () => {},
+    handleUpdateMenuCategory: async () => {},
+    handleDeleteProduct: async () => {},
+    handleCreateNewProduct: async () => {},
+    handleUpdatePromotion: async () => {},
+    handleUpdateMerchant: async () => {},
+    handleUpdateMerchantStatus: async () => {},
+    handleDeleteMerchant: async () => {},
+    handleUpdateDriverStatus: async () => {},
+    handleDeleteDriver: async () => {},
+    handleExportDrivers: () => {},
+    handleUpdateUserStatus: async () => {},
+    handleDeleteUser: async () => {},
+    handleUpdateDedicatedSlot, handleCreateDedicatedSlot: () => {},
+    handleDeleteDedicatedSlot: async () => {},
+    handleNotifyUser: async () => {},
+    handleResetPassword: async () => {},
+    handleCompleteOrder: async () => {},
+    handleDeleteOrder: async () => {},
+    handleConfirmSubscriptionPayment: async () => {},
+    handleAddPeakRule: async () => {},
+    handleRemovePeakRule: async () => {},
+    saveDynamicRates: async () => {},
+    saveSpecificRateMetadata: async () => {},
+    handleAddZone: async () => {},
+    handleRemoveZone: async () => {},
+    handleFileUpload: async () => "",
+    handleUpdateDispatchSettings: async () => {},
+    handleSeedCategories: async () => {},
+  } as any;
+
   return (
-    <div className="min-h-[100dvh] w-full bg-[#F4F5F7] font-display overflow-hidden relative">
+    <AdminContext.Provider value={contextValue}>
+      <div className="min-h-[100dvh] w-full bg-[#F4F5F7] font-display overflow-hidden relative">
       {/* Session/Auth Screen */}
       {!session && (
         <div className="fixed inset-0 z-[100] bg-[#111] flex items-center justify-center p-6 overflow-hidden font-display">
@@ -4024,225 +4099,8 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
 
 {/* â â â â â â â MERCHANT ORDERS â â â â â â â */}
 {/* ─── MERCHANT ORDERS ─── */}
-                        {activeTab === 'orders' && userRole === 'merchant' && (
-              <div className="space-y-10 p-2 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                {/* Cabeçalho da Gestão de Pedidos Premium */}
-                <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-[40px] p-10 text-white relative overflow-hidden ring-1 ring-white/10 shadow-3xl shadow-slate-900/40">
-                    <div className="absolute top-0 right-0 p-8 opacity-10"><span className="material-symbols-outlined text-[140px] -rotate-12 select-none">shopping_cart</span></div>
-                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                        <div className="text-center md:text-left">
-                            <h2 className="text-4xl font-black tracking-tight mb-2">Central de Pedidos</h2>
-                            <p className="text-white/60 text-sm font-bold max-w-md italic leading-relaxed">Gerencie suas vendas, acompanhe a coleta do Flash e mantenha o cliente informado em tempo real.</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-6 py-3 rounded-2xl flex items-center gap-3">
-                                <span className="size-2.5 bg-emerald-400 rounded-full animate-ping" />
-                                <span className="text-xs font-black uppercase tracking-[0.2em]">Fluxo em Tempo Real</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="space-y-12">
-                    
-                    {/* ⚡ SOLICITAÇÕES PENDENTES (AÇÃO IMEDIATA) */}
-                    <div className="space-y-8">
-                        <div className="flex items-center justify-between px-4">
-                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-4">
-                                <span className="size-10 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/30">
-                                    <span className="material-symbols-outlined text-lg animate-bounce">priority_high</span>
-                                </span>
-                                Pedidos Aguardando Aceite
-                            </h3>
-                            <span className="text-[10px] font-black text-orange-500 bg-orange-500/10 px-4 py-2 rounded-full border border-orange-500/20">
-                                {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'novo' || o.status === 'pending' || o.status === 'waiting_merchant')).length} Pendentes
-                            </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && (o.status === 'novo' || o.status === 'pending' || o.status === 'waiting_merchant')).map((o: any) => (
-                                <motion.div key={o.id} whileHover={{ y: -5 }} className="bg-white dark:bg-slate-900 rounded-[44px] shadow-2xl shadow-black/5 border border-slate-100 dark:border-white/5 overflow-hidden flex flex-col">
-                                    <div className="bg-gradient-to-r from-orange-500/10 to-transparent p-8 flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="size-14 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-black text-sm">#{o.id.slice(-4).toUpperCase()}</div>
-                                            <div>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">SÉRIE PEDIDO</p>
-                                                <p className="text-sm font-black text-slate-900 dark:text-white">DT-{o.id.slice(0, 8).toUpperCase()}</p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-2xl font-black text-orange-500 tracking-tighter">R$ {Number(o.total_price || 0).toFixed(2).replace('.', ',')}</p>
-                                            <p className="text-[9px] font-black text-slate-400 uppercase">{o.payment_method === 'dinheiro' ? 'Dinheiro na Entrega' : 'Pagamento Online'}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="p-8 space-y-6 flex-1">
-                                        <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">📋 Especificações do Pedido</h4>
-                                            <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-[32px] ring-1 ring-inset ring-slate-100 dark:ring-white/10">
-                                                <p className="text-sm font-bold text-slate-900 dark:text-white leading-relaxed">{o.package_details || 'Produto do Catálogo Izi'}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">📍 Informações de Entrega</h4>
-                                            <div className="flex items-start gap-4 p-2">
-                                                <span className="material-symbols-outlined text-slate-300">location_on</span>
-                                                <p className="text-xs font-bold text-slate-600 dark:text-slate-400 italic leading-relaxed">{o.delivery_address}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="p-8 pt-0 flex flex-col md:flex-row gap-4">
-                                        <button 
-                                            onClick={() => { const phone = (o as any).customer_phone || (o as any).user_phone || merchantProfile?.store_phone; if(phone) window.open(`https://wa.me/55${phone.replace(/\D/g, '')}`, '_blank'); else toastError('Telefone não disponível'); }}
-                                            className="w-full md:w-fit h-14 px-8 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-[24px] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-emerald-500/20 transition-all outline-none"
-                                        >
-                                            <span className="material-symbols-outlined text-xl">chat</span> Contato
-                                        </button>
-                                        <button 
-                                            onClick={async () => { if(confirm('Cancelar fornecimento?')) { await supabase.from('orders_delivery').update({ status: 'cancelado' }).eq('id', o.id); fetchAllOrders(); toastWarning('Pedido Cancelado'); } }}
-                                            className="w-full md:w-32 h-14 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-all outline-none"
-                                        >
-                                            Recusar
-                                        </button>
-                                        <button 
-                                            onClick={async () => { try { await supabase.from('orders_delivery').update({ status: 'confirmado' }).eq('id', o.id); fetchAllOrders(); toastSuccess('Pedido Aceito! Buscando Flash...'); } catch(err) { console.error(err); } }}
-                                            className="flex-1 w-full h-16 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-[28px] font-black text-xs uppercase tracking-[0.2em] shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all outline-none"
-                                        >
-                                            Aceitar Pedido ⚡
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* 🚚 ACOMPANHAMENTO ATIVO */}
-                    <div className="space-y-8">
-                        <div className="flex items-center gap-4 px-4">
-                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-4">
-                                <span className="size-10 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/30">
-                                    <span className="material-symbols-outlined text-lg">moped</span>
-                                </span>
-                                Pedidos em Preparação / Rota
-                            </h3>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && ['confirmado', 'preparando', 'pronto', 'pendente', 'picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega'].includes(o.status)).map((o: any) => (
-                                <div key={o.id} className="bg-white dark:bg-slate-900 rounded-[38px] p-8 border border-slate-100 dark:border-white/5 shadow-xl shadow-black/5 flex flex-col gap-6 relative overflow-hidden group">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="size-10 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-black text-xs">#{o.id.slice(-3)}</div>
-                                            <h4 className="text-base font-black text-slate-900 dark:text-white tracking-tighter">R$ {o.total_price?.toFixed(2).replace('.', ',')}</h4>
-                                        </div>
-                                        <span className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest ${o.status === 'pendente' ? 'bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20' : o.status === 'confirmado' ? 'bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/20' : o.status === 'preparando' ? 'bg-violet-500/10 text-violet-500 ring-1 ring-violet-500/20' : o.status === 'pronto' ? 'bg-green-500/10 text-green-600 ring-1 ring-green-500/20' : 'bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20'}`}>
-                                            {o.status === 'pendente' ? 'Aguardando Lojista' : o.status === 'confirmado' ? 'Aceito ✅' : o.status === 'preparando' ? 'Em Preparo 🍳' : o.status === 'pronto' ? 'Pronto 📦' : o.status === 'picked_up' ? 'Flash Coletou' : o.status === 'a_caminho' ? 'Flash a Caminho' : 'Em Rota'}
-                                        </span>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-                                            <motion.div initial={{ width: 0 }} animate={{ width: o.status === 'pendente' ? '15%' : o.status === 'confirmado' ? '30%' : o.status === 'preparando' ? '45%' : o.status === 'pronto' ? '55%' : o.status === 'a_caminho' ? '65%' : o.status === 'picked_up' ? '80%' : '95%' }} className="h-full bg-primary" />
-                                        </div>
-                                        <p className="text-[8px] font-black text-slate-400 uppercase text-center tracking-widest">{o.status === 'pendente' ? 'Aguardando aceitação' : o.status === 'confirmado' ? 'Pedido aceito, preparando...' : o.status === 'preparando' ? 'Em preparo no estabelecimento' : o.status === 'pronto' ? 'Pronto! Aguardando Flash' : 'Flash está entregando sua felicidade'}</p>
-                                    </div>
-
-                                    <div className="flex flex-col gap-3">
-                                        <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Entregar em:</p>
-                                            <p className="text-[11px] font-bold text-slate-600 dark:text-slate-300 leading-tight">{o.delivery_address}</p>
-                                        </div>
-                                        
-                                        {['confirmado', 'preparando'].includes(o.status) && (
-                                            <button 
-                                                onClick={async () => { await supabase.from('orders_delivery').update({ status: 'pronto' }).eq('id', o.id); fetchAllOrders(); toastSuccess('Status PRONTO! Flash notificado.'); }} 
-                                                className="w-full h-14 bg-gradient-to-r from-emerald-500 to-emerald-400 text-white rounded-[24px] font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/30 active:scale-95 transition-all outline-none flex items-center justify-center gap-3"
-                                            >
-                                                <span className="material-symbols-outlined text-lg">check_circle</span> Marcar como Pronto ⚡
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                            {allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id && ['confirmado', 'preparando', 'pronto', 'pendente', 'picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega'].includes(o.status)).length === 0 && (
-                                <div className="md:col-span-2 lg:col-span-3 py-20 bg-slate-50/50 dark:bg-white/[0.02] border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[44px] flex flex-col items-center justify-center text-center gap-4 opacity-50">
-                                    <span className="material-symbols-outlined text-5xl text-slate-200">moped</span>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Fluxo de entregas limpo no momento</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* 📜 HISTÓRlCO DE TRANSAÇÕES PREMIUM */}
-                    <div className="bg-white dark:bg-slate-900 rounded-[50px] shadow-3xl shadow-black/5 border border-slate-100 dark:border-white/5 overflow-hidden">
-                      <div className="p-12 border-b border-slate-100 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-6 bg-slate-50/30 dark:bg-white/[0.02]">
-                        <div className="space-y-1">
-                            <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-4">
-                                <span className="size-14 rounded-3xl bg-slate-100 dark:bg-white/10 text-slate-400 flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-2xl">history</span>
-                                </span>
-                                Arquivo Cronológico
-                            </h3>
-                            <p className="text-xs font-bold text-slate-400 pl-18 italic">Acompanhe seu faturamento e performance histórica na plataforma.</p>
-                        </div>
-                      </div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                          <thead className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
-                            <tr>
-                              <th className="px-12 py-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Transação</th>
-                              <th className="px-12 py-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente / Destino</th>
-                              <th className="px-12 py-8 text-[10px) font-black uppercase tracking-widest text-slate-400 text-right">Montante</th>
-                              <th className="px-12 py-8 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Estado</th>
-                              <th className="px-12 py-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Registro</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                            {allOrders.filter((o: any) => userRole === 'admin' || o.merchant_id === merchantProfile?.merchant_id).map((o: any) => (
-                              <tr key={o.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors group">
-                                <td className="px-12 py-8">
-                                    <span className="text-sm font-black text-slate-400 mb-0.5 group-hover:text-primary transition-colors">#DT-{o.id.slice(0, 8).toUpperCase()}</span>
-                                </td>
-                                <td className="px-12 py-8">
-                                    <div className="flex flex-col max-w-[350px]">
-                                        <span className="text-xs font-black text-slate-900 dark:text-white truncate">{o.delivery_address}</span>
-                                        <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mt-1">Concluído via Flash</span>
-                                    </div>
-                                </td>
-                                <td className="px-12 py-8 text-right">
-                                    <span className="text-xl font-black text-slate-900 dark:text-primary tracking-tighter">R$ {o.total_price?.toFixed(2).replace('.', ',')}</span>
-                                </td>
-                                <td className="px-12 py-8 text-center">
-                                  <span className={`inline-flex px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.1em] border ${o.status === 'concluido' ? 'bg-emerald-500/5 text-emerald-600 border-emerald-500/10' : o.status === 'cancelado' ? 'bg-red-500/5 text-red-500 border-red-500/10' : 'bg-slate-100 dark:bg-white/5 text-slate-400 border-white/5'}`}>
-                                    {o.status === 'concluido' ? 'Sucesso' : o.status === 'cancelado' ? 'Anulado' : o.status.toUpperCase()}
-                                  </span>
-                                </td>
-                                <td className="px-12 py-8">
-                                    <span className="text-xs font-bold text-slate-400">{new Date(o.created_at).toLocaleString('pt-BR')}</span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Paginação Premium */}
-                      {merchantOrdersTotalCount > ORDERS_PER_PAGE && (
-                        <div className="p-12 bg-slate-950 text-white flex items-center justify-between">
-                            <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">
-                                Página {merchantOrdersPage} de {Math.ceil(merchantOrdersTotalCount/ORDERS_PER_PAGE)}
-                            </p>
-                            <div className="flex gap-4">
-                                <button onClick={() => fetchAllOrders(merchantOrdersPage - 1)} disabled={merchantOrdersPage <= 1} className="h-14 px-8 bg-white/10 border border-white/10 rounded-2xl flex items-center gap-3 font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-all disabled:opacity-20"><span className="material-symbols-outlined">west</span> Anterior</button>
-                                <button onClick={() => fetchAllOrders(merchantOrdersPage + 1)} disabled={merchantOrdersPage >= Math.ceil(merchantOrdersTotalCount/ORDERS_PER_PAGE)} className="h-14 px-8 bg-white text-slate-900 rounded-2xl flex items-center gap-3 font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all disabled:opacity-20">Próximo <span className="material-symbols-outlined">east</span></button>
-                            </div>
-                        </div>
-                      )}
-                    </div>
-                </div>
-              </div>
+            {activeTab === 'orders' && userRole === 'merchant' && (
+              <OrdersMerchantTab />
             )}
 {/* â â â â â â â ADMIN ORDERS â â â â â â â */}
             {activeTab === 'orders' && userRole === 'admin' && (
@@ -10921,6 +10779,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
       )}
 
     </div>
+    </AdminContext.Provider>
   );
 }
 
