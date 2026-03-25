@@ -217,7 +217,7 @@ const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClear, clas
         `https://places.googleapis.com/v1/places:autocomplete`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey },
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": GMAPS_KEY },
           body: JSON.stringify({ input, includedRegionCodes: ["br"], languageCode: "pt-BR" }),
         }
       );
