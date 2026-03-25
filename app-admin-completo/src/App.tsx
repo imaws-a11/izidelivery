@@ -8874,15 +8874,14 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                     setIsSaving(true);
                     try {
                       const { error } = await supabase
-                        .from('users')
+                        .from('users_delivery')
                         .update({
                           name: selectedUserStudio.name,
                           email: selectedUserStudio.email,
                           phone: selectedUserStudio.phone,
                           address: selectedUserStudio.address,
-                          avatar_url: selectedUserStudio.avatar_url,
                           is_active: selectedUserStudio.is_active,
-                          password: selectedUserStudio.password // A Trigger cuida do Firebase!
+                          password: selectedUserStudio.password
                         })
                         .eq('id', selectedUserStudio.id);
 
