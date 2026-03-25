@@ -642,7 +642,7 @@ function App() {
 
   useEffect(() => {
     // Firebase Auth Observer
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+    const unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
       if (user) {
         // Mapear usuário do Firebase para o formato esperado pelo App (simulando sessão do Supabase)
         const mockSession = {
@@ -655,6 +655,12 @@ function App() {
         
         setSession(mockSession);
         if (user.email) {
+          // Sincronizar dados do lojista no banco admin_users
+          await supabase.from("admin_users").upsert({
+            id: user.uid,
+            email: user.email,
+            role: 'merchant'
+          });
           fetchUserRole(user.email);
         }
       } else {

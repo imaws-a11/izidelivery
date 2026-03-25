@@ -1631,12 +1631,18 @@ function App() {
         setUserName(user.displayName || user.email?.split("@")[0] || "Usuário");
         setEmail(user.email || "");
         
-        // Sincronizar com o banco de dados Supabase (users_delivery)
-        await supabase.from("users_delivery").upsert({ 
-          id: user.uid, 
-          name: user.displayName || user.email?.split("@")[0] || "Usuário",
-          email: user.email
-        });
+        // Sincronizar com o banco de dados Supabase (Somente se NAO for lojista ou entregador)
+        const { data: isAdmin } = await supabase.from("admin_users").select("id").eq("id", user.uid).maybeSingle();
+        const { data: isDriver } = await supabase.from("drivers_delivery").select("id").eq("id", user.uid).maybeSingle();
+
+        if (!isAdmin && !isDriver) {
+          await supabase.from("users_delivery").upsert({ 
+            id: user.uid, 
+            name: user.displayName || user.email?.split("@")[0] || "Usuário",
+            email: user.email,
+            wallet_balance: 0 // Saldo inicial sempre 0
+          });
+        }
 
         setView("app");
         setAuthInitLoading(false);
