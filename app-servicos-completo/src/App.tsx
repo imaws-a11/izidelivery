@@ -991,12 +991,12 @@ function App() {
     address: "Buscando localização...",
     loading: true,
   });
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro" | "saldo" | "bitcoin_lightning">(() => (localStorage.getItem("preferredPaymentMethod") as any) || "cartao");
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro" | "cartao_entrega" | "saldo" | "bitcoin_lightning">(() => (localStorage.getItem("preferredPaymentMethod") as any) || "cartao");
+  const [changeFor, setChangeFor] = useState("");
   useEffect(() => {
     localStorage.setItem("preferredPaymentMethod", paymentMethod);
   }, [paymentMethod]);
   const [deliveryType] = useState<"delivery" | "pickup">("delivery");
-  const [changeFor] = useState<string>("");
 
   const [cpf, setCpf] = useState<string>("");
   const [orderNotes] = useState<string>("");
@@ -1977,6 +1977,7 @@ function App() {
       delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map(i => `${i.name} (R$ ${Number(i.price).toFixed(2)})`).join(', ')}`,
       payment_method: paymentMethod,
       service_type: selectedShop?.type || "restaurant",
+      notes: paymentMethod === "dinheiro" && changeFor ? `TROCO PARA: R$ ${changeFor}` : "",
     };
 
     const clearCart = () => {
@@ -2081,8 +2082,8 @@ function App() {
         return;
       }
 
-      // ── DINHEIRO (PAGAMENTO NA ENTREGA) ─────────────────────────────────
-      if (paymentMethod === "dinheiro") {
+      // ── DINHEIRO / CARTÃO NA ENTREGA ─────────────────────────────────
+      if (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") {
         if (!selectedShop?.id) { alert("Erro: Estabelecimento não selecionado."); setIsLoading(false); return; }
         
         const { data: order, error: insertError } = await supabase
@@ -2097,7 +2098,7 @@ function App() {
           .single();
 
         if (insertError || !order) {
-          console.error("Erro insert dinheiro:", insertError);
+          console.error(`Erro insert ${paymentMethod}:`, insertError);
           alert("Não foi possível processar o pedido. Erro: " + (insertError?.message || "Tente novamente."));
           setIsLoading(false);
           return;
@@ -2105,6 +2106,7 @@ function App() {
 
         setSelectedItem(order);
         clearCart();
+        setChangeFor("");
         navigateSubView("waiting_merchant");
         return;
       }
@@ -4742,10 +4744,11 @@ function App() {
       ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
 
     const paymentOptions = [
-      { id: "cartao",           icon: "credit_card", label: "Cartão de Crédito/Débito", sub: savedCards.length > 0 ? `${savedCards[0].brand} •••• ${savedCards[0].last4}` : "Adicionar cartão" },
+      { id: "cartao",           icon: "credit_card", label: "Cartão via App", sub: savedCards.length > 0 ? `${savedCards[0].brand} •••• ${savedCards[0].last4}` : "Pagar agora pelo app" },
       { id: "pix",              icon: "pix",         label: "PIX", sub: "Mercado Pago • Aprovação imediata" },
       { id: "saldo",            icon: "account_balance_wallet", label: "Saldo IZI", sub: `R$ ${walletBal.toFixed(2).replace(".",",")} disponível`, disabled: walletBal < total },
       { id: "dinheiro",         icon: "payments",    label: "Dinheiro na Entrega", sub: "Pague ao receber" },
+      { id: "cartao_entrega",   icon: "contactless", label: "Cartão na Entrega", sub: "Maquininha com o entregador" },
       { id: "bitcoin_lightning",icon: "bolt",        label: "Bitcoin Lightning", sub: "Pagamento instantâneo em BTC" },
     ];
 
@@ -4794,27 +4797,48 @@ function App() {
               </div>
 
               {paymentOptions.map((m) => (
-                <button key={m.id} onClick={() => !m.disabled && setPaymentMethod(m.id as any)}
-                  disabled={m.disabled}
-                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all active:scale-[0.98] ${
-                    paymentMethod === m.id
-                      ? "bg-yellow-400/5 shadow-[inset_0_0_0_1.5px_rgba(255,215,9,0.4)]"
-                      : m.disabled
-                        ? "opacity-40 cursor-not-allowed"
-                        : "hover:bg-zinc-900/50"
-                  }`}>
-                  <span className={`material-symbols-outlined text-xl ${paymentMethod === m.id ? "text-yellow-400" : "text-zinc-500"}`}
-                    style={{ fontVariationSettings: paymentMethod === m.id ? "'FILL' 1" : "'FILL' 0" }}>
-                    {m.icon}
-                  </span>
-                  <div className="flex-1 text-left">
-                    <p className={`font-black text-sm ${paymentMethod === m.id ? "text-white" : "text-zinc-400"}`}>{m.label}</p>
-                    <p className="text-zinc-600 text-xs mt-0.5">{m.sub}</p>
-                  </div>
-                  <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${paymentMethod === m.id ? "border-yellow-400" : "border-zinc-700"}`}>
-                    {paymentMethod === m.id && <div className="size-2.5 rounded-full bg-yellow-400" />}
-                  </div>
-                </button>
+                <div key={m.id} className="space-y-3">
+                  <button onClick={() => !m.disabled && setPaymentMethod(m.id as any)}
+                    disabled={m.disabled}
+                    className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all active:scale-[0.98] ${
+                      paymentMethod === m.id
+                        ? "bg-yellow-400/5 shadow-[inset_0_0_0_1.5px_rgba(255,215,9,0.4)]"
+                        : m.disabled
+                          ? "opacity-40 cursor-not-allowed"
+                          : "hover:bg-zinc-900/50"
+                    }`}>
+                    <span className={`material-symbols-outlined text-xl ${paymentMethod === m.id ? "text-yellow-400" : "text-zinc-500"}`}
+                      style={{ fontVariationSettings: paymentMethod === m.id ? "'FILL' 1" : "'FILL' 0" }}>
+                      {m.icon}
+                    </span>
+                    <div className="flex-1 text-left">
+                      <p className={`font-black text-sm ${paymentMethod === m.id ? "text-white" : "text-zinc-400"}`}>{m.label}</p>
+                      <p className="text-zinc-600 text-xs mt-0.5">{m.sub}</p>
+                    </div>
+                    <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${paymentMethod === m.id ? "border-yellow-400" : "border-zinc-700"}`}>
+                      {paymentMethod === m.id && <div className="size-2.5 rounded-full bg-yellow-400" />}
+                    </div>
+                  </button>
+
+                  <AnimatePresence>
+                    {paymentMethod === "dinheiro" && m.id === "dinheiro" && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden pl-14 pr-5 pb-2">
+                        <div className="bg-zinc-900/50 rounded-xl p-3 border border-zinc-800 focus-within:border-yellow-400/30 transition-all flex items-center gap-3">
+                          <span className="text-[10px] font-black text-zinc-500 uppercase shrink-0">Troco para:</span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={changeFor}
+                            onChange={(e) => setChangeFor(e.target.value.replace(/\D/g,""))}
+                            placeholder="Ex: 50,00"
+                            className="bg-transparent border-none outline-none text-white text-sm font-black w-full"
+                          />
+                        </div>
+                        <p className="text-[9px] text-zinc-600 mt-2 italic px-1">Deixe em branco se não precisar de troco.</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               ))}
 
               {/* Cartões salvos expandidos quando cartao selecionado */}
@@ -4919,7 +4943,7 @@ function App() {
                 style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.2)" }}>
                 {paymentMethod === "pix" ? "Gerar QR PIX" :
                  paymentMethod === "bitcoin_lightning" ? "Gerar Invoice Lightning" :
-                 paymentMethod === "dinheiro" ? "Confirmar — Pagar na Entrega" :
+                 (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") ? "Confirmar — Pagar na Entrega" :
                  `Confirmar Pedido — R$ ${total.toFixed(2).replace(".",",")}`}
               </button>
 
