@@ -594,14 +594,12 @@ function App() {
 
       if (data) {
         if (data.is_active === false) {
-          console.warn('[RBAC] Conta desativada:', cleanEmail);
           toastWarning('Sua conta de acesso está desativada. Entre em contato com o suporte.');
           handleLogout();
           return;
         }
 
         const role = (data.role as UserRole) || 'merchant';
-        console.log('[RBAC] Papel encontrado:', role);
         setUserRole(role);
         
         if (role === 'merchant') {
@@ -650,18 +648,16 @@ function App() {
             id: user.uid,
             email: user.email,
           },
-          access_token: 'firebase-token', // Se precisar do token real: await user.getIdToken()
+          access_token: 'firebase-token',
         } as any;
         
         setSession(mockSession);
         if (user.email) {
-          // Sincronizar dados do lojista no banco admin_users
-          await supabase.from("admin_users").upsert({
-            id: user.uid,
-            email: user.email,
-            role: 'merchant'
-          });
-          fetchUserRole(user.email);
+          // NOTA: Removido upsert automático para evitar sobrescrita de perfil no refresh
+          // O perfil deve ser gerenciado via Admin Panel ou Edge Function
+          await fetchUserRole(user.email);
+        } else {
+          setIsInitialLoading(false);
         }
       } else {
         setSession(null);
@@ -3439,16 +3435,32 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
   return (
     <AdminContext.Provider value={contextValue}>
       <div className="min-h-[100dvh] w-full bg-[#F4F5F7] font-display overflow-hidden relative">
-      {/* Session/Auth Screen */}
-      {!session && (
+      {/* 1. Loading Principal / Splash Screen */}
+      {isInitialLoading && (
+        <div className="fixed inset-0 z-[120] bg-[#111] flex flex-col items-center justify-center gap-6">
+          <div className="w-20 h-20 bg-primary/10 rounded-[32px] flex items-center justify-center mb-4">
+            <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+          </div>
+          <div className="text-center space-y-3">
+            <h2 className="text-xl font-black text-white uppercase tracking-tighter">Izi Delivery</h2>
+            <div className="flex flex-col items-center">
+              <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] animate-pulse">Sincronizando Sessão...</p>
+              <p className="text-[9px] text-slate-500 mt-2 font-bold uppercase tracking-widest leading-none">Verificando credenciais e permissões</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Tela de Login - Apenas se NÃO estiver em Loading e NÃO tiver sessão */}
+      {!isInitialLoading && !session && (
         <div className="fixed inset-0 z-[100] bg-[#111] flex items-center justify-center p-6 overflow-hidden font-display">
           <div className="absolute top-0 left-0 w-full h-full opacity-10 blur-[100px]">
             <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-primary rounded-full animate-pulse"></div>
             <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-white rounded-full animate-pulse delay-1000"></div>
           </div>
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
             className="w-full max-w-md bg-[#1A1A1A] border border-white/5 rounded-[48px] p-10 pt-12 shadow-2xl relative z-10"
           >
             <div className="text-center mb-10">
@@ -3479,7 +3491,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   className="w-full bg-white/5 border border-white/5 rounded-full px-8 py-5 text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 shadow-inner placeholder:text-slate-700"
                 />
               </div>
-                            {authError && (
+              {authError && (
                 <div className="bg-red-500/10 border border-red-500/30 rounded-2xl px-5 py-4 mt-4">
                   <p className="text-red-400 text-sm font-bold text-center">⚠️ {authError}</p>
                 </div>
@@ -3502,18 +3514,8 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         </div>
       )}
 
-      {/* Synchronizing Data Overlay */}
-      {session && isInitialLoading && (
-        <div className="fixed inset-0 z-[90] bg-[#111] flex flex-col items-center justify-center gap-6">
-          <div className="w-16 h-16 border-4 border-white/10 border-t-yellow-400 rounded-full animate-spin" />
-          <div className="text-center space-y-2">
-            <p className="text-sm font-black text-white uppercase tracking-widest animate-pulse">Carregando Painel...</p>
-            <p className="text-[10px] text-slate-500 font-medium">Sincronizando dados do sistema</p>
-          </div>
-        </div>
-      )}
-
-      {session && !isInitialLoading && (
+      {/* 3. Dashboard Principal - Se NÃO estiver em loading e TIVER sessão */}
+      {!isInitialLoading && session && (
         <div className="flex h-screen overflow-hidden w-full">
           <motion.div 
             initial={{ opacity: 0 }}
@@ -4367,19 +4369,23 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                             </td>
                             <td className="px-10 py-8">
                               <div className="flex items-center justify-end gap-3">
+                                {/* ── Botão Principal: Ver Detalhes ── */}
+                                <button
+                                  onClick={() => { setSelectedDriverStudio(d); setActiveStudioTab('personal'); }}
+                                  className="flex items-center gap-2 px-5 py-3 bg-primary text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.04] active:scale-95 transition-all"
+                                  title="Ver e editar detalhes completos"
+                                >
+                                  <span className="material-symbols-outlined text-base">manage_accounts</span>
+                                  Ver Detalhes
+                                </button>
+
+                                {/* ── Ações Rápidas ── */}
                                 <button
                                   onClick={() => window.open(`https://wa.me/55${d.phone?.replace(/\D/g, '')}`, '_blank')}
                                   className="size-11 flex items-center justify-center rounded-2xl bg-white dark:bg-slate-800 text-green-500 border border-slate-100 dark:border-slate-800 hover:bg-green-500 hover:text-white transition-all shadow-sm group/btn"
-                                  title="Enviar Mensagem"
+                                  title="Enviar WhatsApp"
                                 >
                                   <span className="material-symbols-outlined text-xl group-hover/btn:scale-110 transition-transform">chat</span>
-                                </button>
-                                <button
-                                  onClick={() => { setSelectedDriverStudio(d); setActiveStudioTab('personal'); }}
-                                  className="size-11 flex items-center justify-center rounded-2xl bg-white dark:bg-slate-800 text-blue-500 border border-slate-100 dark:border-slate-800 hover:bg-blue-500 hover:text-white transition-all shadow-sm"
-                                  title="Editar Perfil"
-                                >
-                                  <span className="material-symbols-outlined text-xl">manage_accounts</span>
                                 </button>
                                 <button
                                   onClick={() => handleUpdateDriverStatus(d.id, d.status === 'suspended' ? 'active' : 'suspended')}
