@@ -3,6 +3,14 @@ import { BespokeIcons } from "./lib/BespokeIcons";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "./lib/supabase";
+import { auth } from "./lib/firebase";
+import { 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut,
+  updateProfile
+} from "firebase/auth";
 import { toast, toastSuccess, toastError, toastWarning, showConfirm } from "./lib/useToast";
 import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 // Mercado Pago
@@ -1617,52 +1625,35 @@ function App() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setUserId(session.user.id);
-        setUserName(session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário");
-        setPhone(session.user.user_metadata?.phone || "");
-        setEmail(session.user.email || "");
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setUserId(user.uid);
+        setUserName(user.displayName || user.email?.split("@")[0] || "Usuário");
+        setEmail(user.email || "");
+        
+        // Sincronizar com o banco de dados Supabase (users_delivery)
+        await supabase.from("users_delivery").upsert({ 
+          id: user.uid, 
+          name: user.displayName || user.email?.split("@")[0] || "Usuário",
+          email: user.email
+        });
+
         setView("app");
         setAuthInitLoading(false);
         window.history.replaceState({ view: "app", tab: "home", subView: "none" }, "");
-        fetchMyOrders(session.user.id);
-        fetchWalletBalance(session.user.id);
-        fetchSavedCards(session.user.id);
-        fetchSavedAddresses(session.user.id);
+        
+        fetchMyOrders(user.uid);
+        fetchWalletBalance(user.uid);
+        fetchSavedCards(user.uid);
+        fetchSavedAddresses(user.uid);
         fetchCoupons();
         fetchBeveragePromo();
       } else {
-        // Sem sessão: para o loading e mostra a tela de login
         setView("login");
         setAuthInitLoading(false);
       }
     });
 
-
-
-    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        setUserId(session.user.id);
-        setUserName(session.user.user_metadata?.name || session.user.email?.split("@")[0] || "Usuário");
-        setPhone(session.user.user_metadata?.phone || "");
-        setEmail(session.user.email || "");
-        setView("app");
-        setAuthInitLoading(false);
-        window.history.replaceState({ view: "app", tab: "home", subView: "none" }, "");
-        fetchMyOrders(session.user.id);
-        fetchWalletBalance(session.user.id);
-        fetchSavedCards(session.user.id);
-        fetchSavedAddresses(session.user.id);
-        fetchCoupons();
-      } else if (event === "SIGNED_OUT") {
-        setUserId(null);
-        setView("login");
-        setTab("home");
-        setSubView("none");
-      }
-
-    });
     const sub = supabase
       .channel("orders_tracking")
       .on(
@@ -1703,7 +1694,6 @@ function App() {
 
             // Abrir tela de avaliação ao concluir (exceto para assinaturas Izi Black)
             if (newOrder.status === 'concluido') {
-              // Garantir que o item concluído seja o selecionado para o feedback
               setSelectedItem(newOrder);
               
               setTimeout(() => {
@@ -1717,49 +1707,42 @@ function App() {
             }
 
             // Transições automáticas de tela baseadas no status
-            
-            // 1. Se estava na tela de aguardando loja e ela aceitou (aceito, confirmado ou já preparando)
             if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
               showToast("Loja aceitou seu pedido! 🎉", "success");
               setSelectedItem(newOrder); 
               setTimeout(() => setSubView("payment_success"), 1000);
             }
-            // 2. Se estava na tela de aguardando loja e ela recusou
             if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
               showToast("Seu pedido foi recusado.", "warning");
               setSubView("none");
               fetchMyOrders(userId!);
             }
-            // 3. Se estava na tela de aguardando motorista e ele aceitou
             if (subViewRef.current === "waiting_driver" && 
                 ["a_caminho", "aceito", "confirmado", "em_rota", "no_local", "picked_up", "saiu_para_entrega"].includes(newOrder.status)) {
               setSelectedItem(newOrder);
               setTimeout(() => setSubView("active_order"), 1500);
             }
-            // 4. Se estava na tela de aguardando motorista e o pedido foi cancelado
             if (subViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {
               setSubView("none");
               fetchMyOrders(userId!);
             }
 
-            // ATUALIZAÇÃO GLOBAL DE STATUS DO PEDIDO ATUAL (Tracking em tempo real)
-            // Se o usuário estiver vendo os detalhes DESTE pedido específico, OU se o pedido for o mais recente dele
             if (selectedItem?.id === newOrder.id || !selectedItem) {
               setSelectedItem(newOrder);
             }
           }
           
-          // Atualizar lista completa de pedidos em background
           if (userIdRef.current) fetchMyOrders(userIdRef.current);
         },
       )
       .subscribe();
 
     return () => {
+      unsubscribe();
       supabase.removeChannel(sub);
     };
   }, [userId]);
-
+  
   const fetchMyOrders = async (uid: string) => {
     const { data } = await supabase
       .from("orders_delivery")
@@ -1872,37 +1855,27 @@ function App() {
     setErrorMsg("");
     try {
       if (authMode === 'login') {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-          if (error.message.includes('Invalid login')) {
-            setErrorMsg('Email ou senha incorretos.');
-          } else {
-            setErrorMsg(error.message);
-          }
-          return;
-        }
-        await supabase.from("users_delivery").upsert({ id: data.user!.id, name: data.user!.user_metadata?.name || "Usuário" });
-        setUserId(data.user!.id);
+        await signInWithEmailAndPassword(auth, email, password);
       } else {
         // Register
-        if (!userName.trim()) { setErrorMsg('Informe seu nome completo.'); return; }
-        if (!phone.trim()) { setErrorMsg('Informe seu telefone.'); return; }
-        if (password.length < 6) { setErrorMsg('A senha deve ter no mínimo 6 caracteres.'); return; }
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { name: userName.trim(), phone: phone.trim() } },
+        if (!userName.trim()) { setErrorMsg('Informe seu nome completo.'); setIsLoading(false); return; }
+        if (!phone.trim()) { setErrorMsg('Informe seu telefone.'); setIsLoading(false); return; }
+        if (password.length < 6) { setErrorMsg('A senha deve ter no mínimo 6 caracteres.'); setIsLoading(false); return; }
+        
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        await updateProfile(user, {
+          displayName: userName.trim()
         });
-        if (signUpError) {
-          if (signUpError.message.includes('already registered')) {
-            setErrorMsg('Este email já está cadastrado. Faça login.');
-          } else {
-            setErrorMsg(signUpError.message);
-          }
-          return;
-        }
-        await supabase.from("users_delivery").upsert({ id: signUpData.user!.id, name: userName.trim(), phone: phone.trim() });
-        setUserId(signUpData.user!.id);
+
+        // Sincronizar com o banco de dados Supabase (users_delivery)
+        await supabase.from("users_delivery").upsert({ 
+          id: user.uid, 
+          name: userName.trim(), 
+          phone: phone.trim(),
+          email: email
+        });
       }
 
       if (rememberMe) {
@@ -1915,8 +1888,9 @@ function App() {
 
       setView("app");
       window.history.replaceState({ view: "app", tab: "home", subView: "none" }, "");
-    } catch (e: any) {
-      setErrorMsg(e.message);
+    } catch (err: any) {
+      console.error("Auth error:", err);
+      setErrorMsg(err.code === 'auth/invalid-credential' ? 'Email ou senha incorretos.' : err.message);
     } finally {
       setIsLoading(false);
     }
@@ -2155,16 +2129,10 @@ function App() {
     }
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({ 
-        email: loginEmail, 
-        password: loginPassword 
-      });
-      if (error) { 
-        console.error("Login error:", error); 
-        setLoginError(error.message === 'Invalid login credentials' ? 'Email ou senha inválidos.' : error.message); 
-      }
+      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
     } catch (err: any) {
-      setLoginError(err.message);
+      console.error("Login error:", err); 
+      setLoginError(err.code === 'auth/invalid-credential' ? 'Email ou senha inválidos.' : err.message); 
     } finally {
       setIsLoading(false);
     }
@@ -2190,29 +2158,23 @@ function App() {
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({ 
-        email: loginEmail, 
-        password: loginPassword,
-        options: {
-          data: {
-            name: userName.trim(),
-            phone: phone.trim()
-          }
-        }
+      const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, loginPassword);
+      const user = userCredential.user;
+      
+      await updateProfile(user, {
+        displayName: userName.trim()
       });
-      
-      if (error) {
-        console.error("SignUp error:", error);
-        setLoginError(error.message);
-        return;
-      }
-      
-      // O perfil (users_delivery) agora é criado via trigger no banco (handle_new_user)
-      if (data?.user) {
-        setLoginError("Conta criada! Se o e-mail de confirmação estiver ativo, verifique sua caixa de entrada.");
-        // Se autologin estiver on, o useEffect da sessão cuidará do redirecionamento
-      }
+
+      // Sincronizar manual imediata (opcional, pois o useEffect cuidará disso ao disparar o onAuthStateChanged)
+      await supabase.from("users_delivery").upsert({ 
+        id: user.uid, 
+        name: userName.trim(), 
+        phone: phone.trim(),
+        email: loginEmail
+      });
+
     } catch (err: any) {
+      console.error("SignUp error:", err);
       setLoginError(err.message);
     } finally {
       setIsLoading(false);
@@ -5019,7 +4981,7 @@ function App() {
             amount: Number(total.toFixed(2)),
             orderId: order.id,
             payment_method_id: 'pix',
-            email: userEmail || (await supabase.auth.getUser()).data.user?.email || "cliente@izidelivery.com",
+            email: userEmail || auth.currentUser?.email || email || "cliente@izidelivery.com",
             customer: {
               cpf: pixCpf.replace(/\D/g,""),
               name: userName || "Cliente IziDelivery",
@@ -5203,7 +5165,7 @@ function App() {
                     orderId: order.id,
                     payment_method_id: brand.toLowerCase().includes('visa') ? 'visa' : 'master',
                     token: token,
-                    email: (await supabase.auth.getUser()).data.user?.email || "cliente@izidelivery.com",
+                    email: auth.currentUser?.email || email || "cliente@izidelivery.com",
                     installments: 1
                 },
             });
@@ -5527,7 +5489,7 @@ function App() {
 
         {/* LOGOUT */}
         <div className="px-5 mt-2 pb-4">
-          <button onClick={async () => { await supabase.auth.signOut(); setView("login"); setTab("home"); setSubView("none"); }}
+          <button onClick={async () => { await signOut(auth); setView("login"); setTab("home"); setSubView("none"); }}
             className="w-full flex items-center justify-center gap-3 py-4 text-red-400/60 hover:text-red-400 transition-all active:scale-[0.98] group">
             <span className="material-symbols-outlined text-lg">logout</span>
             <span className="font-black text-sm uppercase tracking-wider">Sair da Conta</span>
@@ -6466,7 +6428,7 @@ function App() {
               amount: total,
               orderId: orderData.id,
               payment_method_id: 'pix',
-              email: (await supabase.auth.getUser()).data.user?.email || "cliente@izidelivery.com",
+              email: auth.currentUser?.email || email || "cliente@izidelivery.com",
               customer: { name: userName, cpf: cpf }
             },
           });
