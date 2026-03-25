@@ -8703,7 +8703,211 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         )
       }
 
-        {selectedDriverStudio && (
+        {selectedUserStudio && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 md:p-10 text-slate-900 overflow-hidden">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setSelectedUserStudio(null)}></div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-[56px] overflow-hidden shadow-2xl relative z-10 flex flex-col md:flex-row h-[90vh]"
+          >
+            {/* Left Header Panel: Quick Info */}
+            <div className="w-full md:w-80 bg-slate-50 dark:bg-slate-950/50 p-10 flex flex-col items-center justify-center text-center gap-6 shrink-0 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800">
+              <div className="relative group overflow-hidden size-40 rounded-full bg-white dark:bg-slate-800 border-8 border-white dark:border-slate-900 shadow-xl">
+                <img
+                  src={selectedUserStudio.avatar_url || `https://ui-avatars.com/api/?name=${selectedUserStudio.name}&background=ffd900&color=000&size=128&bold=true`}
+                  className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                />
+                <button
+                  onClick={async () => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = async (e: any) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setIsSaving(true);
+                      const url = await handleFileUpload(file, 'avatars');
+                      if (url) setSelectedUserStudio({ ...selectedUserStudio, avatar_url: url });
+                      setIsSaving(false);
+                    };
+                    input.click();
+                  }}
+                  className="absolute inset-x-0 bottom-0 h-10 bg-black/60 backdrop-blur-md text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[8px] font-black uppercase tracking-widest"
+                >
+                  Mudar Foto
+                </button>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white leading-tight mb-1">{selectedUserStudio.name}</h3>
+                <p className="text-xs font-bold text-slate-500">{selectedUserStudio.email}</p>
+                <div className="inline-flex mt-4 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 items-center gap-2">
+                   <span className="inline-block size-2 rounded-full bg-primary animate-pulse"></span>
+                   <span className="text-[10px] font-black text-primary uppercase tracking-widest">Cliente Verificado</span>
+                </div>
+              </div>
+
+              <div className="w-full h-px bg-slate-200 dark:bg-slate-800"></div>
+
+              <div className="grid grid-cols-2 w-full gap-4">
+                 <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Pedidos</p>
+                    <p className="text-lg font-black text-slate-900 dark:text-white">0</p>
+                 </div>
+                 <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Gasto</p>
+                    <p className="text-lg font-black text-slate-900 dark:text-white">R$ 0</p>
+                 </div>
+              </div>
+            </div>
+
+            {/* Right Panel: Content */}
+            <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-slate-900">
+              {/* Header Tab Bar */}
+              <div className="px-10 py-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
+                <div className="flex gap-8">
+                  <button className="relative pb-2">
+                    <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Informações Gerais</span>
+                    <span className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-full"></span>
+                  </button>
+                  <button className="relative pb-2 opacity-30 hover:opacity-100 transition-opacity">
+                    <span className="text-sm font-black text-slate-400 uppercase tracking-widest">Histórico de Pedidos</span>
+                  </button>
+                </div>
+                <button onClick={() => setSelectedUserStudio(null)} className="size-12 rounded-full flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                   <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              {/* Form Content */}
+              <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Nome Completo</label>
+                    <input
+                      type="text"
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-3xl px-6 py-5 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary shadow-sm"
+                      value={selectedUserStudio.name}
+                      onChange={e => setSelectedUserStudio({ ...selectedUserStudio, name: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">E-mail de Login</label>
+                    <input
+                      type="email"
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-3xl px-6 py-5 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary shadow-sm"
+                      value={selectedUserStudio.email}
+                      onChange={e => setSelectedUserStudio({ ...selectedUserStudio, email: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Telefone / WhatsApp</label>
+                    <input
+                      type="text"
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-3xl px-6 py-5 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary shadow-sm"
+                      value={selectedUserStudio.phone || ''}
+                      onChange={e => setSelectedUserStudio({ ...selectedUserStudio, phone: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Senha de Acesso</label>
+                    <div className="flex gap-2">
+                       <input
+                        type="text"
+                        placeholder="••••••••"
+                        className="flex-1 bg-slate-50 dark:bg-slate-800 border-none rounded-3xl px-6 py-5 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary shadow-sm"
+                        value={selectedUserStudio.password || ''}
+                        onChange={e => setSelectedUserStudio({ ...selectedUserStudio, password: e.target.value })}
+                      />
+                      <button 
+                        onClick={() => {
+                          const newPass = 'izi' + Math.floor(100000 + Math.random() * 900000);
+                          setSelectedUserStudio({ ...selectedUserStudio, password: newPass });
+                        }}
+                        className="px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl text-slate-500 hover:text-primary transition-colors"
+                        title="Gerar senha aleatória"
+                      >
+                        <span className="material-symbols-outlined">refresh</span>
+                      </button>
+                    </div>
+                    <p className="text-[9px] text-slate-400 italic ml-2">Defina uma senha se desejar que o cliente mude a atual.</p>
+                  </div>
+
+                  <div className="space-y-3 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Endereço Principal</label>
+                    <input
+                      type="text"
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-3xl px-6 py-5 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary shadow-sm"
+                      value={selectedUserStudio.address || ''}
+                      onChange={e => setSelectedUserStudio({ ...selectedUserStudio, address: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Status da Conta</label>
+                    <button
+                      onClick={() => setSelectedUserStudio({ ...selectedUserStudio, is_active: !selectedUserStudio.is_active })}
+                      className={`w-full h-16 rounded-[28px] border transition-all flex items-center px-8 gap-4 ${selectedUserStudio.is_active ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}
+                    >
+                      <span className="material-symbols-outlined">{selectedUserStudio.is_active ? 'check_circle' : 'block'}</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">{selectedUserStudio.is_active ? 'Usuário Ativo' : 'Usuário Bloqueado'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Footer */}
+              <div className="p-10 border-t border-slate-50 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-end gap-5">
+                <button
+                  onClick={() => setSelectedUserStudio(null)}
+                  className="px-10 py-6 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-slate-900 transition-colors"
+                >
+                  Descartar
+                </button>
+                <button
+                  disabled={isSaving}
+                  onClick={async () => {
+                    setIsSaving(true);
+                    try {
+                      const { error } = await supabase
+                        .from('users')
+                        .update({
+                          name: selectedUserStudio.name,
+                          email: selectedUserStudio.email,
+                          phone: selectedUserStudio.phone,
+                          address: selectedUserStudio.address,
+                          avatar_url: selectedUserStudio.avatar_url,
+                          is_active: selectedUserStudio.is_active,
+                          password: selectedUserStudio.password // A Trigger cuida do Firebase!
+                        })
+                        .eq('id', selectedUserStudio.id);
+
+                      if (error) throw error;
+                      toastSuccess('Perfil do cliente atualizado com sucesso!');
+                      setSelectedUserStudio(null);
+                      fetchUsers();
+                    } catch (err: any) {
+                      toastError(err.message || 'Erro ao salvar alterações');
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
+                  className="px-14 py-6 bg-primary text-slate-900 font-black text-[10px] uppercase tracking-widest rounded-full shadow-[0_20px_40px_rgba(255,217,0,0.3)] hover:scale-[1.05] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  <span className={`material-symbols-outlined text-xl font-bold ${isSaving ? 'animate-spin' : ''}`}>{isSaving ? 'sync' : 'done_all'}</span>
+                  {isSaving ? 'Processando...' : 'Confirmar & Salvar Alterações'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {selectedDriverStudio && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 md:p-10 text-slate-900 overflow-hidden">
             <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-3xl" onClick={() => setSelectedDriverStudio(null)}></div>
             
@@ -9097,488 +9301,6 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         </div>
       )}
 
-      {/* ••••••• Client Detail Studio (Comprehensive Editing) ••••••• */}
-      {selectedUserStudio && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 md:p-10 text-slate-900 overflow-hidden">
-          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-3xl" onClick={() => setSelectedUserStudio(null)}></div>
-          
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 40 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-hidden shadow-[0_0_120px_rgba(0,0,0,0.5)] relative z-10 flex flex-col border border-white/10 dark:border-slate-800 h-[92vh]"
-          >
-            {/* Header */}
-            <div className="p-8 md:p-12 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/30">
-              <div className="flex items-center gap-6">
-                <div className="size-20 rounded-[32px] bg-primary/20 flex items-center justify-center text-primary border border-primary/20 shadow-inner">
-                  <span className="material-symbols-outlined text-4xl font-black">person</span>
-                </div>
-                <div>
-                  <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">Estúdio do Cliente</h2>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
-                    {(typeof selectedUserStudio.id === 'string' && selectedUserStudio.id.startsWith('new-')) ? 'Novo Cadastro Operacional' : `ID: ${selectedUserStudio.id?.substring(0, 8)}...`}
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setSelectedUserStudio(null)}
-                className="size-14 rounded-3xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-red-500 transition-all border border-slate-200 dark:border-slate-700 shadow-xl hover:rotate-90"
-              >
-                <span className="material-symbols-outlined text-2xl font-bold">close</span>
-              </button>
-            </div>
-
-            {/* Navigation Tabs */}
-            <div className="px-12 py-2 bg-slate-50 dark:bg-slate-950/50 border-b border-slate-100 dark:border-slate-800 flex gap-10 overflow-x-auto no-scrollbar">
-              {[
-                { id: 'personal', label: 'Cadastro Base', icon: 'account_circle' },
-                { id: 'wallet', label: 'Carteira & Saldo', icon: 'wallet' },
-                { id: 'security', label: 'Segurança & Status', icon: 'verified_user' },
-                { id: 'iziblack', label: 'Izi Black VIP', icon: 'workspace_premium' },
-              ].map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => setActiveStudioTab(t.id as any)}
-                  className={`flex items-center gap-3 py-6 px-4 border-b-4 transition-all whitespace-nowrap group ${activeStudioTab === t.id ? 'border-primary text-slate-900 dark:text-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-                >
-                  <span className={`material-symbols-outlined text-2xl ${activeStudioTab === t.id ? 'font-fill text-primary' : 'group-hover:scale-110 transition-transform'}`}>{t.icon}</span>
-                  <span className="text-xs font-black uppercase tracking-[0.15em]">{t.label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Scrollable Form Area */}
-            <div className="flex-1 overflow-y-auto p-12 scrollbar-hide">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeStudioTab}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="max-w-4xl mx-auto w-full"
-                >
-                  {activeStudioTab === 'personal' && (
-                    <div className="space-y-12">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                        <div className="flex flex-col items-center gap-6">
-                          <div className="size-48 rounded-[56px] bg-slate-100 dark:bg-slate-800 border-8 border-white dark:border-slate-700 shadow-2xl overflow-hidden relative group cursor-pointer ring-4 ring-primary/5">
-                            <img 
-                              src={`https://ui-avatars.com/api/?name=${selectedUserStudio.name || 'C'}&background=ffd900&color=000&size=256&bold=true`} 
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                            />
-                            <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <span className="material-symbols-outlined text-white text-5xl drop-shadow-lg">photo_camera</span>
-                            </div>
-                          </div>
-                          <div className="text-center">
-                            <div className={`px-6 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border shadow-sm ${selectedUserStudio.is_active ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
-                              <span className={`size-2.5 rounded-full ${selectedUserStudio.is_active ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
-                              {selectedUserStudio.is_active ? 'Conta Verificada' : 'Conta Restrita'}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="md:col-span-2 space-y-8">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-3">
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nome Completo</label>
-                               <input 
-                                 type="text" 
-                                 value={selectedUserStudio.name || ''}
-                                 onChange={e => setSelectedUserStudio({...selectedUserStudio, name: e.target.value})}
-                                 className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-primary/20 dark:text-white transition-all shadow-inner"
-                                 placeholder="Nome do cliente"
-                               />
-                            </div>
-                            <div className="space-y-3">
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Telefone / WhatsApp</label>
-                               <input 
-                                 type="text" 
-                                 value={selectedUserStudio.phone || ''}
-                                 onChange={e => setSelectedUserStudio({...selectedUserStudio, phone: e.target.value})}
-                                 className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-primary/20 dark:text-white transition-all shadow-inner"
-                                 placeholder="(00) 00000-0000"
-                               />
-                            </div>
-                            <div className="space-y-3">
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">E-mail</label>
-                               <input 
-                                 type="email" 
-                                 value={selectedUserStudio.email || ''}
-                                 onChange={e => setSelectedUserStudio({...selectedUserStudio, email: e.target.value})}
-                                 className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-primary/20 dark:text-white transition-all shadow-inner"
-                                 placeholder="cliente@exemplo.com"
-                               />
-                            </div>
-                            <div className="space-y-3">
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">CPF</label>
-                               <input 
-                                 type="text" 
-                                 value={(selectedUserStudio as any).cpf || ''}
-                                 onChange={e => setSelectedUserStudio({...selectedUserStudio, cpf: e.target.value} as any)}
-                                 className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-primary/20 dark:text-white transition-all shadow-inner"
-                                 placeholder="000.000.000-00"
-                               />
-                            </div>
-                            <div className="space-y-3">
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Data de Nascimento</label>
-                               <input 
-                                 type="date" 
-                                 value={(selectedUserStudio as any).birth_date || ''}
-                                 onChange={e => setSelectedUserStudio({...selectedUserStudio, birth_date: e.target.value} as any)}
-                                 className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-primary/20 dark:text-white transition-all shadow-inner"
-                               />
-                            </div>
-                            <div className="space-y-3">
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Gênero</label>
-                               <div className="relative">
-                                 <select 
-                                   value={(selectedUserStudio as any).gender || ''}
-                                   onChange={e => setSelectedUserStudio({...selectedUserStudio, gender: e.target.value} as any)}
-                                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-primary/20 dark:text-white transition-all shadow-inner appearance-none cursor-pointer"
-                                 >
-                                   <option value="">Selecionar</option>
-                                   <option value="masculino">Masculino</option>
-                                   <option value="feminino">Feminino</option>
-                                   <option value="outro">Outro</option>
-                                   <option value="prefiro_nao_informar">Prefiro não informar</option>
-                                 </select>
-                                 <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
-                               </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Endereço Completo */}
-                      <div className="p-10 rounded-[48px] bg-blue-50/30 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10 shadow-inner space-y-8">
-                        <div className="flex items-center gap-4 mb-2">
-                          <div className="size-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-600">
-                            <span className="material-symbols-outlined text-2xl font-bold">location_on</span>
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Endereço Residencial</h4>
-                            <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest italic">Localização Principal do Cliente</p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                          <div className="space-y-3">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">CEP</label>
-                             <input type="text" value={(selectedUserStudio as any).zip_code || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, zip_code: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-blue-500/20 dark:text-white transition-all shadow-sm" placeholder="00000-000" />
-                          </div>
-                          <div className="md:col-span-3 space-y-3">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Rua / Avenida / Logradouro</label>
-                             <input type="text" value={(selectedUserStudio as any).address || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, address: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-blue-500/20 dark:text-white transition-all shadow-sm" placeholder="Nome da rua" />
-                          </div>
-                          <div className="space-y-3">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Número</label>
-                             <input type="text" value={(selectedUserStudio as any).address_number || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, address_number: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-blue-500/20 dark:text-white transition-all shadow-sm" placeholder="123" />
-                          </div>
-                          <div className="space-y-3">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Complemento</label>
-                             <input type="text" value={(selectedUserStudio as any).address_complement || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, address_complement: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-blue-500/20 dark:text-white transition-all shadow-sm" placeholder="Apto 12, Bloco B" />
-                          </div>
-                          <div className="space-y-3">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Bairro</label>
-                             <input type="text" value={(selectedUserStudio as any).neighborhood || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, neighborhood: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-blue-500/20 dark:text-white transition-all shadow-sm" placeholder="Nome do bairro" />
-                          </div>
-                          <div className="space-y-3">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Cidade</label>
-                             <input type="text" value={(selectedUserStudio as any).city || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, city: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-blue-500/20 dark:text-white transition-all shadow-sm" placeholder="Nome da cidade" />
-                          </div>
-                          <div className="md:col-span-2 space-y-3">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Estado (UF)</label>
-                             <div className="relative">
-                               <select value={(selectedUserStudio as any).state || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, state: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] px-8 py-5 font-bold text-base focus:ring-4 focus:ring-blue-500/20 dark:text-white transition-all shadow-sm appearance-none cursor-pointer">
-                                 <option value="">Selecionar UF</option>
-                                 {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => <option key={uf} value={uf}>{uf}</option>)}
-                               </select>
-                               <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
-                             </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Observações Internas */}
-                      <div className="p-10 rounded-[48px] bg-amber-50/30 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10 shadow-inner space-y-6">
-                        <div className="flex items-center gap-4 mb-2">
-                          <div className="size-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-600">
-                            <span className="material-symbols-outlined text-2xl font-bold">sticky_note_2</span>
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Observações Internas</h4>
-                            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest italic">Visível apenas para administradores</p>
-                          </div>
-                        </div>
-                        <textarea value={(selectedUserStudio as any).notes || ''} onChange={e => setSelectedUserStudio({...selectedUserStudio, notes: e.target.value} as any)} className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl px-8 py-5 font-bold text-sm focus:ring-4 focus:ring-amber-500/20 dark:text-white transition-all shadow-sm h-32 resize-none" placeholder="Anotações sobre o cliente, preferências, restrições, informações relevantes..." />
-                      </div>
-
-                      <div className="p-10 rounded-[48px] bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/50 shadow-inner">
-                        <div className="flex items-center gap-4 mb-8">
-                          <div className="size-12 rounded-2xl bg-primary flex items-center justify-center text-slate-900 shadow-lg shadow-primary/20">
-                            <span className="material-symbols-outlined text-2xl font-bold">history</span>
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-black uppercase tracking-[0.2em] dark:text-white">Resumo Cronológico</h4>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Dados gerados pelo sistema</p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <div className="p-6 rounded-3xl bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700">
-                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Cliente desde</span>
-                             <span className="text-xl font-black text-slate-900 dark:text-white">
-                                {selectedUserStudio.created_at ? new Date(selectedUserStudio.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Novo Registro'}
-                             </span>
-                          </div>
-                          <div className="p-6 rounded-3xl bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700">
-                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">ID Global</span>
-                             <span className="text-xs font-mono font-bold text-slate-500 truncate block">
-                                {selectedUserStudio.id}
-                             </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {activeStudioTab === 'wallet' && (
-                    <div className="space-y-10">
-                      <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-12 rounded-[56px] text-white shadow-2xl shadow-emerald-500/20 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-110 transition-transform">
-                           <span className="material-symbols-outlined text-[160px] font-black">account_balance_wallet</span>
-                        </div>
-                        <div className="relative z-10">
-                          <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80 mb-4">Saldo Disponível na Carteira</p>
-                          <h3 className="text-6xl font-black tracking-tighter mb-4 flex items-baseline gap-2">
-                            <span className="text-2xl font-bold opacity-60">R$</span>
-                            {selectedUserStudio.wallet_balance?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0,00'}
-                          </h3>
-                          <div className="flex gap-4">
-                             <button onClick={() => setShowAddCreditModal(true)} className="px-6 py-3 bg-white/20 backdrop-blur-md rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/30 transition-all border border-white/20">Adicionar Créditos</button>
-                             <button onClick={() => setShowWalletStatementModal(true)} className="px-6 py-3 bg-black/10 backdrop-blur-md rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black/20 transition-all border border-white/5">Extrato Detalhado</button>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-10 rounded-[48px] bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/50 shadow-inner">
-                         <h4 className="text-xs font-black uppercase tracking-[0.2em] dark:text-white mb-8 flex items-center gap-3">
-                           <span className="size-2 rounded-full bg-emerald-500"></span>
-                           Histórico Recente de Transações
-                         </h4>
-                         <div className="space-y-4">
-                            {isWalletLoading ? (
-                              <div className="flex items-center gap-3 h-20 px-6">
-                                <span className="material-symbols-outlined animate-spin text-emerald-500">progress_activity</span>
-                                <span className="text-xs font-bold text-slate-400">Carregando carteira...</span>
-                              </div>
-                            ) : walletTransactions.length === 0 ? (
-                              <div className="flex flex-col items-center justify-center p-10 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl text-center">
-                                <span className="material-symbols-outlined text-4xl text-slate-300 dark:text-slate-600 mb-2">receipt_long</span>
-                                <span className="text-xs font-bold text-slate-400">Nenhuma transação encontrada</span>
-                              </div>
-                            ) : (
-                              walletTransactions.slice(0, 5).map(tx => {
-                                const isPositive = tx.type === 'deposito' || tx.type === 'reembolso';
-                                return (
-                                <div key={tx.id} className="flex items-center justify-between p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm transition-all hover:scale-[1.01]">
-                                   <div className="flex items-center gap-4">
-                                      <div className={`size-10 rounded-xl flex items-center justify-center ${!isPositive ? 'bg-red-50 text-red-500 dark:bg-red-500/10 dark:text-red-400' : 'bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10 dark:text-emerald-400'}`}>
-                                         <span className="material-symbols-outlined text-xl">{!isPositive ? 'shopping_bag' : 'add_circle'}</span>
-                                      </div>
-                                      <div>
-                                         <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{tx.description || (!isPositive ? 'Uso de Saldo' : 'Aporte de Saldo')}</p>
-                                         <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })} • {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
-                                      </div>
-                                   </div>
-                                   <span className={`text-sm font-black ${!isPositive ? 'text-red-500' : 'text-emerald-500'}`}>
-                                     {!isPositive ? '- ' : '+ '}R$ {Number(tx.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                   </span>
-                                </div>
-                              )})
-                            )}
-                         </div>
-                      </div>
-
-
-                    </div>
-                  )}
-
-                  {activeStudioTab === 'iziblack' && (
-                    <div className="space-y-12">
-                      <div className="p-10 rounded-[48px] bg-slate-950 border border-slate-800 shadow-2xl relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-[80px] -mr-20 -mt-20 group-hover:bg-white/10 transition-colors"></div>
-                        <div className="flex items-center gap-6 mb-10 relative z-10">
-                          <div className="size-16 rounded-3xl bg-gradient-to-br from-slate-700 to-black flex items-center justify-center text-white shadow-xl shadow-black/50 border border-white/10">
-                            <span className="material-symbols-outlined text-3xl font-bold fill-1">workspace_premium</span>
-                          </div>
-                          <div>
-                            <h4 className="text-xl font-black uppercase tracking-tight text-white">Programa Izi Black</h4>
-                            <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Painel Administrativo VIP</p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-                           <div className="space-y-4">
-                              <label className="text-[10px] font-black text-white/50 uppercase tracking-widest ml-4">Status da Assinatura</label>
-                              <div className="relative">
-                                <select 
-                                  value={selectedUserStudio.is_izi_black ? 'active' : 'inactive'}
-                                  onChange={e => setSelectedUserStudio({...selectedUserStudio, is_izi_black: e.target.value === 'active'})}
-                                  className="w-full bg-white/5 border border-white/10 rounded-3xl px-8 py-5 font-black text-sm focus:ring-4 focus:ring-white/10 text-white appearance-none cursor-pointer"
-                                >
-                                  <option value="active" className="text-black">🟢 Assinatura VIP Ativa</option>
-                                  <option value="inactive" className="text-black">⚪ Sem Assinatura (Conta Comum)</option>
-                                </select>
-                                <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none">expand_more</span>
-                              </div>
-                           </div>
-                           <div className="p-6 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-between">
-                              <div>
-                                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Cashback Histórico Ganho</p>
-                                <p className="text-3xl font-black text-white tabular-nums italic">R$ <span className="text-emerald-400">{(selectedUserStudio.cashback_earned || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}</span></p>
-                              </div>
-                           </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {activeStudioTab === 'security' && (
-                    <div className="space-y-12">
-                      <div className="p-10 rounded-[48px] bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/50 shadow-inner">
-                        <div className="flex items-center gap-4 mb-10">
-                          <div className="size-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-                            <span className="material-symbols-outlined text-2xl font-bold">lock</span>
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-black uppercase tracking-[0.2em] dark:text-white">Estado Crítico & Segurança</h4>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controles de acesso do usuário</p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                           <div className="space-y-4">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Status Transacional</label>
-                              <div className="relative">
-                                <select 
-                                  value={selectedUserStudio.status || 'active'}
-                                  onChange={e => setSelectedUserStudio({...selectedUserStudio, status: e.target.value, is_active: e.target.value === 'active'})}
-                                  className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl px-8 py-5 font-bold text-sm focus:ring-4 focus:ring-primary/20 dark:text-white appearance-none cursor-pointer shadow-sm"
-                                >
-                                  <option value="active">🟢 Ativo (Acesso Total)</option>
-                                  <option value="inactive">⚪ Inativo (Apenas Leitura)</option>
-                                  <option value="suspended">🟡 Suspenso (Ação Requerida)</option>
-                                  <option value="blocked">🔴 Bloqueado (Acesso Negado)</option>
-                                </select>
-                                <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
-                              </div>
-                           </div>
-                           <div className="space-y-4">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Autenticação</label>
-                              <button className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl px-8 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 shadow-sm hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2">
-                                <span className="material-symbols-outlined text-lg">key</span>
-                                Resetar Senha por E-mail
-                              </button>
-                           </div>
-                        </div>
-                      </div>
-
-                      <div className="p-10 rounded-[56px] border-4 border-dashed border-red-100 dark:border-red-900/30 flex flex-col items-center text-center gap-6 py-16">
-                         <div className="size-20 rounded-[32px] bg-red-50 dark:bg-red-500/10 flex items-center justify-center text-red-500">
-                           <span className="material-symbols-outlined text-4xl font-black">gpp_maybe</span>
-                         </div>
-                         <div>
-                            <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Zona de Exclusão</h4>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest max-w-sm mx-auto">Estas ações são permanentes e afetarão todos os dados históricos deste cliente.</p>
-                         </div>
-                         <button className="px-10 py-5 bg-red-500 text-white font-black text-[10px] uppercase tracking-widest rounded-3xl shadow-2xl shadow-red-500/30 hover:scale-105 transition-all">
-                           Apagar Registro do Banco de Dados
-                         </button>
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* Footer Actions */}
-            <div className="p-10 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <div className="flex gap-4">
-                <button 
-                  onClick={() => setSelectedUserStudio({...selectedUserStudio, is_active: !selectedUserStudio.is_active, status: !selectedUserStudio.is_active ? 'active' : 'inactive'})}
-                  className={`px-10 py-5 rounded-[28px] text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 border shadow-sm ${selectedUserStudio.is_active ? 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border-red-100' : 'bg-green-50 text-green-500 hover:bg-green-500 hover:text-white border-green-100'}`}
-                >
-                  <span className="material-symbols-outlined text-xl">{selectedUserStudio.is_active ? 'block' : 'check_circle'}</span>
-                  {selectedUserStudio.is_active ? 'Bloquear Cliente' : 'Ativar Acesso'}
-                </button>
-              </div>
-              <div className="flex gap-6 items-center">
-                <button 
-                  onClick={() => setSelectedUserStudio(null)}
-                  className="px-8 py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-900 dark:hover:text-white transition-all underline decoration-2 underline-offset-8 decoration-primary"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  disabled={isSaving}
-                  onClick={async () => {
-                    setIsSaving(true);
-                    try {
-                      const userData = {
-                        name: selectedUserStudio.name,
-                        phone: selectedUserStudio.phone,
-                        email: selectedUserStudio.email,
-                        cpf: (selectedUserStudio as any).cpf,
-                        birth_date: (selectedUserStudio as any).birth_date || null,
-                        gender: (selectedUserStudio as any).gender,
-                        address: (selectedUserStudio as any).address,
-                        address_number: (selectedUserStudio as any).address_number,
-                        address_complement: (selectedUserStudio as any).address_complement,
-                        neighborhood: (selectedUserStudio as any).neighborhood,
-                        city: (selectedUserStudio as any).city,
-                        state: (selectedUserStudio as any).state,
-                        zip_code: (selectedUserStudio as any).zip_code,
-                        notes: (selectedUserStudio as any).notes,
-                        is_active: selectedUserStudio.is_active,
-                        status: selectedUserStudio.status || 'active',
-                        is_izi_black: selectedUserStudio.is_izi_black || false
-                      };
-
-                      const isNew = !selectedUserStudio.id || (typeof selectedUserStudio.id === 'string' && selectedUserStudio.id.startsWith('new-'));
-                      
-                      let error;
-                      if (isNew) {
-                         const { error: err } = await supabase.from('users_delivery').insert([userData]);
-                         error = err;
-                      } else {
-                         const { error: err } = await supabase.from('users_delivery').update(userData).eq('id', selectedUserStudio.id);
-                         error = err;
-                      }
-                      if (error) throw error;
-                      toastSuccess('Dados do cliente salvos com sucesso!');
-                      if (selectedUser && selectedUser.id === selectedUserStudio.id) {
-                        setSelectedUser({ ...selectedUser, ...selectedUserStudio });
-                      }
-                      setSelectedUserStudio(null);
-                      fetchUsers();
-                    } catch (err: any) {
-                      toastError('Erro ao salvar cliente: ' + err.message);
-                    } finally {
-                      setIsSaving(false);
-                    }
-                  }}
-                  className="px-14 py-6 bg-primary text-slate-900 font-black text-[10px] uppercase tracking-widest rounded-full shadow-[0_20px_40px_rgba(255,217,0,0.3)] hover:scale-[1.05] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                >
-                  <span className={`material-symbols-outlined text-xl font-bold ${isSaving ? 'animate-spin' : ''}`}>{isSaving ? 'sync' : 'done_all'}</span>
-                  {isSaving ? 'Processando...' : 'Confirmar & Salvar Alterações'}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
 
       {/* ••••••• Active Orders Live Monitor ••••••• */}
       {showActiveOrdersModal && (
