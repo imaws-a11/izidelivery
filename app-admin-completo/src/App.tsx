@@ -8,6 +8,15 @@ import { supabase } from './lib/supabase';
 import { AdminContext } from './context/AdminContext';
 import OrdersMerchantTab from './components/OrdersMerchantTab';
 
+// Cloudinary & Firebase
+import { uploadToCloudinary } from './lib/cloudinary';
+import { auth as firebaseAuth } from './lib/firebase';
+import { 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged 
+} from 'firebase/auth';
+
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string ?? '';
 const libraries: ("places" | "geometry")[] = ["places"];
 const mapContainerStyle = { width: '100%', height: '100%' };
@@ -632,27 +641,31 @@ function App() {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      if (currentSession?.user?.email) {
-        fetchUserRole(currentSession.user.email);
-      }
-      if (!currentSession) setIsInitialLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.user?.email) {
-        fetchUserRole(session.user.email);
-      }
-      if (!session || !session.user) {
+    // Firebase Auth Observer
+    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+      if (user) {
+        // Mapear usuário do Firebase para o formato esperado pelo App (simulando sessão do Supabase)
+        const mockSession = {
+          user: {
+            id: user.uid,
+            email: user.email,
+          },
+          access_token: 'firebase-token', // Se precisar do token real: await user.getIdToken()
+        } as any;
+        
+        setSession(mockSession);
+        if (user.email) {
+          fetchUserRole(user.email);
+        }
+      } else {
+        setSession(null);
         setIsInitialLoading(false);
         setUserRole('merchant');
         setMerchantProfile(null);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -826,34 +839,26 @@ function App() {
     setAuthLoading(true);
     setAuthError('');
     try {
-      console.log('[Admin] Tentando login para:', email.trim());
-      const { data, error } = await supabase.auth.signInWithPassword({ 
-        email: email.trim(), 
-        password 
-      });
-      
-      if (error) {
-        console.error('[Admin] Erro no login Supabase:', error.message);
-        const errMap: Record<string, string> = {
-          'Invalid login credentials': 'E-mail ou senha incorretos. Verifique seus dados.',
-          'Email not confirmed': 'Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada.',
-          'Too many requests': 'Muitas tentativas exageradas. Aguarde alguns minutos.',
-          'database error': 'Erro no banco de dados. Tente novamente.'
-        };
-        setAuthError(errMap[error.message] || error.message);
-      } else if (data.user) {
-        console.log('[Admin] Login Auth ok!');
-      }
+      console.log('[Firebase] Tentando login para:', email.trim());
+      await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
+      console.log('[Firebase] Login ok!');
     } catch (err: any) {
-      console.error('[Admin] Exceção crítica:', err);
-      setAuthError('Falha de comunicação. Verifique sua rede.');
+      console.error('[Firebase] Erro no login:', err.code);
+      const errMap: Record<string, string> = {
+        'auth/invalid-credential': 'E-mail ou senha incorretos.',
+        'auth/user-not-found': 'Usuário não cadastrado.',
+        'auth/wrong-password': 'Senha incorreta.',
+        'auth/too-many-requests': 'Muitas tentativas. Aguarde um momento.',
+        'auth/network-request-failed': 'Falha na rede. Verifique sua conexão.'
+      };
+      setAuthError(errMap[err.code] || 'Falha na autenticação: ' + err.message);
     } finally {
       setAuthLoading(false);
     }
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut(firebaseAuth);
     setSession(null);
     setUserRole('merchant');
     setMerchantProfile(null);
@@ -1402,26 +1407,14 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     }
   };
 
-  const handleFileUpload = async (file: File, bucket: string = 'logos'): Promise<string | null> => {
+  const handleFileUpload = async (file: File): Promise<string | null> => {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(filePath);
-
-      return publicUrl;
+      const url = await uploadToCloudinary(file);
+      if (!url) throw new Error('Upload falhou');
+      return url;
     } catch (error: any) {
-      console.error('Error uploading file:', error);
-      toastError('Erro ao fazer upload da imagem: ' + (error.message || 'Erro desconhecido.'));
+      console.error('Error uploading to Cloudinary:', error);
+      toastError('Erro ao fazer upload da imagem no Cloudinary: ' + (error.message || 'Verifique o preset.'));
       return null;
     }
   };

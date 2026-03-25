@@ -6,6 +6,16 @@ import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
 
+// Cloudinary & Firebase
+import { auth as firebaseAuth } from './lib/firebase';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signOut, 
+  onAuthStateChanged,
+  updateProfile
+} from 'firebase/auth';
+
 
 const mapContainerStyle = { width: '100%', height: '100%' };
 const mapOptions = {
@@ -275,35 +285,44 @@ function App() {
     }, [isAuthenticated, driverId, isOnline, activeMission]);
     useEffect(() => {
         const ensureDriverRecord = async (user: any) => {
-            const { data } = await supabase.from('drivers_delivery').select('name, lat, lng').eq('id', user.id).maybeSingle();
+            const { data } = await supabase.from('drivers_delivery').select('name, lat, lng').eq('id', user.uid).maybeSingle();
             if (!data) {
                 await supabase.from('drivers_delivery').upsert({
-                    id: user.id, name: user.user_metadata?.name || 'Entregador Izi',
-                    email: user.email, is_online: true, is_active: true, vehicle_type: 'mototaxi'
+                    id: user.uid, 
+                    name: user.displayName || 'Entregador Izi',
+                    email: user.email, 
+                    is_online: true, 
+                    is_active: true, 
+                    vehicle_type: 'mototaxi'
                 });
             } else {
                 if (data.name) setDriverName(data.name);
                 if (data.lat && data.lng) setDriverCoords({ lat: data.lat, lng: data.lng });
             }
         };
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session?.user) { setDriverId(session.user.id); setIsAuthenticated(true); ensureDriverRecord(session.user); }
+
+        const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+            if (user) {
+                setDriverId(user.uid);
+                setIsAuthenticated(true);
+                ensureDriverRecord(user);
+            } else {
+                setDriverId(null);
+                setIsAuthenticated(false);
+                setDriverName('Entregador');
+            }
             setAuthInitLoading(false);
         });
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            if (session?.user) { setDriverId(session.user.id); setIsAuthenticated(true); ensureDriverRecord(session.user); }
-            else { setDriverId(null); setIsAuthenticated(false); setDriverName('Entregador'); }
-        });
-        return () => subscription.unsubscribe();
+
+        return () => unsubscribe();
     }, []);
 
     const handleAuthLogin = async () => {
         setAuthLoading(true); setAuthError('');
         try {
-            const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
-            if (error) throw error;
+            await signInWithEmailAndPassword(firebaseAuth, authEmail, authPassword);
         } catch (e: any) {
-            setAuthError(e.message === 'Invalid login credentials' ? 'Email ou senha incorretos.' : e.message);
+            setAuthError(e.code === 'auth/invalid-credential' ? 'Email ou senha incorretos.' : e.message);
         } finally { setAuthLoading(false); }
     };
 
@@ -312,13 +331,23 @@ function App() {
         if (!authName.trim()) { setAuthError('Informe seu nome completo.'); setAuthLoading(false); return; }
         if (authPassword.length < 6) { setAuthError('A senha deve ter no mínimo 6 caracteres.'); setAuthLoading(false); return; }
         try {
-            const { data, error } = await supabase.auth.signUp({ email: authEmail, password: authPassword, options: { data: { name: authName } } });
-            if (error) throw error;
-            if (!data.user) throw new Error('Erro ao criar conta.');
-            await supabase.from('drivers_delivery').upsert({ id: data.user.id, name: authName.trim(), is_online: false, vehicle_type: authVehicle, phone: authPhone || null, rating: 5.0, is_active: true });
+            const { user } = await createUserWithEmailAndPassword(firebaseAuth, authEmail, authPassword);
+            if (!user) throw new Error('Erro ao criar conta no Firebase.');
+            
+            await updateProfile(user, { displayName: authName.trim() });
+            
+            await supabase.from('drivers_delivery').upsert({ 
+                id: user.uid, 
+                name: authName.trim(), 
+                is_online: false, 
+                vehicle_type: authVehicle, 
+                phone: authPhone || null, 
+                rating: 5.0, 
+                is_active: true 
+            });
             setDriverName(authName.trim());
         } catch (e: any) {
-            setAuthError(e.message.includes('already registered') ? 'Este email já está cadastrado. Faça login.' : e.message);
+            setAuthError(e.code === 'auth/email-already-in-use' ? 'Este email já está cadastrado. Faça login.' : e.message);
         } finally { setAuthLoading(false); }
     };
 
@@ -592,7 +621,7 @@ function App() {
     const handleLogout = async () => {
         if (!await showConfirm({ message: 'Deseja encerrar a sessão?' })) return;
         if (driverId) await supabase.from('drivers_delivery').update({ is_online: false }).eq('id', driverId);
-        await supabase.auth.signOut();
+        await signOut(firebaseAuth);
         setIsMenuOpen(false); setIsOnline(false);
         localStorage.removeItem('Izi_online'); localStorage.removeItem('Izi_declined'); localStorage.removeItem('Izi_declined_timed'); localStorage.removeItem('Izi_active_mission');
     };
