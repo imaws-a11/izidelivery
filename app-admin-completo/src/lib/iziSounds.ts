@@ -42,26 +42,34 @@ export const playIziSound = (role: 'merchant' | 'driver') => {
   if (!ctx) return;
 
   try {
-    if (role === 'merchant') {
-      // Som de telefone tocando - forte e insistente (ring ring ring x3)
+    // SOM DE TELEFONE ANTIGO (RETRO-RING) - ALTO E PENETRANTE
+    // Usamos ondas Square e Sawtooth com frequências clássicas de campainha mecânica
+    const playRetroRing = () => {
+      const repeat = 3 * 0.8; // 3 toques principais
       for (let i = 0; i < 3; i++) {
-        const offset = i * 0.7;
-        // Tom duplo clássico de telefone
-        playTone(ctx, 440, 'sine', offset, 0.3, 0.5);
-        playTone(ctx, 480, 'sine', offset, 0.3, 0.5);
-        // Segundo toque no mesmo ciclo
-        playTone(ctx, 440, 'sine', offset + 0.35, 0.25, 0.4);
-        playTone(ctx, 480, 'sine', offset + 0.35, 0.25, 0.4);
+        const offset = i * 0.8;
+        
+        // Simular o motor da campainha (vibrato rápido entre 440 e 480Hz)
+        for (let j = 0; j < 15; j++) {
+          const microOffset = offset + (j * 0.02);
+          const freq = (j % 2 === 0) ? 440 : 480;
+          playTone(ctx, freq, 'square', microOffset, 0.04, 0.4); 
+          // Camada extra para brilho e volume
+          playTone(ctx, freq * 1.5, 'sawtooth', microOffset, 0.04, 0.15);
+        }
+        
+        // Breve pausa no meio do ring-ring duplo clássico
+        const offset2 = offset + 0.35;
+        for (let j = 0; j < 12; j++) {
+           const microOffset = offset2 + (j * 0.02);
+           const freq = (j % 2 === 0) ? 440 : 480;
+           playTone(ctx, freq, 'square', microOffset, 0.04, 0.4);
+        }
       }
-    } else {
-      // Som de alerta para driver - 3 bips crescentes
-      playTone(ctx, 880, 'square', 0, 0.08, 0.12);
-      playTone(ctx, 1100, 'square', 0.12, 0.08, 0.14);
-      playTone(ctx, 1320, 'square', 0.24, 0.08, 0.16);
-      playTone(ctx, 880, 'square', 0.5, 0.08, 0.14);
-      playTone(ctx, 1100, 'square', 0.62, 0.08, 0.16);
-      playTone(ctx, 1760, 'square', 0.74, 0.15, 0.2);
-    }
+    };
+
+    playRetroRing();
+
   } catch (e) {
     console.warn('Erro ao reproduzir som:', e);
   }
