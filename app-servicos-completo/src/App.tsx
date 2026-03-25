@@ -1716,7 +1716,7 @@ function App() {
             if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
               showToast("Loja aceitou seu pedido! 🎉", "success");
               setSelectedItem(newOrder); 
-              setTimeout(() => setSubView("payment_success"), 1000);
+              setTimeout(() => setSubView("active_order"), 1000);
             }
             if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
               showToast("Seu pedido foi recusado.", "warning");
@@ -1989,8 +1989,8 @@ function App() {
 
     try {
       // ── PAGAMENTOS DIGITAIS (Pendente Confirmação) ───────────────────────
-      const isDigital = ["pix", "cartao", "bitcoin_lightning"].includes(paymentMethod);
-      const initialStatus = isDigital ? "pendente_pagamento" : (paymentMethod === "dinheiro" ? "waiting_merchant" : "novo");
+      const isDigital = ["pix", "cartao", "bitcoin_lightning", "google_pay"].includes(paymentMethod);
+      const initialStatus = isDigital ? "pendente_pagamento" : (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega" ? "waiting_merchant" : "novo");
 
       // ── PIX (Mercado Pago) ──────────────────────────────────────────────
       if (paymentMethod === "pix") {
@@ -2079,6 +2079,31 @@ function App() {
         setSelectedItem(order);
         clearCart();
         navigateSubView("waiting_merchant");
+        return;
+      }
+
+      // ── GOOGLE PAY ─────────────────────────────────────────────────────
+      if (paymentMethod === "google_pay") {
+        setIsLoading(true);
+        navigateSubView("payment_processing");
+        // Simulação de processamento Google Pay
+        setTimeout(async () => {
+          const { data: order, error } = await supabase.from("orders_delivery").insert({ 
+            ...orderBase, 
+            status: "waiting_merchant",
+            payment_status: "paid"
+          }).select().single();
+
+          if (error || !order) {
+            toastError("Erro ao processar Google Pay.");
+            navigateSubView("payment_error");
+            return;
+          }
+          setSelectedItem(order);
+          clearCart();
+          navigateSubView("waiting_merchant");
+          setIsLoading(false);
+        }, 2000);
         return;
       }
 
@@ -4943,6 +4968,7 @@ function App() {
                 style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.2)" }}>
                 {paymentMethod === "pix" ? "Gerar QR PIX" :
                  paymentMethod === "bitcoin_lightning" ? "Gerar Invoice Lightning" :
+                 paymentMethod === "google_pay" ? "Pagar com Google Pay" :
                  (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") ? "Confirmar — Pagar na Entrega" :
                  `Confirmar Pedido — R$ ${total.toFixed(2).replace(".",",")}`}
               </button>
@@ -5737,13 +5763,16 @@ function App() {
         <main className="px-5 py-8 space-y-10">
           {/* MÉTODOS SMART */}
           <div className="grid grid-cols-2 gap-4">
-             <button className="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl flex flex-col items-center gap-2 opacity-50">
+             <button className="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl flex flex-col items-center gap-2 opacity-50 cursor-not-allowed">
                <span className="material-symbols-outlined text-3xl">apple</span>
                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Apple Pay</span>
              </button>
-             <button className="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl flex flex-col items-center gap-2 opacity-50">
-               <span className="material-symbols-outlined text-3xl">google</span>
-               <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Google Pay</span>
+             <button 
+               onClick={() => { setPaymentMethod("google_pay"); navigateSubView("checkout"); }}
+               className={`bg-zinc-900 border p-5 rounded-3xl flex flex-col items-center gap-2 transition-all ${paymentMethod === "google_pay" ? "border-yellow-400 ring-4 ring-yellow-400/10" : "border-zinc-800"}`}
+             >
+               <span className="material-symbols-outlined text-3xl text-white">google</span>
+               <span className="text-[10px] font-black uppercase tracking-widest text-white">Google Pay</span>
              </button>
           </div>
 
@@ -5799,8 +5828,10 @@ function App() {
             <div className="bg-zinc-900/30 border border-zinc-900 rounded-[32px] overflow-hidden">
                {[
                  { id: "pix", icon: "pix", label: "PIX Instantâneo", color: "text-emerald-400" },
+                 { id: "google_pay", icon: "google", label: "Google Pay", color: "text-blue-400" },
                  { id: "bitcoin_lightning", icon: "bolt", label: "Bitcoin Lightning", color: "text-orange-400" },
-                 { id: "dinheiro", icon: "payments", label: "Dinheiro na Entrega", color: "text-zinc-500" }
+                 { id: "dinheiro", icon: "payments", label: "Dinheiro na Entrega", color: "text-zinc-500" },
+                 { id: "cartao_entrega", icon: "credit_card", label: "Cartão na Entrega", color: "text-zinc-500" }
                ].map((m, i) => (
                  <button key={m.id} onClick={() => setPaymentMethod(m.id as any)}
                    className={`w-full flex items-center gap-4 p-5 hover:bg-zinc-900/50 transition-all ${i > 0 ? "border-t border-zinc-900" : ""}`}>

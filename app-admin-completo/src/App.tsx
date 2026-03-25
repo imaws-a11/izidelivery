@@ -1724,6 +1724,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         const { error } = await supabase.from('drivers_delivery').upsert({
           id: editingItem.id || undefined,
           name: editingItem.name,
+          email: editingItem.email,
           phone: editingItem.phone,
           vehicle_type: editingItem.vehicle_type,
           license_plate: editingItem.license_plate,
@@ -2396,7 +2397,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     }
   };
 
-  const handleResetPassword = async (userId: string) => {
+  const handleResetPassword = async (userId: string, email?: string) => {
     if (!await showConfirm({
       title: 'Resetar senha do cliente',
       message: 'Um e-mail de redefinição de senha será enviado para o cliente. Deseja continuar?',
@@ -2407,8 +2408,8 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
       setIsSaving(true);
 
       // Buscar e-mail do usuário
-      const targetUser = usersList.find(u => u.id === userId) || selectedUser;
-      const targetEmail = targetUser?.email || targetUser?.phone;
+      const targetUser = (usersList.find(u => u.id === userId) || selectedUser || myDriversList.find(d => d.id === userId));
+      const targetEmail = email || targetUser?.email || targetUser?.phone;
 
       const { data, error } = await supabase.functions.invoke('reset-password', {
         body: { userId, userEmail: targetEmail ?? undefined },
@@ -8338,6 +8339,30 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                       onChange={e => setEditingItem({ ...editingItem, phone: e.target.value })}
                       className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
+                  </div>
+                )}
+                {(editType === 'user' || editType === 'driver' || editType === 'my_driver') && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">E-mail de Acesso</label>
+                    <div className="flex gap-2">
+                       <input
+                        type="email"
+                        required
+                        value={editingItem.email || ''}
+                        onChange={e => setEditingItem({ ...editingItem, email: e.target.value })}
+                        placeholder="email@exemplo.com"
+                        className="flex-1 bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                      {(editType === 'my_driver' && editingItem.id) && (
+                        <button 
+                          type="button"
+                          onClick={() => handleResetPassword(editingItem.id, editingItem.email)}
+                          className="px-4 bg-primary/10 text-primary rounded-3xl font-black text-[9px] uppercase tracking-widest hover:bg-primary/20 transition-all border border-primary/20"
+                        >
+                          Resetar Senha
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
                 {(editType === 'driver' || editType === 'my_driver') && (

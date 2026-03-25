@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { supabase } from '../lib/supabase';
+import { toastSuccess, toastError } from '../lib/useToast';
 
 // Pedidos do Lojista
 export default function OrdersMerchantTab() {
@@ -45,12 +46,20 @@ export default function OrdersMerchantTab() {
       
       if (error) {
         console.error('Erro detalhado Supabase:', error);
-        alert('Erro ao processar pedido: ' + error.message);
+        toastError('Erro ao processar pedido: ' + error.message);
         throw error;
       }
       
       if (!data || data.length === 0) {
-        alert('O pedido foi atualizado, mas as alterações não refletiram. Verifique se você tem permissão de lojista.');
+        toastError('O pedido foi atualizado, mas as alterações não refletiram.');
+      } else {
+        if (newStatus === 'cancelado') {
+          toastSuccess('Pedido cancelado com sucesso.');
+        } else if (newStatus === 'waiting_driver') {
+          toastSuccess('Pedido aceito! Chamando entregador...');
+        } else {
+          toastSuccess('Status do pedido atualizado.');
+        }
       }
 
       // Forçar atualização do dashboard
