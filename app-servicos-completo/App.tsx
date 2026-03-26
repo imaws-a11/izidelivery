@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { playIziSound } from './lib/iziSounds';
 import { GoogleMap, useJsApiLoader, Marker, Autocomplete, Polygon } from '@react-google-maps/api';
-import { supabase } from './lib/supabase';
+import { supabase, supabaseAdmin } from './lib/supabase';
 import { AdminContext } from './context/AdminContext';
 import OrdersMerchantTab from './components/OrdersMerchantTab';
 
@@ -2965,7 +2965,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                  toastError('Erro: ID do estabelecimento não encontrado. Faça logout e login novamente.');
                                  return;
                                }
-                               const { error, count } = await supabase
+                               const { error, count } = await supabaseAdmin
                                  .from('admin_users')
                                  .update({ store_banner: url }, { count: 'exact' })
                                  .eq('id', targetId);
@@ -3008,7 +3008,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                  toastError('Erro: ID do estabelecimento não encontrado. Faça logout e login novamente.');
                                  return;
                                }
-                               const { error, count } = await supabase
+                               const { error, count } = await supabaseAdmin
                                  .from('admin_users')
                                  .update({ store_logo: url }, { count: 'exact' })
                                  .eq('id', targetId);
@@ -3057,7 +3057,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   <div className="flex justify-end pt-6">
                      <button
                        onClick={async () => {
-                          const { error } = await supabase.from('admin_users').update({
+                          const { error } = await supabaseAdmin.from('admin_users').update({
                              store_name: targetItem.store_name,
                              store_phone: targetItem.store_phone,
                              store_description: targetItem.store_description,
