@@ -37,7 +37,7 @@ import { RestaurantMenuView } from "./components/features/Home/RestaurantMenuVie
 import { StoreCatalogView } from "./components/features/Home/StoreCatalogView";
 
 import { useAuth } from "./hooks/useAuth";
-import { SavedAddress, Order, Quest } from "./types";
+import type { SavedAddress, Order, Quest } from "./types";
 
 // Componentes agora em arquivos separados
 
