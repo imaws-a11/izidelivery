@@ -137,6 +137,7 @@ function App() {
     | "waiting_driver"
     | "scheduled_order"
     | "lightning_payment"
+    | "shipping_priority"
     | "izi_black_purchase"
     | "card_payment"
   >("none");
@@ -247,6 +248,14 @@ function App() {
 
   useEffect(() => { viewRef.current = view; }, [view]);
   useEffect(() => { tabRef.current = tab; }, [tab]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showLojistasModal, setShowLojistasModal] = useState(false);
+  const partnerStores = [
+    { id: 'izi_paulista', name: "Izi Hub Central - Paulista", address: "Av. Paulista, 1000, Bela Vista, São Paulo - SP", phone: "(11) 98888-7777", hours: "08h - 22h", type: "Hub Logístico" },
+    { id: 'posto_augusta', name: "Izi Posto Shell - Augusta", address: "Rua Augusta, 500, Consolação, São Paulo - SP", phone: "(11) 97777-6666", hours: "24h", type: "Ponto de Retirada" },
+    { id: 'loja_oscar', name: "Izi Express - Oscar Freire", address: "Rua Oscar Freire, 300, Jardins, São Paulo - SP", phone: "(11) 96666-5555", hours: "07h - 23h", type: "Loja Parceira" }
+  ];
   useEffect(() => { subViewRef.current = subView; }, [subView]);
 
   // Suporte ao botão voltar do hardware/navegador
@@ -355,6 +364,12 @@ function App() {
     tripType: "only_one_way" as "only_one_way" | "round_trip" | "hourly",
     luggage: "none" as "none" | "medium" | "large",
     purpose: "",
+    priority: "normal" as "turbo" | "light" | "normal" | "scheduled",
+    operationType: "enviar" as "enviar" | "retirar",
+    subService: "express" as "express" | "coleta",
+    pickupCode: "",
+    invoiceNumber: "",
+    pickupSector: "",
   });
   const [distancePrices, setDistancePrices] = useState<Record<string, number>>({});
   const [routeDistance, setRouteDistance] = useState<string>("");
@@ -6379,8 +6394,8 @@ function App() {
 
   const renderExploreEnvios = () => {
     const services = [
-      { id: "express", name: "Entrega Express", desc: "Documentos e pequenos volumes", icon: "bolt", action: () => { setTransitData({ ...transitData, type: "utilitario" }); navigateSubView("shipping_details"); } },
-      { id: "coleta",  name: "Coleta Agenciada", desc: "Logística para empresas", icon: "inventory_2", action: () => { setTransitData({ ...transitData, type: "utilitario" }); navigateSubView("shipping_details"); } },
+      { id: "express", name: "Izi Express", desc: "Documentos e pequenos volumes", icon: "bolt", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "express" }); navigateSubView("shipping_priority"); } },
+      { id: "coleta",  name: "Click e Retire Izi", desc: "Retirada rápida em lojas parceiras", icon: "inventory_2", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "coleta" }); navigateSubView("shipping_details"); } },
     ];
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
@@ -6398,7 +6413,7 @@ function App() {
         <main className="px-5 pt-8 flex flex-col gap-5 pb-10">
           {services.map((svc, i) => (
             <motion.div key={svc.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-              onClick={svc.action} className="relative group bg-zinc-900/60 border border-zinc-800 rounded-2xl p-6 cursor-pointer active:scale-[0.98] transition-all hover:border-yellow-400/20">
+              onClick={svc.action} className="relative group bg-transparent border border-zinc-800 rounded-2xl p-6 cursor-pointer active:scale-[0.98] transition-all hover:border-yellow-400/20">
               <div className="flex items-center gap-5">
                 <div className="size-14 rounded-2xl bg-yellow-400/10 border border-yellow-400/10 flex items-center justify-center shrink-0 group-hover:bg-yellow-400/20 transition-colors">
                   <span className="material-symbols-outlined text-2xl text-yellow-400">{svc.icon}</span>
@@ -6416,10 +6431,87 @@ function App() {
     );
   };
 
+  const renderIziExpressPriority = () => {
+    const priorities = [
+      { id: "turbo", name: "Izi Turbo Flash", desc: "Entrega ultra-rápida até 15 min", time: "15 min", icon: "bolt", color: "text-amber-400", bg: "bg-amber-400/10" },
+      { id: "light", name: "Izi Light Flash", desc: "Entrega agilizada até 30 min", time: "30 min", icon: "electric_bolt", color: "text-yellow-400", bg: "bg-yellow-400/10" },
+      { id: "normal", name: "Izi Express", desc: "Categoria normal", time: "1 hr", icon: "moped", color: "text-zinc-400", bg: "bg-zinc-800" },
+      { id: "scheduled", name: "Izi Agendado", desc: "Você escolhe data e horário", time: "Agendar", icon: "event", color: "text-blue-400", bg: "bg-blue-400/10" },
+    ];
+
+    return (
+      <div className="absolute inset-0 z-40 bg-black text-white flex flex-col hide-scrollbar overflow-y-auto pb-40">
+        <header className="px-6 py-8 flex items-center justify-between gap-4 sticky top-0 bg-black/80 backdrop-blur-xl z-50">
+          <button onClick={() => navigateSubView("explore_envios")} className="size-12 rounded-2xl bg-zinc-900 shadow-xl flex items-center justify-center text-white active:scale-90 transition-all border border-zinc-800">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <div className="text-right">
+            <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Prioridade</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 font-jakarta">Escolha a velocidade</p>
+          </div>
+        </header>
+
+        <main className="px-6 space-y-6 mt-4">
+          <div className="text-center mb-8">
+            <div className="size-20 rounded-[30px] bg-yellow-400/10 flex items-center justify-center mx-auto mb-4 border border-yellow-400/20 shadow-[0_0_40px_-10px_rgba(255,215,9,0.3)]">
+              <span className="material-symbols-outlined text-4xl text-yellow-400">speed</span>
+            </div>
+            <h3 className="text-lg font-black text-white tracking-tight">Qual a sua urgência?</h3>
+            <p className="text-zinc-500 text-xs font-medium mt-1">Selecione o nível de prioridade para sua entrega</p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            {priorities.map((p, i) => (
+              <motion.div
+                key={p.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.1 }}
+                onClick={() => {
+                  setTransitData({ 
+                    ...transitData, 
+                    priority: p.id as any,
+                    scheduled: p.id === "scheduled"
+                  });
+                  navigateSubView("shipping_details");
+                }}
+                className={`p-6 rounded-[35px] border cursor-pointer active:scale-[0.98] transition-all flex items-center gap-5 ${
+                  transitData.priority === p.id 
+                    ? "bg-transparent border-yellow-400/50 shadow-2xl shadow-yellow-400/5" 
+                    : "bg-transparent border-zinc-800 hover:border-zinc-700"
+                }`}
+              >
+                <div className={`size-14 rounded-2xl ${p.bg} flex items-center justify-center`}>
+                  <span className={`material-symbols-outlined text-2xl ${p.color}`}>{p.icon}</span>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <h4 className="font-black text-white text-base tracking-tight">{p.name}</h4>
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${p.color}`}>{p.time}</span>
+                  </div>
+                  <p className="text-zinc-500 text-[11px] font-medium leading-tight">{p.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="bg-yellow-400/5 border border-yellow-400/10 p-6 rounded-[35px] flex items-center gap-4 mt-8">
+            <div className="size-10 rounded-full bg-yellow-400/20 flex items-center justify-center shrink-0">
+               <span className="material-symbols-outlined text-yellow-400 text-sm">info</span>
+            </div>
+            <p className="text-[10px] text-yellow-400/80 font-medium leading-relaxed">
+              Os tempos de entrega são estimativas baseadas na disponibilidade de entregadores próximos no momento da confirmação.
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  };
+
   const renderShippingDetails = () => {
     return (
-      <div className="absolute inset-0 z-[120] bg-slate-50 bg-zinc-900 flex flex-col hide-scrollbar overflow-y-auto animate-in fade-in duration-500 pb-40">
-        <header className="px-6 py-8 flex items-center justify-between gap-4 sticky top-0 bg-slate-50/80 bg-zinc-900/80 backdrop-blur-xl z-50">
+      <div className="absolute inset-0 z-[120] bg-black text-zinc-100 flex flex-col hide-scrollbar overflow-y-auto animate-in fade-in duration-500 pb-40">
+        <header className="px-6 py-8 flex items-center justify-between gap-4 sticky top-0 bg-black/80 backdrop-blur-xl z-50">
           <button
             onClick={() => navigateSubView("explore_envios")}
             className="size-12 rounded-2xl bg-zinc-900 shadow-xl flex items-center justify-center text-white active:scale-90 transition-all border border-zinc-800"
@@ -6428,102 +6520,227 @@ function App() {
           </button>
           <div className="text-right">
             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
-              Detalhes do Objeto
+              Detalhes
             </h2>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Informações de Entrega</p>
           </div>
         </header>
 
         <main className="px-6 space-y-10">
-          <section className="space-y-6">
-            <div className="flex items-center gap-4 px-2">
-              <Icon name="location_on" />
-              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Roteiro de Entrega</h3>
-            </div>
-            
-            <div className="space-y-4">
-              {/* ORIGEM (COLETA) */}
-              <div className="bg-zinc-900 p-6 rounded-[35px] border border-zinc-800 shadow-xl flex flex-col gap-2">
-                <div className="flex justify-between items-center mb-1 ml-1">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em]">Origem (Onde Coletar?)</p>
-                   <button 
-                     onClick={updateLocation}
-                     className="flex items-center gap-1.5 text-yellow-400 hover:text-yellow-300 transition-colors active:scale-95 px-2 py-1 rounded-full bg-yellow-400/5"
-                   >
-                      <span className="material-symbols-outlined text-xs">my_location</span>
-                      <span className="text-[8px] font-black uppercase tracking-widest">Localização Atual</span>
-                   </button>
+          {transitData.subService === "express" && (
+            <section className="space-y-6">
+              <div className="flex items-center gap-4 px-2">
+                <Icon name="location_on" />
+                <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Roteiro de Entrega</h3>
+              </div>
+              
+              <div className="space-y-4">
+                {/* ORIGEM (COLETA) */}
+                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl flex flex-col gap-2">
+                  <div className="flex justify-between items-center mb-1 ml-1">
+                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em]">Origem (Onde Coletar?)</p>
+                     <button 
+                       onClick={updateLocation}
+                       className="flex items-center gap-1.5 text-yellow-400 hover:text-yellow-300 transition-colors active:scale-95 px-2 py-1 rounded-full bg-yellow-400/5"
+                     >
+                        <span className="material-symbols-outlined text-xs">my_location</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest">Localização Atual</span>
+                     </button>
+                  </div>
+                  <AddressSearchInput 
+                    isLoaded={isLoaded}
+                    initialValue={transitData.origin}
+                    placeholder="Endereço de partida..."
+                    className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                    onSelect={(place) => setTransitData(prev => ({ ...prev, origin: place.formatted_address || "" }))}
+                  />
                 </div>
-                <AddressSearchInput 
-                  isLoaded={isLoaded}
-                  initialValue={transitData.origin}
-                  placeholder="Endereço de partida..."
-                  className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
-                  onSelect={(place) => setTransitData(prev => ({ ...prev, origin: place.formatted_address || "" }))}
-                />
-              </div>
 
-              {/* DESTINO */}
-              <div className="bg-zinc-900 p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                 <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Para onde levar?</p>
-                 <AddressSearchInput 
-                   isLoaded={isLoaded}
-                   initialValue={transitData.destination}
-                   placeholder="Digite o endereço de destino..."
-                   className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
-                   onSelect={(place: google.maps.places.PlaceResult) => {
-                     const dest = place.formatted_address || "";
-                     setTransitData(prev => ({ ...prev, destination: dest }));
-                     if (dest && transitData.origin) {
-                       setDistancePrices({});
-                       setRouteDistance("");
-                       calculateDistancePrices(transitData.origin, dest);
-                     }
-                   }}
-                 />
+                {/* DESTINO */}
+                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Para onde levar?</p>
+                   <AddressSearchInput 
+                     isLoaded={isLoaded}
+                     initialValue={transitData.destination}
+                     placeholder="Digite o endereço de destino..."
+                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                     onSelect={(place: google.maps.places.PlaceResult) => {
+                       const dest = place.formatted_address || "";
+                       setTransitData(prev => ({ ...prev, destination: dest }));
+                       if (dest && transitData.origin) {
+                         setDistancePrices({});
+                         setRouteDistance("");
+                         calculateDistancePrices(transitData.origin, dest);
+                       }
+                     }}
+                   />
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          )}
 
           <section className="space-y-6">
             <div className="flex items-center gap-4 px-2">
-              <Icon name="person" />
-              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Quem recebe?</h3>
+              <Icon name="swap_horiz" />
+              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Enviar ou Receber?</h3>
             </div>
             
             <div className="space-y-4">
-              <div className="bg-white bg-zinc-900 p-6 rounded-[35px] border border-zinc-800 border-zinc-800 shadow-xl">
-                 <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nome Completo</p>
-                 <input 
-                   type="text" 
-                   value={transitData.receiverName}
-                   onChange={(e) => setTransitData({...transitData, receiverName: e.target.value})}
-                   placeholder="Ex: João Silva"
-                   className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-white"
-                 />
+              <div className="flex flex-col gap-3 mb-4">
+                {transitData.subService === "express" ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => setTransitData({...transitData, operationType: "enviar"})}
+                      className={`py-6 rounded-[30px] border-2 transition-all flex flex-col items-center gap-2 ${transitData.operationType === "enviar" ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700"}`}
+                    >
+                      <span className="material-symbols-outlined text-2xl">outbox</span>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-center">Vou Enviar Algo</span>
+                    </button>
+                    <button 
+                      onClick={() => setTransitData({...transitData, operationType: "retirar"})}
+                      className={`py-6 rounded-[30px] border-2 transition-all flex flex-col items-center gap-2 ${transitData.operationType === "retirar" ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700"}`}
+                    >
+                      <span className="material-symbols-outlined text-2xl">store</span>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-center px-2">Retirar em Loja/Casa</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => setShowLojistasModal(true)}
+                    className="w-full py-8 rounded-[35px] border-2 bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20 flex flex-col items-center gap-2 active:scale-[0.98] transition-all group"
+                  >
+                    <span className="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform">storefront</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-center">
+                      {transitData.receiverName ? `Loja: ${transitData.receiverName}` : "Selecionar Loja Parceira"}
+                    </span>
+                    {transitData.receiverName && (
+                      <p className="text-[8px] font-bold opacity-70 uppercase tracking-widest">{transitData.origin}</p>
+                    )}
+                  </button>
+                )}
               </div>
 
-              <div className="bg-white bg-zinc-900 p-6 rounded-[35px] border border-zinc-800 border-zinc-800 shadow-xl">
-                 <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Telefone de Contato</p>
-                 <input 
-                   type="tel" 
-                   value={transitData.receiverPhone}
-                   onChange={(e) => setTransitData({...transitData, receiverPhone: e.target.value})}
-                   placeholder="(11) 99999-9999"
-                   className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-white"
-                 />
-              </div>
+              {transitData.subService === "express" && (
+                <>
+                  <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nome de quem recebe</p>
+                     <input 
+                       type="text" 
+                       value={transitData.receiverName}
+                       onChange={(e) => setTransitData({...transitData, receiverName: e.target.value})}
+                       placeholder="Ex: João Silva"
+                       className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-white"
+                     />
+                  </div>
+
+                  <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Telefone de Contato</p>
+                     <input 
+                       type="tel" 
+                       value={transitData.receiverPhone}
+                       onChange={(e) => setTransitData({...transitData, receiverPhone: e.target.value})}
+                       placeholder="(11) 99999-9999"
+                       className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-white"
+                     />
+                  </div>
+                </>
+              )}
+
+              {transitData.subService === "coleta" && (
+                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl ring-1 ring-yellow-400/10">
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Endereço de Entrega (Destino)</p>
+                   <AddressSearchInput 
+                     isLoaded={isLoaded}
+                     initialValue={transitData.destination}
+                     placeholder="Onde devemos entregar?"
+                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                     onSelect={(place: google.maps.places.PlaceResult) => {
+                       const dest = place.formatted_address || "";
+                       setTransitData(prev => ({ ...prev, destination: dest }));
+                       if (dest && transitData.origin) {
+                         calculateDistancePrices(transitData.origin, dest);
+                       }
+                     }}
+                   />
+                </div>
+              )}
             </div>
           </section>
+
+          {transitData.subService === "coleta" && (
+            <motion.section initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+              <div className="flex items-center gap-4 px-2">
+                <Icon name="business" />
+                <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Detalhes do Parceiro Izi</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nome do Parceiro / Loja</p>
+                   <input 
+                     type="text" 
+                     value={transitData.receiverName}
+                     onChange={(e) => setTransitData({...transitData, receiverName: e.target.value})}
+                     placeholder="Ex: Hub Logístico Izi"
+                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                   />
+                </div>
+
+                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Telefone do Parceiro</p>
+                   <input 
+                     type="tel" 
+                     value={transitData.receiverPhone}
+                     onChange={(e) => setTransitData({...transitData, receiverPhone: e.target.value})}
+                     placeholder="(11) 99999-9999"
+                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                   />
+                </div>
+
+                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Cód. do Pedido / Retirada</p>
+                   <input 
+                     type="text" 
+                     value={transitData.pickupCode}
+                     onChange={(e) => setTransitData({...transitData, pickupCode: e.target.value})}
+                     placeholder="Ex: ABC123456"
+                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nota Fiscal (NF)</p>
+                     <input 
+                       type="text" 
+                       value={transitData.invoiceNumber}
+                       onChange={(e) => setTransitData({...transitData, invoiceNumber: e.target.value})}
+                       placeholder="Opcional"
+                       className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                     />
+                  </div>
+                  <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Setor / Guichê</p>
+                     <input 
+                       type="text" 
+                       value={transitData.pickupSector}
+                       onChange={(e) => setTransitData({...transitData, pickupSector: e.target.value})}
+                       placeholder="Piso / Corredor"
+                       className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                     />
+                  </div>
+                </div>
+              </div>
+            </motion.section>
+          )}
 
           <section className="space-y-6">
             <div className="flex items-center gap-4 px-2">
               <Icon name="inventory_2" />
-              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">O que está enviando?</h3>
+              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Detalhes da Retirada</h3>
             </div>
 
             <div className="space-y-4">
-               <div className="bg-white bg-zinc-900 p-6 rounded-[35px] border border-zinc-800 border-zinc-800 shadow-xl">
+               <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Descrição do Item</p>
                   <textarea 
                     value={transitData.packageDesc}
@@ -6539,7 +6756,7 @@ function App() {
                     <button
                       key={weight}
                       onClick={() => setTransitData({...transitData, weightClass: weight})}
-                      className={`py-4 rounded-[25px] text-[10px] font-black uppercase tracking-widest border-2 transition-all ${transitData.weightClass === weight ? 'bg-yellow-400 border-primary text-white shadow-lg' : 'bg-white bg-zinc-900 border-transparent text-zinc-500 opacity-60'}`}
+                      className={`py-4 rounded-[25px] text-[10px] font-black uppercase tracking-widest border-2 transition-all ${transitData.weightClass === weight ? 'bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20' : 'bg-transparent border-zinc-800 text-zinc-500'}`}
                     >
                       {weight}
                     </button>
@@ -6548,15 +6765,135 @@ function App() {
             </div>
           </section>
 
-          <div className="bg-amber-50  p-6 rounded-[35px] border border-amber-100  flex items-start gap-4">
-             <Icon name="warning" />
-             <p className="text-[10px] font-bold text-amber-700  leading-relaxed uppercase tracking-wider">
+          {transitData.scheduled && (
+            <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <div className="flex items-center gap-4 px-2">
+                <Icon name="event_upcoming" />
+                <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Agendamento da Coleta</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div onClick={() => setShowDatePicker(true)} className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl cursor-pointer active:scale-95 transition-all">
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Data</p>
+                   <div className="flex items-center justify-between">
+                     <span className="text-base font-bold text-white">{transitData.scheduledDate || "Selecionar data"}</span>
+                     <span className="material-symbols-outlined text-yellow-400 text-sm">calendar_month</span>
+                   </div>
+                </div>
+                <div onClick={() => setShowTimePicker(true)} className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl cursor-pointer active:scale-95 transition-all">
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Horário</p>
+                   <div className="flex items-center justify-between">
+                     <span className="text-base font-bold text-white">{transitData.scheduledTime || "Selecionar hora"}</span>
+                     <span className="material-symbols-outlined text-yellow-400 text-sm">schedule</span>
+                   </div>
+                </div>
+              </div>
+            </motion.section>
+          )}
+
+          {/* LOJISTAS MODAL */}
+          <AnimatePresence>
+            {showLojistasModal && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[250] bg-black/98 backdrop-blur-2xl flex flex-col p-6">
+                <header className="flex items-center justify-between mb-8">
+                  <h3 className="text-xl font-black text-white">Lojas Parceiras</h3>
+                  <button onClick={() => setShowLojistasModal(false)} className="size-10 rounded-xl bg-zinc-900 flex items-center justify-center text-zinc-400">
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </header>
+                <div className="relative mb-6">
+                   <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">search</span>
+                   <input type="text" placeholder="Buscar por nome ou região..." className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl py-4 pl-12 pr-6 text-sm font-bold focus:ring-1 focus:ring-yellow-400/50 outline-none text-white placeholder-zinc-600" />
+                </div>
+                <div className="flex-1 overflow-y-auto no-scrollbar space-y-4">
+                   {partnerStores.map((store) => (
+                      <motion.div 
+                        whileTap={{ scale: 0.98 }}
+                        key={store.id} 
+                        onClick={() => { 
+                          setTransitData({
+                            ...transitData, 
+                            receiverName: store.name, 
+                            receiverPhone: store.phone, 
+                            origin: store.address
+                          }); 
+                          setShowLojistasModal(false); 
+                        }}
+                        className="p-6 rounded-[30px] border border-zinc-800 hover:border-yellow-400/30 transition-all group cursor-pointer"
+                      >
+                         <div className="flex justify-between items-start mb-2">
+                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded bg-yellow-400/10 text-yellow-400">{store.type}</span>
+                            <span className="text-[10px] font-bold text-zinc-500">{store.hours}</span>
+                         </div>
+                         <h4 className="font-black text-white text-base group-hover:text-yellow-400 transition-colors">{store.name}</h4>
+                         <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">{store.address}</p>
+                      </motion.div>
+                   ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* DATE PICKER MODAL */}
+          <AnimatePresence>
+            {showDatePicker && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
+                <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
+                  <div className="text-center mb-8">
+                    <h3 className="text-xl font-black text-white">Próximos 7 dias</h3>
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Selecione uma data</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
+                    {[...Array(7)].map((_, i) => {
+                      const d = new Date();
+                      d.setDate(d.getDate() + i);
+                      const label = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' });
+                      const iso = d.toISOString().split('T')[0];
+                      return (
+                        <button key={i} onClick={() => { setTransitData({...transitData, scheduledDate: iso}); setShowDatePicker(false); }} className={`w-full py-5 rounded-[25px] border-2 transition-all font-bold text-sm capitalize ${transitData.scheduledDate === iso ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-900 text-zinc-400 hover:border-zinc-800"}`}>
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button onClick={() => setShowDatePicker(false)} className="mt-8 w-full py-4 text-zinc-500 font-black uppercase text-[10px] tracking-widest ring-1 ring-zinc-800 rounded-[20px]">Fechar</button>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* TIME PICKER MODAL */}
+          <AnimatePresence>
+            {showTimePicker && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
+                <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
+                  <div className="text-center mb-8">
+                    <h3 className="text-xl font-black text-white">Horário</h3>
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Das 08:00 às 22:00</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
+                    {["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"].map((h) => (
+                      <button key={h} onClick={() => { setTransitData({...transitData, scheduledTime: h}); setShowTimePicker(false); }} className={`py-4 rounded-[20px] border-2 transition-all font-black text-xs ${transitData.scheduledTime === h ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-900 text-zinc-400 hover:border-zinc-800"}`}>
+                        {h}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => setShowTimePicker(false)} className="mt-8 w-full py-4 text-zinc-500 font-black uppercase text-[10px] tracking-widest ring-1 ring-zinc-800 rounded-[20px]">Fechar</button>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="bg-amber-400/5  p-6 rounded-[35px] border border-amber-400/10  flex items-start gap-4">
+             <div className="size-10 rounded-full bg-amber-400/20 flex items-center justify-center shrink-0">
+               <span className="material-symbols-outlined text-amber-400 text-sm">warning</span>
+             </div>
+             <p className="text-[10px] font-bold text-amber-400/80 leading-relaxed uppercase tracking-wider">
                 Certifique-se de que o objeto esteja bem embalado. Não transportamos itens proibidos por lei ou inflamáveis.
              </p>
           </div>
         </main>
 
-        <div className="fixed bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent dark:from-slate-900 dark:via-slate-900 z-50">
+        <div className="fixed bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-black via-black/90 to-transparent z-50">
           <button
             disabled={!transitData.origin || !transitData.destination || !transitData.receiverName || !transitData.receiverPhone || isLoading}
             onClick={handleRequestTransit}
@@ -6699,7 +7036,7 @@ function App() {
       mototaxi: { label: "MotoTáxi", icon: "motorcycle" },
       carro: { label: "Carro Executivo", icon: "directions_car" },
       van: { label: "Van de Carga", icon: "airport_shuttle" },
-      utilitario: { label: "Entrega Express", icon: "bolt" },
+      utilitario: { label: "Izi Express", icon: "bolt" },
     };
     const service = serviceLabels[transitData.type] || { label: "Serviço", icon: "local_shipping" };
     const activeCard = savedCards.find((c: any) => c.active);
@@ -6871,7 +7208,7 @@ function App() {
       mototaxi: { label: "MotoTáxi", icon: "motorcycle", color: "text-yellow-400" },
       carro: { label: "Carro Executivo", icon: "directions_car", color: "text-zinc-500" },
       van: { label: "Van de Carga", icon: "airport_shuttle", color: "text-blue-500" },
-      utilitario: { label: "Entrega Express", icon: "bolt", color: "text-purple-500" },
+      utilitario: { label: "Izi Express", icon: "bolt", color: "text-purple-500" },
     };
     const service = serviceLabels[selectedItem.service_type] || { label: "Serviço", icon: "local_shipping", color: "text-yellow-400" };
 
@@ -6953,7 +7290,7 @@ function App() {
   const renderScheduledOrder = () => {
     if (!selectedItem) return null;
     const svcIcons: Record<string,string> = { mototaxi:'motorcycle', carro:'directions_car', van:'airport_shuttle', utilitario:'bolt' };
-    const svcLabels: Record<string,string> = { mototaxi:'MotoTáxi', carro:'Carro Executivo', van:'Van de Carga', utilitario:'Entrega Express' };
+    const svcLabels: Record<string,string> = { mototaxi:'MotoTáxi', carro:'Carro Executivo', van:'Van de Carga', utilitario:'Izi Express' };
     const icon = svcIcons[selectedItem.service_type] || 'event';
     const label = svcLabels[selectedItem.service_type] || 'Serviço';
     const scheduledAt = selectedItem.scheduled_date && selectedItem.scheduled_time
@@ -7722,6 +8059,18 @@ function App() {
                   className="absolute inset-0 z-40"
                 >
                   {renderExploreEnvios()}
+                </motion.div>
+              )}
+               {subView === "shipping_priority" && (
+                <motion.div
+                  key="shipprio"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-40"
+                >
+                  {renderIziExpressPriority()}
                 </motion.div>
               )}
                {subView === "taxi_wizard" && (

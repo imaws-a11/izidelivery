@@ -1,5 +1,5 @@
 import { toast, toastSuccess, toastError, toastWarning, showConfirm, showPrompt } from './lib/useToast';
-import type { Order, Driver, User, Merchant, MerchantProfile, Product, Category, Promotion, DedicatedSlot, AuditLog, WalletTransaction, DynamicRate, MenuCategory } from './lib/types';
+import type { Order, Driver, User, Merchant, MerchantProfile, Product, Category, Promotion, DedicatedSlot, AuditLog, WalletTransaction, DynamicRate, MenuCategory, PartnerStore } from './lib/types';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { playIziSound } from './lib/iziSounds';
@@ -56,7 +56,7 @@ const wazeMapStyle = [
   { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#92998d" }] }
 ];
 
-type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'financial' | 'settings' | 'support' | 'promotions' | 'categories' | 'dynamic_rates' | 'audit_logs' | 'my_store' | 'my_drivers' | 'my_studio' | 'merchants' | 'izi_black';
+type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'financial' | 'settings' | 'support' | 'promotions' | 'categories' | 'dynamic_rates' | 'audit_logs' | 'my_store' | 'my_drivers' | 'my_studio' | 'merchants' | 'izi_black' | 'partners';
 type UserRole = 'admin' | 'merchant';
 const MASTER_ADMIN_EMAIL = (import.meta.env.VITE_MASTER_ADMIN_EMAIL as string || 'swmcapital@gmail.com').trim().toLowerCase();
 
@@ -269,6 +269,7 @@ function App() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [myDriversList, setMyDriversList] = useState<Driver[]>([]);
   const [merchantsList, setMerchantsList] = useState<Merchant[]>([]);
+  const [partnerStoresList, setPartnerStoresList] = useState<PartnerStore[]>([]);
   const [productsList, setProductsList] = useState<Product[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [driverSearch, setDriverSearch] = useState('');
@@ -687,6 +688,7 @@ function App() {
         // Se estiver em uma aba específica, carregar os dados dela em paralelo também
         if (activeTab === 'users') baselineTasks.push(fetchUsers());
         if (activeTab === 'merchants') baselineTasks.push(fetchMerchants());
+        if (activeTab === 'partners') baselineTasks.push(fetchPartnerStores());
         if (activeTab === 'drivers' || activeTab === 'tracking' || activeTab === 'dashboard') baselineTasks.push(fetchDrivers());
         
         if (userRole === 'merchant' || activeTab === 'orders' || activeTab === 'tracking' || activeTab === 'dashboard') {
@@ -792,6 +794,9 @@ function App() {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'promotions_delivery' }, () => {
         if (activeTab === 'promotions' || activeTab === 'my_store') fetchPromotions();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'partner_stores_delivery' }, () => {
+        if (activeTab === 'partners') fetchPartnerStores();
       })
       .subscribe();
 
@@ -1360,6 +1365,22 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     }
   };
 
+  const fetchPartnerStores = async () => {
+    setIsLoadingList(true);
+    try {
+      const { data, error } = await supabase
+        .from('partner_stores_delivery')
+        .select('*')
+        .order('name', { ascending: true });
+      if (error) throw error;
+      setPartnerStoresList(data || []);
+    } catch (err) {
+      console.error('Partner stores fetch error:', err);
+    } finally {
+      setIsLoadingList(false);
+    }
+  };
+
   const fetchMerchants = async () => {
     setIsLoadingList(true);
     try {
@@ -1409,7 +1430,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     }
   };
 
-  const handleFileUpload = async (file: File): Promise<string | null> => {
+  const handleFileUpload = async (file: File, folder?: string): Promise<string | null> => {
     try {
       const url = await uploadToCloudinary(file);
       if (!url) throw new Error('Upload falhou');
@@ -2124,6 +2145,65 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
       logAction('Delete Merchant', 'Merchants', { id });
     } catch (err) {
       console.error('Delete error:', err);
+    }
+  };
+
+
+  const handleUpdatePartner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const { error } = await supabase.from('partner_stores_delivery').upsert({
+        id: (editingItem.id && !editingItem.id.toString().startsWith('new-')) ? editingItem.id : undefined,
+        name: editingItem.name,
+        email: editingItem.email,
+        phone: editingItem.phone,
+        address: editingItem.address,
+        city: editingItem.city,
+        category: editingItem.category,
+        logo_url: editingItem.logo_url,
+        is_active: editingItem.is_active ?? true,
+      });
+      if (error) throw error;
+      
+      setEditingItem(null);
+      setEditType(null);
+      fetchPartnerStores();
+      logAction((editingItem.id && !editingItem.id.toString().startsWith('new-')) ? 'Update Partner' : 'Create Partner', 'Partners', editingItem);
+      toastSuccess('Loja parceira salva com sucesso!');
+    } catch (err) {
+      console.error('Update partner error:', err);
+      toastError('Erro ao salvar loja parceira: ' + (err as any).message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUpdatePartnerStatus = async (id: string, active: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('partner_stores_delivery')
+        .update({ is_active: active })
+        .eq('id', id);
+      if (error) throw error;
+      fetchPartnerStores();
+      logAction(`Partner Status: ${active ? 'Active' : 'Inactive'}`, 'Partners', { id });
+    } catch (err) {
+      console.error('Update partner status error:', err);
+    }
+  };
+
+  const handleDeletePartner = async (id: string) => {
+    if (!await showConfirm({ message: 'Deseja realmente EXCLUIR esta loja parceira?' })) return;
+    try {
+      const { error } = await supabase.from('partner_stores_delivery').delete().eq('id', id);
+      if (error) throw error;
+      fetchPartnerStores();
+      logAction('Delete Partner', 'Partners', { id });
+      toastSuccess('Loja parceira excluída!');
+    } catch (err) {
+      console.error('Delete partner error:', err);
+      toastError('Erro ao excluir loja parceira.');
     }
   };
 
@@ -3550,6 +3630,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   <p className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mt-4">Principal</p>
                   <SidebarItem id="dashboard" icon="dashboard" label="Dashboard Geral" />
                   <SidebarItem id="merchants" icon="storefront" label="Lojistas" />
+                  <SidebarItem id="partners" icon="handshake" label="Parceiros Izi" />
                   <SidebarItem id="my_studio" icon="inventory_2" label="Gerenciar Estúdios" />
                   <SidebarItem id="tracking" icon="map" label="Rastreamento" />
                   <SidebarItem id="orders" icon="shopping_cart" label="Pedidos" />
@@ -3622,7 +3703,8 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                       activeTab === 'audit_logs' ? 'Logs de Auditoria' :
                                         activeTab === 'my_store' ? 'Meu Estabelecimento' :
                                           activeTab === 'my_drivers' ? 'Gestão de Motoboys Próprios' :
-                                            activeTab === 'my_studio' ? 'Estúdio do Lojista' : 'Configurações do Sistema'}
+                                            activeTab === 'partners' ? 'Gestão de Parceiros Izi' :
+                                              activeTab === 'my_studio' ? 'Estúdio do Lojista' : 'Configurações do Sistema'}
               </h2>
               <p className="text-xs font-medium text-slate-500">
                 {activeTab === 'dashboard' ? 'Bem-vindo de volta! Veja o que está acontecendo hoje.' : 
@@ -5099,6 +5181,114 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                   onClick={() => handleDeleteMerchant(m.id)}
                                   className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100"
                                   title="Excluir Lojista"
+                                >
+                                  <span className="material-symbols-outlined text-lg">delete</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+
+            {activeTab === 'partners' && userRole === 'admin' && (
+              <div className="space-y-8">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                  <div>
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Gestão de Parceiros Izi</h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-1">Gerencie as lojas e estabelecimentos parceiros integrados.</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setEditingItem({ is_active: true });
+                      setEditType('partner');
+                    }}
+                    className="bg-primary text-slate-900 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:brightness-95 transition-all shadow-lg shadow-primary/20"
+                  >
+                    <span className="material-symbols-outlined text-lg">add_business</span>
+                    Novo Parceiro
+                  </button>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative">
+                  {isLoadingList && (
+                    <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm z-10 flex items-center justify-center">
+                      <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Parceiro</th>
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Contato</th>
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Localização</th>
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Status</th>
+                          <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {partnerStoresList.map(p => (
+                          <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+                            <td className="px-8 py-6">
+                              <div className="flex items-center gap-4 transition-all">
+                                <div className="size-12 rounded-[20px] bg-primary/20 flex items-center justify-center font-black text-primary border border-primary/10 overflow-hidden shrink-0 shadow-sm leading-none text-2xl">
+                                  {p.logo_url ? <img className="w-full h-full object-cover" src={p.logo_url} /> : <span className="material-symbols-outlined">storefront</span>}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-black text-base dark:text-white tracking-tight truncate">{p.name || 'Sem Nome'}</p>
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{p.category || 'Indefinido'}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-8 py-6">
+                              <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{p.email || 'S/ E-MAIL'}</p>
+                              <p className="text-[10px] font-bold text-slate-400 truncate max-w-[150px]">{p.phone || 'S/ Telefone'}</p>
+                            </td>
+                            <td className="px-8 py-6">
+                              <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{p.city || 'S/ Cidade'}</p>
+                              <p className="text-[10px] font-bold text-slate-400 truncate max-w-[200px]">{p.address || 'S/ Endereço'}</p>
+                            </td>
+                            <td className="px-8 py-6 text-center">
+                              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-colors ${
+                                p.is_active
+                                ? 'bg-green-50 text-green-700 border-green-100 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
+                                : 'bg-red-50 text-red-700 border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/10'
+                                }`}>
+                                <span className={`size-1.5 rounded-full ${p.is_active ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                {p.is_active ? 'Ativo' : 'Inativo'}
+                              </span>
+                            </td>
+                            <td className="px-8 py-6 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => {
+                                    setEditingItem(p);
+                                    setEditType('partner');
+                                  }}
+                                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-primary hover:text-slate-900 transition-all shadow-sm"
+                                  title="Editar Parceiro"
+                                >
+                                  <span className="material-symbols-outlined text-lg">edit</span>
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePartnerStatus(p.id, !p.is_active)}
+                                  className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all shadow-sm ${
+                                    p.is_active ? 'bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500' : 'bg-green-50 text-green-500 hover:bg-green-500 hover:text-white border border-green-100'
+                                  }`}
+                                  title={p.is_active ? 'Desativar' : 'Ativar'}
+                                >
+                                  <span className="material-symbols-outlined text-lg">{p.is_active ? 'do_not_disturb_on' : 'check_circle'}</span>
+                                </button>
+                                <button
+                                  onClick={() => handleDeletePartner(p.id)}
+                                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100"
+                                  title="Excluir Parceiro"
                                 >
                                   <span className="material-symbols-outlined text-lg">delete</span>
                                 </button>
@@ -8023,7 +8213,8 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                           editType === 'user' ? 'Cliente' :
                             editType === 'category' ? 'Categoria' :
                               editType === 'merchant' ? 'Lojista' :
-                            editType === 'my_product' ? 'Produto' : 'Promoção/Banner'
+                              editType === 'partner' ? 'Parceiro' :
+                                editType === 'my_product' ? 'Produto' : 'Promoção/Banner'
                     }
                   </h2>
                 </div>
@@ -8038,7 +8229,8 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                     editType === 'user' ? handleUpdateUser :
                       editType === 'category' ? handleUpdateCategory :
                         editType === 'merchant' ? handleUpdateMerchant :
-                          editType === 'my_product' ? handleUpdateMyProduct : handleUpdatePromotion
+                          editType === 'partner' ? handleUpdatePartner :
+                            editType === 'my_product' ? handleUpdateMyProduct : handleUpdatePromotion
               } className="space-y-6">
 
                 {/* Common fields for User, Driver, Category */}
@@ -8308,6 +8500,115 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                       </div>
                     </div>
 
+                  </div>
+                )}
+                
+                {editType === 'partner' && (
+                  <div className="space-y-8">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="size-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                          <span className="material-symbols-outlined text-base">storefront</span>
+                        </div>
+                        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Perfil do Parceiro</h3>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Nome do Estabelecimento</label>
+                        <input
+                          type="text"
+                          required
+                          value={editingItem.name || ''}
+                          onChange={e => setEditingItem({ ...editingItem, name: e.target.value })}
+                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Segmento / Categoria</label>
+                          <input
+                            type="text"
+                            value={editingItem.category || ''}
+                            onChange={e => setEditingItem({ ...editingItem, category: e.target.value })}
+                            placeholder="Ex: Mercado, Farmácia..."
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Telefone</label>
+                          <input
+                            type="text"
+                            value={editingItem.phone || ''}
+                            onChange={e => setEditingItem({ ...editingItem, phone: e.target.value })}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">E-mail</label>
+                        <input
+                          type="email"
+                          value={editingItem.email || ''}
+                          onChange={e => setEditingItem({ ...editingItem, email: e.target.value })}
+                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Cidade</label>
+                          <input
+                            type="text"
+                            value={editingItem.city || ''}
+                            onChange={e => setEditingItem({ ...editingItem, city: e.target.value })}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Endereço</label>
+                          <input
+                            type="text"
+                            value={editingItem.address || ''}
+                            onChange={e => setEditingItem({ ...editingItem, address: e.target.value })}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Logotipo</label>
+                        <div className="flex items-center gap-6 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-[32px] border border-dashed border-slate-200 dark:border-slate-800">
+                          <div className="size-20 rounded-[24px] bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center overflow-hidden shrink-0 border border-slate-100 dark:border-slate-700">
+                            {editingItem.logo_url ? (
+                              <img src={editingItem.logo_url} className="size-full object-cover" />
+                            ) : (
+                              <span className="material-symbols-outlined text-slate-300 text-3xl">add_photo_alternate</span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                             <label className="cursor-pointer bg-white dark:bg-slate-800 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:shadow-md transition-all inline-block border border-slate-100 dark:border-slate-700">
+                               Trocar Logotipo
+                               <input 
+                                 type="file" 
+                                 className="hidden" 
+                                 accept="image/*"
+                                 onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    setIsSaving(true);
+                                    const url = await handleFileUpload(file, 'logos');
+                                    if (url) setEditingItem({ ...editingItem, logo_url: url });
+                                    setIsSaving(false);
+                                  }
+                                }} 
+                               />
+                             </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
