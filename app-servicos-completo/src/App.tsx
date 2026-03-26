@@ -197,6 +197,787 @@ function App() {
 
   const [timeLeft, setTimeLeft] = useState<{h: string, m: string, s: string}>({h: '00', m: '00', s: '00'});
 
+
+
+// Fetch payment methods when entering payments screen
+
+
+
+
+  const [savedCards, setSavedCards] = useState<any[]>([]);
+  const [isLoadingCards, setIsLoadingCards] = useState(false);
+  const [isAddingCard, setIsAddingCard] = useState(false);
+  const [isShowingMyQR, setIsShowingMyQR] = useState(false);
+  const [isScanningQR, setIsScanningQR] = useState(false);
+  const [transferTarget, setTransferTarget] = useState<any>(null);
+  const [newCardData, setNewCardData] = useState({ number: "", expiry: "", cvv: "", brand: "Visa" });
+  const [paymentsOrigin, setPaymentsOrigin] = useState<"checkout" | "profile" | "izi_black">("profile");
+
+  const fetchSavedCards = async (uid: string) => {
+    setIsLoadingCards(true);
+    const { data, error } = await supabase
+      .from("payment_methods")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: true });
+    if (!error && data) {
+      const cards = data.map((c: any) => ({
+        id: c.id,
+        brand: c.brand,
+        last4: c.last4,
+        expiry: c.expiry,
+        active: c.is_default,
+        stripe_payment_method_id: c.stripe_payment_method_id,
+        color: c.brand === "Visa"
+          ? "linear-gradient(135deg, #2563eb, #1e40af)"
+          : c.brand === "Amex"
+            ? "linear-gradient(135deg, #047857, #065f46)"
+            : "linear-gradient(135deg, #1e293b, #0f172a)",
+      }));
+      setSavedCards(cards);
+      // Se tem cartão padrão, define o método de pagamento
+      const defaultCard = cards.find((c: any) => c.active);
+      if (defaultCard) setPaymentMethod("cartao");
+    }
+    setIsLoadingCards(false);
+  };
+  const handleSetPrimaryCard = async (cardId: string) => {
+    if (!userId) return;
+    await supabase.from("payment_methods").update({ is_default: false }).eq("user_id", userId);
+    await supabase.from("payment_methods").update({ is_default: true }).eq("id", cardId);
+    setSavedCards((prev: any[]) => prev.map((c: any) => ({ ...c, active: c.id === cardId })));
+    setPaymentMethod("cartao");
+  };
+
+  const handleDeleteCard = async (cardId: string) => {
+    if (!userId) return;
+    if (await showConfirm({ message: "Remover este cartão?" })) {
+      await supabase.from("payment_methods").delete().eq("id", cardId).eq("user_id", userId);
+      const updated = savedCards.filter((c: any) => c.id !== cardId);
+      setSavedCards(updated);
+      const wasActive = savedCards.find((c: any) => c.id === cardId)?.active;
+      if (wasActive && updated.length > 0) {
+        await handleSetPrimaryCard(updated[0].id);
+      } else if (updated.length === 0) {
+        setPaymentMethod("pix");
+      }
+    }
+  };
+
+  const fetchSavedAddresses = async (uid: string) => {
+    const { data, error } = await supabase
+      .from("saved_addresses")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: true });
+    if (!error && data) {
+      const addresses = data.map((addr: any) => ({
+        id: addr.id,
+        label: addr.label,
+        street: addr.street,
+        details: addr.details,
+        city: addr.city,
+        active: addr.is_active,
+      }));
+      setSavedAddresses(addresses);
+      // Sincroniza o local atual se houver um endereço ativo no banco
+      const active = addresses.find(a => a.active);
+      if (active) {
+        setUserLocation(prev => ({ ...prev, address: active.street }));
+      }
+    }
+  };
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const addressAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(
+    null,
+  );
+  const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [newAddrLabel, setNewAddrLabel] = useState('');
+  const [newAddrStreet, setNewAddrStreet] = useState('');
+  const [newAddrDetails, setNewAddrDetails] = useState('');
+  const [newAddrCity, setNewAddrCity] = useState('');
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+
+  const resetAddressForm = () => {
+    setNewAddrLabel(''); setNewAddrStreet(''); setNewAddrDetails(''); setNewAddrCity('');
+    setEditingAddress(null); setIsAddingAddress(false);
+  };
+
+  const openEditAddress = (addr: SavedAddress) => {
+    setEditingAddress(addr);
+    setNewAddrLabel(addr.label || '');
+    setNewAddrStreet(addr.street || '');
+    setNewAddrDetails(addr.details || '');
+    setNewAddrCity(addr.city || '');
+    setIsAddingAddress(true);
+  };
+
+  const handleSaveAddress = async () => {
+    if (!userId) return;
+    if (!newAddrLabel.trim() || !newAddrStreet.trim()) {
+      toastError('Preencha pelo menos o rótulo e a rua.');
+      return;
+    }
+    setIsSavingAddress(true);
+    try {
+      if (editingAddress) {
+        const { error } = await supabase.from('saved_addresses').update({
+          label: newAddrLabel.trim(),
+          street: newAddrStreet.trim(),
+          details: newAddrDetails.trim() || null,
+          city: newAddrCity.trim() || null,
+        }).eq('id', editingAddress.id);
+        if (error) throw error;
+        toastSuccess('Endereço atualizado!');
+      } else {
+        const { error } = await supabase.from('saved_addresses').insert({
+          user_id: userId,
+          label: newAddrLabel.trim(),
+          street: newAddrStreet.trim(),
+          details: newAddrDetails.trim() || null,
+          city: newAddrCity.trim() || null,
+          is_active: savedAddresses.length === 0,
+        });
+        if (error) throw error;
+        toastSuccess('Endereço salvo com sucesso!');
+      }
+      resetAddressForm();
+      fetchSavedAddresses(userId);
+    } catch (e: any) {
+      toastError('Erro ao salvar: ' + e.message);
+    } finally {
+      setIsSavingAddress(false);
+    }
+  };
+
+  const handleDeleteAddress = async (addrId: string | number) => {
+    if (!userId) return;
+    try {
+      const { error } = await supabase.from('saved_addresses').delete().eq('id', addrId);
+      if (error) throw error;
+      toastSuccess('Endereço removido.');
+      fetchSavedAddresses(userId);
+    } catch (e: any) {
+      toastError('Erro ao remover: ' + e.message);
+    }
+  };
+
+  const handleSetActiveAddress = async (addrId: string | number) => {
+    if (!userId) return;
+    try {
+      await supabase.from('saved_addresses').update({ is_active: false }).eq('user_id', userId);
+      const { error } = await supabase.from('saved_addresses').update({ is_active: true }).eq('id', addrId);
+      if (error) throw error;
+      toastSuccess('Endereço padrão atualizado!');
+      fetchSavedAddresses(userId);
+    } catch (e: any) {
+      toastError('Erro ao definir endereço: ' + e.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchMarketData();
+    fetchFlashOffers();
+    fetchGlobalSettings();
+    fetchBeveragePromo();
+    const interval = setInterval(fetchMarketData, 20000);
+    const flashChannel = supabase.channel('flash_offers_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'flash_offers' }, fetchFlashOffers)
+      .subscribe();
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(flashChannel);
+    };
+  }, []);
+
+  const fetchWalletBalance = async (uid: string) => {
+    const { data } = await supabase
+      .from("users_delivery")
+      .select("wallet_balance, is_izi_black, cashback_earned, user_xp, izi_coins")
+      .eq("id", uid)
+      .single();
+    if (data) {
+      setWalletBalance(data.wallet_balance || 0);
+      setIsIziBlackMembership(data.is_izi_black || false);
+      setIziCashbackEarned(data.cashback_earned || 0);
+      setUserXP(data.user_xp || 0);
+      setIziCoins(data.izi_coins || 0);
+    }
+
+    // Buscar transacoes reais
+    const { data: txData } = await supabase
+      .from("wallet_transactions")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (txData) setWalletTransactions(txData);
+  };
+
+  const isLoaded = true; // Loaded via index.html
+
+  const updateLocation = (onSuccess?: (address: string) => void) => {
+    setUserLocation((prev) => ({ ...prev, loading: true }));
+    if (!("geolocation" in navigator)) {
+      setUserLocation({ address: "Geolocalização não disponível", loading: false });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          let address = "";
+
+          // Tenta reverse geocode via Google Maps Geocoder
+          if ((window as any).google?.maps) {
+            const geocoder = new google.maps.Geocoder();
+            const response = await geocoder.geocode({
+              location: { lat: latitude, lng: longitude },
+            });
+            if (response.results[0]) {
+              address = response.results[0].formatted_address;
+            }
+          }
+
+          // Fallback: Places API (New) reverse geocode via fetch
+          if (!address) {
+            try {
+              const res = await fetch(
+                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&language=pt-BR&result_type=street_address|route`
+              );
+              const data = await res.json();
+              if (data.results?.[0]) {
+                address = data.results[0].formatted_address;
+              }
+            } catch { /* silent */ }
+          }
+
+          // Ãšltimo fallback: Nominatim
+          if (!address) {
+            const nomRes = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+            );
+            const nomData = await nomRes.json();
+            address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "Localização atual";
+          }
+
+          setUserLocation({ address, loading: false, lat: latitude, lng: longitude });
+          setTransitData((prev) => ({ ...prev, origin: address }));
+          if (onSuccess) onSuccess(address);
+        } catch {
+          setUserLocation((prev) => ({ ...prev, loading: false }));
+        }
+      },
+      () => {
+        setUserLocation({ address: "Permissão de localização negada", loading: false });
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  useEffect(() => {
+    updateLocation();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setView("app");
+      window.history.replaceState({ view: "app", tab: "home", subView: "none" }, "");
+      
+      fetchMyOrders(user.uid);
+      fetchWalletBalance(user.uid);
+      fetchSavedCards(user.uid);
+      fetchSavedAddresses(user.uid);
+      fetchCoupons();
+      fetchBeveragePromo();
+    } else if (!authInitLoading) {
+      setView("login");
+    }
+  }, [user, authInitLoading]);
+  useEffect(() => {
+    if (!userId) return;
+
+    const sub = supabase
+      .channel("orders_tracking")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "orders_delivery" },
+        (payload) => {
+          const newOrder = payload.new as any;
+          const oldOrder = payload.old as any;
+          
+          if (newOrder.user_id !== userIdRef.current) return;
+
+          // Se o status mudou, mostrar notificação personalizada
+          if (newOrder.status !== oldOrder.status) {
+            const statusMessages: Record<string, string> = {
+              'novo': 'Recebemos seu pedido! Já estamos processando. âš¡',
+              'pendente_pagamento': 'Aguardando confirmação do pagamento... ðŸ’³',
+              'pendente': 'O lojista recebeu seu pedido! ðŸŽ‰',
+              'aceito': 'O estabelecimento aceitou seu pedido! ðŸŽ‰',
+              'confirmado': 'Pedido confirmado! O preparo começou. âœ…',
+              'preparando': 'Seu pedido está sendo preparado com carinho! ðŸ³',
+              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. ðŸ“¦',
+              'a_caminho': 'O motoboy aceitou e está indo coletar seu pedido! ðŸï¸',
+              'picked_up': 'Pedido coletado! O motoboy está iniciando a entrega. ðŸš€',
+              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! ðŸ›µ',
+              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. ðŸ',
+              'no_local': 'O motoboy chegou ao seu endereço! ðŸ””',
+              'concluido': 'Pedido entregue com sucesso! Bom apetite. âœ¨',
+              'cancelado': 'Ah não! Seu pedido foi cancelado. âš ï¸'
+            };
+
+            const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
+            showToast(msg, newOrder.status === 'cancelado' ? 'warning' : 'success');
+
+            // Se o pagamento lightning foi confirmado, fechar a tela de pagamento
+            if (newOrder.payment_status === 'paid' && subViewRef.current === "lightning_payment") {
+              setSubView("payment_success");
+            }
+
+            // Abrir tela de avaliação ao concluir (exceto para assinaturas Izi Black)
+            if (newOrder.status === 'concluido') {
+              setSelectedItem(newOrder);
+              
+              setTimeout(() => {
+                if (newOrder.service_type === 'subscription') {
+                  setShowIziBlackWelcome(true);
+                  setSubView("none");
+                } else {
+                  setSubView("order_feedback");
+                }
+              }, 2000);
+            }
+
+            // TransiçÃµes automáticas de tela baseadas no status
+            if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
+              showToast("Loja aceitou seu pedido! ðŸŽ‰", "success");
+              setSelectedItem(newOrder); 
+              setTimeout(() => setSubView("active_order"), 1000);
+            }
+            if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
+              showToast("Seu pedido foi recusado.", "warning");
+              setSubView("none");
+              fetchMyOrders(userId!);
+            }
+            if (subViewRef.current === "waiting_driver" && 
+                ["a_caminho", "aceito", "confirmado", "em_rota", "no_local", "picked_up", "saiu_para_entrega"].includes(newOrder.status)) {
+              setSelectedItem(newOrder);
+              setTimeout(() => setSubView("active_order"), 1500);
+            }
+            if (subViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {
+              setSubView("none");
+              fetchMyOrders(userId!);
+            }
+
+            if (selectedItem?.id === newOrder.id || !selectedItem) {
+              setSelectedItem(newOrder);
+            }
+          }
+          
+          if (userIdRef.current) fetchMyOrders(userIdRef.current);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(sub);
+    };
+  }, [userId, subView]);
+  
+  const fetchMyOrders = async (uid: string) => {
+    const { data } = await supabase
+      .from("orders_delivery")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false });
+    if (data) setMyOrders(data);
+  };
+
+  const fetchCoupons = async () => {
+    const { data } = await supabase
+      .from('promotions_delivery')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+    if (data) setAvailableCoupons(data);
+  };
+
+  const fetchBeveragePromo = useCallback(async () => {
+    try {
+      // 1. Buscar Banners específicos para bebidas ou banners gerais ativos
+      const { data: banners } = await supabase
+        .from('promotions_delivery')
+        .select('*')
+        .eq('is_active', true)
+        .is('coupon_code', null)
+        .order('created_at', { ascending: false });
+      
+      if (banners) {
+        // Filtra banners que mencionam bebidas no título ou descrição
+        const bevBanners = banners.filter(b => 
+          (b.title?.toLowerCase().includes('bebida') || b.description?.toLowerCase().includes('bebida') ||
+           b.title?.toLowerCase().includes('gelada') || b.description?.toLowerCase().includes('gelada'))
+        );
+        setBeverageBanners(bevBanners.length > 0 ? bevBanners : banners.slice(0, 1));
+      }
+
+      // 2. Buscar Produtos da categoria Bebidas para a tela de ofertas
+      const { data: pDeals } = await supabase
+        .from('products_delivery')
+        .select('*')
+        .eq('is_available', true)
+        .eq('category', 'Bebidas')
+        .limit(8);
+      
+      if (pDeals) {
+        const discountPct = globalSettings?.flash_offer_discount || 25;
+        const discountMult = 1 / (1 - (discountPct / 100)); // Calculate back to original price
+        
+        const formatted = pDeals.map(p => ({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          oldPrice: p.price * (discountMult || 1.25),
+          off: `${discountPct}%`,
+          img: p.image_url || "https://images.unsplash.com/photo-1596753738914-7bc33e08f58b?q=80&w=400",
+          cat: p.category || "Bebidas"
+        }));
+        setBeverageOffers(formatted);
+      }
+    } catch (err) {
+    }
+  }, [globalSettings]);
+
+  const validateCoupon = async (code: string) => {
+    if (!code.trim()) return;
+    setIsValidatingCoupon(true);
+    setCouponError("");
+
+    try {
+      const { data, error } = await supabase
+        .from('promotions_delivery')
+        .select('*')
+        .eq('coupon_code', code.trim().toUpperCase())
+        .eq('is_active', true)
+        .single();
+
+      if (error || !data) {
+        setCouponError("Cupom inválido ou expirado.");
+        setAppliedCoupon(null);
+        return;
+      }
+
+      const subtotal = cart.reduce((acc, item) => acc + (item.price || 0), 0);
+      if (data.min_order_value && subtotal < data.min_order_value) {
+        setCouponError(`Pedido mínimo de R$ ${data.min_order_value.toFixed(2).replace(".", ",")} para este cupom.`);
+        setAppliedCoupon(null);
+        return;
+      }
+
+      // Validar data de expiração se houver
+      if (data.end_date && new Date(data.end_date) < new Date()) {
+        setCouponError("Este cupom já expirou.");
+        setAppliedCoupon(null);
+        return;
+      }
+
+      setAppliedCoupon(data);
+      setCouponInput("");
+      setCouponError("");
+    } catch (err) {
+      setCouponError("Erro ao validar cupom.");
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+
+
+  const getItemCount = (id: number) =>
+    cart.filter((item) => item.id === id).length;
+
+  const handleAddToCart = (item: any) => {
+    setCart((prev: any[]) => [...prev, { ...item }]);
+    setUserXP((prev: number) => prev + 10);
+  };
+
+  const handleShopClick = async (shop: any) => {
+    setSelectedShop(shop);
+    setActiveCategory("Destaques");
+    const isRestaurant = shop.type === "restaurant";
+    const targetView = isRestaurant ? "restaurant_menu" : "store_catalog";
+
+    try {
+      const { data: products } = await supabase
+        .from("products_delivery")
+        .select("*")
+        .eq("merchant_id", shop.id)
+        .eq("is_available", true)
+        .order("created_at", { ascending: false });
+
+      console.log("Produtos recebidos:", products?.length, products?.[0]);
+      if (products && products.length > 0) {
+        const grouped: Record<string, any[]> = {};
+        products.forEach((p: any) => {
+          const cat = p.category || p.subcategory || (isRestaurant ? "Cardápio" : "Produtos");
+          if (!grouped[cat]) grouped[cat] = [];
+          grouped[cat].push({
+            id: p.id,
+            name: p.name,
+            desc: p.description || "",
+            price: p.price,
+            img: p.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600",
+          });
+        });
+        const categories = Object.entries(grouped).map(([name, items]) => ({ name, items }));
+        setSelectedShop({ ...shop, categories });
+      }
+    } catch (e) {}
+
+    navigateSubView(targetView);
+  };
+
+
+  const handleApplyCoupon = async (code: string) => {
+    if (!code) return;
+    const { data } = await supabase.from("promotions").select("*").eq("coupon_code", code.toUpperCase().trim()).eq("is_active", true).single();
+    if (data) { setAppliedCoupon(data); setCouponInput(data.coupon_code); }
+    else { alert("Cupom invalido ou expirado."); }
+  };
+
+
+  const handlePlaceOrder = async (useCoins: boolean = false) => {
+    if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
+    if (!userId) { alert("Faça login para continuar."); return; }
+    if (cart.length === 0) { alert("Seu carrinho está vazio."); return; }
+
+    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+    const couponDiscount = appliedCoupon
+      ? appliedCoupon.discount_type === "fixed"
+        ? appliedCoupon.discount_value
+        : (subtotal * appliedCoupon.discount_value) / 100
+      : 0;
+    
+    const coinValue = globalSettings?.izi_coin_value || 0.01;
+    const coinDiscount = useCoins ? iziCoins * coinValue : 0;
+    const total = Math.max(0, subtotal - couponDiscount - coinDiscount);
+
+    const coinRate = globalSettings?.izi_coin_rate || 1;
+    const earnedCoins = Math.floor(total * coinRate);
+
+    const orderBase = {
+      user_id: userId,
+      merchant_id: selectedShop?.id || null,
+      status: "novo",
+      total_price: total,
+      pickup_address: selectedShop?.name || "Endereço do Estabelecimento",
+      delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map(i => `${i.name} (R$ ${Number(i.price).toFixed(2)})`).join(', ')}`,
+      payment_method: paymentMethod,
+      service_type: selectedShop?.type || "restaurant",
+      notes: paymentMethod === "dinheiro" && changeFor ? `TROCO PARA: R$ ${changeFor}` : "",
+    };
+
+    const clearCart = async () => {
+      const finalCoins = useCoins ? earnedCoins : (iziCoins + earnedCoins);
+      setCart([]);
+      setAppliedCoupon(null);
+      setCouponInput("");
+      setUserXP((prev: number) => prev + 50);
+      setIziCoins(finalCoins);
+      
+      if (userId) {
+        await supabase.from("users_delivery").update({ 
+          izi_coins: finalCoins,
+          user_xp: (userXP + 50) 
+        }).eq("id", userId);
+      }
+    };
+
+    try {
+      // â”€â”€ PAGAMENTOS DIGITAIS (Pendente Confirmação) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      const isDigital = ["pix", "cartao", "bitcoin_lightning", "google_pay"].includes(paymentMethod);
+      const initialStatus = isDigital ? "pendente_pagamento" : (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega" ? "waiting_merchant" : "novo");
+
+      // â”€â”€ PIX (Mercado Pago) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      if (paymentMethod === "pix") {
+        setPixConfirmed(false);
+        setPixCpf("");
+        navigateSubView("pix_payment");
+        return;
+      }
+
+      // â”€â”€ BITCOIN LIGHTNING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      if (paymentMethod === "bitcoin_lightning") {
+        navigateSubView("payment_processing");
+        const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ 
+          ...orderBase, 
+          status: "pendente_pagamento",
+        }).select().single();
+        
+        if (insertError || !order) { 
+          alert("Não foi possível registrar o pedido para pagamento Lightning: " + (insertError?.message || "Erro desconhecido"));
+          navigateSubView("payment_error"); 
+          return; 
+        }
+
+        try {
+          const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
+            body: { 
+              amount: Number(total.toFixed(2)), 
+              orderId: order.id, 
+              memo: `Pedido ${selectedShop?.name || "IziDelivery"}` 
+            },
+          });
+
+          if (lnErr || !lnData?.payment_request) {
+            console.error("Erro Lightning:", lnErr);
+            // Se o pedido já foi criado, vamos mostrar ele mas com erro na invoice
+            setSelectedItem({ ...order, lightningError: true });
+            navigateSubView("lightning_payment");
+            return;
+          }
+
+          setSelectedItem({ 
+            ...order, 
+            lightningInvoice: lnData.payment_request, 
+            satoshis: lnData.satoshis, 
+            btcPrice: lnData.btc_price_brl 
+          });
+          await clearCart();
+          navigateSubView("lightning_payment");
+        } catch (err) {
+          console.error("Exceção Lightning:", err);
+          setSelectedItem({ ...order, lightningError: true });
+          navigateSubView("lightning_payment");
+        }
+        return;
+      }
+
+      // â”€â”€ SALDO DA CARTEIRA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      if (paymentMethod === "saldo") {
+        const walletBal = walletTransactions.reduce((acc: number, t: any) =>
+          ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
+
+        if (walletBal < total) {
+          alert(`Saldo insuficiente. Seu saldo: R$ ${walletBal.toFixed(2).replace(".",",")}`);
+          setIsLoading(false);
+          return;
+        }
+
+        navigateSubView("payment_processing");
+        const { data: order } = await supabase.from("orders_delivery").insert({ 
+          ...orderBase, 
+          status: "waiting_merchant",
+          payment_status: "paid"
+        }).select().single();
+        
+        if (!order) { 
+          alert("Erro ao debitar saldo. Tente novamente.");
+          navigateSubView("payment_error"); 
+          return; 
+        }
+
+        await supabase.from("wallet_transactions").insert({
+          user_id: userId, type: "pagamento", amount: total,
+          description: `Pedido em ${selectedShop?.name || "Loja"}`,
+        });
+
+        setSelectedItem(order);
+        await clearCart();
+        navigateSubView("waiting_merchant");
+        return;
+      }
+
+      // â”€â”€ GOOGLE PAY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      if (paymentMethod === "google_pay") {
+        setIsLoading(true);
+        navigateSubView("payment_processing");
+        // Simulação de processamento Google Pay
+        setTimeout(async () => {
+          const { data: order, error } = await supabase.from("orders_delivery").insert({ 
+            ...orderBase, 
+            status: "waiting_merchant",
+            payment_status: "paid"
+          }).select().single();
+
+          if (error || !order) {
+            toastError("Erro ao processar Google Pay.");
+            navigateSubView("payment_error");
+            return;
+          }
+          setSelectedItem(order);
+          await clearCart();
+          navigateSubView("waiting_merchant");
+          setIsLoading(false);
+        }, 2000);
+        return;
+      }
+
+      // â”€â”€ DINHEIRO / CARTÃƒO NA ENTREGA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      if (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") {
+        if (!selectedShop?.id) { alert("Erro: Estabelecimento não selecionado."); setIsLoading(false); return; }
+        
+        const { data: order, error: insertError } = await supabase
+          .from("orders_delivery")
+          .insert({ 
+            ...orderBase, 
+            merchant_id: selectedShop.id,
+            status: "waiting_merchant",
+            total_price: Number(total.toFixed(2))
+          })
+          .select()
+          .single();
+
+        if (insertError || !order) {
+          console.error(`Erro insert ${paymentMethod}:`, insertError);
+          alert("Não foi possível processar o pedido. Erro: " + (insertError?.message || "Tente novamente."));
+          setIsLoading(false);
+          return;
+        }
+
+        setSelectedItem(order);
+        await clearCart();
+        setChangeFor("");
+        navigateSubView("waiting_merchant");
+        return;
+      }
+
+      // â”€â”€ CARTÃƒO (Mercado Pago / Online Checkout) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      if (paymentMethod === "cartao") {
+        setSubView("card_payment");
+        return;
+      }
+
+    } catch (e) {
+      console.error("Erro ao criar pedido:", e);
+      navigateSubView("payment_error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (subView === "payments" && userId) {
+      fetchSavedCards(userId);
+    }
+  }, [subView, userId]);
+
+// Simular movimento do entregador
+  useEffect(() => {
+    if (subView === "active_order") {
+      const interval = setInterval(() => {
+        setDriverPos(prev => ({
+          lat: prev.lat + (Math.random() - 0.5) * 0.001,
+          lng: prev.lng + (Math.random() - 0.5) * 0.001
+        }));
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [subView]);
+
+
+
   useEffect(() => {
     if (!globalSettings?.flash_offer_expiry) return;
     const target = new Date(globalSettings.flash_offer_expiry).getTime();
@@ -979,779 +1760,7 @@ function App() {
     };
   }, [isScanningQR]);
 
-// Fetch payment methods when entering payments screen
-  useEffect(() => {
-    if (subView === "payments" && userId) {
-      fetchSavedCards(userId);
-    }
-  }, [subView, userId]);
 
-// Simular movimento do entregador
-  useEffect(() => {
-    if (subView === "active_order") {
-      const interval = setInterval(() => {
-        setDriverPos(prev => ({
-          lat: prev.lat + (Math.random() - 0.5) * 0.001,
-          lng: prev.lng + (Math.random() - 0.5) * 0.001
-        }));
-      }, 3000);
-      return () => clearInterval(interval);
-    }
-  }, [subView]);
-
-  const [savedCards, setSavedCards] = useState<any[]>([]);
-  const [isLoadingCards, setIsLoadingCards] = useState(false);
-  const [isAddingCard, setIsAddingCard] = useState(false);
-  const [isShowingMyQR, setIsShowingMyQR] = useState(false);
-  const [isScanningQR, setIsScanningQR] = useState(false);
-  const [transferTarget, setTransferTarget] = useState<any>(null);
-  const [newCardData, setNewCardData] = useState({ number: "", expiry: "", cvv: "", brand: "Visa" });
-  // Controla de onde a tela de pagamentos foi aberta: "checkout" | "profile"
-  const [paymentsOrigin, setPaymentsOrigin] = useState<"checkout" | "profile" | "izi_black">("profile");
-
-  const fetchSavedCards = async (uid: string) => {
-    setIsLoadingCards(true);
-    const { data, error } = await supabase
-      .from("payment_methods")
-      .select("*")
-      .eq("user_id", uid)
-      .order("created_at", { ascending: true });
-    if (!error && data) {
-      const cards = data.map((c: any) => ({
-        id: c.id,
-        brand: c.brand,
-        last4: c.last4,
-        expiry: c.expiry,
-        active: c.is_default,
-        stripe_payment_method_id: c.stripe_payment_method_id,
-        color: c.brand === "Visa"
-          ? "linear-gradient(135deg, #2563eb, #1e40af)"
-          : c.brand === "Amex"
-            ? "linear-gradient(135deg, #047857, #065f46)"
-            : "linear-gradient(135deg, #1e293b, #0f172a)",
-      }));
-      setSavedCards(cards);
-      // Se tem cartão padrão, define o método de pagamento
-      const defaultCard = cards.find((c: any) => c.active);
-      if (defaultCard) setPaymentMethod("cartao");
-    }
-    setIsLoadingCards(false);
-  };
-  const handleSetPrimaryCard = async (cardId: string) => {
-    if (!userId) return;
-    await supabase.from("payment_methods").update({ is_default: false }).eq("user_id", userId);
-    await supabase.from("payment_methods").update({ is_default: true }).eq("id", cardId);
-    setSavedCards((prev: any[]) => prev.map((c: any) => ({ ...c, active: c.id === cardId })));
-    setPaymentMethod("cartao");
-  };
-
-  const handleDeleteCard = async (cardId: string) => {
-    if (!userId) return;
-    if (await showConfirm({ message: "Remover este cartão?" })) {
-      await supabase.from("payment_methods").delete().eq("id", cardId).eq("user_id", userId);
-      const updated = savedCards.filter((c: any) => c.id !== cardId);
-      setSavedCards(updated);
-      const wasActive = savedCards.find((c: any) => c.id === cardId)?.active;
-      if (wasActive && updated.length > 0) {
-        await handleSetPrimaryCard(updated[0].id);
-      } else if (updated.length === 0) {
-        setPaymentMethod("pix");
-      }
-    }
-  };
-
-  const fetchSavedAddresses = async (uid: string) => {
-    const { data, error } = await supabase
-      .from("saved_addresses")
-      .select("*")
-      .eq("user_id", uid)
-      .order("created_at", { ascending: true });
-    if (!error && data) {
-      const addresses = data.map((addr: any) => ({
-        id: addr.id,
-        label: addr.label,
-        street: addr.street,
-        details: addr.details,
-        city: addr.city,
-        active: addr.is_active,
-      }));
-      setSavedAddresses(addresses);
-      // Sincroniza o local atual se houver um endereço ativo no banco
-      const active = addresses.find(a => a.active);
-      if (active) {
-        setUserLocation(prev => ({ ...prev, address: active.street }));
-      }
-    }
-  };
-  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
-  const addressAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(
-    null,
-  );
-  const [isAddingAddress, setIsAddingAddress] = useState(false);
-  const [newAddrLabel, setNewAddrLabel] = useState('');
-  const [newAddrStreet, setNewAddrStreet] = useState('');
-  const [newAddrDetails, setNewAddrDetails] = useState('');
-  const [newAddrCity, setNewAddrCity] = useState('');
-  const [isSavingAddress, setIsSavingAddress] = useState(false);
-
-  const resetAddressForm = () => {
-    setNewAddrLabel(''); setNewAddrStreet(''); setNewAddrDetails(''); setNewAddrCity('');
-    setEditingAddress(null); setIsAddingAddress(false);
-  };
-
-  const openEditAddress = (addr: SavedAddress) => {
-    setEditingAddress(addr);
-    setNewAddrLabel(addr.label || '');
-    setNewAddrStreet(addr.street || '');
-    setNewAddrDetails(addr.details || '');
-    setNewAddrCity(addr.city || '');
-    setIsAddingAddress(true);
-  };
-
-  const handleSaveAddress = async () => {
-    if (!userId) return;
-    if (!newAddrLabel.trim() || !newAddrStreet.trim()) {
-      toastError('Preencha pelo menos o rótulo e a rua.');
-      return;
-    }
-    setIsSavingAddress(true);
-    try {
-      if (editingAddress) {
-        const { error } = await supabase.from('saved_addresses').update({
-          label: newAddrLabel.trim(),
-          street: newAddrStreet.trim(),
-          details: newAddrDetails.trim() || null,
-          city: newAddrCity.trim() || null,
-        }).eq('id', editingAddress.id);
-        if (error) throw error;
-        toastSuccess('Endereço atualizado!');
-      } else {
-        const { error } = await supabase.from('saved_addresses').insert({
-          user_id: userId,
-          label: newAddrLabel.trim(),
-          street: newAddrStreet.trim(),
-          details: newAddrDetails.trim() || null,
-          city: newAddrCity.trim() || null,
-          is_active: savedAddresses.length === 0,
-        });
-        if (error) throw error;
-        toastSuccess('Endereço salvo com sucesso!');
-      }
-      resetAddressForm();
-      fetchSavedAddresses(userId);
-    } catch (e: any) {
-      toastError('Erro ao salvar: ' + e.message);
-    } finally {
-      setIsSavingAddress(false);
-    }
-  };
-
-  const handleDeleteAddress = async (addrId: string | number) => {
-    if (!userId) return;
-    try {
-      const { error } = await supabase.from('saved_addresses').delete().eq('id', addrId);
-      if (error) throw error;
-      toastSuccess('Endereço removido.');
-      fetchSavedAddresses(userId);
-    } catch (e: any) {
-      toastError('Erro ao remover: ' + e.message);
-    }
-  };
-
-  const handleSetActiveAddress = async (addrId: string | number) => {
-    if (!userId) return;
-    try {
-      await supabase.from('saved_addresses').update({ is_active: false }).eq('user_id', userId);
-      const { error } = await supabase.from('saved_addresses').update({ is_active: true }).eq('id', addrId);
-      if (error) throw error;
-      toastSuccess('Endereço padrão atualizado!');
-      fetchSavedAddresses(userId);
-    } catch (e: any) {
-      toastError('Erro ao definir endereço: ' + e.message);
-    }
-  };
-
-  useEffect(() => {
-    fetchMarketData();
-    fetchFlashOffers();
-    fetchGlobalSettings();
-    fetchBeveragePromo();
-    const interval = setInterval(fetchMarketData, 20000);
-    const flashChannel = supabase.channel('flash_offers_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'flash_offers' }, fetchFlashOffers)
-      .subscribe();
-    return () => {
-      clearInterval(interval);
-      supabase.removeChannel(flashChannel);
-    };
-  }, []);
-
-  const fetchWalletBalance = async (uid: string) => {
-    const { data } = await supabase
-      .from("users_delivery")
-      .select("wallet_balance, is_izi_black, cashback_earned, user_xp, izi_coins")
-      .eq("id", uid)
-      .single();
-    if (data) {
-      setWalletBalance(data.wallet_balance || 0);
-      setIsIziBlackMembership(data.is_izi_black || false);
-      setIziCashbackEarned(data.cashback_earned || 0);
-      setUserXP(data.user_xp || 0);
-      setIziCoins(data.izi_coins || 0);
-    }
-
-    // Buscar transacoes reais
-    const { data: txData } = await supabase
-      .from("wallet_transactions")
-      .select("*")
-      .eq("user_id", uid)
-      .order("created_at", { ascending: false })
-      .limit(20);
-    if (txData) setWalletTransactions(txData);
-  };
-
-  const isLoaded = true; // Loaded via index.html
-
-  const updateLocation = (onSuccess?: (address: string) => void) => {
-    setUserLocation((prev) => ({ ...prev, loading: true }));
-    if (!("geolocation" in navigator)) {
-      setUserLocation({ address: "Geolocalização não disponível", loading: false });
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          let address = "";
-
-          // Tenta reverse geocode via Google Maps Geocoder
-          if ((window as any).google?.maps) {
-            const geocoder = new google.maps.Geocoder();
-            const response = await geocoder.geocode({
-              location: { lat: latitude, lng: longitude },
-            });
-            if (response.results[0]) {
-              address = response.results[0].formatted_address;
-            }
-          }
-
-          // Fallback: Places API (New) reverse geocode via fetch
-          if (!address) {
-            try {
-              const res = await fetch(
-                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&language=pt-BR&result_type=street_address|route`
-              );
-              const data = await res.json();
-              if (data.results?.[0]) {
-                address = data.results[0].formatted_address;
-              }
-            } catch { /* silent */ }
-          }
-
-          // Ãšltimo fallback: Nominatim
-          if (!address) {
-            const nomRes = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
-            );
-            const nomData = await nomRes.json();
-            address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "Localização atual";
-          }
-
-          setUserLocation({ address, loading: false, lat: latitude, lng: longitude });
-          setTransitData((prev) => ({ ...prev, origin: address }));
-          if (onSuccess) onSuccess(address);
-        } catch {
-          setUserLocation((prev) => ({ ...prev, loading: false }));
-        }
-      },
-      () => {
-        setUserLocation({ address: "Permissão de localização negada", loading: false });
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  };
-
-  useEffect(() => {
-    updateLocation();
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      setView("app");
-      window.history.replaceState({ view: "app", tab: "home", subView: "none" }, "");
-      
-      fetchMyOrders(user.uid);
-      fetchWalletBalance(user.uid);
-      fetchSavedCards(user.uid);
-      fetchSavedAddresses(user.uid);
-      fetchCoupons();
-      fetchBeveragePromo();
-    } else if (!authInitLoading) {
-      setView("login");
-    }
-  }, [user, authInitLoading]);
-  useEffect(() => {
-    if (!userId) return;
-
-    const sub = supabase
-      .channel("orders_tracking")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "orders_delivery" },
-        (payload) => {
-          const newOrder = payload.new as any;
-          const oldOrder = payload.old as any;
-          
-          if (newOrder.user_id !== userIdRef.current) return;
-
-          // Se o status mudou, mostrar notificação personalizada
-          if (newOrder.status !== oldOrder.status) {
-            const statusMessages: Record<string, string> = {
-              'novo': 'Recebemos seu pedido! Já estamos processando. âš¡',
-              'pendente_pagamento': 'Aguardando confirmação do pagamento... ðŸ’³',
-              'pendente': 'O lojista recebeu seu pedido! ðŸŽ‰',
-              'aceito': 'O estabelecimento aceitou seu pedido! ðŸŽ‰',
-              'confirmado': 'Pedido confirmado! O preparo começou. âœ…',
-              'preparando': 'Seu pedido está sendo preparado com carinho! ðŸ³',
-              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. ðŸ“¦',
-              'a_caminho': 'O motoboy aceitou e está indo coletar seu pedido! ðŸï¸',
-              'picked_up': 'Pedido coletado! O motoboy está iniciando a entrega. ðŸš€',
-              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! ðŸ›µ',
-              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. ðŸ',
-              'no_local': 'O motoboy chegou ao seu endereço! ðŸ””',
-              'concluido': 'Pedido entregue com sucesso! Bom apetite. âœ¨',
-              'cancelado': 'Ah não! Seu pedido foi cancelado. âš ï¸'
-            };
-
-            const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
-            showToast(msg, newOrder.status === 'cancelado' ? 'warning' : 'success');
-
-            // Se o pagamento lightning foi confirmado, fechar a tela de pagamento
-            if (newOrder.payment_status === 'paid' && subViewRef.current === "lightning_payment") {
-              setSubView("payment_success");
-            }
-
-            // Abrir tela de avaliação ao concluir (exceto para assinaturas Izi Black)
-            if (newOrder.status === 'concluido') {
-              setSelectedItem(newOrder);
-              
-              setTimeout(() => {
-                if (newOrder.service_type === 'subscription') {
-                  setShowIziBlackWelcome(true);
-                  setSubView("none");
-                } else {
-                  setSubView("order_feedback");
-                }
-              }, 2000);
-            }
-
-            // TransiçÃµes automáticas de tela baseadas no status
-            if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
-              showToast("Loja aceitou seu pedido! ðŸŽ‰", "success");
-              setSelectedItem(newOrder); 
-              setTimeout(() => setSubView("active_order"), 1000);
-            }
-            if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
-              showToast("Seu pedido foi recusado.", "warning");
-              setSubView("none");
-              fetchMyOrders(userId!);
-            }
-            if (subViewRef.current === "waiting_driver" && 
-                ["a_caminho", "aceito", "confirmado", "em_rota", "no_local", "picked_up", "saiu_para_entrega"].includes(newOrder.status)) {
-              setSelectedItem(newOrder);
-              setTimeout(() => setSubView("active_order"), 1500);
-            }
-            if (subViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {
-              setSubView("none");
-              fetchMyOrders(userId!);
-            }
-
-            if (selectedItem?.id === newOrder.id || !selectedItem) {
-              setSelectedItem(newOrder);
-            }
-          }
-          
-          if (userIdRef.current) fetchMyOrders(userIdRef.current);
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(sub);
-    };
-  }, [userId, subView]);
-  
-  const fetchMyOrders = async (uid: string) => {
-    const { data } = await supabase
-      .from("orders_delivery")
-      .select("*")
-      .eq("user_id", uid)
-      .order("created_at", { ascending: false });
-    if (data) setMyOrders(data);
-  };
-
-  const fetchCoupons = async () => {
-    const { data } = await supabase
-      .from('promotions_delivery')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
-    if (data) setAvailableCoupons(data);
-  };
-
-  const fetchBeveragePromo = useCallback(async () => {
-    try {
-      // 1. Buscar Banners específicos para bebidas ou banners gerais ativos
-      const { data: banners } = await supabase
-        .from('promotions_delivery')
-        .select('*')
-        .eq('is_active', true)
-        .is('coupon_code', null)
-        .order('created_at', { ascending: false });
-      
-      if (banners) {
-        // Filtra banners que mencionam bebidas no título ou descrição
-        const bevBanners = banners.filter(b => 
-          (b.title?.toLowerCase().includes('bebida') || b.description?.toLowerCase().includes('bebida') ||
-           b.title?.toLowerCase().includes('gelada') || b.description?.toLowerCase().includes('gelada'))
-        );
-        setBeverageBanners(bevBanners.length > 0 ? bevBanners : banners.slice(0, 1));
-      }
-
-      // 2. Buscar Produtos da categoria Bebidas para a tela de ofertas
-      const { data: pDeals } = await supabase
-        .from('products_delivery')
-        .select('*')
-        .eq('is_available', true)
-        .eq('category', 'Bebidas')
-        .limit(8);
-      
-      if (pDeals) {
-        const discountPct = globalSettings?.flash_offer_discount || 25;
-        const discountMult = 1 / (1 - (discountPct / 100)); // Calculate back to original price
-        
-        const formatted = pDeals.map(p => ({
-          id: p.id,
-          name: p.name,
-          price: p.price,
-          oldPrice: p.price * (discountMult || 1.25),
-          off: `${discountPct}%`,
-          img: p.image_url || "https://images.unsplash.com/photo-1596753738914-7bc33e08f58b?q=80&w=400",
-          cat: p.category || "Bebidas"
-        }));
-        setBeverageOffers(formatted);
-      }
-    } catch (err) {
-    }
-  }, [globalSettings]);
-
-  const validateCoupon = async (code: string) => {
-    if (!code.trim()) return;
-    setIsValidatingCoupon(true);
-    setCouponError("");
-
-    try {
-      const { data, error } = await supabase
-        .from('promotions_delivery')
-        .select('*')
-        .eq('coupon_code', code.trim().toUpperCase())
-        .eq('is_active', true)
-        .single();
-
-      if (error || !data) {
-        setCouponError("Cupom inválido ou expirado.");
-        setAppliedCoupon(null);
-        return;
-      }
-
-      const subtotal = cart.reduce((acc, item) => acc + (item.price || 0), 0);
-      if (data.min_order_value && subtotal < data.min_order_value) {
-        setCouponError(`Pedido mínimo de R$ ${data.min_order_value.toFixed(2).replace(".", ",")} para este cupom.`);
-        setAppliedCoupon(null);
-        return;
-      }
-
-      // Validar data de expiração se houver
-      if (data.end_date && new Date(data.end_date) < new Date()) {
-        setCouponError("Este cupom já expirou.");
-        setAppliedCoupon(null);
-        return;
-      }
-
-      setAppliedCoupon(data);
-      setCouponInput("");
-      setCouponError("");
-    } catch (err) {
-      setCouponError("Erro ao validar cupom.");
-    } finally {
-      setIsValidatingCoupon(false);
-    }
-  };
-
-
-
-  const getItemCount = (id: number) =>
-    cart.filter((item) => item.id === id).length;
-
-  const handleAddToCart = (item: any) => {
-    setCart((prev: any[]) => [...prev, { ...item }]);
-    setUserXP((prev: number) => prev + 10);
-  };
-
-  const handleShopClick = async (shop: any) => {
-    setSelectedShop(shop);
-    setActiveCategory("Destaques");
-    const isRestaurant = shop.type === "restaurant";
-    const targetView = isRestaurant ? "restaurant_menu" : "store_catalog";
-
-    try {
-      const { data: products } = await supabase
-        .from("products_delivery")
-        .select("*")
-        .eq("merchant_id", shop.id)
-        .eq("is_available", true)
-        .order("created_at", { ascending: false });
-
-      console.log("Produtos recebidos:", products?.length, products?.[0]);
-      if (products && products.length > 0) {
-        const grouped: Record<string, any[]> = {};
-        products.forEach((p: any) => {
-          const cat = p.category || p.subcategory || (isRestaurant ? "Cardápio" : "Produtos");
-          if (!grouped[cat]) grouped[cat] = [];
-          grouped[cat].push({
-            id: p.id,
-            name: p.name,
-            desc: p.description || "",
-            price: p.price,
-            img: p.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600",
-          });
-        });
-        const categories = Object.entries(grouped).map(([name, items]) => ({ name, items }));
-        setSelectedShop({ ...shop, categories });
-      }
-    } catch (e) {}
-
-    navigateSubView(targetView);
-  };
-
-
-  const handleApplyCoupon = async (code: string) => {
-    if (!code) return;
-    const { data } = await supabase.from("promotions").select("*").eq("coupon_code", code.toUpperCase().trim()).eq("is_active", true).single();
-    if (data) { setAppliedCoupon(data); setCouponInput(data.coupon_code); }
-    else { alert("Cupom invalido ou expirado."); }
-  };
-
-
-  const handlePlaceOrder = async (useCoins: boolean = false) => {
-    if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
-    if (!userId) { alert("Faça login para continuar."); return; }
-    if (cart.length === 0) { alert("Seu carrinho está vazio."); return; }
-
-    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const couponDiscount = appliedCoupon
-      ? appliedCoupon.discount_type === "fixed"
-        ? appliedCoupon.discount_value
-        : (subtotal * appliedCoupon.discount_value) / 100
-      : 0;
-    
-    const coinValue = globalSettings?.izi_coin_value || 0.01;
-    const coinDiscount = useCoins ? iziCoins * coinValue : 0;
-    const total = Math.max(0, subtotal - couponDiscount - coinDiscount);
-
-    const coinRate = globalSettings?.izi_coin_rate || 1;
-    const earnedCoins = Math.floor(total * coinRate);
-
-    const orderBase = {
-      user_id: userId,
-      merchant_id: selectedShop?.id || null,
-      status: "novo",
-      total_price: total,
-      pickup_address: selectedShop?.name || "Endereço do Estabelecimento",
-      delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map(i => `${i.name} (R$ ${Number(i.price).toFixed(2)})`).join(', ')}`,
-      payment_method: paymentMethod,
-      service_type: selectedShop?.type || "restaurant",
-      notes: paymentMethod === "dinheiro" && changeFor ? `TROCO PARA: R$ ${changeFor}` : "",
-    };
-
-    const clearCart = async () => {
-      const finalCoins = useCoins ? earnedCoins : (iziCoins + earnedCoins);
-      setCart([]);
-      setAppliedCoupon(null);
-      setCouponInput("");
-      setUserXP((prev: number) => prev + 50);
-      setIziCoins(finalCoins);
-      
-      if (userId) {
-        await supabase.from("users_delivery").update({ 
-          izi_coins: finalCoins,
-          user_xp: (userXP + 50) 
-        }).eq("id", userId);
-      }
-    };
-
-    try {
-      // â”€â”€ PAGAMENTOS DIGITAIS (Pendente Confirmação) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      const isDigital = ["pix", "cartao", "bitcoin_lightning", "google_pay"].includes(paymentMethod);
-      const initialStatus = isDigital ? "pendente_pagamento" : (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega" ? "waiting_merchant" : "novo");
-
-      // â”€â”€ PIX (Mercado Pago) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      if (paymentMethod === "pix") {
-        setPixConfirmed(false);
-        setPixCpf("");
-        navigateSubView("pix_payment");
-        return;
-      }
-
-      // â”€â”€ BITCOIN LIGHTNING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      if (paymentMethod === "bitcoin_lightning") {
-        navigateSubView("payment_processing");
-        const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ 
-          ...orderBase, 
-          status: "pendente_pagamento",
-        }).select().single();
-        
-        if (insertError || !order) { 
-          alert("Não foi possível registrar o pedido para pagamento Lightning: " + (insertError?.message || "Erro desconhecido"));
-          navigateSubView("payment_error"); 
-          return; 
-        }
-
-        try {
-          const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
-            body: { 
-              amount: Number(total.toFixed(2)), 
-              orderId: order.id, 
-              memo: `Pedido ${selectedShop?.name || "IziDelivery"}` 
-            },
-          });
-
-          if (lnErr || !lnData?.payment_request) {
-            console.error("Erro Lightning:", lnErr);
-            // Se o pedido já foi criado, vamos mostrar ele mas com erro na invoice
-            setSelectedItem({ ...order, lightningError: true });
-            navigateSubView("lightning_payment");
-            return;
-          }
-
-          setSelectedItem({ 
-            ...order, 
-            lightningInvoice: lnData.payment_request, 
-            satoshis: lnData.satoshis, 
-            btcPrice: lnData.btc_price_brl 
-          });
-          await clearCart();
-          navigateSubView("lightning_payment");
-        } catch (err) {
-          console.error("Exceção Lightning:", err);
-          setSelectedItem({ ...order, lightningError: true });
-          navigateSubView("lightning_payment");
-        }
-        return;
-      }
-
-      // â”€â”€ SALDO DA CARTEIRA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      if (paymentMethod === "saldo") {
-        const walletBal = walletTransactions.reduce((acc: number, t: any) =>
-          ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
-
-        if (walletBal < total) {
-          alert(`Saldo insuficiente. Seu saldo: R$ ${walletBal.toFixed(2).replace(".",",")}`);
-          setIsLoading(false);
-          return;
-        }
-
-        navigateSubView("payment_processing");
-        const { data: order } = await supabase.from("orders_delivery").insert({ 
-          ...orderBase, 
-          status: "waiting_merchant",
-          payment_status: "paid"
-        }).select().single();
-        
-        if (!order) { 
-          alert("Erro ao debitar saldo. Tente novamente.");
-          navigateSubView("payment_error"); 
-          return; 
-        }
-
-        await supabase.from("wallet_transactions").insert({
-          user_id: userId, type: "pagamento", amount: total,
-          description: `Pedido em ${selectedShop?.name || "Loja"}`,
-        });
-
-        setSelectedItem(order);
-        await clearCart();
-        navigateSubView("waiting_merchant");
-        return;
-      }
-
-      // â”€â”€ GOOGLE PAY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      if (paymentMethod === "google_pay") {
-        setIsLoading(true);
-        navigateSubView("payment_processing");
-        // Simulação de processamento Google Pay
-        setTimeout(async () => {
-          const { data: order, error } = await supabase.from("orders_delivery").insert({ 
-            ...orderBase, 
-            status: "waiting_merchant",
-            payment_status: "paid"
-          }).select().single();
-
-          if (error || !order) {
-            toastError("Erro ao processar Google Pay.");
-            navigateSubView("payment_error");
-            return;
-          }
-          setSelectedItem(order);
-          await clearCart();
-          navigateSubView("waiting_merchant");
-          setIsLoading(false);
-        }, 2000);
-        return;
-      }
-
-      // â”€â”€ DINHEIRO / CARTÃƒO NA ENTREGA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      if (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") {
-        if (!selectedShop?.id) { alert("Erro: Estabelecimento não selecionado."); setIsLoading(false); return; }
-        
-        const { data: order, error: insertError } = await supabase
-          .from("orders_delivery")
-          .insert({ 
-            ...orderBase, 
-            merchant_id: selectedShop.id,
-            status: "waiting_merchant",
-            total_price: Number(total.toFixed(2))
-          })
-          .select()
-          .single();
-
-        if (insertError || !order) {
-          console.error(`Erro insert ${paymentMethod}:`, insertError);
-          alert("Não foi possível processar o pedido. Erro: " + (insertError?.message || "Tente novamente."));
-          setIsLoading(false);
-          return;
-        }
-
-        setSelectedItem(order);
-        await clearCart();
-        setChangeFor("");
-        navigateSubView("waiting_merchant");
-        return;
-      }
-
-      // â”€â”€ CARTÃƒO (Mercado Pago / Online Checkout) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      if (paymentMethod === "cartao") {
-        setSubView("card_payment");
-        return;
-      }
-
-    } catch (e) {
-      console.error("Erro ao criar pedido:", e);
-      navigateSubView("payment_error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const renderBurgerList = () => {
     return (
