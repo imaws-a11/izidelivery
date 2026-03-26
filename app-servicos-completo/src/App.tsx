@@ -298,6 +298,7 @@ function App() {
   const [stripePaymentMethodId, setStripePaymentMethodId] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState<string>("Destaques");
+  const [restaurantInitialCategory, setRestaurantInitialCategory] = useState("Todos");
   const [activeMenuCategory, setActiveMenuCategory] = useState("Destaques");
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [driverLocation, setDriverLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -586,12 +587,12 @@ function App() {
   });
 
   const foodCategories = [
-    { id: "all",        name: "Todos",      icon: "restaurant",    action: () => navigateSubView("explore_restaurants") },
-    { id: "burgers",    name: "Burgers",    icon: "lunch_dining",  action: () => navigateSubView("burger_list") },
-    { id: "pizza",      name: "Pizza",      icon: "local_pizza",   action: () => navigateSubView("pizza_list") },
-    { id: "japones",    name: "Japonesa",   icon: "set_meal",      action: () => navigateSubView("japonesa_list") },
-    { id: "brasileira", name: "Brasileira", icon: "dinner_dining", action: () => navigateSubView("brasileira_list") },
-    { id: "acai",       name: "Açaí",       icon: "grass",         action: () => navigateSubView("acai_list") },
+    { id: "all",        name: "Todos",      icon: "restaurant",    action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
+    { id: "burgers",    name: "Burgers",    icon: "lunch_dining",  action: () => { setRestaurantInitialCategory("Burgers"); navigateSubView("explore_restaurants"); } },
+    { id: "pizza",      name: "Pizza",      icon: "local_pizza",   action: () => { setRestaurantInitialCategory("Pizza"); navigateSubView("explore_restaurants"); } },
+    { id: "japones",    name: "Japonesa",   icon: "set_meal",      action: () => { setRestaurantInitialCategory("Japonesa"); navigateSubView("explore_restaurants"); } },
+    { id: "brasileira", name: "Brasileira", icon: "dinner_dining", action: () => { setRestaurantInitialCategory("Brasileira"); navigateSubView("explore_restaurants"); } },
+    { id: "acai",       name: "Açaí",       icon: "grass",         action: () => { setRestaurantInitialCategory("Açaí"); navigateSubView("explore_restaurants"); } },
     { id: "daily",      name: "Do Dia",     icon: "today",         action: () => navigateSubView("daily_menus") },
   ];
 
@@ -2040,103 +2041,21 @@ function App() {
   };
 
   const renderExploreRestaurants = () => {
-    const allShops = ESTABLISHMENTS.map((estab: any) => ({
-      id: estab.id,
-      name: estab.name,
-      rating: estab.rating || "5.0",
-      time: estab.time || "30-40 min",
-      freeDelivery: estab.freeDelivery || true,
-      fee: estab.freeDelivery ? "GRÁTIS" : (estab.fee || "R$ 9,00"),
-      tag: estab.tag || "Restaurante",
-      banner: estab.banner || estab.img,
-      img: estab.img,
-    }));
-
-    const filtered = allShops.filter(shop =>
-      ESTABLISHMENTS.find(e => e.id === shop.id)?.type === 'restaurant' &&
-      (shop.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       shop.tag.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-
     return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
-
-        {/* HEADER */}
-        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-md flex justify-between items-center w-full px-5 py-4 border-b border-zinc-900">
-          <button onClick={() => setSubView("restaurant_list")} className="p-2 -ml-1 text-yellow-400 hover:bg-yellow-400/10 rounded-full transition-colors active:scale-90">
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
-          <button className="flex items-center gap-2 px-5 py-2 bg-yellow-400 text-black rounded-full font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_15px_rgba(255,215,9,0.3)]">
-            <span className="material-symbols-outlined text-sm">tune</span>
-            Filtrar
-          </button>
-        </header>
-
-        {/* SEARCH */}
-        <div className="px-5 pt-4 pb-2">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
-            </div>
-            <input
-              className="w-full bg-zinc-900/50 border-0 border-b border-zinc-900 rounded-2xl py-3.5 pl-12 pr-10 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-yellow-400/20 text-sm font-medium transition-all"
-              placeholder="Buscar por gênero ou nome..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="absolute inset-y-0 right-4 flex items-center">
-                <span className="material-symbols-outlined text-zinc-500 text-sm">close</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* GRID */}
-        <main className="px-5 pt-4 pb-10">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
-            {filtered.map((shop, i) => (
-              <motion.article
-                key={shop.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                onClick={() => handleShopClick({ ...shop, type: "restaurant" })}
-                className="group cursor-pointer"
-              >
-                <div className="relative aspect-[4/5] mb-3 overflow-hidden rounded-3xl transition-transform duration-500 group-hover:scale-[1.02] shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
-                  <img src={shop.banner} alt={shop.name} className="w-full h-full object-cover transition-all duration-700" />
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0) 100%)" }} />
-                  <div className="absolute bottom-4 left-4 right-4">
-                    {shop.tag && (
-                      <div className="mb-1.5">
-                        <span className="bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">{shop.tag}</span>
-                      </div>
-                    )}
-                    <h3 className="font-extrabold text-base tracking-tight text-white group-hover:text-yellow-400 transition-colors leading-tight">{shop.name}</h3>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1 px-1">
-                  <div className="flex items-center gap-1 text-yellow-400">
-                    <span className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                    <span className="font-black text-xs text-white">{shop.rating}</span>
-                    <span className="text-zinc-600 text-[10px] ml-1">• {shop.time}</span>
-                  </div>
-                  <div className="text-[10px] uppercase tracking-wider font-semibold">
-                    <span className={shop.freeDelivery ? "text-yellow-400 font-black" : "text-zinc-500"}>{shop.freeDelivery ? "GRÁTIS" : shop.fee}</span>
-                  </div>
-                </div>
-              </motion.article>
-            ))}
-            {filtered.length === 0 && (
-              <div className="col-span-2 flex flex-col items-center justify-center py-20 gap-3">
-                <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
-                <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum resultado</p>
-              </div>
-            )}
-          </div>
-        </main>
-      </div>
+      <ExploreRestaurantsView 
+        setSubView={setSubView}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        cart={cart}
+        navigateSubView={navigateSubView}
+        foodCategories={foodCategories}
+        availableCoupons={availableCoupons}
+        establishments={ESTABLISHMENTS}
+        onShopClick={handleShopClick}
+        copiedCoupon={copiedCoupon}
+        setCopiedCoupon={setCopiedCoupon}
+        initialCategory={restaurantInitialCategory}
+      />
     );
   };
 
