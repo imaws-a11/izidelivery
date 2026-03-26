@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { BespokeIcons } from "./lib/BespokeIcons";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,7 +12,7 @@ import {
   updateProfile
 } from "firebase/auth";
 import { toast, toastSuccess, toastError, toastWarning, showConfirm } from "./lib/useToast";
-import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from '@react-google-maps/api';
+import { useGoogleMapsLoader } from "./hooks/useGoogleMapsLoader";
 // Mercado Pago
 import { MercadoPagoCardForm } from "./components/MercadoPagoCardForm";
 import { calculateFreightPrice, calculateVanPrice } from "./lib/pricing_engine";
@@ -46,6 +46,9 @@ function App() {
   const [tab, setTab] = useState<"home" | "orders" | "wallet" | "profile">(
     "home",
   );
+
+  // Carrega a Google Maps API uma única vez para toda a aplicação (singleton)
+  useGoogleMapsLoader();
   
   const {
     user,
@@ -374,6 +377,7 @@ function App() {
     pickupSector: "",
   });
   const [distancePrices, setDistancePrices] = useState<Record<string, number>>({});
+  const [distanceValueKm, setDistanceValueKm] = useState(0);
   const [routeDistance, setRouteDistance] = useState<string>("");
   const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
   const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
@@ -719,6 +723,7 @@ function App() {
         const durationText = mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60}min` : `${mins} min`;
         const distText = distKm < 1 ? `${Math.round(distKm*1000)} m` : `${distKm.toFixed(1)} km`;
         setRouteDistance(`${distText} â€¢ ${durationText}`);
+        setDistanceValueKm(distKm);
           const bv = marketConditions.settings.baseValues;
           const surge = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
           const mototaxi_min = parseFloat(String(bv.mototaxi_min)) || 6.0;
@@ -787,7 +792,7 @@ function App() {
     if (transitData.type === 'utilitario') {
        finalPrice = calculateFreightPrice({
           baseFare: 45,
-          distanceInKm: 10,
+          distanceInKm: distanceValueKm || 1,
           distanceRate: 2.8,
           helperCount: transitData.helpers,
           helperRate: 35,
@@ -796,7 +801,7 @@ function App() {
     } else if (transitData.type === 'van') {
        finalPrice = calculateVanPrice({
           baseFare: 80,
-          distanceInKm: 15,
+          distanceInKm: distanceValueKm || 1,
           distanceRate: 3.5,
           stopCount: transitData.stops.length,
           stopRate: 15,
@@ -5903,10 +5908,11 @@ function App() {
       <div className="absolute inset-0 z-40 bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
         {/* MAPA NO FUNDO */}
         <div className="absolute inset-0 z-0">
-           <IziTrackingMap 
-             driverLoc={driverLocation} 
-             userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} 
-           />
+            <IziTrackingMap 
+              driverLoc={driverLocation} 
+              userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} 
+              onMyLocationClick={updateLocation}
+            />
            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
         </div>
 
@@ -5996,7 +6002,7 @@ function App() {
       <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
         {/* MAPA NO FUNDO */}
         <div className="absolute inset-0 z-0 h-[35vh]">
-           <IziTrackingMap driverLoc={driverLocation} />
+           <IziTrackingMap driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
         </div>
 
@@ -6202,8 +6208,8 @@ function App() {
                       R$ {(() => {
                         const res = calculateFreightPrice({
                           baseFare: 45,
-                          distanceInKm: 10,
-                          distanceRate: 2.8,
+                          distanceInKm: distanceValueKm || 1,
+                           distanceRate: 2.8,
                           helperCount: transitData.helpers,
                           helperRate: 35,
                           hasStairs: transitData.accessibility.stairsAtOrigin || transitData.accessibility.stairsAtDestination
@@ -6244,7 +6250,7 @@ function App() {
       <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
         {/* MAPA NO FUNDO */}
         <div className="absolute inset-0 z-0 h-[35vh]">
-           <IziTrackingMap driverLoc={driverLocation} />
+           <IziTrackingMap driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
         </div>
 
@@ -6414,7 +6420,7 @@ function App() {
                       R$ {(() => {
                         const res = calculateVanPrice({
                           baseFare: 80,
-                          distanceInKm: 15, // Por ser wizard demo usamos fixo
+                          distanceInKm: distanceValueKm || 1, // Usando distância real da Routes API
                           distanceRate: 3.5,
                           stopCount: transitData.stops.length,
                           stopRate: 15,
@@ -6981,7 +6987,7 @@ function App() {
       <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
         {/* MAPA NO FUNDO */}
         <div className="absolute inset-0 z-0 h-[45vh]">
-           <IziTrackingMap driverLoc={driverLocation} />
+           <IziTrackingMap driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
         </div>
 
@@ -7030,7 +7036,11 @@ function App() {
                            placeholder="Para onde vamos?"
                            className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
                            userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                           onSelect={(p) => setTransitData({...transitData, destination: p.formatted_address || ""})}
+                          onSelect={(p) => {
+                            const dest = p.formatted_address || "";
+                            setTransitData({...transitData, destination: dest});
+                            if (transitData.origin) calculateDistancePrices(transitData.origin, dest);
+                          }}
                          />
                       </div>
                    </div>
@@ -7051,7 +7061,7 @@ function App() {
                          </div>
                          <div className="flex-1">
                             <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Preço Estimado</p>
-                            <p className="text-2xl font-black text-yellow-400">R$ 15,90</p>
+                            <p className="text-2xl font-black text-yellow-400">R$ {(transitData.estPrice || 15.9).toFixed(2).replace(".", ",")}</p>
                          </div>
                       </div>
                       <div className="h-px bg-white/5 w-full" />
@@ -8251,6 +8261,7 @@ function App() {
                     selectedItem={selectedItem}
                     driverLocation={driverLocation}
                     userLocation={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
+                    onMyLocationClick={updateLocation}
                     setSubView={setSubView}
                   />
                 </motion.div>

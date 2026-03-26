@@ -7,6 +7,7 @@ interface ActiveOrderViewProps {
   selectedItem: any;
   driverLocation: any;
   userLocation: { lat: number; lng: number } | null;
+  onMyLocationClick: () => void;
   setSubView: (view: string) => void;
 }
 
@@ -14,6 +15,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
   selectedItem,
   driverLocation,
   userLocation,
+  onMyLocationClick,
   setSubView,
 }) => {
   if (!selectedItem) return null;
@@ -99,7 +101,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
       {/* MAPA PLACEHOLDER OU REAL-TIME */}
       <div className="relative w-full h-[35vh] bg-zinc-900 overflow-hidden shrink-0">
         {/* MAPA REAL-TIME IZI FLASH */}
-        <IziTrackingMap driverLoc={driverLocation} userLoc={userLocation} />
+        <IziTrackingMap driverLoc={driverLocation} userLoc={userLocation} onMyLocationClick={onMyLocationClick} />
 
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black z-10 pointer-events-none" />
 
