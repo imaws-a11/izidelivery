@@ -25,6 +25,7 @@ interface HomeViewProps {
   transitData: any;
   setTransitData: (data: any) => void;
   setExploreCategoryState: (state: any) => void;
+  isIziBlackMembership: boolean;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -50,8 +51,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
   setActiveService,
   transitData,
   setTransitData,
-  setExploreCategoryState
+  setExploreCategoryState,
+  isIziBlackMembership,
 }) => {
+  const handleBannerClick = () => {
+    if (isIziBlackMembership) {
+      navigateSubView("exclusive_offer");
+    } else {
+      navigateSubView("izi_black_purchase");
+    }
+  };
+
   const deliveryServices = [
     { icon: "restaurant",     label: "Restaurantes", type: "restaurant", action: null },
     { icon: "local_mall",     label: "Mercados",     type: "market",     action: null },
@@ -182,7 +192,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         {/* BANNER PROMO */}
         <section>
-          <div className="relative h-44 w-full rounded-2xl overflow-hidden group cursor-pointer" onClick={() => navigateSubView("exclusive_offer")}>
+          <div className="relative h-44 w-full rounded-2xl overflow-hidden group cursor-pointer" onClick={handleBannerClick}>
             <img className="w-full h-full object-cover brightness-50 group-hover:scale-105 transition-transform duration-700" src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=800" alt="Promo" />
             <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-transparent flex flex-col justify-center p-7">
               <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Oferta VIP</span>
