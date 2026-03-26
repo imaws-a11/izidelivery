@@ -2953,13 +2953,22 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                              if (!file) return;
                              setUploadingImage(true);
                              try {
+                               console.log('[UPLOAD BANNER] targetId:', targetId, 'targetItem:', targetItem);
                                const url = await handleFileUpload(file);
-                               if (url) {
-                                  updateItem({...targetItem, store_banner: url});
-                                  const { error } = await supabase.from('admin_users').update({ store_banner: url }).eq('id', targetId);
-                                  if (!error) toastSuccess('Banner salvo com sucesso!');
-                                  else toastError('Erro ao salvar o banner: ' + error.message);
+                               console.log('[UPLOAD BANNER] url retornada:', url);
+                               if (!url) {
+                                 toastError('Upload falhou: verifique as variáveis VITE_CLOUDINARY_CLOUD_NAME e VITE_CLOUDINARY_UPLOAD_PRESET no .env');
+                                 return;
                                }
+                               updateItem({...targetItem, store_banner: url});
+                               if (!targetId) {
+                                 toastError('Erro: ID do estabelecimento não encontrado. Faça logout e login novamente.');
+                                 return;
+                               }
+                               const { error } = await supabase.from('admin_users').update({ store_banner: url }).eq('id', targetId);
+                               console.log('[UPLOAD BANNER] save error:', error);
+                               if (!error) toastSuccess('Banner salvo com sucesso!');
+                               else toastError('Erro ao salvar o banner: ' + error.message);
                              } finally {
                                setUploadingImage(false);
                                e.target.value = '';
@@ -2983,13 +2992,22 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                              if (!file) return;
                              setUploadingImage(true);
                              try {
+                               console.log('[UPLOAD LOGO] targetId:', targetId, 'targetItem:', targetItem);
                                const url = await handleFileUpload(file);
-                               if (url) {
-                                  updateItem({...targetItem, store_logo: url});
-                                  const { error } = await supabase.from('admin_users').update({ store_logo: url }).eq('id', targetId);
-                                  if (!error) toastSuccess('Logotipo salvo com sucesso!');
-                                  else toastError('Erro ao salvar o logotipo: ' + error.message);
+                               console.log('[UPLOAD LOGO] url retornada:', url);
+                               if (!url) {
+                                 toastError('Upload falhou: verifique as variáveis VITE_CLOUDINARY_CLOUD_NAME e VITE_CLOUDINARY_UPLOAD_PRESET no .env');
+                                 return;
                                }
+                               updateItem({...targetItem, store_logo: url});
+                               if (!targetId) {
+                                 toastError('Erro: ID do estabelecimento não encontrado. Faça logout e login novamente.');
+                                 return;
+                               }
+                               const { error } = await supabase.from('admin_users').update({ store_logo: url }).eq('id', targetId);
+                               console.log('[UPLOAD LOGO] save error:', error);
+                               if (!error) toastSuccess('Logotipo salvo com sucesso!');
+                               else toastError('Erro ao salvar o logotipo: ' + error.message);
                              } finally {
                                setUploadingImage(false);
                                e.target.value = '';
