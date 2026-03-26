@@ -2965,10 +2965,14 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                  toastError('Erro: ID do estabelecimento não encontrado. Faça logout e login novamente.');
                                  return;
                                }
-                               const { error } = await supabase.from('admin_users').update({ store_banner: url }).eq('id', targetId);
-                               console.log('[UPLOAD BANNER] save error:', error);
-                               if (!error) toastSuccess('Banner salvo com sucesso!');
-                               else toastError('Erro ao salvar o banner: ' + error.message);
+                               const { error, count } = await supabase
+                                 .from('admin_users')
+                                 .update({ store_banner: url }, { count: 'exact' })
+                                 .eq('id', targetId);
+                               console.log('[UPLOAD BANNER] save error:', error, 'rows affected:', count);
+                               if (error) toastError('Erro ao salvar o banner: ' + error.message);
+                               else if (count === 0) toastError('Permissão negada: nenhuma linha foi atualizada. Verifique as políticas RLS do Supabase na tabela admin_users.');
+                               else toastSuccess('Banner salvo com sucesso!');
                              } finally {
                                setUploadingImage(false);
                                e.target.value = '';
@@ -3004,10 +3008,14 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                  toastError('Erro: ID do estabelecimento não encontrado. Faça logout e login novamente.');
                                  return;
                                }
-                               const { error } = await supabase.from('admin_users').update({ store_logo: url }).eq('id', targetId);
-                               console.log('[UPLOAD LOGO] save error:', error);
-                               if (!error) toastSuccess('Logotipo salvo com sucesso!');
-                               else toastError('Erro ao salvar o logotipo: ' + error.message);
+                               const { error, count } = await supabase
+                                 .from('admin_users')
+                                 .update({ store_logo: url }, { count: 'exact' })
+                                 .eq('id', targetId);
+                               console.log('[UPLOAD LOGO] save error:', error, 'rows affected:', count);
+                               if (error) toastError('Erro ao salvar o logotipo: ' + error.message);
+                               else if (count === 0) toastError('Permissão negada: nenhuma linha atualizada. Verifique as políticas RLS do Supabase na tabela admin_users.');
+                               else toastSuccess('Logotipo salvo com sucesso!');
                              } finally {
                                setUploadingImage(false);
                                e.target.value = '';
