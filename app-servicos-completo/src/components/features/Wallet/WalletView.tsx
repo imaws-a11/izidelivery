@@ -1,5 +1,6 @@
-import React from "react";
-
+import React, { useState, useRef } from "react";
+import { supabase } from "../../../lib/supabase";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface WalletViewProps {
   walletTransactions: any[];
@@ -9,17 +10,35 @@ interface WalletViewProps {
   paymentMethod: string;
   setPaymentsOrigin: (origin: string) => void;
   setSubView: (view: string) => void;
+  userId: string | null;
+  userName: string;
+  showToast?: (msg: string, type: 'success' | 'error' | 'warning') => void;
+  setShowDepositModal: (show: boolean) => void;
 }
 
 export const WalletView: React.FC<WalletViewProps> = ({
-  walletTransactions,
-  myOrders,
-  userXP,
-  savedCards,
-  paymentMethod,
+  walletTransactions = [],
+  myOrders = [],
+  userXP = 0,
+  savedCards = [],
+  paymentMethod = "cartao",
   setPaymentsOrigin,
   setSubView,
+  userId,
+  userName,
+  showToast,
+  setShowDepositModal,
 }) => {
+  const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr">("main");
+  const historyRef = useRef<HTMLElement>(null);
+
+  // Estados para Transferência
+  const [searchTarget, setSearchTarget] = useState("");
+  const [recipient, setRecipient] = useState<any>(null);
+  const [amount, setAmount] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
+
   const walletBalance = walletTransactions.reduce(
     (acc: number, t: any) =>
       ["deposito", "reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount),
@@ -31,6 +50,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
     reembolso: { icon: "refresh", color: "text-blue-400" },
     pagamento: { icon: "shopping_bag", color: "text-zinc-400" },
     saque: { icon: "arrow_outward", color: "text-red-400" },
+    transferencia: { icon: "swap_horiz", color: "text-blue-400" },
   };
 
   const totalGasto = walletTransactions
@@ -47,35 +67,213 @@ export const WalletView: React.FC<WalletViewProps> = ({
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
 
+  const handleSearchRecipient = async () => {
+    if (!searchTarget.trim()) return;
+    setIsSearching(true);
+    try {
+      const { data, error } = await supabase
+        .from("users_delivery")
+        .select("id, name, email, phone")
+        .or(`email.eq.${searchTarget},phone.eq.${searchTarget}`)
+        .not("id", "eq", userId)
+        .single();
+
+      if (error || !data) {
+        showToast?.("Usuário não encontrado", "error");
+        setRecipient(null);
+      } else {
+        setRecipient(data);
+      }
+    } catch (err) {
+      showToast?.("Erro ao buscar usuário", "error");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleTransfer = async () => {
+    const val = Number(amount.replace(",", "."));
+    if (isNaN(val) || val <= 0) return showToast?.("Valor inválido", "error");
+    if (val > walletBalance) return showToast?.("Saldo insuficiente", "error");
+    if (!recipient) return;
+
+    setIsTransferring(true);
+    try {
+      // 1. Débito no remetente
+      const { error: err1 } = await supabase
+        .from("wallet_transactions")
+        .insert({
+          user_id: userId,
+          amount: val,
+          type: "pagamento",
+          description: `Transferência enviada para ${recipient.name}`
+        });
+
+      if (err1) throw err1;
+
+      // 2. Crédito no destinatário
+      const { error: err2 } = await supabase
+        .from("wallet_transactions")
+        .insert({
+          user_id: recipient.id,
+          amount: val,
+          type: "deposito",
+          description: `Transferência recebida de ${userName}`
+        });
+
+      if (err2) throw err2;
+
+      showToast?.("Transferência realizada com sucesso!", "success");
+      setWalletMode("main");
+      // Limpar estados
+      setRecipient(null);
+      setSearchTarget("");
+      setAmount("");
+    } catch (err) {
+      showToast?.("Erro ao realizar transferência", "error");
+    } finally {
+      setIsTransferring(false);
+    }
+  };
+
+  if (walletMode === "my_qr") {
+    return (
+      <div className="flex flex-col h-full bg-black text-white p-6 pt-12 items-center text-center gap-10">
+        <header className="w-full flex items-center justify-between mb-4">
+          <button onClick={() => setWalletMode("main")} className="size-10 rounded-full bg-zinc-900 flex items-center justify-center">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <h1 className="font-extrabold text-base uppercase tracking-widest">Meu QR</h1>
+          <div className="size-10" />
+        </header>
+        <div className="bg-white p-6 rounded-3xl mt-10">
+          <img 
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=izipay:${userId}`}
+            alt="Izi Pay QR"
+            className="size-56"
+          />
+        </div>
+        <div className="space-y-1">
+          <p className="font-black text-2xl uppercase">{userName || "USUARIO IZI"}</p>
+          <p className="text-zinc-600 text-xs tracking-wider">Escaneie para transferir saldo interno</p>
+        </div>
+        <button onClick={() => setWalletMode("main")} className="w-full py-4 bg-zinc-900 rounded-2xl font-black uppercase text-sm mt-10">Fechar</button>
+      </div>
+    );
+  }
+
+  if (walletMode === "transfer") {
+    return (
+      <div className="flex flex-col h-full bg-black text-white p-6 pt-12 gap-8">
+        <header className="w-full flex items-center justify-between">
+          <button onClick={() => { setWalletMode("main"); setRecipient(null); }} className="size-10 rounded-full bg-zinc-900 flex items-center justify-center">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <h1 className="font-extrabold text-base uppercase tracking-widest">Enviar Saldo</h1>
+          <div className="size-10" />
+        </header>
+
+        <AnimatePresence mode="wait">
+          {!recipient ? (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Destinatário</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="E-mail ou Telefone"
+                    value={searchTarget}
+                    onChange={(e) => setSearchTarget(e.target.value)}
+                    className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 focus:border-yellow-400/50 outline-none transition-all font-bold"
+                  />
+                  <button 
+                    onClick={handleSearchRecipient}
+                    disabled={isSearching}
+                    className="size-14 bg-yellow-400 rounded-2xl flex items-center justify-center active:scale-95 disabled:opacity-50"
+                  >
+                    {isSearching ? <div className="size-5 border-2 border-black border-t-transparent animate-spin rounded-full"/> : <span className="material-symbols-outlined text-black">search</span>}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-10">
+              <div className="flex items-center gap-4 bg-zinc-900/50 p-5 rounded-3xl border border-zinc-800">
+                <div className="size-14 rounded-full bg-yellow-400 flex items-center justify-center font-black text-black text-xl">
+                  {recipient.name[0]}
+                </div>
+                <div className="flex-1">
+                  <p className="font-black uppercase">{recipient.name}</p>
+                  <p className="text-zinc-600 text-xs">{recipient.email || recipient.phone}</p>
+                </div>
+                <button onClick={() => setRecipient(null)} className="text-xs font-bold text-zinc-500 underline">Trocar</button>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest text-center block">Quanto deseja enviar?</label>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-2xl font-black text-yellow-400">R$</span>
+                  <input 
+                    type="text" 
+                    autoFocus
+                    placeholder="0,00"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="bg-transparent text-5xl font-black text-white outline-none w-40 text-center"
+                  />
+                </div>
+                <p className="text-center text-xs text-zinc-700">Saldo disponível: R$ {walletBalance.toFixed(2).replace(".", ",")}</p>
+              </div>
+
+              <button 
+                onClick={handleTransfer}
+                disabled={isTransferring || !amount}
+                className="w-full py-5 bg-yellow-400 rounded-2xl font-black text-black uppercase tracking-widest shadow-[0_10px_30px_rgba(255,215,9,0.2)] active:scale-95 disabled:opacity-50 transition-all"
+              >
+                {isTransferring ? "Processando..." : "Confirmar Envio"}
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32">
       {/* HERO SALDO */}
       <div className="px-5 pt-14 pb-8 border-b border-zinc-900">
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-yellow-400 font-extrabold italic tracking-widest text-xs">IZI BLACK VIP</span>
+          <span className="text-yellow-400 font-extrabold italic tracking-[0.3em] text-[10px] uppercase">Izi Pay</span>
           <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
         </div>
-        <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-1">Saldo Disponível</p>
-        <div className="flex items-baseline gap-2 mb-6">
-          <span className="font-extrabold text-2xl text-yellow-400 opacity-60">R$</span>
-          <span
-            className="font-extrabold text-5xl tracking-tighter text-white"
-            style={{ textShadow: "0 0 20px rgba(255,215,9,0.3)" }}
-          >
-            {Math.abs(walletBalance).toFixed(2).replace(".", ",")}
-          </span>
+        <div className="flex justify-between items-start">
+          <div>
+            <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-1">Saldo Disponível</p>
+            <div className="flex items-baseline gap-2 mb-6">
+              <span className="font-extrabold text-2xl text-yellow-400 opacity-60">R$</span>
+              <span
+                className="font-extrabold text-5xl tracking-tighter text-white"
+                style={{ textShadow: "0 0 20px rgba(255,215,9,0.3)" }}
+              >
+                {Math.abs(walletBalance).toFixed(2).replace(".", ",")}
+              </span>
+            </div>
+          </div>
+          <button onClick={() => setShowDepositModal(true)} className="px-4 py-2 bg-zinc-900 rounded-full text-[10px] font-black uppercase tracking-widest border border-zinc-800 active:scale-95">Recarregar</button>
         </div>
 
         {/* AÇÕES RÁPIDAS */}
         <div className="grid grid-cols-4 gap-2">
           {[
-            { icon: "add", label: "Adicionar" },
-            { icon: "arrow_outward", label: "Transferir" },
-            { icon: "history", label: "Extrato" },
-            { icon: "qr_code_2", label: "Meu QR" },
+            { icon: "qr_code_scanner", label: "Escanear", action: () => showToast?.("Leitor em desenvolvimento", "warning") },
+            { icon: "arrow_outward", label: "Enviar", action: () => setWalletMode("transfer") },
+            { icon: "history", label: "Extrato", action: () => historyRef.current?.scrollIntoView({ behavior: 'smooth' }) },
+            { icon: "qr_code_2", label: "Meu QR", action: () => setWalletMode("my_qr") },
           ].map((a) => (
             <button
-              key={a.icon}
+              key={a.label}
+              onClick={a.action}
               className="flex flex-col items-center gap-2 py-4 active:scale-95 transition-all group"
             >
               <div className="size-12 rounded-2xl bg-zinc-900/60 border border-zinc-900 flex items-center justify-center group-hover:border-yellow-400/20 transition-all">
@@ -251,7 +449,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
         </section>
 
         {/* HISTÓRICO */}
-        <section>
+        <section ref={historyRef}>
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Histórico</h2>
             <button className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Ver Tudo</button>
