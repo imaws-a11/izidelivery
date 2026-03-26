@@ -7425,7 +7425,7 @@ function App() {
                   transition={{ type: "spring", bounce: 0, duration: 0.4 }}
                   className="absolute inset-0 z-40"
                 >
-                  {renderRestaurantList()}
+                  {renderExploreRestaurants()}
                 </motion.div>
               )}
               {subView === "market_list" && (
@@ -7473,7 +7473,7 @@ function App() {
                   transition={{ type: "spring", bounce: 0, duration: 0.4 }}
                   className="absolute inset-0 z-40"
                 >
-                  {renderBurgerList()}
+                  {renderExploreRestaurants()}
                 </motion.div>
               )}
               {subView === "pizza_list" && (
@@ -7485,17 +7485,17 @@ function App() {
                   transition={{ type: "spring", bounce: 0, duration: 0.4 }}
                   className="absolute inset-0 z-40"
                 >
-                  {renderPizzaList()}
+                  {renderExploreRestaurants()}
                 </motion.div>
               )}
               {subView === "acai_list" && (
                 <motion.div key="aclist" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-40 bg-black">
-                  <EstablishmentListView title="Açaí & Gelados" subtitle="Refresque seu dia" icon="icecream" searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSubView={setSubView} establishments={ESTABLISHMENTS} filterFn={(s) => s.tag === 'Açaí'} onShopClick={handleShopClick} cartLength={cart.length} navigateSubView={navigateSubView} />
+                  {renderExploreRestaurants()}
                 </motion.div>
               )}
               {subView === "japonesa_list" && (
                 <motion.div key="jplist" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-40 bg-black">
-                  <EstablishmentListView title="Comida Japonesa" subtitle="Sushis e Sashimis" icon="sushi" searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSubView={setSubView} establishments={ESTABLISHMENTS} filterFn={(s) => s.tag === 'Japonesa'} onShopClick={handleShopClick} cartLength={cart.length} navigateSubView={navigateSubView} />
+                  {renderExploreRestaurants()}
                 </motion.div>
               )}
               {subView === "brasileira_list" && (
@@ -7507,24 +7507,12 @@ function App() {
                   transition={{ type: "spring", bounce: 0, duration: 0.4 }}
                   className="absolute inset-0 z-40"
                 >
-                  {renderBrasileiraList()}
+                  {renderExploreRestaurants()}
                 </motion.div>
               )}
               {subView === "explore_restaurants" && (
                 <motion.div key="exrest" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-40 bg-black">
-                  <ExploreRestaurantsView
-                    setSubView={setSubView}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    cart={cart}
-                    navigateSubView={navigateSubView}
-                    foodCategories={foodCategories}
-                    availableCoupons={availableCoupons}
-                    establishments={ESTABLISHMENTS}
-                    onShopClick={handleShopClick}
-                    copiedCoupon={copiedCoupon}
-                    setCopiedCoupon={setCopiedCoupon}
-                  />
+                  {renderExploreRestaurants()}
                 </motion.div>
               )}
               {subView === "daily_menus" && (
