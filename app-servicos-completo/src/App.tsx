@@ -858,7 +858,7 @@ function App() {
                 amount: finalPrice,
                 orderId: order.id,
                 payment_method_id: 'pix',
-                email: email || "cliente@izidelivery.com",
+                email: user?.email || loginEmail || "cliente@izidelivery.com",
                 customer: { name: userName, cpf: "000.000.000-00" }
               },
             });
@@ -3612,7 +3612,7 @@ function App() {
             amount: Number(total.toFixed(2)),
             orderId: order.id,
             payment_method_id: 'pix',
-            email: userEmail || auth.currentUser?.email || email || "cliente@izidelivery.com",
+            email: user?.email || loginEmail || "cliente@izidelivery.com",
             customer: {
               cpf: pixCpf.replace(/\D/g,""),
               name: userName || "Cliente IziDelivery",
@@ -3796,7 +3796,7 @@ function App() {
                     orderId: order.id,
                     payment_method_id: brand.toLowerCase().includes('visa') ? 'visa' : 'master',
                     token: token,
-                    email: auth.currentUser?.email || email || "cliente@izidelivery.com",
+                    email: user?.email || loginEmail || "cliente@izidelivery.com",
                     installments: 1
                 },
             });
@@ -5064,7 +5064,7 @@ function App() {
               amount: total,
               orderId: orderData.id,
               payment_method_id: 'pix',
-              email: auth.currentUser?.email || email || "cliente@izidelivery.com",
+              email: user?.email || loginEmail || "cliente@izidelivery.com",
               customer: { name: userName, cpf: cpf }
             },
           });
@@ -5083,6 +5083,25 @@ function App() {
           setSelectedItem({ ...orderData, lightningInvoice: lnData.payment_request });
           setPaymentsOrigin("izi_black");
           setSubView("lightning_payment");
+        } else if (paymentMethod === "saldo") {
+          // Deduz do saldo
+          const { error: walletErr } = await supabase
+            .from("wallet_transactions")
+            .insert({
+              user_id: userId,
+              amount: total,
+              type: "pagamento",
+              description: "Assinatura Izi Black"
+            });
+          if (walletErr) throw walletErr;
+          
+          // Marca pedido como concluído
+          await supabase.from("orders_delivery").update({ status: "concluido" }).eq("id", orderData.id);
+          
+          // Ativa Izi Black no perfil
+          await supabase.from('users_delivery').update({ is_izi_black: true }).eq('id', userId);
+          setIsIziBlackMembership(true);
+          setIziBlackStep('success');
         }
       } catch (err: any) {
         toastError(err.message || "Erro ao processar assinatura.");
@@ -5117,6 +5136,16 @@ function App() {
 
     // ── PAGAMENTO ───────────────────────────────────────────────────────────────
     if (iziBlackStep === 'payment') {
+      const walletBal = walletTransactions.reduce((acc: number, t: any) =>
+        ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
+
+      const subOptions = [
+        { id: "cartao",            icon: "credit_card",            label: "Cartão de Crédito" },
+        { id: "pix",               icon: "pix",                    label: "PIX" },
+        { id: "saldo",             icon: "account_balance_wallet", label: `Saldo IZI (R$ ${walletBal.toFixed(2)})`, disabled: walletBal < 29.90 },
+        { id: "bitcoin_lightning", icon: "bolt",                   label: "Bitcoin Lightning" },
+      ];
+
       return (
         <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
           <header className="bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
@@ -5136,12 +5165,11 @@ function App() {
 
             <div className="space-y-1">
               <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest mb-3">Forma de pagamento</p>
-              {[
-                { id: "cartao", icon: "credit_card", label: "Cartão de Crédito" },
-                { id: "pix",    icon: "pix",         label: "PIX" },
-              ].map((m) => (
-                <button key={m.id} onClick={() => setPaymentMethod(m.id as any)}
-                  className={`w-full flex items-center gap-4 px-0 py-4 border-b transition-all active:opacity-60 text-left ${paymentMethod === m.id ? "border-yellow-400/30" : "border-zinc-900"}`}>
+              {subOptions.map((m) => (
+                <button key={m.id} 
+                  onClick={() => !m.disabled && setPaymentMethod(m.id as any)}
+                  disabled={m.disabled}
+                  className={`w-full flex items-center gap-4 px-0 py-4 border-b transition-all active:opacity-60 text-left ${paymentMethod === m.id ? "border-yellow-400/30" : "border-zinc-900"} ${m.disabled ? "opacity-30 cursor-not-allowed" : ""}`}>
                   <span className={`material-symbols-outlined text-xl ${paymentMethod === m.id ? "text-yellow-400" : "text-zinc-700"}`}>{m.icon}</span>
                   <span className={`font-black text-sm flex-1 ${paymentMethod === m.id ? "text-white" : "text-zinc-600"}`}>{m.label}</span>
                   <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${paymentMethod === m.id ? "border-yellow-400" : "border-zinc-800"}`}>
