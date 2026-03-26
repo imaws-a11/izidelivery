@@ -378,6 +378,7 @@ function App() {
   });
   const [distancePrices, setDistancePrices] = useState<Record<string, number>>({});
   const [distanceValueKm, setDistanceValueKm] = useState(0);
+  const [routePolyline, setRoutePolyline] = useState<string>("");
   const [routeDistance, setRouteDistance] = useState<string>("");
   const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
   const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
@@ -704,7 +705,7 @@ function App() {
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": "routes.duration,routes.distanceMeters",
+          "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline",
         },
         body: JSON.stringify({
           origin: { address: origin },
@@ -724,6 +725,9 @@ function App() {
         const distText = distKm < 1 ? `${Math.round(distKm*1000)} m` : `${distKm.toFixed(1)} km`;
         setRouteDistance(`${distText} â€¢ ${durationText}`);
         setDistanceValueKm(distKm);
+        if (route.polyline?.encodedPolyline) {
+          setRoutePolyline(route.polyline.encodedPolyline);
+        }
           const bv = marketConditions.settings.baseValues;
           const surge = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
           const mototaxi_min = parseFloat(String(bv.mototaxi_min)) || 6.0;
@@ -5908,7 +5912,7 @@ function App() {
       <div className="absolute inset-0 z-40 bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
         {/* MAPA NO FUNDO */}
         <div className="absolute inset-0 z-0">
-            <IziTrackingMap 
+            <IziTrackingMap routePolyline={routePolyline} 
               driverLoc={driverLocation} 
               userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} 
               onMyLocationClick={updateLocation}
@@ -6002,7 +6006,7 @@ function App() {
       <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
         {/* MAPA NO FUNDO */}
         <div className="absolute inset-0 z-0 h-[35vh]">
-           <IziTrackingMap driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
+           <IziTrackingMap routePolyline={routePolyline} driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
         </div>
 
@@ -6250,7 +6254,7 @@ function App() {
       <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
         {/* MAPA NO FUNDO */}
         <div className="absolute inset-0 z-0 h-[35vh]">
-           <IziTrackingMap driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
+           <IziTrackingMap routePolyline={routePolyline} driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
         </div>
 
@@ -6987,7 +6991,7 @@ function App() {
       <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
         {/* MAPA NO FUNDO */}
         <div className="absolute inset-0 z-0 h-[45vh]">
-           <IziTrackingMap driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
+           <IziTrackingMap routePolyline={routePolyline} driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
         </div>
 
@@ -8261,6 +8265,7 @@ function App() {
                     selectedItem={selectedItem}
                     driverLocation={driverLocation}
                     userLocation={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
+                    routePolyline={routePolyline}
                     onMyLocationClick={updateLocation}
                     setSubView={setSubView}
                   />
