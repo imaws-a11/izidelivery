@@ -21,31 +21,20 @@ const mapContainerStyle = { width: '100%', height: '100%' };
 const mapOptions = {
     disableDefaultUI: true,
     zoomControl: false,
+    gestureHandling: 'greedy',
     styles: [
-        { elementType: "geometry", stylers: [{ color: "#f0ebe3" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#523735" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#f5f1ee" }] },
-        { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#c9b2a6" }] },
-        { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#dde9d0" }] },
-        { featureType: "poi", elementType: "geometry", stylers: [{ color: "#dde9d0" }] },
-        { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#93817c" }] },
-        { featureType: "poi.park", elementType: "geometry.fill", stylers: [{ color: "#a5b076" }] },
-        { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#447530" }] },
-        { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-        { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#f8c967" }] },
-        { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#f3d19c" }] },
-        { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#fafafb" }] },
-        { featureType: "road.arterial", elementType: "geometry.stroke", stylers: [{ color: "#ff8c00" }] },
-        { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#f8c967" }] },
-        { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#e9bc62" }] },
-        { featureType: "road.highway.controlled_access", elementType: "geometry", stylers: [{ color: "#e98d58" }] },
-        { featureType: "road.highway.controlled_access", elementType: "geometry.stroke", stylers: [{ color: "#db8555" }] },
-        { featureType: "road.local", elementType: "labels.text.fill", stylers: [{ color: "#806b63" }] },
-        { featureType: "transit", elementType: "geometry", stylers: [{ color: "#dde9d0" }] },
-        { featureType: "transit.line", elementType: "geometry", stylers: [{ color: "#dfd2ae" }] },
-        { featureType: "transit.station", elementType: "geometry", stylers: [{ color: "#dfd2ae" }] },
-        { featureType: "water", elementType: "geometry.fill", stylers: [{ color: "#b9d3c2" }] },
-        { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#92998d" }] }
+        { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#00b2ff" }] },
+        { "featureType": "landscape", "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
+        { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#ffca28" }] },
+        { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#ffb300" }] },
+        { "featureType": "road.arterial", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
+        { "featureType": "road.arterial", "elementType": "geometry.stroke", "stylers": [{ "color": "#dcdcdc" }] },
+        { "featureType": "road.local", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
+        { "featureType": "road.local", "elementType": "geometry.stroke", "stylers": [{ "color": "#eeeeee" }] },
+        { "featureType": "poi.park", "elementType": "geometry.fill", "stylers": [{ "color": "#8dc26f" }] },
+        { "featureType": "transit.line", "elementType": "geometry.fill", "stylers": [{ "color": "#808080" }] },
+        { "elementType": "labels.text.fill", "stylers": [{ "color": "#444444" }] },
+        { "elementType": "labels.text.stroke", "stylers": [{ "color": "#ffffff" }] }
     ]
 };
 
@@ -86,6 +75,12 @@ function Icon({ name, className = "", size = 20, ...props }: any) {
     'emergency': BespokeIcons.Help,
     'moped': BespokeIcons.Motorcycle,
     'chevron_right': BespokeIcons.ChevronRight,
+    'local_shipping': BespokeIcons.Truck,
+    'directions_car': BespokeIcons.Car,
+    'pedal_bike': BespokeIcons.Motorcycle,
+    'support_agent': BespokeIcons.Support,
+    'badge': BespokeIcons.User,
+    'settings': BespokeIcons.Menu,
   };
 
   const IconComp = icons[name] || BespokeIcons.Help;
@@ -93,7 +88,7 @@ function Icon({ name, className = "", size = 20, ...props }: any) {
 }
 
 type View = 'dashboard' | 'history' | 'earnings' | 'profile' | 'active_mission' | 'dedicated' | 'scheduled' | 'sos';
-type ServiceType = 'package' | 'mototaxi' | 'car_ride' | string;
+type ServiceType = 'package' | 'mototaxi' | 'car_ride' | 'frete' | 'motorista_particular' | 'motoboy' | string;
 
 interface Order {
     id: string;
@@ -179,9 +174,11 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
         <Marker 
           position={driverCoords} 
           icon={{
-            url: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
-            scaledSize: new google.maps.Size(40, 40)
+            url: 'https://cdn-icons-png.flaticon.com/128/3448/3448339.png',
+            scaledSize: new google.maps.Size(42, 42),
+            anchor: new google.maps.Point(21, 21)
           }}
+          zIndex={100}
         />
         
         {directions ? (
@@ -201,10 +198,9 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
         )}
       </GoogleMap>
 
-      {/* Botão para Sair do Modo de Rota Ativa (Recentralizar) */}
       <button 
         onClick={() => setIsNavMode(!isNavMode)}
-        className={`absolute top-6 right-6 z-50 size-14 rounded-2xl flex items-center justify-center border shadow-2xl transition-all active:scale-90 ${isNavMode ? 'bg-primary text-slate-950 border-white/20' : 'bg-slate-900/80 text-white border-white/10 backdrop-blur-md'}`}
+        className={`absolute bottom-6 right-6 z-50 size-14 rounded-2xl flex items-center justify-center border shadow-2xl transition-all active:scale-90 ${isNavMode ? 'bg-primary text-slate-950 border-white/20' : 'bg-slate-900/80 text-white border-white/10 backdrop-blur-md'}`}
         title={isNavMode ? 'Mudar para Mapa Livre' : 'Voltar para Navegação'}
       >
         <span className="material-symbols-outlined text-2xl">
@@ -212,8 +208,23 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
         </span>
       </button>
 
+      {directions && directions.routes[0].legs[0] && (
+        <div className="absolute top-6 left-6 z-[60] bg-slate-900/90 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-left-4">
+          <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+            <Icon name="navigation" size={20} />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Tempo Estimado</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-black text-white tracking-tight">{directions.routes[0].legs[0].duration?.text}</span>
+              <span className="text-[10px] font-black text-primary">{directions.routes[0].legs[0].distance?.text}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!isNavMode && (
-        <div className="absolute top-24 right-6 z-50 px-4 py-2 bg-slate-900/80 backdrop-blur-md rounded-xl border border-white/10 text-[8px] font-black text-white uppercase tracking-[0.2em] shadow-2xl animate-in fade-in slide-in-from-right-4">
+        <div className="absolute bottom-24 right-6 z-50 px-4 py-2 bg-slate-900/80 backdrop-blur-md rounded-xl border border-white/10 text-[8px] font-black text-white uppercase tracking-[0.2em] shadow-2xl animate-in fade-in slide-in-from-right-4">
           Modo Mapa Livre Ativo
         </div>
       )}
@@ -631,7 +642,10 @@ function App() {
             case 'package': return { icon: 'package_2', color: 'text-primary', bg: 'bg-primary/10', label: 'Encomenda' };
             case 'mototaxi': return { icon: 'two_wheeler', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'MotoTaxi' };
             case 'car_ride': return { icon: 'directions_car', color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'Carro' };
-            default: return { icon: 'local_shipping', color: 'text-primary', bg: 'bg-primary/10', label: 'Entrega' };
+            case 'frete': return { icon: 'local_shipping', color: 'text-orange-400', bg: 'bg-orange-400/10', label: 'Frete/Carreto' };
+            case 'motorista_particular': return { icon: 'military_tech', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Motorista Particular' };
+            case 'motoboy': return { icon: 'moped', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'Motoboy' };
+            default: return { icon: 'local_shipping', color: 'text-primary', bg: 'bg-primary/10', label: 'Serviço' };
         }
     };
 
@@ -883,7 +897,13 @@ function App() {
             </div>
 
             <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                {[{ id: 'all', label: 'Todos', icon: 'apps' }, { id: 'package', label: 'Pacotes', icon: 'package_2' }, { id: 'mototaxi', label: 'Moto', icon: 'two_wheeler' }, { id: 'car_ride', label: 'Carro', icon: 'directions_car' }].map(item => (
+                {[
+                    { id: 'all', label: 'Todos', icon: 'grid_view' },
+                    { id: 'motoboy', label: 'Entregas', icon: 'moped' },
+                    { id: 'frete', label: 'Fretes', icon: 'local_shipping' },
+                    { id: 'car_ride', label: 'Corridas', icon: 'directions_car' },
+                    { id: 'motorista_particular', label: 'VIP', icon: 'military_tech' }
+                ].map(item => (
                     <button key={item.id} onClick={() => setFilter(item.id as any)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl whitespace-nowrap transition-all shrink-0 ${filter === item.id ? 'bg-primary text-slate-900 font-black shadow-lg shadow-primary/20' : 'bg-white/[0.03] text-white/40 border border-white/5'}`}>
                         <Icon name={item.icon} className="text-base" /><span className="text-[11px] font-black uppercase tracking-widest">{item.label}</span>
                     </button>
@@ -1201,10 +1221,13 @@ function App() {
                     <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#020617]/40 via-transparent to-[#030712]/40" />
                     
                     {/* Info overlay no canto superior direito */}
-                    <div className="absolute top-5 right-5 flex flex-col items-end gap-2">
-                        <div className="bg-black/70 backdrop-blur-md border border-white/10 rounded-2xl px-4 py-3 text-right">
-                            <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Ganho</p>
-                            <p className="text-xl font-black text-primary">R$ {activeMission.price.toFixed(2)}</p>
+                    <div className="absolute top-5 right-5 flex flex-col items-end gap-2 shrink-0">
+                        <div className="bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-right shadow-2xl">
+                            <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mb-1">Pagamento</p>
+                            <div className="flex items-center justify-end gap-2">
+                              <span className="text-xl font-black text-primary tracking-tight">R$ {activeMission.price.toFixed(2)}</span>
+                              <div className="size-5 rounded-full bg-primary/20 flex items-center justify-center"><Icon name="payments" size={12} className="text-primary" /></div>
+                            </div>
                         </div>
                         
                         {/* Status do Estabelecimento para o Motoboy Flash */}
@@ -1238,11 +1261,23 @@ function App() {
 
                 {/* Painel inferior - esconde em modo mapa */}
                 {!isMapOnly && (
-                <div className="px-5 pt-5 pb-8 bg-[#030712] border-t border-white/5 space-y-4 shrink-0">
-                    <div className="bg-white/[0.03] border border-white/8 rounded-[24px] p-5 space-y-3">
-                        <div className="flex items-start gap-3"><div className="mt-1.5 size-2 rounded-full bg-white/30 shrink-0" /><div><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Coleta</p><p className="text-xs font-bold text-white/60 leading-tight">{activeMission.origin}</p></div></div>
-                        <div className="ml-[3px] h-3 w-[1px] bg-white/10" />
-                        <div className="flex items-start gap-3"><div className="mt-1.5 size-2 rounded-full bg-primary shrink-0 shadow-[0_0_8px_rgba(255,217,0,0.5)]" /><div><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Destino Final</p><p className="text-xs font-black text-white leading-tight">{activeMission.destination}</p></div></div>
+                <div className="px-5 pt-6 pb-10 bg-[#030712] border-t border-white/5 space-y-5 shrink-0 shadow-[0_-20px_40px_rgba(0,0,0,0.5)]">
+                    <div className="bg-white/[0.03] border border-white/8 rounded-[28px] p-6 space-y-4 shadow-inner">
+                        <div className="flex items-start gap-4">
+                            <div className="mt-1.5 size-2.5 rounded-full bg-blue-500/40 ring-4 ring-blue-500/10 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">{isMobility ? 'Origem / Coleta' : 'Estabelecimento / Coleta'}</p>
+                                <p className="text-sm font-bold text-white/70 leading-tight">{activeMission.origin || activeMission.pickup_address}</p>
+                            </div>
+                        </div>
+                        <div className="ml-[4px] h-6 w-[1.5px] bg-gradient-to-b from-blue-500/20 to-primary/20" />
+                        <div className="flex items-start gap-4">
+                            <div className="mt-1.5 size-2.5 rounded-full bg-primary ring-4 ring-primary/20 shrink-0 shadow-[0_0_12px_rgba(255,217,0,0.6)]" />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">{isMobility ? 'Destino do Passageiro' : 'Endereço de Entrega'}</p>
+                                <p className="text-sm font-black text-white leading-tight">{activeMission.destination || activeMission.delivery_address}</p>
+                            </div>
+                        </div>
                     </div>
                     <div className="flex gap-3">
                         <button 
@@ -1269,11 +1304,21 @@ function App() {
                         <button onClick={() => setIsSOSActive(true)} className="size-14 bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"><Icon name="emergency" className="text-xl" /></button>
                     </div>
                     {/* BOTÕES DINÂMICOS DE PROGRESSO */}
-                    {(!activeMission.status || ['a_caminho', 'pronto', 'confirmado', 'preparando'].includes(activeMission.status)) && (
+                    {(!activeMission.status || ['a_caminho', 'confirmado', 'preparando'].includes(activeMission.status)) && (
+                        <button 
+                            onClick={() => handleUpdateStatus('no_local')} 
+                            disabled={isAccepting}
+                            className="w-full h-16 bg-gradient-to-r from-blue-600 to-blue-400 text-white font-black text-sm uppercase tracking-widest rounded-[22px] shadow-2xl shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                        >
+                            <Icon name="location_on" className="text-2xl" />Cheguei no Local
+                        </button>
+                    )}
+
+                    {(activeMission.status === 'no_local' || activeMission.status === 'pronto') && (
                         <button 
                             onClick={() => handleUpdateStatus('picked_up')} 
                             disabled={isAccepting}
-                            className={`w-full h-16 font-black text-sm uppercase tracking-widest rounded-[22px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 ${activeMission.status === 'pronto' ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-emerald-500/20 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-blue-500/20'}`}
+                            className={`w-full h-16 font-black text-sm uppercase tracking-widest rounded-[22px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 ${activeMission.status === 'pronto' ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-emerald-500/20 animate-pulse' : 'bg-gradient-to-r from-emerald-600 to-emerald-400 text-white shadow-emerald-500/10'}`}
                         >
                             <Icon name="package_2" className="text-2xl" />{activeMission.status === 'pronto' ? '📦 Coletar Pedido Pronto!' : 'Confirmar Coleta'}
                         </button>
