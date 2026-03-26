@@ -2576,6 +2576,40 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div className="space-y-4">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Banner do Estabelecimento</label>
+<<<<<<< HEAD
+                      <label className="relative aspect-video rounded-[32px] overflow-hidden bg-slate-100 dark:bg-slate-800 group border-4 border-white dark:border-slate-800 shadow-xl cursor-pointer block">
+                        <img src={targetItem.store_banner || 'https://via.placeholder.com/800x400'} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                          {uploadingImage
+                            ? <span className="material-symbols-outlined text-white text-4xl animate-spin">progress_activity</span>
+                            : <span className="bg-white text-slate-900 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest">Alterar Banner</span>
+                          }
+                        </div>
+                        <input 
+                          type="file" accept="image/*" 
+                          className="hidden"
+                          disabled={uploadingImage}
+                          onChange={async (e) => {
+                             const file = e.target.files?.[0];
+                             if (!file) return;
+                             setUploadingImage(true);
+                             try {
+                               const url = await handleFileUpload(file, 'banners');
+                               if (url) updateItem({...targetItem, store_banner: url});
+                             } finally {
+                               setUploadingImage(false);
+                               e.target.value = '';
+                             }
+                          }}
+                        />
+                      </label>
+                    </div>
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Logotipo</label>
+                      <label className="relative size-44 rounded-[40px] overflow-hidden bg-slate-100 dark:bg-slate-800 group border-4 border-white dark:border-slate-800 shadow-xl cursor-pointer block">
+                        <img src={targetItem.store_logo || 'https://via.placeholder.com/200'} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+=======
                       <div className="relative aspect-video rounded-[32px] overflow-hidden bg-slate-100 dark:bg-slate-800 group border-4 border-white dark:border-slate-800 shadow-xl">
                         <img src={targetItem.store_banner || 'https://via.placeholder.com/800x400'} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -2599,10 +2633,28 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                       <div className="relative size-44 rounded-[40px] overflow-hidden bg-slate-100 dark:bg-slate-800 group border-4 border-white dark:border-slate-800 shadow-xl">
                         <img src={targetItem.store_logo || 'https://via.placeholder.com/200'} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+>>>>>>> ff490e068e35cfd37feba751ec33554f4a919cb2
                           <span className="material-symbols-outlined text-white">photo_camera</span>
                         </div>
                         <input 
                           type="file" accept="image/*" 
+<<<<<<< HEAD
+                          className="hidden"
+                          onChange={async (e) => {
+                             const file = e.target.files?.[0];
+                             if (!file) return;
+                             setUploadingImage(true);
+                             try {
+                               const url = await handleFileUpload(file, 'logos');
+                               if (url) updateItem({...targetItem, store_logo: url});
+                             } finally {
+                               setUploadingImage(false);
+                               e.target.value = '';
+                             }
+                          }}
+                        />
+                      </label>
+=======
                           className="absolute inset-0 opacity-0 cursor-pointer"
                           onChange={async (e) => {
                              const file = e.target.files?.[0];
@@ -2613,6 +2665,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                           }}
                         />
                       </div>
+>>>>>>> ff490e068e35cfd37feba751ec33554f4a919cb2
                     </div>
                   </div>
 
