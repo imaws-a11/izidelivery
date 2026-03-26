@@ -17,493 +17,29 @@ import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from '@react-google-m
 import { MercadoPagoCardForm } from "./components/MercadoPagoCardForm";
 import { calculateFreightPrice, calculateVanPrice } from "./lib/pricing_engine";
 
-function IziTrackingMap({ driverLoc, userLoc }: any) {
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: "AIzaSyBi3EJ41-Kh7-ZXjNQ9K1d9AqmoD8UNiO8"
-  });
+// Novos Componentes Modulares
+import { Icon } from "./components/common/Icon";
+import { AddressSearchInput } from "./components/features/Address/AddressSearchInput";
+import { AIConciergePanel } from "./components/features/AI/AIConciergePanel";
+import { IziTrackingMap } from "./components/features/Map/IziTrackingMap";
+import { LoginView } from "./components/features/Auth/LoginView";
+import { HomeView } from "./components/features/Home/HomeView";
+import { OrderListView } from "./components/features/Order/OrderListView";
+import { ProfileView } from "./components/features/Profile/ProfileView";
+import { WalletView } from "./components/features/Wallet/WalletView";
+import { CartView } from "./components/features/Cart/CartView";
+import { CheckoutView } from "./components/features/Checkout/CheckoutView";
+import { ActiveOrderView } from "./components/features/Order/ActiveOrderView";
+import { EstablishmentListView } from "./components/features/Establishment/EstablishmentListView";
+import { ExploreRestaurantsView } from "./components/features/Home/ExploreRestaurantsView";
+import { BeverageOffersView } from "./components/features/Home/BeverageOffersView";
+import { RestaurantMenuView } from "./components/features/Home/RestaurantMenuView";
+import { StoreCatalogView } from "./components/features/Home/StoreCatalogView";
 
-  if (!isLoaded || !driverLoc) return (
-    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center backdrop-blur-sm z-10">
-      <div className="flex flex-col items-center gap-3">
-        <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-        <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] animate-pulse">Buscando Sinal do Flash...</p>
-      </div>
-    </div>
-  );
+import { useAuth } from "./hooks/useAuth";
+import { SavedAddress, Order, Quest } from "./types";
 
-  const center = driverLoc ? { lat: driverLoc.lat, lng: driverLoc.lng } : { lat: -23.5505, lng: -46.6333 };
-
-  return (
-    <div className="w-full h-full relative z-0">
-      <GoogleMap
-        mapContainerStyle={{ width: '100%', height: '100%' }}
-        center={center}
-        zoom={16}
-        options={{
-            disableDefaultUI: true,
-            zoomControl: false,
-            styles: [
-                { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
-                { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
-                { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
-                { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
-                { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
-                { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#263c3f' }] },
-                { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#6b9a76' }] },
-                { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#38414e' }] },
-                { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212a37' }] },
-                { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
-                { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#746855' }] },
-                { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#1f2835' }] },
-                { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#f3d19c' }] },
-                { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] },
-                { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#515c6d' }] },
-                { featureType: 'water', elementType: 'labels.text.stroke', stylers: [{ color: '#17263c' }] }
-            ]
-        }}
-      >
-        <Marker position={center} />
-        {userLoc && <Marker position={{ lat: userLoc.lat, lng: userLoc.lng }} />}
-      </GoogleMap>
-    </div>
-  );
-}
-
-
-
-
-
-function Icon({ name, className = "", size = 20 }: { name: string; className?: string; size?: number }) {
-  const icons: Record<string, any> = {
-    'home': BespokeIcons.Home,
-    'search': BespokeIcons.Search,
-    'shopping_bag': BespokeIcons.Bag,
-    'shopping_cart': BespokeIcons.Bag,
-    'person': BespokeIcons.User,
-    'chevron_left': BespokeIcons.ChevronLeft,
-    'chevron_right': BespokeIcons.ChevronRight,
-    'location_on': BespokeIcons.Pin,
-    'pin_drop': BespokeIcons.Pin,
-    'bolt': BespokeIcons.Bolt,
-    'category': BespokeIcons.Bag,
-    'map': BespokeIcons.Map,
-    'more_vert': BespokeIcons.Menu,
-    'close': BespokeIcons.X,
-    'notifications': BespokeIcons.Notifications,
-    'shield': BespokeIcons.Shield,
-    'support_agent': BespokeIcons.Support,
-    'help': BespokeIcons.Help,
-    'history': BespokeIcons.History,
-    'payments': BespokeIcons.Wallet,
-    'wallet': BespokeIcons.Wallet,
-    'account_balance_wallet': BespokeIcons.Wallet,
-    'credit_card': BespokeIcons.CreditCard,
-    'star': BespokeIcons.StarFilled,
-    'check_circle': BespokeIcons.Check,
-    'check': BespokeIcons.Check,
-    'logout': BespokeIcons.Logout,
-    'settings': BespokeIcons.User,
-    'local_shipping': BespokeIcons.Truck,
-    'monetization_on': BespokeIcons.Coins,
-    'card_giftcard': BespokeIcons.Gift,
-    'expand_more': BespokeIcons.ChevronDown,
-    'expand_less': BespokeIcons.ChevronUp,
-    'directions_car': BespokeIcons.Car,
-    'two_wheeler': BespokeIcons.Motorcycle,
-    'schedule': BespokeIcons.Clock,
-    'workspace_premium': BespokeIcons.Bolt,
-    'stars': BespokeIcons.Star,
-    'qr_code_2': BespokeIcons.Check,
-    'receipt_long': BespokeIcons.History,
-    'smart_toy': BespokeIcons.Bolt,
-    'military_tech': BespokeIcons.Shield,
-    'sync': BespokeIcons.Clock,
-    'diamond': BespokeIcons.Bolt,
-    'arrow_back': BespokeIcons.ChevronLeft,
-    'arrow_forward': BespokeIcons.ChevronRight,
-    'delete': BespokeIcons.X,
-    'edit': BespokeIcons.User,
-    'local_pizza': BespokeIcons.Pizza,
-    'pizza': BespokeIcons.Pizza,
-    'fastfood': BespokeIcons.Burger,
-    'burger': BespokeIcons.Burger,
-    'local_cafe': BespokeIcons.Coffee,
-    'coffee': BespokeIcons.Coffee,
-    'package': BespokeIcons.Package,
-    'inventory_2': BespokeIcons.Package,
-  };
-
-  const IconComp = icons[name] || BespokeIcons.Help;
-  return <IconComp size={size} className={className} />;
-}
-
-
-interface SavedAddress {
-  id: string | number;
-  label: string;
-  street: string;
-  details: string;
-  city: string;
-  active: boolean;
-}
-
-
-
-const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string ?? '';
-
-// Carrega o Google Maps dinamicamente e chama callback quando pronto
-function loadGoogleMapsScript(callback: () => void) {
-  if ((window as any).google && (window as any).google.maps && (window as any).google.maps.places) {
-    callback();
-    return;
-  }
-  const existingScript = document.getElementById("gmaps-script");
-  if (existingScript) {
-    existingScript.addEventListener("load", callback);
-    return;
-  }
-  (window as any).__gmapsCallback = callback;
-  const script = document.createElement("script");
-  script.id = "gmaps-script";
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${GMAPS_KEY}&libraries=places,geometry&language=pt-BR&callback=__gmapsCallback`;
-  script.async = true;
-  script.defer = true;
-  document.head.appendChild(script);
-}
-
-const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClear, className }: any) => {
-  const [query, setQuery] = useState(initialValue || "");
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [open, setOpen] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
-  const [googleReady, setGoogleReady] = useState(!!(window as any).google?.maps?.places);
-  const debounceRef = useRef<any>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!googleReady) {
-      loadGoogleMapsScript(() => setGoogleReady(true));
-    }
-  }, [googleReady]);
-
-  // Fechar dropdown ao clicar fora
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const updateDropdownPos = () => {
-    if (wrapperRef.current) {
-      const rect = wrapperRef.current.getBoundingClientRect();
-      setDropdownPos({
-        top: rect.bottom + window.scrollY + 8,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-      });
-    }
-  };
-
-  const fetchSuggestions = async (input: string) => {
-    if (!input || input.length < 3) { setSuggestions([]); setOpen(false); return; }
-    try {
-      const apiKey = GMAPS_KEY;
-      const res = await fetch(
-        `https://places.googleapis.com/v1/places:autocomplete`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": GMAPS_KEY },
-          body: JSON.stringify({ input, includedRegionCodes: ["br"], languageCode: "pt-BR" }),
-        }
-      );
-      const data = await res.json();
-      const predictions = (data.suggestions || []).map((s: any) => ({
-        description: s.placePrediction?.text?.text || "",
-        place_id: s.placePrediction?.placeId || "",
-        structured_formatting: {
-          main_text: s.placePrediction?.structuredFormat?.mainText?.text || "",
-          secondary_text: s.placePrediction?.structuredFormat?.secondaryText?.text || "",
-        }
-      })).filter((p: any) => p.description);
-      if (predictions.length > 0) {
-        setSuggestions(predictions);
-        updateDropdownPos();
-        setOpen(true);
-      } else {
-        setSuggestions([]);
-        setOpen(false);
-      }
-    } catch {
-      setSuggestions([]);
-      setOpen(false);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setQuery(val);
-    clearTimeout(debounceRef.current);
-    if (!val) {
-      setSuggestions([]);
-      setOpen(false);
-      if (onClear) onClear();
-      return;
-    }
-    debounceRef.current = setTimeout(() => fetchSuggestions(val), 400);
-  };
-
-  const handleClear = () => {
-    setQuery("");
-    setSuggestions([]);
-    setOpen(false);
-    if (onClear) onClear();
-  };
-
-  const handleSelect = (prediction: any) => {
-    const description = prediction.description || "";
-    setQuery(description);
-    setOpen(false);
-    setSuggestions([]);
-    onSelect({ formatted_address: description });
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && query.length > 2) {
-      e.preventDefault();
-      setOpen(false);
-      if (suggestions.length > 0) {
-        handleSelect(suggestions[0]);
-      } else {
-        onSelect({ formatted_address: query });
-      }
-    }
-  };
-
-  const dropdown = open && suggestions.length > 0 ? createPortal(
-    <div
-      onMouseDown={e => e.preventDefault()}
-      style={{
-        position: "absolute",
-        top: dropdownPos.top,
-        left: dropdownPos.left,
-        width: dropdownPos.width,
-        background: "white",
-        borderRadius: "20px",
-        boxShadow: "0 20px 50px rgba(0,0,0,0.18)",
-        zIndex: 2147483647,
-        overflow: "hidden",
-        border: "1px solid #f1f5f9",
-        maxHeight: "320px",
-        overflowY: "auto",
-      }}
-    >
-      {suggestions.map((s: any, i: number) => (
-        <div
-          key={i}
-          onMouseDown={() => handleSelect(s)}
-          style={{
-            padding: "14px 20px",
-            cursor: "pointer",
-            borderTop: i > 0 ? "1px solid #f8fafc" : "none",
-            display: "flex",
-            alignItems: "flex-start",
-            gap: "12px",
-            background: "white",
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
-          onMouseLeave={e => (e.currentTarget.style.background = "white")}
-        >
-          <span style={{ fontSize: "18px", marginTop: "2px", flexShrink: 0 }}>ðŸ“</span>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: "14px", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {s.structured_formatting?.main_text || s.description}
-            </div>
-            {s.structured_formatting?.secondary_text && (
-              <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {s.structured_formatting.secondary_text}
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>,
-    document.body
-  ) : null;
-
-  return (
-    <div ref={wrapperRef} style={{ position: "relative", width: "100%" }}>
-      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-        <input
-          type="text"
-          value={query}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          className={className}
-          autoComplete="off"
-          style={{ paddingRight: query ? "2.5rem" : undefined }}
-          onFocus={() => {
-            updateDropdownPos();
-            if (suggestions.length > 0) setOpen(true);
-          }}
-        />
-        {query && (
-          <button
-            onMouseDown={(e) => { e.preventDefault(); handleClear(); }}
-            style={{ position: "absolute", right: "12px", background: "rgba(100,116,139,0.15)", border: "none", borderRadius: "50%", width: "22px", height: "22px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, zIndex: 10 }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: "14px", color: "#94a3b8" }}>close</span>
-          </button>
-        )}
-      </div>
-      {dropdown}
-    </div>
-  );
-};
-
-// ─── AI Concierge Component ──────────
-const AIConciergePanel = ({ isOpen, onClose, userName, walletBalance, userLocation, myOrders, ESTABLISHMENTS }: any) => {
-  const [messages, setMessages] = useState<{role: 'user'|'assistant', content: string}[]>([]);
-  const [input, setInput] = useState('');
-  const [isThinking, setIsThinking] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const totalGasto = myOrders.filter((o: any) => o.status === 'concluido').reduce((s: number, o: any) => s + (o.total_price || 0), 0).toFixed(2);
-
-  const systemPrompt = `Você é o Izi Concierge, assistente do app IziDelivery. Seja direto e útil.
-Contexto: Nome: ${userName || 'Cliente'}, Saldo: R$${walletBalance?.toFixed(2)}, Total gasto: R$${totalGasto}
-Responda em português, máx 3 linhas, use emojis com moderação.`;
-
-  const sendMessage = async () => {
-    if (!input.trim() || isThinking) return;
-    const userMsg = { role: 'user' as const, content: input.trim() };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
-    setInput('');
-    setIsThinking(true);
-    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-3-5-sonnet-20240620', max_tokens: 1000, system: systemPrompt, messages: newMessages.map(m => ({ role: m.role, content: m.content })) }),
-      });
-      const data = await response.json();
-      const reply = data.content?.[0]?.text || 'Não consegui processar. Tente novamente.';
-      setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Problema de conexão. Tente novamente.' }]);
-    } finally {
-      setIsThinking(false);
-      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    }
-  };
-
-  const quickSuggestions = [
-    myOrders.length > 0 ? 'Repetir meu último pedido' : 'O que está em promoção?',
-    'Quanto gastei esse mês?',
-    'Sugestão para jantar de hoje',
-  ];
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="absolute inset-0 z-[160] bg-[#020617]/95 backdrop-blur-3xl flex flex-col overflow-hidden">
-      <header className="px-8 py-8 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-5">
-          <div className="size-14 rounded-[22px] bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center shadow-lg shadow-primary/10 relative overflow-hidden">
-            <div className="absolute inset-0 bg-yellow-400/10 animate-pulse" />
-            <Icon name="bolt" size={28} className="text-yellow-400 relative z-10" />
-          </div>
-          <div>
-            <h2 className="text-xl font-black text-white tracking-tighter uppercase italic leading-none mb-1">Izi <span className="text-yellow-400">Concierge</span></h2>
-            <div className="flex items-center gap-2">
-              <div className="size-1.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_white]" />
-              <p className="text-[8px] font-black text-emerald-400 uppercase tracking-[0.4em]">Sintonizado</p>
-            </div>
-          </div>
-        </div>
-        <button onClick={onClose} className="size-12 rounded-[20px] bg-white/5 border border-white/10 flex items-center justify-center text-white/40 active:scale-90 transition-all shadow-premium">
-          <Icon name="close" size={24} />
-        </button>
-      </header>
-      
-      <div className="flex-1 overflow-y-auto no-scrollbar px-8 py-4 space-y-6">
-        {messages.length === 0 && (
-          <div className="space-y-10">
-            <div className="flex flex-col items-center text-center mt-12 mb-16">
-              <div className="size-20 rounded-full bg-yellow-400/20 border-4 border-white/5 flex items-center justify-center mb-6 shadow-2xl">
-                <Icon name="bolt" size={40} className="text-yellow-400" />
-              </div>
-              <h3 className="text-3xl font-black text-white italic tracking-tighter mb-4 uppercase">Olá, {userName?.split(" ")[0]}</h3>
-              <p className="text-zinc-400 text-sm font-medium leading-relaxed max-w-[80%] mx-auto">Sua inteligência logística pessoal. O que deseja agilizar hoje?</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white/5 border border-white/10 rounded-[30px] p-6 shadow-soft">
-                <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Dotação Izi</p>
-                <p className="text-2xl font-black text-yellow-400 tracking-tighter">R$ {walletBalance?.toFixed(2).replace(".", ",")}</p>
-              </div>
-              <div className="bg-white/5 border border-white/10 rounded-[30px] p-6 shadow-soft">
-                <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Ciclo Operacional</p>
-                <p className="text-2xl font-black text-white tracking-tighter">R$ {totalGasto.replace(".", ",")}</p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] px-2 mb-4">Comandos Rápidos</p>
-              {quickSuggestions.map((s, i) => (
-                <button key={i} onClick={() => setInput(s)} className="w-full text-left bg-white/5 border border-white/5 rounded-[22px] px-6 py-4.5 text-sm text-white/60 font-black uppercase tracking-tight hover:bg-white/10 hover:text-white transition-all active:scale-[0.98] flex items-center justify-between group">
-                  {s} <Icon name="arrow_forward" className="text-yellow-400 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex items-start gap-4 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
-            {msg.role === "assistant" && (
-              <div className="size-10 rounded-2xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center shrink-0 mt-1 shadow-lg">
-                <Icon name="bolt" size={20} className="text-yellow-400" />
-              </div>
-            )}
-            <div className={`px-6 py-4.5 max-w-[85%] shadow-premium ${msg.role === "user" ? "bg-yellow-400 text-slate-950 font-black rounded-[28px] rounded-tr-[4px]" : "bg-white/5 border border-white/10 text-white/90 rounded-[28px] rounded-tl-[4px]"}`}>
-              <p className="text-sm leading-relaxed tracking-tight">{msg.content}</p>
-            </div>
-          </div>
-        ))}
-        {isThinking && (
-          <div className="flex items-start gap-4">
-            <div className="size-10 rounded-2xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center shrink-0 mt-1">
-              <Icon name="bolt" size={20} className="text-yellow-400" />
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-[28px] rounded-tl-[4px] px-6 py-4.5">
-              <div className="flex gap-2 items-center">
-                <div className="size-2 bg-yellow-400 rounded-full animate-pulse" />
-                <div className="size-2 bg-yellow-400/60 rounded-full animate-pulse delay-75" />
-                <div className="size-2 bg-yellow-400/30 rounded-full animate-pulse delay-150" />
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      <div className="px-8 pb-10 pt-4 shrink-0 border-t border-white/5">
-        <div className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-[30px] px-6 py-3 shadow-inner">
-          <input type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Comando operacional..." className="flex-1 bg-transparent border-none outline-none text-white text-[15px] font-black placeholder:text-white/10 py-3 uppercase tracking-tight" />
-          <button onClick={sendMessage} disabled={!input.trim() || isThinking} className="size-12 rounded-[20px] bg-yellow-400 text-slate-950 flex items-center justify-center shadow-lg shadow-primary/20 active:scale-90 transition-all disabled:opacity-10 shrink-0">
-            <Icon name="arrow_forward" size={24} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+// Componentes agora em arquivos separados
 
 function App() {
   const [view, setView] = useState<"login" | "app" | "loading">("loading");
@@ -511,7 +47,30 @@ function App() {
     "home",
   );
   
-  const [authInitLoading, setAuthInitLoading] = useState(true);
+  const {
+    user,
+    userId,
+    userName,
+    setUserName,
+    phone,
+    setPhone,
+    loginEmail,
+    setLoginEmail,
+    loginPassword,
+    setLoginPassword,
+    authMode,
+    setAuthMode,
+    isLoading,
+    loginError,
+    setLoginError,
+    authInitLoading,
+    setAuthInitLoading,
+    handleLogin,
+    handleSignUp,
+    setIsLoading,
+    logout
+  } = useAuth();
+
   const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
   const [shopRating, setShopRating] = useState<number>(0);
   const [driverRating, setDriverRating] = useState<number>(0);
@@ -579,6 +138,7 @@ function App() {
     | "scheduled_order"
     | "lightning_payment"
     | "izi_black_purchase"
+    | "card_payment"
   >("none");
   const [iziBlackOrigin, setIziBlackOrigin] = useState<"home" | "checkout">("home");
   const [iziBlackStep, setIziBlackStep] = useState<"info" | "payment" | "pix_qr" | "success">("info");
@@ -806,15 +366,6 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [userName, setUserName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobilityExpanded, setIsMobilityExpanded] = useState(false);
   const [editingAddress, setEditingAddress] = useState<SavedAddress | null>(null);
@@ -830,10 +381,6 @@ function App() {
     }
   }, []);
 
-  const [userId, setUserId] = useState<string | null>(null);
-  const [loginError, setLoginError] = useState<string>("");
-  const [loginPassword, setLoginPassword] = useState<string>("");
-  const [loginEmail, setLoginEmail] = useState<string>("");
   const userIdRef = useRef(userId);
   useEffect(() => { userIdRef.current = userId; }, [userId]);
   const [ESTABLISHMENTS, setESTABLISHMENTS] = useState<any[]>([]);
@@ -987,11 +534,13 @@ function App() {
   const [userLocation, setUserLocation] = useState<{
     address: string;
     loading: boolean;
+    lat?: number;
+    lng?: number;
   }>({
     address: "Buscando localização...",
     loading: true,
   });
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro" | "cartao_entrega" | "saldo" | "bitcoin_lightning">(() => (localStorage.getItem("preferredPaymentMethod") as any) || "cartao");
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro" | "cartao_entrega" | "saldo" | "bitcoin_lightning" | "google_pay">(() => (localStorage.getItem("preferredPaymentMethod") as any) || "cartao");
   const [changeFor, setChangeFor] = useState("");
   useEffect(() => {
     localStorage.setItem("preferredPaymentMethod", paymentMethod);
@@ -1035,6 +584,16 @@ function App() {
       }
     }
   });
+
+  const foodCategories = [
+    { id: "all",        name: "Todos",      icon: "restaurant",    action: () => navigateSubView("explore_restaurants") },
+    { id: "burgers",    name: "Burgers",    icon: "lunch_dining",  action: () => navigateSubView("burger_list") },
+    { id: "pizza",      name: "Pizza",      icon: "local_pizza",   action: () => navigateSubView("pizza_list") },
+    { id: "japones",    name: "Japonesa",   icon: "set_meal",      action: () => navigateSubView("japonesa_list") },
+    { id: "brasileira", name: "Brasileira", icon: "dinner_dining", action: () => navigateSubView("brasileira_list") },
+    { id: "acai",       name: "Açaí",       icon: "grass",         action: () => navigateSubView("acai_list") },
+    { id: "daily",      name: "Do Dia",     icon: "today",         action: () => navigateSubView("daily_menus") },
+  ];
 
   const fetchMarketData = async () => {
     try {
@@ -1625,40 +1184,22 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUserId(user.uid);
-        setUserName(user.displayName || user.email?.split("@")[0] || "Usuário");
-        setEmail(user.email || "");
-        
-        // Sincronizar com o banco de dados Supabase (Somente se NAO for lojista ou entregador)
-        const { data: isAdmin } = await supabase.from("admin_users").select("id").eq("id", user.uid).maybeSingle();
-        const { data: isDriver } = await supabase.from("drivers_delivery").select("id").eq("id", user.uid).maybeSingle();
-
-        if (!isAdmin && !isDriver) {
-          await supabase.from("users_delivery").upsert({ 
-            id: user.uid, 
-            name: user.displayName || user.email?.split("@")[0] || "Usuário",
-            email: user.email,
-            wallet_balance: 0 // Saldo inicial sempre 0
-          });
-        }
-
-        setView("app");
-        setAuthInitLoading(false);
-        window.history.replaceState({ view: "app", tab: "home", subView: "none" }, "");
-        
-        fetchMyOrders(user.uid);
-        fetchWalletBalance(user.uid);
-        fetchSavedCards(user.uid);
-        fetchSavedAddresses(user.uid);
-        fetchCoupons();
-        fetchBeveragePromo();
-      } else {
-        setView("login");
-        setAuthInitLoading(false);
-      }
-    });
+    if (user) {
+      setView("app");
+      window.history.replaceState({ view: "app", tab: "home", subView: "none" }, "");
+      
+      fetchMyOrders(user.uid);
+      fetchWalletBalance(user.uid);
+      fetchSavedCards(user.uid);
+      fetchSavedAddresses(user.uid);
+      fetchCoupons();
+      fetchBeveragePromo();
+    } else if (!authInitLoading) {
+      setView("login");
+    }
+  }, [user, authInitLoading]);
+  useEffect(() => {
+    if (!userId) return;
 
     const sub = supabase
       .channel("orders_tracking")
@@ -1744,10 +1285,9 @@ function App() {
       .subscribe();
 
     return () => {
-      unsubscribe();
       supabase.removeChannel(sub);
     };
-  }, [userId]);
+  }, [userId, subView]);
   
   const fetchMyOrders = async (uid: string) => {
     const { data } = await supabase
@@ -1856,51 +1396,7 @@ function App() {
     }
   };
 
-  const handleAuth = async () => {
-    setIsLoading(true);
-    setErrorMsg("");
-    try {
-      if (authMode === 'login') {
-        await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        // Register
-        if (!userName.trim()) { setErrorMsg('Informe seu nome completo.'); setIsLoading(false); return; }
-        if (!phone.trim()) { setErrorMsg('Informe seu telefone.'); setIsLoading(false); return; }
-        if (password.length < 6) { setErrorMsg('A senha deve ter no mínimo 6 caracteres.'); setIsLoading(false); return; }
-        
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        await updateProfile(user, {
-          displayName: userName.trim()
-        });
 
-        // Sincronizar com o banco de dados Supabase (users_delivery)
-        await supabase.from("users_delivery").upsert({ 
-          id: user.uid, 
-          name: userName.trim(), 
-          phone: phone.trim(),
-          email: email
-        });
-      }
-
-      if (rememberMe) {
-        localStorage.setItem("savedEmail", email);
-        localStorage.setItem("rememberMe", "true");
-      } else {
-        localStorage.removeItem("savedEmail");
-        localStorage.removeItem("rememberMe");
-      }
-
-      setView("app");
-      window.history.replaceState({ view: "app", tab: "home", subView: "none" }, "");
-    } catch (err: any) {
-      console.error("Auth error:", err);
-      setErrorMsg(err.code === 'auth/invalid-credential' ? 'Email ou senha incorretos.' : err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const getItemCount = (id: number) =>
     cart.filter((item) => item.id === id).length;
@@ -2136,7 +1632,7 @@ function App() {
         return;
       }
 
-      // ── CARTÃO (Mercado Pago) ──────────────────────────────────────────
+      // ── CARTÃO (Mercado Pago / Online Checkout) ───────────────────────────
       if (paymentMethod === "cartao") {
         setSubView("card_payment");
         return;
@@ -2145,533 +1641,9 @@ function App() {
     } catch (e) {
       console.error("Erro ao criar pedido:", e);
       navigateSubView("payment_error");
-    }
-  };
-
-
-
-
-
-  const handleLogin = async () => {
-    setLoginError("");
-    setIsLoading(true);
-    if (!loginEmail || !loginPassword) { 
-      setLoginError("Preencha email e senha."); 
-      setIsLoading(false);
-      return; 
-    }
-    
-    try {
-      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
-    } catch (err: any) {
-      console.error("Login error:", err); 
-      setLoginError(err.code === 'auth/invalid-credential' ? 'Email ou senha inválidos.' : err.message); 
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleSignUp = async () => {
-    setLoginError("");
-    setIsLoading(true);
-    if (!loginEmail || !loginPassword) { 
-      setLoginError("Preencha email e senha."); 
-      setIsLoading(false);
-      return; 
-    }
-    if (loginPassword.length < 6) { 
-      setLoginError("Senha deve ter pelo menos 6 caracteres."); 
-      setIsLoading(false);
-      return; 
-    }
-    if (!userName.trim()) {
-      setLoginError("Informe seu nome completo.");
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, loginPassword);
-      const user = userCredential.user;
-      
-      await updateProfile(user, {
-        displayName: userName.trim()
-      });
-
-      // Sincronizar manual imediata (opcional, pois o useEffect cuidará disso ao disparar o onAuthStateChanged)
-      await supabase.from("users_delivery").upsert({ 
-        id: user.uid, 
-        name: userName.trim(), 
-        phone: phone.trim(),
-        email: loginEmail
-      });
-
-    } catch (err: any) {
-      console.error("SignUp error:", err);
-      setLoginError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const renderLogin = () => (
-    <div className="flex flex-col min-h-screen bg-black text-zinc-100 items-center justify-center px-6 relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20">
-        <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-yellow-400/20 blur-[120px] rounded-full" />
-        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-zinc-800/30 blur-[100px] rounded-full" />
-      </div>
-
-      <div className="w-full max-w-sm space-y-12 relative z-10 transition-all duration-500">
-        <div className="text-center space-y-4">
-          <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="inline-block p-4 rounded-3xl bg-zinc-900 shadow-2xl border border-zinc-800 mb-2"
-          >
-            <h1 className="text-4xl font-black tracking-[0.2em] italic text-yellow-400 uppercase"
-              style={{ textShadow: "0 0 30px rgba(255,215,9,0.3)" }}>
-              IZI
-            </h1>
-          </motion.div>
-          <div>
-            <h2 className="text-xl font-bold text-white tracking-tight">
-              {authMode === 'login' ? 'Seja bem-vindo de volta' : 'Crie sua conta IZI'}
-            </h2>
-            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mt-1">
-              {authMode === 'login' ? 'Stealth Luxury Delivery' : 'Experiência Premium em Segundos'}
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <AnimatePresence mode="wait">
-            <motion.div 
-              key={authMode}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-5"
-            >
-              {authMode === 'register' && (
-                <>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Nome Completo</p>
-                    <input 
-                      type="text" 
-                      value={userName} 
-                      onChange={(e) => setUserName(e.target.value)}
-                      placeholder="Como deseja ser chamado?"
-                      className="w-full bg-zinc-900/50 border-b-2 border-zinc-800 py-4 px-2 text-white placeholder:text-zinc-700 focus:outline-none focus:border-yellow-400/50 text-sm font-medium transition-all rounded-t-xl" 
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Telefone / WhatsApp</p>
-                    <input 
-                      type="tel" 
-                      value={phone} 
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="(00) 0 0000-0000"
-                      className="w-full bg-zinc-900/50 border-b-2 border-zinc-800 py-4 px-2 text-white placeholder:text-zinc-700 focus:outline-none focus:border-yellow-400/50 text-sm font-medium transition-all rounded-t-xl" 
-                    />
-                  </div>
-                </>
-              )}
-
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Endereço de E-mail</p>
-                <input 
-                  type="email" 
-                  value={loginEmail} 
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="exemplo@email.com"
-                  className="w-full bg-zinc-900/50 border-b-2 border-zinc-800 py-4 px-2 text-white placeholder:text-zinc-700 focus:outline-none focus:border-yellow-400/50 text-sm font-medium transition-all rounded-t-xl" 
-                />
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Sua Chave de Acesso</p>
-                <input 
-                  type="password" 
-                  value={loginPassword} 
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && (authMode === 'login' ? handleLogin() : handleSignUp())}
-                  placeholder="••••••••"
-                  className="w-full bg-zinc-900/50 border-b-2 border-zinc-800 py-4 px-2 text-white placeholder:text-zinc-700 focus:outline-none focus:border-yellow-400/50 text-sm font-medium transition-all rounded-t-xl" 
-                />
-              </div>
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="pt-6 space-y-4">
-            <button 
-              onClick={() => authMode === 'login' ? handleLogin() : handleSignUp()}
-              disabled={isLoading}
-              className="w-full py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 group"
-              style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 10px 30px rgba(255,215,9,0.15)" }}
-            >
-              {isLoading && <div className="size-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />}
-              <span>{authMode === 'login' ? 'Entrar Agora' : 'Finalizar Cadastro'}</span>
-              <span className="material-symbols-outlined text-sm font-bold group-hover:translate-x-1 transition-transform">arrow_forward</span>
-            </button>
-            
-            <button 
-              onClick={() => {
-                setAuthMode(authMode === 'login' ? 'register' : 'login');
-                setLoginError("");
-              }}
-              className="w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest border border-zinc-900 text-zinc-500 hover:border-yellow-400/20 hover:text-yellow-400 transition-all active:scale-95"
-            >
-              {authMode === 'login' ? 'Novo por aqui? Criar uma conta' : 'Já possui conta? Fazer Login'}
-            </button>
-          </div>
-        </div>
-
-        {loginError && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 rounded-2xl bg-red-400/10 border border-red-400/20 flex items-center gap-3"
-          >
-            <span className="material-symbols-outlined text-red-400 text-lg">error</span>
-            <p className="text-red-400 text-xs font-bold">{loginError}</p>
-          </motion.div>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderHome = () => {
-    const deliveryServices = [
-      { icon: "restaurant",     label: "Restaurantes", type: "restaurant", action: null },
-      { icon: "local_mall",     label: "Mercados",     type: "market",     action: null },
-      { icon: "local_bar",      label: "Bebidas",      type: "beverages",  action: null },
-      { icon: "local_pharmacy", label: "Saúde",        type: "pharmacy",   action: null },
-      { icon: "pedal_bike",     label: "Logística",    type: null,         action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
-      { icon: "pets",           label: "Petshop",      type: "generic",    action: () => { setExploreCategoryState({ id: "pets", title: "Pet Shop Premium", tagline: "Mimo para seu melhor amigo", primaryColor: "rose-500", icon: "pets", banner: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=1200" }); navigateSubView("explore_category"); } },
-    ];
-
-    const handleServiceSelection = (cat: any) => {
-      if (cat.action) return cat.action();
-      setActiveService(cat);
-      if (cat.type === "restaurant") navigateSubView("restaurant_list");
-      else if (cat.type === "market") navigateSubView("market_list");
-      else if (cat.type === "pharmacy") navigateSubView("pharmacy_list");
-      else if (cat.type === "beverages") navigateSubView("beverages_list");
-      else navigateSubView("generic_list");
-    };
-
-    // IZI Flash — usa dados reais do Supabase (tabela flash_offers)
-    const activeStories = flashOffers.map((offer: any) => {
-      const expiresAt = new Date(offer.expires_at);
-      const now = new Date();
-      const diffMs = expiresAt.getTime() - now.getTime();
-      const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-      const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      const timeLeft = diffHrs > 0 ? diffHrs + "h" : diffMins + "min";
-      const discount = offer.discount_percent
-        ? offer.discount_percent + "% OFF"
-        : offer.discounted_price && offer.original_price
-          ? "R$ " + Number(offer.discounted_price).toFixed(0)
-          : "Oferta";
-      return {
-        id: offer.id,
-        merchant: offer.admin_users?.store_name || offer.merchant_name || "Loja",
-        discount,
-        timeLeft,
-        img: offer.product_image || offer.admin_users?.store_logo || "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=400",
-        isMaster: userLevel >= 10 && offer.is_vip,
-        offer,
-      };
-    });
-
-    const activeOrder = myOrders.find(o => !["concluido", "cancelado"].includes(o.status));
-
-    return (
-      <div className="flex flex-col bg-black text-zinc-100 pb-32 overflow-y-auto no-scrollbar h-full">
-
-        {/* HEADER */}
-        <header className="sticky top-0 z-50 flex justify-between items-center w-full px-6 py-5"
-          style={{ background: "linear-gradient(to bottom, #000000 60%, transparent)" }}>
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setSubView(subView === "addresses" ? "none" : "addresses")}>
-            <div className="relative">
-              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-yellow-400/20">
-                <img className="w-full h-full object-cover" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" />
-              </div>
-              {userLevel >= 10 && (
-                <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black text-[9px] font-extrabold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-[0_0_10px_rgba(255,215,9,0.5)]">
-                  <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "\'FILL\' 1" }}>workspace_premium</span>
-                  VIP
-                </div>
-              )}
-            </div>
-            <div>
-              <p className="text-zinc-500 text-[10px] font-medium uppercase tracking-widest">Entregar em</p>
-              <div className="flex items-center gap-1">
-                <span className="text-zinc-100 font-bold text-sm tracking-tight max-w-[150px] truncate">
-                  {userLocation.loading ? "Buscando..." : userLocation.address}
-                </span>
-                <span className="material-symbols-outlined text-yellow-400 text-sm">expand_more</span>
-              </div>
-            </div>
-          </div>
-
-          <h1 className="text-lg font-extrabold tracking-[0.4em] italic text-yellow-400 hidden md:block uppercase">IZI</h1>
-
-          <div className="flex items-center gap-3">
-            <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-800/50 transition-all active:scale-95">
-              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-              {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>
-              )}
-            </button>
-            <button onClick={() => setSubView("quest_center")} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-800/50 transition-all active:scale-95">
-              <span className="material-symbols-outlined text-zinc-100">notifications</span>
-            </button>
-          </div>
-        </header>
-
-        <main className="px-5 pb-10 flex flex-col gap-8">
-
-          {/* SEARCH */}
-          <div className="relative group">
-            <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 group-focus-within:text-yellow-400 transition-colors text-xl">search</span>
-            </div>
-            <input
-              className="w-full bg-zinc-900/60 border border-zinc-800 rounded-2xl py-4 pl-14 pr-12 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 transition-all text-sm font-medium"
-              placeholder="O que você deseja pedir hoje?"
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <div className="absolute inset-y-0 right-5 flex items-center">
-              {searchQuery
-                ? <button onClick={() => setSearchQuery("")}><span className="material-symbols-outlined text-zinc-500 text-sm">close</span></button>
-                : <span className="material-symbols-outlined text-zinc-500 text-xl">tune</span>
-              }
-            </div>
-          </div>
-
-          {/* PEDIDO ATIVO */}
-          {activeOrder && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              onClick={() => { setSelectedItem(activeOrder); setSubView("active_order"); }}
-              className="bg-yellow-400 text-black p-5 rounded-2xl flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all relative overflow-hidden"
-            >
-              <div className="size-12 rounded-xl bg-black/10 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-2xl">moped</span>
-              </div>
-              <div className="flex-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-black/60">Pedido em andamento</p>
-                <h4 className="font-black text-base leading-tight">Acompanhar entrega em tempo real</h4>
-              </div>
-              <div className="size-2 bg-red-500 rounded-full animate-ping shrink-0" />
-            </motion.div>
-          )}
-
-          {/* BANNER PROMO */}
-          <section>
-            <div className="relative h-44 w-full rounded-2xl overflow-hidden group cursor-pointer" onClick={() => navigateSubView("exclusive_offer")}>
-              <img className="w-full h-full object-cover brightness-50 group-hover:scale-105 transition-transform duration-700" src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=800" alt="Promo" />
-              <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-transparent flex flex-col justify-center p-7">
-                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Oferta VIP</span>
-                <h2 className="text-2xl font-extrabold text-white leading-tight">Ganhe 50% OFF<br/>na Primeira Entrega</h2>
-                <p className="text-zinc-300 text-xs mt-1.5 font-medium">Use o código: IZI-FIRST</p>
-              </div>
-            </div>
-          </section>
-
-          {/* CARD ELITE */}
-          <section>
-            <div className="relative overflow-hidden rounded-[2rem] h-48 flex items-center p-7 bg-gradient-to-br from-zinc-900/60 to-black border border-white/5">
-              <div className="relative z-10 space-y-2">
-                <span className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.3em]">Privilégio Elite</span>
-                <h2 className="text-2xl font-extrabold text-white leading-tight tracking-tight">Taxa zero em<br/>toda a cidade.</h2>
-                <p className="text-zinc-500 text-xs font-medium max-w-[190px]">A velocidade máxima do ecossistema IZI Black ao seu comando.</p>
-              </div>
-              <div className="absolute right-[-5%] top-1/2 -translate-y-1/2 opacity-20 pointer-events-none">
-                <span className="material-symbols-outlined text-[160px] text-yellow-400" style={{ fontVariationSettings: "\'FILL\' 0" }}>delivery_dining</span>
-              </div>
-            </div>
-          </section>
-
-          {/* GRADE DE SERVIÇOS */}
-          <section className="grid grid-cols-3 gap-y-10 gap-x-6">
-            {deliveryServices.map((svc, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.05 }}
-                onClick={() => handleServiceSelection(svc)}
-                className="flex flex-col items-center gap-4 group cursor-pointer active:scale-95 transition-all"
-              >
-                <div className="relative w-24 h-24 flex items-center justify-center transition-all duration-700 group-hover:scale-110">
-                  <div className="absolute inset-0 bg-yellow-400/10 blur-[30px] rounded-full opacity-60 group-hover:opacity-100 transition-opacity" />
-                  <span className="material-symbols-outlined text-6xl text-white group-hover:text-yellow-400 transition-colors" style={{ filter: "drop-shadow(0 0 20px rgba(255,215,9,0.25))" }}>
-                    {svc.icon}
-                  </span>
-                </div>
-                <span className="text-[10px] font-black text-zinc-500 group-hover:text-yellow-400 tracking-[0.3em] uppercase transition-colors">{svc.label}</span>
-              </motion.div>
-            ))}
-          </section>
-
-          {/* CUPONS */}
-          {availableCoupons.length > 0 && (
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-black tracking-tight text-zinc-100">Cupons Disponíveis</h3>
-                <span className="text-[10px] font-black text-yellow-400 bg-yellow-400/10 px-3 py-1 rounded-full">
-                  {availableCoupons.length} {availableCoupons.length === 1 ? "cupom" : "cupons"}
-                </span>
-              </div>
-              <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-5 px-5">
-                {availableCoupons.map((coupon, i) => {
-                  const isCopied = copiedCoupon === coupon.coupon_code;
-                  return (
-                    <motion.div key={coupon.id || i} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.07 }}
-                      className="flex-shrink-0 w-64 h-28 bg-zinc-900/60 rounded-2xl p-5 flex justify-between items-center border border-zinc-800/60">
-                      <div>
-                        <p className="text-yellow-400 text-[10px] font-bold mb-1 uppercase tracking-wider">CUPOM ATIVO</p>
-                        <h5 className="text-base font-black text-white font-mono tracking-widest">{coupon.coupon_code}</h5>
-                        <p className="text-zinc-500 text-[10px] mt-1">
-                          {coupon.discount_type === "fixed" ? `R$ ${coupon.discount_value?.toFixed(2)} OFF` : `${coupon.discount_value}% OFF`}
-                          {coupon.min_order_value > 0 && ` • Mín R$${coupon.min_order_value}`}
-                        </p>
-                      </div>
-                      <button onClick={() => { navigator.clipboard.writeText(coupon.coupon_code).catch(() => {}); setCopiedCoupon(coupon.coupon_code); setTimeout(() => setCopiedCoupon(null), 2000); }}
-                        className="w-10 h-10 rounded-full bg-yellow-400/10 flex items-center justify-center active:scale-90 transition-all">
-                        <span className={`material-symbols-outlined text-lg ${isCopied ? "text-emerald-400" : "text-yellow-400"}`}>
-                          {isCopied ? "check_circle" : "content_copy"}
-                        </span>
-                      </button>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          {/* FLASH OFFERS — só aparece se tiver ofertas ativas */}
-          {activeStories.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-black text-zinc-100 uppercase tracking-[0.2em]">Izi Flash</h3>
-              <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest animate-pulse">Ao Vivo</span>
-            </div>
-            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-5 px-5">
-              {activeStories.map(story => (
-                <div key={story.id}
-                  onClick={() => {
-                    if (story.isMaster && userLevel < 10) showToast("Esta oferta é exclusiva para membros Tier MASTER.", "info");
-                    else if (story.isMaster) setShowMasterPerks(true);
-                    else showToast(`Izi Flash: Oferta de ${story.discount} ativada para ${story.merchant}!`, "success");
-                  }}
-                  className={`relative flex-shrink-0 size-24 rounded-[28px] p-[2px] bg-gradient-to-tr ${story.isMaster ? "from-amber-400 via-yellow-400 to-orange-600" : "from-yellow-400 via-orange-400 to-rose-500"} cursor-pointer active:scale-95 transition-all group`}>
-                  <div className="size-full rounded-[26px] overflow-hidden bg-zinc-900 border-2 border-zinc-900 relative">
-                    <img src={story.img} className="size-full object-cover opacity-70 group-hover:scale-110 transition-transform" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-2.5">
-                      <p className="text-[7px] font-black text-white uppercase tracking-tighter truncate">{story.merchant}</p>
-                      <p className="text-[10px] font-black text-yellow-400 italic">{story.discount}</p>
-                    </div>
-                    <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded-full">
-                      <p className="text-[6px] font-black text-white">{story.timeLeft}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-          )}
-
-          {/* FAVORITOS DA REGIÃO */}
-          <section>
-            <div className="flex justify-between items-end mb-6">
-              <div>
-                <h3 className="text-xl font-extrabold tracking-tight text-white">Favoritos da Região</h3>
-                <p className="text-zinc-500 text-xs mt-0.5">Os mais pedidos agora</p>
-              </div>
-              <button className="text-yellow-400 text-xs font-bold hover:underline">Ver todos</button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {ESTABLISHMENTS.filter(e => e.type === 'restaurant').length > 0 && (
-                <div className="md:col-span-2 group cursor-pointer" onClick={() => handleShopClick(ESTABLISHMENTS.find(e => e.type === 'restaurant'))}>
-                  <div className="relative rounded-2xl overflow-hidden aspect-video">
-                    <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={ESTABLISHMENTS[0].img} alt={ESTABLISHMENTS[0].name} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-5 flex flex-col justify-end">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="bg-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded uppercase">Exclusivo</span>
-                        <div className="flex items-center text-yellow-400 text-xs font-bold">
-                          <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "\'FILL\' 1" }}>star</span>
-                          {ESTABLISHMENTS[0].rating}
-                        </div>
-                      </div>
-                      <h4 className="text-lg font-bold text-white">{ESTABLISHMENTS[0].name}</h4>
-                      <p className="text-zinc-400 text-xs">{ESTABLISHMENTS[0].tag} • {ESTABLISHMENTS[0].time} • {ESTABLISHMENTS[0].freeDelivery ? "Grátis" : ESTABLISHMENTS[0].fee}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div className="flex flex-col gap-6">
-                {ESTABLISHMENTS.slice(1, 3).map((shop) => (
-                  <div key={shop.id} className="group cursor-pointer" onClick={() => handleShopClick(shop)}>
-                    <div className="relative rounded-2xl overflow-hidden aspect-video">
-                      <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={shop.img} alt={shop.name} />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent p-4 flex flex-col justify-end">
-                        <h4 className="font-bold text-white text-sm">{shop.name}</h4>
-                        <p className="text-zinc-400 text-xs">{shop.tag} • {shop.time}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* MOBILIDADE */}
-          <section>
-            <div className="mb-10 text-center">
-              <p className="text-[10px] font-black text-yellow-400 tracking-[0.4em] uppercase mb-1">Ecossistema Urbano</p>
-              <h2 className="text-2xl font-extrabold tracking-tight text-white">Mobilidade e Transporte</h2>
-            </div>
-            <div className="grid grid-cols-2 gap-y-12 gap-x-8">
-              {[
-                { icon: "two_wheeler", label: "Mototáxi", action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("taxi_wizard"); } },
-                { icon: "airport_shuttle", label: "Van", action: () => { setTransitData({ ...transitData, type: "van", scheduled: false }); navigateSubView("van_wizard"); } },
-                { icon: "directions_car", label: "Motorista\nParticular", action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("taxi_wizard"); } },
-                { icon: "local_shipping", label: "Frete", action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("freight_wizard"); } },
-              ].map((svc, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.05 }}
-                  onClick={svc.action}
-                  className="flex flex-col items-center gap-4 group cursor-pointer active:scale-95 transition-all"
-                >
-                  <div className="relative w-24 h-24 flex items-center justify-center transition-all duration-700 group-hover:scale-110">
-                    <div className="absolute inset-0 bg-yellow-400/10 blur-[30px] rounded-full opacity-60 group-hover:opacity-100 transition-opacity" />
-                    <span className="material-symbols-outlined text-6xl text-white group-hover:text-yellow-400 transition-colors" style={{ filter: "drop-shadow(0 0 20px rgba(255,215,9,0.25))" }}>
-                      {svc.icon}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-black text-zinc-500 group-hover:text-yellow-400 tracking-[0.3em] uppercase transition-colors text-center leading-tight">
-                    {svc.label.split("\n").map((line: string, j: number) => (
-                      <span key={j}>{line}{j < svc.label.split("\n").length - 1 && <br/>}</span>
-                    ))}
-                  </span>
-                </motion.div>
-              ))}
-            </div>
-          </section>
-
-        </main>
-      </div>
-    );
   };
 
   const renderBurgerList = () => {
@@ -4659,338 +3631,7 @@ function App() {
     );
   };
 
-  const renderCart = () => {
-    const subtotal: number = cart.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0);
-    const taxa: number = 0;
-    const total: number = subtotal + taxa;
 
-    if (cart.length === 0) {
-      return (
-        <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col items-center justify-center gap-6">
-          <span className="material-symbols-outlined text-6xl text-zinc-800">shopping_bag</span>
-          <div className="text-center">
-            <h2 className="text-xl font-black text-white mb-2">Sua sacola está vazia</h2>
-            <p className="text-zinc-500 text-sm">Adicione itens para continuar</p>
-          </div>
-          <button onClick={() => setSubView("none")} className="bg-yellow-400 text-black font-black px-8 py-3 rounded-2xl uppercase tracking-wider active:scale-95 transition-all">
-            Explorar
-          </button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-
-        {/* HEADER */}
-        <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSubView("none")} className="active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
-            </button>
-            <h1 className="font-extrabold text-base tracking-tight text-white uppercase">Sua Sacola</h1>
-          </div>
-          <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-3 py-1 rounded-full">
-            {cart.length} {cart.length === 1 ? "item" : "itens"}
-          </span>
-        </header>
-
-        <main className="px-5 pt-6 flex flex-col gap-4">
-
-          {/* ITENS */}
-          {cart.map((item: any, i: number) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-              className="flex items-center gap-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4">
-              <div className="w-16 h-16 rounded-xl bg-zinc-800 overflow-hidden shrink-0">
-                {item.img && <img src={item.img} alt={item.name} className="w-full h-full object-cover" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-black text-sm text-white truncate">{item.name}</h4>
-                <p className="text-yellow-400 font-black text-sm mt-0.5">R$ {Number(item.price || 0).toFixed(2).replace(".", ",")}</p>
-              </div>
-              <button onClick={() => setCart((prev: any[]) => { const c = [...prev]; c.splice(i, 1); return c; })}
-                className="size-8 rounded-full bg-zinc-800 flex items-center justify-center active:scale-90 transition-all hover:bg-red-500/20">
-                <span className="material-symbols-outlined text-zinc-500 hover:text-red-400 text-sm transition-colors">close</span>
-              </button>
-            </motion.div>
-          ))}
-
-          {/* TOTAIS */}
-          <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 mt-2 space-y-3">
-            {[
-              { label: "Subtotal", value: `R$ ${subtotal.toFixed(2).replace(".", ",")}` },
-              { label: "Taxa de entrega", value: taxa === 0 ? "Grátis" : `R$ ${taxa.toFixed(2)}`, green: taxa === 0 },
-            ].map((row: any) => (
-              <div key={row.label} className="flex justify-between items-center">
-                <span className="text-zinc-400 text-sm">{row.label}</span>
-                <span className={`text-sm font-bold ${row.green ? "text-emerald-400" : "text-white"}`}>{row.value}</span>
-              </div>
-            ))}
-            <div className="flex justify-between items-center pt-3 border-t border-zinc-800">
-              <span className="text-white font-black uppercase tracking-wider">Total</span>
-              <span className="text-yellow-400 font-black text-xl" style={{ textShadow: "0 0 15px rgba(255,215,9,0.4)" }}>
-                R$ {total.toFixed(2).replace(".", ",")}
-              </span>
-            </div>
-          </div>
-
-          {/* LIMPAR */}
-          <button onClick={() => setCart([])} className="flex items-center justify-center gap-2 py-3 text-zinc-600 hover:text-red-400 transition-colors active:scale-95">
-            <span className="material-symbols-outlined text-sm">delete_outline</span>
-            <span className="text-[11px] font-black uppercase tracking-widest">Limpar sacola</span>
-          </button>
-
-        </main>
-
-        {/* FOOTER FIXO */}
-        <div className="fixed bottom-0 left-0 w-full px-5 pb-8 pt-4 bg-black/95 backdrop-blur-xl border-t border-zinc-900 z-50">
-          <button
-            onClick={() => navigateSubView("checkout")}
-            className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 shadow-[0_0_20px_rgba(255,215,9,0.2)]"
-            style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}
-          >
-            Ir para Checkout — R$ {total.toFixed(2).replace(".", ",")}
-          </button>
-        </div>
-
-      </div>
-    );
-  };
-
-  const renderCheckout = () => {
-    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const discount = appliedCoupon
-      ? appliedCoupon.discount_type === "fixed"
-        ? appliedCoupon.discount_value
-        : (subtotal * appliedCoupon.discount_value) / 100
-      : 0;
-    const total = Math.max(0, subtotal + 0 - discount);
-    const walletBal = walletTransactions.reduce((acc: number, t: any) =>
-      ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
-
-    const paymentOptions = [
-      { id: "cartao",           icon: "credit_card", label: "Cartão via App", sub: savedCards.length > 0 ? `${savedCards[0].brand} •••• ${savedCards[0].last4}` : "Pagar agora pelo app" },
-      { id: "pix",              icon: "pix",         label: "PIX", sub: "Mercado Pago • Aprovação imediata" },
-      { id: "saldo",            icon: "account_balance_wallet", label: "Saldo IZI", sub: `R$ ${walletBal.toFixed(2).replace(".",",")} disponível`, disabled: walletBal < total },
-      { id: "dinheiro",         icon: "payments",    label: "Dinheiro na Entrega", sub: "Pague ao receber" },
-      { id: "cartao_entrega",   icon: "contactless", label: "Cartão na Entrega", sub: "Maquininha com o entregador" },
-      { id: "bitcoin_lightning",icon: "bolt",        label: "Bitcoin Lightning", sub: "Pagamento instantâneo em BTC" },
-    ];
-
-    return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-
-        {/* HEADER */}
-        <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSubView("cart")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
-            </button>
-            <h1 className="text-lg font-black text-white uppercase tracking-tight">Checkout</h1>
-          </div>
-          <div className="size-10 rounded-full overflow-hidden border border-zinc-800">
-            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" className="size-full" />
-          </div>
-        </header>
-
-        <div className="max-w-2xl mx-auto px-5 py-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-          {/* LEFT COLUMN */}
-          <div className="lg:col-span-7 space-y-10">
-
-            {/* ENDEREÇO */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="font-extrabold text-base tracking-tight text-white uppercase">Entregar em</h2>
-                <button onClick={() => setSubView("addresses")} className="text-yellow-400 text-[10px] font-black tracking-widest uppercase hover:opacity-80">Alterar</button>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="size-10 rounded-2xl bg-yellow-400/10 flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="material-symbols-outlined text-yellow-400 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
-                </div>
-                <div>
-                  <p className="text-white font-bold text-sm leading-tight">{userLocation.address || "Endereço não definido"}</p>
-                  <p className="text-zinc-500 text-xs mt-1">Estimativa: 25-40 min</p>
-                </div>
-              </div>
-            </section>
-
-            {/* PAGAMENTO */}
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="font-extrabold text-base tracking-tight text-white uppercase">Pagamento</h2>
-              </div>
-
-              {paymentOptions.map((m) => (
-                <div key={m.id} className="space-y-3">
-                  <button onClick={() => !m.disabled && setPaymentMethod(m.id as any)}
-                    disabled={m.disabled}
-                    className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all active:scale-[0.98] ${
-                      paymentMethod === m.id
-                        ? "bg-yellow-400/5 shadow-[inset_0_0_0_1.5px_rgba(255,215,9,0.4)]"
-                        : m.disabled
-                          ? "opacity-40 cursor-not-allowed"
-                          : "hover:bg-zinc-900/50"
-                    }`}>
-                    <span className={`material-symbols-outlined text-xl ${paymentMethod === m.id ? "text-yellow-400" : "text-zinc-500"}`}
-                      style={{ fontVariationSettings: paymentMethod === m.id ? "'FILL' 1" : "'FILL' 0" }}>
-                      {m.icon}
-                    </span>
-                    <div className="flex-1 text-left">
-                      <p className={`font-black text-sm ${paymentMethod === m.id ? "text-white" : "text-zinc-400"}`}>{m.label}</p>
-                      <p className="text-zinc-600 text-xs mt-0.5">{m.sub}</p>
-                    </div>
-                    <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${paymentMethod === m.id ? "border-yellow-400" : "border-zinc-700"}`}>
-                      {paymentMethod === m.id && <div className="size-2.5 rounded-full bg-yellow-400" />}
-                    </div>
-                  </button>
-
-                  <AnimatePresence>
-                    {paymentMethod === "dinheiro" && m.id === "dinheiro" && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden pl-14 pr-5 pb-2">
-                        <div className="bg-zinc-900/50 rounded-xl p-3 border border-zinc-800 focus-within:border-yellow-400/30 transition-all flex items-center gap-3">
-                          <span className="text-[10px] font-black text-zinc-500 uppercase shrink-0">Troco para:</span>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={changeFor}
-                            onChange={(e) => setChangeFor(e.target.value.replace(/\D/g,""))}
-                            placeholder="Ex: 50,00"
-                            className="bg-transparent border-none outline-none text-white text-sm font-black w-full"
-                          />
-                        </div>
-                        <p className="text-[9px] text-zinc-600 mt-2 italic px-1">Deixe em branco se não precisar de troco.</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              ))}
-
-              {/* Cartões salvos expandidos quando cartao selecionado */}
-              {paymentMethod === "cartao" && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="overflow-hidden space-y-2 pl-14">
-                  {savedCards.map((card: any) => (
-                    <button key={card.id} onClick={() => setSelectedCard(card)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${selectedCard?.id === card.id ? "bg-yellow-400/10 shadow-[inset_0_0_0_1px_rgba(255,215,9,0.3)]" : "bg-zinc-900/50"}`}>
-                      <span className="material-symbols-outlined text-base text-zinc-400" style={{ fontVariationSettings: "'FILL' 1" }}>credit_card</span>
-                      <span className="text-zinc-300 text-sm font-bold flex-1 text-left">{card.brand} •••• {card.last4}</span>
-                      {selectedCard?.id === card.id && <span className="material-symbols-outlined text-yellow-400 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </section>
-
-            {/* RESUMO DOS ITENS */}
-            <section className="space-y-4">
-              <h2 className="font-extrabold text-base tracking-tight text-white uppercase">Resumo do Pedido</h2>
-              <div className="space-y-3">
-                {cart.map((item: any, i: number) => (
-                  <div key={i} className="flex items-center gap-4">
-                    <div className="relative w-16 h-16 rounded-2xl overflow-hidden shrink-0 bg-zinc-900">
-                      {item.img
-                        ? <img src={item.img} alt={item.name} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500" />
-                        : <div className="w-full h-full flex items-center justify-center"><span className="material-symbols-outlined text-zinc-700">fastfood</span></div>
-                      }
-                      <div className="absolute top-1 left-1 size-5 bg-yellow-400 rounded-full flex items-center justify-center">
-                        <span className="text-[8px] font-black text-black">1x</span>
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-black text-sm truncate">{item.name}</p>
-                      {item.desc && <p className="text-zinc-600 text-[10px] mt-0.5 truncate">{item.desc}</p>}
-                      {item.options && <p className="text-zinc-500 text-[10px] mt-0.5">{item.options}</p>}
-                    </div>
-                    <p className="text-yellow-400 font-black text-sm shrink-0">R$ {Number(item.price || 0).toFixed(2).replace(".",",")}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Cupom */}
-              <div className="pt-2">
-                <div className="flex items-center gap-2 bg-zinc-900/50 rounded-2xl overflow-hidden border border-zinc-800 focus-within:border-yellow-400/30 transition-all">
-                  <span className="material-symbols-outlined text-zinc-500 text-lg pl-4">confirmation_number</span>
-                  <input
-                    className="flex-1 bg-transparent py-3.5 px-2 text-white placeholder:text-zinc-600 focus:outline-none text-sm font-medium"
-                    placeholder="Código de cupom"
-                    value={couponInput}
-                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                  />
-                  <button onClick={() => handleApplyCoupon(couponInput)}
-                    className="bg-yellow-400 text-black text-[10px] font-black uppercase tracking-wider px-4 py-3.5 shrink-0 hover:bg-yellow-300 transition-colors">
-                    Aplicar
-                  </button>
-                </div>
-                {appliedCoupon && (
-                  <div className="flex items-center gap-2 mt-2 px-1">
-                    <span className="material-symbols-outlined text-emerald-400 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                    <p className="text-emerald-400 text-xs font-black">
-                      {appliedCoupon.coupon_code} — {appliedCoupon.discount_type === "fixed" ? `R$ ${appliedCoupon.discount_value.toFixed(2)} OFF` : `${appliedCoupon.discount_value}% OFF`}
-                    </p>
-                    <button onClick={() => { setAppliedCoupon(null); setCouponInput(""); }} className="text-zinc-600 hover:text-red-400 transition-colors ml-auto">
-                      <span className="material-symbols-outlined text-sm">close</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </section>
-          </div>
-
-          {/* RIGHT COLUMN — Resumo financeiro + botão */}
-          <div className="lg:col-span-5">
-            <div className="sticky top-20 space-y-4">
-
-              {/* Totais */}
-              <div className="space-y-3">
-                <div className="h-px bg-zinc-900" />
-                {[
-                  { label: "Subtotal", value: `R$ ${subtotal.toFixed(2).replace(".",",")}`, muted: true },
-                  { label: "Entrega", value: "Grátis", green: true },
-                  ...(discount > 0 ? [{ label: `Desconto (${appliedCoupon?.coupon_code})`, value: `-R$ ${discount.toFixed(2).replace(".",",")}`, green: true }] : []),
-                ].map((row: any) => (
-                  <div key={row.label} className="flex justify-between items-center">
-                    <span className="text-zinc-500 text-sm">{row.label}</span>
-                    <span className={`text-sm font-bold ${row.green ? "text-emerald-400" : "text-zinc-300"}`}>{row.value}</span>
-                  </div>
-                ))}
-                <div className="h-px bg-zinc-900" />
-                <div className="flex justify-between items-center">
-                  <span className="text-white font-black text-base uppercase tracking-wider">Total</span>
-                  <span className="text-yellow-400 font-black text-2xl" style={{ textShadow: "0 0 20px rgba(255,215,9,0.4)" }}>
-                    R$ {total.toFixed(2).replace(".",",")}
-                  </span>
-                </div>
-              </div>
-
-              {/* Botão confirmar */}
-              <button onClick={() => handlePlaceOrder()} disabled={!paymentMethod}
-                className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.2)" }}>
-                {paymentMethod === "pix" ? "Gerar QR PIX" :
-                 paymentMethod === "bitcoin_lightning" ? "Gerar Invoice Lightning" :
-                 paymentMethod === "google_pay" ? "Pagar com Google Pay" :
-                 (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") ? "Confirmar — Pagar na Entrega" :
-                 `Confirmar Pedido — R$ ${total.toFixed(2).replace(".",",")}`}
-              </button>
-
-              {/* Adicionar cartão — só aparece aqui quando cartao selecionado */}
-              {paymentMethod === "cartao" && (
-                <button onClick={() => { setPaymentsOrigin("checkout"); setSubView("payments"); }}
-                  className="w-full py-3 rounded-2xl border border-dashed border-zinc-800 text-zinc-500 hover:border-yellow-400/30 hover:text-yellow-400 transition-all text-xs font-black uppercase tracking-wider active:scale-95 flex items-center justify-center gap-2">
-                  <span className="material-symbols-outlined text-sm">add</span>
-                  Adicionar novo cartão
-                </button>
-              )}
-
-              <p className="text-zinc-700 text-[10px] text-center leading-relaxed">
-                Ao confirmar você concorda com os <span className="text-yellow-400/40">Termos de Uso</span> e <span className="text-yellow-400/40">Política de Privacidade</span>.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   const renderPixPayment = () => {
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
@@ -6148,7 +4789,7 @@ function App() {
         setSubView("none");
       } catch (e) { 
         console.error(e); 
-        showToast("Erro ao enviar avaliação.", "error");
+        showToast("Erro ao enviar avaliação.", "warning");
       } finally {
         setFbIsSubmitting(false);
       }
@@ -8577,204 +7218,6 @@ function App() {
     );
   };
 
-  const renderActiveOrder = () => {
-    if (!selectedItem) return null;
-
-    const isMobility = ['mototaxi', 'carro', 'van', 'utilitario'].includes(selectedItem.service_type);
-
-    const steps = isMobility ? [
-      { id: 'procurando', label: 'Buscando Motorista', icon: 'search',           status: ['waiting_driver', 'novo'] },
-      { id: 'confirmed',  label: 'Motorista Confirmado', icon: 'check_circle',   status: ['aceito', 'confirmado'] },
-      { id: 'a_caminho',  label: 'Motorista em Rota',  icon: 'directions_bike',  status: ['a_caminho', 'at_pickup'] },
-      { id: 'em_curso',   label: 'Viagem Iniciada',    icon: 'location_on',     status: ['picked_up', 'em_rota', 'saiu_para_entrega'] },
-      { id: 'chegando',   label: 'Chegando ao Destino', icon: 'potted_plant',    status: ['no_local'] },
-      { id: 'concluido',  label: 'Viagem Concluída',   icon: 'verified',        status: ['concluido'] },
-    ] : [
-      { id: 'confirmado', label: 'Pedido Confirmado', icon: 'check_circle', status: ['aceito', 'confirmado', 'preparando', 'pronto', 'a_caminho', 'picked_up', 'saiu_para_entrega', 'em_rota', 'no_local', 'concluido'] },
-      { id: 'preparando', label: 'Em Preparação',    icon: 'restaurant',     status: ['preparando', 'pronto', 'a_caminho', 'picked_up', 'saiu_para_entrega', 'em_rota', 'no_local', 'concluido'] },
-      { id: 'aceito_ent', label: 'Indo Coletar',     icon: 'moped',          status: ['a_caminho', 'picked_up', 'saiu_para_entrega', 'em_rota', 'no_local', 'concluido'] },
-      { id: 'coletado',   label: 'Pedido Coletado',  icon: 'package_2',      status: ['picked_up', 'saiu_para_entrega', 'em_rota', 'no_local', 'concluido'] },
-      { id: 'em_rota',    label: 'A Caminho',        icon: 'delivery_dining', status: ['saiu_para_entrega', 'em_rota', 'no_local', 'concluido'] },
-      { id: 'entregue',   label: 'Entregue',         icon: 'verified',       status: ['concluido'] },
-    ];
-
-    const revIdx = steps.slice().reverse().findIndex(s => s.status.includes(selectedItem.status));
-    const currentIdx = revIdx === -1 ? 0 : steps.length - 1 - revIdx;
-    
-    return (
-      <div className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-hidden pb-32">
-        {/* MAPA PLACEHOLDER OU REAL-TIME */}
-        <div className="relative w-full h-[35vh] bg-zinc-900 overflow-hidden shrink-0">
-           {/* MAPA REAL-TIME IZI FLASH */}
-           <IziTrackingMap 
-             driverLoc={driverLocation} 
-             userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} 
-           />
-           
-           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black z-10 pointer-events-none" />
-           
-           {/* Botão flutuante voltar */}
-           <div className="absolute top-8 left-6 z-20">
-              <button 
-                onClick={() => setSubView("none")}
-                className="size-12 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all"
-              >
-                <Icon name="arrow_back" />
-              </button>
-           </div>
-
-           {/* Badge flutuante de status */}
-           <div className="absolute bottom-8 left-6 right-6 z-20">
-              <div className="bg-black/60 backdrop-blur-xl border border-white/10 p-5 rounded-[32px] flex items-center gap-5 shadow-2xl">
-                 <div className="size-14 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-lg shadow-primary/20">
-                    <span className="material-symbols-outlined text-black text-2xl animate-bounce">
-                      {steps[currentIdx]?.icon || 'sync'}
-                    </span>
-                 </div>
-                 <div className="flex-1">
-                    <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-1">Logística Ativa</p>
-                    <h3 className="text-lg font-black text-white tracking-tighter leading-none">
-                      {steps[currentIdx]?.label || 'Sintonizando...'}
-                    </h3>
-                 </div>
-                 <div className="text-right">
-                    <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1">Previsão</p>
-                    <p className="text-lg font-black text-white italic">{(selectedItem.delivery_time || "15-25")}</p>
-                 </div>
-              </div>
-           </div>
-        </div>
-
-        {/* DETALHES COMPLEMENTARES */}
-        <main className="flex-1 overflow-y-auto no-scrollbar px-6 py-10 space-y-12">
-           
-           {/* TRACKING TIMELINE */}
-           <section className="space-y-10">
-              <div className="flex items-center justify-between px-2">
-                 <h2 className="text-[11px] font-black text-zinc-600 uppercase tracking-[0.4em]">Fluxo Operacional</h2>
-                 <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Real-time</span>
-                    <span className="size-2 bg-emerald-500 rounded-full animate-pulse" />
-                 </div>
-              </div>
-
-              <div className="relative space-y-12 pl-4">
-                 {/* Linha vertical tracejada */}
-                 <div className="absolute left-[38px] top-6 bottom-6 w-[2px] bg-zinc-900 border-l border-dashed border-zinc-800" />
-                 
-                 {steps.map((s, i) => {
-                    const isActive = i <= currentIdx;
-                    const isCurrent = i === currentIdx;
-                    return (
-                       <div key={s.id} className={`flex items-start gap-8 relative z-10 transition-all duration-500 ${isActive ? 'opacity-100 scale-100' : 'opacity-20 scale-95'}`}>
-                          <div className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${isActive ? 'bg-yellow-400 text-black shadow-lg shadow-primary/30 border border-yellow-300/20' : 'bg-zinc-900 text-zinc-700'}`}>
-                             <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>{s.icon}</span>
-                          </div>
-                          <div className="flex-1 pt-1">
-                             <h4 className={`text-base font-black tracking-tight ${isActive ? 'text-white' : 'text-zinc-600'}`}>{s.label}</h4>
-                             {isCurrent && (
-                               <motion.p 
-                                 initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }}
-                                 className="text-yellow-400/60 text-[10px] uppercase font-black tracking-widest mt-1"
-                               >
-                                 Sendo processado agora
-                               </motion.p>
-                             )}
-                          </div>
-                          {isActive && (
-                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="mt-2.5">
-                               <span className="material-symbols-outlined text-emerald-400 text-lg">check_circle</span>
-                            </motion.div>
-                          )}
-                       </div>
-                    );
-                 })}
-              </div>
-           </section>
-
-           {/* ESTABELECIMENTO / MOTORISTA */}
-           <section className="bg-zinc-900/40 border border-white/5 rounded-[40px] p-8 space-y-8 shadow-inner">
-              <div className="flex items-center justify-between">
-                 <div className="flex items-center gap-5">
-                    <div className="size-16 rounded-[24px] bg-cover bg-center border border-white/10 shadow-float"
-                      style={{ backgroundImage: `url('https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedItem.driver_id || selectedItem.merchant_name || 'izi'}')` }} />
-                    <div className="space-y-1">
-                       <h4 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none">
-                         {selectedItem.driver_id ? (selectedItem.driver_name || 'Entregador Izi') : (selectedItem.merchant_name || 'Estabelecimento')}
-                       </h4>
-                       <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">
-                            {selectedItem.driver_id ? 'Entregador Parceiro' : 'Protocolo Izi'} #{String(selectedItem.id).slice(-6)}
-                          </span>
-                       </div>
-                    </div>
-                 </div>
-                 <button className="size-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 active:scale-90 transition-all">
-                    <Icon name="support_agent" size={20} className="text-zinc-500" />
-                 </button>
-              </div>
-
-              {selectedItem.driver_id && (
-                <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
-                   <div className="size-10 rounded-xl bg-yellow-400/10 flex items-center justify-center">
-                      <Icon name="two_wheeler" className="text-yellow-400" />
-                   </div>
-                   <div className="flex-1">
-                      <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Veículo Selecionado</p>
-                      <p className="text-xs font-bold text-white">Moto / Placa {String(selectedItem.id).slice(-4).toUpperCase()}</p>
-                   </div>
-                   <div className="text-right">
-                      <div className="flex items-center gap-1">
-                         <span className="material-symbols-outlined text-yellow-400 text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                         <span className="text-xs font-black text-white">4.9</span>
-                      </div>
-                   </div>
-                </div>
-              )}
-
-              <div className="h-px bg-white/5 mx-2" />
-
-              <div className="grid grid-cols-2 gap-4">
-                 <button 
-                  onClick={() => setSubView("order_chat")}
-                  className="bg-zinc-900/80 border border-zinc-800 py-5 rounded-[24px] flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest text-zinc-400 active:scale-[0.98] transition-all hover:bg-zinc-800 hover:text-white"
-                 >
-                    <Icon name="chat" size={18} className="text-yellow-400" />
-                    Abrir Canal Chat
-                 </button>
-                 <button className="bg-zinc-900/80 border border-zinc-800 py-5 rounded-[24px] flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest text-zinc-400 active:scale-[0.98] transition-all hover:bg-zinc-800 hover:text-white">
-                    <span className="material-symbols-outlined text-yellow-400 text-xl">call</span>
-                    Ligar Agora
-                 </button>
-              </div>
-           </section>
-
-           {/* DADOS DE ENTREGA */}
-           <section className="px-2 space-y-4">
-              <h2 className="text-[11px] font-black text-zinc-600 uppercase tracking-[0.4em]">Destino Final</h2>
-              <div className="flex items-start gap-4 bg-zinc-900/40 p-6 rounded-[32px] border border-white/5">
-                 <div className="size-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
-                    <Icon name="location_on" className="text-orange-500" />
-                 </div>
-                 <div>
-                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Receber em</p>
-                    <p className="text-sm font-bold text-zinc-300 leading-tight">{selectedItem.delivery_address}</p>
-                 </div>
-              </div>
-           </section>
-
-           {/* AJUDA */}
-           <button 
-            onClick={() => setSubView("order_support")}
-            className="w-full py-6 rounded-[32px] border-2 border-dashed border-zinc-900/60 text-zinc-800 font-black text-[10px] uppercase tracking-[0.3em] active:scale-95 transition-all flex items-center justify-center gap-3 group hover:border-white/10 hover:text-white mt-10"
-           >
-              <Icon name="help" className="group-hover:text-yellow-400 transition-colors" />
-              Central de Protocolos e Ajuda
-           </button>
-        </main>
-      </div>
-    );
-  };
 
   const renderWaitingMerchant = () => {
     return (
@@ -8930,7 +7373,23 @@ function App() {
             exit={{ opacity: 0, x: -50 }}
             className="h-full"
           >
-            <div className="h-full">{renderLogin()}</div>
+            <LoginView
+              authMode={authMode}
+              setAuthMode={setAuthMode}
+              userName={userName}
+              setUserName={setUserName}
+              phone={phone}
+              setPhone={setPhone}
+              loginEmail={loginEmail}
+              setLoginEmail={setLoginEmail}
+              loginPassword={loginPassword}
+              setLoginPassword={setLoginPassword}
+              loginError={loginError}
+              setLoginError={setLoginError}
+              isLoading={isLoading}
+              handleLogin={handleLogin}
+              handleSignUp={handleSignUp}
+            />
           </motion.div>
         )}
         {view === "app" && (
@@ -8940,10 +7399,62 @@ function App() {
             animate={{ opacity: 1 }}
             className="h-full relative"
           >
-            {tab === "home" && renderHome()}
-            {tab === "orders" && renderOrders()}
-            {tab === "wallet" && renderWallet()}
-            {tab === "profile" && renderProfile()}
+            {tab === "home" && (
+              <HomeView
+                userLevel={userLevel}
+                userId={userId}
+                userLocation={userLocation}
+                cart={cart}
+                myOrders={myOrders}
+                navigateSubView={navigateSubView}
+                setSubView={setSubView}
+                subView={subView}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                setSelectedItem={setSelectedItem}
+                availableCoupons={availableCoupons}
+                copiedCoupon={copiedCoupon}
+                setCopiedCoupon={setCopiedCoupon}
+                showToast={showToast}
+                setShowMasterPerks={setShowMasterPerks}
+                ESTABLISHMENTS={ESTABLISHMENTS}
+                handleShopClick={handleShopClick}
+                flashOffers={flashOffers}
+                setActiveService={setActiveService}
+                transitData={transitData}
+                setTransitData={setTransitData}
+                setExploreCategoryState={setExploreCategoryState}
+              />
+            )}
+            {tab === "orders" && (
+              <OrderListView
+                myOrders={myOrders}
+                userId={userId}
+                setSubView={setSubView}
+                setSelectedItem={setSelectedItem}
+                navigateSubView={navigateSubView}
+                tab={tab}
+              />
+            )}
+            {tab === "wallet" && (
+              <WalletView
+                walletTransactions={walletTransactions}
+                setSubView={setSubView}
+                showToast={showToast}
+                userId={userId}
+                setShowDepositModal={setShowDepositModal}
+              />
+            )}
+            {tab === "profile" && (
+              <ProfileView
+                userId={userId}
+                userName={userName}
+                userLevel={userLevel}
+                userXP={userXP}
+                setSubView={setSubView}
+                logout={logout}
+              />
+            )}
 
             {/* Sub Views */}
             {/* Sub Views - Unified Layering */}
@@ -9033,27 +7544,13 @@ function App() {
                 </motion.div>
               )}
               {subView === "acai_list" && (
-                <motion.div
-                  key="alist"
-                  initial={{ x: "100%" }}
-                  animate={{ x: 0 }}
-                  exit={{ x: "100%" }}
-                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-                  className="absolute inset-0 z-40"
-                >
-                  {renderAcaiList()}
+                <motion.div key="aclist" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-40 bg-black">
+                  <EstablishmentListView title="Açaí & Gelados" subtitle="Refresque seu dia" icon="icecream" searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSubView={setSubView} establishments={ESTABLISHMENTS} filterFn={(s) => s.tag === 'Açaí'} onShopClick={handleShopClick} cartLength={cart.length} navigateSubView={navigateSubView} />
                 </motion.div>
               )}
               {subView === "japonesa_list" && (
-                <motion.div
-                  key="jlist"
-                  initial={{ x: "100%" }}
-                  animate={{ x: 0 }}
-                  exit={{ x: "100%" }}
-                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-                  className="absolute inset-0 z-40"
-                >
-                  {renderJaponesaList()}
+                <motion.div key="jplist" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-40 bg-black">
+                  <EstablishmentListView title="Comida Japonesa" subtitle="Sushis e Sashimis" icon="sushi" searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSubView={setSubView} establishments={ESTABLISHMENTS} filterFn={(s) => s.tag === 'Japonesa'} onShopClick={handleShopClick} cartLength={cart.length} navigateSubView={navigateSubView} />
                 </motion.div>
               )}
               {subView === "brasileira_list" && (
@@ -9069,39 +7566,30 @@ function App() {
                 </motion.div>
               )}
               {subView === "explore_restaurants" && (
-                <motion.div
-                  key="explorerest"
-                  initial={{ x: "100%" }}
-                  animate={{ x: 0 }}
-                  exit={{ x: "100%" }}
-                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-                  className="absolute inset-0 z-40"
-                >
-                  {renderExploreRestaurants()}
+                <motion.div key="exrest" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-40 bg-black">
+                  <ExploreRestaurantsView
+                    setSubView={setSubView}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    cart={cart}
+                    navigateSubView={navigateSubView}
+                    foodCategories={foodCategories}
+                    availableCoupons={availableCoupons}
+                    establishments={ESTABLISHMENTS}
+                    onShopClick={handleShopClick}
+                    copiedCoupon={copiedCoupon}
+                    setCopiedCoupon={setCopiedCoupon}
+                  />
                 </motion.div>
               )}
               {subView === "daily_menus" && (
-                <motion.div
-                  key="dailymenus"
-                  initial={{ x: "100%" }}
-                  animate={{ x: 0 }}
-                  exit={{ x: "100%" }}
-                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-                  className="absolute inset-0 z-40"
-                >
-                  {renderDailyMenus()}
+                <motion.div key="dailymenus" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-40 bg-black">
+                  <EstablishmentListView title="Menus do Dia" subtitle="Economia e Sabor" icon="restaurant_menu" searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSubView={setSubView} establishments={ESTABLISHMENTS} filterFn={(s) => s.tag === 'Menu do Dia'} onShopClick={handleShopClick} cartLength={cart.length} navigateSubView={navigateSubView} />
                 </motion.div>
               )}
               {subView === "health_plantao" && (
-                <motion.div
-                  key="healthplantao"
-                  initial={{ x: "100%" }}
-                  animate={{ x: 0 }}
-                  exit={{ x: "100%" }}
-                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-                  className="absolute inset-0 z-40"
-                >
-                  {renderHealthPlantao()}
+                <motion.div key="healthplantao" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-40 bg-black">
+                  <EstablishmentListView title="Plantão 24h" subtitle="Emergências e Farmácias" icon="health_and_safety" searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSubView={setSubView} establishments={ESTABLISHMENTS} filterFn={(s) => s.type === 'pharmacy'} onShopClick={handleShopClick} cartLength={cart.length} navigateSubView={navigateSubView} />
                 </motion.div>
               )}
               {subView === "beverages_list" && (
@@ -9209,7 +7697,13 @@ function App() {
                   transition={{ type: "spring", bounce: 0, duration: 0.4 }}
                   className="absolute inset-0 z-40"
                 >
-                  {renderWallet()}
+                  <WalletView
+                    walletTransactions={walletTransactions}
+                    setSubView={setSubView}
+                    showToast={showToast}
+                    userId={userId}
+                    setShowDepositModal={setShowDepositModal}
+                  />
                 </motion.div>
               )}
               {subView === "cart" && (
@@ -9221,7 +7715,12 @@ function App() {
                   transition={{ type: "spring", bounce: 0, duration: 0.4 }}
                   className="absolute inset-0 z-[75]"
                 >
-                  {renderCart()}
+                  <CartView
+                    cart={cart}
+                    setCart={setCart}
+                    setSubView={setSubView}
+                    navigateSubView={navigateSubView}
+                  />
                 </motion.div>
               )}
               {subView === "checkout" && (
@@ -9233,7 +7732,27 @@ function App() {
                   transition={{ type: "spring", bounce: 0, duration: 0.4 }}
                   className="absolute inset-0 z-[60]"
                 >
-                  {renderCheckout()}
+                  <CheckoutView
+                    cart={cart}
+                    appliedCoupon={appliedCoupon}
+                    walletTransactions={walletTransactions}
+                    savedCards={savedCards}
+                    userId={userId}
+                    userLocation={userLocation}
+                    paymentMethod={paymentMethod}
+                    setPaymentMethod={setPaymentMethod}
+                    changeFor={changeFor}
+                    setChangeFor={setChangeFor}
+                    selectedCard={selectedCard}
+                    setSelectedCard={setSelectedCard}
+                    couponInput={couponInput}
+                    setCouponInput={setCouponInput}
+                    handleApplyCoupon={handleApplyCoupon}
+                    setAppliedCoupon={setAppliedCoupon}
+                    handlePlaceOrder={handlePlaceOrder}
+                    setPaymentsOrigin={setPaymentsOrigin}
+                    setSubView={setSubView}
+                  />
                 </motion.div>
               )}
                {subView === "explore_mobility" && (
@@ -9365,7 +7884,12 @@ function App() {
                   transition={{ type: "spring", bounce: 0, duration: 0.4 }}
                   className="absolute inset-0 z-[100]"
                 >
-                  {renderActiveOrder()}
+                  <ActiveOrderView
+                    selectedItem={selectedItem}
+                    driverLocation={driverLocation}
+                    userLocation={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
+                    setSubView={setSubView}
+                  />
                 </motion.div>
               )}
               {subView === "payment_processing" && (
