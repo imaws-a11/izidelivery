@@ -8,7 +8,7 @@ interface CartViewProps {
   navigateSubView: (view: string) => void;
 }
 
-const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, navigateSubView }) => {
+export const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, navigateSubView }) => {
   const subtotal: number = cart.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0);
   const taxa: number = 0;
   const total: number = subtotal + taxa;
@@ -138,4 +138,4 @@ const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, navigate
   );
 };
 
-export default CartView;
+

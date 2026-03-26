@@ -23,7 +23,7 @@ interface CheckoutViewProps {
   setSubView: (view: string) => void;
 }
 
-const CheckoutView: React.FC<CheckoutViewProps> = ({
+export const CheckoutView: React.FC<CheckoutViewProps> = ({
   cart,
   appliedCoupon,
   walletTransactions,
@@ -407,4 +407,4 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({
   );
 };
 
-export default CheckoutView;
+

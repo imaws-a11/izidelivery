@@ -10,7 +10,7 @@ interface ActiveOrderViewProps {
   setSubView: (view: string) => void;
 }
 
-const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
+export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
   selectedItem,
   driverLocation,
   userLocation,
@@ -294,4 +294,4 @@ const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
   );
 };
 
-export default ActiveOrderView;
+
