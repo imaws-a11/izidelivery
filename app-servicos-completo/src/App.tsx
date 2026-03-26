@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+﻿import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { BespokeIcons } from "./lib/BespokeIcons";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,7 +47,7 @@ function App() {
     "home",
   );
 
-  // Carrega a Google Maps API uma única vez para toda a aplicação (singleton)
+  // Carrega a Google Maps API uma Ãºnica vez para toda a aplicaÃ§Ã£o (singleton)
   useGoogleMapsLoader();
   
   const {
@@ -174,7 +174,7 @@ function App() {
   const [schedChatInputState, setSchedChatInputState] = useState('');
   const [schedMessagesState, setSchedMessagesState] = useState<{id: string; text: string; from: 'user'|'driver'; time: string}[]>([]);
   const [isSavingObsState, setIsSavingObsState] = useState(false);
-  const [aiMessage, setAiMessage] = useState("Olá! Sou seu assistente Izi. Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?");
+  const [aiMessage, setAiMessage] = useState("OlÃ¡! Sou seu assistente Izi. Percebi que vocÃª gosta de culinÃ¡ria japonesa. Que tal conferir as ofertas do Sushi Zen?");
   const [isIziBlackMembership, setIsIziBlackMembership] = useState(false);
   const [iziCashbackEarned, setIziCashbackEarned] = useState(0);
   const [showIziBlackCard, setShowIziBlackCard] = useState(false);
@@ -235,7 +235,7 @@ function App() {
             : "linear-gradient(135deg, #1e293b, #0f172a)",
       }));
       setSavedCards(cards);
-      // Se tem cartão padrão, define o método de pagamento
+      // Se tem cartÃ£o padrÃ£o, define o mÃ©todo de pagamento
       const defaultCard = cards.find((c: any) => c.active);
       if (defaultCard) setPaymentMethod("cartao");
     }
@@ -251,7 +251,7 @@ function App() {
 
   const handleDeleteCard = async (cardId: string) => {
     if (!userId) return;
-    if (await showConfirm({ message: "Remover este cartão?" })) {
+    if (await showConfirm({ message: "Remover este cartÃ£o?" })) {
       await supabase.from("payment_methods").delete().eq("id", cardId).eq("user_id", userId);
       const updated = savedCards.filter((c: any) => c.id !== cardId);
       setSavedCards(updated);
@@ -280,7 +280,7 @@ function App() {
         active: addr.is_active,
       }));
       setSavedAddresses(addresses);
-      // Sincroniza o local atual se houver um endereço ativo no banco
+      // Sincroniza o local atual se houver um endereÃ§o ativo no banco
       const active = addresses.find(a => a.active);
       if (active) {
         setUserLocation(prev => ({ ...prev, address: active.street }));
@@ -315,7 +315,7 @@ function App() {
   const handleSaveAddress = async () => {
     if (!userId) return;
     if (!newAddrLabel.trim() || !newAddrStreet.trim()) {
-      toastError('Preencha pelo menos o rótulo e a rua.');
+      toastError('Preencha pelo menos o rÃ³tulo e a rua.');
       return;
     }
     setIsSavingAddress(true);
@@ -328,7 +328,7 @@ function App() {
           city: newAddrCity.trim() || null,
         }).eq('id', editingAddress.id);
         if (error) throw error;
-        toastSuccess('Endereço atualizado!');
+        toastSuccess('EndereÃ§o atualizado!');
       } else {
         const { error } = await supabase.from('saved_addresses').insert({
           user_id: userId,
@@ -339,7 +339,7 @@ function App() {
           is_active: savedAddresses.length === 0,
         });
         if (error) throw error;
-        toastSuccess('Endereço salvo com sucesso!');
+        toastSuccess('EndereÃ§o salvo com sucesso!');
       }
       resetAddressForm();
       fetchSavedAddresses(userId);
@@ -355,7 +355,7 @@ function App() {
     try {
       const { error } = await supabase.from('saved_addresses').delete().eq('id', addrId);
       if (error) throw error;
-      toastSuccess('Endereço removido.');
+      toastSuccess('EndereÃ§o removido.');
       fetchSavedAddresses(userId);
     } catch (e: any) {
       toastError('Erro ao remover: ' + e.message);
@@ -368,10 +368,10 @@ function App() {
       await supabase.from('saved_addresses').update({ is_active: false }).eq('user_id', userId);
       const { error } = await supabase.from('saved_addresses').update({ is_active: true }).eq('id', addrId);
       if (error) throw error;
-      toastSuccess('Endereço padrão atualizado!');
+      toastSuccess('EndereÃ§o padrÃ£o atualizado!');
       fetchSavedAddresses(userId);
     } catch (e: any) {
-      toastError('Erro ao definir endereço: ' + e.message);
+      toastError('Erro ao definir endereÃ§o: ' + e.message);
     }
   };
 
@@ -419,7 +419,7 @@ function App() {
   const updateLocation = (onSuccess?: (address: string) => void) => {
     setUserLocation((prev) => ({ ...prev, loading: true }));
     if (!("geolocation" in navigator)) {
-      setUserLocation({ address: "Geolocalização não disponível", loading: false });
+      setUserLocation({ address: "GeolocalizaÃ§Ã£o nÃ£o disponÃ­vel", loading: false });
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -452,13 +452,13 @@ function App() {
             } catch { /* silent */ }
           }
 
-          // Ãšltimo fallback: Nominatim
+          // ÃƒÅ¡ltimo fallback: Nominatim
           if (!address) {
             const nomRes = await fetch(
               `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
             );
             const nomData = await nomRes.json();
-            address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "Localização atual";
+            address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "LocalizaÃ§Ã£o atual";
           }
 
           setUserLocation({ address, loading: false, lat: latitude, lng: longitude });
@@ -469,7 +469,7 @@ function App() {
         }
       },
       () => {
-        setUserLocation({ address: "Permissão de localização negada", loading: false });
+        setUserLocation({ address: "PermissÃ£o de localizaÃ§Ã£o negada", loading: false });
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -508,23 +508,23 @@ function App() {
           
           if (newOrder.user_id !== userIdRef.current) return;
 
-          // Se o status mudou, mostrar notificação personalizada
+          // Se o status mudou, mostrar notificaÃ§Ã£o personalizada
           if (newOrder.status !== oldOrder.status) {
             const statusMessages: Record<string, string> = {
-              'novo': 'Recebemos seu pedido! Já estamos processando. âš¡',
-              'pendente_pagamento': 'Aguardando confirmação do pagamento... ðŸ’³',
-              'pendente': 'O lojista recebeu seu pedido! ðŸŽ‰',
-              'aceito': 'O estabelecimento aceitou seu pedido! ðŸŽ‰',
-              'confirmado': 'Pedido confirmado! O preparo começou. âœ…',
-              'preparando': 'Seu pedido está sendo preparado com carinho! ðŸ³',
-              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. ðŸ“¦',
-              'a_caminho': 'O motoboy aceitou e está indo coletar seu pedido! ðŸï¸',
-              'picked_up': 'Pedido coletado! O motoboy está iniciando a entrega. ðŸš€',
-              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! ðŸ›µ',
-              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. ðŸ',
-              'no_local': 'O motoboy chegou ao seu endereço! ðŸ””',
-              'concluido': 'Pedido entregue com sucesso! Bom apetite. âœ¨',
-              'cancelado': 'Ah não! Seu pedido foi cancelado. âš ï¸'
+              'novo': 'Recebemos seu pedido! JÃ¡ estamos processando. Ã¢Å¡Â¡',
+              'pendente_pagamento': 'Aguardando confirmaÃ§Ã£o do pagamento... Ã°Å¸â€™Â³',
+              'pendente': 'O lojista recebeu seu pedido! Ã°Å¸Å½â€°',
+              'aceito': 'O estabelecimento aceitou seu pedido! Ã°Å¸Å½â€°',
+              'confirmado': 'Pedido confirmado! O preparo comeÃ§ou. Ã¢Å“â€¦',
+              'preparando': 'Seu pedido estÃ¡ sendo preparado com carinho! Ã°Å¸ÂÂ³',
+              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. Ã°Å¸â€œÂ¦',
+              'a_caminho': 'O motoboy aceitou e estÃ¡ indo coletar seu pedido! Ã°Å¸ÂÂÃ¯Â¸Â',
+              'picked_up': 'Pedido coletado! O motoboy estÃ¡ iniciando a entrega. Ã°Å¸Å¡â‚¬',
+              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! Ã°Å¸â€ºÂµ',
+              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. Ã°Å¸ÂÂ',
+              'no_local': 'O motoboy chegou ao seu endereÃ§o! Ã°Å¸â€â€',
+              'concluido': 'Pedido entregue com sucesso! Bom apetite. Ã¢Å“Â¨',
+              'cancelado': 'Ah nÃ£o! Seu pedido foi cancelado. Ã¢Å¡Â Ã¯Â¸Â'
             };
 
             const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
@@ -535,7 +535,7 @@ function App() {
               setSubView("payment_success");
             }
 
-            // Abrir tela de avaliação ao concluir (exceto para assinaturas Izi Black)
+            // Abrir tela de avaliaÃ§Ã£o ao concluir (exceto para assinaturas Izi Black)
             if (newOrder.status === 'concluido') {
               setSelectedItem(newOrder);
               
@@ -549,9 +549,9 @@ function App() {
               }, 2000);
             }
 
-            // TransiçÃµes automáticas de tela baseadas no status
+            // TransiÃ§ÃƒÂµes automÃ¡ticas de tela baseadas no status
             if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
-              showToast("Loja aceitou seu pedido! ðŸŽ‰", "success");
+              showToast("Loja aceitou seu pedido! Ã°Å¸Å½â€°", "success");
               setSelectedItem(newOrder); 
               setTimeout(() => setSubView("active_order"), 1000);
             }
@@ -605,7 +605,7 @@ function App() {
 
   const fetchBeveragePromo = useCallback(async () => {
     try {
-      // 1. Buscar Banners específicos para bebidas ou banners gerais ativos
+      // 1. Buscar Banners especÃ­ficos para bebidas ou banners gerais ativos
       const { data: banners } = await supabase
         .from('promotions_delivery')
         .select('*')
@@ -614,7 +614,7 @@ function App() {
         .order('created_at', { ascending: false });
       
       if (banners) {
-        // Filtra banners que mencionam bebidas no título ou descrição
+        // Filtra banners que mencionam bebidas no tÃ­tulo ou descriÃ§Ã£o
         const bevBanners = banners.filter(b => 
           (b.title?.toLowerCase().includes('bebida') || b.description?.toLowerCase().includes('bebida') ||
            b.title?.toLowerCase().includes('gelada') || b.description?.toLowerCase().includes('gelada'))
@@ -663,21 +663,21 @@ function App() {
         .single();
 
       if (error || !data) {
-        setCouponError("Cupom inválido ou expirado.");
+        setCouponError("Cupom invÃ¡lido ou expirado.");
         setAppliedCoupon(null);
         return;
       }
 
       const subtotal = cart.reduce((acc, item) => acc + (item.price || 0), 0);
       if (data.min_order_value && subtotal < data.min_order_value) {
-        setCouponError(`Pedido mínimo de R$ ${data.min_order_value.toFixed(2).replace(".", ",")} para este cupom.`);
+        setCouponError(`Pedido mÃ­nimo de R$ ${data.min_order_value.toFixed(2).replace(".", ",")} para este cupom.`);
         setAppliedCoupon(null);
         return;
       }
 
-      // Validar data de expiração se houver
+      // Validar data de expiraÃ§Ã£o se houver
       if (data.end_date && new Date(data.end_date) < new Date()) {
-        setCouponError("Este cupom já expirou.");
+        setCouponError("Este cupom jÃ¡ expirou.");
         setAppliedCoupon(null);
         return;
       }
@@ -720,7 +720,7 @@ function App() {
       if (products && products.length > 0) {
         const grouped: Record<string, any[]> = {};
         products.forEach((p: any) => {
-          const cat = p.category || p.subcategory || (isRestaurant ? "Cardápio" : "Produtos");
+          const cat = p.category || p.subcategory || (isRestaurant ? "CardÃ¡pio" : "Produtos");
           if (!grouped[cat]) grouped[cat] = [];
           grouped[cat].push({
             id: p.id,
@@ -749,8 +749,8 @@ function App() {
 
   const handlePlaceOrder = async (useCoins: boolean = false) => {
     if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
-    if (!userId) { alert("Faça login para continuar."); return; }
-    if (cart.length === 0) { alert("Seu carrinho está vazio."); return; }
+    if (!userId) { alert("FaÃ§a login para continuar."); return; }
+    if (cart.length === 0) { alert("Seu carrinho estÃ¡ vazio."); return; }
 
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
     const couponDiscount = appliedCoupon
@@ -771,8 +771,8 @@ function App() {
       merchant_id: selectedShop?.id || null,
       status: "novo",
       total_price: total,
-      pickup_address: selectedShop?.name || "Endereço do Estabelecimento",
-      delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map(i => `${i.name} (R$ ${Number(i.price).toFixed(2)})`).join(', ')}`,
+      pickup_address: selectedShop?.name || "EndereÃ§o do Estabelecimento",
+      delivery_address: `${userLocation.address || "EndereÃ§o nÃ£o informado"} | ITENS: ${cart.map(i => `${i.name} (R$ ${Number(i.price).toFixed(2)})`).join(', ')}`,
       payment_method: paymentMethod,
       service_type: selectedShop?.type || "restaurant",
       notes: paymentMethod === "dinheiro" && changeFor ? `TROCO PARA: R$ ${changeFor}` : "",
@@ -795,11 +795,11 @@ function App() {
     };
 
     try {
-      // â”€â”€ PAGAMENTOS DIGITAIS (Pendente Confirmação) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Ã¢â€â‚¬Ã¢â€â‚¬ PAGAMENTOS DIGITAIS (Pendente ConfirmaÃ§Ã£o) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       const isDigital = ["pix", "cartao", "bitcoin_lightning", "google_pay"].includes(paymentMethod);
       const initialStatus = isDigital ? "pendente_pagamento" : (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega" ? "waiting_merchant" : "novo");
 
-      // â”€â”€ PIX (Mercado Pago) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Ã¢â€â‚¬Ã¢â€â‚¬ PIX (Mercado Pago) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       if (paymentMethod === "pix") {
         setPixConfirmed(false);
         setPixCpf("");
@@ -807,7 +807,7 @@ function App() {
         return;
       }
 
-      // â”€â”€ BITCOIN LIGHTNING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Ã¢â€â‚¬Ã¢â€â‚¬ BITCOIN LIGHTNING Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       if (paymentMethod === "bitcoin_lightning") {
         navigateSubView("payment_processing");
         const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ 
@@ -816,7 +816,7 @@ function App() {
         }).select().single();
         
         if (insertError || !order) { 
-          alert("Não foi possível registrar o pedido para pagamento Lightning: " + (insertError?.message || "Erro desconhecido"));
+          alert("NÃ£o foi possÃ­vel registrar o pedido para pagamento Lightning: " + (insertError?.message || "Erro desconhecido"));
           navigateSubView("payment_error"); 
           return; 
         }
@@ -832,7 +832,7 @@ function App() {
 
           if (lnErr || !lnData?.payment_request) {
             console.error("Erro Lightning:", lnErr);
-            // Se o pedido já foi criado, vamos mostrar ele mas com erro na invoice
+            // Se o pedido jÃ¡ foi criado, vamos mostrar ele mas com erro na invoice
             setSelectedItem({ ...order, lightningError: true });
             navigateSubView("lightning_payment");
             return;
@@ -847,14 +847,14 @@ function App() {
           await clearCart();
           navigateSubView("lightning_payment");
         } catch (err) {
-          console.error("Exceção Lightning:", err);
+          console.error("ExceÃ§Ã£o Lightning:", err);
           setSelectedItem({ ...order, lightningError: true });
           navigateSubView("lightning_payment");
         }
         return;
       }
 
-      // â”€â”€ SALDO DA CARTEIRA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Ã¢â€â‚¬Ã¢â€â‚¬ SALDO DA CARTEIRA Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       if (paymentMethod === "saldo") {
         const walletBal = walletTransactions.reduce((acc: number, t: any) =>
           ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
@@ -889,11 +889,11 @@ function App() {
         return;
       }
 
-      // â”€â”€ GOOGLE PAY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Ã¢â€â‚¬Ã¢â€â‚¬ GOOGLE PAY Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       if (paymentMethod === "google_pay") {
         setIsLoading(true);
         navigateSubView("payment_processing");
-        // Simulação de processamento Google Pay
+        // SimulaÃ§Ã£o de processamento Google Pay
         setTimeout(async () => {
           const { data: order, error } = await supabase.from("orders_delivery").insert({ 
             ...orderBase, 
@@ -914,9 +914,9 @@ function App() {
         return;
       }
 
-      // â”€â”€ DINHEIRO / CARTÃƒO NA ENTREGA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Ã¢â€â‚¬Ã¢â€â‚¬ DINHEIRO / CARTÃƒÆ’O NA ENTREGA Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       if (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") {
-        if (!selectedShop?.id) { alert("Erro: Estabelecimento não selecionado."); setIsLoading(false); return; }
+        if (!selectedShop?.id) { alert("Erro: Estabelecimento nÃ£o selecionado."); setIsLoading(false); return; }
         
         const { data: order, error: insertError } = await supabase
           .from("orders_delivery")
@@ -931,7 +931,7 @@ function App() {
 
         if (insertError || !order) {
           console.error(`Erro insert ${paymentMethod}:`, insertError);
-          alert("Não foi possível processar o pedido. Erro: " + (insertError?.message || "Tente novamente."));
+          alert("NÃ£o foi possÃ­vel processar o pedido. Erro: " + (insertError?.message || "Tente novamente."));
           setIsLoading(false);
           return;
         }
@@ -943,7 +943,7 @@ function App() {
         return;
       }
 
-      // â”€â”€ CARTÃƒO (Mercado Pago / Online Checkout) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Ã¢â€â‚¬Ã¢â€â‚¬ CARTÃƒÆ’O (Mercado Pago / Online Checkout) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       if (paymentMethod === "cartao") {
         setSubView("card_payment");
         return;
@@ -1022,12 +1022,12 @@ function App() {
   } | null>(null);
 
   const [quests] = useState([
-    { id: 1, title: 'Explorador Urbano', desc: 'Peça em 3 categorias diferentes hoje', xp: 500, progress: 1, total: 3, icon: 'explore', color: '#fbbf24' },
+    { id: 1, title: 'Explorador Urbano', desc: 'PeÃ§a em 3 categorias diferentes hoje', xp: 500, progress: 1, total: 3, icon: 'explore', color: '#fbbf24' },
     { id: 2, title: 'Amigo do Peito', desc: 'Indique um amigo para a Izi', xp: 1000, progress: 0, total: 1, icon: 'group_add', color: '#10b981' },
-    { id: 3, title: 'Madrugador Izi', desc: 'Peça café da manhã antes das 9h', xp: 300, progress: 0, total: 1, icon: 'wb_sunny', color: '#f59e0b' },
+    { id: 3, title: 'Madrugador Izi', desc: 'PeÃ§a cafÃ© da manhÃ£ antes das 9h', xp: 300, progress: 0, total: 1, icon: 'wb_sunny', color: '#f59e0b' },
   ]);
 
-  // Refs para manter o estado atual sempre acessível nos handlers
+  // Refs para manter o estado atual sempre acessÃ­vel nos handlers
   const viewRef = useRef(view);
   const tabRef = useRef(tab);
   const subViewRef = useRef(subView);
@@ -1038,18 +1038,18 @@ function App() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showLojistasModal, setShowLojistasModal] = useState(false);
   const partnerStores = [
-    { id: 'izi_paulista', name: "Izi Hub Central - Paulista", address: "Av. Paulista, 1000, Bela Vista, São Paulo - SP", phone: "(11) 98888-7777", hours: "08h - 22h", type: "Hub Logístico" },
-    { id: 'posto_augusta', name: "Izi Posto Shell - Augusta", address: "Rua Augusta, 500, Consolação, São Paulo - SP", phone: "(11) 97777-6666", hours: "24h", type: "Ponto de Retirada" },
-    { id: 'loja_oscar', name: "Izi Express - Oscar Freire", address: "Rua Oscar Freire, 300, Jardins, São Paulo - SP", phone: "(11) 96666-5555", hours: "07h - 23h", type: "Loja Parceira" }
+    { id: 'izi_paulista', name: "Izi Hub Central - Paulista", address: "Av. Paulista, 1000, Bela Vista, SÃ£o Paulo - SP", phone: "(11) 98888-7777", hours: "08h - 22h", type: "Hub LogÃ­stico" },
+    { id: 'posto_augusta', name: "Izi Posto Shell - Augusta", address: "Rua Augusta, 500, ConsolaÃ§Ã£o, SÃ£o Paulo - SP", phone: "(11) 97777-6666", hours: "24h", type: "Ponto de Retirada" },
+    { id: 'loja_oscar', name: "Izi Express - Oscar Freire", address: "Rua Oscar Freire, 300, Jardins, SÃ£o Paulo - SP", phone: "(11) 96666-5555", hours: "07h - 23h", type: "Loja Parceira" }
   ];
   useEffect(() => { subViewRef.current = subView; }, [subView]);
 
-  // Suporte ao botão voltar do hardware/navegador
+  // Suporte ao botÃ£o voltar do hardware/navegador
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
       if (event.state) {
         const { view: v, tab: t, subView: sv } = event.state;
-        // Se o usuário está autenticado, nunca permitir voltar para login
+        // Se o usuÃ¡rio estÃ¡ autenticado, nunca permitir voltar para login
         if (userIdRef.current && v === "login") {
           window.history.pushState(
             { view: "app", tab: t || tabRef.current, subView: "none" },
@@ -1062,7 +1062,7 @@ function App() {
         if (t) setTab(t);
         setSubView(sv || "none");
       } else {
-        // Sem estado no histórico â€” se autenticado, manter no app
+        // Sem estado no histÃ³rico Ã¢â‚¬â€ se autenticado, manter no app
         if (userIdRef.current) {
           window.history.pushState(
             { view: "app", tab: tabRef.current, subView: "none" },
@@ -1140,9 +1140,9 @@ function App() {
     receiverName: "",
     receiverPhone: "",
     packageDesc: "",
-    weightClass: "Pequeno (até 5kg)",
+    weightClass: "Pequeno (atÃ© 5kg)",
     // Novos campos para Frete e Van
-    vehicleCategory: "Fiorino/Furgão",
+    vehicleCategory: "Fiorino/FurgÃ£o",
     helpers: 0,
     accessibility: { stairsAtOrigin: false, stairsAtDestination: false, serviceElevator: false },
     cargoPhotos: [] as string[],
@@ -1191,13 +1191,13 @@ function App() {
 
   const isStoreOpen = useCallback((openingHours: any, manualOpen: boolean) => {
     // Prioridade total para o status manual definido pelo lojista na admin.
-    // Se is_open for true no banco, a loja está aberta independentemente do horário.
-    // Se is_open for false no banco, a loja está fechada.
+    // Se is_open for true no banco, a loja estÃ¡ aberta independentemente do horÃ¡rio.
+    // Se is_open for false no banco, a loja estÃ¡ fechada.
     if (manualOpen !== undefined && manualOpen !== null) {
       return manualOpen;
     }
 
-    // Fallback para horário caso o status manual não esteja definido (ex: lojas antigas)
+    // Fallback para horÃ¡rio caso o status manual nÃ£o esteja definido (ex: lojas antigas)
     if (!openingHours || Object.keys(openingHours).length === 0) return true;
 
     const now = new Date();
@@ -1232,7 +1232,7 @@ function App() {
       
       const realEstabs = data?.map(m => {
         const isOpen = isStoreOpen(m.opening_hours, m.is_open);
-        // Normalização do tipo para garantir consistência nos filtros
+        // NormalizaÃ§Ã£o do tipo para garantir consistÃªncia nos filtros
         const normalizedType = (m.store_type || "restaurant").toLowerCase().trim();
         
         return {
@@ -1262,11 +1262,11 @@ function App() {
 
     // AI Dynamic Suggestions Cycle
     const aiTips = [
-      "Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?",
-      "Hoje é sexta! Temos cupons especiais de 20% em bebidas para membros Izi Black. Ã°Å¸ÂÂ»",
-      "Baseado no seu histórico, você costuma pedir em mercados Ã s 19h. Deseja agendar suas compras?",
-      "O trânsito está pesado hoje. Sugiro usar o Mototáxi para chegar mais rápido ao seu destino.",
-      "Você está a apenas 250 XP de subir para o nível 13! Que tal um pedido extra hoje?"
+      "Percebi que vocÃª gosta de culinÃ¡ria japonesa. Que tal conferir as ofertas do Sushi Zen?",
+      "Hoje Ã© sexta! Temos cupons especiais de 20% em bebidas para membros Izi Black. ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â»",
+      "Baseado no seu histÃ³rico, vocÃª costuma pedir em mercados ÃƒÂ s 19h. Deseja agendar suas compras?",
+      "O trÃ¢nsito estÃ¡ pesado hoje. Sugiro usar o MototÃ¡xi para chegar mais rÃ¡pido ao seu destino.",
+      "VocÃª estÃ¡ a apenas 250 XP de subir para o nÃ­vel 13! Que tal um pedido extra hoje?"
     ];
     let index = 0;
     const interval = setInterval(() => {
@@ -1274,7 +1274,7 @@ function App() {
       setAiMessage(aiTips[index]);
     }, 15000);
 
-    // Inscrição em tempo real para atualizaçÃµes de status da loja
+    // InscriÃ§Ã£o em tempo real para atualizaÃ§ÃƒÂµes de status da loja
     const channel = supabase
       .channel('admin_users_updates')
       .on(
@@ -1300,7 +1300,7 @@ function App() {
   useEffect(() => {
     if (!userId) return;
     
-    // Inscrição em tempo real para atualizaçÃµes dos pedidos do próprio cliente
+    // InscriÃ§Ã£o em tempo real para atualizaÃ§ÃƒÂµes dos pedidos do prÃ³prio cliente
     const ordersChannel = supabase
       .channel('my_orders_realtime')
       .on(
@@ -1341,7 +1341,7 @@ function App() {
     lat?: number;
     lng?: number;
   }>({
-    address: "Buscando localização...",
+    address: "Buscando localizaÃ§Ã£o...",
     loading: true,
   });
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro" | "cartao_entrega" | "saldo" | "bitcoin_lightning" | "google_pay">(() => (localStorage.getItem("preferredPaymentMethod") as any) || "cartao");
@@ -1366,7 +1366,7 @@ function App() {
   const [beverageBanners, setBeverageBanners] = useState<any[]>([]);
   const [beverageOffers, setBeverageOffers] = useState<any[]>([]);
 
-  // --- MOTOR DE PRECIFICAÃ‡ÃƒO DINÃ‚MICA (REAL-TIME DATA) ---
+  // --- MOTOR DE PRECIFICAÃƒâ€¡ÃƒÆ’O DINÃƒâ€šMICA (REAL-TIME DATA) ---
   const [marketConditions, setMarketConditions] = useState({
     demand: 1.0,
     traffic: "Normal",
@@ -1395,13 +1395,13 @@ function App() {
     { id: "pizza",      name: "Pizza",      icon: "local_pizza",   action: () => { setRestaurantInitialCategory("Pizza"); navigateSubView("explore_restaurants"); } },
     { id: "japones",    name: "Japonesa",   icon: "set_meal",      action: () => { setRestaurantInitialCategory("Japonesa"); navigateSubView("explore_restaurants"); } },
     { id: "brasileira", name: "Brasileira", icon: "dinner_dining", action: () => { setRestaurantInitialCategory("Brasileira"); navigateSubView("explore_restaurants"); } },
-    { id: "acai",       name: "Açaí",       icon: "grass",         action: () => { setRestaurantInitialCategory("Açaí"); navigateSubView("explore_restaurants"); } },
+    { id: "acai",       name: "AÃ§aÃ­",       icon: "grass",         action: () => { setRestaurantInitialCategory("AÃ§aÃ­"); navigateSubView("explore_restaurants"); } },
     { id: "daily",      name: "Do Dia",     icon: "today",         action: () => navigateSubView("daily_menus") },
   ];
 
   const fetchMarketData = async () => {
     try {
-      // 1. Buscar ConfiguraçÃµes Centrais do Admin
+      // 1. Buscar ConfiguraÃ§ÃƒÂµes Centrais do Admin
       const { data: ratesData } = await supabase
         .from('dynamic_rates_delivery')
         .select('*');
@@ -1424,17 +1424,17 @@ function App() {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending');
 
-      // 4. Clima (Simulação estruturada - pronta para API externa)
+      // 4. Clima (SimulaÃ§Ã£o estruturada - pronta para API externa)
       const weathers = ["Ensolarado", "Nublado", "Chuva Leve", "Tempestade"];
       const hour = new Date().getHours();
       const currentWeather = (hour > 18 || hour < 6) ? "Nublado" : weathers[Math.floor(Math.random() * 2)];
 
-      // 5. Lógica de Equilíbrio de Marketplace usando ConfiguraçÃµes do Admin
+      // 5. LÃ³gica de EquilÃ­brio de Marketplace usando ConfiguraÃ§ÃƒÂµes do Admin
       const drivers = onlineDrivers || 5; 
       const orders = pendingOrders || 0;
       const ratio = orders / drivers;
 
-      // Cálculo do Multiplicador (Surge) baseado no Threshold e Sensibilidade do Admin
+      // CÃ¡lculo do Multiplicador (Surge) baseado no Threshold e Sensibilidade do Admin
       let surge = 1.0;
       const { threshold, sensitivity, maxSurge } = config.equilibrium;
       
@@ -1442,14 +1442,14 @@ function App() {
         surge = 1.0 + (ratio - threshold) * sensitivity;
       }
 
-      // 6. Aplicar Fatores Climáticos Ativos
+      // 6. Aplicar Fatores ClimÃ¡ticos Ativos
       if (currentWeather === "Tempestade" && config.weather.storm.active) surge += (config.weather.storm.multiplier - 1);
       if (currentWeather === "Chuva Leve" && config.weather.rain.active) surge += (config.weather.rain.multiplier - 1);
       
-      // Horário de Pico (Fixado ou Dinâmico)
+      // HorÃ¡rio de Pico (Fixado ou DinÃ¢mico)
       if (hour >= 18 && hour <= 21) surge += 0.3; 
 
-      // 7. Limites de Segurança (Hard Caps vindos do Admin)
+      // 7. Limites de SeguranÃ§a (Hard Caps vindos do Admin)
       const finalSurge = Math.max(1.0, Math.min(maxSurge, surge));
 
       setMarketConditions({
@@ -1475,7 +1475,7 @@ function App() {
       : basePrice;
   };
 
-  // Calcula preços usando Routes API (nova, não deprecated)
+  // Calcula preÃ§os usando Routes API (nova, nÃ£o deprecated)
   const calculateDistancePrices = async (origin: string, destination: string) => {
     if (!origin || !destination) return;
     setIsCalculatingPrice(true);
@@ -1504,7 +1504,7 @@ function App() {
         const mins = Math.round(secs / 60);
         const durationText = mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60}min` : `${mins} min`;
         const distText = distKm < 1 ? `${Math.round(distKm*1000)} m` : `${distKm.toFixed(1)} km`;
-        setRouteDistance(`${distText} â€¢ ${durationText}`);
+        setRouteDistance(`${distText} Ã¢â‚¬Â¢ ${durationText}`);
         setDistanceValueKm(distKm);
         if (route.polyline?.encodedPolyline) {
           setRoutePolyline(route.polyline.encodedPolyline);
@@ -1558,7 +1558,7 @@ function App() {
 
   const handleConfirmMobility = async (paymentMethod: string) => {
     if (!userId) {
-      toastWarning("Faça login para continuar");
+      toastWarning("FaÃ§a login para continuar");
       setView("login");
       return;
     }
@@ -1572,7 +1572,7 @@ function App() {
       utilitario: bv.utilitario_min || 10 
     };
     
-    // Calcular preço final usando o novo motor de precificação se disponível ou o fallback dinâmico
+    // Calcular preÃ§o final usando o novo motor de precificaÃ§Ã£o se disponÃ­vel ou o fallback dinÃ¢mico
     let finalPrice = 0;
     if (transitData.type === 'utilitario') {
        finalPrice = calculateFreightPrice({
@@ -1610,7 +1610,7 @@ function App() {
       pickup_address: transitData.origin,
       delivery_address: `${transitData.destination} | OBS: ${isShipping 
         ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
-        : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`}`,
+        : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTÃ¡xi' : 'Particular'})`}`,
       payment_method: paymentMethod,
       payment_status: (paymentMethod === 'dinheiro' || paymentMethod === 'pix' || paymentMethod === 'bitcoin_lightning') ? 'pending' : 'paid',
       scheduled_at: transitData.scheduled ? `${transitData.scheduledDate}T${transitData.scheduledTime}:00` : null
@@ -1663,7 +1663,7 @@ function App() {
                });
                setShowPixPayment(true);
             } else {
-               // Fallback para modal manual se a função falhar
+               // Fallback para modal manual se a funÃ§Ã£o falhar
                setShowPixPayment(true);
             }
          } catch (e) {
@@ -1677,7 +1677,7 @@ function App() {
             if (!lnErr && lnData?.payment_request) {
                setLightningData({ 
                  payment_request: lnData.payment_request, 
-                 satoshis: Math.round(finalPrice * 2000), // Exemplo de conversão
+                 satoshis: Math.round(finalPrice * 2000), // Exemplo de conversÃ£o
                  btc_price_brl: 350000 
                });
                setSubView("lightning_payment");
@@ -1685,7 +1685,7 @@ function App() {
           } catch(e) {}
       }
 
-      // Salvar no histórico
+      // Salvar no histÃ³rico
       const newHistory = [transitData.destination, ...transitHistory.filter(h => h !== transitData.destination)].slice(0, 10);
       setTransitHistory(newHistory);
       localStorage.setItem("transitHistory", JSON.stringify(newHistory));
@@ -1693,7 +1693,7 @@ function App() {
       setSelectedItem(order);
       
       if (paymentMethod !== 'pix' && paymentMethod !== 'bitcoin_lightning') {
-        toastSuccess(isShipping ? "Pedido de envio criado!" : "Procurando motorista mais próximo...");
+        toastSuccess(isShipping ? "Pedido de envio criado!" : "Procurando motorista mais prÃ³ximo...");
         if (transitData.scheduled) {
           setSubView("payment_success");
         } else {
@@ -1703,7 +1703,7 @@ function App() {
 
     } catch (err: any) {
       console.error("Erro no fluxo de mobilidade:", err);
-      toastError("Não foi possível criar seu pedido: " + err.message);
+      toastError("NÃ£o foi possÃ­vel criar seu pedido: " + err.message);
     } finally {
       setIsLoading(false);
     }
@@ -1717,7 +1717,7 @@ function App() {
     return () => clearInterval(adTimer);
   }, []);
 
-  // Recalcular preços ao entrar na tela transit_selection com rota já definida
+  // Recalcular preÃ§os ao entrar na tela transit_selection com rota jÃ¡ definida
   useEffect(() => {
     if (subView === "transit_selection" && transitData.origin && transitData.destination && Object.keys(distancePrices).length === 0) {
       setRouteDistance("");
@@ -1745,7 +1745,7 @@ function App() {
                 setTransferTarget({ id: targetId, email: targetEmail, phone: targetPhone });
                 setIsScanningQR(false);
                 html5QrCode.stop();
-                toastSuccess("Usuário Identificado!");
+                toastSuccess("UsuÃ¡rio Identificado!");
               }
             },
             () => {}
@@ -1804,7 +1804,7 @@ function App() {
                   <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                   <span className="text-xs font-black text-white">{shop.rating}</span>
                 </div>
-                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega GrÃ¡tis</div>}
               </div>
               <div className="flex items-center justify-between px-1">
                 <div>
@@ -1813,7 +1813,7 @@ function App() {
                     <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">schedule</span>{shop.time}</span>
                     <span className={shop.freeDelivery ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
                       <span className="material-symbols-outlined text-[13px]">delivery_dining</span>
-                      {shop.freeDelivery ? "Grátis" : shop.fee}
+                      {shop.freeDelivery ? "GrÃ¡tis" : shop.fee}
                     </span>
                   </div>
                 </div>
@@ -1876,7 +1876,7 @@ function App() {
                   <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                   <span className="text-xs font-black text-white">{shop.rating}</span>
                 </div>
-                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega GrÃ¡tis</div>}
               </div>
               <div className="flex items-center justify-between px-1">
                 <div>
@@ -1885,7 +1885,7 @@ function App() {
                     <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">schedule</span>{shop.time}</span>
                     <span className={shop.freeDelivery ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
                       <span className="material-symbols-outlined text-[13px]">delivery_dining</span>
-                      {shop.freeDelivery ? "Grátis" : shop.fee}
+                      {shop.freeDelivery ? "GrÃ¡tis" : shop.fee}
                     </span>
                   </div>
                 </div>
@@ -1916,7 +1916,7 @@ function App() {
                 <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
               </button>
               <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">Açaí</h1>
+                <h1 className="text-xl font-black tracking-tight text-white leading-none">AÃ§aÃ­</h1>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Cremoso e gelado</p>
               </div>
             </div>
@@ -1936,7 +1936,7 @@ function App() {
         <main className="px-5 flex flex-col gap-4 pb-10">
           {ESTABLISHMENTS.filter((s: any) => 
             s.type === "restaurant" && 
-            (s.description.toLowerCase().includes("açai") || s.description.toLowerCase().includes("açaí") || s.name.toLowerCase().includes("acai") || s.name.toLowerCase().includes("açaí")) && 
+            (s.description.toLowerCase().includes("aÃ§ai") || s.description.toLowerCase().includes("aÃ§aÃ­") || s.name.toLowerCase().includes("acai") || s.name.toLowerCase().includes("aÃ§aÃ­")) && 
             s.name.toLowerCase().includes(searchQuery.toLowerCase())
           ).map((shop: any, i: number) => (
             <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
@@ -1948,7 +1948,7 @@ function App() {
                   <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                   <span className="text-xs font-black text-white">{shop.rating}</span>
                 </div>
-                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega GrÃ¡tis</div>}
               </div>
               <div className="flex items-center justify-between px-1">
                 <div>
@@ -1957,7 +1957,7 @@ function App() {
                     <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">schedule</span>{shop.time}</span>
                     <span className={shop.freeDelivery ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
                       <span className="material-symbols-outlined text-[13px]">delivery_dining</span>
-                      {shop.freeDelivery ? "Grátis" : shop.fee}
+                      {shop.freeDelivery ? "GrÃ¡tis" : shop.fee}
                     </span>
                   </div>
                 </div>
@@ -1967,7 +1967,7 @@ function App() {
               </div>
             </motion.div>
           ))}
-          {ESTABLISHMENTS.filter((s: any) => ((s.tag || s.type || "").toLowerCase().includes("açai") || (s.tag || s.type || "").toLowerCase().includes("açaí") || (s.tag || s.type || "").toLowerCase().includes("acai")) && s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+          {ESTABLISHMENTS.filter((s: any) => ((s.tag || s.type || "").toLowerCase().includes("aÃ§ai") || (s.tag || s.type || "").toLowerCase().includes("aÃ§aÃ­") || (s.tag || s.type || "").toLowerCase().includes("acai")) && s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
             <div className="flex flex-col items-center py-16 gap-3">
               <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
               <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum resultado</p>
@@ -2020,7 +2020,7 @@ function App() {
                   <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                   <span className="text-xs font-black text-white">{shop.rating}</span>
                 </div>
-                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega GrÃ¡tis</div>}
               </div>
               <div className="flex items-center justify-between px-1">
                 <div>
@@ -2029,7 +2029,7 @@ function App() {
                     <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">schedule</span>{shop.time}</span>
                     <span className={shop.freeDelivery ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
                       <span className="material-symbols-outlined text-[13px]">delivery_dining</span>
-                      {shop.freeDelivery ? "Grátis" : shop.fee}
+                      {shop.freeDelivery ? "GrÃ¡tis" : shop.fee}
                     </span>
                   </div>
                 </div>
@@ -2053,11 +2053,11 @@ function App() {
   const renderExploreCategory = () => {
     if (!exploreCategoryState) return null;
 
-    // Filtra os lojistas reais do banco de dados ao invés de usar dados engessados (hardcoded)
+    // Filtra os lojistas reais do banco de dados ao invÃ©s de usar dados engessados (hardcoded)
     const shops = ESTABLISHMENTS.filter((estab: any) => {
         const catId = (exploreCategoryState.id || "").toLowerCase();
         const type = estab.type.toLowerCase();
-        // Filtro estrito: deve coincidir o tipo OU estar na descrição caso seja uma subcategoria
+        // Filtro estrito: deve coincidir o tipo OU estar na descriÃ§Ã£o caso seja uma subcategoria
         return type === catId || estab.description.toLowerCase().includes(catId);
     }).map((estab: any) => ({
       id: estab.id,
@@ -2104,7 +2104,7 @@ function App() {
 
         <main className="px-6 space-y-8 -mt-6 relative z-10">
           <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
-            {['Em Destaque', 'Mais Próximos', 'Novidades', 'Melhor Avaliados'].map((filter, i) => (
+            {['Em Destaque', 'Mais PrÃ³ximos', 'Novidades', 'Melhor Avaliados'].map((filter, i) => (
               <button 
                 key={i} 
                 className={`px-6 py-3 rounded-2xl whitespace-nowrap text-[11px] font-black uppercase tracking-widest transition-all ${i === 0 ? `bg-zinc-900  text-white  shadow-xl shadow-primary/20` : 'bg-zinc-900 bg-zinc-900 border border-zinc-800 border-zinc-800 text-zinc-500'}`}
@@ -2140,10 +2140,10 @@ function App() {
                     <h3 className="text-lg font-black tracking-tight text-white truncate">{shop.name}</h3>
                     <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-widest text-zinc-500">
                       <span className={`text-${accentColor}`}>{shop.tag}</span>
-                      <span>â€¢</span>
+                      <span>Ã¢â‚¬Â¢</span>
                       <span>{shop.time}</span>
-                      <span>â€¢</span>
-                      <span className={shop.freeDelivery ? "text-emerald-500" : ""}>{shop.freeDelivery ? "Grátis" : shop.fee}</span>
+                      <span>Ã¢â‚¬Â¢</span>
+                      <span className={shop.freeDelivery ? "text-emerald-500" : ""}>{shop.freeDelivery ? "GrÃ¡tis" : shop.fee}</span>
                     </div>
                   </div>
                 </div>
@@ -2186,8 +2186,8 @@ function App() {
                 <Icon name="arrow_back" />
               </button>
               <div>
-                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Cardápios do Dia</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500">SugestÃµes Especiais</p>
+                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">CardÃ¡pios do Dia</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500">SugestÃƒÂµes Especiais</p>
               </div>
             </div>
           </div>
@@ -2196,7 +2196,7 @@ function App() {
         <main className="p-6 space-y-10 pt-8">
            <div className="bg-pink-500/5 p-8 rounded-[45px] border border-pink-500/10 mb-2">
              <h2 className="text-lg font-black text-pink-600  mb-2 leading-none uppercase tracking-tighter">Ofertas de Hoje</h2>
-             <p className="text-xs font-medium text-zinc-500">Seus pratos favoritos com preços exclusivos para hoje.</p>
+             <p className="text-xs font-medium text-zinc-500">Seus pratos favoritos com preÃ§os exclusivos para hoje.</p>
            </div>
 
            <div className="grid grid-cols-1 gap-6">
@@ -2253,7 +2253,7 @@ function App() {
         oldPrice: 59.90,
         price: 29.95,
         off: '50% OFF',
-        desc: 'Blend de carne Angus 180g, queijo brie maçaricado, cebola caramelizada no Jack Daniels e pão brioche artesanal.'
+        desc: 'Blend de carne Angus 180g, queijo brie maÃ§aricado, cebola caramelizada no Jack Daniels e pÃ£o brioche artesanal.'
       },
       {
         id: 'vip-pizza-1',
@@ -2263,7 +2263,7 @@ function App() {
         oldPrice: 72.00,
         price: 36.00,
         off: '50% OFF',
-        desc: 'Massa de fermentação natural, mozzarella fior di latte, azeite de trufas brancas e manjericão fresco.'
+        desc: 'Massa de fermentaÃ§Ã£o natural, mozzarella fior di latte, azeite de trufas brancas e manjericÃ£o fresco.'
       }
     ];
 
@@ -2406,7 +2406,7 @@ function App() {
                   <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                   <span className="text-xs font-black text-white">{shop.rating}</span>
                 </div>
-                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega GrÃ¡tis</div>}
               </div>
               <div className="flex items-center justify-between px-1">
                 <div>
@@ -2415,7 +2415,7 @@ function App() {
                     <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">schedule</span>{shop.time}</span>
                     <span className={shop.freeDelivery ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
                       <span className="material-symbols-outlined text-[13px]">delivery_dining</span>
-                      {shop.freeDelivery ? "Grátis" : shop.fee}
+                      {shop.freeDelivery ? "GrÃ¡tis" : shop.fee}
                     </span>
                   </div>
                 </div>
@@ -2451,8 +2451,8 @@ function App() {
                 <Icon name="arrow_back" />
               </button>
               <div>
-                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Plantão de SaÃºde</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Ofertas Relâmpago de Hoje</p>
+                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">PlantÃ£o de SaÃƒÂºde</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Ofertas RelÃ¢mpago de Hoje</p>
               </div>
             </div>
           </div>
@@ -2462,8 +2462,8 @@ function App() {
            <div className="bg-slate-900 text-white p-10 rounded-[60px] relative overflow-hidden shadow-2xl mb-4">
               <div className="relative z-10">
                 <Icon name="medical_services" />
-                <h2 className="text-4xl font-black tracking-tighter mb-4 leading-none">Cuidado Premium <br />Pela Metade do Preço</h2>
-                <p className="opacity-60 text-sm font-medium max-w-[200px]">Somente nas próximas 12 horas ou enquanto durarem os estoques.</p>
+                <h2 className="text-4xl font-black tracking-tighter mb-4 leading-none">Cuidado Premium <br />Pela Metade do PreÃ§o</h2>
+                <p className="opacity-60 text-sm font-medium max-w-[200px]">Somente nas prÃ³ximas 12 horas ou enquanto durarem os estoques.</p>
               </div>
               <div className="absolute -right-10 -bottom-10 size-64 bg-yellow-400/20 rounded-full blur-[100px]" />
            </div>
@@ -2482,7 +2482,7 @@ function App() {
                      <img src={item.img} className="size-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-yellow-400 mb-1">{item.store} â€¢ {item.cat}</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-yellow-400 mb-1">{item.store} Ã¢â‚¬Â¢ {item.cat}</p>
                     <h3 className="text-lg font-black text-white mb-3 leading-tight truncate group-hover:text-yellow-400 transition-colors">{item.name}</h3>
                     <div className="flex items-center gap-4">
                        <div className="flex flex-col">
@@ -2524,15 +2524,15 @@ function App() {
                 <Icon name="arrow_back" />
               </button>
               <div>
-                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Todas as Farmácias</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Unidades Próximas</p>
+                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Todas as FarmÃ¡cias</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Unidades PrÃ³ximas</p>
               </div>
             </div>
           </div>
           <div className="px-6 mt-4">
             <div className="flex items-center bg-white bg-zinc-900/80 rounded-[28px] px-6 h-16 border border-zinc-800 border-zinc-800 focus-within:border-yellow-400/40 transition-all shadow-xl relative group overflow-hidden">
                <Icon name="search" />
-               <input className="bg-transparent border-none focus:ring-0 w-full text-base placeholder:text-zinc-500 font-bold text-white outline-none relative z-10" placeholder="Buscar farmácia..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+               <input className="bg-transparent border-none focus:ring-0 w-full text-base placeholder:text-zinc-500 font-bold text-white outline-none relative z-10" placeholder="Buscar farmÃ¡cia..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
           </div>
         </header>
@@ -2557,10 +2557,10 @@ function App() {
                     <Icon name="star" />
                     <span className="text-white">{pharm.rating}</span>
                   </div>
-                  <span>â€¢</span>
+                  <span>Ã¢â‚¬Â¢</span>
                   <span>{pharm.time}</span>
-                  <span>â€¢</span>
-                  <span className={pharm.freeDelivery ? "text-emerald-500" : ""}>{pharm.freeDelivery ? "Grátis" : pharm.fee}</span>
+                  <span>Ã¢â‚¬Â¢</span>
+                  <span className={pharm.freeDelivery ? "text-emerald-500" : ""}>{pharm.freeDelivery ? "GrÃ¡tis" : pharm.fee}</span>
                 </div>
               </div>
               <div className="size-12 rounded-[22px] bg-slate-100 bg-zinc-900 flex items-center justify-center group-hover:bg-yellow-400 transition-colors">
@@ -2579,7 +2579,7 @@ function App() {
 
     const categoryIcons: Record<string, string> = {
       "Petshop": "pets", "Flores": "local_florist", "Doces & Bolos": "cake",
-      "Farmácia": "local_pharmacy", "Mercado": "local_mall",
+      "FarmÃ¡cia": "local_pharmacy", "Mercado": "local_mall",
     };
     const icon = categoryIcons[title] || "storefront";
 
@@ -2596,7 +2596,7 @@ function App() {
               </button>
               <div>
                 <h1 className="text-xl font-black tracking-tight text-white leading-none">{title}</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Disponível agora</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">DisponÃ­vel agora</p>
               </div>
             </div>
             <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
@@ -2626,7 +2626,7 @@ function App() {
                 <span className="material-symbols-outlined text-[120px] text-yellow-400/10">{icon}</span>
               </div>
               <div className="absolute inset-0 flex flex-col justify-center p-6">
-                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Disponível</span>
+                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">DisponÃ­vel</span>
                 <h2 className="text-xl font-extrabold text-white leading-tight">{title}<br/>premium na sua porta</h2>
               </div>
             </div>
@@ -2636,7 +2636,7 @@ function App() {
           <section>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="font-extrabold text-base tracking-tight text-white uppercase">Próximos de você</h3>
+                <h3 className="font-extrabold text-base tracking-tight text-white uppercase">PrÃ³ximos de vocÃª</h3>
                 <div className="w-8 h-1 bg-yellow-400 rounded-full mt-1" />
               </div>
             </div>
@@ -2665,7 +2665,7 @@ function App() {
                     </div>
                     {shop.freeDelivery && (
                       <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
-                        Entrega Grátis
+                        Entrega GrÃ¡tis
                       </div>
                     )}
                   </div>
@@ -2727,7 +2727,7 @@ function App() {
       { id: "pizza",      name: "Pizza",      icon: "local_pizza",   action: () => navigateSubView("pizza_list") },
       { id: "japones",    name: "Japonesa",   icon: "set_meal",      action: () => navigateSubView("japonesa_list") },
       { id: "brasileira", name: "Brasileira", icon: "dinner_dining", action: () => navigateSubView("brasileira_list") },
-      { id: "acai",       name: "Açaí",       icon: "grass",         action: () => navigateSubView("acai_list") },
+      { id: "acai",       name: "AÃ§aÃ­",       icon: "grass",         action: () => navigateSubView("acai_list") },
       { id: "daily",      name: "Do Dia",     icon: "today",         action: () => navigateSubView("daily_menus") },
     ];
 
@@ -2859,11 +2859,11 @@ function App() {
             </section>
           )}
 
-          {/* RESTAURANTES PRÃ“XIMOS */}
+          {/* RESTAURANTES PRÃƒâ€œXIMOS */}
           <section>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="font-extrabold text-base tracking-tight text-white uppercase">Mais Próximos</h3>
+                <h3 className="font-extrabold text-base tracking-tight text-white uppercase">Mais PrÃ³ximos</h3>
                 <div className="w-8 h-1 bg-yellow-400 rounded-full mt-1" />
               </div>
               <button className="text-[10px] font-black uppercase tracking-widest text-yellow-400 flex items-center gap-1">
@@ -2893,7 +2893,7 @@ function App() {
                     </div>
                     {shop.freeDelivery && (
                       <div className="absolute bottom-3 left-3 bg-emerald-500/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-white/10">
-                        Entrega Grátis
+                        Entrega GrÃ¡tis
                       </div>
                     )}
                   </div>
@@ -2972,7 +2972,7 @@ function App() {
                 <span className="material-symbols-outlined text-[100px] text-yellow-400/10">local_mall</span>
               </div>
               <div className="absolute inset-0 flex flex-col justify-center p-5">
-                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Disponível agora</span>
+                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">DisponÃ­vel agora</span>
                 <h2 className="text-lg font-extrabold text-white leading-tight">Mercados premium<br/>na sua porta</h2>
               </div>
             </div>
@@ -2992,7 +2992,7 @@ function App() {
                     <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                     <span className="text-xs font-black text-white">{shop.rating}</span>
                   </div>
-                  {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                  {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega GrÃ¡tis</div>}
                 </div>
                 <div className="flex items-center justify-between px-1">
                   <div>
@@ -3054,7 +3054,7 @@ function App() {
                 <span className="material-symbols-outlined text-[100px] text-yellow-400/10">local_bar</span>
               </div>
               <div className="absolute inset-0 flex flex-col justify-center p-5">
-                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Disponível agora</span>
+                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">DisponÃ­vel agora</span>
                 <h2 className="text-lg font-extrabold text-white leading-tight">Bebidas premium<br/>na sua porta</h2>
               </div>
             </div>
@@ -3075,7 +3075,7 @@ function App() {
                     <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                     <span className="text-xs font-black text-white">{shop.rating}</span>
                   </div>
-                  {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                  {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega GrÃ¡tis</div>}
                 </div>
                 <div className="flex items-center justify-between px-1">
                   <div>
@@ -3111,7 +3111,7 @@ function App() {
           </button>
           <div className="flex-1">
             <h1 className="text-2xl font-black tracking-tighter leading-none mb-1">Ofertas Geladas</h1>
-            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-[0.2em]">Seleção Premium de Ofertas</p>
+            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-[0.2em]">SeleÃ§Ã£o Premium de Ofertas</p>
           </div>
           <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-12 rounded-2xl bg-zinc-900/5 border border-white/10 flex items-center justify-center group active:scale-95 transition-all">
             <Icon name="shopping_bag" />
@@ -3131,10 +3131,10 @@ function App() {
                     <span className="bg-yellow-400 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest w-fit">Limitado</span>
                  </div>
                  <h2 className="text-4xl font-black tracking-tighter leading-tight max-w-[250px] italic text-yellow-400">
-                    {beverageBanners.length > 0 ? beverageBanners[0].title : "Liquidação de Verão"}
+                    {beverageBanners.length > 0 ? beverageBanners[0].title : "LiquidaÃ§Ã£o de VerÃ£o"}
                  </h2>
                  <p className="text-[11px] font-bold text-white/60 mt-4 uppercase tracking-[0.2em]">
-                    {beverageBanners.length > 0 ? beverageBanners[0].description : "Até 40% OFF em Packs Selecionados"}
+                    {beverageBanners.length > 0 ? beverageBanners[0].description : "AtÃ© 40% OFF em Packs Selecionados"}
                  </p>
               </div>
             </div>
@@ -3231,8 +3231,8 @@ function App() {
                 <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
               </button>
               <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">Farmácias</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">SaÃºde e bem-estar</p>
+                <h1 className="text-xl font-black tracking-tight text-white leading-none">FarmÃ¡cias</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">SaÃƒÂºde e bem-estar</p>
               </div>
             </div>
             <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
@@ -3260,8 +3260,8 @@ function App() {
                 <span className="material-symbols-outlined text-[100px] text-yellow-400/10">local_pharmacy</span>
               </div>
               <div className="absolute inset-0 flex flex-col justify-center p-5">
-                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Disponível agora</span>
-                <h2 className="text-lg font-extrabold text-white leading-tight">Farmácias premium<br/>na sua porta</h2>
+                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">DisponÃ­vel agora</span>
+                <h2 className="text-lg font-extrabold text-white leading-tight">FarmÃ¡cias premium<br/>na sua porta</h2>
               </div>
             </div>
           </section>
@@ -3280,7 +3280,7 @@ function App() {
                     <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                     <span className="text-xs font-black text-white">{shop.rating}</span>
                   </div>
-                  {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                  {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega GrÃ¡tis</div>}
                 </div>
                 <div className="flex items-center justify-between px-1">
                   <div>
@@ -3306,7 +3306,7 @@ function App() {
     const shop = selectedShop || {
       name: "Gourmet Lab",
       rating: "4.9",
-      tag: "Artesanal â€¢ Premium",
+      tag: "Artesanal Ã¢â‚¬Â¢ Premium",
       time: "20-30 min",
       freeDelivery: true,
       img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1000",
@@ -3316,19 +3316,19 @@ function App() {
           name: "Populares do Mestre",
           items: [
             { id: 101, name: "Filet Mignon Au Poivre", desc: "Filet grelhado com crosta de pimentas negras e molho demi-glace artesanal.", price: 89.00, img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=600" },
-            { id: 102, name: "Pasta de Trufas Negras", desc: "Massa fresca envolta em creme de parmesão envelhecido e trufas frescas.", price: 74.00, img: "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?q=80&w=600" },
+            { id: 102, name: "Pasta de Trufas Negras", desc: "Massa fresca envolta em creme de parmesÃ£o envelhecido e trufas frescas.", price: 74.00, img: "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?q=80&w=600" },
             { id: 103, name: "Bisque de Lagosta", desc: "Creme aveludado de lagosta com toque de conhaque e ervas finas.", price: 62.00, img: "https://images.unsplash.com/photo-1547592166-23ac45744acd?q=80&w=600" },
             { id: 104, name: "Fondant de Chocolate 70%", desc: "Bolo quente com centro cremoso servido com gelato de baunilha Bourbon.", price: 45.00, img: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?q=80&w=600" },
           ]
         },
         { name: "Entradas", items: [
-          { id: 201, name: "Carpaccio de Wagyu", desc: "Fatias finas de wagyu com alcaparras e parmesão.", price: 52.00, img: "https://images.unsplash.com/photo-1607189860920-34ef073e7a77?q=80&w=600" },
+          { id: 201, name: "Carpaccio de Wagyu", desc: "Fatias finas de wagyu com alcaparras e parmesÃ£o.", price: 52.00, img: "https://images.unsplash.com/photo-1607189860920-34ef073e7a77?q=80&w=600" },
         ]},
         { name: "Sobremesas", items: [
-          { id: 301, name: "CrÃ¨me BrÃ»lée", desc: "Clássico francês com crosta caramelizada na hora.", price: 38.00, img: "https://images.unsplash.com/photo-1470124182917-cc6e71b22ecc?q=80&w=600" },
+          { id: 301, name: "CrÃƒÂ¨me BrÃƒÂ»lÃ©e", desc: "ClÃ¡ssico francÃªs com crosta caramelizada na hora.", price: 38.00, img: "https://images.unsplash.com/photo-1470124182917-cc6e71b22ecc?q=80&w=600" },
         ]},
         { name: "Bebidas", items: [
-          { id: 401, name: "Ãgua com Gás", desc: "500ml gelada.", price: 9.00, img: "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?q=80&w=600" },
+          { id: 401, name: "ÃƒÂgua com GÃ¡s", desc: "500ml gelada.", price: 9.00, img: "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?q=80&w=600" },
         ]},
       ]
     };
@@ -3387,7 +3387,7 @@ function App() {
             <div className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[16px] text-zinc-400">delivery_dining</span>
               <span className={shop.freeDelivery ? "text-yellow-400 font-bold" : "text-zinc-400"}>
-                {shop.freeDelivery ? "Grátis" : shop.fee}
+                {shop.freeDelivery ? "GrÃ¡tis" : shop.fee}
               </span>
             </div>
           </div>
@@ -3522,7 +3522,7 @@ function App() {
               <span>{shop.time}</span>
             </div>
             <span className={shop.freeDelivery ? "text-yellow-400 font-bold text-sm" : "text-zinc-400 text-sm"}>
-              {shop.freeDelivery ? "Entrega Grátis" : shop.fee}
+              {shop.freeDelivery ? "Entrega GrÃ¡tis" : shop.fee}
             </span>
           </div>
         </section>
@@ -3542,7 +3542,7 @@ function App() {
           {displayCategories.length === 0 && (
             <div className="flex flex-col items-center py-20 gap-3">
               <span className="material-symbols-outlined text-5xl text-zinc-800">storefront</span>
-              <p className="text-zinc-600 text-sm font-bold uppercase tracking-widest">Cardápio em breve</p>
+              <p className="text-zinc-600 text-sm font-bold uppercase tracking-widest">CardÃ¡pio em breve</p>
             </div>
           )}
           {displayCategories.map((category: any) => (
@@ -3647,8 +3647,8 @@ function App() {
                <div className="size-20 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-2">
                   <span className="material-symbols-outlined text-4xl text-orange-500">bolt_slash</span>
                </div>
-               <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Falha na Conexão Lightning</h3>
-               <p className="text-zinc-500 text-sm px-4">Não foi possível gerar sua fatura agora. O pedido foi registrado mas o pagamento via Bitcoin está indisponível.</p>
+               <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Falha na ConexÃ£o Lightning</h3>
+               <p className="text-zinc-500 text-sm px-4">NÃ£o foi possÃ­vel gerar sua fatura agora. O pedido foi registrado mas o pagamento via Bitcoin estÃ¡ indisponÃ­vel.</p>
                <button onClick={() => { setTab("orders"); setSubView("none"); }}
                   className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-sm uppercase tracking-widest">
                   Ver Meus Pedidos
@@ -3678,11 +3678,11 @@ function App() {
       .replace(/(\d{3})(\d{1,2})$/,"$1-$2");
 
     const handlePixConfirm = async () => {
-      if (pixCpf.replace(/\D/g,"").length < 11) { alert("CPF inválido."); return; }
+      if (pixCpf.replace(/\D/g,"").length < 11) { alert("CPF invÃ¡lido."); return; }
       setPixConfirmed(true);
       try {
         // 1. Criar pedido no Supabase
-        if (!selectedShop?.id) { alert("Erro: Estabelecimento não selecionado."); setPixConfirmed(false); return; }
+        if (!selectedShop?.id) { alert("Erro: Estabelecimento nÃ£o selecionado."); setPixConfirmed(false); return; }
 
         const { data: order, error: orderErr } = await supabase
           .from("orders_delivery")
@@ -3691,8 +3691,8 @@ function App() {
             merchant_id: selectedShop.id,
             status: "pendente_pagamento",
             total_price: Number(total.toFixed(2)),
-            pickup_address: selectedShop.name || "Endereço do Estabelecimento",
-            delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map(i => `${i.name}`).join(', ')}`,
+            pickup_address: selectedShop.name || "EndereÃ§o do Estabelecimento",
+            delivery_address: `${userLocation.address || "EndereÃ§o nÃ£o informado"} | ITENS: ${cart.map(i => `${i.name}`).join(', ')}`,
             payment_method: "pix",
             service_type: selectedShop.type || "restaurant",
           })
@@ -3701,7 +3701,7 @@ function App() {
 
         if (orderErr || !order) {
           console.error("Erro ao criar pedido:", orderErr);
-          alert("Não foi possível registrar o pedido no banco de dados. Verifique sua conexão. Detalhe: " + (orderErr?.message || "Erro desconhecido"));
+          alert("NÃ£o foi possÃ­vel registrar o pedido no banco de dados. Verifique sua conexÃ£o. Detalhe: " + (orderErr?.message || "Erro desconhecido"));
           navigateSubView("payment_error");
           return;
         }
@@ -3784,7 +3784,7 @@ function App() {
             </div>
           )}
 
-          {/* Botão confirmar */}
+          {/* BotÃ£o confirmar */}
           {pixCpf.replace(/\D/g,"").length === 11 && !pixConfirmed && (
             <button onClick={handlePixConfirm}
               className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
@@ -3839,8 +3839,8 @@ function App() {
                <div>
                   <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-2">Ops! Falha no QR Code</h3>
                   <p className="text-zinc-400 text-sm font-medium leading-relaxed px-4">
-                     O pedido foi enviado ao lojista, mas não conseguimos gerar o QR Code Pix agora. 
-                     {selectedItem.pixErrorMessage ? ` Detalhe: ${selectedItem.pixErrorMessage}` : " Você pode tentar pagar através de outro método ou falar com o suporte."}
+                     O pedido foi enviado ao lojista, mas nÃ£o conseguimos gerar o QR Code Pix agora. 
+                     {selectedItem.pixErrorMessage ? ` Detalhe: ${selectedItem.pixErrorMessage}` : " VocÃª pode tentar pagar atravÃ©s de outro mÃ©todo ou falar com o suporte."}
                   </p>
                </div>
                <div className="w-full space-y-3">
@@ -3850,7 +3850,7 @@ function App() {
                   </button>
                   <button onClick={() => { setSubView("checkout"); setPixConfirmed(false); }}
                     className="w-full py-4 rounded-2xl text-zinc-500 font-black text-[10px] uppercase tracking-widest">
-                    Tentar outro método
+                    Tentar outro mÃ©todo
                   </button>
                </div>
             </motion.div>
@@ -3882,7 +3882,7 @@ function App() {
                 total_price: total,
                 status: "pendente_pagamento",
                 pickup_address: isSubscription ? "Assinatura Izi Black" : (selectedShop?.name || "Estabelecimento"),
-                delivery_address: isSubscription ? "Serviço Digital" : (userLocation.address || "Endereço não informado"),
+                delivery_address: isSubscription ? "ServiÃ§o Digital" : (userLocation.address || "EndereÃ§o nÃ£o informado"),
                 payment_method: "cartao",
                 service_type: isSubscription ? "subscription" : "restaurant",
             };
@@ -3902,8 +3902,8 @@ function App() {
             });
 
             if (fnErr || (fnData && fnData.status !== 'approved')) {
-                const msg = fnData?.details || fnErr?.message || "O cartão foi recusado pela operadora.";
-                toastError(`Pagamento não aprovado: ${msg}`);
+                const msg = fnData?.details || fnErr?.message || "O cartÃ£o foi recusado pela operadora.";
+                toastError(`Pagamento nÃ£o aprovado: ${msg}`);
                 setSubView(isSubscription ? "izi_black_purchase" : "checkout");
                 return;
             }
@@ -3939,7 +3939,7 @@ function App() {
             <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
           </button>
           <div className="flex flex-col text-left">
-              <h1 className="text-lg font-black text-white uppercase tracking-tight leading-none">Cartão de Crédito</h1>
+              <h1 className="text-lg font-black text-white uppercase tracking-tight leading-none">CartÃ£o de CrÃ©dito</h1>
               <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">{selectedShop?.name || 'Venda Digital'}</p>
           </div>
         </header>
@@ -3960,7 +3960,7 @@ function App() {
                 <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-black">Certificado pela PCI DSS</p>
              </div>
              <p className="text-[10px] text-center text-zinc-700 uppercase tracking-widest font-bold max-w-[200px] leading-relaxed">
-               Seus dados são encriptados de ponta a ponta e nunca armazenados em nossos servidores.
+               Seus dados sÃ£o encriptados de ponta a ponta e nunca armazenados em nossos servidores.
              </p>
           </div>
         </main>
@@ -3976,11 +3976,11 @@ function App() {
     const statusLabel: Record<string, string> = {
       pending: "Aguardando", pendente: "Aguardando", novo: "Processando",
       waiting_driver: "Buscando Condutor",
-      aceito: "Confirmado", confirmado: "Confirmado", preparando: "Em Preparação", pronto: "Pronto para Coleta",
+      aceito: "Confirmado", confirmado: "Confirmado", preparando: "Em PreparaÃ§Ã£o", pronto: "Pronto para Coleta",
       a_caminho: "Em Rota de Coleta", at_pickup: "No Local",
       picked_up: "Coletado / Em Viagem", 
       em_rota: "A Caminho do Destino", saiu_para_entrega: "Saindo para Entrega",
-      concluido: "Concluído", cancelado: "Cancelado",
+      concluido: "ConcluÃ­do", cancelado: "Cancelado",
     };
 
     const isMobility = (o: any) => ["mototaxi", "carro", "van", "utilitario"].includes(o.service_type);
@@ -3995,7 +3995,7 @@ function App() {
             {[
               { id: "ativos",     label: "Ativos",     count: activeOrders.length },
               { id: "agendados",  label: "Agendados",  count: scheduledOrders.length },
-              { id: "historico",  label: "Histórico",  count: 0 },
+              { id: "historico",  label: "HistÃ³rico",  count: 0 },
             ].map((t) => (
               <button
                 key={t.id}
@@ -4054,7 +4054,7 @@ function App() {
                         </span>
                       </div>
                       <p className="text-zinc-400 text-sm max-w-xs">
-                        {order.delivery_address || "Endereço de entrega"}
+                        {order.delivery_address || "EndereÃ§o de entrega"}
                       </p>
                       <div className="pt-3 flex items-center gap-3">
                         <button
@@ -4101,13 +4101,13 @@ function App() {
               </motion.div>
             )}
 
-            {/* HISTÃ“RICO */}
+            {/* HISTÃƒâ€œRICO */}
             {filterTab === "historico" && (
               <motion.div key="historico" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-6">
                 {pastOrders.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4">
                     <span className="material-symbols-outlined text-5xl text-zinc-800">history</span>
-                    <p className="text-zinc-600 text-sm font-medium">Nenhum pedido no histórico</p>
+                    <p className="text-zinc-600 text-sm font-medium">Nenhum pedido no histÃ³rico</p>
                   </div>
                 ) : pastOrders.map((order) => (
                   <motion.div
@@ -4124,7 +4124,7 @@ function App() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-black text-sm text-white truncate">{order.merchant_name || "Pedido"}</h4>
-                      <p className="text-zinc-500 text-xs mt-0.5">{new Date(order.created_at).toLocaleDateString("pt-BR")} â€¢ R$ {Number(order.total_price || 0).toFixed(2).replace(".", ",")}</p>
+                      <p className="text-zinc-500 text-xs mt-0.5">{new Date(order.created_at).toLocaleDateString("pt-BR")} Ã¢â‚¬Â¢ R$ {Number(order.total_price || 0).toFixed(2).replace(".", ",")}</p>
                     </div>
                     <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${order.status === "concluido" ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
                       {statusLabel[order.status] || order.status}
@@ -4140,7 +4140,7 @@ function App() {
           <div className="mt-20 pt-8 border-t border-zinc-900 flex flex-col items-center text-center">
             <span className="material-symbols-outlined text-zinc-800 text-4xl mb-3">shopping_bag</span>
             <p className="text-zinc-600 text-sm font-medium">
-              Não vê um pedido?{" "}
+              NÃ£o vÃª um pedido?{" "}
               <button onClick={() => userId && fetchMyOrders(userId)} className="text-yellow-400/60 hover:text-yellow-400 transition-colors">
                 Atualizar lista
               </button>
@@ -4154,13 +4154,13 @@ function App() {
 
   const renderProfile = () => {
     const menuItems = [
-      { icon: "location_on",            label: "Endereços",        desc: "Seus endereços salvos",          action: () => setSubView("addresses") },
-      { icon: "credit_card",            label: "Métodos de Pagamento", desc: "Gerencie seus cartões e PIX",     action: () => { setPaymentsOrigin("profile"); setSubView("payments"); } },
+      { icon: "location_on",            label: "EndereÃ§os",        desc: "Seus endereÃ§os salvos",          action: () => setSubView("addresses") },
+      { icon: "credit_card",            label: "MÃ©todos de Pagamento", desc: "Gerencie seus cartÃµes e PIX",     action: () => { setPaymentsOrigin("profile"); setSubView("payments"); } },
       { icon: "account_balance_wallet", label: "Carteira",         desc: "Saldo e extrato",                action: () => setTab("wallet") },
-      { icon: "workspace_premium",      label: "IZI Black",        desc: "Benefícios do plano premium",    action: () => { setIziBlackStep("info"); setSubView("izi_black_purchase"); } },
-      { icon: "military_tech",          label: "Quests & Ranking", desc: "MissÃµes e conquistas",           action: () => setSubView("quest_center") },
+      { icon: "workspace_premium",      label: "IZI Black",        desc: "BenefÃ­cios do plano premium",    action: () => { setIziBlackStep("info"); setSubView("izi_black_purchase"); } },
+      { icon: "military_tech",          label: "Quests & Ranking", desc: "MissÃƒÂµes e conquistas",           action: () => setSubView("quest_center") },
       { icon: "support_agent",          label: "Suporte",          desc: "Central de ajuda",               action: () => setSubView("order_support") },
-      { icon: "settings",               label: "ConfiguraçÃµes",    desc: "Preferências da conta",          action: () => {} },
+      { icon: "settings",               label: "ConfiguraÃ§ÃƒÂµes",    desc: "PreferÃªncias da conta",          action: () => {} },
     ];
 
     return (
@@ -4181,10 +4181,10 @@ function App() {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-black text-white tracking-tight truncate">{userName || "Usuário"}</h1>
+              <h1 className="text-xl font-black text-white tracking-tight truncate">{userName || "UsuÃ¡rio"}</h1>
               <p className="text-zinc-600 text-xs mt-0.5">{userId ? `ID: ${userId.slice(0,8)}...` : "Visitante"}</p>
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-[10px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Nível {userLevel}</span>
+                <span className="text-[10px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-wider">NÃ­vel {userLevel}</span>
                 <span className="text-[10px] font-black text-zinc-600 uppercase">{userXP} XP</span>
               </div>
             </div>
@@ -4228,7 +4228,7 @@ function App() {
           </button>
         </div>
 
-        <p className="text-center text-zinc-900 text-[10px] font-bold uppercase tracking-widest pb-6">IZI Delivery â€¢ Stealth Luxury</p>
+        <p className="text-center text-zinc-900 text-[10px] font-bold uppercase tracking-widest pb-6">IZI Delivery Ã¢â‚¬Â¢ Stealth Luxury</p>
       </div>
     );
   };
@@ -4241,7 +4241,7 @@ function App() {
             <button onClick={() => { if (isAddingAddress) { resetAddressForm(); } else { setSubView("none"); } }} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
               <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
             </button>
-            <h1 className="font-extrabold text-base text-white uppercase tracking-tight">{isAddingAddress ? (editingAddress ? 'Editar Endereço' : 'Novo Endereço') : 'Endereços'}</h1>
+            <h1 className="font-extrabold text-base text-white uppercase tracking-tight">{isAddingAddress ? (editingAddress ? 'Editar EndereÃ§o' : 'Novo EndereÃ§o') : 'EndereÃ§os'}</h1>
           </div>
           {!isAddingAddress && (
             <button onClick={() => { resetAddressForm(); setIsAddingAddress(true); }} className="text-yellow-400 active:scale-90 transition-all">
@@ -4254,9 +4254,9 @@ function App() {
           <AnimatePresence mode="wait">
             {isAddingAddress ? (
               <motion.div key="address-form" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-5 py-4">
-                {/* Seleção rápida de rótulo */}
+                {/* SeleÃ§Ã£o rÃ¡pida de rÃ³tulo */}
                 <div>
-                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">Tipo de endereço</p>
+                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">Tipo de endereÃ§o</p>
                   <div className="flex gap-3">
                     {[
                       { label: 'Casa', icon: 'home' },
@@ -4279,27 +4279,27 @@ function App() {
                   </div>
                 </div>
 
-                {/* Campo Rótulo (personalizado) */}
+                {/* Campo RÃ³tulo (personalizado) */}
                 <div>
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">Rótulo</label>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">RÃ³tulo</label>
                   <input
                     type="text"
                     value={newAddrLabel}
                     onChange={(e) => setNewAddrLabel(e.target.value)}
-                    placeholder="Ex: Casa, Trabalho, Mãe..."
+                    placeholder="Ex: Casa, Trabalho, MÃ£e..."
                     className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3.5 text-sm text-white placeholder:text-zinc-700 outline-none focus:border-yellow-400/50 transition-colors"
                   />
                 </div>
 
-                {/* Campo Rua/Endereço com Autocomplete */}
+                {/* Campo Rua/EndereÃ§o com Autocomplete */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Endereço Completo</label>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">EndereÃ§o Completo</label>
                   <AddressSearchInput
-                    placeholder="Busque rua, nÃºmero, bairro..."
+                    placeholder="Busque rua, nÃƒÂºmero, bairro..."
                     initialValue={newAddrStreet}
                     onSelect={(place: any) => {
                       setNewAddrStreet(place.formatted_address || "");
-                      // Tenta extrair cidade se disponível
+                      // Tenta extrair cidade se disponÃ­vel
                       if (place.address_components) {
                         const cityComp = place.address_components.find((c: any) => c.types.includes("administrative_area_level_2"));
                         if (cityComp) setNewAddrCity(cityComp.long_name);
@@ -4329,12 +4329,12 @@ function App() {
                     type="text"
                     value={newAddrCity}
                     onChange={(e) => setNewAddrCity(e.target.value)}
-                    placeholder="São Paulo"
+                    placeholder="SÃ£o Paulo"
                     className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3.5 text-sm text-white placeholder:text-zinc-700 outline-none focus:border-yellow-400/50 transition-colors"
                   />
                 </div>
 
-                {/* Botão Salvar */}
+                {/* BotÃ£o Salvar */}
                 <button
                   onClick={handleSaveAddress}
                   disabled={isSavingAddress || !newAddrLabel.trim() || !newAddrStreet.trim()}
@@ -4345,7 +4345,7 @@ function App() {
                   ) : (
                     <>
                       <span className="material-symbols-outlined text-lg">save</span>
-                      {editingAddress ? 'Atualizar Endereço' : 'Salvar Endereço'}
+                      {editingAddress ? 'Atualizar EndereÃ§o' : 'Salvar EndereÃ§o'}
                     </>
                   )}
                 </button>
@@ -4357,18 +4357,18 @@ function App() {
                     <div className="size-20 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
                       <span className="material-symbols-outlined text-4xl text-zinc-700">location_off</span>
                     </div>
-                    <p className="text-zinc-600 text-sm font-bold uppercase tracking-widest">Nenhum endereço salvo</p>
+                    <p className="text-zinc-600 text-sm font-bold uppercase tracking-widest">Nenhum endereÃ§o salvo</p>
                     <button
                       onClick={() => { resetAddressForm(); setIsAddingAddress(true); }}
                       className="bg-yellow-400 text-black font-black text-xs uppercase tracking-widest px-6 py-3 rounded-2xl active:scale-95 transition-all shadow-lg shadow-yellow-400/20"
                     >
-                      Adicionar primeiro endereço
+                      Adicionar primeiro endereÃ§o
                     </button>
                   </div>
                 ) : savedAddresses.map((addr: any, i: number) => (
                   <motion.div key={addr.id || i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                     className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0 w-full group">
-                    {/* Ãcone + Info */}
+                    {/* ÃƒÂcone + Info */}
                     <button
                       onClick={() => handleSetActiveAddress(addr.id)}
                       className="flex items-center gap-4 flex-1 min-w-0 text-left active:opacity-60 transition-all"
@@ -4380,13 +4380,13 @@ function App() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-black text-sm text-white">{addr.label || "Endereço"}</p>
-                          {addr.active && <span className="text-[8px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Padrão</span>}
+                          <p className="font-black text-sm text-white">{addr.label || "EndereÃ§o"}</p>
+                          {addr.active && <span className="text-[8px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-wider">PadrÃ£o</span>}
                         </div>
                         <p className="text-zinc-600 text-xs mt-0.5 truncate">{addr.street}{addr.details ? `, ${addr.details}` : ""}</p>
                       </div>
                     </button>
-                    {/* AçÃµes */}
+                    {/* AÃ§ÃƒÂµes */}
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => openEditAddress(addr)}
@@ -4409,7 +4409,7 @@ function App() {
                     className="flex items-center gap-3 py-5 text-zinc-700 hover:text-yellow-400 transition-all active:scale-[0.98] mt-2"
                   >
                     <span className="material-symbols-outlined text-xl">add_location</span>
-                    <span className="text-sm font-black uppercase tracking-wider">Adicionar novo endereço</span>
+                    <span className="text-sm font-black uppercase tracking-wider">Adicionar novo endereÃ§o</span>
                   </button>
                 )}
               </motion.div>
@@ -4447,7 +4447,7 @@ function App() {
               <span className="material-symbols-outlined font-bold">add</span>
             </button>
           </div>
-          {/* MÃ‰TODOS SMART */}
+          {/* MÃƒâ€°TODOS SMART */}
           <div className="grid grid-cols-2 gap-4">
              <button className="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl flex flex-col items-center gap-2 opacity-50 cursor-not-allowed">
                <span className="material-symbols-outlined text-3xl">apple</span>
@@ -4462,10 +4462,10 @@ function App() {
              </button>
           </div>
 
-          {/* LISTA DE CARTÃ•ES */}
+          {/* LISTA DE CARTÃƒâ€¢ES */}
           <section className="space-y-6">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">CartÃµes Salvos</h3>
+              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">CartÃƒÂµes Salvos</h3>
               <button 
                 onClick={() => setIsAddingCard(true)}
                 className="text-[10px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/10 px-4 py-2 rounded-full">
@@ -4477,7 +4477,7 @@ function App() {
               <div className="py-10 flex justify-center"><div className="size-6 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin" /></div>
             ) : savedCards.length === 0 ? (
                <div className="bg-zinc-900/40 border border-dashed border-zinc-800 rounded-3xl p-10 text-center">
-                 <p className="text-zinc-600 text-xs font-bold uppercase tracking-widest">Nenhum cartão salvo</p>
+                 <p className="text-zinc-600 text-xs font-bold uppercase tracking-widest">Nenhum cartÃ£o salvo</p>
                </div>
             ) : (
               <div className="space-y-4">
@@ -4498,10 +4498,10 @@ function App() {
                     </div>
                     <div>
                       <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">{card.brand}</p>
-                      <p className="font-extrabold text-lg tracking-[0.2em] text-white">•••• •••• •••• {card.last4}</p>
+                      <p className="font-extrabold text-lg tracking-[0.2em] text-white">â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ {card.last4}</p>
                     </div>
                     {card.active && (
-                       <div className="absolute top-6 right-12 bg-yellow-400 text-black text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest">Padrão</div>
+                       <div className="absolute top-6 right-12 bg-yellow-400 text-black text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest">PadrÃ£o</div>
                     )}
                   </div>
                 ))}
@@ -4509,17 +4509,17 @@ function App() {
             )}
           </section>
 
-          {/* OUTRAS OPÃ‡Ã•ES */}
+          {/* OUTRAS OPÃƒâ€¡Ãƒâ€¢ES */}
           <section className="space-y-4">
-            <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] px-1">Outros Métodos</h3>
+            <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] px-1">Outros MÃ©todos</h3>
             <div className="bg-zinc-900/30 border border-zinc-900 rounded-[32px] overflow-hidden">
                {[
                   { id: "wallet", icon: "account_balance_wallet", label: "Saldo Carteira Izi", color: "text-yellow-400" },
-                  { id: "pix", icon: "pix", label: "PIX Instantâneo", color: "text-emerald-400" },
+                  { id: "pix", icon: "pix", label: "PIX InstantÃ¢neo", color: "text-emerald-400" },
                  { id: "google_pay", icon: "google", label: "Google Pay", color: "text-blue-400" },
                  { id: "bitcoin_lightning", icon: "bolt", label: "Bitcoin Lightning", color: "text-orange-400" },
                  { id: "dinheiro", icon: "payments", label: "Dinheiro na Entrega", color: "text-zinc-500" },
-                 { id: "cartao_entrega", icon: "credit_card", label: "Cartão na Entrega", color: "text-zinc-500" }
+                 { id: "cartao_entrega", icon: "credit_card", label: "CartÃ£o na Entrega", color: "text-zinc-500" }
                ].map((m, i) => (
                  <button key={m.id} onClick={() => setPaymentMethod(m.id as any)}
                    className={`w-full flex items-center gap-4 p-4 hover:bg-zinc-900 transition-all active:scale-[0.98] ${i > 0 ? "border-t border-zinc-900/50" : ""}`}>
@@ -4531,7 +4531,7 @@ function App() {
             </div>
           </section>
 
-          {/* BOTÃƒO CONFIRMAR (Se vier do checkout) */}
+          {/* BOTÃƒÆ’O CONFIRMAR (Se vier do checkout) */}
           {paymentsOrigin === "checkout" && (
             <button 
               onClick={() => setSubView("checkout")}
@@ -4550,7 +4550,7 @@ function App() {
               <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
                 className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[40px] p-8 shadow-2xl">
                 <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-xl font-black text-white tracking-tight">Novo Cartão</h3>
+                  <h3 className="text-xl font-black text-white tracking-tight">Novo CartÃ£o</h3>
                   <button onClick={() => setIsAddingCard(false)} className="size-10 rounded-full bg-zinc-800 flex items-center justify-center">
                     <span className="material-symbols-outlined text-zinc-400">close</span>
                   </button>
@@ -4572,7 +4572,7 @@ function App() {
 
                      if (userId) await fetchSavedCards(userId);
                      setIsAddingCard(false);
-                     toastSuccess("Cartão adicionado!");
+                     toastSuccess("CartÃ£o adicionado!");
                      
                      if (paymentsOrigin === "checkout") {
                         setSubView("checkout");
@@ -4619,7 +4619,7 @@ function App() {
             </div>
             
             <h3 className="text-2xl font-black text-white tracking-tight mb-2 uppercase">Meu IZI Code</h3>
-            <p className="text-zinc-500 text-xs font-medium mb-10 leading-relaxed px-4">Compartilhe para receber transferências instantâneas de IZI Coins.</p>
+            <p className="text-zinc-500 text-xs font-medium mb-10 leading-relaxed px-4">Compartilhe para receber transferÃªncias instantÃ¢neas de IZI Coins.</p>
 
             <div className="p-6 bg-white rounded-[40px] shadow-inner mb-10 relative group">
               <img 
@@ -4664,7 +4664,7 @@ function App() {
             </div>
 
             <div className="bg-zinc-950 p-6 rounded-[35px] border border-white/5">
-              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">Valor da Transferência</p>
+              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">Valor da TransferÃªncia</p>
               <div className="flex items-center justify-center gap-3">
                 <span className="text-2xl font-black text-yellow-400 opacity-40 italic">IZI</span>
                 <input 
@@ -4676,7 +4676,7 @@ function App() {
             </div>
 
             <button className="w-full bg-yellow-400 text-black font-black text-sm uppercase tracking-widest py-6 rounded-3xl shadow-xl shadow-yellow-400/20 active:scale-95 transition-all">
-              Confirmar Envio Instantâneo
+              Confirmar Envio InstantÃ¢neo
             </button>
           </motion.div>
         </motion.div>
@@ -4743,7 +4743,7 @@ function App() {
             <span className="text-yellow-400 font-extrabold italic tracking-widest text-xs">IZI PAY</span>
             <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
           </div>
-          <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-1">Saldo Disponível</p>
+          <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-1">Saldo DisponÃ­vel</p>
           <div className="flex items-baseline gap-2 mb-6">
             <span className="font-extrabold text-2xl text-yellow-400 opacity-60">R$</span>
             <span className="font-extrabold text-5xl tracking-tighter text-white"
@@ -4752,7 +4752,7 @@ function App() {
             </span>
           </div>
 
-          {/* AÃ‡Ã•ES RÃPIDAS */}
+          {/* AÃƒâ€¡Ãƒâ€¢ES RÃƒÂPIDAS */}
           <div className="grid grid-cols-4 gap-2">
             {[
               { icon: "add",           label: "Adicionar" },
@@ -4777,7 +4777,7 @@ function App() {
             {[
               { label: "Gasto total",  value: `R$ ${totalGasto.toFixed(0)}`,    icon: "shopping_bag" },
               { label: "Recebido",     value: `R$ ${totalRecebido.toFixed(0)}`, icon: "add_circle" },
-              { label: "Pedidos/mês",  value: `${pedidosMes}`,                  icon: "receipt_long" },
+              { label: "Pedidos/mÃªs",  value: `${pedidosMes}`,                  icon: "receipt_long" },
             ].map((s, i) => (
               <div key={i} className={`flex flex-col items-center py-5 gap-1 ${i < 2 ? "border-r border-zinc-900" : ""}`}>
                 <span className="material-symbols-outlined text-zinc-700 text-lg">{s.icon}</span>
@@ -4787,10 +4787,10 @@ function App() {
             ))}
           </div>
 
-          {/* CARTÃ•ES */}
+          {/* CARTÃƒâ€¢ES */}
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Meus CartÃµes</h2>
+              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Meus CartÃƒÂµes</h2>
               <button onClick={() => { setPaymentsOrigin("profile"); setSubView("payments"); }}
                 className="text-yellow-400 text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity">
                 Gerenciar
@@ -4806,8 +4806,8 @@ function App() {
                   <span className="material-symbols-outlined text-zinc-800 text-base">contactless</span>
                 </div>
                 <div>
-                  <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Digital</p>
-                  <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ 8820</p>
+                  <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">CartÃ£o Digital</p>
+                  <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ 8820</p>
                   <div className="flex justify-between items-center">
                     <p className="text-[8px] text-zinc-700 uppercase tracking-widest">Val. 12/28</p>
                     <div className="size-7 rounded-full bg-yellow-400/10 flex items-center justify-center">
@@ -4823,8 +4823,8 @@ function App() {
                     <span className="material-symbols-outlined text-zinc-800 text-base">contactless</span>
                   </div>
                   <div>
-                    <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Físico</p>
-                    <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">•••• •••• •••• {card.last4}</p>
+                    <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">CartÃ£o FÃ­sico</p>
+                    <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ {card.last4}</p>
                     <div className="flex justify-between items-center">
                       <p className="text-[8px] text-zinc-700 uppercase">{card.brand}</p>
                       <p className="text-[9px] text-zinc-600">Val. {card.expiry}</p>
@@ -4835,7 +4835,7 @@ function App() {
               <button onClick={() => { setPaymentsOrigin("profile"); setSubView("payments"); }}
                 className="min-w-[120px] h-40 border border-dashed border-zinc-900 rounded-2xl flex flex-col items-center justify-center gap-2 shrink-0 active:scale-95 transition-all hover:border-yellow-400/20 group">
                 <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors text-2xl">add</span>
-                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-500 transition-colors">Novo Cartão</span>
+                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-500 transition-colors">Novo CartÃ£o</span>
               </button>
             </div>
           </section>
@@ -4848,7 +4848,7 @@ function App() {
                 <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">IZI Points</span>
               </div>
               <p className="text-2xl font-extrabold text-white">{(userXP * 10).toLocaleString("pt-BR")}</p>
-              <p className="text-[9px] text-yellow-400/50">â‰ˆ R$ {(userXP * 0.1).toFixed(2).replace(".",",")} em descontos</p>
+              <p className="text-[9px] text-yellow-400/50">Ã¢â€°Ë† R$ {(userXP * 0.1).toFixed(2).replace(".",",")} em descontos</p>
             </div>
             <div className="flex flex-col gap-1 p-5">
               <div className="flex items-center gap-1.5 mb-2">
@@ -4856,19 +4856,19 @@ function App() {
                 <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Cashback</span>
               </div>
               <p className="text-2xl font-extrabold text-white">R$ 42,10</p>
-              <p className="text-[9px] text-zinc-700">Disponível para usar</p>
+              <p className="text-[9px] text-zinc-700">DisponÃ­vel para usar</p>
             </div>
           </div>
 
-          {/* MÃ‰TODOS DE PAGAMENTO */}
+          {/* MÃƒâ€°TODOS DE PAGAMENTO */}
           <section>
             <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-2">Formas de Pagamento</h2>
             <div className="flex flex-col">
               {[
-                { icon: "pix",                    label: "PIX",             desc: "Mercado Pago â€¢ Instantâneo",    id: "pix" },
-                { icon: "bolt",                   label: "Bitcoin Lightning", desc: "LNbits â€¢ Satoshis",           id: "bitcoin_lightning" },
+                { icon: "pix",                    label: "PIX",             desc: "Mercado Pago Ã¢â‚¬Â¢ InstantÃ¢neo",    id: "pix" },
+                { icon: "bolt",                   label: "Bitcoin Lightning", desc: "LNbits Ã¢â‚¬Â¢ Satoshis",           id: "bitcoin_lightning" },
                 { icon: "payments",               label: "Dinheiro",        desc: "Pague na entrega",              id: "dinheiro" },
-                { icon: "account_balance_wallet", label: "Saldo IZI",       desc: `R$ ${Math.abs(walletBalance).toFixed(2).replace(".",",")} disponível`, id: "saldo" },
+                { icon: "account_balance_wallet", label: "Saldo IZI",       desc: `R$ ${Math.abs(walletBalance).toFixed(2).replace(".",",")} disponÃ­vel`, id: "saldo" },
               ].map((m) => (
                 <div key={m.id} className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0">
                   <span className="material-symbols-outlined text-zinc-600 text-xl">{m.icon}</span>
@@ -4882,17 +4882,17 @@ function App() {
             </div>
           </section>
 
-          {/* HISTÃ“RICO */}
+          {/* HISTÃƒâ€œRICO */}
           <section>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Histórico</h2>
+              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">HistÃ³rico</h2>
               <button className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Ver Tudo</button>
             </div>
             <div className="flex flex-col">
               {walletTransactions.length === 0 ? (
                 <div className="py-10 flex flex-col items-center gap-3">
                   <span className="material-symbols-outlined text-4xl text-zinc-900">receipt_long</span>
-                  <p className="text-zinc-700 text-sm">Nenhuma transação ainda</p>
+                  <p className="text-zinc-700 text-sm">Nenhuma transaÃ§Ã£o ainda</p>
                 </div>
               ) : walletTransactions.slice(0, 20).map((t: any, i: number) => {
                 const tx = txIcon[t.type] || { icon: "payments", color: "text-zinc-400" };
@@ -4904,7 +4904,7 @@ function App() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-black text-white truncate">{t.description || t.type}</p>
                       <p className="text-[10px] text-zinc-600 uppercase tracking-widest mt-0.5">
-                        {new Date(t.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} â€¢ {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        {new Date(t.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} Ã¢â‚¬Â¢ {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
@@ -4946,7 +4946,7 @@ function App() {
         setSubView("none");
       } catch (e) { 
         console.error(e); 
-        showToast("Erro ao enviar avaliação.", "warning");
+        showToast("Erro ao enviar avaliaÃ§Ã£o.", "warning");
       } finally {
         setFbIsSubmitting(false);
       }
@@ -4986,8 +4986,8 @@ function App() {
 
         <div className="flex-1 overflow-y-auto px-6 space-y-10 pb-10">
           <header className="text-center space-y-2">
-            <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">Sua Experiência</h2>
-            <p className="text-zinc-500 text-sm font-medium">Como foi o serviço hoje?</p>
+            <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">Sua ExperiÃªncia</h2>
+            <p className="text-zinc-500 text-sm font-medium">Como foi o serviÃ§o hoje?</p>
           </header>
 
           <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-[32px] space-y-5">
@@ -5016,7 +5016,7 @@ function App() {
               </div>
               <div className="flex-1">
                 <h4 className="text-white font-black text-sm uppercase tracking-wider">O Entregador</h4>
-                <p className="text-[10px] text-zinc-500 font-bold uppercase">Avalie a agilidade e educação</p>
+                <p className="text-[10px] text-zinc-500 font-bold uppercase">Avalie a agilidade e educaÃ§Ã£o</p>
               </div>
             </div>
             <div className="flex justify-center gap-2">
@@ -5029,11 +5029,11 @@ function App() {
           </section>
 
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">ObservaçÃµes adicionais</label>
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">ObservaÃ§ÃƒÂµes adicionais</label>
             <textarea 
               value={fbComment}
               onChange={(e) => setFbComment(e.target.value)}
-              placeholder="Escreva algo sobre sua experiência..."
+              placeholder="Escreva algo sobre sua experiÃªncia..."
               className="w-full bg-zinc-900 border border-zinc-800 rounded-[24px] p-5 text-zinc-100 text-sm focus:border-yellow-500 outline-none transition-all min-h-[120px] resize-none"
             />
           </div>
@@ -5045,7 +5045,7 @@ function App() {
             disabled={fbIsSubmitting}
             className={`w-full py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${fbIsSubmitting ? 'bg-zinc-800 text-zinc-500' : 'bg-yellow-500 text-black hover:shadow-[0_0_30px_rgba(234,179,8,0.3)] active:scale-95'}`}
           >
-            {fbIsSubmitting ? 'Enviando...' : 'Confirmar Avaliação'}
+            {fbIsSubmitting ? 'Enviando...' : 'Confirmar AvaliaÃ§Ã£o'}
             {!fbIsSubmitting && <span className="material-symbols-outlined text-sm">arrow_forward</span>}
           </button>
         </div>
@@ -5056,7 +5056,7 @@ function App() {
   const renderOrderChat = () => {
     const [msg, setMsg] = (useState as any)<string>("");
     const [messages, setMessages] = (useState as any)<any[]>([
-      { from: "driver", text: "Olá! Estou a caminho do seu endereço.", time: "agora" },
+      { from: "driver", text: "OlÃ¡! Estou a caminho do seu endereÃ§o.", time: "agora" },
     ]);
 
     const sendMsg = () => {
@@ -5106,7 +5106,7 @@ function App() {
 
   const renderOrderSupport = () => {
     const topics = [
-      { icon: "local_shipping", label: "Meu pedido está atrasado" },
+      { icon: "local_shipping", label: "Meu pedido estÃ¡ atrasado" },
       { icon: "cancel",         label: "Quero cancelar meu pedido" },
       { icon: "swap_horiz",     label: "Item errado ou faltando" },
       { icon: "payments",       label: "Problema com pagamento" },
@@ -5165,9 +5165,9 @@ function App() {
 
   const renderQuestCenter = () => {
     const quests = [
-      { id: 1, title: "Explorador Urbano", desc: "Faça 3 pedidos em categorias diferentes", xp: 150, progress: 33, icon: "explore" },
-      { id: 2, title: "Cliente Fiel",      desc: "Peça do mesmo restaurante 3 vezes",        xp: 100, progress: 66, icon: "favorite" },
-      { id: 3, title: "Madrugador",        desc: "Faça um pedido antes das 9h",              xp: 80,  progress: 0,  icon: "wb_sunny" },
+      { id: 1, title: "Explorador Urbano", desc: "FaÃ§a 3 pedidos em categorias diferentes", xp: 150, progress: 33, icon: "explore" },
+      { id: 2, title: "Cliente Fiel",      desc: "PeÃ§a do mesmo restaurante 3 vezes",        xp: 100, progress: 66, icon: "favorite" },
+      { id: 3, title: "Madrugador",        desc: "FaÃ§a um pedido antes das 9h",              xp: 80,  progress: 0,  icon: "wb_sunny" },
       { id: 4, title: "Gourmet",           desc: "Experimente 5 restaurantes diferentes",    xp: 200, progress: 20, icon: "restaurant" },
     ];
 
@@ -5180,7 +5180,7 @@ function App() {
             </button>
             <div>
               <h1 className="font-extrabold text-base text-white uppercase tracking-tight">Quests & Ranking</h1>
-              <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">Nível {userLevel} â€¢ {userXP} XP</p>
+              <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">NÃ­vel {userLevel} Ã¢â‚¬Â¢ {userXP} XP</p>
             </div>
           </div>
         </header>
@@ -5192,7 +5192,7 @@ function App() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Infinity Tier</p>
-                <p className="font-black text-white text-lg">Nível {userLevel}</p>
+                <p className="font-black text-white text-lg">NÃ­vel {userLevel}</p>
               </div>
               <div className="size-14 rounded-2xl bg-yellow-400/10 border border-yellow-400/10 flex items-center justify-center">
                 <span className="material-symbols-outlined text-2xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>diamond</span>
@@ -5212,7 +5212,7 @@ function App() {
 
           {/* QUESTS */}
           <div>
-            <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-4">MissÃµes Ativas</h2>
+            <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-4">MissÃƒÂµes Ativas</h2>
             <div className="flex flex-col">
               {quests.map((q, i) => (
                 <motion.div key={q.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
@@ -5264,7 +5264,7 @@ function App() {
             status: (paymentMethod === "cartao" || paymentMethod === "bitcoin_lightning") ? "pendente_pagamento" : "novo",
             total_price: total,
             pickup_address: "Assinatura Izi Black",
-            delivery_address: "Serviço Digital",
+            delivery_address: "ServiÃ§o Digital",
             service_type: "subscription",
             payment_method: paymentMethod,
             cpf_invoice: cpf,
@@ -5318,7 +5318,7 @@ function App() {
             });
           if (walletErr) throw walletErr;
           
-          // Marca pedido como concluído
+          // Marca pedido como concluÃ­do
           await supabase.from("orders_delivery").update({ status: "concluido" }).eq("id", orderData.id);
           
           // Ativa Izi Black no perfil
@@ -5333,7 +5333,7 @@ function App() {
       }
     };
 
-    // â”€â”€ SUCESSO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ SUCESSO Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     if (iziBlackStep === 'success') {
       return (
         <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center px-6 gap-10">
@@ -5346,24 +5346,24 @@ function App() {
           <div className="text-center space-y-3">
             <p className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.5em]">Protocolo Ativado</p>
             <h2 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">IZI Black</h2>
-            <p className="text-zinc-600 text-sm max-w-xs mx-auto">Bem-vindo ao clube de privilégios. Seus benefícios já estão ativos.</p>
+            <p className="text-zinc-600 text-sm max-w-xs mx-auto">Bem-vindo ao clube de privilÃ©gios. Seus benefÃ­cios jÃ¡ estÃ£o ativos.</p>
           </div>
           <button onClick={() => { setSubView("none"); setIziBlackStep("info"); }}
             className="w-full max-w-xs py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
             style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 40px rgba(255,215,9,0.2)" }}>
-            Começar a Usar
+            ComeÃ§ar a Usar
           </button>
         </div>
       );
     }
 
-    // â”€â”€ PAGAMENTO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ PAGAMENTO Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     if (iziBlackStep === 'payment') {
       const walletBal = walletTransactions.reduce((acc: number, t: any) =>
         ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
 
       const subOptions = [
-        { id: "cartao",            icon: "credit_card",            label: "Cartão de Crédito" },
+        { id: "cartao",            icon: "credit_card",            label: "CartÃ£o de CrÃ©dito" },
         { id: "pix",               icon: "pix",                    label: "PIX" },
         { id: "saldo",             icon: "account_balance_wallet", label: `Saldo IZI (R$ ${walletBal.toFixed(2)})`, disabled: walletBal < 29.90 },
         { id: "bitcoin_lightning", icon: "bolt",                   label: "Bitcoin Lightning" },
@@ -5383,7 +5383,7 @@ function App() {
               <p className="font-black text-white leading-none" style={{ fontSize: "64px", textShadow: "0 0 30px rgba(255,215,9,0.2)" }}>
                 29<span className="text-3xl text-yellow-400/60">,90</span>
               </p>
-              <p className="text-zinc-700 text-xs">Cancele quando quiser â€¢ Renovação automática</p>
+              <p className="text-zinc-700 text-xs">Cancele quando quiser Ã¢â‚¬Â¢ RenovaÃ§Ã£o automÃ¡tica</p>
             </div>
 
             <div className="space-y-1">
@@ -5412,21 +5412,21 @@ function App() {
             <button onClick={handleSubscribeReal} disabled={isLoading}
               className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all disabled:opacity-30"
               style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
-              {isLoading ? "Processando..." : "Confirmar â€” R$ 29,90/mês"}
+              {isLoading ? "Processando..." : "Confirmar Ã¢â‚¬â€ R$ 29,90/mÃªs"}
             </button>
           </main>
         </div>
       );
     }
 
-    // â”€â”€ TELA PRINCIPAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ TELA PRINCIPAL Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     const perks = [
-      { icon: "delivery_dining",    title: "Taxa Zero",        desc: "Entrega grátis em toda a cidade, sem limite",    highlight: true },
+      { icon: "delivery_dining",    title: "Taxa Zero",        desc: "Entrega grÃ¡tis em toda a cidade, sem limite",    highlight: true },
       { icon: "bolt",               title: "Prioridade",       desc: "Seus pedidos sempre primeiro na fila",           highlight: false },
       { icon: "stars",              title: "Cashback 5%",      desc: "Pontos dobrados em todos os pedidos",            highlight: false },
       { icon: "support_agent",      title: "Suporte VIP",      desc: "Canal exclusivo 24 horas por dia",               highlight: false },
-      { icon: "confirmation_number",title: "Cupons Black",     desc: "Ofertas exclusivas só para membros",             highlight: false },
-      { icon: "qr_code_scanner",    title: "Early Access",     desc: "Novidades e lançamentos antes de todos",         highlight: false },
+      { icon: "confirmation_number",title: "Cupons Black",     desc: "Ofertas exclusivas sÃ³ para membros",             highlight: false },
+      { icon: "qr_code_scanner",    title: "Early Access",     desc: "Novidades e lanÃ§amentos antes de todos",         highlight: false },
     ];
 
     return (
@@ -5442,7 +5442,7 @@ function App() {
 
         <main className="px-5 flex flex-col gap-10 pb-8">
 
-          {/* BANNER VIP â€” para membros */}
+          {/* BANNER VIP Ã¢â‚¬â€ para membros */}
           {isIziBlackMembership ? (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               className="relative overflow-hidden mt-4 px-0 py-8 border-b border-zinc-900">
@@ -5454,7 +5454,7 @@ function App() {
                     <span className="text-yellow-400 text-[9px] font-black uppercase tracking-[0.4em]">Membro Ativo</span>
                   </div>
                   <h2 className="text-2xl font-black text-white tracking-tighter uppercase leading-none">IZI Black</h2>
-                  <p className="text-zinc-600 text-xs mt-1">Protocolo de Privilégio Elite</p>
+                  <p className="text-zinc-600 text-xs mt-1">Protocolo de PrivilÃ©gio Elite</p>
                 </div>
                 <div className="size-12 rounded-2xl flex items-center justify-center"
                   style={{ background: "rgba(255,215,9,0.06)", border: "1px solid rgba(255,215,9,0.12)" }}>
@@ -5463,7 +5463,7 @@ function App() {
               </div>
               <div className="relative z-10 grid grid-cols-3 border-t border-zinc-800/40 pt-4 gap-0">
                 {[
-                  { label: "Nível",    value: String(userLevel) },
+                  { label: "NÃ­vel",    value: String(userLevel) },
                   { label: "XP",       value: String(userXP) },
                   { label: "Cashback", value: "5%" },
                 ].map((s, i) => (
@@ -5475,29 +5475,29 @@ function App() {
               </div>
             </motion.div>
           ) : (
-            /* HERO para não-membros */
+            /* HERO para nÃ£o-membros */
             <div className="text-center pt-8 space-y-5">
               <div className="size-20 rounded-3xl flex items-center justify-center mx-auto"
                 style={{ background: "rgba(255,215,9,0.06)", border: "1px solid rgba(255,215,9,0.1)" }}>
                 <span className="material-symbols-outlined text-4xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
               </div>
               <div>
-                <p className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.4em] mb-2">Privilégio Elite</p>
+                <p className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.4em] mb-2">PrivilÃ©gio Elite</p>
                 <h2 className="text-4xl font-extrabold text-white leading-none tracking-tighter">O melhor do<br/>ecossistema IZI.</h2>
               </div>
               <div className="inline-flex items-baseline gap-1 px-6 py-3 rounded-2xl"
                 style={{ background: "rgba(255,215,9,0.04)", border: "1px solid rgba(255,215,9,0.08)" }}>
                 <span className="font-black text-4xl text-white">29</span>
                 <span className="font-black text-xl text-yellow-400/40">,90</span>
-                <span className="text-zinc-600 text-sm font-bold">/mês</span>
+                <span className="text-zinc-600 text-sm font-bold">/mÃªs</span>
               </div>
             </div>
           )}
 
-          {/* BENEFÃCIOS â€” sem cards, estilo lista premium */}
+          {/* BENEFÃƒÂCIOS Ã¢â‚¬â€ sem cards, estilo lista premium */}
           <div>
             <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest mb-2">
-              {isIziBlackMembership ? "Benefícios Ativos" : "Incluso no plano"}
+              {isIziBlackMembership ? "BenefÃ­cios Ativos" : "Incluso no plano"}
             </p>
             <div className="flex flex-col">
               {perks.map((p, i) => (
@@ -5531,7 +5531,7 @@ function App() {
             <button onClick={() => setIziBlackStep("payment")}
               className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
               style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
-              Assinar por R$ 29,90/mês
+              Assinar por R$ 29,90/mÃªs
             </button>
           ) : (
             <div className="flex flex-col items-center gap-3 py-2">
@@ -5545,7 +5545,7 @@ function App() {
             </div>
           )}
 
-          <p className="text-zinc-900 text-[10px] text-center">Cancele quando quiser â€¢ Sem fidelidade</p>
+          <p className="text-zinc-900 text-[10px] text-center">Cancele quando quiser Ã¢â‚¬Â¢ Sem fidelidade</p>
 
         </main>
       </div>
@@ -5590,11 +5590,11 @@ function App() {
               transition={{ delay: 0.8 }}
             >
               <h1 className="text-4xl font-black text-white mb-4 tracking-tight">
-                VOCÃŠ ESTÃƒÂ <span className="text-yellow-500">DENTRO</span>.
+                VOCÃƒÅ  ESTÃƒÆ’Ã‚Â <span className="text-yellow-500">DENTRO</span>.
               </h1>
               <p className="text-zinc-400 font-medium text-lg leading-relaxed mb-12">
                 Seja bem-vindo ao <span className="text-white font-bold">Izi Black</span>. 
-                Seus privilégios exclusivos foram ativados com sucesso.
+                Seus privilÃ©gios exclusivos foram ativados com sucesso.
               </p>
             </motion.div>
 
@@ -5607,7 +5607,7 @@ function App() {
             >
               {[
                 { icon: 'bolt', label: 'Cashback 5%' },
-                { icon: 'local_shipping', label: 'Frete Grátis' },
+                { icon: 'local_shipping', label: 'Frete GrÃ¡tis' },
                 { icon: 'star', label: 'VIP Perks' },
                 { icon: 'support_agent', label: 'Suporte Elite' }
               ].map((perk, i) => (
@@ -5630,7 +5630,7 @@ function App() {
               }}
               className="w-full bg-white text-black font-black py-7 rounded-[32px] text-xs uppercase tracking-[0.2em] shadow-[0_10px_30px_rgba(255,255,255,0.1)] active:scale-95 transition-all"
             >
-              Começar Experiência Elite
+              ComeÃ§ar ExperiÃªncia Elite
             </motion.button>
           </div>
         </motion.div>
@@ -5650,7 +5650,7 @@ function App() {
     const dashOffset = circumference - (progressPercent / 100) * circumference;
 
     const perks = [
-      { id: 'frete', icon: 'local_shipping', label: 'Frete Grátis', active: true },
+      { id: 'frete', icon: 'local_shipping', label: 'Frete GrÃ¡tis', active: true },
       { id: 'cashback', icon: 'monetization_on', label: 'Cashback 5%', active: true },
       { id: 'priority', icon: 'support_agent', label: 'Priority', active: true },
       { id: 'seguro', icon: 'shield', label: 'Seguro', active: userLevel >= 2 },
@@ -5687,7 +5687,7 @@ function App() {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3, type: "spring" }} className="text-6xl font-black text-white leading-none tracking-tighter italic">{userLevel}</motion.span>
-                <span className="text-[8px] font-black text-yellow-400 uppercase tracking-[0.4em] mt-1 italic">Nível</span>
+                <span className="text-[8px] font-black text-yellow-400 uppercase tracking-[0.4em] mt-1 italic">NÃ­vel</span>
               </div>
             </div>
             
@@ -5798,9 +5798,9 @@ function App() {
                            <div className="size-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
                              <Icon name="local_shipping" size={20} />
                            </div>
-                           <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Frete Grátis Ativado</h4>
+                           <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Frete GrÃ¡tis Ativado</h4>
                         </div>
-                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Você possui frete grátis ilimitado em todos os pedidos acima de R$ 50,00. O benefício é aplicado automaticamente no seu checkout.</p>
+                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">VocÃª possui frete grÃ¡tis ilimitado em todos os pedidos acima de R$ 50,00. O benefÃ­cio Ã© aplicado automaticamente no seu checkout.</p>
                       </div>
                     )}
 
@@ -5833,7 +5833,7 @@ function App() {
                            </div>
                            <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Izi Surprise</h4>
                         </div>
-                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Como membro nível 3, você recebe mimos exclusivos todos os meses. Fique atento Ã s suas notificaçÃµes!</p>
+                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Como membro nÃ­vel 3, vocÃª recebe mimos exclusivos todos os meses. Fique atento ÃƒÂ s suas notificaÃ§ÃƒÂµes!</p>
                       </div>
                     )}
                   </div>
@@ -5847,8 +5847,8 @@ function App() {
           {/* Integration Links */}
           <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="py-10 px-7 space-y-2">
             {[
-              { icon: 'military_tech', title: 'Izi Battle Pass', sub: 'MissÃµes e Ranking Global', action: () => { setShowIziBlackCard(false); setSubView("quest_center"); }, active: true },
-              { icon: 'workspace_premium', title: 'Próximas Recompensas', sub: 'O que vem por aí', action: () => setShowMasterPerks(true), active: true },
+              { icon: 'military_tech', title: 'Izi Battle Pass', sub: 'MissÃƒÂµes e Ranking Global', action: () => { setShowIziBlackCard(false); setSubView("quest_center"); }, active: true },
+              { icon: 'workspace_premium', title: 'PrÃ³ximas Recompensas', sub: 'O que vem por aÃ­', action: () => setShowMasterPerks(true), active: true },
             ].map((item, i) => (
               <Fragment key={i}>
                 <motion.div whileTap={{ scale: 0.98 }} onClick={item.action} className="flex items-center justify-between py-6 px-6 rounded-[32px] bg-white/[0.03] border border-white/5 cursor-pointer group hover:bg-white/[0.05] transition-all">
@@ -5870,7 +5870,7 @@ function App() {
           </motion.section>
 
           <div className="text-center pt-8 pb-4">
-            <p className="text-[8px] font-black text-white/[0.06] uppercase tracking-[0.5em] italic">Izi Black Â· Membro Fundador desde 2024</p>
+            <p className="text-[8px] font-black text-white/[0.06] uppercase tracking-[0.5em] italic">Izi Black Ã‚Â· Membro Fundador desde 2024</p>
           </div>
         </main>
       </div>
@@ -5879,12 +5879,12 @@ function App() {
 
   const renderMasterPerks = () => {
     const perks = [
-      { icon: "delivery_dining",    title: "Taxa Zero",          desc: "Entrega grátis em toda a cidade, sem limite de pedidos" },
-      { icon: "bolt",              title: "Prioridade Máxima",  desc: "Seus pedidos são processados primeiro, sempre" },
-      { icon: "workspace_premium", title: "Suporte VIP 24/7",   desc: "Atendimento exclusivo via canal prioritário" },
-      { icon: "confirmation_number","title": "Cupons Exclusivos", desc: "Ofertas e descontos só para membros Black" },
+      { icon: "delivery_dining",    title: "Taxa Zero",          desc: "Entrega grÃ¡tis em toda a cidade, sem limite de pedidos" },
+      { icon: "bolt",              title: "Prioridade MÃ¡xima",  desc: "Seus pedidos sÃ£o processados primeiro, sempre" },
+      { icon: "workspace_premium", title: "Suporte VIP 24/7",   desc: "Atendimento exclusivo via canal prioritÃ¡rio" },
+      { icon: "confirmation_number","title": "Cupons Exclusivos", desc: "Ofertas e descontos sÃ³ para membros Black" },
       { icon: "stars",             title: "Cashback Duplo",     desc: "2x mais pontos em todos os pedidos" },
-      { icon: "qr_code_scanner",   title: "Acesso Antecipado",  desc: "Novidades e lançamentos antes de todos" },
+      { icon: "qr_code_scanner",   title: "Acesso Antecipado",  desc: "Novidades e lanÃ§amentos antes de todos" },
     ];
 
     return (
@@ -5901,9 +5901,9 @@ function App() {
 
           {/* HERO */}
           <div className="space-y-2">
-            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em]">Privilégio Elite</p>
+            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em]">PrivilÃ©gio Elite</p>
             <h2 className="text-3xl font-extrabold text-white leading-tight tracking-tighter">O melhor do<br/>ecossistema IZI.</h2>
-            <p className="text-zinc-600 text-sm">Acesso completo a todos os benefícios premium da plataforma.</p>
+            <p className="text-zinc-600 text-sm">Acesso completo a todos os benefÃ­cios premium da plataforma.</p>
           </div>
 
           {/* CTA */}
@@ -5913,9 +5913,9 @@ function App() {
             Assinar IZI Black
           </button>
 
-          {/* BENEFÃCIOS */}
+          {/* BENEFÃƒÂCIOS */}
           <div>
-            <h3 className="font-extrabold text-base text-white uppercase tracking-tight mb-2">O que está incluso</h3>
+            <h3 className="font-extrabold text-base text-white uppercase tracking-tight mb-2">O que estÃ¡ incluso</h3>
             <div className="flex flex-col">
               {perks.map((p, i) => (
                 <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
@@ -6013,11 +6013,11 @@ function App() {
           <div className="mt-8 space-y-6">
             <section>
               <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-4">
-                Descrição
+                DescriÃ§Ã£o
               </h3>
               <p className="text-zinc-500 text-zinc-400 font-medium text-base leading-relaxed">
                 {selectedItem.desc ||
-                  "Um produto premium selecionado especialmente para você. Qualidade garantida e entrega rápida diretamente na sua porta."}
+                  "Um produto premium selecionado especialmente para vocÃª. Qualidade garantida e entrega rÃ¡pida diretamente na sua porta."}
               </p>
             </section>
             <div className="flex items-center justify-between mb-6">
@@ -6079,10 +6079,10 @@ function App() {
 
   const renderExploreMobility = () => {
     const services = [
-      { id: "mototaxi", name: "Mototáxi",  desc: "Rapidez para driblar o trânsito.", icon: "two_wheeler",    type: "mototaxi"  },
+      { id: "mototaxi", name: "MototÃ¡xi",  desc: "Rapidez para driblar o trÃ¢nsito.", icon: "two_wheeler",    type: "mototaxi"  },
       { id: "carro",    name: "Motorista Particular", desc: "Viagens executivas exclusivas.", icon: "directions_car", type: "carro"     },
-      { id: "frete",    name: "Fretes & Mudanças", desc: "Força e espaço para volumes.", icon: "local_shipping", type: "utilitario"  },
-      { id: "van",      name: "Van / Grupos", desc: "Capacidade para até 20 pessoas.", icon: "airport_shuttle", type: "van"       },
+      { id: "frete",    name: "Fretes & MudanÃ§as", desc: "ForÃ§a e espaÃ§o para volumes.", icon: "local_shipping", type: "utilitario"  },
+      { id: "van",      name: "Van / Grupos", desc: "Capacidade para atÃ© 20 pessoas.", icon: "airport_shuttle", type: "van"       },
     ];
 
     return (
@@ -6118,12 +6118,12 @@ function App() {
           animate={{ y: 0 }}
           className="relative z-40 mt-auto bg-zinc-900/90 backdrop-blur-2xl rounded-t-[40px] border-t border-white/10 p-6 pt-2 pb-12 flex flex-col gap-6"
         >
-          {/* Alça do painel */}
+          {/* AlÃ§a do painel */}
           <div className="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto mb-6" />
 
           <div className="px-2">
             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Para onde vamos?</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-6">Escolha o serviço ideal para você</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-6">Escolha o serviÃ§o ideal para vocÃª</p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[50vh] no-scrollbar pb-6 px-1">
@@ -6174,9 +6174,9 @@ function App() {
 
   const renderFreightWizard = () => {
     const categories = [
-      { id: 'fiorino', name: 'Fiorino/Furgão', desc: 'Cargas pequenas (ex: móvel pequeno, caixas)', icon: 'local_shipping' },
-      { id: 'caminhonete', name: 'Caminhonete', desc: 'Cargas médias / abertas (ex: geladeira, sofá)', icon: 'terminal' },
-      { id: 'caminhao', name: 'Caminhão BaÃº', desc: 'Mudanças completas / grandes volumes', icon: 'truck_front' }
+      { id: 'fiorino', name: 'Fiorino/FurgÃ£o', desc: 'Cargas pequenas (ex: mÃ³vel pequeno, caixas)', icon: 'local_shipping' },
+      { id: 'caminhonete', name: 'Caminhonete', desc: 'Cargas mÃ©dias / abertas (ex: geladeira, sofÃ¡)', icon: 'terminal' },
+      { id: 'caminhao', name: 'CaminhÃ£o BaÃƒÂº', desc: 'MudanÃ§as completas / grandes volumes', icon: 'truck_front' }
     ];
 
     return (
@@ -6192,19 +6192,19 @@ function App() {
             <Icon name="arrow_back" />
           </button>
           <div className="text-right">
-             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Frete & Mudança</h2>
-             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Logística Profissional</p>
+             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Frete & MudanÃ§a</h2>
+             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">LogÃ­stica Profissional</p>
           </div>
         </header>
 
         <main className="relative z-40 mt-auto bg-zinc-950 border-t border-white/5 flex flex-col h-[70vh] rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
            <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
-              {/* STEP 1: ENDEREÃ‡OS E PARADAS */}
+              {/* STEP 1: ENDEREÃƒâ€¡OS E PARADAS */}
               {mobilityStep === 1 && (
                 <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
                    <div className="space-y-2">
                       <h3 className="text-xl font-bold text-white tracking-tight">Roteiro do Frete</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Defina origem, destino e até 2 paradas intermediárias.</p>
+                      <p className="text-zinc-500 text-xs font-medium">Defina origem, destino e atÃ© 2 paradas intermediÃ¡rias.</p>
                    </div>
                    
                    <div className="space-y-4">
@@ -6262,12 +6262,12 @@ function App() {
                 </motion.section>
               )}
 
-              {/* STEP 2: CATEGORIA DO VEÃCULO */}
+              {/* STEP 2: CATEGORIA DO VEÃƒÂCULO */}
               {mobilityStep === 2 && (
                 <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
                    <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Tipo de Veículo</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Selecione o veículo ideal baseado na sua carga.</p>
+                      <h3 className="text-xl font-bold text-white tracking-tight">Tipo de VeÃ­culo</h3>
+                      <p className="text-zinc-500 text-xs font-medium">Selecione o veÃ­culo ideal baseado na sua carga.</p>
                    </div>
 
                    <div className="space-y-4">
@@ -6296,23 +6296,23 @@ function App() {
                 <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-10">
                    <div className="space-y-2">
                       <h3 className="text-xl font-bold text-white tracking-tight">O que vamos transportar?</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Descreva os itens e envie fotos para facilitar o orçamento.</p>
+                      <p className="text-zinc-500 text-xs font-medium">Descreva os itens e envie fotos para facilitar o orÃ§amento.</p>
                    </div>
 
                    <div className="space-y-8">
                       <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-3 ml-1">Descrição Breve</p>
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-3 ml-1">DescriÃ§Ã£o Breve</p>
                          <textarea 
                            className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 resize-none"
                            rows={4}
-                           placeholder="Ex: 1 Geladeira, 1 Sofá de 3 lugares, 5 caixas de roupas..."
+                           placeholder="Ex: 1 Geladeira, 1 SofÃ¡ de 3 lugares, 5 caixas de roupas..."
                            value={transitData.packageDesc}
                            onChange={(e) => setTransitData({...transitData, packageDesc: e.target.value})}
                          />
                       </div>
 
                       <div className="space-y-4">
-                        <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Fotos da Carga (Opcional - Máx 3)</p>
+                        <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Fotos da Carga (Opcional - MÃ¡x 3)</p>
                         <div className="grid grid-cols-3 gap-4">
                            {[1,2,3].map((_, i) => (
                              <div key={i} className="aspect-square bg-zinc-900 rounded-[25px] border-2 border-dashed border-zinc-800 flex flex-col items-center justify-center gap-2 text-zinc-600 hover:border-yellow-400/30 hover:text-yellow-400 transition-all cursor-pointer">
@@ -6331,7 +6331,7 @@ function App() {
                 <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-10">
                    <div className="space-y-2">
                       <h3 className="text-xl font-bold text-white tracking-tight">Ajuda & Acessibilidade</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Defina se precisa de ajudantes e as condiçÃµes do local.</p>
+                      <p className="text-zinc-500 text-xs font-medium">Defina se precisa de ajudantes e as condiÃ§ÃƒÂµes do local.</p>
                    </div>
 
                    <div className="space-y-8">
@@ -6355,12 +6355,12 @@ function App() {
 
                       {/* ACESSIBILIDADE */}
                       <div className="space-y-4">
-                         <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">CondiçÃµes do Local</p>
+                         <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">CondiÃ§ÃƒÂµes do Local</p>
                          <div className="space-y-3">
                             {[
                                { key: 'stairsAtOrigin', label: "Possui escadas na origem?", icon: "stairs" },
                                { key: 'stairsAtDestination', label: "Possui escadas no destino?", icon: "apartment" },
-                               { key: 'serviceElevator', label: "Tem elevador de serviço?", icon: "elevators" }
+                               { key: 'serviceElevator', label: "Tem elevador de serviÃ§o?", icon: "elevators" }
                             ].map((item) => (
                                <div key={item.key} onClick={() => setTransitData({...transitData, accessibility: {...transitData.accessibility, [item.key]: !((transitData.accessibility as any)[item.key]) } as any})}
                                  className={`flex items-center justify-between p-5 rounded-[28px] border-2 transition-all cursor-pointer ${(transitData.accessibility as any)[item.key] ? 'border-yellow-400 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}>
@@ -6400,7 +6400,7 @@ function App() {
                     </span>
                  </div>
                  <div className="h-px bg-white/5" />
-                 <p className="text-[9px] font-medium text-zinc-500 italic">* Valor sujeito a alteraçÃµes por distância real ou tempo de carga excedente.</p>
+                 <p className="text-[9px] font-medium text-zinc-500 italic">* Valor sujeito a alteraÃ§ÃƒÂµes por distÃ¢ncia real ou tempo de carga excedente.</p>
               </div>
             </div>
 
@@ -6416,7 +6416,7 @@ function App() {
                    onClick={() => mobilityStep < 4 ? setMobilityStep(prev => prev + 1) : navigateSubView("mobility_payment")}
                    className="flex-1 bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px] shadow-2xl shadow-yellow-400/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
                  >
-                    <span className="uppercase tracking-widest">{mobilityStep < 4 ? "Próximo Passo" : "Ver Preço & Pedir"}</span>
+                    <span className="uppercase tracking-widest">{mobilityStep < 4 ? "PrÃ³ximo Passo" : "Ver PreÃ§o & Pedir"}</span>
                     <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">{mobilityStep < 4 ? 'arrow_forward' : 'bolt'}</span>
                  </button>
               </div>
@@ -6452,13 +6452,13 @@ function App() {
                 <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
                    <div className="space-y-2">
                       <h3 className="text-xl font-bold text-white tracking-tight">Roteiro da Viagem</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Vans podem fazer várias paradas para pegar passageiros.</p>
+                      <p className="text-zinc-500 text-xs font-medium">Vans podem fazer vÃ¡rias paradas para pegar passageiros.</p>
                    </div>
                    
                    <div className="space-y-4">
                       {/* ORIGEM */}
                       <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Início da Rota</p>
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">InÃ­cio da Rota</p>
                          <AddressSearchInput 
                            initialValue={transitData.origin}
                            placeholder="Partida..."
@@ -6521,7 +6521,7 @@ function App() {
                          {[
                             { id: 'only_one_way', label: 'Ida', icon: 'trending_flat' },
                             { id: 'round_trip', label: 'Ida e Volta', icon: 'sync' },
-                            { id: 'hourly', label: 'Diária', icon: 'schedule' }
+                            { id: 'hourly', label: 'DiÃ¡ria', icon: 'schedule' }
                          ].map((t) => (
                            <div key={t.id} onClick={() => setTransitData({...transitData, tripType: t.id as any})}
                              className={`p-4 rounded-3xl border-2 flex flex-col items-center gap-2 transition-all cursor-pointer ${transitData.tripType === t.id ? 'border-yellow-400 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}>
@@ -6533,7 +6533,7 @@ function App() {
 
                       <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
                          <div className="flex items-center justify-between mb-4">
-                            <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">NÂº de Passageiros</p>
+                            <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">NÃ‚Âº de Passageiros</p>
                             <span className="text-yellow-400 font-black text-lg">{transitData.passengers}</span>
                          </div>
                          <input 
@@ -6544,7 +6544,7 @@ function App() {
                          />
                          <div className="flex justify-between mt-2 px-1">
                             <span className="text-[9px] font-bold text-zinc-600">1 Pessoa</span>
-                            <span className="text-[9px] font-bold text-zinc-600">Até 20 Pessoas</span>
+                            <span className="text-[9px] font-bold text-zinc-600">AtÃ© 20 Pessoas</span>
                          </div>
                       </div>
                    </div>
@@ -6578,7 +6578,7 @@ function App() {
                       </div>
 
                       <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-3 ml-1">Finalidade / ObservaçÃµes</p>
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-3 ml-1">Finalidade / ObservaÃ§ÃƒÂµes</p>
                          <textarea 
                            className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 resize-none"
                            rows={3}
@@ -6601,7 +6601,7 @@ function App() {
                       R$ {(() => {
                         const res = calculateVanPrice({
                           baseFare: 80,
-                          distanceInKm: distanceValueKm || 1, // Usando distância real da Routes API
+                          distanceInKm: distanceValueKm || 1, // Usando distÃ¢ncia real da Routes API
                           distanceRate: 3.5,
                           stopCount: transitData.stops.length,
                           stopRate: 15,
@@ -6628,7 +6628,7 @@ function App() {
                    onClick={() => mobilityStep < 3 ? setMobilityStep(prev => prev + 1) : navigateSubView("mobility_payment")}
                    className="flex-1 bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
                  >
-                    <span className="uppercase tracking-widest">{mobilityStep < 3 ? "Próximo Passo" : "Ver Preço & Pedir"}</span>
+                    <span className="uppercase tracking-widest">{mobilityStep < 3 ? "PrÃ³ximo Passo" : "Ver PreÃ§o & Pedir"}</span>
                     <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">{mobilityStep < 3 ? 'arrow_forward' : 'bolt'}</span>
                  </button>
               </div>
@@ -6641,7 +6641,7 @@ function App() {
   const renderExploreEnvios = () => {
     const services = [
       { id: "express", name: "Izi Express", desc: "Documentos e pequenos volumes", icon: "bolt", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "express" }); navigateSubView("shipping_priority"); } },
-      { id: "coleta",  name: "Click e Retire Izi", desc: "Retirada rápida em lojas parceiras", icon: "inventory_2", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "coleta" }); navigateSubView("shipping_details"); } },
+      { id: "coleta",  name: "Click e Retire Izi", desc: "Retirada rÃ¡pida em lojas parceiras", icon: "inventory_2", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "coleta" }); navigateSubView("shipping_details"); } },
     ];
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
@@ -6651,7 +6651,7 @@ function App() {
               <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
             </button>
             <div>
-              <h1 className="text-lg font-black tracking-tight text-white">Logística & Envios</h1>
+              <h1 className="text-lg font-black tracking-tight text-white">LogÃ­stica & Envios</h1>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Entregamos qualquer coisa</p>
             </div>
           </div>
@@ -6679,10 +6679,10 @@ function App() {
 
   const renderIziExpressPriority = () => {
     const priorities = [
-      { id: "turbo", name: "Izi Turbo Flash", desc: "Entrega ultra-rápida até 15 min", time: "15 min", icon: "bolt", color: "text-amber-400", bg: "bg-amber-400/10" },
-      { id: "light", name: "Izi Light Flash", desc: "Entrega agilizada até 30 min", time: "30 min", icon: "electric_bolt", color: "text-yellow-400", bg: "bg-yellow-400/10" },
+      { id: "turbo", name: "Izi Turbo Flash", desc: "Entrega ultra-rÃ¡pida atÃ© 15 min", time: "15 min", icon: "bolt", color: "text-amber-400", bg: "bg-amber-400/10" },
+      { id: "light", name: "Izi Light Flash", desc: "Entrega agilizada atÃ© 30 min", time: "30 min", icon: "electric_bolt", color: "text-yellow-400", bg: "bg-yellow-400/10" },
       { id: "normal", name: "Izi Express", desc: "Categoria normal", time: "1 hr", icon: "moped", color: "text-zinc-400", bg: "bg-zinc-800" },
-      { id: "scheduled", name: "Izi Agendado", desc: "Você escolhe data e horário", time: "Agendar", icon: "event", color: "text-blue-400", bg: "bg-blue-400/10" },
+      { id: "scheduled", name: "Izi Agendado", desc: "VocÃª escolhe data e horÃ¡rio", time: "Agendar", icon: "event", color: "text-blue-400", bg: "bg-blue-400/10" },
     ];
 
     return (
@@ -6702,8 +6702,8 @@ function App() {
             <div className="size-20 rounded-[30px] bg-yellow-400/10 flex items-center justify-center mx-auto mb-4 border border-yellow-400/20 shadow-[0_0_40px_-10px_rgba(255,215,9,0.3)]">
               <span className="material-symbols-outlined text-4xl text-yellow-400">speed</span>
             </div>
-            <h3 className="text-lg font-black text-white tracking-tight">Qual a sua urgência?</h3>
-            <p className="text-zinc-500 text-xs font-medium mt-1">Selecione o nível de prioridade para sua entrega</p>
+            <h3 className="text-lg font-black text-white tracking-tight">Qual a sua urgÃªncia?</h3>
+            <p className="text-zinc-500 text-xs font-medium mt-1">Selecione o nÃ­vel de prioridade para sua entrega</p>
           </div>
 
           <div className="grid grid-cols-1 gap-4">
@@ -6746,7 +6746,7 @@ function App() {
                <span className="material-symbols-outlined text-yellow-400 text-sm">info</span>
             </div>
             <p className="text-[10px] text-yellow-400/80 font-medium leading-relaxed">
-              Os tempos de entrega são estimativas baseadas na disponibilidade de entregadores próximos no momento da confirmação.
+              Os tempos de entrega sÃ£o estimativas baseadas na disponibilidade de entregadores prÃ³ximos no momento da confirmaÃ§Ã£o.
             </p>
           </div>
         </main>
@@ -6768,7 +6768,7 @@ function App() {
             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
               Detalhes
             </h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">InformaçÃµes de Entrega</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">InformaÃ§ÃƒÂµes de Entrega</p>
           </div>
         </header>
 
@@ -6794,12 +6794,12 @@ function App() {
                           ? <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.2" /><path d="M22 12A10 10 0 0 0 12 2" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
                           : <span className="material-symbols-outlined text-xs">my_location</span>
                         }
-                        <span className="text-[8px] font-black uppercase tracking-widest">{userLocation.loading ? 'Buscando...' : 'Localização Atual'}</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest">{userLocation.loading ? 'Buscando...' : 'LocalizaÃ§Ã£o Atual'}</span>
                      </button>
                   </div>
                   <AddressSearchInput 
                     initialValue={transitData.origin}
-                    placeholder="Endereço de partida..."
+                    placeholder="EndereÃ§o de partida..."
                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white placeholder:text-zinc-600"
                     userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                     onSelect={(place) => setTransitData(prev => ({ ...prev, origin: place.formatted_address || "" }))}
@@ -6811,7 +6811,7 @@ function App() {
                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Para onde levar?</p>
                    <AddressSearchInput 
                      initialValue={transitData.destination}
-                     placeholder="Digite o endereço de destino..."
+                     placeholder="Digite o endereÃ§o de destino..."
                      className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white placeholder:text-zinc-600"
                      userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                      onSelect={(place) => {
@@ -6878,7 +6878,7 @@ function App() {
                        type="text" 
                        value={transitData.receiverName}
                        onChange={(e) => setTransitData({...transitData, receiverName: e.target.value})}
-                       placeholder="Ex: João Silva"
+                       placeholder="Ex: JoÃ£o Silva"
                        className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-white"
                      />
                   </div>
@@ -6898,7 +6898,7 @@ function App() {
 
               {transitData.subService === "coleta" && (
                 <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl ring-1 ring-yellow-400/10">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Endereço de Entrega (Destino)</p>
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">EndereÃ§o de Entrega (Destino)</p>
                    <AddressSearchInput 
                      initialValue={transitData.destination}
                      placeholder="Onde devemos entregar?"
@@ -6930,7 +6930,7 @@ function App() {
                      type="text" 
                      value={transitData.receiverName}
                      onChange={(e) => setTransitData({...transitData, receiverName: e.target.value})}
-                     placeholder="Ex: Hub Logístico Izi"
+                     placeholder="Ex: Hub LogÃ­stico Izi"
                      className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
                    />
                 </div>
@@ -6947,7 +6947,7 @@ function App() {
                 </div>
 
                 <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Cód. do Pedido / Retirada</p>
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">CÃ³d. do Pedido / Retirada</p>
                    <input 
                      type="text" 
                      value={transitData.pickupCode}
@@ -6969,7 +6969,7 @@ function App() {
                      />
                   </div>
                   <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Setor / Guichê</p>
+                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Setor / GuichÃª</p>
                      <input 
                        type="text" 
                        value={transitData.pickupSector}
@@ -6991,18 +6991,18 @@ function App() {
 
             <div className="space-y-4">
                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Descrição do Item</p>
+                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">DescriÃ§Ã£o do Item</p>
                   <textarea 
                     value={transitData.packageDesc}
                     onChange={(e) => setTransitData({...transitData, packageDesc: e.target.value})}
-                    placeholder="Ex: 2 Camisetas, 1 Par de Tênis..."
+                    placeholder="Ex: 2 Camisetas, 1 Par de TÃªnis..."
                     rows={3}
                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white resize-none"
                   />
                </div>
 
                <div className="grid grid-cols-2 gap-4">
-                  {['Pequeno (até 5kg)', 'Médio (até 15kg)', 'Grande (até 30kg)', 'Pesado (+30kg)'].map((weight) => (
+                  {['Pequeno (atÃ© 5kg)', 'MÃ©dio (atÃ© 15kg)', 'Grande (atÃ© 30kg)', 'Pesado (+30kg)'].map((weight) => (
                     <button
                       key={weight}
                       onClick={() => setTransitData({...transitData, weightClass: weight})}
@@ -7030,7 +7030,7 @@ function App() {
                    </div>
                 </div>
                 <div onClick={() => setShowTimePicker(true)} className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl cursor-pointer active:scale-95 transition-all">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Horário</p>
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">HorÃ¡rio</p>
                    <div className="flex items-center justify-between">
                      <span className="text-base font-bold text-white">{transitData.scheduledTime || "Selecionar hora"}</span>
                      <span className="material-symbols-outlined text-yellow-400 text-sm">schedule</span>
@@ -7052,7 +7052,7 @@ function App() {
                 </header>
                 <div className="relative mb-6">
                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">search</span>
-                   <input type="text" placeholder="Buscar por nome ou região..." className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl py-4 pl-12 pr-6 text-sm font-bold focus:ring-1 focus:ring-yellow-400/50 outline-none text-white placeholder-zinc-600" />
+                   <input type="text" placeholder="Buscar por nome ou regiÃ£o..." className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl py-4 pl-12 pr-6 text-sm font-bold focus:ring-1 focus:ring-yellow-400/50 outline-none text-white placeholder-zinc-600" />
                 </div>
                 <div className="flex-1 overflow-y-auto no-scrollbar space-y-4">
                    {partnerStores.map((store) => (
@@ -7089,7 +7089,7 @@ function App() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
                 <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
                   <div className="text-center mb-8">
-                    <h3 className="text-xl font-black text-white">Próximos 7 dias</h3>
+                    <h3 className="text-xl font-black text-white">PrÃ³ximos 7 dias</h3>
                     <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Selecione uma data</p>
                   </div>
                   <div className="grid grid-cols-1 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
@@ -7117,8 +7117,8 @@ function App() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
                 <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
                   <div className="text-center mb-8">
-                    <h3 className="text-xl font-black text-white">Horário</h3>
-                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Das 08:00 Ã s 22:00</p>
+                    <h3 className="text-xl font-black text-white">HorÃ¡rio</h3>
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Das 08:00 ÃƒÂ s 22:00</p>
                   </div>
                   <div className="grid grid-cols-3 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
                     {["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"].map((h) => (
@@ -7138,7 +7138,7 @@ function App() {
                <span className="material-symbols-outlined text-amber-400 text-sm">warning</span>
              </div>
              <p className="text-[10px] font-bold text-amber-400/80 leading-relaxed uppercase tracking-wider">
-                Certifique-se de que o objeto esteja bem embalado. Não transportamos itens proibidos por lei ou inflamáveis.
+                Certifique-se de que o objeto esteja bem embalado. NÃ£o transportamos itens proibidos por lei ou inflamÃ¡veis.
              </p>
           </div>
         </main>
@@ -7178,9 +7178,9 @@ function App() {
           </button>
           <div className="text-right">
              <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
-                {transitData.type === 'mototaxi' ? "MotoTáxi" : "Motorista Particular"}
+                {transitData.type === 'mototaxi' ? "MotoTÃ¡xi" : "Motorista Particular"}
              </h2>
-             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Viagem Rápida & Segura</p>
+             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Viagem RÃ¡pida & Segura</p>
           </div>
         </header>
 
@@ -7203,7 +7203,7 @@ function App() {
                           </div>
                          <AddressSearchInput 
                            initialValue={transitData.origin}
-                           placeholder="De onde você está saindo?"
+                           placeholder="De onde vocÃª estÃ¡ saindo?"
                            className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
                            userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                            onSelect={(p) => setTransitData({...transitData, origin: p.formatted_address || ""})}
@@ -7232,7 +7232,7 @@ function App() {
                 <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
                    <div className="space-y-2">
                       <h3 className="text-xl font-bold text-white tracking-tight">Resumo da Viagem</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Confirme os detalhes e o preço antes de pedir.</p>
+                      <p className="text-zinc-500 text-xs font-medium">Confirme os detalhes e o preÃ§o antes de pedir.</p>
                    </div>
 
                    <div className="bg-white/5 border border-white/5 p-6 rounded-[35px] space-y-6">
@@ -7241,8 +7241,12 @@ function App() {
                             <span className="material-symbols-outlined text-yellow-400 italic">local_atm</span>
                          </div>
                          <div className="flex-1">
-                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Preço Estimado</p>
-                            <p className="text-2xl font-black text-yellow-400">R$ {(transitData.estPrice || 15.9).toFixed(2).replace(".", ",")}</p>
+                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">PreÃ§o Estimado</p>
+                            <p className="text-2xl font-black text-yellow-400">
+                              {transitData.estPrice > 0 
+                                ? `R$ ${transitData.estPrice.toFixed(2).replace(".", ",")}` 
+                                : isCalculatingPrice ? "Calculando..." : "..."}
+                            </p>
                          </div>
                       </div>
                       <div className="h-px bg-white/5 w-full" />
@@ -7266,7 +7270,7 @@ function App() {
                 onClick={() => mobilityStep < 2 ? setMobilityStep(2) : navigateSubView("mobility_payment")}
                 className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
               >
-                 <span className="uppercase tracking-widest">{mobilityStep === 1 ? "Próximo Passo" : "Solicitar Agora"}</span>
+                 <span className="uppercase tracking-widest">{mobilityStep === 1 ? "PrÃ³ximo Passo" : "Solicitar Agora"}</span>
                  <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">{mobilityStep === 1 ? 'arrow_forward' : 'bolt'}</span>
               </button>
            </div>
@@ -7276,191 +7280,142 @@ function App() {
   };
 
 
-  // ââ€â‚¬ââ€â‚¬ââ€â‚¬ Tela de Pagamento da Mobilidade ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬
+  // Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Tela de Pagamento da Mobilidade Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const renderMobilityPayment = () => {
     const bv = marketConditions.settings.baseValues;
     const basePrices: Record<string, number> = { mototaxi: bv.mototaxi_min, carro: bv.carro_min, van: bv.van_min, utilitario: bv.utilitario_min };
     const price = (transitData.estPrice > 0 ? transitData.estPrice : calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min)) ?? 0;
 
-    const serviceLabels: Record<string, { label: string; icon: string }> = {
-      mototaxi: { label: "MotoTáxi", icon: "motorcycle" },
-      carro: { label: "Carro Executivo", icon: "directions_car" },
-      van: { label: "Van de Carga", icon: "airport_shuttle" },
-      utilitario: { label: "Izi Express", icon: "bolt" },
-    };
-    const service = serviceLabels[transitData.type] || { label: "Serviço", icon: "local_shipping" };
     const activeCard = savedCards.find((c: any) => c.active);
 
     return (
-      <div className="absolute inset-0 z-[115] bg-black bg-black flex flex-col hide-scrollbar overflow-y-auto">
+      <div className="absolute inset-0 z-[115] bg-black flex flex-col hide-scrollbar overflow-y-auto">
         {/* Header */}
-        <header className="sticky top-0 z-50 bg-white/80 bg-black/80 backdrop-blur-2xl border-b border-zinc-900 border-zinc-800 px-6 py-5 flex items-center gap-4">
-          <button onClick={() => setSubView("transit_selection")} className="size-11 rounded-2xl bg-slate-50  border border-zinc-800  flex items-center justify-center active:scale-90 transition-all">
-            <Icon name="arrow_back" />
+        <header className="sticky top-0 z-50 bg-black px-6 py-6 flex items-center gap-4">
+          <button onClick={() => setSubView("transit_selection")} className="size-10 rounded-full bg-zinc-800 flex items-center justify-center text-white active:scale-90 transition-all shadow-lg border border-white/5">
+            <span className="material-symbols-outlined text-sm">arrow_back_ios_new</span>
           </button>
-          <div>
-            <h2 className="text-lg font-black text-white tracking-tighter">Confirmar Serviço</h2>
-            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Escolha como pagar</p>
+          <div className="flex flex-col text-left">
+            <h2 className="text-xl font-black text-white tracking-tighter leading-none">Confirmar Servico</h2>
+            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-1">ESCOLHA COMO PAGAR</p>
           </div>
         </header>
 
-        <div className="flex-1 px-6 py-6 space-y-6 pb-40">
-          {/* Resumo do serviço */}
-          <div className="bg-white  border border-zinc-800  rounded-[40px] p-6 space-y-5">
-            <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Resumo da Solicitação</h3>
-            <div className="flex items-center gap-4">
-              <div className="size-14 rounded-[22px] bg-yellow-400/10 flex items-center justify-center">
-                <Icon name={service.icon} />
-              </div>
-              <div className="flex-1">
-                <p className="font-black text-white text-base">{service.label}</p>
-                <p className="text-xs text-zinc-500 truncate mt-0.5">
-                  {transitData.origin.split(",")[0]} ââ€ â€™ {transitData.destination.split(",")[0]}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-black text-white tracking-tight">
-                  R$ {price.toFixed(2).replace(".", ",")}
-                </p>
-                {transitData.scheduled && (
-                  <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">Agendado</p>
-                )}
-              </div>
-            </div>
-
-            {/* Info de agendamento */}
-            {transitData.scheduled && transitData.scheduledDate && (
-              <div className="bg-yellow-400/5 border border-yellow-400/20 rounded-[20px] p-4 flex items-center gap-3">
-                <Icon name="event" />
-                <div>
-                  <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest">Agendado para</p>
-                  <p className="text-sm font-black text-white">
-                    {new Date(`${transitData.scheduledDate}T${transitData.scheduledTime}`).toLocaleString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Rota detalhada */}
-            <div className="bg-slate-50 bg-black/20 rounded-[24px] p-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="mt-1.5 size-2 rounded-full bg-yellow-400 shrink-0" />
-                <div>
-                  <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Origem</p>
-                  <p className="text-xs font-bold text-slate-700 text-zinc-300">{transitData.origin}</p>
-                </div>
-              </div>
-              <div className="ml-[3px] h-4 w-[1px] bg-slate-200 " />
-              <div className="flex items-start gap-3">
-                <div className="mt-1.5 size-2 rounded-full bg-orange-500 shrink-0" />
-                <div>
-                  <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Destino</p>
-                  <p className="text-xs font-bold text-white">{transitData.destination}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Métodos de pagamento */}
-          <div className="space-y-3">
-            <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] px-1">Forma de Pagamento</h3>
-
-            {/* Cartão salvo */}
-            {activeCard && activeCard.stripe_payment_method_id && (
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleConfirmMobility("cartao")}
-                disabled={isLoading}
-                className="w-full bg-slate-900  border-2 border-yellow-400/20 rounded-[28px] p-5 flex items-center gap-4 active:scale-[0.98] transition-all"
-              >
-                <div className="size-12 rounded-[18px] bg-yellow-400/10 flex items-center justify-center">
-                  <Icon name="credit_card" />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="font-black text-white text-sm">{activeCard.brand} â€¢â€¢â€¢â€¢{activeCard.last4}</p>
-                  <p className="text-[10px] text-white/40 uppercase tracking-widest">Débito instantâneo</p>
-                </div>
-                <Icon name="arrow_forward" />
-              </motion.button>
-            )}
-
-            {/* PIX */}
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleConfirmMobility("pix")}
-              disabled={isLoading}
-              className="w-full bg-white  border border-emerald-200  rounded-[28px] p-5 flex items-center gap-4 active:scale-[0.98] transition-all"
-            >
-              <div className="size-12 rounded-[18px] bg-emerald-500/10 flex items-center justify-center">
-                <Icon name="qr_code_2" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="font-black text-white text-sm">PIX</p>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Aprovação imediata</p>
-              </div>
-              <Icon name="arrow_forward" />
-            </motion.button>
-
-            {/* Saldo */}
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleConfirmMobility("saldo")}
-              disabled={isLoading || walletBalance < price}
-              className="w-full bg-white  border border-zinc-800  rounded-[28px] p-5 flex items-center gap-4 active:scale-[0.98] transition-all disabled:opacity-40"
-            >
-              <div className="size-12 rounded-[18px] bg-blue-500/10 flex items-center justify-center">
-                <Icon name="account_balance_wallet" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="font-black text-white text-sm">Saldo em Carteira</p>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-widest">R$ {walletBalance.toFixed(2).replace(".", ",")} disponível</p>
-              </div>
-              {walletBalance < price ? (
-                <span className="text-[9px] font-black text-red-400 uppercase">Insuficiente</span>
-              ) : (
-                <Icon name="arrow_forward" />
+        <div className="flex-1 px-4 py-2 space-y-6 pb-40">
+          {/* Resumo da solicitacao */}
+          <div className="space-y-4">
+            <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] px-2 flex justify-between items-center">
+              <span>RESUMO DA SOLICITACAO</span>
+              {transitData.estPrice > 0 && (
+                <span className="text-yellow-400 font-black">R$ {price.toFixed(2).replace(".", ",")}</span>
               )}
-            </motion.button>
-
-            {/* Dinheiro */}
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleConfirmMobility("dinheiro")}
-              disabled={isLoading}
-              className="w-full bg-white  border border-zinc-800  rounded-[28px] p-5 flex items-center gap-4 active:scale-[0.98] transition-all"
-            >
-              <div className="size-12 rounded-[18px] bg-slate-100  flex items-center justify-center">
-                <Icon name="payments" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="font-black text-white text-sm">Dinheiro</p>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Pague ao prestador</p>
-              </div>
-              <Icon name="arrow_forward" />
-            </motion.button>
+            </h3>
+            
+            <div className="bg-white rounded-[40px] p-8 flex items-center gap-6 shadow-xl relative overflow-hidden transition-all duration-500 hover:shadow-yellow-400/5">
+               <div className="size-16 rounded-full bg-yellow-50 flex items-center justify-center shrink-0 shadow-inner">
+                  <span className="material-symbols-outlined text-zinc-400 text-2xl">help_outline</span>
+               </div>
+               <div className="flex-1 space-y-4">
+                  <div className="flex items-start gap-4 text-left">
+                     <div className="size-2.5 rounded-full bg-yellow-400 shrink-0 mt-1" />
+                     <p className="text-xs font-bold text-zinc-400 line-clamp-2 leading-relaxed">{transitData.origin}</p>
+                  </div>
+                  <div className="flex items-start gap-4 text-left">
+                     <div className="size-2.5 rounded-full bg-orange-500 shrink-0 mt-1" />
+                     <p className="text-xs font-bold text-zinc-400 line-clamp-2 leading-relaxed">{transitData.destination || "Aguardando destino..."}</p>
+                  </div>
+               </div>
+            </div>
           </div>
 
-          {/* Badge segurança */}
-          <div className="flex items-center gap-3 bg-yellow-400/5 border border-yellow-400/20 border-dashed p-4 rounded-[24px]">
-            <Icon name="shield_with_heart" />
-            <p className="text-[10px] font-black text-zinc-500 text-zinc-300 uppercase tracking-widest">Pagamento 100% seguro e criptografado</p>
+          {/* Forma de pagamento */}
+          <div className="space-y-4">
+            <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] px-2">FORMA DE PAGAMENTO</h3>
+            
+            <div className="space-y-2">
+              {/* PIX */}
+              <motion.button 
+                whileTap={{ scale: 0.98 }}
+                onClick={() => handleConfirmMobility("pix")}
+                className="w-full bg-white rounded-[30px] p-6 pr-8 flex items-center gap-5 shadow-lg group active:scale-[0.98] transition-all border border-transparent hover:border-emerald-100"
+              >
+                  <div className="size-12 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                     <span className="material-symbols-outlined text-emerald-500 text-2xl">check_circle</span>
+                  </div>
+                  <div className="flex-1 text-left">
+                     <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-1 leading-none">APROVACAO IMEDIATA</p>
+                     <p className="text-[10px] font-bold text-zinc-300">Pague com PIX para aprovacao instantanea</p>
+                  </div>
+                  <span className="material-symbols-outlined text-zinc-300 group-hover:text-emerald-400 transition-colors">chevron_right</span>
+              </motion.button>
+
+              {/* Saldo Wallet */}
+              <motion.button 
+                whileTap={{ scale: 0.98 }}
+                disabled={walletBalance < price}
+                onClick={() => handleConfirmMobility("saldo")}
+                className={`w-full bg-zinc-900 rounded-[30px] p-6 pr-8 flex items-center gap-5 shadow-lg transition-all border border-white/5 ${walletBalance < price ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:border-blue-400/30'}`}
+              >
+                  <div className={`size-12 rounded-full flex items-center justify-center shrink-0 ${walletBalance < price ? 'bg-zinc-800' : 'bg-blue-400/10'}`}>
+                     <span className={`material-symbols-outlined text-2xl ${walletBalance < price ? 'text-zinc-600' : 'text-blue-400'}`}>account_balance_wallet</span>
+                  </div>
+                  <div className="flex-1 text-left">
+                     <p className={`text-[11px] font-black uppercase tracking-widest leading-none mb-1 ${walletBalance < price ? 'text-zinc-600' : 'text-blue-400'}`}>
+                        R$ {walletBalance.toFixed(2).replace(".", ",")} DISPONIVEL
+                     </p>
+                     <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Saldo da Carteira IZI</p>
+                  </div>
+                  {walletBalance < price ? (
+                    <span className="text-[9px] font-black text-red-500 bg-red-500/10 px-2 py-1 rounded-lg uppercase whitespace-nowrap">INSUFICIENTE</span>
+                  ) : (
+                    <span className="material-symbols-outlined text-zinc-400">chevron_right</span>
+                  )}
+              </motion.button>
+
+              {/* Dinheiro */}
+              <motion.button 
+                whileTap={{ scale: 0.98 }}
+                onClick={() => handleConfirmMobility("dinheiro")}
+                className="w-full bg-white rounded-[30px] p-6 pr-8 flex items-center gap-5 shadow-lg group active:scale-[0.98] transition-all border border-transparent hover:border-zinc-200"
+              >
+                  <div className="size-12 rounded-full bg-white border border-zinc-100 flex items-center justify-center shrink-0">
+                     <span className="material-symbols-outlined text-zinc-400 text-2xl">payments</span>
+                  </div>
+                  <div className="flex-1 text-left">
+                     <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-1 leading-none">PAGUE AO PRESTADOR</p>
+                     <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider">Pagamento em Especie</p>
+                  </div>
+                  <span className="material-symbols-outlined text-zinc-300">chevron_right</span>
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Footer security */}
+          <div className="flex items-center justify-center gap-4 pt-10 pb-10">
+             <div className="h-px bg-zinc-900 flex-1" />
+             <div className="flex items-center gap-3">
+               <span className="material-symbols-outlined text-zinc-700 text-sm">enhanced_encryption</span>
+               <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.2em] whitespace-nowrap">PAGAMENTO 100% SEGURO E CRIPTOGRAFADO</p>
+             </div>
+             <div className="h-px bg-zinc-900 flex-1" />
           </div>
         </div>
       </div>
     );
   };
 
-  // ââ€â‚¬ââ€â‚¬ââ€â‚¬ Tela de Aguardando Motorista ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬ââ€â‚¬
+
+  // Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Tela de Aguardando Motorista Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬Ã¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const renderWaitingDriver = () => {
     if (!selectedItem) return null;
 
     const serviceLabels: Record<string, { label: string; icon: string; color: string }> = {
-      mototaxi: { label: "MotoTáxi", icon: "motorcycle", color: "text-yellow-400" },
+      mototaxi: { label: "MotoTÃ¡xi", icon: "motorcycle", color: "text-yellow-400" },
       carro: { label: "Carro Executivo", icon: "directions_car", color: "text-zinc-500" },
       van: { label: "Van de Carga", icon: "airport_shuttle", color: "text-blue-500" },
       utilitario: { label: "Izi Express", icon: "bolt", color: "text-purple-500" },
     };
-    const service = serviceLabels[selectedItem.service_type] || { label: "Serviço", icon: "local_shipping", color: "text-yellow-400" };
+    const service = serviceLabels[selectedItem.service_type] || { label: "ServiÃ§o", icon: "local_shipping", color: "text-yellow-400" };
 
     return (
       <div className="bg-black absolute inset-0 z-[115] bg-[#020617] flex flex-col items-center justify-center p-8 text-white overflow-hidden">
@@ -7477,12 +7432,12 @@ function App() {
         </div>
 
         <h2 className="text-2xl font-black text-white tracking-tight text-center mb-2">Buscando Prestador</h2>
-        <p className="text-white/40 text-sm text-center mb-8 max-w-xs">Estamos encontrando o melhor prestador disponível para você</p>
+        <p className="text-white/40 text-sm text-center mb-8 max-w-xs">Estamos encontrando o melhor prestador disponÃ­vel para vocÃª</p>
 
         {/* Info do pedido */}
         <div className="w-full max-w-sm bg-white/5 border border-white/10 rounded-[32px] p-6 space-y-4 mb-8">
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Serviço</span>
+            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">ServiÃ§o</span>
             <span className="text-sm font-black text-white">{service.label}</span>
           </div>
           <div className="h-px bg-white/5" />
@@ -7506,15 +7461,15 @@ function App() {
         {/* Cancelar */}
         <button
           onClick={async () => {
-            if (!await showConfirm({ message: "Cancelar a solicitação?" })) return;
+            if (!await showConfirm({ message: "Cancelar a solicitaÃ§Ã£o?" })) return;
             await supabase.from("orders_delivery").update({ status: "cancelado" }).eq("id", selectedItem.id);
             setSubView("none");
             fetchMyOrders(userId!);
-            toastSuccess("Solicitação cancelada.");
+            toastSuccess("SolicitaÃ§Ã£o cancelada.");
           }}
           className="text-white/30 font-black text-[10px] uppercase tracking-widest border border-white/10 px-6 py-3 rounded-2xl hover:bg-white/5 transition-all active:scale-95"
         >
-          Cancelar Solicitação
+          Cancelar SolicitaÃ§Ã£o
         </button>
 
         {/* Auto-redireciona para active_order quando driver aceita */}
@@ -7540,9 +7495,9 @@ function App() {
   const renderScheduledOrder = () => {
     if (!selectedItem) return null;
     const svcIcons: Record<string,string> = { mototaxi:'motorcycle', carro:'directions_car', van:'airport_shuttle', utilitario:'bolt' };
-    const svcLabels: Record<string,string> = { mototaxi:'MotoTáxi', carro:'Carro Executivo', van:'Van de Carga', utilitario:'Izi Express' };
+    const svcLabels: Record<string,string> = { mototaxi:'MotoTÃ¡xi', carro:'Carro Executivo', van:'Van de Carga', utilitario:'Izi Express' };
     const icon = svcIcons[selectedItem.service_type] || 'event';
-    const label = svcLabels[selectedItem.service_type] || 'Serviço';
+    const label = svcLabels[selectedItem.service_type] || 'ServiÃ§o';
     const scheduledAt = selectedItem.scheduled_date && selectedItem.scheduled_time
       ? new Date(`${selectedItem.scheduled_date}T${selectedItem.scheduled_time}`).toLocaleString('pt-BR', { weekday:'long', day:'2-digit', month:'long', hour:'2-digit', minute:'2-digit' })
       : null;
@@ -7553,7 +7508,7 @@ function App() {
       setIsSavingObsState(true);
       await supabase.from('orders_delivery').update({ order_notes: schedObsState }).eq('id', selectedItem.id);
       setIsSavingObsState(false);
-      toastSuccess('Observação salva!');
+      toastSuccess('ObservaÃ§Ã£o salva!');
     };
 
     const sendScheduledMessage = () => {
@@ -7589,8 +7544,8 @@ function App() {
               <span className={`material-symbols-outlined text-2xl ${hasDriver ? 'text-emerald-500' : 'text-blue-500'}`}>{hasDriver ? 'verified' : 'pending'}</span>
             </div>
             <div>
-              <p className={`text-[9px] font-black uppercase tracking-widest ${hasDriver ? 'text-emerald-500' : 'text-blue-400'}`}>{hasDriver ? 'Motorista Confirmado' : 'Aguardando Confirmação'}</p>
-              <h3 className="text-base font-black text-white">{hasDriver ? 'Seu motorista está confirmado!' : 'Buscando motorista disponível...'}</h3>
+              <p className={`text-[9px] font-black uppercase tracking-widest ${hasDriver ? 'text-emerald-500' : 'text-blue-400'}`}>{hasDriver ? 'Motorista Confirmado' : 'Aguardando ConfirmaÃ§Ã£o'}</p>
+              <h3 className="text-base font-black text-white">{hasDriver ? 'Seu motorista estÃ¡ confirmado!' : 'Buscando motorista disponÃ­vel...'}</h3>
             </div>
           </div>
 
@@ -7598,7 +7553,7 @@ function App() {
           <div className="bg-white bg-zinc-900 rounded-[28px] border border-zinc-800 border-zinc-700 p-5 space-y-4 shadow-sm">
             <div className="flex items-center gap-3">
               <Icon name={icon} />
-              <div><p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Serviço</p><p className="text-sm font-black text-white">{label}</p></div>
+              <div><p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">ServiÃ§o</p><p className="text-sm font-black text-white">{label}</p></div>
             </div>
             {scheduledAt && <div className="flex items-center gap-3">
               <Icon name="event" />
@@ -7618,16 +7573,16 @@ function App() {
             </div>
           </div>
 
-          {/* ObservaçÃµes */}
+          {/* ObservaÃ§ÃƒÂµes */}
           <div className="bg-white bg-zinc-900 rounded-[28px] border border-zinc-800 border-zinc-700 p-5 shadow-sm space-y-3">
-            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">ObservaçÃµes para o Motorista</p>
+            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">ObservaÃ§ÃƒÂµes para o Motorista</p>
             <textarea value={schedObsState} onChange={e => setSchedObsState(e.target.value)}
-              placeholder="Ex: Tenho bagagens, endereço tem portão azul, preciso de nota fiscal..."
+              placeholder="Ex: Tenho bagagens, endereÃ§o tem portÃ£o azul, preciso de nota fiscal..."
               rows={3} className="w-full bg-slate-50 bg-zinc-900/50 border border-slate-200 border-zinc-700 rounded-2xl px-4 py-3 text-sm font-medium text-white placeholder:text-slate-300 focus:outline-none focus:border-blue-400 resize-none"
             />
             <button onClick={saveObservation} disabled={isSavingObsState}
               className="w-full py-3 bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-md shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50">
-              {isSavingObsState ? 'Salvando...' : 'Salvar Observação'}
+              {isSavingObsState ? 'Salvando...' : 'Salvar ObservaÃ§Ã£o'}
             </button>
           </div>
 
@@ -7640,7 +7595,7 @@ function App() {
             <div className="p-4 min-h-[100px] space-y-3">
               {schedMessagesState.length === 0 && (
                 <p className="text-center text-[10px] font-black text-slate-300  uppercase tracking-widest py-4">
-                  {hasDriver ? 'Inicie a conversa com seu motorista' : 'Disponível após confirmação do motorista'}
+                  {hasDriver ? 'Inicie a conversa com seu motorista' : 'DisponÃ­vel apÃ³s confirmaÃ§Ã£o do motorista'}
                 </p>
               )}
               {schedMessagesState.map((msg: any) => (
@@ -7696,7 +7651,7 @@ function App() {
         <div className="space-y-4 relative z-10">
           <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.5em] mb-2 animate-pulse">Izi Security Protocol</p>
           <h1 className="text-3xl font-black text-white tracking-tighter italic uppercase">
-            Autenticando Transação...
+            Autenticando TransaÃ§Ã£o...
           </h1>
           <p className="text-white/40 text-[11px] leading-relaxed max-w-[250px] mx-auto font-bold uppercase tracking-widest">
             Aguarde um instante. Estamos verificando os dados via API segura Izi.
@@ -7778,9 +7733,9 @@ function App() {
           </div>
           <p className="text-zinc-500 text-xs font-medium">
             {paymentMethod === 'dinheiro' 
-              ? "O estabelecimento está analisando seu pedido para pagamento na entrega." 
+              ? "O estabelecimento estÃ¡ analisando seu pedido para pagamento na entrega." 
               : "Seu pagamento foi confirmado! Aguardando a loja aceitar o pedido..."}
-            Confirmação em poucos segundos...
+            ConfirmaÃ§Ã£o em poucos segundos...
           </p>
         </div>
       </div>
@@ -7798,7 +7753,7 @@ function App() {
 
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-black text-white uppercase tracking-tight">Pedido Confirmado!</h2>
-          <p className="text-zinc-600 text-sm">Seu pedido está sendo preparado</p>
+          <p className="text-zinc-600 text-sm">Seu pedido estÃ¡ sendo preparado</p>
         </div>
 
         <div className="w-full max-w-sm space-y-0">
@@ -7806,7 +7761,7 @@ function App() {
             { label: "Status",          value: "Confirmado",                   color: "text-emerald-400" },
             { label: "Estabelecimento", value: selectedItem?.merchant_name || "Pedido", color: "text-white" },
             { label: "Tempo estimado",  value: "25-40 min",                    color: "text-yellow-400" },
-            { label: "Entrega em",      value: userLocation.address || "Seu endereço", color: "text-zinc-300" },
+            { label: "Entrega em",      value: userLocation.address || "Seu endereÃ§o", color: "text-zinc-300" },
           ].map((row: any) => (
             <div key={row.label} className="flex justify-between items-center py-3 border-b border-zinc-900/60 last:border-0">
               <span className="text-zinc-600 text-sm">{row.label}</span>
@@ -7822,7 +7777,7 @@ function App() {
             Acompanhar Pedido
           </button>
           <button onClick={() => setSubView("none")} className="w-full text-zinc-700 text-sm font-black uppercase tracking-widest hover:text-zinc-500 transition-colors py-2">
-            Voltar ao Início
+            Voltar ao InÃ­cio
           </button>
         </div>
       </div>
@@ -7831,7 +7786,7 @@ function App() {
 
   const BottomNav = () => {
     const navItems = [
-      { id: "home",    icon: "explore",                label: "Início"   },
+      { id: "home",    icon: "explore",                label: "InÃ­cio"   },
       { id: "wallet",  icon: "account_balance_wallet",  label: "IZI Pay"  },
       { id: "orders",  icon: "receipt_long",            label: "Pedidos"  },
       { id: "profile", icon: "person",                  label: "Perfil"   },
@@ -8119,7 +8074,7 @@ function App() {
               )}
               {subView === "health_plantao" && (
                 <motion.div key="healthplantao" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-40 bg-black">
-                  <EstablishmentListView title="Plantão 24h" subtitle="Emergências e Farmácias" icon="health_and_safety" searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSubView={setSubView} establishments={ESTABLISHMENTS} filterFn={(s) => s.type === 'pharmacy'} onShopClick={handleShopClick} cartLength={cart.length} navigateSubView={navigateSubView} />
+                  <EstablishmentListView title="PlantÃ£o 24h" subtitle="EmergÃªncias e FarmÃ¡cias" icon="health_and_safety" searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSubView={setSubView} establishments={ESTABLISHMENTS} filterFn={(s) => s.type === 'pharmacy'} onShopClick={handleShopClick} cartLength={cart.length} navigateSubView={navigateSubView} />
                 </motion.div>
               )}
               {subView === "beverages_list" && (
@@ -8623,7 +8578,7 @@ function App() {
                         onClick={() => showToast("Chave copiada!")}
                         className="mt-4 w-full bg-white text-brand-600 font-black py-3 rounded-xl shadow-sm active:scale-95 transition-all text-sm uppercase"
                       >
-                        Copiar Código
+                        Copiar CÃ³digo
                       </button>
                     </div>
 
@@ -8634,11 +8589,11 @@ function App() {
                       }}
                       className="w-full bg-slate-900 text-white font-black py-5 rounded-[28px] shadow-float active:scale-[0.98] transition-all"
                     >
-                      Já realizei o pagamento
+                      JÃ¡ realizei o pagamento
                     </button>
 
                     <p className="mt-6 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">
-                      O pedido será confirmado em instantes
+                      O pedido serÃ¡ confirmado em instantes
                     </p>
                   </motion.div>
                 </motion.div>
