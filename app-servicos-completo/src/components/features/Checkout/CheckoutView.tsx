@@ -18,9 +18,11 @@ interface CheckoutViewProps {
   setCouponInput: (val: string) => void;
   handleApplyCoupon: (code: string) => void;
   setAppliedCoupon: (coupon: any) => void;
-  handlePlaceOrder: () => void;
+  handlePlaceOrder: (useCoins?: boolean) => void;
   setPaymentsOrigin: (origin: string) => void;
   setSubView: (view: string) => void;
+  iziCoins?: number;
+  iziCoinValue?: number;
 }
 
 export const CheckoutView: React.FC<CheckoutViewProps> = ({
@@ -43,14 +45,19 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   handlePlaceOrder,
   setPaymentsOrigin,
   setSubView,
+  iziCoins = 0,
+  iziCoinValue = 0.01,
 }) => {
+  const [useCoins, setUseCoins] = React.useState(false);
   const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-  const discount = appliedCoupon
+  const couponDiscount = appliedCoupon
     ? appliedCoupon.discount_type === "fixed"
       ? appliedCoupon.discount_value
       : (subtotal * appliedCoupon.discount_value) / 100
     : 0;
-  const total = Math.max(0, subtotal + 0 - discount);
+  
+  const coinDiscount = useCoins ? iziCoins * iziCoinValue : 0;
+  const total = Math.max(0, subtotal + 0 - couponDiscount - coinDiscount);
   const walletBal = walletTransactions.reduce(
     (acc: number, t: any) =>
       ["deposito", "reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount),
@@ -325,44 +332,77 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         {/* RIGHT COLUMN — Resumo financeiro + botão */}
         <div className="lg:col-span-5">
           <div className="sticky top-20 space-y-4">
-            {/* Totais */}
-            <div className="space-y-3">
-              <div className="h-px bg-zinc-900" />
-              {[
-                { label: "Subtotal", value: `R$ ${subtotal.toFixed(2).replace(".", ",")}`, muted: true },
-                { label: "Entrega", value: "Grátis", green: true },
-                ...(discount > 0
-                  ? [
-                      {
-                        label: `Desconto (${appliedCoupon?.coupon_code})`,
-                        value: `-R$ ${discount.toFixed(2).replace(".", ",")}`,
-                        green: true,
-                      },
-                    ]
-                  : []),
-              ].map((row: any) => (
-                <div key={row.label} className="flex justify-between items-center">
-                  <span className="text-zinc-500 text-sm">{row.label}</span>
-                  <span className={`text-sm font-bold ${row.green ? "text-emerald-400" : "text-zinc-300"}`}>
-                    {row.value}
-                  </span>
-                </div>
-              ))}
-              <div className="h-px bg-zinc-900" />
-              <div className="flex justify-between items-center">
-                <span className="text-white font-black text-base uppercase tracking-wider">Total</span>
-                <span
-                  className="text-yellow-400 font-black text-2xl"
-                  style={{ textShadow: "0 0 20px rgba(255,215,9,0.4)" }}
-                >
-                  R$ {total.toFixed(2).replace(".", ",")}
-                </span>
-              </div>
-            </div>
+      {/* IZI COINS SECTION */}
+      {iziCoins >= 100 && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+             <div className="flex items-center gap-2">
+               <span className="material-symbols-outlined text-yellow-400 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>monetization_on</span>
+               <h2 className="font-extrabold text-xs tracking-tight text-white uppercase">Usar IZI Coins</h2>
+             </div>
+             <div 
+               onClick={() => setUseCoins(!useCoins)}
+               className={`w-12 h-6 rounded-full p-1 transition-all cursor-pointer ${useCoins ? 'bg-yellow-400' : 'bg-zinc-800'}`}
+             >
+               <motion.div 
+                 animate={{ x: useCoins ? 24 : 0 }}
+                 className="size-4 bg-black rounded-full shadow-sm"
+               />
+             </div>
+          </div>
+          <p className="text-[10px] text-zinc-500 font-bold leading-relaxed px-1">
+            Você possui <span className="text-yellow-400">{iziCoins} IZI Coins</span>. 
+            Utilize-as para obter um desconto de <span className="text-white">R$ {(iziCoins * iziCoinValue).toFixed(2).replace(".", ",")}</span> neste pedido.
+          </p>
+        </section>
+      )}
+
+      {/* Totais */}
+      <div className="space-y-3 pt-6 border-t border-zinc-900">
+        {[
+          { label: "Subtotal", value: `R$ ${subtotal.toFixed(2).replace(".", ",")}` },
+          { label: "Entrega", value: "Grátis", green: true },
+          ...(couponDiscount > 0
+            ? [
+                {
+                  label: `Desconto (${appliedCoupon?.coupon_code})`,
+                  value: `-R$ ${couponDiscount.toFixed(2).replace(".", ",")}`,
+                  green: true,
+                },
+              ]
+            : []),
+          ...(useCoins
+            ? [
+                {
+                  label: "Desconto IZI Coins",
+                  value: `-R$ ${coinDiscount.toFixed(2).replace(".", ",")}`,
+                  green: true,
+                },
+              ]
+            : []),
+        ].map((row: any) => (
+          <div key={row.label} className="flex justify-between items-center px-1">
+            <span className="text-zinc-500 text-xs font-bold uppercase tracking-wider">{row.label}</span>
+            <span className={`text-sm font-black ${row.green ? "text-emerald-400" : "text-zinc-300"}`}>
+              {row.value}
+            </span>
+          </div>
+        ))}
+        <div className="h-px bg-zinc-900 my-2" />
+        <div className="flex justify-between items-center px-1">
+          <span className="text-white font-black text-sm uppercase tracking-widest">Total</span>
+          <span
+            className="text-yellow-400 font-black text-2xl"
+            style={{ textShadow: "0 0 20px rgba(255,215,9,0.4)" }}
+          >
+            R$ {total.toFixed(2).replace(".", ",")}
+          </span>
+        </div>
+      </div>
 
             {/* Botão confirmar */}
             <button
-              onClick={() => handlePlaceOrder()}
+              onClick={() => handlePlaceOrder(useCoins)}
               disabled={!paymentMethod}
               className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
