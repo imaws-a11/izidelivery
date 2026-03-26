@@ -9,7 +9,7 @@ interface OrderListViewProps {
   fetchMyOrders: (uid: string) => void;
 }
 
-const OrderListView: React.FC<OrderListViewProps> = ({
+export const OrderListView: React.FC<OrderListViewProps> = ({
   myOrders,
   setSelectedItem,
   setSubView,
@@ -285,4 +285,4 @@ const OrderListView: React.FC<OrderListViewProps> = ({
   );
 };
 
-export default OrderListView;
+

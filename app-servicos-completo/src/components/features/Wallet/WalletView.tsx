@@ -11,7 +11,7 @@ interface WalletViewProps {
   setSubView: (view: string) => void;
 }
 
-const WalletView: React.FC<WalletViewProps> = ({
+export const WalletView: React.FC<WalletViewProps> = ({
   walletTransactions,
   myOrders,
   userXP,
@@ -300,4 +300,4 @@ const WalletView: React.FC<WalletViewProps> = ({
   );
 };
 
-export default WalletView;
+

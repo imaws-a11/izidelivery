@@ -13,7 +13,7 @@ interface ProfileViewProps {
   fetchSavedAddresses: (uid: string) => void;
 }
 
-const ProfileView: React.FC<ProfileViewProps> = ({
+export const ProfileView: React.FC<ProfileViewProps> = ({
   user,
   userName,
   userLevel,
@@ -92,4 +92,4 @@ const ProfileView: React.FC<ProfileViewProps> = ({
   );
 };
 
-export default ProfileView;
+
