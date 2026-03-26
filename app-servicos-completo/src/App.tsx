@@ -6461,7 +6461,6 @@ function App() {
   const renderExploreEnvios = () => {
     const services = [
       { id: "express", name: "Entrega Express", desc: "Documentos e pequenos volumes", icon: "bolt", action: () => { setTransitData({ ...transitData, type: "utilitario" }); navigateSubView("shipping_details"); } },
-      { id: "frete",   name: "Fretes & Mudanças", desc: "Transporte de grandes volumes", icon: "local_shipping", action: () => { setTransitData({ ...transitData, type: "utilitario" }); navigateSubView("shipping_details"); } },
       { id: "coleta",  name: "Coleta Agenciada", desc: "Logística para empresas", icon: "inventory_2", action: () => { setTransitData({ ...transitData, type: "utilitario" }); navigateSubView("shipping_details"); } },
     ];
     return (
@@ -6503,8 +6502,8 @@ function App() {
       <div className="absolute inset-0 z-[120] bg-slate-50 bg-zinc-900 flex flex-col hide-scrollbar overflow-y-auto animate-in fade-in duration-500 pb-40">
         <header className="px-6 py-8 flex items-center justify-between gap-4 sticky top-0 bg-slate-50/80 bg-zinc-900/80 backdrop-blur-xl z-50">
           <button
-            onClick={() => setSubView("transit_selection")}
-            className="size-12 rounded-2xl bg-white bg-zinc-900 shadow-xl flex items-center justify-center text-white active:scale-90 transition-all border border-zinc-800 border-zinc-700"
+            onClick={() => navigateSubView("explore_envios")}
+            className="size-12 rounded-2xl bg-zinc-900 shadow-xl flex items-center justify-center text-white active:scale-90 transition-all border border-zinc-800"
           >
             <Icon name="arrow_back" />
           </button>
@@ -6520,25 +6519,50 @@ function App() {
           <section className="space-y-6">
             <div className="flex items-center gap-4 px-2">
               <Icon name="location_on" />
-              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Local da Entrega</h3>
+              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Roteiro de Entrega</h3>
             </div>
-            <div className="bg-white bg-zinc-900 p-6 rounded-[35px] border border-zinc-800 border-zinc-800 shadow-xl">
-               <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Endereço Selecionado</p>
-               <AddressSearchInput 
-                 isLoaded={isLoaded}
-                 initialValue={transitData.destination}
-                 placeholder="Digite o endereço..."
-                 className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
-                 onSelect={(place: google.maps.places.PlaceResult) => {
-                   const dest = place.formatted_address || "";
-                   setTransitData(prev => ({ ...prev, destination: dest }));
-                   if (dest && transitData.origin) {
-                     setDistancePrices({});
-                     setRouteDistance("");
-                     calculateDistancePrices(transitData.origin, dest);
-                   }
-                 }}
-               />
+            
+            <div className="space-y-4">
+              {/* ORIGEM (COLETA) */}
+              <div className="bg-zinc-900 p-6 rounded-[35px] border border-zinc-800 shadow-xl flex flex-col gap-2">
+                <div className="flex justify-between items-center mb-1 ml-1">
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em]">Origem (Onde Coletar?)</p>
+                   <button 
+                     onClick={updateLocation}
+                     className="flex items-center gap-1.5 text-yellow-400 hover:text-yellow-300 transition-colors active:scale-95 px-2 py-1 rounded-full bg-yellow-400/5"
+                   >
+                      <span className="material-symbols-outlined text-xs">my_location</span>
+                      <span className="text-[8px] font-black uppercase tracking-widest">Localização Atual</span>
+                   </button>
+                </div>
+                <AddressSearchInput 
+                  isLoaded={isLoaded}
+                  initialValue={transitData.origin}
+                  placeholder="Endereço de partida..."
+                  className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                  onSelect={(place) => setTransitData(prev => ({ ...prev, origin: place.formatted_address || "" }))}
+                />
+              </div>
+
+              {/* DESTINO */}
+              <div className="bg-zinc-900 p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                 <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Para onde levar?</p>
+                 <AddressSearchInput 
+                   isLoaded={isLoaded}
+                   initialValue={transitData.destination}
+                   placeholder="Digite o endereço de destino..."
+                   className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                   onSelect={(place: google.maps.places.PlaceResult) => {
+                     const dest = place.formatted_address || "";
+                     setTransitData(prev => ({ ...prev, destination: dest }));
+                     if (dest && transitData.origin) {
+                       setDistancePrices({});
+                       setRouteDistance("");
+                       calculateDistancePrices(transitData.origin, dest);
+                     }
+                   }}
+                 />
+              </div>
             </div>
           </section>
 
@@ -6615,16 +6639,16 @@ function App() {
 
         <div className="fixed bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent dark:from-slate-900 dark:via-slate-900 z-50">
           <button
-            disabled={!transitData.receiverName || !transitData.receiverPhone || isLoading}
+            disabled={!transitData.origin || !transitData.destination || !transitData.receiverName || !transitData.receiverPhone || isLoading}
             onClick={handleRequestTransit}
-            className="w-full bg-slate-900  text-white  font-black text-xl py-6 rounded-[32px] shadow-2xl active:scale-[0.98] transition-all disabled:opacity-30 flex justify-center items-center gap-4 group"
+            className="w-full bg-yellow-400 text-black font-black text-xl py-6 rounded-[32px] shadow-[0_20px_40px_rgba(255,215,9,0.2)] active:scale-[0.98] transition-all disabled:opacity-30 flex justify-center items-center gap-4 group"
           >
             {isLoading ? (
-              <div className="size-7 border-4 border-white/30 border-t-white   rounded-full animate-spin"></div>
+              <div className="size-7 border-4 border-black/30 border-t-black rounded-full animate-spin"></div>
             ) : (
               <>
-                <span className="tracking-tighter uppercase tracking-[0.1em]">Agendar Coleta & Enviar</span>
-                <Icon name="bolt" />
+                <span className="uppercase tracking-[0.1em]">Continuar</span>
+                <Icon name="arrow_forward" />
               </>
             )}
           </button>
@@ -7404,6 +7428,7 @@ function App() {
                 userLevel={userLevel}
                 userId={userId}
                 userLocation={userLocation}
+                isIziBlackMembership={isIziBlackMembership}
                 cart={cart}
                 myOrders={myOrders}
                 navigateSubView={navigateSubView}
@@ -7451,6 +7476,7 @@ function App() {
                 userName={userName}
                 userLevel={userLevel}
                 userXP={userXP}
+                walletBalance={walletBalance}
                 setSubView={setSubView}
                 logout={logout}
               />

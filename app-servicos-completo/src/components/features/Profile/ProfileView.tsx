@@ -2,24 +2,23 @@ import React from "react";
 import { motion } from "framer-motion";
 
 interface ProfileViewProps {
-  user: any;
+  userId: string | null;
   userName: string | null;
-  setUserName: (name: string) => void;
   userLevel: number;
   userXP: number;
-  walletBalance: number;
-  savedAddresses: any[];
+  walletBalance?: number;
   logout: () => Promise<void>;
-  fetchSavedAddresses: (uid: string) => void;
+  setSubView?: (view: string) => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
-  user,
+  userId,
   userName,
   userLevel,
   userXP,
-  walletBalance,
+  walletBalance = 0,
   logout,
+  setSubView,
 }) => {
   const nextLevelXP = (userLevel + 1) * 1000;
 
@@ -33,7 +32,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="flex items-center gap-5">
           <div className="size-20 rounded-3xl overflow-hidden border border-zinc-800 bg-zinc-900">
              <img
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid || "izi"}`}
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "izi"}`}
                 alt="User"
                 className="size-full"
               />
@@ -65,7 +64,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       </div>
 
       <div className="p-5 space-y-1">
-        <button className="w-full flex items-center gap-4 py-4 text-left border-b border-zinc-900 last:border-0 group">
+        <button 
+          onClick={() => setSubView?.("addresses")}
+          className="w-full flex items-center gap-4 py-4 text-left border-b border-zinc-900 last:border-0 group"
+        >
           <span className="material-symbols-outlined text-zinc-600 group-hover:text-yellow-400">location_on</span>
           <span className="font-black text-sm">Meus Endereços</span>
         </button>
@@ -73,7 +75,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <span className="material-symbols-outlined text-zinc-600 group-hover:text-yellow-400">payments</span>
           <span className="font-black text-sm">Métodos de Pagamento</span>
         </button>
-        <button className="w-full flex items-center gap-4 py-4 text-left border-b border-zinc-900 last:border-0 group">
+        <button 
+          onClick={() => setSubView?.("izi_black_purchase")}
+          className="w-full flex items-center gap-4 py-4 text-left border-b border-zinc-900 last:border-0 group"
+        >
           <span className="material-symbols-outlined text-zinc-600 group-hover:text-yellow-400">workspace_premium</span>
           <span className="font-black text-sm">Izi Black</span>
         </button>
@@ -91,5 +96,3 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     </div>
   );
 };
-
-

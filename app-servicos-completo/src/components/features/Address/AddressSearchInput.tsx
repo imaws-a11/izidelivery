@@ -33,6 +33,10 @@ interface AddressSearchInputProps {
 
 export const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClear, className }: AddressSearchInputProps) => {
   const [query, setQuery] = useState(initialValue || "");
+  useEffect(() => {
+    setQuery(initialValue || "");
+  }, [initialValue]);
+
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
