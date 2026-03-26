@@ -240,3 +240,16 @@ export interface DynamicRatesState {
     highDemandActive: boolean;
   };
 }
+
+export interface PartnerStore {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  category?: string;
+  logo_url?: string;
+  is_active: boolean;
+  created_at: string;
+}
