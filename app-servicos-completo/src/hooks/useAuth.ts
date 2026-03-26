@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { auth } from '../lib/firebase';
 import { supabase } from '../lib/supabase';
-import type { User } from "firebase/auth";
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut,
-  updateProfile
+  updateProfile,
+  type User
 } from "firebase/auth";
 
 export const useAuth = () => {
@@ -21,6 +21,7 @@ export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [authInitLoading, setAuthInitLoading] = useState(true);
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -33,6 +34,8 @@ export const useAuth = () => {
         const { data: isAdmin } = await supabase.from("admin_users").select("id").eq("id", u.uid).maybeSingle();
         const { data: isDriver } = await supabase.from("drivers_delivery").select("id").eq("id", u.uid).maybeSingle();
 
+        setIsUserAdmin(!!isAdmin);
+
         if (!isAdmin && !isDriver) {
           await supabase.from("users_delivery").upsert({ 
             id: u.uid, 
@@ -40,6 +43,8 @@ export const useAuth = () => {
             email: u.email,
           });
         }
+      } else {
+        setIsUserAdmin(false);
       }
       setAuthInitLoading(false);
     });
@@ -110,6 +115,7 @@ export const useAuth = () => {
   };
 
   const logout = async () => {
+    setIsUserAdmin(false);
     await signOut(auth);
   };
 
@@ -134,6 +140,7 @@ export const useAuth = () => {
     setAuthInitLoading,
     handleLogin,
     handleSignUp,
-    logout
+    logout,
+    isAdmin: isUserAdmin
   };
 };

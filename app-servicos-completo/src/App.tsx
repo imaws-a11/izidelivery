@@ -68,7 +68,8 @@ function App() {
     handleLogin,
     handleSignUp,
     setIsLoading,
-    logout
+    logout,
+    isAdmin
   } = useAuth();
 
   const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
@@ -161,7 +162,8 @@ function App() {
   const toastError = (message: string) => showToast(message, 'warning');
 
   // --- Izi Elite Client Features ---
-  const [userXP, setUserXP] = useState(1250);
+  const [userXP, setUserXP] = useState(0);
+  const [iziCoins, setIziCoins] = useState(0);
   const [userLevel] = useState(12);
   const [nextLevelXP] = useState(2500);
   const [isAIOpen, setIsAIOpen] = useState(false);
@@ -1133,13 +1135,15 @@ function App() {
   const fetchWalletBalance = async (uid: string) => {
     const { data } = await supabase
       .from("users_delivery")
-      .select("wallet_balance, is_izi_black, cashback_earned")
+      .select("wallet_balance, is_izi_black, cashback_earned, user_xp, izi_coins")
       .eq("id", uid)
       .single();
     if (data) {
       setWalletBalance(data.wallet_balance || 0);
       setIsIziBlackMembership(data.is_izi_black || false);
       setIziCashbackEarned(data.cashback_earned || 0);
+      setUserXP(data.user_xp || 0);
+      setIziCoins(data.izi_coins || 0);
     }
 
     // Buscar transacoes reais
@@ -1467,18 +1471,24 @@ function App() {
   };
 
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = async (useCoins: boolean = false) => {
     if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
     if (!userId) { alert("Faça login para continuar."); return; }
     if (cart.length === 0) { alert("Seu carrinho está vazio."); return; }
 
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const discount = appliedCoupon
+    const couponDiscount = appliedCoupon
       ? appliedCoupon.discount_type === "fixed"
         ? appliedCoupon.discount_value
         : (subtotal * appliedCoupon.discount_value) / 100
       : 0;
-    const total = Math.max(0, subtotal - discount);
+    
+    const coinValue = globalSettings?.izi_coin_value || 0.01;
+    const coinDiscount = useCoins ? iziCoins * coinValue : 0;
+    const total = Math.max(0, subtotal - couponDiscount - coinDiscount);
+
+    const coinRate = globalSettings?.izi_coin_rate || 1;
+    const earnedCoins = Math.floor(total * coinRate);
 
     const orderBase = {
       user_id: userId,
@@ -1492,11 +1502,20 @@ function App() {
       notes: paymentMethod === "dinheiro" && changeFor ? `TROCO PARA: R$ ${changeFor}` : "",
     };
 
-    const clearCart = () => {
+    const clearCart = async () => {
+      const finalCoins = useCoins ? earnedCoins : (iziCoins + earnedCoins);
       setCart([]);
       setAppliedCoupon(null);
       setCouponInput("");
       setUserXP((prev: number) => prev + 50);
+      setIziCoins(finalCoins);
+      
+      if (userId) {
+        await supabase.from("users_delivery").update({ 
+          izi_coins: finalCoins,
+          user_xp: (userXP + 50) 
+        }).eq("id", userId);
+      }
     };
 
     try {
@@ -1549,7 +1568,7 @@ function App() {
             satoshis: lnData.satoshis, 
             btcPrice: lnData.btc_price_brl 
           });
-          clearCart();
+          await clearCart();
           navigateSubView("lightning_payment");
         } catch (err) {
           console.error("Exceção Lightning:", err);
@@ -1589,7 +1608,7 @@ function App() {
         });
 
         setSelectedItem(order);
-        clearCart();
+        await clearCart();
         navigateSubView("waiting_merchant");
         return;
       }
@@ -1612,7 +1631,7 @@ function App() {
             return;
           }
           setSelectedItem(order);
-          clearCart();
+          await clearCart();
           navigateSubView("waiting_merchant");
           setIsLoading(false);
         }, 2000);
@@ -1642,7 +1661,7 @@ function App() {
         }
 
         setSelectedItem(order);
-        clearCart();
+        await clearCart();
         setChangeFor("");
         navigateSubView("waiting_merchant");
         return;
@@ -4517,7 +4536,7 @@ function App() {
         {/* HERO SALDO */}
         <div className="px-5 pt-14 pb-8 border-b border-zinc-900">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-yellow-400 font-extrabold italic tracking-widest text-xs">IZI BLACK VIP</span>
+            <span className="text-yellow-400 font-extrabold italic tracking-widest text-xs">IZI PAY</span>
             <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
           </div>
           <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-1">Saldo Disponível</p>
@@ -5495,7 +5514,7 @@ function App() {
               </div>
               <h2 className="text-7xl font-black text-white tabular-nums tracking-tighter leading-none mb-4 italic">{iziCoins.toLocaleString('pt-BR')}</h2>
               <div className="inline-block px-6 py-2 rounded-full bg-white/5 border border-white/5 text-[9px] font-black text-white/20 uppercase tracking-[0.3em]">
-                Acumule +5 coins a cada R$ 1,00 gasto
+                Acumule {globalSettings?.izi_coin_rate || 1} coins a cada R$ 1,00 gasto
               </div>
             </div>
           </motion.section>
@@ -7757,7 +7776,11 @@ function App() {
                 showToast={showToast}
                 userId={userId}
                 userName={userName}
+                iziCoins={iziCoins}
+                iziCashback={iziCashbackEarned}
                 setShowDepositModal={setShowDepositModal}
+                iziCoinValue={globalSettings?.izi_coin_value || 0.01}
+                iziCoinRate={globalSettings?.izi_coin_rate || 5}
               />
             )}
             {tab === "profile" && (
@@ -8012,7 +8035,11 @@ function App() {
                     showToast={showToast}
                     userId={userId}
                     userName={userName}
+                    iziCoins={iziCoins}
+                    iziCashback={iziCashbackEarned}
                     setShowDepositModal={setShowDepositModal}
+                    iziCoinValue={globalSettings?.izi_coin_value || 0.01}
+                    iziCoinRate={globalSettings?.izi_coin_rate || 5}
                   />
                 </motion.div>
               )}
@@ -8062,6 +8089,8 @@ function App() {
                     handlePlaceOrder={handlePlaceOrder}
                     setPaymentsOrigin={setPaymentsOrigin}
                     setSubView={setSubView}
+                    iziCoins={iziCoins}
+                    iziCoinValue={globalSettings?.izi_coin_value || 0.01}
                   />
                 </motion.div>
               )}

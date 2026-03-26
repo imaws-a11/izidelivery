@@ -7,9 +7,11 @@ interface AIConciergePanelProps {
   userName: string;
   walletBalance: number;
   myOrders: any[];
+  userLocation: any;
+  ESTABLISHMENTS: any[];
 }
 
-export const AIConciergePanel = ({ isOpen, onClose, userName, walletBalance, myOrders }: AIConciergePanelProps) => {
+export const AIConciergePanel = ({ isOpen, onClose, userName, walletBalance, myOrders, userLocation, ESTABLISHMENTS }: AIConciergePanelProps) => {
   const [messages, setMessages] = useState<{role: 'user'|'assistant', content: string}[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);

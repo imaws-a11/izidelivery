@@ -6,20 +6,25 @@ interface WalletViewProps {
   walletTransactions: any[];
   myOrders: any[];
   userXP: number;
+  iziCoins: number;
+  iziCashback: number;
   savedCards: any[];
   paymentMethod: string;
-  setPaymentsOrigin: (origin: string) => void;
+  setPaymentsOrigin: (origin: 'checkout' | 'profile' | 'izi_black') => void;
   setSubView: (view: string) => void;
   userId: string | null;
   userName: string;
   showToast?: (msg: string, type: 'success' | 'error' | 'warning') => void;
   setShowDepositModal: (show: boolean) => void;
+  iziCoinValue?: number;
+  iziCoinRate?: number;
 }
 
 export const WalletView: React.FC<WalletViewProps> = ({
   walletTransactions = [],
   myOrders = [],
-  userXP = 0,
+  iziCoins = 0,
+  iziCashback = 0,
   savedCards = [],
   paymentMethod = "cartao",
   setPaymentsOrigin,
@@ -28,6 +33,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
   userName,
   showToast,
   setShowDepositModal,
+  iziCoinValue = 0.01,
 }) => {
   const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr">("main");
   const historyRef = useRef<HTMLElement>(null);
@@ -388,23 +394,23 @@ export const WalletView: React.FC<WalletViewProps> = ({
         </section>
 
         {/* PONTOS E CASHBACK */}
-        <div className="grid grid-cols-2 gap-0 border border-zinc-900 rounded-2xl overflow-hidden">
-          <div className="flex flex-col gap-1 p-5 border-r border-zinc-900">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1 p-5 bg-zinc-900/40 rounded-3xl border border-zinc-900">
             <div className="flex items-center gap-1.5 mb-2">
               <span
                 className="material-symbols-outlined text-yellow-400 text-base"
                 style={{ fontVariationSettings: "'FILL' 1" }}
               >
-                stars
+                monetization_on
               </span>
-              <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">IZI Points</span>
+              <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">IZI Coins</span>
             </div>
-            <p className="text-2xl font-extrabold text-white">{(userXP * 10).toLocaleString("pt-BR")}</p>
+            <p className="text-2xl font-extrabold text-white">{iziCoins.toLocaleString("pt-BR")}</p>
             <p className="text-[9px] text-yellow-400/50">
-              ≈ R$ {(userXP * 0.1).toFixed(2).replace(".", ",")} em descontos
+              ≈ R$ {(iziCoins * iziCoinValue).toFixed(2).replace(".", ",")} em descontos
             </p>
           </div>
-          <div className="flex flex-col gap-1 p-5">
+          <div className="flex flex-col gap-1 p-5 bg-zinc-900/40 rounded-3xl border border-zinc-900">
             <div className="flex items-center gap-1.5 mb-2">
               <span
                 className="material-symbols-outlined text-emerald-400 text-base"
@@ -414,7 +420,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
               </span>
               <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Cashback</span>
             </div>
-            <p className="text-2xl font-extrabold text-white">R$ 42,10</p>
+            <p className="text-2xl font-extrabold text-white">R$ {iziCashback.toFixed(2).replace(".", ",")}</p>
             <p className="text-[9px] text-zinc-700">Disponível para usar</p>
           </div>
         </div>
