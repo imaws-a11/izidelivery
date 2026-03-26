@@ -7610,7 +7610,7 @@ function App() {
   const BottomNav = () => {
     const navItems = [
       { id: "home",    icon: "explore",                label: "Início"   },
-      { id: "wallet",  icon: "account_balance_wallet",  label: "Wallet"   },
+      { id: "wallet",  icon: "account_balance_wallet",  label: "IZI Pay"  },
       { id: "orders",  icon: "receipt_long",            label: "Pedidos"  },
       { id: "profile", icon: "person",                  label: "Perfil"   },
     ];
@@ -7748,9 +7748,15 @@ function App() {
             {tab === "wallet" && (
               <WalletView
                 walletTransactions={walletTransactions}
+                myOrders={myOrders}
+                userXP={userXP}
+                savedCards={savedCards}
+                paymentMethod={paymentMethod}
+                setPaymentsOrigin={setPaymentsOrigin}
                 setSubView={setSubView}
                 showToast={showToast}
                 userId={userId}
+                userName={userName}
                 setShowDepositModal={setShowDepositModal}
               />
             )}
@@ -7997,9 +8003,15 @@ function App() {
                 >
                   <WalletView
                     walletTransactions={walletTransactions}
+                    myOrders={myOrders}
+                    userXP={userXP}
+                    savedCards={savedCards}
+                    paymentMethod={paymentMethod}
+                    setPaymentsOrigin={setPaymentsOrigin}
                     setSubView={setSubView}
                     showToast={showToast}
                     userId={userId}
+                    userName={userName}
                     setShowDepositModal={setShowDepositModal}
                   />
                 </motion.div>
