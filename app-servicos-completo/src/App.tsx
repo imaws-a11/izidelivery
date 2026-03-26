@@ -944,7 +944,49 @@ function App() {
     }
   }, [subView]);
 
-  // Simular movimento do entregador
+    
+  useEffect(() => {
+    let html5QrCode: any = null;
+    if (isScanningQR) {
+      setTimeout(() => {
+        const reader = document.getElementById('reader');
+        if (reader && typeof (window as any).Html5Qrcode !== 'undefined') {
+          html5QrCode = new (window as any).Html5Qrcode("reader");
+          html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            (decodedText: string) => {
+              if (decodedText.startsWith("izi:transfer:")) {
+                const parts = decodedText.split(":");
+                const targetId = parts[2];
+                const targetEmail = parts[3];
+                const targetPhone = parts[4];
+                setTransferTarget({ id: targetId, email: targetEmail, phone: targetPhone });
+                setIsScanningQR(false);
+                html5QrCode.stop();
+                toastSuccess("Usuário Identificado!");
+              }
+            },
+            () => {}
+          ).catch((e: any) => console.error(e));
+        }
+      }, 500);
+    }
+    return () => {
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().catch((e: any) => console.error(e));
+      }
+    };
+  }, [isScanningQR]);
+
+// Fetch payment methods when entering payments screen
+  useEffect(() => {
+    if (subView === "payments" && userId) {
+      fetchSavedCards(userId);
+    }
+  }, [subView, userId]);
+
+// Simular movimento do entregador
   useEffect(() => {
     if (subView === "active_order") {
       const interval = setInterval(() => {
@@ -960,6 +1002,9 @@ function App() {
   const [savedCards, setSavedCards] = useState<any[]>([]);
   const [isLoadingCards, setIsLoadingCards] = useState(false);
   const [isAddingCard, setIsAddingCard] = useState(false);
+  const [isShowingMyQR, setIsShowingMyQR] = useState(false);
+  const [isScanningQR, setIsScanningQR] = useState(false);
+  const [transferTarget, setTransferTarget] = useState<any>(null);
   const [newCardData, setNewCardData] = useState({ number: "", expiry: "", cvv: "", brand: "Visa" });
   // Controla de onde a tela de pagamentos foi aberta: "checkout" | "profile"
   const [paymentsOrigin, setPaymentsOrigin] = useState<"checkout" | "profile" | "izi_black">("profile");
@@ -4101,6 +4146,7 @@ function App() {
   const renderProfile = () => {
     const menuItems = [
       { icon: "location_on",            label: "Endereços",        desc: "Seus endereços salvos",          action: () => setSubView("addresses") },
+      { icon: "credit_card",            label: "Métodos de Pagamento", desc: "Gerencie seus cartões e PIX",     action: () => { setPaymentsOrigin("profile"); setSubView("payments"); } },
       { icon: "account_balance_wallet", label: "Carteira",         desc: "Saldo e extrato",                action: () => setTab("wallet") },
       { icon: "workspace_premium",      label: "IZI Black",        desc: "Benefícios do plano premium",    action: () => { setIziBlackStep("info"); setSubView("izi_black_purchase"); } },
       { icon: "military_tech",          label: "Quests & Ranking", desc: "MissÃµes e conquistas",           action: () => setSubView("quest_center") },
@@ -4381,7 +4427,17 @@ function App() {
           <h1 className="text-xl font-black text-white uppercase tracking-tight">Pagamentos</h1>
         </header>
 
-        <main className="px-5 py-8 space-y-10">
+                <main className="px-5 py-8 space-y-10">
+          {/* RESUMO DE SALDO */}
+          <div className="bg-gradient-to-br from-zinc-900 to-black border border-white/5 p-6 rounded-[35px] flex items-center justify-between shadow-2xl">
+            <div>
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Seu Saldo IZI</p>
+              <h2 className="text-3xl font-black text-white">R$ {(userBalance || 0).toFixed(2).replace(".", ",")}</h2>
+            </div>
+            <button onClick={() => setTab("wallet")} className="size-12 rounded-2xl bg-yellow-400 text-black flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-yellow-400/20">
+              <span className="material-symbols-outlined font-bold">add</span>
+            </button>
+          </div>
           {/* MÃ‰TODOS SMART */}
           <div className="grid grid-cols-2 gap-4">
              <button className="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl flex flex-col items-center gap-2 opacity-50 cursor-not-allowed">
@@ -4420,7 +4476,8 @@ function App() {
                   <div 
                     key={card.id} 
                     onClick={() => handleSetPrimaryCard(card.id)}
-                    className={`relative p-6 rounded-[32px] border-2 transition-all cursor-pointer ${card.active ? "border-yellow-400 bg-zinc-900/80" : "border-zinc-900 bg-zinc-900/30"}`}
+                    className={`relative p-6 rounded-[32px] border-2 transition-all cursor-pointer ${card.active ? "border-yellow-400" : "border-zinc-900"}`}
+                    style={{ background: card.color || "rgba(24,24,27,0.5)" }}
                   >
                     <div className="flex justify-between items-start mb-6">
                       <div className={`size-12 rounded-2xl flex items-center justify-center ${card.active ? "bg-yellow-400 text-black" : "bg-zinc-800 text-zinc-500"}`}>
@@ -4432,7 +4489,7 @@ function App() {
                     </div>
                     <div>
                       <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">{card.brand}</p>
-                      <p className="font-extrabold text-lg tracking-[0.2em] text-white">â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ {card.last4}</p>
+                      <p className="font-extrabold text-lg tracking-[0.2em] text-white">•••• •••• •••• {card.last4}</p>
                     </div>
                     {card.active && (
                        <div className="absolute top-6 right-12 bg-yellow-400 text-black text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest">Padrão</div>
@@ -4448,14 +4505,15 @@ function App() {
             <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] px-1">Outros Métodos</h3>
             <div className="bg-zinc-900/30 border border-zinc-900 rounded-[32px] overflow-hidden">
                {[
-                 { id: "pix", icon: "pix", label: "PIX Instantâneo", color: "text-emerald-400" },
+                  { id: "wallet", icon: "account_balance_wallet", label: "Saldo Carteira Izi", color: "text-yellow-400" },
+                  { id: "pix", icon: "pix", label: "PIX Instantâneo", color: "text-emerald-400" },
                  { id: "google_pay", icon: "google", label: "Google Pay", color: "text-blue-400" },
                  { id: "bitcoin_lightning", icon: "bolt", label: "Bitcoin Lightning", color: "text-orange-400" },
                  { id: "dinheiro", icon: "payments", label: "Dinheiro na Entrega", color: "text-zinc-500" },
                  { id: "cartao_entrega", icon: "credit_card", label: "Cartão na Entrega", color: "text-zinc-500" }
                ].map((m, i) => (
                  <button key={m.id} onClick={() => setPaymentMethod(m.id as any)}
-                   className={`w-full flex items-center gap-4 p-5 hover:bg-zinc-900/50 transition-all ${i > 0 ? "border-t border-zinc-900" : ""}`}>
+                   className={`w-full flex items-center gap-4 p-4 hover:bg-zinc-900 transition-all active:scale-[0.98] ${i > 0 ? "border-t border-zinc-900/50" : ""}`}>
                    <span className={`material-symbols-outlined text-xl ${m.color}`} style={{ fontVariationSettings: paymentMethod === m.id ? "'FILL' 1" : "'FILL' 0" }}>{m.icon}</span>
                    <p className="flex-1 text-left font-black text-sm text-zinc-100">{m.label}</p>
                    {paymentMethod === m.id && <span className="material-symbols-outlined text-yellow-400 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>}
@@ -4532,6 +4590,116 @@ function App() {
   };
 
 
+  
+  const renderMyQRModal = () => (
+    <AnimatePresence>
+      {isShowingMyQR && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-6">
+          <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+            className="w-full max-w-sm bg-zinc-900 border border-white/5 rounded-[45px] p-10 flex flex-col items-center text-center shadow-2xl relative overflow-hidden">
+            <div className="absolute -top-24 -right-24 size-48 bg-yellow-400/10 rounded-full blur-[80px]" />
+            <div className="absolute -bottom-24 -left-24 size-48 bg-yellow-400/5 rounded-full blur-[80px]" />
+            
+            <button onClick={() => setIsShowingMyQR(false)} className="absolute top-6 right-6 size-10 rounded-full bg-white/5 flex items-center justify-center active:scale-90 transition-all">
+              <span className="material-symbols-outlined text-zinc-500">close</span>
+            </button>
+
+            <div className="size-20 rounded-[28px] bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center mb-8">
+              <span className="material-symbols-outlined text-4xl text-yellow-400">qr_code_2</span>
+            </div>
+            
+            <h3 className="text-2xl font-black text-white tracking-tight mb-2 uppercase">Meu IZI Code</h3>
+            <p className="text-zinc-500 text-xs font-medium mb-10 leading-relaxed px-4">Compartilhe para receber transferências instantâneas de IZI Coins.</p>
+
+            <div className="p-6 bg-white rounded-[40px] shadow-inner mb-10 relative group">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=izi:transfer:${userId}:${loginEmail}:${phone}`} 
+                alt="QR Code" 
+                className="size-56 object-contain"
+              />
+              <div className="absolute inset-0 border-[12px] border-white rounded-[40px] pointer-events-none" />
+            </div>
+
+            <div className="space-y-1">
+              <p className="font-black text-white text-base tracking-tight">{userName}</p>
+              <p className="text-zinc-600 font-bold text-[10px] uppercase tracking-widest">{loginEmail}</p>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  
+  const renderTransferModal = () => (
+    <AnimatePresence>
+      {transferTarget && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
+          <motion.div initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 30 }}
+            className="w-full max-w-sm bg-zinc-900 border border-white/5 rounded-[50px] p-8 text-center space-y-8 relative">
+            
+            <button onClick={() => setTransferTarget(null)} className="absolute top-6 right-6 size-10 rounded-full bg-white/5 flex items-center justify-center active:scale-90 transition-all">
+              <span className="material-symbols-outlined text-zinc-500">close</span>
+            </button>
+
+            <div className="size-24 rounded-full bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mx-auto mb-2">
+              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${transferTarget.email}`} className="size-full rounded-full" />
+            </div>
+
+            <div className="space-y-1">
+              <p className="font-black text-2xl text-white tracking-tight">Transferir IZI Coins</p>
+              <p className="text-emerald-400 font-bold text-xs uppercase tracking-widest leading-none mb-1">Para: {transferTarget.email}</p>
+              <p className="text-zinc-600 font-bold text-[9px] uppercase tracking-widest">{transferTarget.phone || "Sem telefone"}</p>
+            </div>
+
+            <div className="bg-zinc-950 p-6 rounded-[35px] border border-white/5">
+              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">Valor da Transferência</p>
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-2xl font-black text-yellow-400 opacity-40 italic">IZI</span>
+                <input 
+                  type="number" 
+                  placeholder="0,00"
+                  className="bg-transparent border-none text-4xl font-black text-white text-center w-full focus:ring-0 placeholder:text-zinc-800"
+                />
+              </div>
+            </div>
+
+            <button className="w-full bg-yellow-400 text-black font-black text-sm uppercase tracking-widest py-6 rounded-3xl shadow-xl shadow-yellow-400/20 active:scale-95 transition-all">
+              Confirmar Envio Instantâneo
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  const renderScanQRModal = () => (
+    <AnimatePresence>
+      {isScanningQR && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center">
+          
+          <div className="absolute top-10 left-6 right-6 flex items-center justify-between z-10">
+            <button onClick={() => setIsScanningQR(false)} className="size-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white">
+              <span className="material-symbols-outlined">close</span>
+            </button>
+            <h3 className="text-white font-black uppercase tracking-widest text-[10px]">Escanear IZI Code</h3>
+            <div className="size-12" />
+          </div>
+
+          <div id="reader" className="w-[85vw] h-[85vw] max-w-sm max-h-[400px] border-4 border-yellow-400/30 rounded-[40px] overflow-hidden relative shadow-[0_0_80px_rgba(255,184,0,0.1)]">
+            <div className="absolute inset-0 border-2 border-yellow-400/10 rounded-[40px] pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-48 border-2 border-white/20 border-dashed rounded-3xl animate-pulse" />
+          </div>
+
+          <p className="mt-12 text-zinc-500 font-bold text-xs animate-pulse">Aponte para o QR Code de um amigo</p>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   const renderWallet = () => {
     const walletBalance = walletTransactions.reduce((acc: number, t: any) =>
       ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
@@ -4579,11 +4747,11 @@ function App() {
           <div className="grid grid-cols-4 gap-2">
             {[
               { icon: "add",           label: "Adicionar" },
-              { icon: "arrow_outward", label: "Transferir" },
+              { icon: "arrow_outward", label: "Transferir", action: () => setIsScanningQR(true) },
               { icon: "history",       label: "Extrato" },
-              { icon: "qr_code_2",     label: "Meu QR" },
+              { icon: "qr_code_2", label: "Meu QR", action: () => setIsShowingMyQR(true) },
             ].map((a) => (
-              <button key={a.icon} className="flex flex-col items-center gap-2 py-4 active:scale-95 transition-all group">
+              <button key={a.icon} onClick={(a as any).action} className="flex flex-col items-center gap-2 py-4 active:scale-95 transition-all group">
                 <div className="size-12 rounded-2xl bg-zinc-900/60 border border-zinc-900 flex items-center justify-center group-hover:border-yellow-400/20 transition-all">
                   <span className="material-symbols-outlined text-zinc-500 group-hover:text-yellow-400 transition-colors text-xl">{a.icon}</span>
                 </div>
@@ -4647,7 +4815,7 @@ function App() {
                   </div>
                   <div>
                     <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Físico</p>
-                    <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ {card.last4}</p>
+                    <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">•••• •••• •••• {card.last4}</p>
                     <div className="flex justify-between items-center">
                       <p className="text-[8px] text-zinc-700 uppercase">{card.brand}</p>
                       <p className="text-[9px] text-zinc-600">Val. {card.expiry}</p>
