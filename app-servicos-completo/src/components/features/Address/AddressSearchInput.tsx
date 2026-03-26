@@ -3,35 +3,26 @@ import { createPortal } from "react-dom";
 
 const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string ?? '';
 
-// Carrega o Google Maps dinamicamente e chama callback quando pronto
-function loadGoogleMapsScript(callback: () => void) {
-  if ((window as any).google && (window as any).google.maps && (window as any).google.maps.places) {
-    callback();
-    return;
-  }
-  const existingScript = document.getElementById("gmaps-script");
-  if (existingScript) {
-    existingScript.addEventListener("load", callback);
-    return;
-  }
-  (window as any).__gmapsCallback = callback;
-  const script = document.createElement("script");
-  script.id = "gmaps-script";
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${GMAPS_KEY}&libraries=places,geometry&language=pt-BR&callback=__gmapsCallback`;
-  script.async = true;
-  script.defer = true;
-  document.head.appendChild(script);
-}
-
 interface AddressSearchInputProps {
   placeholder: string;
   initialValue?: string;
-  onSelect: (addr: { formatted_address: string }) => void;
+  onSelect: (addr: { formatted_address: string; lat?: number; lng?: number }) => void;
   onClear?: () => void;
   className?: string;
+  /** Localização do usuário para usar como referência de bias nas sugestões */
+  userCoords?: { lat: number; lng: number } | null;
+  /** Se true, o input está dentro de um modal/overlay com fundo escuro */
+  darkMode?: boolean;
 }
 
-export const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClear, className }: AddressSearchInputProps) => {
+export const AddressSearchInput = ({
+  placeholder,
+  initialValue,
+  onSelect,
+  onClear,
+  className,
+  userCoords,
+}: AddressSearchInputProps) => {
   const [query, setQuery] = useState(initialValue || "");
   useEffect(() => {
     setQuery(initialValue || "");
@@ -39,16 +30,10 @@ export const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClea
 
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
-  const [googleReady, setGoogleReady] = useState(!!(window as any).google?.maps?.places);
   const debounceRef = useRef<any>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!googleReady) {
-      loadGoogleMapsScript(() => setGoogleReady(true));
-    }
-  }, [googleReady]);
 
   // Fechar dropdown ao clicar fora
   useEffect(() => {
@@ -65,7 +50,7 @@ export const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClea
     if (wrapperRef.current) {
       const rect = wrapperRef.current.getBoundingClientRect();
       setDropdownPos({
-        top: rect.bottom + window.scrollY + 8,
+        top: rect.bottom + window.scrollY + 6,
         left: rect.left + window.scrollX,
         width: rect.width,
       });
@@ -73,25 +58,54 @@ export const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClea
   };
 
   const fetchSuggestions = async (input: string) => {
-    if (!input || input.length < 3) { setSuggestions([]); setOpen(false); return; }
+    if (!input || input.length < 2) {
+      setSuggestions([]);
+      setOpen(false);
+      return;
+    }
+
+    setLoading(true);
     try {
+      const body: Record<string, any> = {
+        input,
+        includedRegionCodes: ["br"],
+        languageCode: "pt-BR",
+      };
+
+      // Adiciona locationBias se temos coordenadas do usuário
+      if (userCoords?.lat && userCoords?.lng) {
+        body.locationBias = {
+          circle: {
+            center: { latitude: userCoords.lat, longitude: userCoords.lng },
+            radius: 50000, // 50km de raio
+          },
+        };
+      }
+
       const res = await fetch(
         `https://places.googleapis.com/v1/places:autocomplete`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": GMAPS_KEY },
-          body: JSON.stringify({ input, includedRegionCodes: ["br"], languageCode: "pt-BR" }),
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": GMAPS_KEY,
+            "X-Goog-FieldMask": "suggestions.placePrediction.text,suggestions.placePrediction.placeId,suggestions.placePrediction.structuredFormat",
+          },
+          body: JSON.stringify(body),
         }
       );
       const data = await res.json();
-      const predictions = (data.suggestions || []).map((s: any) => ({
-        description: s.placePrediction?.text?.text || "",
-        place_id: s.placePrediction?.placeId || "",
-        structured_formatting: {
-          main_text: s.placePrediction?.structuredFormat?.mainText?.text || "",
-          secondary_text: s.placePrediction?.structuredFormat?.secondaryText?.text || "",
-        }
-      })).filter((p: any) => p.description);
+      const predictions = (data.suggestions || [])
+        .map((s: any) => ({
+          description: s.placePrediction?.text?.text || "",
+          place_id: s.placePrediction?.placeId || "",
+          structured_formatting: {
+            main_text: s.placePrediction?.structuredFormat?.mainText?.text || "",
+            secondary_text: s.placePrediction?.structuredFormat?.secondaryText?.text || "",
+          },
+        }))
+        .filter((p: any) => p.description);
+
       if (predictions.length > 0) {
         setSuggestions(predictions);
         updateDropdownPos();
@@ -103,7 +117,26 @@ export const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClea
     } catch {
       setSuggestions([]);
       setOpen(false);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  /**
+   * Busca lat/lng do place selecionado via Places API (New) GET
+   */
+  const fetchPlaceDetails = async (placeId: string): Promise<{ lat: number; lng: number } | null> => {
+    try {
+      const res = await fetch(
+        `https://places.googleapis.com/v1/places/${placeId}?fields=location&key=${GMAPS_KEY}&languageCode=pt-BR`,
+        { method: "GET" }
+      );
+      const data = await res.json();
+      if (data?.location) {
+        return { lat: data.location.latitude, lng: data.location.longitude };
+      }
+    } catch { /* silent */ }
+    return null;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,7 +149,7 @@ export const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClea
       if (onClear) onClear();
       return;
     }
-    debounceRef.current = setTimeout(() => fetchSuggestions(val), 400);
+    debounceRef.current = setTimeout(() => fetchSuggestions(val), 350);
   };
 
   const handleClear = () => {
@@ -126,12 +159,22 @@ export const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClea
     if (onClear) onClear();
   };
 
-  const handleSelect = (prediction: any) => {
+  const handleSelect = async (prediction: any) => {
     const description = prediction.description || "";
     setQuery(description);
     setOpen(false);
     setSuggestions([]);
-    onSelect({ formatted_address: description });
+
+    // Busca coordenadas do lugar para melhor precisão de rota
+    let coords: { lat: number; lng: number } | null = null;
+    if (prediction.place_id) {
+      coords = await fetchPlaceDetails(prediction.place_id);
+    }
+
+    onSelect({
+      formatted_address: description,
+      ...(coords ?? {}),
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -144,58 +187,99 @@ export const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClea
         onSelect({ formatted_address: query });
       }
     }
+    if (e.key === "Escape") {
+      setOpen(false);
+    }
   };
 
-  const dropdown = open && suggestions.length > 0 ? createPortal(
-    <div
-      onMouseDown={e => e.preventDefault()}
-      style={{
-        position: "absolute",
-        top: dropdownPos.top,
-        left: dropdownPos.left,
-        width: dropdownPos.width,
-        background: "white",
-        borderRadius: "20px",
-        boxShadow: "0 20px 50px rgba(0,0,0,0.18)",
-        zIndex: 2147483647,
-        overflow: "hidden",
-        border: "1px solid #f1f5f9",
-        maxHeight: "320px",
-        overflowY: "auto",
-      }}
-    >
-      {suggestions.map((s: any, i: number) => (
-        <div
-          key={i}
-          onMouseDown={() => handleSelect(s)}
-          style={{
-            padding: "14px 20px",
-            cursor: "pointer",
-            borderTop: i > 0 ? "1px solid #f8fafc" : "none",
-            display: "flex",
-            alignItems: "flex-start",
-            gap: "12px",
-            background: "white",
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
-          onMouseLeave={e => (e.currentTarget.style.background = "white")}
-        >
-          <span style={{ fontSize: "18px", marginTop: "2px", flexShrink: 0 }}>📍 </span>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: "14px", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {s.structured_formatting?.main_text || s.description}
+  const dropdown =
+    open && suggestions.length > 0
+      ? createPortal(
+          <div
+            onMouseDown={(e) => e.preventDefault()}
+            style={{
+              position: "absolute",
+              top: dropdownPos.top,
+              left: dropdownPos.left,
+              width: dropdownPos.width,
+              borderRadius: "20px",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.06)",
+              zIndex: 2147483647,
+              overflow: "hidden",
+              maxHeight: "340px",
+              overflowY: "auto",
+              background: "#111827",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            {/* Header da lista */}
+            <div style={{ padding: "10px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <span style={{ fontSize: "9px", fontWeight: 900, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.2em" }}>
+                {userCoords ? "📍 Sugestões próximas à sua localização" : "Sugestões de endereço"}
+              </span>
             </div>
-            {s.structured_formatting?.secondary_text && (
-              <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {s.structured_formatting.secondary_text}
+
+            {suggestions.map((s: any, i: number) => (
+              <div
+                key={i}
+                onMouseDown={() => handleSelect(s)}
+                style={{
+                  padding: "14px 18px",
+                  cursor: "pointer",
+                  borderTop: i > 0 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "14px",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,217,0,0.05)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                <div style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "12px",
+                  background: "rgba(255,217,0,0.08)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: "16px", color: "#ffd900" }}>location_on</span>
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: "13px", color: "#f8fafc", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {s.structured_formatting?.main_text || s.description}
+                  </div>
+                  {s.structured_formatting?.secondary_text && (
+                    <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {s.structured_formatting.secondary_text}
+                    </div>
+                  )}
+                </div>
+                <span className="material-symbols-outlined" style={{ fontSize: "14px", color: "rgba(255,255,255,0.15)", flexShrink: 0 }}>north_west</span>
               </div>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>,
-    document.body
-  ) : null;
+            ))}
+
+            {/* Powered by Google */}
+            <div style={{
+              padding: "8px 18px",
+              borderTop: "1px solid rgba(255,255,255,0.05)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: "6px",
+            }}>
+              <span style={{ fontSize: "9px", color: "rgba(255,255,255,0.2)", fontWeight: 600 }}>powered by</span>
+              <svg height="10" viewBox="0 0 74 24" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.3 }}>
+                <path d="M6.24 2.4C3.6 2.4 1.44 4.56 1.44 7.2s2.16 4.8 4.8 4.8c1.68 0 2.64-.48 3.36-1.2l.96.96c-1.08.96-2.52 1.56-4.32 1.56C2.76 13.32 0 10.56 0 7.2S2.76 1.08 6.24 1.08c1.8 0 3.12.6 4.2 1.56L9.6 3.48C8.88 2.88 7.68 2.4 6.24 2.4z" fill="#4285F4"/>
+                <path d="M9.84 6.48H6.24V7.8h3.6c-.12 2.04-1.8 3.48-3.6 3.48-2.04 0-3.6-1.56-3.6-3.6s1.56-3.6 3.6-3.6c.96 0 1.8.36 2.4.96l.96-.96C8.64 3.12 7.56 2.64 6.24 2.64 3.72 2.64 1.68 4.68 1.68 7.2s2.04 4.56 4.56 4.56 4.44-1.68 4.44-4.44c0-.24 0-.6-.12-.84H9.84z" fill="#4285F4"/>
+              </svg>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
 
   return (
     <div ref={wrapperRef} style={{ position: "relative", width: "100%" }}>
@@ -208,18 +292,42 @@ export const AddressSearchInput = ({ placeholder, initialValue, onSelect, onClea
           placeholder={placeholder}
           className={className}
           autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
           style={{ paddingRight: query ? "2.5rem" : undefined }}
           onFocus={() => {
             updateDropdownPos();
             if (suggestions.length > 0) setOpen(true);
           }}
         />
-        {query && (
+        {loading && (
+          <div style={{ position: "absolute", right: query ? "2.8rem" : "0.75rem", display: "flex", alignItems: "center" }}>
+            <svg style={{ width: "14px", height: "14px", animation: "spin 1s linear infinite", color: "rgba(255,217,0,0.6)" }} viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.2" />
+              <path d="M22 12A10 10 0 0 0 12 2" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+          </div>
+        )}
+        {query && !loading && (
           <button
             onMouseDown={(e) => { e.preventDefault(); handleClear(); }}
-            style={{ position: "absolute", right: "12px", background: "rgba(100,116,139,0.15)", border: "none", borderRadius: "50%", width: "22px", height: "22px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, zIndex: 10 }}
+            style={{
+              position: "absolute",
+              right: "10px",
+              background: "rgba(100,116,139,0.15)",
+              border: "none",
+              borderRadius: "50%",
+              width: "22px",
+              height: "22px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flexShrink: 0,
+              zIndex: 10,
+            }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: "14px", color: "#94a3b8" }}>close</span>
+            <span className="material-symbols-outlined" style={{ fontSize: "13px", color: "#94a3b8" }}>close</span>
           </button>
         )}
       </div>
