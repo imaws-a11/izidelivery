@@ -1275,7 +1275,7 @@ function App() {
           time: "30-40 min",
           img: m.store_logo || "https://images.unsplash.com/photo-1552566626-52f8b828add9?q=80&w=200",
           banner: m.store_banner || "https://images.unsplash.com/photo-1514933651103-005eec06ccc0?q=80&w=800",
-          freeDelivery: true,
+          freeDelivery: !!m.free_delivery,
           type: normalizedType,
           foodCategory: m.food_category || "all",
           description: m.store_description || "",

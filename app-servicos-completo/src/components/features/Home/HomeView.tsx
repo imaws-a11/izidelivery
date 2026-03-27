@@ -378,10 +378,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <p className="text-[9px] font-bold text-zinc-400/80 truncate mt-1">{shop.tag}</p>
                   </div>
 
-                  {/* Badge de Entrega Grátis se houver */}
+                  {/* Badge de Entrega Grátis (Redesenhado) */}
                   {shop.freeDelivery && (
-                    <div className="absolute top-4 right-4 translate-x-1/4 -translate-y-1/4 rotate-12">
-                       <span className="bg-yellow-400 text-black text-[8px] font-black px-2 py-1 rounded-lg shadow-lg">FRETE 0</span>
+                    <div className="absolute top-3 right-3 z-20">
+                       <span className="bg-yellow-400 text-black text-[9px] font-black px-3 py-1.5 rounded-full shadow-xl flex items-center gap-1 border border-black/10">
+                          <span className="material-symbols-outlined text-[12px]">local_shipping</span>
+                          FRETE GRÁTIS
+                       </span>
                     </div>
                   )}
                 </div>
