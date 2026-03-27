@@ -47,25 +47,32 @@ export const ExploreRestaurantsView = ({
   }, [foodCategories]);
 
   const filteredRestaurants = useMemo(() => {
+    const normalize = (s: string) => s ? s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_') : "";
+    
     return establishments.filter(shop => {
-      // Consideramos como restaurantes qualquer loja do tipo food, restaurant, hamburguer, etc.
-      // E filtramos tipos que já têm visões próprias (mercado, farmacia, bebidas) se necessário, 
-      // mas aqui a prioridade é o que o usuário quer ver.
-      const isFoodRelated = ['restaurant', 'food', 'hamburguer', 'pizza', 'acai', 'lanchonete', 'japones'].includes(shop.type?.toLowerCase());
+      // Consideramos como restaurantes qualquer loja que não seja estritamente de outros serviços conhecidos
+      const isOtherService = ['pharmacy', 'farmacia', 'mobility', 'taxi', 'van', 'envios', 'utility', 'servico'].includes(normalize(shop.type));
+      const isFoodRelated = !isOtherService;
+      
       const matchesSearch = shop.name.toLowerCase().includes(searchQuery.toLowerCase());
       
       let matchesCategory = true;
       if (selectedCategory !== "Todos") {
-        const cat = selectedCategory.toLowerCase();
+        const catNormalized = normalize(selectedCategory);
         
-        // Verifica se a categoria está na tag, descrição, nome ou no novo campo foodCategory
-        matchesCategory = (shop.foodCategory && shop.foodCategory.toLowerCase() === cat) ||
-                         (shop.foodCategory && shop.foodCategory.toLowerCase().includes(cat)) ||
-                         (shop.tag && shop.tag.toLowerCase().includes(cat)) || 
-                         (shop.description && shop.description.toLowerCase().includes(cat)) ||
-                         (shop.name.toLowerCase().includes(cat)) ||
-                         // Caso especial para Burguer/Burger
-                         (cat === "burguer" && (shop.tag?.toLowerCase().includes("burger") || shop.name.toLowerCase().includes("burger") || shop.foodCategory?.toLowerCase().includes("burger") || shop.type?.toLowerCase().includes("hamburguer")));
+        // Verifica se a categoria normalizada bate com o foodCategory, type, tag ou nome
+        matchesCategory = normalize(shop.foodCategory) === catNormalized ||
+                         normalize(shop.type) === catNormalized ||
+                         normalize(shop.tag).includes(catNormalized) || 
+                         normalize(shop.description).includes(catNormalized) ||
+                         normalize(shop.name).includes(catNormalized);
+                         
+        // Fallback para termos comuns
+        if (!matchesCategory) {
+           if (catNormalized === 'hambuguer' || catNormalized === 'burger' || catNormalized === 'burgers') {
+              matchesCategory = normalize(shop.tag).includes('burger') || normalize(shop.foodCategory).includes('burger') || normalize(shop.name).includes('burger');
+           }
+        }
       }
 
       return isFoodRelated && matchesSearch && matchesCategory;
