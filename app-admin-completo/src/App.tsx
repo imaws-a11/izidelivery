@@ -245,34 +245,30 @@ const FlashOffersSection = ({ supabase, userRole, merchantId }: { supabase: any,
 };
 
 function App() {
-  const [session, setSession] = useState<any>(null);
+
+  const [session, setSession] = useState<any>(() => {
+    try {
+      const cached = localStorage.getItem('izi_admin_session');
+      return cached ? JSON.parse(cached) : null;
+    } catch { return null; }
+  });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
-  const [userRole, setUserRole] = useState<UserRole>('merchant');
-  const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
+  const [userRole, setUserRole] = useState<UserRole>(() => (localStorage.getItem('izi_admin_role') as UserRole) || 'merchant');
+  const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(() => {
+    try {
+      const cached = localStorage.getItem('izi_admin_profile');
+      return cached ? JSON.parse(cached) : null;
+    } catch { return null; }
+  });
 
   const [financialSubTab, setFinancialSubTab] = useState<'overview' | 'izi_economy'>('overview');
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
 
   // --- Session Persistence ---
-  useEffect(() => {
-    try {
-      const cachedSession = localStorage.getItem('izi_admin_session');
-      if (cachedSession) {
-        const parsed = JSON.parse(cachedSession);
-        setSession(parsed);
-        const cachedRole = localStorage.getItem('izi_admin_role');
-        if (cachedRole) setUserRole(cachedRole as UserRole);
-        const cachedProfile = localStorage.getItem('izi_admin_profile');
-        if (cachedProfile) setMerchantProfile(JSON.parse(cachedProfile));
-      }
-    } catch (e) {
-      console.error('[Session] Error restoring cache:', e);
-    }
-  }, []);
-
+  // Sincronizar o estado do localStorage conforme a sessão muda
   useEffect(() => {
     if (session) {
       localStorage.setItem('izi_admin_session', JSON.stringify(session));
@@ -280,8 +276,12 @@ function App() {
       if (merchantProfile) {
         localStorage.setItem('izi_admin_profile', JSON.stringify(merchantProfile));
       }
+    } else if (!isInitialLoading) {
+      localStorage.removeItem('izi_admin_session');
+      localStorage.removeItem('izi_admin_role');
+      localStorage.removeItem('izi_admin_profile');
     }
-  }, [session, userRole, merchantProfile]);
+  }, [session, userRole, merchantProfile, isInitialLoading]);
 
   const [stats, setStats] = useState({
     users: 0,
@@ -316,7 +316,7 @@ function App() {
                            (driverFilter === 'Ativos' && (d.is_active || d.status === 'active')) ||
                            (driverFilter === 'Offline' && !d.is_online) ||
                            (driverFilter === 'Pendentes' && (!d.is_active || d.status !== 'active') && d.status !== 'suspended');
-                           
+                            
       return matchesSearch && matchesFilter;
     });
   }, [driversList, driverSearch, driverFilter]);
@@ -326,6 +326,7 @@ function App() {
     return filteredDrivers.slice(start, start + DRIVERS_PER_PAGE);
   }, [filteredDrivers, driversPage]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+
 
   // Paginação de pedidos
   const ORDERS_PER_PAGE = 50;
