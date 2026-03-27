@@ -1402,7 +1402,7 @@ function App() {
 
   const fetchMarketData = async () => {
     try {
-      // 1. Buscar ConfiguraçÃƒµes Centrais do Admin
+      // 1. Buscar Configurações Centrais do Admin
       const { data: ratesData } = await supabase
         .from('dynamic_rates_delivery')
         .select('*');
@@ -1430,7 +1430,7 @@ function App() {
       const hour = new Date().getHours();
       const currentWeather = (hour > 18 || hour < 6) ? "Nublado" : weathers[Math.floor(Math.random() * 2)];
 
-      // 5. Lógica de Equilíbrio de Marketplace usando ConfiguraçÃƒµes do Admin
+      // 5. Lógica de Equilíbrio de Marketplace usando Configurações do Admin
       const drivers = onlineDrivers || 5; 
       const orders = pendingOrders || 0;
       const ratio = orders / drivers;
@@ -1447,7 +1447,7 @@ function App() {
       if (currentWeather === "Tempestade" && config.weather.storm.active) surge += (config.weather.storm.multiplier - 1);
       if (currentWeather === "Chuva Leve" && config.weather.rain.active) surge += (config.weather.rain.multiplier - 1);
       
-      // Horário de Pico (Fixado ou DinÃ¢mico)
+      // Horário de Pico (Fixado ou Dinâmico)
       if (hour >= 18 && hour <= 21) surge += 0.3; 
 
       // 7. Limites de Segurança (Hard Caps vindos do Admin)
@@ -2188,7 +2188,7 @@ function App() {
               </button>
               <div>
                 <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Cardápios do Dia</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500">SugestÃƒµes Especiais</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500">Sugestões Especiais</p>
               </div>
             </div>
           </div>

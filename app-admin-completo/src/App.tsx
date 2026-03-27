@@ -8484,11 +8484,21 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
 
                     {/* Seção 2: Perfil da Loja */}
                     <div className="space-y-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="size-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                          <span className="material-symbols-outlined text-base">storefront</span>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="size-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                            <span className="material-symbols-outlined text-base">storefront</span>
+                          </div>
+                          <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Perfil do Estabelecimento</h3>
                         </div>
-                        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Perfil do Estabelecimento</h3>
+                        <button 
+                          type="button" 
+                          onClick={handleAddSegment}
+                          className="bg-primary text-slate-900 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 hover:brightness-105 transition-all shadow-sm active:scale-95"
+                        >
+                          <span className="material-symbols-outlined text-base">add_circle</span>
+                          + Adicionar Categoria
+                        </button>
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -8504,16 +8514,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                         </div>
                         <div className="space-y-1">
                           <div className="flex items-center justify-between mb-1">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Segmento</label>
-                            <button 
-                              type="button" 
-                              onClick={handleAddSegment}
-                              className="text-[10px] font-black text-primary hover:text-primary/70 uppercase tracking-widest flex items-center gap-1 px-3 py-1 group transition-colors"
-                              title="Adicionar novo segmento ao sistema"
-                            >
-                              <span className="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">add_circle</span>
-                              Novo
-                            </button>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Segmento Principal</label>
                           </div>
                           <div className="relative">
                             <select
@@ -8553,20 +8554,24 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Categoria / Subsegmento</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Subcategoria / Filtro de Exploração</label>
                           <div className="relative">
                             <select
                               value={editingItem.food_category || 'all'}
                               onChange={e => setEditingItem({ ...editingItem, food_category: e.target.value })}
                               className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all cursor-pointer appearance-none"
                             >
-                              <option value="all">Filtro: Todos</option>
-                              <option value="burgers">Hambúguer / Burger</option>
-                              <option value="pizza">Pizza</option>
-                              <option value="japones">Comida Japonesa</option>
-                              <option value="brasileira">Comida Brasileira</option>
-                              <option value="acai">Açaí / Sorvetes</option>
-                              <option value="doces">Doces / Padaria</option>
+                              <option value="all">Filtro: Todos / Outros</option>
+                              {categoriesState
+                                .filter(c => !c.parent_id && c.type === 'service')
+                                .map(c => {
+                                  const slug = c.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_');
+                                  return (
+                                    <option key={c.id} value={slug}>
+                                      {c.name}
+                                    </option>
+                                  );
+                                })}
                             </select>
                             <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                               <span className="material-symbols-outlined text-base">expand_more</span>
