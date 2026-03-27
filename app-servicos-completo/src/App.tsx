@@ -5936,6 +5936,79 @@ function App() {
     );
   };
 
+  const [productAddonGroups, setProductAddonGroups] = useState<any[]>([]);
+  const [selectedOptions, setSelectedOptions] = useState<any>({});
+  const [addonsLoading, setAddonsLoading] = useState(false);
+
+  const fetchProductAddons = async (productId: string) => {
+    setAddonsLoading(true);
+    try {
+      const { data: groups, error: gErr } = await supabase
+        .from('product_options_groups_delivery')
+        .select('*')
+        .eq('product_id', productId)
+        .order('sort_order', { ascending: true });
+        
+      if (gErr) throw gErr;
+      if (!groups || groups.length === 0) {
+        setProductAddonGroups([]);
+        return;
+      }
+
+      const gIds = groups.map(g => g.id);
+      const { data: items, error: iErr } = await supabase
+        .from('product_options_items_delivery')
+        .select('*')
+        .in('group_id', gIds)
+        .order('sort_order', { ascending: true });
+        
+      if (iErr) throw iErr;
+      
+      const assembled = groups.map(g => ({
+        ...g,
+        items: items?.filter(i => i.group_id === g.id) || []
+      }));
+      setProductAddonGroups(assembled);
+    } catch (err) {
+      console.error('Error fetching addons:', err);
+    } finally {
+      setAddonsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (subView === "product_detail" && (selectedItem?.id || selectedItem?.uid)) {
+       fetchProductAddons(selectedItem.id || selectedItem.uid);
+    } else if (subView !== "product_detail") {
+       setProductAddonGroups([]);
+       setSelectedOptions({});
+    }
+  }, [subView, selectedItem?.id, selectedItem?.uid]);
+
+  const toggleOption = (group: any, item: any) => {
+    const current = selectedOptions[group.id] || [];
+    const isSelected = current.some((i: any) => i.id === item.id);
+    
+    if (isSelected) {
+      setSelectedOptions({
+        ...selectedOptions,
+        [group.id]: current.filter((i: any) => i.id !== item.id)
+      });
+    } else {
+      if (group.max_select === 1) {
+        setSelectedOptions({
+          ...selectedOptions,
+          [group.id]: [item]
+        });
+      } else if (current.length < group.max_select) {
+        setSelectedOptions({
+          ...selectedOptions,
+          [group.id]: [...current, item]
+        });
+      }
+    }
+  };
+
   const renderProductDetail = () => {
     if (!selectedItem) return null;
 
@@ -6021,6 +6094,57 @@ function App() {
                   "Um produto premium selecionado especialmente para você. Qualidade garantida e entrega rápida diretamente na sua porta."}
               </p>
             </section>
+
+            {/* Opcionais Section */}
+            <div className="space-y-8">
+              {addonsLoading ? (
+                <div className="flex flex-col items-center py-10 gap-3">
+                   <div className="size-8 border-4 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin"></div>
+                   <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Carregando Adicionais...</p>
+                </div>
+              ) : productAddonGroups.map((group) => (
+                <section key={group.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="flex justify-between items-end mb-4 px-2">
+                    <div>
+                      <h3 className="text-lg font-black text-white tracking-tight">{group.name}</h3>
+                      <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mt-0.5">
+                        {group.min_select > 0 ? `Obrigatório • ` : ''} 
+                        {group.max_select === 1 ? 'Escolha 1 opção' : `Escolha até ${group.max_select} opções`}
+                      </p>
+                    </div>
+                    {group.is_required && (
+                      <span className="bg-white/5 border border-white/10 px-3 py-1 rounded-full text-[8px] font-black text-yellow-500 uppercase tracking-widest">Obrigatório</span>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {group.items.map((item: any) => {
+                      const isSelected = (selectedOptions[group.id] || []).some((i: any) => i.id === item.id);
+                      return (
+                        <div 
+                          key={item.id}
+                          onClick={() => toggleOption(group, item)}
+                          className={`group p-4 rounded-3xl border transition-all flex items-center justify-between cursor-pointer active:scale-[0.98] ${isSelected ? 'bg-yellow-400 border-yellow-400' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
+                        >
+                          <div className="flex items-center gap-4">
+                             <div className={`size-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-black border-black' : 'border-zinc-700'}`}>
+                                {isSelected && <span className="material-symbols-rounded text-yellow-400 text-sm font-black">check</span>}
+                             </div>
+                             <span className={`font-bold transition-colors ${isSelected ? 'text-black' : 'text-zinc-300 group-hover:text-white'}`}>{item.name}</span>
+                          </div>
+                          {item.price > 0 && (
+                            <span className={`font-black text-xs ${isSelected ? 'text-black' : 'text-yellow-400'}`}>
+                              + R$ {item.price.toFixed(2).replace('.', ',')}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
                 Quantidade
@@ -6054,9 +6178,27 @@ function App() {
           <motion.button
             whileTap={{ scale: 0.96 }}
             onClick={() => {
-              const itemsToAdd = Array(tempQuantity).fill(selectedItem);
+              // Validar obrigatoriedade
+              const missingRequired = productAddonGroups.filter(g => g.is_required && (!selectedOptions[g.id] || selectedOptions[g.id].length < g.min_select));
+              if (missingRequired.length > 0) {
+                 return showToast(`Escolha pelo menos ${missingRequired[0].min_select} em: ${missingRequired[0].name}`, "error");
+              }
+
+              const addonsPrice = Object.values(selectedOptions).flat().reduce((acc: number, cur: any) => acc + (parseFloat(cur.price) || 0), 0);
+              
+              const itemWithAddons = {
+                ...selectedItem,
+                selectedOptions: selectedOptions,
+                cartId: `${selectedItem.id}-${Date.now()}`,
+                price: selectedItem.price + addonsPrice,
+                originalPrice: selectedItem.price,
+                addonsTotal: addonsPrice
+              };
+              
+              const itemsToAdd = Array(tempQuantity).fill(itemWithAddons);
               setCart([...cart, ...itemsToAdd]);
               handleBack();
+              showToast("Item adicionado!", "success");
             }}
             className="w-full bg-slate-900  text-white  p-5 rounded-[28px] shadow-[0_20px_40px_rgba(0,0,0,0.2)] flex items-center justify-between transition-all"
           >
@@ -6070,7 +6212,7 @@ function App() {
             </div>
             <span className="font-black text-xl bg-white/20 bg-black/10 px-4 py-1.5 rounded-2xl tracking-tighter">
               R${" "}
-              {(selectedItem.price * tempQuantity).toFixed(2).replace(".", ",")}
+              {((selectedItem.price + Object.values(selectedOptions).flat().reduce((acc: number, cur: any) => acc + (parseFloat(cur.price) || 0), 0)) * tempQuantity).toFixed(2).replace(".", ",")}
             </span>
           </motion.button>
         </div>

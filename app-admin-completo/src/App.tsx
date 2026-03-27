@@ -416,7 +416,8 @@ function App() {
   const [categoryPromptName, setCategoryPromptName] = useState('');
   const [isSavingCategoryPrompt, setIsSavingCategoryPrompt] = useState(false);
   const [productForm, setProductForm] = useState<any>({
-    name: '', description: '', price: '', category: '', sub_category: '', image_url: '', is_available: true
+    name: '', description: '', price: '', category: '', sub_category: '', image_url: '', is_available: true,
+    options_groups: []
   });
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [selectedCategoryStudio, setSelectedCategoryStudio] = useState<Category | null>(null);
@@ -960,6 +961,201 @@ function App() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const renderMerchantSettings = () => {
+    if (!merchantProfile) return null;
+
+    return (
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Left: General Config */}
+          <div className="lg:col-span-1 space-y-6">
+             <section className="bg-white dark:bg-slate-900 rounded-[40px] p-8 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-3 mb-8">
+                   <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                      <span className="material-symbols-outlined">storefront</span>
+                   </div>
+                   <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Status da Operação</h3>
+                </div>
+
+                <div className="space-y-6">
+                   {/* Loja Aberta/Fechada */}
+                   <div className="flex items-center justify-between p-5 bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
+                      <div>
+                         <p className="text-sm font-black text-slate-900 dark:text-white mb-1">Status da Loja</p>
+                         <p className="text-[10px] font-bold text-slate-400 uppercase">Forçar abertura ou fechamento</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const prevState = merchantProfile.is_open;
+                          const newState = !prevState;
+                          setMerchantProfile({ ...merchantProfile, is_open: newState });
+                          try {
+                            const { error } = await supabase.from('admin_users').update({ is_open: newState }).eq('id', (merchantProfile as any).merchant_id);
+                            if (error) throw error;
+                            toastSuccess(newState ? 'Loja Aberta! 🏪' : 'Loja Fechada! 🔒');
+                          } catch (err: any) {
+                            setMerchantProfile({ ...merchantProfile, is_open: prevState });
+                            toastError(err.message);
+                          }
+                        }}
+                        className={`w-14 h-8 rounded-full relative p-1 transition-all ${merchantProfile.is_open ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                      >
+                         <div className={`size-6 bg-white rounded-full shadow-md transition-all ${merchantProfile.is_open ? 'ml-auto' : 'ml-0'}`}></div>
+                      </button>
+                   </div>
+
+                   {/* Frete Grátis */}
+                   <div className="flex items-center justify-between p-5 bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
+                      <div>
+                         <p className="text-sm font-black text-slate-900 dark:text-white mb-1">Frete Grátis</p>
+                         <p className="text-[10px] font-bold text-slate-400 uppercase">Estimule suas vendas agora</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const prevState = merchantProfile.free_delivery;
+                          const newState = !prevState;
+                          setMerchantProfile({ ...merchantProfile, free_delivery: newState });
+                          try {
+                            const { error } = await supabase.from('admin_users').update({ free_delivery: newState }).eq('id', (merchantProfile as any).merchant_id);
+                            if (error) throw error;
+                            toastSuccess(newState ? 'Frete Grátis Ativado! 🎁' : 'Frete Grátis Desativado.');
+                          } catch (err: any) {
+                            setMerchantProfile({ ...merchantProfile, free_delivery: prevState });
+                            toastError(err.message);
+                          }
+                        }}
+                        className={`w-14 h-8 rounded-full relative p-1 transition-all ${merchantProfile.free_delivery ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                      >
+                         <div className={`size-6 bg-white rounded-full shadow-md transition-all ${merchantProfile.free_delivery ? 'ml-auto' : 'ml-0'}`}></div>
+                      </button>
+                   </div>
+
+                   {/* Raio de Atendimento */}
+                   <div className="space-y-3 px-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Raio de Atendimento (KM)</label>
+                      <div className="flex items-center gap-3">
+                         <input 
+                           type="number" 
+                           value={merchantProfile.delivery_radius || 0}
+                           onChange={e => setMerchantProfile({...merchantProfile, delivery_radius: parseFloat(e.target.value)})}
+                           className="flex-1 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 font-black text-slate-900 dark:text-white focus:ring-2 focus:ring-primary shadow-inner"
+                         />
+                         <button 
+                           onClick={async () => {
+                             setIsSaving(true);
+                             try {
+                               const { error } = await supabase.from('admin_users').update({ delivery_radius: merchantProfile.delivery_radius }).eq('id', (merchantProfile as any).merchant_id);
+                               if (error) throw error;
+                               toastSuccess('Raio de entrega atualizado!');
+                             } catch (err: any) {
+                               toastError(err.message);
+                             } finally {
+                               setIsSaving(false);
+                             }
+                           }}
+                           className="size-14 bg-primary text-slate-900 rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
+                         >
+                            <span className="material-symbols-outlined font-black text-lg">save</span>
+                         </button>
+                      </div>
+                      <p className="text-[9px] text-slate-400 italic ml-2">* Apenas clientes dentro deste raio verão sua loja.</p>
+                   </div>
+                </div>
+             </section>
+          </div>
+
+          {/* Right: Opening Hours */}
+          <div className="lg:col-span-2 space-y-6">
+             <section className="bg-white dark:bg-slate-900 rounded-[40px] p-8 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden h-full">
+                <div className="flex items-center justify-between mb-8">
+                   <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                         <span className="material-symbols-outlined">schedule</span>
+                      </div>
+                      <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Horários de Funcionamento</h3>
+                   </div>
+                   <button
+                     disabled={isSaving}
+                     onClick={async () => {
+                       setIsSaving(true);
+                       try {
+                         const { error } = await supabase
+                           .from('admin_users')
+                           .update({ opening_hours: merchantProfile.opening_hours })
+                           .eq('id', (merchantProfile as any).merchant_id);
+                         if (error) throw error;
+                         toastSuccess('Horários de funcionamento salvos!');
+                       } catch (err: any) {
+                         toastError(err.message);
+                       } finally {
+                         setIsSaving(false);
+                       }
+                     }}
+                     className="px-8 py-3 bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest rounded-full shadow-[0_10px_20px_rgba(59,130,246,0.3)] hover:scale-[1.05] transition-all disabled:opacity-50"
+                   >
+                     {isSaving ? 'Salvando...' : 'Salvar Todos os Horários'}
+                   </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'].map((day) => {
+                    const dayNames: any = { seg: 'Segunda-feira', ter: 'Terça-feira', qua: 'Quarta-feira', qui: 'Quinta-feira', sex: 'Sexta-feira', sab: 'Sábado', dom: 'Domingo' };
+                    const dayConfig = merchantProfile.opening_hours?.[day] || { active: true, open: '08:00', close: '22:00' };
+                    return (
+                      <div key={day} className={`p-6 rounded-[32px] border transition-all ${dayConfig.active ? 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 opacity-60'}`}>
+                         <div className="flex items-center justify-between mb-4">
+                            <span className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">{dayNames[day]}</span>
+                            <button
+                              onClick={() => {
+                                const next = { ...merchantProfile.opening_hours, [day]: { ...dayConfig, active: !dayConfig.active } };
+                                setMerchantProfile({ ...merchantProfile, opening_hours: next });
+                              }}
+                              className={`w-10 h-6 rounded-full relative p-1 transition-all ${dayConfig.active ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                            >
+                               <div className={`size-4 bg-white rounded-full transition-all ${dayConfig.active ? 'ml-auto' : 'ml-0'}`}></div>
+                            </button>
+                         </div>
+                         <div className="flex items-center gap-3">
+                            <div className="flex-1 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                               <span className="material-symbols-outlined text-sm text-slate-400">login</span>
+                               <input 
+                                 type="text" 
+                                 value={dayConfig.open}
+                                 onChange={e => {
+                                   const next = { ...merchantProfile.opening_hours, [day]: { ...dayConfig, open: e.target.value } };
+                                   setMerchantProfile({ ...merchantProfile, opening_hours: next });
+                                 }}
+                                 className="w-full bg-transparent border-none p-0 text-xs font-black dark:text-white focus:ring-0"
+                                 placeholder="00:00"
+                               />
+                            </div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Até</span>
+                            <div className="flex-1 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                               <span className="material-symbols-outlined text-sm text-slate-400">logout</span>
+                               <input 
+                                 type="text" 
+                                 value={dayConfig.close}
+                                 onChange={e => {
+                                   const next = { ...merchantProfile.opening_hours, [day]: { ...dayConfig, close: e.target.value } };
+                                   setMerchantProfile({ ...merchantProfile, opening_hours: next });
+                                 }}
+                                 className="w-full bg-transparent border-none p-0 text-xs font-black dark:text-white focus:ring-0"
+                                 placeholder="00:00"
+                               />
+                            </div>
+                         </div>
+                      </div>
+                    );
+                  })}
+                </div>
+             </section>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const fetchUsers = async () => {
@@ -1863,8 +2059,113 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     }
   };
 
-  // Removed duplicate handleUpdateCategory manually by replacing it with a comment
-  // Duplicate at 568 removed.
+  const fetchProductOptions = async (productId: string) => {
+    try {
+      const { data: groups, error: groupsError } = await supabase
+        .from('product_options_groups_delivery')
+        .select('*')
+        .eq('product_id', productId)
+        .order('sort_order', { ascending: true });
+        
+      if (groupsError) throw groupsError;
+      if (!groups || groups.length === 0) return [];
+      
+      const groupIds = groups.map(g => g.id);
+      const { data: items, error: itemsError } = await supabase
+        .from('product_options_items_delivery')
+        .select('*')
+        .in('group_id', groupIds)
+        .order('sort_order', { ascending: true });
+        
+      if (itemsError) throw itemsError;
+      
+      return groups.map(g => ({
+        ...g,
+        items: items?.filter(i => i.group_id === g.id) || []
+      }));
+    } catch (err) {
+      console.error('Fetch product options error:', err);
+      return [];
+    }
+  };
+
+  const addOptionGroup = () => {
+    const newGroup = {
+      id: `temp-group-${Date.now()}`,
+      name: '',
+      min_select: 0,
+      max_select: 1,
+      is_required: false,
+      items: [{ id: `temp-item-${Date.now()}`, name: '', price: 0 }]
+    };
+    setProductForm(prev => ({ 
+      ...prev, 
+      options_groups: [...(prev.options_groups || []), newGroup] 
+    }));
+  };
+
+  const removeOptionGroup = (groupId: string) => {
+    setProductForm(prev => ({
+      ...prev,
+      options_groups: prev.options_groups.filter((g: any) => g.id !== groupId)
+    }));
+  };
+
+  const addOptionItem = (groupId: string) => {
+    setProductForm(prev => ({
+      ...prev,
+      options_groups: prev.options_groups.map((g: any) => {
+        if (g.id === groupId) {
+          return {
+            ...g,
+            items: [...g.items, { id: `temp-item-${Date.now()}`, name: '', price: 0 }]
+          };
+        }
+        return g;
+      })
+    }));
+  };
+
+  const removeOptionItem = (groupId: string, itemId: string) => {
+    setProductForm(prev => ({
+      ...prev,
+      options_groups: prev.options_groups.map((g: any) => {
+        if (g.id === groupId) {
+          return {
+            ...g,
+            items: g.items.filter((i: any) => i.id !== itemId)
+          };
+        }
+        return g;
+      })
+    }));
+  };
+
+  const updateOptionGroup = (groupId: string, field: string, value: any) => {
+    setProductForm(prev => ({
+      ...prev,
+      options_groups: prev.options_groups.map((g: any) => 
+        g.id === groupId ? { ...g, [field]: value } : g
+      )
+    }));
+  };
+
+  const updateOptionItem = (groupId: string, itemId: string, field: string, value: any) => {
+    setProductForm(prev => ({
+      ...prev,
+      options_groups: prev.options_groups.map((g: any) => {
+        if (g.id === groupId) {
+          return {
+            ...g,
+            items: g.items.map((i: any) => 
+              i.id === itemId ? { ...i, [field]: value } : i
+            )
+          };
+        }
+        return g;
+      })
+    }));
+  };
 
   const handleSaveProduct = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -1901,6 +2202,40 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
       }
 
       if (res.error) throw res.error;
+      
+      // Salvar Complementos/Adicionais
+      const pId = res.data[0].id;
+      // Removemos versões antigas para simplificar o sync
+      await supabase.from('product_options_groups_delivery').delete().eq('product_id', pId);
+      
+      if (productForm.options_groups && productForm.options_groups.length > 0) {
+        for (const group of productForm.options_groups) {
+          if (!group.name.trim()) continue;
+          
+          const { data: gData, error: gErr } = await supabase.from('product_options_groups_delivery').insert([{
+            product_id: pId,
+            name: group.name,
+            min_select: parseInt(group.min_select) || 0,
+            max_select: parseInt(group.max_select) || 1,
+            is_required: !!group.is_required
+          }]).select().single();
+          
+          if (!gErr && gData && group.items && group.items.length > 0) {
+            const itemsToInsert = group.items
+              .filter((it: any) => it.name.trim())
+              .map((it: any) => ({
+                group_id: gData.id,
+                name: it.name,
+                price: parseFloat(it.price.toString().replace(',', '.')) || 0
+              }));
+              
+            if (itemsToInsert.length > 0) {
+              await supabase.from('product_options_items_delivery').insert(itemsToInsert);
+            }
+          }
+        }
+      }
+
       toastSuccess(productForm.id && !productForm.id.startsWith('new-') ? 'Produto atualizado!' : 'Produto criado!');
       setShowProductModal(false);
       
@@ -1968,18 +2303,19 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     setShowCategoryPromptModal(false);
   };
 
-  const handleCreateNewProduct = (forcedMerchantId?: string | React.MouseEvent) => {
+  const handleCreateNewProduct = (forcedMerchantId?: any) => {
     const mId = typeof forcedMerchantId === 'string' ? forcedMerchantId : null;
     setProductForm({
       name: '',
       description: '',
       price: '',
-      category: menuCategoriesList[0]?.name || '',
+      category: (userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList)[0]?.name || '',
       sub_category: '',
       image_url: '',
       is_available: true,
       featured: false,
-      merchant_id: mId
+      merchant_id: mId,
+      options_groups: []
     });
     setShowProductModal(true);
   };
@@ -2050,13 +2386,16 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     }
   };
 
-  const handleEditProduct = (p: any, forcedMerchantId?: string) => {
+  const handleEditProduct = async (p: any, forcedMerchantId?: string) => {
+    // Buscar opcionais do produto
+    const addons = await fetchProductOptions(p.id);
     setProductForm({
       ...p,
       price: p.price?.toString().replace('.', ',') || '',
       is_available: p.is_available ?? p.is_active ?? true,
       featured: !!p.featured,
-      merchant_id: p.merchant_id || (typeof forcedMerchantId === 'string' ? forcedMerchantId : null)
+      merchant_id: p.merchant_id || (typeof forcedMerchantId === 'string' ? forcedMerchantId : null),
+      options_groups: addons || []
     });
     setShowProductModal(true);
   };
@@ -3666,6 +4005,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   <SidebarItem id="my_drivers" icon="delivery_dining" label="Meus Motoboys" />
                   <SidebarItem id="promotions" icon="percent" label="Promoções" />
                   <SidebarItem id="financial" icon="bar_chart" label="Meu Financeiro" />
+                  <SidebarItem id="settings" icon="settings" label="Configurações" />
                 </>
               ) : (
                 <>
@@ -3746,7 +4086,8 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                           activeTab === 'my_store' ? 'Meu Estabelecimento' :
                                             activeTab === 'my_drivers' ? 'Gestão de Motoboys Próprios' :
                                               activeTab === 'partners' ? 'Gestão de Parceiros Izi' :
-                                                activeTab === 'my_studio' ? 'Estúdio do Lojista' : 'Configurações do Sistema'}
+                                                activeTab === 'my_studio' ? 'Estúdio do Lojista' : 
+                                                  activeTab === 'settings' && userRole === 'merchant' ? 'Configurações do Estabelecimento' : 'Configurações do Sistema'}
               </h2>
               <p className="text-xs font-medium text-slate-500">
                 {activeTab === 'dashboard' ? 'Bem-vindo de volta! Veja o que está acontecendo hoje.' : 
@@ -8116,6 +8457,8 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
 
 
 
+            {activeTab === 'settings' && userRole === 'merchant' && renderMerchantSettings()}
+            
             {/* ── Merchant: Motoboys Próprios ── */}
             {activeTab === 'my_drivers' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -10960,6 +11303,124 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                             placeholder="Ingredientes, peso, tamanho..."
                             className="w-full bg-[#0a0a0a] border border-white/10 rounded-3xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all min-h-[120px] resize-none"
                           />
+                        </div>
+
+                        {/* Complementos e Adicionais Section */}
+                        <div className="space-y-6 md:col-span-2 mt-4 pt-4 border-t border-white/5">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Complementos e Adicionais</label>
+                                    <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest ml-4 mt-1">Configure campos para personalização (Ex: Escolha o Pão, Adicionais...)</p>
+                                </div>
+                                <button 
+                                    type="button"
+                                    onClick={addOptionGroup}
+                                    className="px-4 py-2 bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-400 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-yellow-400/20 flex items-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-[14px]">add_circle</span> Criar Novo Grupo
+                                </button>
+                            </div>
+
+                            {/* Groups List */}
+                            <div className="space-y-4">
+                                {productForm.options_groups?.map((group: any) => (
+                                    <div key={group.id} className="bg-white/5 border border-white/10 rounded-[32px] overflow-hidden">
+                                        {/* Group Header */}
+                                        <div className="p-6 bg-white/5 flex flex-wrap items-center gap-4">
+                                            <div className="flex-1 min-w-[200px]">
+                                                <input 
+                                                    type="text"
+                                                    placeholder="Nome do Grupo (Ex: Escolha seu molho)"
+                                                    value={group.name}
+                                                    onChange={(e) => updateOptionGroup(group.id, 'name', e.target.value)}
+                                                    className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-2 text-xs font-bold text-white focus:border-yellow-400/50 outline-none"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
+                                                    <span className="text-[8px] font-bold text-slate-500 uppercase">Min</span>
+                                                    <input 
+                                                        type="number"
+                                                        value={group.min_select}
+                                                        onChange={(e) => updateOptionGroup(group.id, 'min_select', e.target.value)}
+                                                        className="w-10 bg-transparent text-center text-xs font-bold text-white outline-none"
+                                                    />
+                                                </div>
+                                                <div className="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
+                                                    <span className="text-[8px] font-bold text-slate-500 uppercase">Max</span>
+                                                    <input 
+                                                        type="number"
+                                                        value={group.max_select}
+                                                        onChange={(e) => updateOptionGroup(group.id, 'max_select', e.target.value)}
+                                                        className="w-10 bg-transparent text-center text-xs font-bold text-white outline-none"
+                                                    />
+                                                </div>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => updateOptionGroup(group.id, 'is_required', !group.is_required)}
+                                                    className={`px-3 py-1.5 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all ${group.is_required ? 'bg-amber-500/20 border-amber-500/40 text-amber-500' : 'bg-black/40 border-white/10 text-slate-500'}`}
+                                                >
+                                                    Obrigatório
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => removeOptionGroup(group.id)}
+                                                    className="size-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">delete</span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Items List */}
+                                        <div className="p-6 pt-2 space-y-2">
+                                            <p className="text-[8px] font-bold text-slate-600 uppercase tracking-[0.2em] ml-2 mb-3">Opções do Grupo</p>
+                                            {group.items?.map((item: any) => (
+                                                <div key={item.id} className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 transition-all">
+                                                    <div className="flex-1">
+                                                        <input 
+                                                            type="text"
+                                                            placeholder="Nome da Opção (Ex: Maionese Caseira)"
+                                                            value={item.name}
+                                                            onChange={(e) => updateOptionItem(group.id, item.id, 'name', e.target.value)}
+                                                            className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-2 text-[10px] font-bold text-white focus:border-yellow-400/50 outline-none transition-all"
+                                                        />
+                                                    </div>
+                                                    <div className="w-32 relative">
+                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-bold">R$</span>
+                                                        <input 
+                                                            type="text"
+                                                            placeholder="0,00"
+                                                            value={item.price}
+                                                            onChange={(e) => updateOptionItem(group.id, item.id, 'price', e.target.value)}
+                                                            className="w-full bg-black/40 border border-white/5 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-white focus:border-yellow-400/50 outline-none transition-all placeholder:text-slate-700"
+                                                        />
+                                                    </div>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => removeOptionItem(group.id, item.id)}
+                                                        className="size-8 flex items-center justify-center rounded-xl text-slate-600 hover:text-rose-500 transition-colors"
+                                                    >
+                                                        <span className="material-symbols-outlined text-sm">close</span>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            <button 
+                                                type="button"
+                                                onClick={() => addOptionItem(group.id)}
+                                                className="w-full py-2 border border-dashed border-white/10 rounded-xl text-[8px] font-black text-slate-500 uppercase tracking-widest hover:border-white/20 hover:text-white transition-all mt-2"
+                                            >
+                                                + Adicionar Opção
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {(!productForm.options_groups || productForm.options_groups.length === 0) && (
+                                    <div className="h-24 rounded-[32px] border border-dashed border-white/5 flex items-center justify-center">
+                                        <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest text-center">Nenhum adicional configurado para este produto.</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                       </div>
                     </form>
