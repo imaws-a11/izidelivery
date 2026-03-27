@@ -256,6 +256,33 @@ function App() {
   const [financialSubTab, setFinancialSubTab] = useState<'overview' | 'izi_economy'>('overview');
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
 
+  // --- Session Persistence ---
+  useEffect(() => {
+    try {
+      const cachedSession = localStorage.getItem('izi_admin_session');
+      if (cachedSession) {
+        const parsed = JSON.parse(cachedSession);
+        setSession(parsed);
+        const cachedRole = localStorage.getItem('izi_admin_role');
+        if (cachedRole) setUserRole(cachedRole as UserRole);
+        const cachedProfile = localStorage.getItem('izi_admin_profile');
+        if (cachedProfile) setMerchantProfile(JSON.parse(cachedProfile));
+      }
+    } catch (e) {
+      console.error('[Session] Error restoring cache:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (session) {
+      localStorage.setItem('izi_admin_session', JSON.stringify(session));
+      localStorage.setItem('izi_admin_role', userRole);
+      if (merchantProfile) {
+        localStorage.setItem('izi_admin_profile', JSON.stringify(merchantProfile));
+      }
+    }
+  }, [session, userRole, merchantProfile]);
+
   const [stats, setStats] = useState({
     users: 0,
     drivers: 0,
@@ -871,7 +898,12 @@ function App() {
   };
 
   const handleLogout = async () => {
-    await signOut(firebaseAuth);
+    try {
+      await signOut(firebaseAuth);
+    } catch(e) {}
+    localStorage.removeItem('izi_admin_session');
+    localStorage.removeItem('izi_admin_role');
+    localStorage.removeItem('izi_admin_profile');
     setSession(null);
     setUserRole('merchant');
     setMerchantProfile(null);
