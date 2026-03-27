@@ -48,25 +48,18 @@ export const ExploreRestaurantsView = ({
 
   const filteredRestaurants = useMemo(() => {
     return establishments.filter(shop => {
-      const isRestaurant = shop.type === 'restaurant' || shop.type === 'burger' || shop.type === 'burguer' || shop.type === 'pizza' || shop.type === 'sushi';
+      const isRestaurant = shop.type === 'restaurant';
       const matchesSearch = shop.name.toLowerCase().includes(searchQuery.toLowerCase());
       
       let matchesCategory = true;
       if (selectedCategory !== "Todos") {
         const cat = selectedCategory.toLowerCase();
-        const shopTag = (shop.tag || "").toLowerCase();
-        const shopType = (shop.type || "").toLowerCase();
-        const shopDesc = (shop.description || "").toLowerCase();
-        const shopName = shop.name.toLowerCase();
-
-        matchesCategory =
-          shopTag.includes(cat) ||
-          shopType.includes(cat) ||
-          shopDesc.includes(cat) ||
-          shopName.includes(cat) ||
-          // Aliases: burguer ↔ burger
-          (cat === "burguer" && (shopTag.includes("burger") || shopType.includes("burger") || shopName.includes("burger"))) ||
-          (cat === "burger"  && (shopTag.includes("burguer") || shopType.includes("burguer")));
+        // Verifica se a categoria está na tag, descrição ou nome
+        matchesCategory = (shop.tag && shop.tag.toLowerCase().includes(cat)) || 
+                         (shop.description && shop.description.toLowerCase().includes(cat)) ||
+                         (shop.name.toLowerCase().includes(cat)) ||
+                         // Caso especial para Burguer/Burger
+                         (cat === "burguer" && (shop.tag?.toLowerCase().includes("burger") || shop.name.toLowerCase().includes("burger")));
       }
 
       return isRestaurant && matchesSearch && matchesCategory;
@@ -207,9 +200,6 @@ export const ExploreRestaurantsView = ({
                     <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-white/10">
                       <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                       <span className="text-xs font-black text-white">{shop.rating || "5.0"}</span>
-                    </div>
-                    <div className={`absolute top-3 left-3 backdrop-blur-md text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-white/10 ${shop.isOpen ? 'bg-emerald-500/90 text-white' : 'bg-zinc-800/90 text-zinc-400'}`}>
-                      {shop.statusTag || (shop.isOpen ? "Aberto" : "Fechado")}
                     </div>
                     {shop.freeDelivery && (
                       <div className="absolute bottom-3 left-3 bg-emerald-500/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-white/10">
