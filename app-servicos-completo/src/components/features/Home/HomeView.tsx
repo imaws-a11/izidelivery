@@ -306,61 +306,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </section>
         )}
 
-        {/* FAVORITOS DA REGIÃO */}
-        <section>
-          <div className="flex justify-between items-end mb-6">
-            <div>
-              <h3 className="text-xl font-extrabold tracking-tight text-white">Favoritos da Região</h3>
-              <p className="text-zinc-500 text-xs mt-0.5">Os mais pedidos agora</p>
-            </div>
-            <button className="text-yellow-400 text-xs font-bold hover:underline">Ver todos</button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {ESTABLISHMENTS.filter(e => e.type === 'restaurant').length > 0 && (
-              <div className="md:col-span-2 group cursor-pointer" onClick={() => handleShopClick(ESTABLISHMENTS.find(e => e.type === 'restaurant'))}>
-                <div className="relative rounded-2xl overflow-hidden aspect-video">
-                  <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={ESTABLISHMENTS[0].img} alt={ESTABLISHMENTS[0].name} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-5 flex flex-col justify-end">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="bg-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded uppercase">Exclusivo</span>
-                      <div className="flex items-center text-yellow-400 text-xs font-bold">
-                        <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                        {ESTABLISHMENTS[0].rating}
-                      </div>
-                    </div>
-                    <h4 className="text-lg font-bold text-white">{ESTABLISHMENTS[0].name}</h4>
-                    <p className="text-zinc-400 text-xs">{ESTABLISHMENTS[0].tag} • {ESTABLISHMENTS[0].time} • {ESTABLISHMENTS[0].freeDelivery ? "Grátis" : ESTABLISHMENTS[0].fee}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div className="flex flex-col gap-6">
-              {ESTABLISHMENTS.slice(1, 3).map((shop) => (
-                <div key={shop.id} className="group cursor-pointer" onClick={() => handleShopClick(shop)}>
-                  <div className="relative rounded-2xl overflow-hidden aspect-video">
-                    <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src={shop.img} alt={shop.name} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent p-4 flex flex-col justify-end">
-                      <h4 className="font-bold text-white text-sm">{shop.name}</h4>
-                      <p className="text-zinc-400 text-xs">{shop.tag} • {shop.time}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* MOBILIDADE */}
-        <section>
-          <div className="mb-10 text-center">
-            <p className="text-[10px] font-black text-yellow-400 tracking-[0.4em] uppercase mb-1">Ecossistema Urbano</p>
-            <h2 className="text-2xl font-extrabold tracking-tight text-white">Mobilidade e Transporte</h2>
+        <section className="bg-zinc-900/20 rounded-[32px] p-8 border border-white/5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 size-40 bg-yellow-400/5 blur-[80px] rounded-full -mr-20 -mt-20 pointer-events-none" />
+          <div className="flex flex-col items-center mb-10 text-center relative z-10">
+            <p className="text-[9px] font-black text-yellow-400 tracking-[0.5em] uppercase mb-2">Ecossistema Urbano</p>
+            <h2 className="text-2xl font-black tracking-tighter text-white italic uppercase">Mobilidade Izi</h2>
           </div>
-          <div className="grid grid-cols-2 gap-y-12 gap-x-8">
+          <div className="grid grid-cols-2 gap-y-12 gap-x-8 relative z-10 p-4">
             {[
               { icon: "two_wheeler", label: "Mototáxi", action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("taxi_wizard"); } },
               { icon: "airport_shuttle", label: "Van", action: () => { setTransitData({ ...transitData, type: "van", scheduled: false }); navigateSubView("van_wizard"); } },
-              { icon: "directions_car", label: "Motorista\nParticular", action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("taxi_wizard"); } },
+              { icon: "directions_car", label: "Motorista Particular", action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("taxi_wizard"); } },
               { icon: "local_shipping", label: "Frete", action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("freight_wizard"); } },
             ].map((svc, i) => (
               <motion.div
@@ -378,10 +335,56 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   </span>
                 </div>
                 <span className="text-[10px] font-black text-zinc-500 group-hover:text-yellow-400 tracking-[0.3em] uppercase transition-colors text-center leading-tight">
-                  {svc.label.split("\n").map((line: string, j: number) => (
-                    <span key={j}>{line}{j < svc.label.split("\n").length - 1 && <br/>}</span>
-                  ))}
+                  {svc.label}
                 </span>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        {/* FAVORITOS DA REGIÃO */}
+        <section className="space-y-6">
+          <div className="flex justify-between items-end px-1">
+            <div className="space-y-1">
+              <h3 className="text-xl font-black tracking-tighter text-white italic uppercase">Favoritos</h3>
+              <div className="flex items-center gap-2">
+                <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Bombando Agora</p>
+              </div>
+            </div>
+            <button className="text-[10px] font-black text-yellow-400 uppercase tracking-widest px-4 py-2 bg-yellow-400/5 rounded-xl border border-yellow-400/10 active:scale-95 transition-all">Ver todos</button>
+          </div>
+          
+          <div className="flex gap-5 overflow-x-auto no-scrollbar pb-6 -mx-5 px-5">
+            {ESTABLISHMENTS.map((shop, i) => (
+              <motion.div 
+                key={shop.id || i}
+                onClick={() => handleShopClick(shop)}
+                className="relative flex-shrink-0 w-[180px] group cursor-pointer"
+              >
+                <div className="relative aspect-[4/5] rounded-[32px] overflow-hidden bg-zinc-900 border border-white/5 transition-all duration-500 group-hover:border-white/20 group-hover:shadow-2xl group-hover:shadow-black">
+                  <img src={shop.img} className="size-full object-cover brightness-75 group-hover:scale-110 transition-transform duration-700" alt={shop.name} />
+                  
+                  {/* Overlay Gradiente Premium */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-5 flex flex-col justify-end">
+                    <div className="flex items-center gap-1.5 mb-2">
+                       <div className="flex items-center gap-0.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg border border-white/5">
+                          <span className="material-symbols-outlined text-yellow-400 text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                          <span className="text-[10px] font-black text-white">{shop.rating}</span>
+                       </div>
+                       <span className="text-[8px] font-black text-white/50 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg border border-white/5 uppercase tracking-tighter">{shop.time}</span>
+                    </div>
+                    <h4 className="text-sm font-black text-white leading-tight tracking-tight uppercase italic">{shop.name}</h4>
+                    <p className="text-[9px] font-bold text-zinc-400/80 truncate mt-1">{shop.tag}</p>
+                  </div>
+
+                  {/* Badge de Entrega Grátis se houver */}
+                  {shop.freeDelivery && (
+                    <div className="absolute top-4 right-4 translate-x-1/4 -translate-y-1/4 rotate-12">
+                       <span className="bg-yellow-400 text-black text-[8px] font-black px-2 py-1 rounded-lg shadow-lg">FRETE 0</span>
+                    </div>
+                  )}
+                </div>
               </motion.div>
             ))}
           </div>
