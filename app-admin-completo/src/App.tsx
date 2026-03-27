@@ -8514,7 +8514,19 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                         </div>
                         <div className="space-y-1">
                           <div className="flex items-center justify-between mb-1">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Segmento Principal</label>
+                            <div className="space-y-0.5">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Segmento Principal</label>
+                              <p className="text-[9px] text-slate-400 font-medium ml-4 leading-none lowercase italic">(ex: Restaurantes, Saúde, Mercados...)</p>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={() => setShowCategoryListModal(true)}
+                              className="text-[10px] font-black text-slate-400 hover:text-primary uppercase tracking-widest flex items-center gap-1 px-3 py-1 group transition-all"
+                              title="Gerenciar todos os segmentos e categorias do sistema"
+                            >
+                              <span className="material-symbols-outlined text-sm group-hover:rotate-90 transition-all">settings</span>
+                              Gerenciar
+                            </button>
                           </div>
                           <div className="relative">
                             <select
@@ -8554,21 +8566,45 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Subcategoria / Filtro de Exploração</label>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="space-y-0.5">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Filtros Adicionais / Especialidade</label>
+                              <p className="text-[9px] text-slate-400 font-medium ml-4 leading-none lowercase italic">(ex: Pizza, Sushi, Farmácia, Loja de Conveniência...)</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button 
+                                type="button" 
+                                onClick={() => setShowCategoryListModal(true)}
+                                className="text-[10px] font-black text-slate-400 hover:text-primary uppercase tracking-widest flex items-center gap-1 px-3 py-1 group transition-colors"
+                                title="Editar ou excluir categorias existentes"
+                              >
+                                <span className="material-symbols-outlined text-sm">settings</span>
+                                Gerenciar
+                              </button>
+                              <button 
+                                type="button" 
+                                onClick={handleAddSegment}
+                                className="text-[10px] font-black text-primary hover:text-primary/70 uppercase tracking-widest flex items-center gap-1 px-3 py-1 group transition-colors"
+                                title="Adicionar nova categoria ao sistema"
+                              >
+                                <span className="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">add_circle</span>
+                                Novo
+                              </button>
+                            </div>
+                          </div>
                           <div className="relative">
                             <select
                               value={editingItem.food_category || 'all'}
                               onChange={e => setEditingItem({ ...editingItem, food_category: e.target.value })}
                               className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all cursor-pointer appearance-none"
                             >
-                              <option value="all">Filtro: Todos / Outros</option>
+                              <option value="all">Sem Filtro Adicional</option>
                               {categoriesState
-                                .filter(c => !c.parent_id && c.type === 'service')
                                 .map(c => {
                                   const slug = c.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_');
                                   return (
                                     <option key={c.id} value={slug}>
-                                      {c.name}
+                                      {c.name} {c.parent_id ? '(Sub)' : ''}
                                     </option>
                                   );
                                 })}
