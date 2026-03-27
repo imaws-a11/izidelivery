@@ -2109,6 +2109,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         is_active: editingItem.is_active ?? (editingItem.status === 'active' ? true : false),
         status: editingItem.status || 'active',
         store_type: editingItem.store_type || 'restaurant',
+        food_category: editingItem.food_category || 'all',
         store_phone: editingItem.store_phone,
         store_description: editingItem.store_description,
         store_logo: editingItem.store_logo,
@@ -8551,6 +8552,27 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Categoria / Subsegmento</label>
+                          <div className="relative">
+                            <select
+                              value={editingItem.food_category || 'all'}
+                              onChange={e => setEditingItem({ ...editingItem, food_category: e.target.value })}
+                              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[24px] px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 transition-all cursor-pointer appearance-none"
+                            >
+                              <option value="all">Filtro: Todos</option>
+                              <option value="burgers">Hambúguer / Burger</option>
+                              <option value="pizza">Pizza</option>
+                              <option value="japones">Comida Japonesa</option>
+                              <option value="brasileira">Comida Brasileira</option>
+                              <option value="acai">Açaí / Sorvetes</option>
+                              <option value="doces">Doces / Padaria</option>
+                            </select>
+                            <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                              <span className="material-symbols-outlined text-base">expand_more</span>
+                            </div>
+                          </div>
+                        </div>
                         <div className="space-y-1">
                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">Documento (CPF/CNPJ)</label>
                           <input

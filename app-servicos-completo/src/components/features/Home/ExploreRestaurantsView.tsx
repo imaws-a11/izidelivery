@@ -48,21 +48,27 @@ export const ExploreRestaurantsView = ({
 
   const filteredRestaurants = useMemo(() => {
     return establishments.filter(shop => {
-      const isRestaurant = shop.type === 'restaurant';
+      // Consideramos como restaurantes qualquer loja do tipo food, restaurant, hamburguer, etc.
+      // E filtramos tipos que já têm visões próprias (mercado, farmacia, bebidas) se necessário, 
+      // mas aqui a prioridade é o que o usuário quer ver.
+      const isFoodRelated = ['restaurant', 'food', 'hamburguer', 'pizza', 'acai', 'lanchonete', 'japones'].includes(shop.type?.toLowerCase());
       const matchesSearch = shop.name.toLowerCase().includes(searchQuery.toLowerCase());
       
       let matchesCategory = true;
       if (selectedCategory !== "Todos") {
         const cat = selectedCategory.toLowerCase();
-        // Verifica se a categoria está na tag, descrição ou nome
-        matchesCategory = (shop.tag && shop.tag.toLowerCase().includes(cat)) || 
+        
+        // Verifica se a categoria está na tag, descrição, nome ou no novo campo foodCategory
+        matchesCategory = (shop.foodCategory && shop.foodCategory.toLowerCase() === cat) ||
+                         (shop.foodCategory && shop.foodCategory.toLowerCase().includes(cat)) ||
+                         (shop.tag && shop.tag.toLowerCase().includes(cat)) || 
                          (shop.description && shop.description.toLowerCase().includes(cat)) ||
                          (shop.name.toLowerCase().includes(cat)) ||
                          // Caso especial para Burguer/Burger
-                         (cat === "burguer" && (shop.tag?.toLowerCase().includes("burger") || shop.name.toLowerCase().includes("burger")));
+                         (cat === "burguer" && (shop.tag?.toLowerCase().includes("burger") || shop.name.toLowerCase().includes("burger") || shop.foodCategory?.toLowerCase().includes("burger") || shop.type?.toLowerCase().includes("hamburguer")));
       }
 
-      return isRestaurant && matchesSearch && matchesCategory;
+      return isFoodRelated && matchesSearch && matchesCategory;
     });
   }, [establishments, searchQuery, selectedCategory]);
 
