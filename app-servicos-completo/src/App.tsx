@@ -697,9 +697,29 @@ function App() {
   const getItemCount = (id: number) =>
     cart.filter((item) => item.id === id).length;
 
-  const handleAddToCart = (item: any) => {
+  const handleAddToCart = async (item: any) => {
+    try {
+      // Verificar se o produto tem adicionais cadastrados no banco
+      const { data: groups, error } = await supabase
+        .from('product_options_groups_delivery')
+        .select('id')
+        .eq('product_id', item.id)
+        .limit(1);
+
+      if (groups && groups.length > 0) {
+        // Se tiver opcionais, abre a tela de detalhes para o usuário escolher
+        setSelectedItem(item);
+        setSubView("product_detail");
+        return;
+      }
+    } catch (e) {
+      console.error("Erro ao verificar adicionais:", e);
+    }
+
+    // Se NÃO tiver adicionais, adiciona direto na sacola
     setCart((prev: any[]) => [...prev, { ...item }]);
     setUserXP((prev: number) => prev + 10);
+    showToast("Adicionado à sacola!", "success");
   };
 
   const handleShopClick = async (shop: any) => {
@@ -2981,7 +3001,7 @@ function App() {
 
           <div className="flex flex-col gap-4 pb-10">
             {ESTABLISHMENTS.filter((shop: any) =>
-              (shop.type === 'market' || shop.type === 'mercado') && shop.name.toLowerCase().includes(searchQuery.toLowerCase())
+              (shop.type === 'market' || shop.type === 'mercado' || shop.type === 'mercados') && shop.name.toLowerCase().includes(searchQuery.toLowerCase())
             ).map((shop: any, i: number) => (
               <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                 onClick={() => handleShopClick({ ...shop, type: "generic" })}
@@ -3063,7 +3083,7 @@ function App() {
 
           <div className="flex flex-col gap-4 pb-10">
             {ESTABLISHMENTS.filter((shop: any) =>
-              shop.type === "beverages" &&
+              (shop.type === "beverages" || shop.type === "bebidas") &&
               shop.name.toLowerCase().includes(searchQuery.toLowerCase())
             ).map((shop: any, i: number) => (
               <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
@@ -3269,7 +3289,7 @@ function App() {
 
           <div className="flex flex-col gap-4 pb-10">
             {ESTABLISHMENTS.filter((shop: any) =>
-              (shop.type === 'pharmacy' || shop.type === 'farmacia') && shop.name.toLowerCase().includes(searchQuery.toLowerCase())
+              (shop.type === 'pharmacy' || shop.type === 'farmacia' || shop.type === 'saude') && shop.name.toLowerCase().includes(searchQuery.toLowerCase())
             ).map((shop: any, i: number) => (
               <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                 onClick={() => handleShopClick({ ...shop, type: "generic" })}
@@ -3429,11 +3449,14 @@ function App() {
                     transition={{ delay: idx * 0.05 }}
                     className={`group relative flex flex-col gap-4 ${idx % 2 === 1 ? "md:mt-12" : ""}`}
                   >
-                    <div className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-[1.02]">
+                    <div 
+                      onClick={() => { setSelectedItem(item); setSubView("product_detail"); }}
+                      className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-[1.02] cursor-pointer"
+                    >
                       <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
                       <button
-                        onClick={() => handleAddToCart(item)}
+                        onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
                         className="absolute bottom-5 right-5 w-14 h-14 rounded-2xl bg-yellow-400 text-black shadow-[0_0_20px_rgba(255,215,9,0.4)] flex items-center justify-center active:scale-90 transition-all"
                       >
                         <span className="material-symbols-outlined font-bold">add</span>
@@ -3553,10 +3576,12 @@ function App() {
                 {(category.items || []).map((item: any, idx: number) => (
                   <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
                     className={`group relative flex flex-col gap-3 ${idx % 2 === 1 ? "md:mt-10" : ""}`}>
-                    <div className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-[1.02]">
+                    <div 
+                      onClick={() => { setSelectedItem(item); setSubView("product_detail"); }}
+                      className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-[1.02] cursor-pointer">
                       <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                      <button onClick={() => handleAddToCart(item)}
+                      <button onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
                         className="absolute bottom-4 right-4 w-12 h-12 rounded-2xl bg-yellow-400 text-black shadow-[0_0_20px_rgba(255,215,9,0.4)] flex items-center justify-center active:scale-90 transition-all">
                         <span className="material-symbols-outlined font-bold">add</span>
                       </button>
@@ -5979,9 +6004,11 @@ function App() {
   useEffect(() => {
     if (subView === "product_detail" && (selectedItem?.id || selectedItem?.uid)) {
        fetchProductAddons(selectedItem.id || selectedItem.uid);
+       setTempQuantity(1);
     } else if (subView !== "product_detail") {
        setProductAddonGroups([]);
        setSelectedOptions({});
+       setTempQuantity(1);
     }
   }, [subView, selectedItem?.id, selectedItem?.uid]);
 
