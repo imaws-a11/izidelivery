@@ -91,6 +91,7 @@ export interface Merchant {
   dispatch_priority?: 'exclusive' | 'global';
   scheduling_priority?: 'exclusive' | 'global';
   opening_hours?: Record<string, { active: boolean; open: string; close: string }>;
+  free_delivery?: boolean;
   created_at: string;
   updated_at?: string;
 }

@@ -50,19 +50,16 @@ export const ExploreRestaurantsView = ({
     const normalize = (s: string) => s ? s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_') : "";
     
     return establishments.filter(shop => {
-      // Normalizamos o tipo/segmento para uma verificação rigorosa
+      // Normalizamos o tipo/segmento para uma verificação rigorosa de Whitelist
       const type = normalize(shop.type);
-      const foodCat = normalize(shop.foodCategory);
       
-      // Lista de termos que definem o que NÃO é um restaurante/comida
-      const isBlacklisted = [
-        'pharmacy', 'farmacia', 'drugstore', 'saude', 'health', 
-        'mobility', 'taxi', 'van', 'envios', 'utility', 'servico', 
-        'marketplace', 'transporte', 'frete', 'entrega', 'logistica'
-      ].some(term => type.includes(term) || foodCat.includes(term));
+      // Apenas permitimos se o segmento principal for relacionado a alimentação
+      // Excluímos explicitamente mercados, farmácias e serviços
+      const whitelist = ['restaurante', 'food', 'hamburguer', 'pizzaria', 'acai', 'japones', 'lanche', 'gastronomia', 'doce', 'sorvete', 'confeitaria'];
+      const blacklist = ['mercado', 'market', 'farmacia', 'pharmacy', 'saude', 'gas', 'agua', 'servico', 'van', 'taxi', 'frete', 'entrega', 'utility'];
 
-      // Só permitimos se NÃO estiver na blacklist
-      const isFoodRelated = !isBlacklisted;
+      const isFoodRelated = whitelist.some(term => type.includes(term)) || 
+                           (!blacklist.some(term => type.includes(term)) && type !== "");
       
       const matchesSearch = shop.name.toLowerCase().includes(searchQuery.toLowerCase());
       
