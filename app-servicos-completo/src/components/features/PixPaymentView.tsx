@@ -184,6 +184,12 @@ export const PixPaymentView: React.FC<PixPaymentViewProps> = ({
             <div className="w-52 h-52 bg-white rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(255,215,9,0.2)] p-3">
               {selectedItem?.pixQrBase64 ? (
                 <img src={`data:image/png;base64,${selectedItem.pixQrBase64}`} className="w-full h-full" alt="QR PIX" />
+              ) : selectedItem?.pixQrCode ? (
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(selectedItem.pixQrCode)}`} 
+                  className="w-full h-full" 
+                  alt="QR PIX Fallback" 
+                />
               ) : (
                 <span className="material-symbols-outlined text-[120px] text-zinc-800">qr_code_2</span>
               )}

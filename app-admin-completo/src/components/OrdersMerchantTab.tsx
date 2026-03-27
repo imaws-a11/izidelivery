@@ -528,7 +528,7 @@ export default function OrdersMerchantTab() {
                                 </button>
                               </>
                           )}
-                          {selectedOrderDetails.status === 'waiting_merchant' && (
+                          {(selectedOrderDetails.status === 'waiting_merchant' || selectedOrderDetails.status === 'novo') && (
                               <>
                                 <button 
                                     disabled={localProcessingId === selectedOrderDetails.id}
