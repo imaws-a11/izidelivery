@@ -511,13 +511,15 @@ function App() {
           // Se o status mudou, mostrar notificação personalizada
           if (newOrder.status !== oldOrder.status) {
             const statusMessages: Record<string, string> = {
-              'novo': 'Recebemos seu pedido! Já estamos processando. Ã¢Å¡¡',
-              'pendente_pagamento': 'Aguardando confirmação do pagamento... Ã°Å¸â€™³',
-              'pendente': 'O lojista recebeu seu pedido! Ã°Å¸Å½â€°',
-              'aceito': 'O estabelecimento aceitou seu pedido! Ã°Å¸Å½â€°',
-              'confirmado': 'Pedido confirmado! O preparo começou. Ã¢Å“â€¦',
+              'novo': 'Pagamento aprovado! O lojista já recebeu seu pedido. ⚡',
+              'pendente_pagamento': 'Aguardando confirmação do pagamento... 💳',
+              'pendente': 'O lojista recebeu seu pedido! 🥳',
+              'aceito': 'O estabelecimento aceitou seu pedido! 🥳',
+              'confirmado': 'Pedido confirmado! O preparo começou. ✅',
               'preparando': 'Seu pedido está sendo preparado com carinho! Ã°Å¸³',
-              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. Ã°Å¸â€œ¦',
+              'no_preparo': 'Seu pedido já está no preparo! 🥗',
+              'waiting_driver': 'Pedido aceito! Estão buscando um entregador. 🛵',
+              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. 📦',
               'a_caminho': 'O motoboy aceitou e está indo coletar seu pedido! Ã°Å¸Ã¯¸',
               'picked_up': 'Pedido coletado! O motoboy está iniciando a entrega. Ã°Å¸Å¡â‚¬',
               'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! Ã°Å¸â€ºµ',
@@ -531,7 +533,7 @@ function App() {
             showToast(msg, newOrder.status === 'cancelado' ? 'warning' : 'success');
 
             // Se o pagamento lightning foi confirmado, fechar a tela de pagamento
-            if (newOrder.payment_status === 'paid' && subViewRef.current === "lightning_payment") {
+            if (newOrder.payment_status === 'paid' && subView === "lightning_payment") {
               setSubView("payment_success");
             }
 
@@ -550,22 +552,22 @@ function App() {
             }
 
             // TransiçÃƒµes automáticas de tela baseadas no status
-            if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
-              showToast("Loja aceitou seu pedido! Ã°Å¸Å½â€°", "success");
+            if (subView === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
+              showToast("Loja aceitou seu pedido! 🥳", "success");
               setSelectedItem(newOrder); 
               setTimeout(() => setSubView("active_order"), 1000);
             }
-            if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
+            if (subView === "waiting_merchant" && newOrder.status === "cancelado") {
               showToast("Seu pedido foi recusado.", "warning");
               setSubView("none");
               fetchMyOrders(userId!);
             }
-            if (subViewRef.current === "waiting_driver" && 
+            if (subView === "waiting_driver" && 
                 ["a_caminho", "aceito", "confirmado", "em_rota", "no_local", "picked_up", "saiu_para_entrega"].includes(newOrder.status)) {
               setSelectedItem(newOrder);
               setTimeout(() => setSubView("active_order"), 1500);
             }
-            if (subViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {
+            if (subView === "waiting_driver" && newOrder.status === "cancelado") {
               setSubView("none");
               fetchMyOrders(userId!);
             }
