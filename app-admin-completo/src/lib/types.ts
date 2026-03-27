@@ -97,19 +97,19 @@ export interface Merchant {
 }
 
 export interface MerchantProfile {
-  merchant_id: string;
-  store_name: string;
-  store_logo: string;
-  store_description: string;
-  store_banner: string;
-  store_phone: string;
-  delivery_radius: number;
-  opening_hours: Record<string, { active: boolean; open: string; close: string }>;
-  store_address: string;
-  dispatch_priority: 'exclusive' | 'global';
-  scheduling_priority: 'exclusive' | 'global';
-  is_open: boolean;
-  store_type: string;
+  merchant_id?: string;
+  store_name?: string;
+  store_logo?: string;
+  store_description?: string;
+  store_banner?: string;
+  store_phone?: string;
+  delivery_radius?: number;
+  opening_hours?: Record<string, { active: boolean; open: string; close: string }>;
+  store_address?: string;
+  dispatch_priority?: 'exclusive' | 'global';
+  scheduling_priority?: 'exclusive' | 'global';
+  is_open?: boolean;
+  store_type?: string;
   free_delivery?: boolean;
 }
 

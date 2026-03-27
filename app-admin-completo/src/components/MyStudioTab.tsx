@@ -5,7 +5,7 @@ import type { Merchant, MerchantProfile, Product, MenuCategory } from '../lib/ty
 
 function renderDevicePreview(targetItem: Merchant | MerchantProfile | null, targetProducts: Product[], targetCategories: any[]) {
   return (
-    <div className="hidden lg:flex w-[400px] bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex-col items-center justify-center p-10 select-none">
+    <div className="flex flex-col items-center justify-center p-4 lg:p-10 select-none">
       <div className="relative w-full max-w-[320px] aspect-[9/19] bg-white dark:bg-slate-900 rounded-[50px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.3)] border-[8px] border-slate-900 dark:border-slate-800 overflow-hidden">
         {/* Status Bar */}
         <div className="absolute top-0 w-full h-8 flex items-center justify-between px-8 z-20">
@@ -681,7 +681,6 @@ function renderDevicePreview(targetItem: Merchant | MerchantProfile | null, targ
       </div>
     </div>
   );
-}
 
 export default function MyStudioTab() {
   const {
@@ -725,23 +724,30 @@ export default function MyStudioTab() {
     <>
 <div className="flex flex-col h-[calc(100vh-160px)] -m-8 relative overflow-hidden bg-white dark:bg-slate-900 shadow-2xl rounded-[40px] border border-slate-100 dark:border-slate-800">
   {((userRole === 'merchant' && merchantProfile) || (userRole === 'admin' && selectedMerchantPreview)) ? (
-    <div className="flex-1 flex overflow-hidden">
-      {/* Digital Preview Column (Simulates App) */}
-      <div className="w-[480px] border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 flex flex-col items-center justify-center p-12 overflow-hidden relative">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/0 via-primary/40 to-primary/0"></div>
-        {renderDevicePreview(
-          userRole === 'merchant' ? merchantProfile : selectedMerchantPreview,
-          userRole === 'merchant' ? productsList : previewProducts,
-          userRole === 'merchant' ? menuCategoriesList : previewCategories
-        )}
-      </div>
-
-      {/* Creative Control Panel Column */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900">
+    <div className="flex-1 flex flex-col xl:flex-row overflow-hidden pb-10">
+      {/* Creative Control Panel Column - Immersive Full Screen */}
+      <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 min-w-0">
          {renderStudioPanel(
           userRole === 'merchant' ? merchantProfile : selectedMerchantPreview,
           userRole === 'merchant' ? (updated: MerchantProfile) => setMerchantProfile(updated) : (updated: Merchant) => setSelectedMerchantPreview(updated)
          )}
+      </div>
+
+      {/* Digital Preview Column (Simulates App) - Responsive & Toggleable */}
+      <div className="hidden xl:flex w-[480px] border-l border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 flex-col items-center justify-center p-8 overflow-hidden relative group">
+        <div className="absolute top-0 right-0 w-1 h-full bg-gradient-to-b from-primary/0 via-primary/40 to-primary/0"></div>
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-full shadow-sm border border-slate-100 dark:border-slate-800 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+           <span className="material-symbols-outlined text-primary text-sm">devices</span>
+           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Visualização em Tempo Real</span>
+        </div>
+        
+        <div className="scale-90 xl:scale-100 transition-transform duration-500">
+          {renderDevicePreview(
+            userRole === 'merchant' ? merchantProfile : selectedMerchantPreview,
+            userRole === 'merchant' ? productsList : previewProducts,
+            userRole === 'merchant' ? menuCategoriesList : previewCategories
+          )}
+        </div>
       </div>
     </div>
   ) : (
