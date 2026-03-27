@@ -246,12 +246,13 @@ const FlashOffersSection = ({ supabase, userRole, merchantId }: { supabase: any,
 
 function App() {
 
-  const [session, setSession] = useState<any>(() => {
+  const [session, setSession] = useState<Session | null>(() => {
     try {
       const cached = localStorage.getItem('izi_admin_session');
       return cached ? JSON.parse(cached) : null;
     } catch { return null; }
   });
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
@@ -325,7 +326,7 @@ function App() {
     const start = (driversPage - 1) * DRIVERS_PER_PAGE;
     return filteredDrivers.slice(start, start + DRIVERS_PER_PAGE);
   }, [filteredDrivers, driversPage]);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
 
 
   // Paginação de pedidos
@@ -1990,10 +1991,10 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
       if (error) throw error;
 
       // Update local state
-      setMerchantProfile((prev) => ({
+      setMerchantProfile((prev) => prev ? ({
         ...prev,
         [field]: value
-      }));
+      }) : null);
     } catch (err) {
       console.error('Update dispatch settings error:', err);
     }
@@ -3055,7 +3056,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
       if (!acc[type]) acc[type] = { count: 0, revenue: 0 };
       acc[type].count++;
       if (o.status === 'concluido') {
-        acc[type].revenue += (o.total_amount || o.total_price || 0);
+        acc[type].revenue += (o.total_price || 0);
       }
       return acc;
     }, {});
@@ -3740,7 +3741,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                                          </div>
                                        ) : (
                                          <div className="w-full bg-slate-50 dark:bg-slate-900/50 rounded-2xl py-4 px-6 text-xs font-black text-slate-900 dark:text-white border border-slate-100 dark:border-slate-800">
-                                            R$ {parseFloat(slot.fee_per_day || 0).toFixed(2).replace('.', ',')}
+                                            R$ {Number(slot.fee_per_day || 0).toFixed(2).replace('.', ',')}
                                          </div>
                                        )}
                                     </div>
@@ -3840,18 +3841,24 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     </div>
   );
 
-  const SidebarItem = ({ icon, label, id }: { icon: string, label: string, id: Tab }) => (
+  const NavTab = ({ icon, label, id }: { icon: string, label: string, id: Tab }) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-semibold text-sm group ${activeTab === id
-        ? 'bg-primary text-slate-900 shadow-soft'
-        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+      className={`flex flex-col lg:flex-row items-center gap-2 px-5 lg:px-6 py-2 rounded-2xl transition-all relative whitespace-nowrap group ${activeTab === id
+        ? 'bg-primary text-slate-900 shadow-lg shadow-primary/20 scale-105'
+        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
         }`}
     >
-      <span className={`material-symbols-outlined transition-transform ${activeTab === id ? 'scale-110' : 'group-hover:scale-110'}`}>
+      <span className={`material-symbols-outlined text-2xl transition-all ${activeTab === id ? 'font-fill' : 'group-hover:scale-110'}`}>
         {icon}
       </span>
-      <span>{label}</span>
+      <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+      {activeTab === id && (
+        <motion.div 
+          layoutId="active-tab-indicator" 
+          className="absolute -bottom-2 lg:bottom-0 left-1/2 lg:left-0 -translate-x-1/2 lg:translate-x-0 w-1 lg:w-full h-1 lg:h-0.5 bg-primary/0 rounded-full" 
+        />
+      )}
     </button>
   );
 
@@ -4011,140 +4018,103 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
 
       {/* 3. Dashboard Principal - Se NÃO estiver em loading e TIVER sessão */}
       {!isInitialLoading && session && (
-        <div className="flex h-screen overflow-hidden w-full">
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex w-full overflow-hidden"
-          >
-        {/* Sidebar Navigation */}
-        <aside className="w-64 flex-shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between p-4 z-20 overflow-y-auto custom-scrollbar">
-          <div className="flex flex-col gap-8">
-            <div className="flex items-center gap-3 px-2 py-4">
-              <div className="bg-primary size-10 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-                <span className="material-symbols-outlined text-slate-900 font-bold">local_shipping</span>
-              </div>
-              <div className="flex flex-col">
-                <h1 className="text-slate-900 dark:text-white text-base font-black leading-tight tracking-tight">Delivery de Tudo</h1>
-                <p className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest">Painel Admin</p>
-              </div>
+        <div className="flex flex-col h-screen overflow-hidden w-full bg-background-light dark:bg-background-dark">
+          {/* Top Navigation Bar */}
+          <nav className="z-30 h-24 lg:h-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center px-4 lg:px-8 gap-4 lg:gap-8 shadow-sm">
+            {/* Logo */}
+            <div className="hidden md:flex items-center gap-4 shrink-0 pr-4 border-r border-slate-100 dark:border-slate-800">
+               <div className="bg-primary size-10 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                  <span className="material-symbols-outlined text-slate-900 font-bold">local_shipping</span>
+               </div>
+               <div className="flex flex-col">
+                  <h1 className="text-slate-900 dark:text-white text-base font-black leading-tight tracking-tight">IZI <span className="text-primary tracking-widest text-[9px] ml-0.5">ADMIN</span></h1>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Professional Studio</p>
+               </div>
             </div>
 
-            <nav className="flex flex-col gap-1">
-              {userRole === 'merchant' ? (
-                <>
-                  <SidebarItem id="orders" icon="shopping_cart" label="Pedidos e Entregas" />
-                  <SidebarItem id="my_studio" icon="inventory_2" label="Minha Loja Digital" />
-                  <SidebarItem id="my_drivers" icon="delivery_dining" label="Meus Motoboys" />
-                  <SidebarItem id="promotions" icon="percent" label="Promoções" />
-                  <SidebarItem id="financial" icon="bar_chart" label="Meu Financeiro" />
-                  <SidebarItem id="settings" icon="settings" label="Configurações" />
-                </>
-              ) : (
-                <>
-                  <p className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mt-4">Principal</p>
-                  <SidebarItem id="dashboard" icon="dashboard" label="Dashboard Geral" />
-                  <SidebarItem id="merchants" icon="storefront" label="Lojistas" />
-                  <SidebarItem id="partners" icon="handshake" label="Parceiros Izi" />
-                  <SidebarItem id="my_studio" icon="inventory_2" label="Gerenciar Estúdios" />
-                  <SidebarItem id="tracking" icon="map" label="Rastreamento" />
-                  <SidebarItem id="orders" icon="shopping_cart" label="Pedidos" />
-                  <SidebarItem id="drivers" icon="person_pin_circle" label="Entregadores" />
-                  <SidebarItem id="users" icon="group" label="Clientes" />
+            {/* Scrollable Tabs */}
+            <div className="flex-1 flex items-center overflow-x-auto scrollbar-hide gap-1 py-4 lg:py-0">
+               {userRole === 'merchant' ? (
+                 <>
+                   <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
+                   <NavTab id="my_studio" icon="inventory_2" label="Minha Loja Digital" />
+                   <NavTab id="my_drivers" icon="delivery_dining" label="Motoboys" />
+                   <NavTab id="promotions" icon="percent" label="Promoções" />
+                   <NavTab id="financial" icon="bar_chart" label="Financeiro" />
+                   <NavTab id="settings" icon="settings" label="Configurações" />
+                 </>
+               ) : (
+                 <>
+                   <NavTab id="dashboard" icon="dashboard" label="Home" />
+                   <NavTab id="merchants" icon="storefront" label="Lojistas" />
+                   <NavTab id="my_studio" icon="inventory_2" label="Estúdios" />
+                   <NavTab id="tracking" icon="map" label="Rastreador" />
+                   <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
+                   <NavTab id="drivers" icon="person_pin_circle" label="Entregadores" />
+                   <NavTab id="users" icon="group" label="Clientes" />
+                   <NavTab id="categories" icon="layers" label="Categorias" />
+                   <NavTab id="dynamic_rates" icon="payments" label="Taxas" />
+                   <NavTab id="partners" icon="handshake" label="Parceiros" />
+                   <NavTab id="settings" icon="settings" label="Sistema" />
+                 </>
+               )}
+            </div>
 
-                  <p className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mt-6">Operacional</p>
-                  <SidebarItem id="categories" icon="layers" label="Categorias" />
-                  <SidebarItem id="promotions" icon="percent" label="Promoções" />
-                  <SidebarItem id="izi_black" icon="workspace_premium" label="Izi Black VIP" />
-                  <SidebarItem id="dynamic_rates" icon="payments" label="Taxas Dinâmicas" />
-                  <SidebarItem id="financial" icon="bar_chart" label="Financeiro Geral" />
-                  <SidebarItem id="support" icon="support_agent" label="Suporte Central" />
-                  <SidebarItem id="audit_logs" icon="history_toggle_off" label="Logs do Sistema" />
-                  <SidebarItem id="settings" icon="settings" label="Configurações" />
-                </>
-              )}
-            </nav>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <div className="size-10 rounded-full bg-slate-300 dark:bg-slate-700 flex items-center justify-center overflow-hidden border-2 border-white dark:border-slate-800 shadow-sm">
-                {userRole === 'merchant' && merchantProfile?.store_logo ? (
-                  <img alt="Store Logo" className="w-full h-full object-cover" src={merchantProfile.store_logo} />
-                ) : (
-                  <img alt="User Avatar" className="w-full h-full object-cover" src={`https://ui-avatars.com/api/?name=${userRole === 'merchant' ? (merchantProfile?.store_name || 'L') : 'ADM'}&background=${userRole === 'merchant' ? '10b981' : 'ffd900'}&color=fff&size=128&bold=true`} />
-                )}
-              </div>
-              <div className="flex flex-col min-w-0">
-                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                  {userRole === 'merchant' ? (merchantProfile?.store_name || 'Lojista') : 'Admin Sistema'}
-                </p>
-                <div className="flex items-center gap-1.5">
-                  <span className={`inline-block size-1.5 rounded-full ${userRole === 'admin' ? 'bg-primary' : 'bg-emerald-500'}`}></span>
-                  <p className={`text-[10px] font-black uppercase tracking-widest ${userRole === 'admin' ? 'text-primary' : 'text-emerald-500'}`}>
-                    {userRole === 'admin' ? 'Gerente Geral' : 'Lojista'}
+            {/* User Profile & Logout */}
+            <div className="flex items-center gap-3 shrink-0 ml-auto pl-4 border-l border-slate-100 dark:border-slate-800">
+               <div className="hidden sm:flex flex-col text-right mr-2">
+                  <p className="text-xs font-black text-slate-900 dark:text-white truncate max-w-[120px]">
+                     {userRole === 'merchant' ? (merchantProfile?.store_name || 'Lojista') : 'Admin Sistema'}
                   </p>
-                </div>
-              </div>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-emerald-500">{userRole === 'admin' ? 'Gerente Master' : 'Estabelecimento'}</p>
+               </div>
+               <div className="size-10 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center p-0.5">
+                  {userRole === 'merchant' && merchantProfile?.store_logo ? (
+                     <img alt="Store Logo" className="w-full h-full object-cover rounded-[14px]" src={merchantProfile.store_logo} />
+                  ) : (
+                     <img alt="User Avatar" className="w-full h-full object-cover rounded-[14px]" src={`https://ui-avatars.com/api/?name=${userRole === 'merchant' ? (merchantProfile?.store_name || 'L') : 'ADM'}&background=${userRole === 'merchant' ? '10b981' : 'ffd900'}&color=fff&size=120&bold=true`} />
+                  )}
+               </div>
+               <button 
+                  onClick={handleLogout} 
+                  className="size-10 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-sm"
+                  title="Sair do Sistema"
+               >
+                  <span className="material-symbols-outlined text-xl">logout</span>
+               </button>
             </div>
+          </nav>
 
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl text-red-500 font-bold hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-sm"
-            >
-              <span className="material-symbols-outlined text-lg">logout</span>
-              Sair do Sistema
-            </button>
-          </div>
-        </aside>
-
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark relative">
-          {/* Header */}
-          <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
-            <div>
-              <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
-                {activeTab === 'dashboard' ? 'Visão Geral do Dashboard' :
-                  activeTab === 'tracking' ? 'Rastreamento em Tempo Real' :
-                    activeTab === 'orders' ? 'Gestão de Pedidos' :
-                      activeTab === 'drivers' ? 'Gestão de Entregadores' :
-                        activeTab === 'users' ? 'Gestão de Clientes' :
-                          activeTab === 'categories' ? 'Gestão de Categorias' :
-                            activeTab === 'promotions' ? 'Promoções e Banners' :
-                              activeTab === 'izi_black' ? 'Membros Izi Black VIP' :
-                                activeTab === 'dynamic_rates' ? 'Configurações de Taxas Dinâmicas' :
-                                    activeTab === 'financial' ? 'Relatórios Financeiros' :
-                                      activeTab === 'support' ? 'Central de Suporte' :
-                                        activeTab === 'audit_logs' ? 'Logs de Auditoria' :
-                                          activeTab === 'my_store' ? 'Meu Estabelecimento' :
-                                            activeTab === 'my_drivers' ? 'Gestão de Motoboys Próprios' :
-                                              activeTab === 'partners' ? 'Gestão de Parceiros Izi' :
-                                                activeTab === 'my_studio' ? 'Estúdio do Lojista' : 
-                                                  activeTab === 'settings' && userRole === 'merchant' ? 'Configurações do Estabelecimento' : 'Configurações do Sistema'}
-              </h2>
-              <p className="text-xs font-medium text-slate-500">
-                {activeTab === 'dashboard' ? 'Bem-vindo de volta! Veja o que está acontecendo hoje.' : 
-                  activeTab === 'izi_black' ? 'Gerenciamento de benefícios e recompensas exclusivas.' : 'Acompanhamento em tempo real dos seus dados.'}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
-                <input
-                  className="pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-xl text-sm font-semibold focus:ring-2 focus:ring-primary w-64 transition-all placeholder:text-slate-400"
-                  placeholder="Buscar pedidos, clientes..."
-                  type="text"
-                />
-              </div>
-              <button className="relative p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
-                <span className="material-symbols-outlined">notifications</span>
-                <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full ring-2 ring-white dark:ring-slate-900"></span>
-              </button>
-            </div>
-          </header>
-
-          <div className="p-8 space-y-8 min-h-screen">
+          <main className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark relative scrollbar-hide">
+            
+            <motion.div 
+            className="flex-1 overflow-x-hidden relative"
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.2}
+            onDragEnd={(_, info) => {
+              const threshold = 100;
+              const tabs = userRole === 'merchant' 
+                ? ['orders', 'my_studio', 'my_drivers', 'promotions', 'financial', 'settings']
+                : ['dashboard', 'merchants', 'my_studio', 'tracking', 'orders', 'drivers', 'users', 'categories', 'dynamic_rates', 'partners', 'settings'];
+              
+              const currentIndex = tabs.indexOf(activeTab);
+              if (info.offset.x > threshold && currentIndex > 0) {
+                setActiveTab(tabs[currentIndex - 1] as Tab);
+              } else if (info.offset.x < -threshold && currentIndex < tabs.length - 1) {
+                setActiveTab(tabs[currentIndex + 1] as Tab);
+              }
+            }}
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="p-8 space-y-8 min-h-screen"
+              >
 
 {/* â â â â â â â ADMIN DASHBOARD â â â â â â â */}
             {activeTab === 'dashboard' && userRole !== 'merchant' && (
@@ -8635,25 +8605,32 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
 
             {/* ── Merchant/Admin: Estúdio do Lojista (Consolidado) ── */}
             {activeTab === 'my_studio' && (
-              <div className="flex flex-col h-[calc(100vh-160px)] -m-8 relative overflow-hidden bg-white dark:bg-slate-900 shadow-2xl rounded-[40px] border border-slate-100 dark:border-slate-800">
+              <div className="flex flex-col h-[calc(100vh-140px)] -m-8 relative overflow-hidden bg-white dark:bg-slate-900 shadow-2xl rounded-[40px] border border-slate-100 dark:border-slate-800">
                 {(userRole === 'merchant' && merchantProfile) || (userRole === 'admin' && selectedMerchantPreview) ? (
-                  <div className="flex-1 flex overflow-hidden">
-                    {/* Digital Preview Column (Simulates App) */}
-                    <div className="w-[480px] border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 flex flex-col items-center justify-center p-12 overflow-hidden relative">
-                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/0 via-primary/40 to-primary/0"></div>
-                      {renderDevicePreview(
-                        userRole === 'merchant' ? merchantProfile : selectedMerchantPreview,
-                        userRole === 'merchant' ? productsList : previewProducts,
-                        userRole === 'merchant' ? menuCategoriesList : previewCategories
-                      )}
-                    </div>
-
-                    {/* Creative Control Panel Column */}
-                    <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900">
+                  <div className="flex-1 flex flex-col lg:flex-row overflow-hidden pb-10">
+                    {/* Creative Control Panel Column - Takes priority in Full Screen */}
+                    <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900 min-w-0">
                        {renderStudioPanel(
                         userRole === 'merchant' ? merchantProfile : selectedMerchantPreview,
                         userRole === 'merchant' ? (updated: MerchantProfile) => setMerchantProfile(updated) : (updated: Merchant) => setSelectedMerchantPreview(updated)
                        )}
+                    </div>
+
+                    {/* Digital Preview Column (Simulates App) - Responsive & Toggleable */}
+                    <div className="hidden xl:flex w-[480px] border-l border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 flex-col items-center justify-center p-8 overflow-hidden relative group">
+                      <div className="absolute top-0 right-0 w-1 h-full bg-gradient-to-b from-primary/0 via-primary/40 to-primary/0"></div>
+                      <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-full shadow-sm border border-slate-100 dark:border-slate-800 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <span className="material-symbols-outlined text-primary text-sm">devices</span>
+                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Visualização em Tempo Real</span>
+                      </div>
+                      
+                      <div className="scale-90 xl:scale-100 transition-transform duration-500">
+                        {renderDevicePreview(
+                          userRole === 'merchant' ? merchantProfile : selectedMerchantPreview,
+                          userRole === 'merchant' ? productsList : previewProducts,
+                          userRole === 'merchant' ? menuCategoriesList : previewCategories
+                        )}
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -11574,15 +11551,15 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
               </div>
             )}
           </AnimatePresence>
-
-          {/* Global Footer */}
+          
           <div className="p-6 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-slate-800 text-center mt-auto">
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">Painel de Controle em Tempo Real • Gerenciamento de Pedidos</p>
           </div>
+                </motion.div>
+              </AnimatePresence>
+            </motion.div>
+          </main>
         </div>
-      </main>
-      </motion.div>
-    </div>
       )}
 
     </div>
