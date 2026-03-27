@@ -66,18 +66,40 @@ export const ExploreRestaurantsView = ({
       let matchesCategory = true;
       if (selectedCategory !== "Todos") {
         const catNormalized = normalize(selectedCategory);
+        const shopFoodCat = normalize(shop.foodCategory);
+        const shopType = normalize(shop.type);
+        const shopTag = normalize(shop.tag);
+        const shopDesc = normalize(shop.description);
+        const shopName = normalize(shop.name);
         
-        // Verifica se a categoria normalizada bate com o foodCategory, type, tag ou nome
-        matchesCategory = normalize(shop.foodCategory) === catNormalized ||
-                         normalize(shop.type) === catNormalized ||
-                         normalize(shop.tag).includes(catNormalized) || 
-                         normalize(shop.description).includes(catNormalized) ||
-                         normalize(shop.name).includes(catNormalized);
+        // Verificação mais abrangente por similaridade de texto
+        matchesCategory = shopFoodCat.includes(catNormalized) ||
+                         shopType.includes(catNormalized) ||
+                         shopTag.includes(catNormalized) || 
+                         shopDesc.includes(catNormalized) ||
+                         shopName.includes(catNormalized);
                          
-        // Fallback para termos comuns
+        // Fallback robusto para variações linguísticas (Burguer / Hamburguer / Burger)
         if (!matchesCategory) {
-           if (catNormalized === 'hambuguer' || catNormalized === 'burger' || catNormalized === 'burgers') {
-              matchesCategory = normalize(shop.tag).includes('burger') || normalize(shop.foodCategory).includes('burger') || normalize(shop.name).includes('burger');
+           const burgerTerms = ['burguer', 'hamburguer', 'burger', 'burgers'];
+           if (burgerTerms.includes(catNormalized)) {
+              matchesCategory = burgerTerms.some(term => 
+                shopFoodCat.includes(term) || shopTag.includes(term) || shopName.includes(term)
+              );
+           }
+           
+           const pizzaTerms = ['pizza', 'pizzaria', 'pizzas'];
+           if (pizzaTerms.includes(catNormalized)) {
+              matchesCategory = pizzaTerms.some(term => 
+                shopFoodCat.includes(term) || shopTag.includes(term) || shopName.includes(term)
+              );
+           }
+
+           const japaneseTerms = ['japones', 'sushi', 'temaki', 'oriental'];
+           if (japaneseTerms.includes(catNormalized)) {
+              matchesCategory = japaneseTerms.some(term => 
+                shopFoodCat.includes(term) || shopTag.includes(term) || shopName.includes(term)
+              );
            }
         }
       }
@@ -95,8 +117,12 @@ export const ExploreRestaurantsView = ({
               <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
             </button>
             <div>
-              <h1 className="text-xl font-black tracking-tight text-white leading-none">Restaurantes</h1>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Explore novos sabores</p>
+              <h1 className="text-xl font-black tracking-tight text-white leading-none">
+                {initialCategory === "Almoço" ? "Almoço Izi" : "Restaurantes"}
+              </h1>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">
+                {initialCategory === "Almoço" ? "O que comer no almoço?" : "Explore novos sabores"}
+              </p>
             </div>
           </div>
           <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">

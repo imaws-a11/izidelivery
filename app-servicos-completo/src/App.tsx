@@ -1429,6 +1429,14 @@ function App() {
     { id: "daily",      name: "Do Dia",     icon: "today",         action: () => navigateSubView("daily_menus") },
   ];
 
+  const lunchCategories = [
+    { id: "all",     name: "Todos",           icon: "restaurant" },
+    { id: "promo",   name: "Promoção do Dia", icon: "percent" },
+    { id: "monte",   name: "Monte o seu",     icon: "flatware" },
+    { id: "pratos",  name: "Pratos feitos",   icon: "rice_bowl" },
+    { id: "marmita", name: "Marmitas",        icon: "lunch_dining" },
+  ];
+
   const fetchMarketData = async () => {
     try {
       // 1. Buscar Configurações Centrais do Admin
@@ -2186,6 +2194,8 @@ function App() {
   };
 
   const renderExploreRestaurants = () => {
+    const isLunchMode = restaurantInitialCategory === "Almoço";
+    
     return (
       <ExploreRestaurantsView 
         setSubView={setSubView}
@@ -2193,7 +2203,7 @@ function App() {
         setSearchQuery={setSearchQuery}
         cart={cart}
         navigateSubView={navigateSubView}
-        foodCategories={foodCategories}
+        foodCategories={isLunchMode ? lunchCategories : foodCategories}
         availableCoupons={availableCoupons}
         establishments={ESTABLISHMENTS}
         onShopClick={handleShopClick}
@@ -8133,6 +8143,7 @@ function App() {
                 transitData={transitData}
                 setTransitData={setTransitData}
                 setExploreCategoryState={setExploreCategoryState}
+                setRestaurantInitialCategory={setRestaurantInitialCategory}
               />
             )}
             {tab === "orders" && (

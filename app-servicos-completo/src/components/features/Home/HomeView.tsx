@@ -25,6 +25,7 @@ interface HomeViewProps {
   transitData: any;
   setTransitData: (data: any) => void;
   setExploreCategoryState: (state: any) => void;
+  setRestaurantInitialCategory: (cat: string) => void;
   isIziBlackMembership: boolean;
 }
 
@@ -52,6 +53,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   transitData,
   setTransitData,
   setExploreCategoryState,
+  setRestaurantInitialCategory,
   isIziBlackMembership,
 }) => {
   const handleBannerClick = () => {
@@ -63,7 +65,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
   };
 
   const deliveryServices = [
-    { icon: "restaurant",     label: "Restaurantes", type: "restaurant", action: null },
+    { icon: "restaurant",     label: "Food",         type: "restaurant", action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("restaurant_list"); } },
+    { icon: "rice_bowl",      label: "Almoço",       type: "restaurant", action: () => { setRestaurantInitialCategory("Almoço"); navigateSubView("restaurant_list"); } },
     { icon: "local_mall",     label: "Mercados",     type: "market",     action: null },
     { icon: "local_bar",      label: "Bebidas",      type: "beverages",  action: null },
     { icon: "local_pharmacy", label: "Saúde",        type: "pharmacy",   action: null },
@@ -74,7 +77,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const handleServiceSelection = (cat: any) => {
     if (cat.action) return cat.action();
     setActiveService(cat);
-    if (cat.type === "restaurant") navigateSubView("restaurant_list");
+    
+    if (cat.type === "restaurant") {
+       setRestaurantInitialCategory("Todos");
+       navigateSubView("restaurant_list");
+    }
     else if (cat.type === "market") navigateSubView("market_list");
     else if (cat.type === "pharmacy") navigateSubView("pharmacy_list");
     else if (cat.type === "beverages") navigateSubView("beverages_list");
