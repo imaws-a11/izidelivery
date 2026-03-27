@@ -90,7 +90,14 @@ export const EstablishmentListView = ({
                   <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                   <span className="text-xs font-black text-white">{shop.rating}</span>
                 </div>
-                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                {shop.freeDelivery && (
+                  <div className="absolute bottom-3 left-3 z-10">
+                     <span className="bg-yellow-400 text-black text-[9px] font-black px-3 py-1.5 rounded-full shadow-xl flex items-center gap-1.5 border border-black/10">
+                        <span className="material-symbols-outlined text-[12px]">local_shipping</span>
+                        FRETE GRÁTIS
+                     </span>
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between px-1">
                 <div>
