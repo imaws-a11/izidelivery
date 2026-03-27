@@ -18,8 +18,9 @@ serve(async (req) => {
       return new Response(JSON.stringify({ received: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const paymentId = payload.data?.id
+    const paymentId = payload.data?.id || payload.id
     if (!paymentId) {
+      console.log('Webhook MP ignorado ou sem paymentId:', JSON.stringify(payload))
       return new Response(JSON.stringify({ received: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 

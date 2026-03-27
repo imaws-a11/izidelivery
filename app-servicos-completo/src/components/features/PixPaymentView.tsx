@@ -56,7 +56,8 @@ export const PixPaymentView: React.FC<PixPaymentViewProps> = ({
 }) => {
   const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
   const discount = appliedCoupon ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100) : 0;
-  const total = Math.max(0, subtotal - discount);
+  const cartTotal = Math.max(0, subtotal - discount);
+  const total = (pixConfirmed && selectedItem?.total_price) ? Number(selectedItem.total_price) : cartTotal;
 
   const formatCpf = (v: string) => v.replace(/\D/g,"").slice(0,11)
     .replace(/(\d{3})(\d)/,"$1.$2")

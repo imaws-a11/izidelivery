@@ -39,8 +39,14 @@ export default function OrdersMerchantTab() {
   const handleAction = async (id: string, newStatus: string, reason?: string) => {
     setLocalProcessingId(id);
     try {
-      const updateData: any = { status: newStatus };
+      let updateData: any = { status: newStatus };
       if (reason) updateData.cancel_reason = reason;
+      
+      // Se for confirmação manual de pagamento, atualizar campos de pagamento também
+      if (newStatus === 'novo') {
+        updateData.payment_status = 'approved';
+        updateData.paid_at = new Date().toISOString();
+      }
       
       const { data, error, status } = await supabase.from('orders_delivery').update(updateData).eq('id', id).select();
       
@@ -516,7 +522,7 @@ export default function OrdersMerchantTab() {
                                 </button>
                                 <button
                                     disabled={localProcessingId === selectedOrderDetails.id}
-                                    onClick={() => handleAction(selectedOrderDetails.id, 'waiting_driver')}
+                                    onClick={() => handleAction(selectedOrderDetails.id, 'novo')}
                                     className="flex-[2] py-4 rounded-3xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
                                     {localProcessingId === selectedOrderDetails.id ? '...' : (

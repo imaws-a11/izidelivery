@@ -22,6 +22,7 @@ serve(async (req) => {
     })
     if (!chargeRes.ok) throw new Error(`OpenNode: ${JSON.stringify(await chargeRes.json())}`)
     const { data: charge } = await chargeRes.json()
+    console.log(`Charge criada: ${charge.id}, Invoice: ${charge.lightning_invoice?.payreq ? 'Sim' : 'Não'}`);
     const db = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { autoRefreshToken: false, persistSession: false } })
     await db.from('orders_delivery').update({ payment_intent_id: charge.id, payment_status: 'pending' }).eq('id', orderId)
     return new Response(JSON.stringify({ chargeId: charge.id, payment_request: charge.lightning_invoice?.payreq, hosted_checkout: charge.hosted_checkout_url, satoshis, amount_brl: amount, btc_price_brl: btcPriceBRL }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
