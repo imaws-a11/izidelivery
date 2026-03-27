@@ -11157,7 +11157,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   <div className="flex-1 overflow-y-auto px-10 pb-10 custom-scrollbar">
                     <form id="productForm" onSubmit={handleSaveProduct} className="space-y-12 mt-4">
                       {/* Check store type for specialized Experience */}
-                      {(merchantProfile?.store_type === 'restaurant' || selectedMerchantPreview?.store_type === 'restaurant') ? (
+                      {(merchantProfile?.store_type?.toLowerCase() === 'restaurant' || merchantProfile?.store_type?.toLowerCase() === 'restaurante' || selectedMerchantPreview?.store_type?.toLowerCase() === 'restaurant' || selectedMerchantPreview?.store_type?.toLowerCase() === 'restaurante') ? (
                         <div className="space-y-8">
                           {/* THEME: GOUREMT / STEALTH LUXURY */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
