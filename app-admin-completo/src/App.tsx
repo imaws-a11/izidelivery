@@ -446,7 +446,8 @@ function App() {
   const [isSavingCategoryPrompt, setIsSavingCategoryPrompt] = useState(false);
   const [productForm, setProductForm] = useState<any>({
     name: '', description: '', price: '', category: '', sub_category: '', image_url: '', is_available: true,
-    options_groups: []
+    featured: false, serving_size: '', prep_time: '', is_vegan: false, is_gluten_free: false, 
+    is_lactose_free: false, calories: '', options_groups: []
   });
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [selectedCategoryStudio, setSelectedCategoryStudio] = useState<Category | null>(null);
@@ -11058,7 +11059,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   exit={{ opacity: 0, scale: 0.9, y: 20 }}
                   className="relative w-full max-w-md bg-slate-950 border border-yellow-500/10 rounded-[32px] overflow-hidden shadow-[0_32px_120px_-20px_rgba(234,179,8,0.1)] p-8"
                 >
-                  <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center justify-between pl-8 pr-6 pt-6 mb-8">
                     <div className="flex items-center gap-3">
                       <div className="size-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
                         <span className="material-symbols-outlined text-xl">category</span>
@@ -11066,6 +11067,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                       <h2 className="text-xl font-black text-white uppercase tracking-wider">Novo Segmento</h2>
                     </div>
                     <button 
+                      type="button"
                       onClick={() => setShowSegmentModal(false)}
                       className="size-10 flex items-center justify-center rounded-full bg-slate-900 text-slate-400 hover:text-white transition-colors"
                     >
@@ -11110,7 +11112,7 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
             )}
           </AnimatePresence>
 
-          {/* Modal Novo/Editar Produto (Allblack Design) */}
+          {/* Modal Novo/Editar Produto (Architecture: Stealth Luxury Gourmet) */}
           <AnimatePresence>
             {showProductModal && (
               <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
@@ -11126,344 +11128,474 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
                   initial={{ opacity: 0, scale: 0.95, y: 30 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 30 }}
-                  className="relative w-full max-w-2xl bg-[#000000] border border-yellow-500/10 rounded-[48px] overflow-hidden shadow-[0_32px_120px_-20px_rgba(234,179,8,0.15)] flex flex-col max-h-[90vh]"
+                  className="relative w-full max-w-3xl bg-[#000000] border border-yellow-500/10 rounded-[48px] overflow-hidden shadow-[0_32px_120px_-20px_rgba(234,179,8,0.15)] flex flex-col max-h-[90vh]"
                 >
-                  {/* Header */}
-                  <div className="p-8 pb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="size-12 rounded-[22px] bg-yellow-400 flex items-center justify-center text-black">
-                        <span className="material-symbols-outlined text-2xl font-black">inventory_2</span>
+                  {/* Premium Header */}
+                  <div className="p-10 pb-6 flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      <div className="size-16 rounded-[28px] bg-yellow-400 flex items-center justify-center text-black shadow-lg shadow-yellow-400/20 active:scale-95 transition-all">
+                        <span className="material-symbols-outlined text-3xl font-black">restaurant_menu</span>
                       </div>
                       <div>
-                        <h2 className="text-2xl font-black text-white uppercase tracking-tight">{productForm.id && !productForm.id.startsWith('new-') ? 'Editar Produto' : 'Novo Produto'}</h2>
-                        <p className="text-[10px] font-black text-yellow-500/60 uppercase tracking-[0.2em] mt-0.5">Gestão de Inventário Premium</p>
+                        <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
+                          {productForm.id && !productForm.id.startsWith('new-') ? 'Refinar Prato' : 'Novo Prato Gourmet'}
+                        </h2>
+                        <p className="text-[10px] font-black text-yellow-500/60 uppercase tracking-[0.4em] mt-2 flex items-center gap-2">
+                          <span className="size-1.5 rounded-full bg-yellow-500 animate-pulse"></span>
+                          Studio Gourmet • IZI Merchant Exclusive
+                        </p>
                       </div>
                     </div>
                     <button 
                       onClick={() => setShowProductModal(false)}
-                      className="size-12 flex items-center justify-center rounded-full bg-white/5 text-slate-400 hover:text-white transition-all hover:rotate-90"
+                      className="size-14 flex items-center justify-center rounded-full bg-white/5 text-slate-400 hover:text-white transition-all hover:rotate-90 border border-white/5 active:scale-90"
                     >
-                      <span className="material-symbols-outlined">close</span>
+                      <span className="material-symbols-outlined text-2xl">close</span>
                     </button>
                   </div>
 
-                  {/* Scrollable Form */}
-                  <div className="flex-1 overflow-y-auto p-8 pt-0 custom-scrollbar">
-                    <form id="productForm" onSubmit={handleSaveProduct} className="space-y-8 mt-4">
-                      
-                      {/* Upload Section */}
-                      <div className="space-y-3">
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-4">Visual do Produto</p>
-                        <div className="relative group/upload h-48 rounded-[38px] bg-white/5 border border-dashed border-white/10 flex flex-col items-center justify-center gap-4 hover:border-yellow-400/40 transition-all overflow-hidden">
-                          {productForm.image_url ? (
-                            <>
-                              <img src={productForm.image_url} className="absolute inset-0 size-full object-cover opacity-40 group-hover/upload:opacity-60 transition-opacity" />
-                              <div className="relative z-10 size-16 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/10 shadow-xl group-hover/upload:scale-110 transition-transform">
-                                <span className="material-symbols-outlined text-2xl">add_photo_alternate</span>
+                  <div className="flex-1 overflow-y-auto px-10 pb-10 custom-scrollbar">
+                    <form id="productForm" onSubmit={handleSaveProduct} className="space-y-12 mt-4">
+                      {/* Check store type for specialized Experience */}
+                      {(merchantProfile?.store_type === 'restaurant' || selectedMerchantPreview?.store_type === 'restaurant') ? (
+                        <div className="space-y-8">
+                          {/* THEME: GOUREMT / STEALTH LUXURY */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* Visual & Core info */}
+                            <div className="space-y-6">
+                              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500/60 ml-4">Engenharia Visual</p>
+                              <div className="relative group/upload h-[280px] rounded-[48px] bg-[#020202] border border-dashed border-white/10 flex flex-col items-center justify-center gap-4 hover:border-yellow-400/40 transition-all overflow-hidden shadow-2xl">
+                                {productForm.image_url ? (
+                                  <>
+                                    <img src={productForm.image_url} className="absolute inset-0 size-full object-cover opacity-60 group-hover/upload:scale-105 transition-transform duration-1000" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+                                    <div className="relative z-10 flex flex-col items-center gap-3">
+                                      <div className="size-14 rounded-full bg-black/80 backdrop-blur-xl flex items-center justify-center border border-white/10 text-yellow-400 shadow-xl">
+                                        <span className="material-symbols-outlined text-2xl">upload</span>
+                                      </div>
+                                      <p className="text-[10px] font-black text-black uppercase tracking-widest bg-yellow-500 px-6 py-2 rounded-full shadow-lg">Substituir Imagem</p>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="flex flex-col items-center gap-6 text-center px-10">
+                                    <div className="size-20 rounded-[32px] bg-yellow-400/5 flex items-center justify-center text-yellow-400/40 border border-yellow-400/5 group-hover/upload:scale-105 transition-all">
+                                      <span className="material-symbols-outlined text-4xl">flatware</span>
+                                    </div>
+                                    <div>
+                                      <p className="text-[11px] font-black text-white uppercase tracking-widest">Foto Institucional</p>
+                                      <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-2 leading-relaxed">A imagem deve ser apetitosa</p>
+                                    </div>
+                                  </div>
+                                )}
+                                <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      setIsSavingProduct(true);
+                                      const url = await handleFileUpload(file, 'products');
+                                      if (url) setProductForm({ ...productForm, image_url: url });
+                                      setIsSavingProduct(false);
+                                    }
+                                  }}
+                                />
                               </div>
-                              <p className="relative z-10 text-[10px] font-black text-white uppercase tracking-widest bg-black/60 px-4 py-2 rounded-full backdrop-blur-sm border border-white/5">Alterar Imagem</p>
-                            </>
-                          ) : (
-                            <>
-                              <div className="size-16 rounded-[24px] bg-yellow-400/10 flex items-center justify-center text-yellow-400 border border-yellow-400/20 group-hover/upload:scale-110 transition-transform">
-                                <span className="material-symbols-outlined text-3xl">add_photo_alternate</span>
-                              </div>
-                              <div className="text-center">
-                                <p className="text-[10px] font-black text-white uppercase tracking-widest leading-loose">Solte a imagem aqui ou <span className="text-yellow-400 underline underline-offset-4">escolha o arquivo</span></p>
-                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Sugerido: 800x800px (Máx 5MB)</p>
-                              </div>
-                            </>
-                          )}
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            className="absolute inset-0 opacity-0 cursor-pointer z-20"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                setIsSavingProduct(true);
-                                const url = await handleFileUpload(file, 'products');
-                                if (url) setProductForm({ ...productForm, image_url: url });
-                                setIsSavingProduct(false);
-                              }
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2 md:col-span-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Nome do Produto</label>
-                          <input
-                            type="text"
-                            required
-                            value={productForm.name}
-                            onChange={e => setProductForm({ ...productForm, name: e.target.value })}
-                            placeholder="Ex: Coca-Cola 350ml, X-Burguer Duplo..."
-                            className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Preço (R$)</label>
-                          <input
-                            type="text"
-                            required
-                            value={productForm.price}
-                            onChange={e => setProductForm({ ...productForm, price: e.target.value })}
-                            placeholder="0,00"
-                            className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4 flex justify-between items-center pr-2">
-                            <span>Categoria</span>
-                            <button 
-                              type="button" 
-                              onClick={() => {
-                                setCategoryPromptType('category');
-                                setCategoryPromptName('');
-                                setShowCategoryPromptModal(true);
-                              }}
-                              className="text-yellow-400 hover:text-white flex items-center gap-1 transition-colors normal-case tracking-normal"
-                            >
-                              <span className="material-symbols-outlined text-[12px]">add</span> Adicionar categoria
-                            </button>
-                          </label>
-                          <div className="relative">
-                            <select
-                              required
-                              value={productForm.category}
-                              onChange={e => setProductForm({ ...productForm, category: e.target.value, sub_category: '' })}
-                              className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all appearance-none cursor-pointer"
-                            >
-                               <option value="" disabled>Selecione</option>
-                               {(userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList).filter(c => !c.parent_id).map(cat => (
-                                 <option key={cat.id} value={cat.name}>{cat.name}</option>
-                               ))}
-                            </select>
-                            <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">expand_more</span>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4 flex justify-between items-center pr-2">
-                            <span>Subcategoria</span>
-                            <button 
-                              type="button" 
-                              onClick={() => {
-                                const activeCategories = userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList;
-                                const parent = activeCategories.find(c => c.name === productForm.category && !c.parent_id);
-                                if (!parent) return toastError('Selecione uma categoria pai primeiro.');
-                                
-                                setCategoryPromptType('subcategory');
-                                setCategoryPromptName('');
-                                setShowCategoryPromptModal(true);
-                              }}
-                              className="text-yellow-400 hover:text-white flex items-center gap-1 transition-colors normal-case tracking-normal"
-                            >
-                              <span className="material-symbols-outlined text-[12px]">add</span> Adicionar subcategoria
-                            </button>
-                          </label>
-                          <div className="relative">
-                            <select
-                              value={productForm.sub_category}
-                              onChange={e => setProductForm({ ...productForm, sub_category: e.target.value })}
-                              className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all appearance-none cursor-pointer"
-                            >
-                               <option value="">Nenhuma</option>
-                               {(userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList).filter(c => c.parent_id && c.parent_id === (userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList).find(parent => parent.name === productForm.category)?.id).map(sub => (
-                                 <option key={sub.id} value={sub.name}>{sub.name}</option>
-                               ))}
-                            </select>
-                            <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">expand_more</span>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Disponibilidade</label>
-                          <button
-                            type="button"
-                            onClick={() => setProductForm({ ...productForm, is_available: !productForm.is_available })}
-                            className={`w-full h-[58px] rounded-2xl border transition-all flex items-center px-6 gap-3 ${productForm.is_available ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' : 'bg-rose-500/10 border-rose-500/30 text-rose-500'}`}
-                          >
-                             <span className="material-symbols-outlined">{productForm.is_available ? 'check_circle' : 'cancel'}</span>
-                             <span className="text-[10px] font-black uppercase tracking-widest">{productForm.is_available ? 'Item Disponível' : 'Item Indisponível'}</span>
-                          </button>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Promoções e Destaques</label>
-                          <button
-                            type="button"
-                            onClick={() => setProductForm({ ...productForm, featured: !productForm.featured })}
-                            className={`w-full h-[58px] rounded-2xl border transition-all flex items-center px-6 gap-3 ${productForm.featured ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-[#0a0a0a] border-white/10 text-slate-600'}`}
-                          >
-                             <span className="material-symbols-outlined">{productForm.featured ? 'star' : 'star_border'}</span>
-                             <span className="text-[10px] font-black uppercase tracking-widest">{productForm.featured ? 'Produto em Destaque/Oferta' : 'Produto Normal'}</span>
-                          </button>
-                        </div>
-
-                        <div className="space-y-2 md:col-span-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Descrição</label>
-                          <textarea
-                            value={productForm.description}
-                            onChange={e => setProductForm({ ...productForm, description: e.target.value })}
-                            placeholder="Ingredientes, peso, tamanho..."
-                            className="w-full bg-[#0a0a0a] border border-white/10 rounded-3xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all min-h-[120px] resize-none"
-                          />
-                        </div>
-
-                        {/* Complementos e Adicionais Section */}
-                        <div className="space-y-6 md:col-span-2 mt-4 pt-4 border-t border-white/5">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Complementos e Adicionais</label>
-                                    <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest ml-4 mt-1">Configure campos para personalização (Ex: Escolha o Pão, Adicionais...)</p>
-                                </div>
-                                <button 
-                                    type="button"
-                                    onClick={addOptionGroup}
-                                    className="px-4 py-2 bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-400 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-yellow-400/20 flex items-center gap-2"
-                                >
-                                    <span className="material-symbols-outlined text-[14px]">add_circle</span> Criar Novo Grupo
-                                </button>
                             </div>
 
-                            {/* Groups List */}
-                            <div className="space-y-4">
-                                {productForm.options_groups?.map((group: any) => (
-                                    <div key={group.id} className="bg-white/5 border border-white/10 rounded-[32px] overflow-hidden">
-                                        {/* Group Header */}
-                                        <div className="p-6 bg-white/5 flex flex-wrap items-center gap-4">
-                                            <div className="flex-1 min-w-[200px]">
-                                                <input 
-                                                    type="text"
-                                                    placeholder="Nome do Grupo (Ex: Escolha seu molho)"
-                                                    value={group.name}
-                                                    onChange={(e) => updateOptionGroup(group.id, 'name', e.target.value)}
-                                                    className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-2 text-xs font-bold text-white focus:border-yellow-400/50 outline-none"
-                                                />
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
-                                                    <span className="text-[8px] font-bold text-slate-500 uppercase">Min</span>
-                                                    <input 
-                                                        type="number"
-                                                        value={group.min_select}
-                                                        onChange={(e) => updateOptionGroup(group.id, 'min_select', e.target.value)}
-                                                        className="w-10 bg-transparent text-center text-xs font-bold text-white outline-none"
-                                                    />
-                                                </div>
-                                                <div className="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
-                                                    <span className="text-[8px] font-bold text-slate-500 uppercase">Max</span>
-                                                    <input 
-                                                        type="number"
-                                                        value={group.max_select}
-                                                        onChange={(e) => updateOptionGroup(group.id, 'max_select', e.target.value)}
-                                                        className="w-10 bg-transparent text-center text-xs font-bold text-white outline-none"
-                                                    />
-                                                </div>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => updateOptionGroup(group.id, 'is_required', !group.is_required)}
-                                                    className={`px-3 py-1.5 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all ${group.is_required ? 'bg-amber-500/20 border-amber-500/40 text-amber-500' : 'bg-black/40 border-white/10 text-slate-500'}`}
-                                                >
-                                                    Obrigatório
-                                                </button>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => removeOptionGroup(group.id)}
-                                                    className="size-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
-                                                >
-                                                    <span className="material-symbols-outlined text-sm">delete</span>
-                                                </button>
-                                            </div>
-                                        </div>
+                            {/* Main Specs */}
+                            <div className="space-y-6">
+                              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-500/60 ml-4">Informações do Item</p>
+                              
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-4">Nome do Prato/Bebida</label>
+                                <input type="text" required value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} placeholder="X-Tudo Premium, Salmão Grelhado..."
+                                  className="w-full bg-white/5 border border-white/10 rounded-[28px] px-7 py-5 font-black text-white focus:outline-none focus:border-yellow-400/50 transition-all text-lg"
+                                />
+                              </div>
 
-                                        {/* Items List */}
-                                        <div className="p-6 pt-2 space-y-2">
-                                            <p className="text-[8px] font-bold text-slate-600 uppercase tracking-[0.2em] ml-2 mb-3">Opções do Grupo</p>
-                                            {group.items?.map((item: any) => (
-                                                <div key={item.id} className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 transition-all">
-                                                    <div className="flex-1">
-                                                        <input 
-                                                            type="text"
-                                                            placeholder="Nome da Opção (Ex: Maionese Caseira)"
-                                                            value={item.name}
-                                                            onChange={(e) => updateOptionItem(group.id, item.id, 'name', e.target.value)}
-                                                            className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-2 text-[10px] font-bold text-white focus:border-yellow-400/50 outline-none transition-all"
-                                                        />
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-4">Preço Base (R$)</label>
+                                  <div className="relative">
+                                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-yellow-500 font-bold">R$</span>
+                                    <input type="text" required value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} placeholder="0,00"
+                                      className="w-full bg-white/5 border border-white/10 rounded-[24px] pl-14 pr-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-500 transition-all"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-4">Preço de Oferta (R$)</label>
+                                  <input type="text" value={productForm.discount_price} onChange={e => setProductForm({...productForm, discount_price: e.target.value})} placeholder="OPCIONAL"
+                                    className="w-full bg-white/5 border border-white/5 rounded-[24px] px-6 py-4 font-bold text-emerald-400 focus:outline-none focus:border-emerald-500/50 transition-all placeholder:text-slate-800"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-4">Serve</label>
+                                  <div className="relative">
+                                    <span className="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-slate-600">group</span>
+                                    <input type="text" value={productForm.serving_size} onChange={e => setProductForm({...productForm, serving_size: e.target.value})} placeholder="Ex: 2 pessoas"
+                                      className="w-full bg-white/5 border border-white/5 rounded-[24px] pl-14 py-4 text-xs font-bold text-white outline-none"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-4">Preparo</label>
+                                  <div className="relative">
+                                    <span className="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-slate-600">timer</span>
+                                    <input type="text" value={productForm.prep_time} onChange={e => setProductForm({...productForm, prep_time: e.target.value})} placeholder="Ex: 30 min"
+                                      className="w-full bg-white/5 border border-white/5 rounded-[24px] pl-14 py-4 text-xs font-bold text-white outline-none"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Categorization & Dietary (Full width split) */}
+                            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-white/5">
+                               <div className="space-y-4">
+                                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Cardápio & Menu</label>
+                                  <div className="relative">
+                                    <select required value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value, sub_category: ''})}
+                                      className="w-full bg-[#050505] border border-white/10 rounded-2xl px-6 py-5 font-bold text-white outline-none appearance-none hover:border-yellow-500/50 transition-all cursor-pointer"
+                                    >
+                                      <option value="" disabled>Selecione</option>
+                                      {(userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList).filter(c => !c.parent_id).map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
+                                    </select>
+                                    <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-yellow-500/40 pointer-events-none">expand_more</span>
+                                  </div>
+                               </div>
+                               
+                               <div className="md:col-span-2 space-y-4">
+                                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Selos de Qualidade & Tags Nutricionais</label>
+                                  <div className="flex flex-wrap gap-3">
+                                    {[
+                                      { key: 'is_vegan', label: 'Vegano', icon: 'eco' },
+                                      { key: 'is_gluten_free', label: 'Sem Glúten', icon: 'grass' },
+                                      { key: 'is_lactose_free', label: 'Sem Lactose', icon: 'opacity' }
+                                    ].map(tag => (
+                                      <button key={tag.key} type="button" onClick={() => setProductForm({...productForm, [tag.key]: !productForm[tag.key as keyof typeof productForm]})}
+                                        className={`px-5 py-3 rounded-2xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all border ${productForm[tag.key as keyof typeof productForm] ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' : 'bg-[#050505] border-white/5 text-slate-600 hover:border-white/10'}`}
+                                      >
+                                        <span className="material-symbols-outlined text-[16px]">{tag.icon}</span>
+                                        {tag.label}
+                                      </button>
+                                    ))}
+                                    <button type="button" onClick={() => setProductForm({...productForm, featured: !productForm.featured})}
+                                      className={`px-5 py-3 rounded-2xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all border ${productForm.featured ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-[#050505] border-white/5 text-slate-600 hover:border-white/10'}`}
+                                    >
+                                      <span className="material-symbols-outlined text-[16px]">stars</span>
+                                      Destaque Estratégico
+                                    </button>
+                                  </div>
+                               </div>
+
+                               <div className="md:col-span-3 space-y-4 mt-2">
+                                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-6">Descrição Sensorial & Ingredientes</label>
+                                  <textarea value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} placeholder="Descreva aromas, texturas e ingredientes exclusivos que tornam este prato único..."
+                                    className="w-full bg-[#050505] border border-white/10 rounded-[32px] px-8 py-6 font-medium text-white/80 focus:outline-none focus:border-yellow-400/30 transition-all min-h-[140px] resize-none text-sm leading-relaxed"
+                                  />
+                               </div>
+                            </div>
+                          </div>
+                          
+                          {/* Reused Complements Section */}
+                          <div className="space-y-8 mt-10 pt-10 border-t border-white/10">
+                              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                  <div>
+                                      <label className="text-[11px] font-black uppercase tracking-[0.3em] text-yellow-500 ml-4">Arquitetura de Complementos</label>
+                                      <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest ml-4 mt-2">Construa opções adicionais e personalizações para elevar a experiência</p>
+                                  </div>
+                                  <button type="button" onClick={addOptionGroup} 
+                                    className="px-8 py-4 bg-yellow-400 hover:bg-yellow-300 text-black rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-2xl shadow-yellow-400/20 active:scale-95 shrink-0"
+                                  >
+                                      <span className="material-symbols-outlined">add_box</span> Novo Grupo
+                                  </button>
+                              </div>
+
+                              <div className="space-y-8">
+                                  {productForm.options_groups?.map((group: any) => (
+                                      <div key={group.id} className="bg-[#050505] border border-white/5 rounded-[48px] overflow-hidden shadow-2xl">
+                                          <div className="p-8 bg-white/[0.02] flex flex-wrap items-center gap-8 border-b border-white/5">
+                                              <div className="flex-1 min-w-[200px]">
+                                                  <input type="text" placeholder="Nome do Grupo (Ex: Ponto da Carne)" value={group.name} onChange={(e) => updateOptionGroup(group.id, 'name', e.target.value)}
+                                                      className="w-full bg-black/40 border-none rounded-2xl px-6 py-4 text-sm font-black text-white focus:ring-1 ring-yellow-400/20 outline-none transition-all placeholder:text-slate-600"
+                                                  />
+                                              </div>
+                                              <div className="flex items-center gap-6">
+                                                  <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-black/60 border border-white/5">
+                                                      <span className="text-[7px] font-black text-slate-500 uppercase">Min</span>
+                                                      <input type="number" value={group.min_select} onChange={(e) => updateOptionGroup(group.id, 'min_select', e.target.value)} className="w-8 bg-transparent text-center text-xs font-black text-white outline-none" />
+                                                  </div>
+                                                  <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-black/60 border border-white/5">
+                                                      <span className="text-[7px] font-black text-slate-500 uppercase">Max</span>
+                                                      <input type="number" value={group.max_select} onChange={(e) => updateOptionGroup(group.id, 'max_select', e.target.value)} className="w-8 bg-transparent text-center text-xs font-black text-white outline-none" />
+                                                  </div>
+                                                  <button type="button" onClick={() => updateOptionGroup(group.id, 'is_required', !group.is_required)}
+                                                      className={`px-5 py-3 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all ${group.is_required ? 'bg-amber-500 text-black border-amber-500' : 'bg-black/60 border-white/5 text-slate-500 hover:text-white'}`}
+                                                  >
+                                                      Obrigatório
+                                                  </button>
+                                                  <button type="button" onClick={() => removeOptionGroup(group.id)} className="size-14 flex items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all border border-rose-500/5">
+                                                      <span className="material-symbols-outlined">delete_sweep</span>
+                                                  </button>
+                                              </div>
+                                          </div>
+                                          <div className="p-8 space-y-4">
+                                              {group.items?.map((item: any) => (
+                                                  <div key={item.id} className="flex items-center gap-4 group/item">
+                                                      <div className="flex-1">
+                                                          <input type="text" placeholder="Opção (Ex: Mal Passado)" value={item.name} onChange={(e) => updateOptionItem(group.id, item.id, 'name', e.target.value)}
+                                                              className="w-full bg-black/20 border-t-0 border-r-0 border-l-0 border-b border-white/10 hover:border-yellow-400/30 focus:border-yellow-400/60 px-2 py-3 text-[11px] font-bold text-white outline-none transition-all placeholder:text-slate-600"
+                                                          />
+                                                      </div>
+                                                      <div className="w-36 relative">
+                                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-yellow-500/60 font-black">R$</span>
+                                                          <input type="text" placeholder="0,00" value={item.price} onChange={(e) => updateOptionItem(group.id, item.id, 'price', e.target.value)}
+                                                              className="w-full bg-black/20 border-t-0 border-r-0 border-l-0 border-b border-white/10 hover:border-yellow-400/30 focus:border-yellow-400/60 pl-8 pr-2 py-3 text-[11px] font-bold text-white outline-none transition-all placeholder:text-slate-600"
+                                                          />
+                                                      </div>
+                                                      <button type="button" onClick={() => removeOptionItem(group.id, item.id)} className="size-8 flex items-center justify-center text-slate-700 hover:text-rose-500 transition-colors">
+                                                          <span className="material-symbols-outlined text-lg">close</span>
+                                                      </button>
+                                                  </div>
+                                              ))}
+                                              <button type="button" onClick={() => addOptionItem(group.id)} className="w-full py-4 border-2 border-dashed border-white/5 rounded-[28px] text-[8px] font-black text-slate-500 uppercase tracking-widest hover:border-white/10 hover:text-white transition-all hover:bg-white/[0.02]">
+                                                  + Associar Nova Opção Opcional
+                                              </button>
+                                          </div>
+                                      </div>
+                                  ))}
+                              </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* GENERIC FORM (NON-RESTAURANT) */
+                        <div className="space-y-8">
+                          {/* Upload Section */}
+                          <div className="space-y-3">
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 ml-4">Visual do Produto</p>
+                            <div className="relative group/upload h-48 rounded-[38px] bg-white/5 border border-dashed border-white/10 flex flex-col items-center justify-center gap-4 hover:border-yellow-400/40 transition-all overflow-hidden">
+                              {productForm.image_url ? (
+                                <>
+                                  <img src={productForm.image_url} className="absolute inset-0 size-full object-cover opacity-40 group-hover/upload:opacity-60 transition-opacity" />
+                                  <div className="relative z-10 size-16 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/10 shadow-xl group-hover/upload:scale-110 transition-transform">
+                                    <span className="material-symbols-outlined text-2xl">add_photo_alternate</span>
+                                  </div>
+                                  <p className="relative z-10 text-[10px] font-black text-white uppercase tracking-widest bg-black/60 px-4 py-2 rounded-full backdrop-blur-sm border border-white/5">Alterar Imagem</p>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="size-16 rounded-[24px] bg-yellow-400/10 flex items-center justify-center text-yellow-400 border border-yellow-400/20 group-hover/upload:scale-110 transition-transform">
+                                    <span className="material-symbols-outlined text-3xl">add_photo_alternate</span>
+                                  </div>
+                                  <div className="text-center">
+                                    <p className="text-[10px] font-black text-white uppercase tracking-widest leading-loose">Solte a imagem aqui ou <span className="text-yellow-400 underline underline-offset-4">escolha o arquivo</span></p>
+                                    <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Sugerido: 800x800px (Máx 5MB)</p>
+                                  </div>
+                                </>
+                              )}
+                              <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    setIsSavingProduct(true);
+                                    const url = await handleFileUpload(file, 'products');
+                                    if (url) setProductForm({ ...productForm, image_url: url });
+                                    setIsSavingProduct(false);
+                                  }
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2 md:col-span-2">
+                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Nome do Produto</label>
+                              <input type="text" required value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} placeholder="Ex: Coca-Cola 350ml, X-Burguer Duplo..."
+                                className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Preço (R$)</label>
+                              <input type="text" required value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} placeholder="0,00"
+                                className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4 flex justify-between items-center pr-2">
+                                <span>Categoria</span>
+                                <button type="button" onClick={() => { setCategoryPromptType('category'); setCategoryPromptName(''); setShowCategoryPromptModal(true); }}
+                                  className="text-yellow-400 hover:text-white flex items-center gap-1 transition-colors normal-case tracking-normal"
+                                >
+                                  <span className="material-symbols-outlined text-[12px]">add</span> Adicionar categoria
+                                </button>
+                              </label>
+                              <div className="relative">
+                                <select required value={productForm.category} onChange={e => setProductForm({ ...productForm, category: e.target.value, sub_category: '' })}
+                                  className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all appearance-none cursor-pointer"
+                                >
+                                   <option value="" disabled>Selecione</option>
+                                   {(userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList).filter(c => !c.parent_id).map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
+                                </select>
+                                <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">expand_more</span>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4 flex justify-between items-center pr-2">
+                                <span>Subcategoria</span>
+                                <button type="button" onClick={() => {
+                                    const activeCategories = userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList;
+                                    const parent = activeCategories.find(c => c.name === productForm.category && !c.parent_id);
+                                    if (!parent) return toastError('Selecione uma categoria pai primeiro.');
+                                    setCategoryPromptType('subcategory'); setCategoryPromptName(''); setShowCategoryPromptModal(true);
+                                  }}
+                                  className="text-yellow-400 hover:text-white flex items-center gap-1 transition-colors normal-case tracking-normal"
+                                >
+                                  <span className="material-symbols-outlined text-[12px]">add</span> Adicionar subcategoria
+                                </button>
+                              </label>
+                              <div className="relative">
+                                <select value={productForm.sub_category} onChange={e => setProductForm({ ...productForm, sub_category: e.target.value })}
+                                  className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all appearance-none cursor-pointer"
+                                >
+                                   <option value="">Nenhuma</option>
+                                   {(userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList).filter(c => c.parent_id && c.parent_id === (userRole === 'admin' && selectedMerchantPreview ? previewCategories : menuCategoriesList).find(parent => parent.name === productForm.category)?.id).map(sub => <option key={sub.id} value={sub.name}>{sub.name}</option>)}
+                                </select>
+                                <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none">expand_more</span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Disponibilidade</label>
+                              <button type="button" onClick={() => setProductForm({ ...productForm, is_available: !productForm.is_available })}
+                                className={`w-full h-[58px] rounded-2xl border transition-all flex items-center px-6 gap-3 ${productForm.is_available ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' : 'bg-rose-500/10 border-rose-500/30 text-rose-500'}`}
+                              >
+                                 <span className="material-symbols-outlined">{productForm.is_available ? 'check_circle' : 'cancel'}</span>
+                                 <span className="text-[10px] font-black uppercase tracking-widest">{productForm.is_available ? 'Item Disponível' : 'Item Indisponível'}</span>
+                              </button>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Promoções e Destaques</label>
+                              <button type="button" onClick={() => setProductForm({ ...productForm, featured: !productForm.featured })}
+                                className={`w-full h-[58px] rounded-2xl border transition-all flex items-center px-6 gap-3 ${productForm.featured ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-[#0a0a0a] border-white/10 text-slate-600'}`}
+                              >
+                                 <span className="material-symbols-outlined">{productForm.featured ? 'star' : 'star_border'}</span>
+                                 <span className="text-[10px] font-black uppercase tracking-widest">{productForm.featured ? 'Produto em Destaque/Oferta' : 'Produto Normal'}</span>
+                              </button>
+                            </div>
+
+                            <div className="space-y-2 md:col-span-2">
+                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Descrição</label>
+                              <textarea value={productForm.description} onChange={e => setProductForm({ ...productForm, description: e.target.value })} placeholder="Ingredientes, peso, tamanho..."
+                                className="w-full bg-[#0a0a0a] border border-white/10 rounded-3xl px-6 py-4 font-bold text-white focus:outline-none focus:border-yellow-400/50 transition-all min-h-[120px] resize-none"
+                              />
+                            </div>
+
+                            {/* Reused Complements Section */}
+                            <div className="space-y-6 md:col-span-2 mt-4 pt-4 border-t border-white/5">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 ml-4">Complementos e Adicionais</label>
+                                        <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest ml-4 mt-1">Configure campos para personalização (Ex: Escolha o Pão, Adicionais...)</p>
+                                    </div>
+                                    <button type="button" onClick={addOptionGroup} className="px-4 py-2 bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-400 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-yellow-400/20 flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[14px]">add_circle</span> Criar Novo Grupo
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {productForm.options_groups?.map((group: any) => (
+                                        <div key={group.id} className="bg-[#050505] border border-white/5 rounded-[32px] overflow-hidden shadow-xl">
+                                            <div className="p-6 bg-white/[0.02] flex flex-wrap items-center gap-4 border-b border-white/5">
+                                                <div className="flex-1 min-w-[200px]">
+                                                    <input type="text" placeholder="Nome do Grupo (Ex: Escolha seu molho)" value={group.name} onChange={(e) => updateOptionGroup(group.id, 'name', e.target.value)}
+                                                        className="w-full bg-black/40 border-none rounded-xl px-5 py-3 text-xs font-bold text-white focus:ring-1 ring-yellow-400/20 outline-none transition-all"
+                                                    />
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
+                                                        <span className="text-[8px] font-bold text-slate-500 uppercase">Min</span>
+                                                        <input type="number" value={group.min_select} onChange={(e) => updateOptionGroup(group.id, 'min_select', e.target.value)} className="w-10 bg-transparent text-center text-xs font-bold text-white outline-none" />
                                                     </div>
-                                                    <div className="w-32 relative">
-                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-bold">R$</span>
-                                                        <input 
-                                                            type="text"
-                                                            placeholder="0,00"
-                                                            value={item.price}
-                                                            onChange={(e) => updateOptionItem(group.id, item.id, 'price', e.target.value)}
-                                                            className="w-full bg-black/40 border border-white/5 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-white focus:border-yellow-400/50 outline-none transition-all placeholder:text-slate-700"
-                                                        />
+                                                    <div className="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
+                                                        <span className="text-[8px] font-bold text-slate-500 uppercase">Max</span>
+                                                        <input type="number" value={group.max_select} onChange={(e) => updateOptionGroup(group.id, 'max_select', e.target.value)} className="w-10 bg-transparent text-center text-xs font-bold text-white outline-none" />
                                                     </div>
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => removeOptionItem(group.id, item.id)}
-                                                        className="size-8 flex items-center justify-center rounded-xl text-slate-600 hover:text-rose-500 transition-colors"
+                                                    <button type="button" onClick={() => updateOptionGroup(group.id, 'is_required', !group.is_required)}
+                                                        className={`px-3 py-1.5 rounded-xl border text-[8px] font-black uppercase tracking-widest transition-all ${group.is_required ? 'bg-amber-500/20 border-amber-500/40 text-amber-500' : 'bg-black/40 border-white/10 text-slate-500'}`}
                                                     >
-                                                        <span className="material-symbols-outlined text-sm">close</span>
+                                                        Obrigatório
+                                                    </button>
+                                                    <button type="button" onClick={() => removeOptionGroup(group.id)} className="size-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all">
+                                                        <span className="material-symbols-outlined text-sm">delete</span>
                                                     </button>
                                                 </div>
-                                            ))}
-                                            <button 
-                                                type="button"
-                                                onClick={() => addOptionItem(group.id)}
-                                                className="w-full py-2 border border-dashed border-white/10 rounded-xl text-[8px] font-black text-slate-500 uppercase tracking-widest hover:border-white/20 hover:text-white transition-all mt-2"
-                                            >
-                                                + Adicionar Opção
-                                            </button>
+                                            </div>
+                                            <div className="p-6 pt-2 space-y-2">
+                                                {group.items?.map((item: any) => (
+                                                    <div key={item.id} className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 transition-all">
+                                                        <div className="flex-1">
+                                                            <input type="text" placeholder="Nome da Opção" value={item.name} onChange={(e) => updateOptionItem(group.id, item.id, 'name', e.target.value)}
+                                                                className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-2 text-[10px] font-bold text-white focus:border-yellow-400/50 outline-none"
+                                                            />
+                                                        </div>
+                                                        <div className="w-32 relative">
+                                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-bold">R$</span>
+                                                            <input type="text" placeholder="0,00" value={item.price} onChange={(e) => updateOptionItem(group.id, item.id, 'price', e.target.value)}
+                                                                className="w-full bg-black/40 border border-white/5 rounded-xl pl-9 pr-4 py-2 text-[10px] font-bold text-white focus:border-yellow-400/50 outline-none"
+                                                            />
+                                                        </div>
+                                                        <button type="button" onClick={() => removeOptionItem(group.id, item.id)} className="size-8 flex items-center justify-center rounded-xl text-slate-600 hover:text-rose-500 transition-colors">
+                                                            <span className="material-symbols-outlined text-sm">close</span>
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                <button type="button" onClick={() => addOptionItem(group.id)} className="w-full py-2 border border-dashed border-white/10 rounded-xl text-[8px] font-black text-slate-500 uppercase tracking-widest hover:border-white/20 hover:text-white transition-all mt-2">
+                                                    + Adicionar Opção
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                                {(!productForm.options_groups || productForm.options_groups.length === 0) && (
-                                    <div className="h-24 rounded-[32px] border border-dashed border-white/5 flex items-center justify-center">
-                                        <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest text-center">Nenhum adicional configurado para este produto.</p>
-                                    </div>
-                                )}
+                                    ))}
+                                </div>
                             </div>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </form>
                   </div>
 
-                  {/* Footer */}
-                  <div className="p-8 bg-black/50 backdrop-blur-xl border-t border-white/10 flex items-center justify-between gap-4">
+                  {/* Premium Action Footer */}
+                  <div className="p-10 bg-black/80 backdrop-blur-3xl border-t border-white/5 flex items-center justify-between gap-6">
                     <div className="hidden sm:block">
-                       <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Padrão de Qualidade • Izi Delivery Systems</p>
+                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] flex items-center gap-3">
+                         <span className="size-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                         Syncing with Cloud Studio • Premium Tier
+                       </p>
                     </div>
-                    <div className="flex-1 sm:flex-initial flex items-center gap-3">
-                       <button
-                         type="button"
-                         onClick={() => setShowProductModal(false)}
-                         className="flex-1 sm:flex-initial px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
-                       >
-                         Cancelar
-                       </button>
-                       <button
-                         form="productForm"
-                         type="submit"
-                         disabled={isSavingProduct}
-                         className="flex-1 sm:flex-initial px-10 py-4 bg-yellow-400 hover:bg-yellow-300 disabled:bg-slate-800 disabled:text-slate-500 text-black rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-yellow-400/20 active:scale-95 flex items-center justify-center gap-2"
-                       >
-                         {isSavingProduct ? (
-                           <div className="size-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                         ) : (
-                           <>
-                             {productForm.id && !productForm.id.startsWith('new-') ? 'Salvar Alterações' : 'Criar Produto'}
-                             <span className="material-symbols-outlined text-lg">check_circle</span>
-                           </>
-                         )}
-                       </button>
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                      <button onClick={() => setShowProductModal(false)} 
+                        className="flex-1 sm:flex-initial px-8 py-5 bg-white/5 hover:bg-white/10 text-white rounded-[28px] text-[11px] font-black uppercase tracking-widest transition-all active:scale-95"
+                      >
+                        Descartar
+                      </button>
+                      <button form="productForm" type="submit" disabled={isSavingProduct}
+                        className="flex-1 sm:flex-initial px-12 py-5 bg-yellow-400 hover:bg-yellow-300 disabled:bg-slate-800 disabled:text-slate-500 text-black rounded-[28px] text-[11px] font-black uppercase tracking-[0.2em] shadow-[0_25px_50px_-12px_rgba(234,179,8,0.4)] active:scale-95 transition-all flex items-center justify-center gap-3"
+                      >
+                        {isSavingProduct ? (
+                          <div className="size-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            {productForm.id && !productForm.id.startsWith('new-') ? 'Salvar Edição' : 'Publicar Prato'}
+                            <span className="material-symbols-outlined text-xl">star</span>
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </motion.div>
