@@ -50,9 +50,19 @@ export const ExploreRestaurantsView = ({
     const normalize = (s: string) => s ? s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_') : "";
     
     return establishments.filter(shop => {
-      // Consideramos como restaurantes qualquer loja que não seja estritamente de outros serviços conhecidos
-      const isOtherService = ['pharmacy', 'farmacia', 'mobility', 'taxi', 'van', 'envios', 'utility', 'servico'].includes(normalize(shop.type));
-      const isFoodRelated = !isOtherService;
+      // Normalizamos o tipo/segmento para uma verificação rigorosa
+      const type = normalize(shop.type);
+      const foodCat = normalize(shop.foodCategory);
+      
+      // Lista de termos que definem o que NÃO é um restaurante/comida
+      const isBlacklisted = [
+        'pharmacy', 'farmacia', 'drugstore', 'saude', 'health', 
+        'mobility', 'taxi', 'van', 'envios', 'utility', 'servico', 
+        'marketplace', 'transporte', 'frete', 'entrega', 'logistica'
+      ].some(term => type.includes(term) || foodCat.includes(term));
+
+      // Só permitimos se NÃO estiver na blacklist
+      const isFoodRelated = !isBlacklisted;
       
       const matchesSearch = shop.name.toLowerCase().includes(searchQuery.toLowerCase());
       
