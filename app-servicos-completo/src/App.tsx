@@ -537,6 +537,12 @@ function App() {
               setSubView("payment_success");
             }
 
+            // Se o pagamento PIX ou outros foram aprovados (status 'novo')
+            if (newOrder.status === 'novo' && (subView === "pix_payment" || subView === "payment_processing")) {
+              setSubView("payment_success");
+              fetchMyOrders(userIdRef.current!);
+            }
+
             // Abrir tela de avaliação ao concluir (exceto para assinaturas Izi Black)
             if (newOrder.status === 'concluido') {
               setSelectedItem(newOrder);
@@ -853,19 +859,20 @@ function App() {
           });
 
           if (lnErr || !lnData?.payment_request) {
-            console.error("Erro Lightning:", lnErr);
-            // Se o pedido já foi criado, vamos mostrar ele mas com erro na invoice
+            console.error("Erro Lightning total:", lnErr, lnData);
             setSelectedItem({ ...order, lightningError: true });
             navigateSubView("lightning_payment");
             return;
           }
 
-          setSelectedItem({ 
-            ...order, 
+          const lData = { 
             lightningInvoice: lnData.payment_request, 
             satoshis: lnData.satoshis, 
-            btcPrice: lnData.btc_price_brl 
-          });
+            btc_price_brl: lnData.btc_price_brl 
+          };
+          setLightningData({ ...lData, payment_request: lData.lightningInvoice });
+          setSelectedItem({ ...order, ...lData });
+          
           await clearCart();
           navigateSubView("lightning_payment");
         } catch (err) {
@@ -3623,9 +3630,9 @@ function App() {
   };
 
   const renderLightningPayment = () => {
-    const invoice = selectedItem?.lightningInvoice || "";
-    const satoshis = selectedItem?.satoshis || 0;
-    const btcPrice = selectedItem?.btcPrice || 0;
+    const invoice = selectedItem?.lightningInvoice || lightningData?.payment_request || "";
+    const satoshis = selectedItem?.satoshis || lightningData?.satoshis || 0;
+    const btcPrice = selectedItem?.btcPrice || selectedItem?.btc_price_brl || lightningData?.btc_price_brl || 0;
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
@@ -3698,7 +3705,8 @@ function App() {
   const renderPixPayment = () => {
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
     const discount = appliedCoupon ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100) : 0;
-    const total = Math.max(0, subtotal - discount);
+    const cartTotal = Math.max(0, subtotal - discount);
+    const total = (pixConfirmed && selectedItem?.total_price) ? Number(selectedItem.total_price) : cartTotal;
 
     const formatCpf = (v: string) => v.replace(/\D/g,"").slice(0,11)
       .replace(/(\d{3})(\d)/,"$1.$2")
