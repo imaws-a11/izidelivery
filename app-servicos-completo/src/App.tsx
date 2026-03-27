@@ -7461,6 +7461,7 @@ function App() {
 
 
   // →Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬ Tela de Pagamento da Mobilidade →Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬
+  // --- Tela de Pagamento da Mobilidade (Stealth Luxury Design) ---
   const renderMobilityPayment = () => {
     const bv = marketConditions.settings.baseValues;
     const basePrices: Record<string, number> = { mototaxi: bv.mototaxi_min, carro: bv.carro_min, van: bv.van_min, utilitario: bv.utilitario_min };
@@ -7468,116 +7469,158 @@ function App() {
 
     const activeCard = savedCards.find((c: any) => c.active);
 
+    const PaymentMethodButton = ({ id, icon, label, sub, colorClass, disabled = false }: any) => {
+      const isSelected = paymentMethod === id;
+      return (
+        <motion.button 
+          whileTap={{ scale: disabled ? 1 : 0.98 }}
+          disabled={disabled}
+          onClick={() => handleConfirmMobility(id)}
+          className={`w-full group relative overflow-hidden flex items-center gap-4 p-5 rounded-[32px] transition-all duration-500 border
+            ${disabled ? 'opacity-30 grayscale cursor-not-allowed' : 'active:scale-[0.98]'}
+            ${isSelected ? 'bg-yellow-400 font-bold border-yellow-400 shadow-[0_20px_40px_rgba(255,217,9,0.15)]' : 'bg-zinc-900/40 backdrop-blur-xl border-white/5 hover:border-white/10 shadow-2xl shadow-black/50'}
+          `}
+        >
+          <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors duration-500
+            ${isSelected ? 'bg-black/10' : `bg-white/5 ${colorClass}`}
+          `}>
+             <span className={`material-symbols-outlined text-2xl ${isSelected ? 'text-black' : ''}`}>{icon}</span>
+          </div>
+          <div className="flex-1 text-left">
+             <p className={`text-[11px] font-black uppercase tracking-widest mb-1 leading-none ${isSelected ? 'text-black' : 'text-zinc-500'}`}>{label}</p>
+             <p className={`text-[10px] font-bold tracking-tight ${isSelected ? 'text-black/60' : 'text-zinc-600'}`}>{sub}</p>
+          </div>
+          {disabled ? (
+              <span className="text-[8px] font-black text-red-500/60 bg-red-500/10 px-2 py-1 rounded-lg uppercase tracking-widest">Bloqueado</span>
+          ) : (
+              <span className={`material-symbols-outlined text-sm ${isSelected ? 'text-black/40' : 'text-zinc-800'}`}>chevron_right</span>
+          )}
+        </motion.button>
+      );
+    };
+
     return (
       <div className="absolute inset-0 z-[115] bg-black flex flex-col hide-scrollbar overflow-y-auto">
-        {/* Header */}
-        <header className="sticky top-0 z-50 bg-black px-6 py-6 flex items-center gap-4">
-          <button onClick={() => setSubView("transit_selection")} className="size-10 rounded-full bg-zinc-800 flex items-center justify-center text-white active:scale-90 transition-all shadow-lg border border-white/5">
-            <span className="material-symbols-outlined text-sm">arrow_back_ios_new</span>
+        {/* Header imersivo */}
+        <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md px-6 py-8 flex items-center gap-5 border-b border-white/5">
+          <button onClick={() => setSubView("transit_selection")} className="size-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-90 transition-all shadow-xl">
+            <span className="material-symbols-outlined text-lg">arrow_back_ios_new</span>
           </button>
           <div className="flex flex-col text-left">
-            <h2 className="text-xl font-black text-white tracking-tighter leading-none">Confirmar Serviço</h2>
-            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-1">ESCOLHA COMO PAGAR</p>
+            <h2 className="text-2xl font-black text-white tracking-tighter leading-none italic uppercase">Confirmar</h2>
+            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mt-1.5 opacity-80">Check-out Premium</p>
           </div>
         </header>
 
-        <div className="flex-1 px-4 py-2 space-y-6 pb-40">
-          {/* Resumo da solicitação */}
+        <div className="flex-1 px-5 py-6 space-y-10 pb-40">
+          {/* Resumo Imersivo e Minimalista */}
           <div className="space-y-4">
-            <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] px-2 flex justify-between items-center">
-              <span>RESUMO DA SOLICITAÇÃO</span>
-              {transitData.estPrice > 0 && (
-                <span className="text-yellow-400 font-black">R$ {price.toFixed(2).replace(".", ",")}</span>
-              )}
+            <div className="flex items-center justify-between px-2">
+              <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Resumo do Serviço</h3>
+              <div className="px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/20">
+                <span className="text-xs font-black text-yellow-400">R$ {price.toFixed(2).replace(".", ",")}</span>
+              </div>
+            </div>
+            
+            <div className="bg-zinc-900/30 backdrop-blur-xl rounded-[40px] p-8 border border-white/5 shadow-2xl relative overflow-hidden group">
+               <div className="absolute top-0 right-0 size-32 bg-yellow-400/5 blur-[60px] rounded-full -mr-16 -mt-16 pointer-events-none" />
+               <div className="flex-1 space-y-6">
+                  <div className="flex items-start gap-5 text-left">
+                     <div className="size-2 rounded-full bg-yellow-400 shrink-0 mt-1.5 shadow-[0_0_10px_rgba(255,217,9,1)]" />
+                     <div>
+                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">Partida</p>
+                        <p className="text-sm font-bold text-zinc-300 leading-relaxed">{transitData.origin}</p>
+                     </div>
+                  </div>
+                  <div className="h-4 w-px bg-zinc-800 ml-1" />
+                  <div className="flex items-start gap-5 text-left">
+                     <div className="size-2 rounded-full bg-zinc-700 shrink-0 mt-1.5" />
+                     <div>
+                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">Destino</p>
+                        <p className="text-sm font-bold text-zinc-400 leading-relaxed">{transitData.destination || "Aguardando destino..."}</p>
+                     </div>
+                  </div>
+               </div>
+            </div>
+          </div>
+
+          {/* Formas de Pagamento Stealth */}
+          <div className="space-y-6">
+            <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] px-2 flex items-center gap-3">
+              <span>Selecione o Pagamento</span>
+              <div className="h-px flex-1 bg-white/5" />
             </h3>
             
-            <div className="bg-white rounded-[40px] p-8 flex items-center gap-6 shadow-xl relative overflow-hidden transition-all duration-500 hover:shadow-yellow-400/5">
-               <div className="size-16 rounded-full bg-yellow-50 flex items-center justify-center shrink-0 shadow-inner">
-                  <span className="material-symbols-outlined text-zinc-400 text-2xl">help_outline</span>
-               </div>
-               <div className="flex-1 space-y-4">
-                  <div className="flex items-start gap-4 text-left">
-                     <div className="size-2.5 rounded-full bg-yellow-400 shrink-0 mt-1" />
-                     <p className="text-xs font-bold text-zinc-400 line-clamp-2 leading-relaxed">{transitData.origin}</p>
-                  </div>
-                  <div className="flex items-start gap-4 text-left">
-                     <div className="size-2.5 rounded-full bg-orange-500 shrink-0 mt-1" />
-                     <p className="text-xs font-bold text-zinc-400 line-clamp-2 leading-relaxed">{transitData.destination || "Aguardando destino..."}</p>
-                  </div>
-               </div>
-            </div>
-          </div>
+            <div className="grid grid-cols-1 gap-3">
+              {/* Cartão via App (Destaque se houver) */}
+              <PaymentMethodButton 
+                id="cartao" 
+                icon="credit_card" 
+                label="Cartão via App" 
+                sub={activeCard ? `${activeCard.brand} •••• ${activeCard.last4}` : "Pague com segurança pelo App"}
+                colorClass="text-blue-400"
+              />
 
-          {/* Forma de pagamento */}
-          <div className="space-y-4">
-            <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] px-2">FORMA DE PAGAMENTO</h3>
-            
-            <div className="space-y-2">
-              {/* PIX */}
-              <motion.button 
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleConfirmMobility("pix")}
-                className="w-full bg-white rounded-[30px] p-6 pr-8 flex items-center gap-5 shadow-lg group active:scale-[0.98] transition-all border border-transparent hover:border-emerald-100"
-              >
-                  <div className="size-12 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
-                     <span className="material-symbols-outlined text-emerald-500 text-2xl">check_circle</span>
-                  </div>
-                  <div className="flex-1 text-left">
-                     <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-1 leading-none">APROVAÇÃO IMEDIATA</p>
-                     <p className="text-[10px] font-bold text-zinc-300">Pague com PIX para aprovacao instantânea</p>
-                  </div>
-                  <span className="material-symbols-outlined text-zinc-300 group-hover:text-emerald-400 transition-colors">chevron_right</span>
-              </motion.button>
+              {/* PIX (Popular) */}
+              <PaymentMethodButton 
+                id="pix" 
+                icon="pix" 
+                label="PIX Instantâneo" 
+                sub="Aprovação imediata via QR Code"
+                colorClass="text-emerald-400"
+              />
 
-              {/* Saldo Wallet */}
-              <motion.button 
-                whileTap={{ scale: 0.98 }}
+              {/* Bitcoin Lightning (Premium/Stealth) */}
+              <PaymentMethodButton 
+                id="bitcoin_lightning" 
+                icon="bolt" 
+                label="Bitcoin Lightning" 
+                sub="Pagamento instantâneo em Satoshis"
+                colorClass="text-orange-400"
+              />
+
+              {/* Saldo IZI */}
+              <PaymentMethodButton 
+                id="saldo" 
+                icon="account_balance_wallet" 
+                label="Saldo IZI Wallet" 
+                sub={`R$ ${walletBalance.toFixed(2).replace(".", ",")} disponível`}
+                colorClass="text-cyan-400"
                 disabled={walletBalance < price}
-                onClick={() => handleConfirmMobility("saldo")}
-                className={`w-full bg-zinc-900 rounded-[30px] p-6 pr-8 flex items-center gap-5 shadow-lg transition-all border border-white/5 ${walletBalance < price ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:border-blue-400/30'}`}
-              >
-                  <div className={`size-12 rounded-full flex items-center justify-center shrink-0 ${walletBalance < price ? 'bg-zinc-800' : 'bg-blue-400/10'}`}>
-                     <span className={`material-symbols-outlined text-2xl ${walletBalance < price ? 'text-zinc-600' : 'text-blue-400'}`}>account_balance_wallet</span>
-                  </div>
-                  <div className="flex-1 text-left">
-                     <p className={`text-[11px] font-black uppercase tracking-widest leading-none mb-1 ${walletBalance < price ? 'text-zinc-600' : 'text-blue-400'}`}>
-                        R$ {walletBalance.toFixed(2).replace(".", ",")} DISPONÍVEL
-                     </p>
-                     <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Saldo da Carteira IZI</p>
-                  </div>
-                  {walletBalance < price ? (
-                    <span className="text-[9px] font-black text-red-500 bg-red-500/10 px-2 py-1 rounded-lg uppercase whitespace-nowrap">INSUFICIENTE</span>
-                  ) : (
-                    <span className="material-symbols-outlined text-zinc-400">chevron_right</span>
-                  )}
-              </motion.button>
+              />
 
-              {/* Dinheiro */}
-              <motion.button 
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleConfirmMobility("dinheiro")}
-                className="w-full bg-white rounded-[30px] p-6 pr-8 flex items-center gap-5 shadow-lg group active:scale-[0.98] transition-all border border-transparent hover:border-zinc-200"
-              >
-                  <div className="size-12 rounded-full bg-white border border-zinc-100 flex items-center justify-center shrink-0">
-                     <span className="material-symbols-outlined text-zinc-400 text-2xl">payments</span>
-                  </div>
-                  <div className="flex-1 text-left">
-                     <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-1 leading-none">PAGUE AO PRESTADOR</p>
-                     <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider">Pagamento em Espécie</p>
-                  </div>
-                  <span className="material-symbols-outlined text-zinc-300">chevron_right</span>
-              </motion.button>
+              {/* Cartão na Entrega */}
+              <PaymentMethodButton 
+                id="cartao_entrega" 
+                icon="contactless" 
+                label="Cartão na Entrega" 
+                sub="Pague com maquininha ao motoboy"
+                colorClass="text-zinc-500"
+              />
+
+              {/* Dinheiro (Espécie) */}
+              <PaymentMethodButton 
+                id="dinheiro" 
+                icon="payments" 
+                label="Dinheiro em Espécie" 
+                sub="Pague diretamente ao prestador"
+                colorClass="text-zinc-600"
+              />
             </div>
           </div>
 
-          {/* Footer security */}
-          <div className="flex items-center justify-center gap-4 pt-10 pb-10">
-             <div className="h-px bg-zinc-900 flex-1" />
-             <div className="flex items-center gap-3">
-               <span className="material-symbols-outlined text-zinc-700 text-sm">enhanced_encryption</span>
-               <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.2em] whitespace-nowrap">PAGAMENTO 100% SEGURO E CRIPTOGRAFADO</p>
+          {/* Footer ultra-minimalista */}
+          <div className="flex flex-col items-center gap-6 pt-10 pb-10">
+             <div className="flex items-center gap-4 group cursor-help">
+               <div className="size-8 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-700 group-hover:text-yellow-400 group-hover:border-yellow-400/20 transition-all">
+                  <span className="material-symbols-outlined text-sm">enhanced_encryption</span>
+               </div>
+               <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.4em]">Proteção Izi Security • RSA 4096-bit</p>
              </div>
-             <div className="h-px bg-zinc-900 flex-1" />
+             
+             <button className="text-[9px] font-black text-zinc-800 uppercase tracking-widest hover:text-zinc-500 transition-colors">
+               Termos de Uso e Política de Privacidade
+             </button>
           </div>
         </div>
       </div>

@@ -162,30 +162,30 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                 <button
                   onClick={() => !m.disabled && setPaymentMethod(m.id)}
                   disabled={m.disabled}
-                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all active:scale-[0.98] ${
-                    paymentMethod === m.id
-                      ? "bg-yellow-400/5 shadow-[inset_0_0_0_1.5px_rgba(255,215,9,0.4)]"
+                  className={`w-full flex items-center gap-4 px-6 py-5 rounded-[28px] transition-all duration-500 border
+                    ${paymentMethod === m.id
+                      ? "bg-yellow-400 border-yellow-400 shadow-[0_20px_40px_rgba(255,217,9,0.1)]"
                       : m.disabled
-                        ? "opacity-40 cursor-not-allowed"
-                        : "hover:bg-zinc-900/50"
-                  }`}
+                        ? "opacity-30 cursor-not-allowed grayscale"
+                        : "bg-zinc-900/40 backdrop-blur-xl border-white/5 hover:border-white/10"
+                    }`}
                 >
                   <span
-                    className={`material-symbols-outlined text-xl ${paymentMethod === m.id ? "text-yellow-400" : "text-zinc-500"}`}
+                    className={`material-symbols-outlined text-xl ${paymentMethod === m.id ? "text-black" : "text-zinc-500"}`}
                     style={{ fontVariationSettings: paymentMethod === m.id ? "'FILL' 1" : "'FILL' 0" }}
                   >
                     {m.icon}
                   </span>
                   <div className="flex-1 text-left">
-                    <p className={`font-black text-sm ${paymentMethod === m.id ? "text-white" : "text-zinc-400"}`}>
+                    <p className={`font-black text-[13px] uppercase tracking-wider ${paymentMethod === m.id ? "text-black" : "text-zinc-400"}`}>
                       {m.label}
                     </p>
-                    <p className="text-zinc-600 text-xs mt-0.5">{m.sub}</p>
+                    <p className={`text-[10px] font-bold mt-0.5 ${paymentMethod === m.id ? "text-black/60" : "text-zinc-600"}`}>{m.sub}</p>
                   </div>
                   <div
-                    className={`size-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${paymentMethod === m.id ? "border-yellow-400" : "border-zinc-700"}`}
+                    className={`size-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${paymentMethod === m.id ? "border-black/20" : "border-zinc-800"}`}
                   >
-                    {paymentMethod === m.id && <div className="size-2.5 rounded-full bg-yellow-400" />}
+                    {paymentMethod === m.id && <div className="size-2.5 rounded-full bg-black/80" />}
                   </div>
                 </button>
 
