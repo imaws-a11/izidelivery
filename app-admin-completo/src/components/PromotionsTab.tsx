@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { supabase } from '../lib/supabase';
 import { showConfirm } from '../lib/useToast';
@@ -8,9 +8,16 @@ import FlashOffersSection from './FlashOffersSection';
 // Promoções e Banners
 export default function PromotionsTab() {
   const {
-    promotionsList, promoFilter, setPromoFilter, promoSearch, setPromoSearch, showPromoForm, setShowPromoForm, promoFormType, setPromoFormType, promoForm, setPromoForm, promoSaving, promoSaveStatus, editingItem, setEditingItem, editType, setEditType, isSaving, userRole, merchantProfile, handleUpdatePromotion, fetchPromotions,
-    savePromotion, autoSavePromo
+    promotionsList, promoFilter, setPromoFilter, promoSearch, setPromoSearch, showPromoForm, setShowPromoForm, promoFormType, setPromoFormType, promoForm, setPromoForm, promoSaving, promoSaveStatus, userRole, merchantProfile, fetchPromotions,
+    savePromotion, autoSavePromo, fetchMerchants, merchantsList
   } = useAdmin();
+
+  React.useEffect(() => {
+    fetchPromotions();
+    if (userRole === 'admin') {
+      fetchMerchants();
+    }
+  }, [fetchPromotions, fetchMerchants, userRole]);
 
   return (
     <div className="space-y-8">
@@ -28,14 +35,32 @@ export default function PromotionsTab() {
     </div>
     <div className="flex items-center gap-3">
       <button
-        onClick={() => { setPromoFormType('banner'); setPromoForm({ title:'', description:'', image_url:'', coupon_code:'', discount_type:'percent', discount_value:10, min_order_value:0, max_usage:100, expires_at:'', is_active:true, is_vip:false }); setShowPromoForm(true); }}
+        onClick={() => { 
+          setPromoFormType('banner'); 
+          setPromoForm({ 
+            title:'', description:'', image_url:'', coupon_code:'', 
+            discount_type:'percent', discount_value:10, min_order_value:0, 
+            max_usage:100, expires_at:'', is_active:true, is_vip:false,
+            merchant_id: userRole === 'merchant' ? merchantProfile?.merchant_id : undefined
+          }); 
+          setShowPromoForm(true); 
+        }}
         className="flex items-center gap-2 px-5 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all"
       >
         <span className="material-symbols-outlined text-lg">add_photo_alternate</span>
         Novo Banner
       </button>
       <button
-        onClick={() => { setPromoFormType('coupon'); setPromoForm({ title:'', description:'', image_url:'', coupon_code:'', discount_type:'percent', discount_value:10, min_order_value:0, max_usage:100, expires_at:'', is_active:true, is_vip:false }); setShowPromoForm(true); }}
+        onClick={() => { 
+          setPromoFormType('coupon'); 
+          setPromoForm({ 
+            title:'', description:'', image_url:'', coupon_code:'', 
+            discount_type:'percent', discount_value:10, min_order_value:0, 
+            max_usage:100, expires_at:'', is_active:true, is_vip:false,
+            merchant_id: userRole === 'merchant' ? merchantProfile?.merchant_id : undefined
+          }); 
+          setShowPromoForm(true); 
+        }}
         className="flex items-center gap-2 px-6 py-3 bg-primary text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:brightness-110 transition-all"
       >
         <span className="material-symbols-outlined text-lg">confirmation_number</span>
@@ -44,7 +69,7 @@ export default function PromotionsTab() {
     </div>
   </div>
 
-{/* â â Stats â Â */}
+{/* ── Stats ── */}
   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
     {[
       { label: 'Total de Promoções', val: promotionsList.length, icon: 'campaign', color: 'text-primary', bg: 'bg-primary/10 border-primary/20' },
@@ -65,7 +90,7 @@ export default function PromotionsTab() {
     ))}
   </div>
 
-{/* â â Filter Bar â Â */}
+{/* ── Filter Bar ── */}
   <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
     <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl gap-1">
       {([
@@ -91,7 +116,7 @@ export default function PromotionsTab() {
     </div>
   </div>
 
-{/* â â Inline Create Form â Â */}
+{/* ── Inline Create Form ── */}
   {showPromoForm && (
     <motion.div initial={{ opacity:0, y:-20 }} animate={{ opacity:1, y:0 }}
       className="bg-white dark:bg-slate-900 border border-primary/30 rounded-[40px] p-8 shadow-xl shadow-primary/5">
@@ -142,6 +167,22 @@ export default function PromotionsTab() {
             placeholder="Válido apenas para primeiros pedidos"
             className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white" />
         </div>
+
+        {userRole === 'admin' && (
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Vincular a Lojista (Opcional)</label>
+            <select 
+              value={promoForm.merchant_id || ''} 
+              onChange={e => autoSavePromo({...promoForm, merchant_id: e.target.value || null})}
+              className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white"
+            >
+              <option value="">Promoção Global (Plataforma)</option>
+              {merchantsList.map(m => (
+                <option key={m.id} value={m.id}>{m.store_name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {promoFormType === 'coupon' && (
           <>
@@ -257,7 +298,7 @@ export default function PromotionsTab() {
     </motion.div>
   )}
 
-{/* â â Banners Grid â Â */}
+{/* ── Banners Grid ── */}
   {(promoFilter === 'all' || promoFilter === 'banner' || promoFilter === 'active' || promoFilter === 'expired') && (() => {
     const banners = promotionsList.filter(p => {
       if (!p.image_url) return false;
@@ -282,7 +323,7 @@ export default function PromotionsTab() {
                 <img src={bn.image_url} alt={bn.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-4">
                   <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-white ${bn.is_active ? 'bg-emerald-500' : 'bg-slate-500'}`}>
-{bn.is_active ? ' â Ativo' : ' â â Inativo'}
+{bn.is_active ? ' • Ativo' : ' • • Inativo'}
                   </span>
                 </div>
               </div>
@@ -317,7 +358,7 @@ export default function PromotionsTab() {
     );
   })()}
 
-{/* â â Coupons Table â Â */}
+{/* ── Coupons Table ── */}
   {(promoFilter === 'all' || promoFilter === 'coupon' || promoFilter === 'active' || promoFilter === 'expired') && (() => {
     const coupons = promotionsList.filter(p => {
       if (!p.coupon_code) return false;
@@ -355,7 +396,7 @@ export default function PromotionsTab() {
                   return (
                     <tr key={cp.id || i} className="hover:bg-primary/[0.02] transition-colors group">
                       <td className="px-8 py-5">
-                        <button onClick={() => navigator.clipboard.writeText(cp.coupon_code)}
+                        <button onClick={() => navigator.clipboard.writeText(cp.coupon_code || '')}
                           className="font-mono bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl text-primary font-black text-xs tracking-widest border border-primary/10 shadow-sm hover:bg-primary hover:text-slate-900 transition-all group/code flex items-center gap-1"
                           title="Clique para copiar">
                           {cp.coupon_code}
@@ -427,10 +468,9 @@ export default function PromotionsTab() {
     </div>
   )}
 
-  {/* IZI FLASH */}
+  {/* IZI FLASH MANAGEMENT */}
   {(userRole === 'admin' || userRole === 'merchant') && (
     <FlashOffersSection 
-      supabase={supabase} 
       userRole={userRole} 
       merchantId={userRole === 'merchant' ? merchantProfile?.merchant_id : undefined} 
     />

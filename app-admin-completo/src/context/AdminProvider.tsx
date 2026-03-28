@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useJsApiLoader } from '@react-google-maps/api';
 import { supabase } from '../lib/supabase';
 import { AdminContext } from './AdminContext';
 import type { AdminContextType } from './AdminContext';
@@ -10,15 +11,20 @@ import type {
 } from '../lib/types';
 import { useAuth } from './AuthContext';
 import { toastSuccess, toastError, toastWarning, showConfirm } from '../lib/useToast';
-import { playIziSound } from '../lib/iziSounds';
 import { uploadToCloudinary } from '../lib/cloudinary';
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { session, logout } = useAuth();
   const MASTER_ADMIN_EMAIL = (import.meta.env.VITE_MASTER_ADMIN_EMAIL as string || 'swmcapital@gmail.com').trim().toLowerCase();
+  const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string || '';
+
+  const { isLoaded, loadError: mapsLoadError } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    libraries: ['places', 'geometry']
+  });
 
   const ORDERS_PER_PAGE = 50;
-  const DRIVERS_PER_PAGE = 10;
 
   // Navigation & Role
   const [activeTab, setActiveTab] = useState<Tab>(() => (localStorage.getItem('izi_admin_active_tab') as Tab) || 'dashboard');
@@ -452,12 +458,18 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchPromotions = useCallback(async () => {
     setIsLoadingList(true);
     try {
-      const { data } = await supabase.from('promotions_delivery').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('promotions_delivery').select('*').order('created_at', { ascending: false });
+      
+      if (userRole === 'merchant' && merchantProfile?.merchant_id) {
+        query = query.eq('merchant_id', merchantProfile.merchant_id);
+      }
+
+      const { data } = await query;
       if (data) setPromotionsList(data as Promotion[]);
     } finally {
       setIsLoadingList(false);
     }
-  }, []);
+  }, [userRole, merchantProfile]);
 
   const fetchAuditLogs = useCallback(async () => {
     setIsLoadingList(true);
@@ -680,6 +692,18 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [fetchMenuCategories]);
 
+  const handleDeleteMenuCategory = useCallback(async (id: string, name: string) => {
+    if (!await showConfirm({ message: `Excluir a categoria "${name}"?` })) return;
+    try {
+      const { error } = await supabase.from('menu_categories_delivery').delete().eq('id', id);
+      if (error) throw error;
+      toastSuccess('Categoria removida!');
+      fetchMenuCategories();
+    } catch (err: any) {
+      toastError(err.message);
+    }
+  }, [fetchMenuCategories]);
+
   const handleDeleteProduct = useCallback(async (id: string, name: string) => {
     if (!await showConfirm({ message: `Excluir "${name}"?` })) return;
     try {
@@ -691,7 +715,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [fetchProducts]);
 
-  const handleCreateNewProduct = useCallback(() => {
+  const handleCreateNewProduct = useCallback(async () => {
     setEditingItem({
       name: '',
       description: '',
@@ -942,10 +966,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fetchPromotions]);
 
   const autoSavePromo = (updatedPromo: any) => {
-    setAutoSaveStatus('pending');
-    // Simple debounce logic could be here
+    // Apenas atualiza o estado local do formulário para persistência durante a edição
     setPromoForm(updatedPromo);
-    setAutoSaveStatus('saved');
   };
 
   const dashboardData = useMemo(() => ({
@@ -1001,14 +1023,14 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     selectedHexagons, setSelectedHexagons, hexGrid, getHexPath: () => [], 
     previewProducts, setPreviewProducts, previewCategories, setPreviewCategories, 
     dashboardData: dashboardData as DashboardData,
-    mapsLoadError: null,
-    isLoaded: true,
+    mapsLoadError: mapsLoadError ? mapsLoadError.message : null,
+    isLoaded,
     fetchStats, fetchUsers, fetchDrivers, fetchMyDrivers, fetchProducts, fetchMenuCategories, 
     fetchAllOrders, fetchSubscriptionOrders, fetchCategories, fetchDynamicRates, 
     fetchPromotions, fetchAuditLogs, fetchMerchants, fetchAppSettings, fetchMyDedicatedSlots, 
     openMerchantPreview, handleAddCredit, handleApplyCredit, handleUpdateDriver, 
     handleUpdateCategory, handleUpdateMyDriver, handleDeleteMyDriver, handleUpdateUser, 
-    handleUpdateMyProduct, handleUpdateMenuCategory, handleDeleteProduct, handleCreateNewProduct, 
+    handleUpdateMyProduct, handleUpdateMenuCategory, handleDeleteMenuCategory, handleDeleteProduct, handleCreateNewProduct, 
     handleUpdatePromotion, handleUpdateMerchant, handleUpdateMerchantStatus, handleDeleteMerchant, 
     handleUpdateDriverStatus, handleDeleteDriver, handleExportDrivers, handleUpdateUserStatus, 
     handleDeleteUser, handleUpdateDedicatedSlot, handleCreateDedicatedSlot, handleDeleteDedicatedSlot, 

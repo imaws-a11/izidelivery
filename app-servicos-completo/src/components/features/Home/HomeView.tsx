@@ -27,6 +27,7 @@ interface HomeViewProps {
   setExploreCategoryState: (state: any) => void;
   setRestaurantInitialCategory: (cat: string) => void;
   isIziBlackMembership: boolean;
+  setTab: (tab: "home" | "orders" | "wallet" | "profile") => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -55,6 +56,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   setExploreCategoryState,
   setRestaurantInitialCategory,
   isIziBlackMembership,
+  setTab,
 }) => {
   const handleBannerClick = () => {
     if (isIziBlackMembership) {
@@ -116,11 +118,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   return (
     <div className="flex flex-col bg-black text-zinc-100 pb-32 overflow-y-auto no-scrollbar h-full">
-      {/* HEADER PREMIUM - OTIMIZADO */}
-      <header className="sticky top-0 z-[60] flex justify-between items-center w-full px-5 py-3 bg-black/40 backdrop-blur-2xl border-b border-white/5 transition-all duration-300">
-        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setSubView(subView === "addresses" ? "none" : "addresses")}>
-          <div className="relative">
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-400/20 group-hover:border-yellow-400 transition-colors">
+      {/* HEADER PREMIUM - REFORMULADO COM PERFIL ONE-CLICK */}
+      <header className="sticky top-0 z-[60] flex flex-col w-full bg-black/40 backdrop-blur-2xl border-b border-white/5 transition-all duration-300">
+        <div className="flex justify-between items-center px-5 py-3">
+          {/* Avatar / Perfil no Click */}
+          <button 
+            onClick={() => { setTab("profile"); window.history.pushState({ view: "app", tab: "profile", subView: "none" }, ""); }}
+            className="relative active:scale-95 transition-all"
+          >
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-400/20 hover:border-yellow-400 transition-colors">
               <img className="w-full h-full object-cover" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" />
             </div>
             {isIziBlackMembership && (
@@ -128,34 +134,36 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <span className="material-symbols-outlined text-[10px] font-black" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
               </div>
             )}
-          </div>
+          </button>
 
-          <div className="flex flex-col">
-            <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em] leading-none mb-1">Entregas em</p>
-            <div className="flex items-center gap-1">
-              <span className="text-white font-black text-xs tracking-tight max-w-[140px] truncate leading-none">
-                {userLocation.loading ? "Buscando..." : userLocation.address}
+          {/* Endereço Centralizado ou ao lado */}
+          <div className="flex-1 flex flex-col items-center cursor-pointer group px-4" onClick={() => setSubView(subView === "addresses" ? "none" : "addresses")}>
+            <p className="text-zinc-500 text-[8px] font-black uppercase tracking-[0.2em] leading-none mb-1">Entregas em</p>
+            <div className="flex items-center gap-1 max-w-full">
+              <span className="text-white font-black text-xs tracking-tight truncate leading-none">
+                {userLocation.loading ? "Buscando..." : userLocation.address || "Definir endereço"}
               </span>
               <span className="material-symbols-outlined text-yellow-400 text-sm group-hover:translate-y-0.5 transition-transform">expand_more</span>
             </div>
           </div>
+
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => cart.length > 0 && navigateSubView("cart")} 
+              className="group relative w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900/40 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95">
+              <span className="material-symbols-outlined text-zinc-100 text-xl group-hover:text-yellow-400 transition-colors">shopping_bag</span>
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 size-4.5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-black animate-in fade-in zoom-in duration-300">
+                  {cart.length}
+                </span>
+              )}
+            </button>
+            <button onClick={() => setSubView("quest_center")} 
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900/40 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95">
+              <span className="material-symbols-outlined text-zinc-100 text-xl">notifications</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <button onClick={() => cart.length > 0 && navigateSubView("cart")} 
-            className="group relative w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900/40 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95">
-            <span className="material-symbols-outlined text-zinc-100 text-xl group-hover:text-yellow-400 transition-colors">shopping_bag</span>
-            {cart.length > 0 && (
-              <span className="absolute -top-1 -right-1 size-4.5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-black animate-in fade-in zoom-in duration-300">
-                {cart.length}
-              </span>
-            )}
-          </button>
-          <button onClick={() => setSubView("quest_center")} 
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900/40 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95">
-            <span className="material-symbols-outlined text-zinc-100 text-xl">notifications</span>
-          </button>
-        </div>
       </header>
 
 
@@ -199,30 +207,111 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </motion.div>
         )}
 
-        {/* BANNER PROMO */}
-        <section>
-          <div className="relative h-44 w-full rounded-2xl overflow-hidden group cursor-pointer" onClick={handleBannerClick}>
-            <img className="w-full h-full object-cover brightness-50 group-hover:scale-105 transition-transform duration-700" src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=800" alt="Promo" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-transparent flex flex-col justify-center p-7">
-              <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Oferta VIP</span>
-              <h2 className="text-2xl font-extrabold text-white leading-tight">Ganhe 50% OFF<br/>na Primeira Entrega</h2>
-              <p className="text-zinc-300 text-xs mt-1.5 font-medium">Use o código: IZI-FIRST</p>
+        {/* HERO IMMERSIVE (SEM BORDAS OU FUNDO DE CARD) */}
+        <section className="-mx-5 -mt-8 relative h-[300px] overflow-hidden group cursor-pointer" onClick={handleBannerClick}>
+            {/* Imagem de Fundo de Alta Fidelidade com Fade para Preto */}
+            <div className="absolute inset-0 z-0">
+               <img 
+                 className="w-full h-full object-cover brightness-75 group-hover:scale-105 transition-transform duration-1000" 
+                 src="https://images.unsplash.com/photo-1604871000636-074fa5117945?q=80&w=1600" 
+                 alt="Izi Black Elite" 
+               />
+               <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black to-transparent" />
             </div>
-          </div>
+
+            {/* Conteúdo Flutuante */}
+            <div className="relative z-10 h-full flex flex-col justify-end px-8 pb-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="bg-yellow-400 text-black text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Izi Black</span>
+                  <div className="h-[1px] w-12 bg-white/20" />
+                </div>
+                <h2 className="text-4xl font-black text-white leading-none tracking-tighter uppercase italic drop-shadow-2xl">
+                  Sinta o <br />
+                  <span className="text-yellow-400 italic">Poder</span> da Elite.
+                </h2>
+                <p className="text-zinc-300 text-xs font-medium mt-3 mb-6 max-w-[260px] leading-relaxed">
+                  Taxa zero, suporte humano e ofertas sensoriais exclusivas para membros Izi Black.
+                </p>
+                <button className="w-fit bg-white/5 backdrop-blur-md border border-white/10 text-white font-black text-[10px] uppercase tracking-[0.2em] px-8 py-3.5 rounded-2xl hover:bg-white hover:text-black transition-all active:scale-95 shadow-2xl">
+                  Explorar Benefícios
+                </button>
+            </div>
         </section>
 
-        {/* CARD ELITE */}
-        <section>
-          <div className="relative overflow-hidden rounded-[2rem] h-48 flex items-center p-7 bg-gradient-to-br from-zinc-900/60 to-black border border-white/5">
-            <div className="relative z-10 space-y-2">
-              <span className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.3em]">Privilégio Elite</span>
-              <h2 className="text-2xl font-extrabold text-white leading-tight tracking-tight">Taxa zero em<br/>toda a cidade.</h2>
-              <p className="text-zinc-500 text-xs font-medium max-w-[190px]">A velocidade máxima do ecossistema IZI Black ao seu comando.</p>
+        {/* CARROSSEL NATIVO IMERSIVO (SEM CARD BOXES) */}
+        <section className="-mx-5 mt-4">
+            {/* Header da Seção */}
+            <div className="px-5 mb-4 flex justify-between items-center">
+               <h3 className="text-sm font-black uppercase tracking-widest text-zinc-100 italic">Ofertas do Dia</h3>
+               <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-widest cursor-pointer">Ver Tudo</span>
             </div>
-            <div className="absolute right-[-5%] top-1/2 -translate-y-1/2 opacity-20 pointer-events-none">
-              <span className="material-symbols-outlined text-[160px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 0" }}>delivery_dining</span>
+
+            <div className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar px-5 gap-3">
+               {/* Slide 1: Farmácia */}
+               <div className="snap-center min-w-[300px] h-44 relative overflow-hidden rounded-[2.5rem] group flex-shrink-0">
+                  <img className="absolute inset-0 w-full h-full object-cover" src="https://images.unsplash.com/photo-1579165466541-74e2ae162b6a?q=80&w=800" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent p-7 flex flex-col justify-center">
+                    <span className="text-yellow-400 text-[9px] font-black uppercase mb-1">Cuidado Diário</span>
+                    <h4 className="text-xl font-black text-white leading-tight uppercase">Mês do<br/>Consumidor</h4>
+                    <p className="text-yellow-400 text-3xl font-black italic mt-1 leading-none">60% OFF</p>
+                  </div>
+               </div>
+
+               {/* Slide 2: Burger */}
+               <div className="snap-center min-w-[300px] h-44 relative overflow-hidden rounded-[2.5rem] group flex-shrink-0">
+                  <img className="absolute inset-0 w-full h-full object-cover brightness-75" src="https://images.unsplash.com/photo-1571091718767-18b5b1457add?q=80&w=800" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent p-7 flex flex-col justify-end">
+                    <h4 className="text-xl font-black text-white leading-tight uppercase italic">Noites de<br/>Burgers</h4>
+                    <div className="flex items-center gap-2 mt-2">
+                       <span className="bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded uppercase">Ao vivo</span>
+                       <p className="text-white font-black text-sm">Taxa Grátis</p>
+                    </div>
+                  </div>
+               </div>
+
+               {/* Slide 3: Mercado */}
+               <div className="snap-center min-w-[300px] h-44 relative overflow-hidden rounded-[2.5rem] group flex-shrink-0">
+                  <img className="absolute inset-0 w-full h-full object-cover" src="https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=800" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/60 via-black/80 to-black p-7 flex flex-col justify-center">
+                    <span className="text-emerald-400 text-[9px] font-black uppercase mb-1">Fresco & Rápido</span>
+                    <h4 className="text-xl font-black text-white leading-tight uppercase">Sua feira<br/>em 15 min</h4>
+                    <button className="mt-4 w-fit bg-emerald-500 text-white font-black text-[8px] uppercase px-4 py-2 rounded-xl">Pedir Agora</button>
+                  </div>
+               </div>
+
+               {/* Slide 4: Sushi / Orient Express */}
+               <div className="snap-center min-w-[300px] h-44 relative overflow-hidden rounded-[2.5rem] group flex-shrink-0">
+                  <img className="absolute inset-0 w-full h-full object-cover brightness-75" src="https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=800" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-orange-600/60 via-black/80 to-transparent p-7 flex flex-col justify-center">
+                    <span className="text-orange-400 text-[9px] font-black uppercase mb-1">Culinária Oriental</span>
+                    <h4 className="text-xl font-black text-white leading-tight uppercase">Festival<br/>do Sushi</h4>
+                    <p className="text-white text-[10px] mt-2 font-medium">Kits exclusivos a partir de R$ 49</p>
+                  </div>
+               </div>
+
+               {/* Slide 5: Drinks e Happy Hour */}
+               <div className="snap-center min-w-[300px] h-44 relative overflow-hidden rounded-[2.5rem] group flex-shrink-0">
+                  <img className="absolute inset-0 w-full h-full object-cover brightness-[0.6]" src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=800" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-7 flex flex-col justify-end">
+                    <span className="text-purple-400 text-[9px] font-black uppercase mb-1">Adega Izi</span>
+                    <h4 className="text-xl font-black text-white leading-tight uppercase italic">Happy Hour<br/>começou</h4>
+                    <div className="mt-3 flex items-center gap-2">
+                       <span className="size-2 bg-purple-500 rounded-full animate-pulse" />
+                       <span className="text-white font-bold text-[10px]">Gelada em 20 min</span>
+                    </div>
+                  </div>
+               </div>
+
+               {/* Slide 6: Pet Shop / Amigo Izi */}
+               <div className="snap-center min-w-[300px] h-44 relative overflow-hidden rounded-[2.5rem] group flex-shrink-0">
+                  <img className="absolute inset-0 w-full h-full object-cover brightness-90" src="https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=800" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600/40 via-black/90 to-black p-7 flex flex-col justify-center">
+                    <span className="text-blue-400 text-[9px] font-black uppercase mb-1">Tudo pro seu Pet</span>
+                    <h4 className="text-xl font-black text-white leading-tight uppercase">Ração e <br/>Mimos Izi</h4>
+                    <button className="mt-4 w-fit bg-blue-500 text-white font-black text-[8px] uppercase px-4 py-2 rounded-xl">Explorar</button>
+                  </div>
+               </div>
             </div>
-          </div>
         </section>
 
         {/* GRADE DE SERVIÇOS */}

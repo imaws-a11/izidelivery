@@ -199,6 +199,7 @@ export interface AdminContextType {
   handleUpdateUser: (e: React.FormEvent) => Promise<void>;
   handleUpdateMyProduct: (e: React.FormEvent) => Promise<void>;
   handleUpdateMenuCategory: (cat: any) => Promise<void>;
+  handleDeleteMenuCategory: (id: string, name: string) => Promise<void>;
   handleDeleteProduct: (id: string, name: string) => Promise<void>;
   handleCreateNewProduct: () => Promise<void>;
   handleUpdatePromotion: (e: React.FormEvent) => Promise<void>;

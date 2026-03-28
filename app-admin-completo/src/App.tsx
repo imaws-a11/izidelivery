@@ -143,16 +143,20 @@ function App() {
                </>
              ) : (
                <>
-                 <NavTab id="dashboard" icon="dashboard" label="Home" />
-                 <NavTab id="merchants" icon="storefront" label="Lojistas" />
-                 <NavTab id="my_studio" icon="inventory_2" label="Estúdios" />
-                 <NavTab id="tracking" icon="map" label="Rastreador" />
-                 <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
-                 <NavTab id="drivers" icon="person_pin_circle" label="Entregadores" />
-                 <NavTab id="users" icon="group" label="Clientes" />
-                 <NavTab id="categories" icon="layers" label="Categorias" />
-                 <NavTab id="dynamic_rates" icon="payments" label="Taxas" />
-                 <NavTab id="settings" icon="settings" label="Sistema" />
+                  <NavTab id="dashboard" icon="dashboard" label="Home" />
+                  <NavTab id="merchants" icon="storefront" label="Lojistas" />
+                  <NavTab id="my_studio" icon="inventory_2" label="Estúdios" />
+                  <NavTab id="tracking" icon="map" label="Rastreador" />
+                  <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
+                  <NavTab id="promotions" icon="percent" label="Promoções" />
+                  <NavTab id="izi_black" icon="workspace_premium" label="Izi Black" />
+                  <NavTab id="drivers" icon="person_pin_circle" label="Entregadores" />
+                  <NavTab id="users" icon="group" label="Clientes" />
+                  <NavTab id="categories" icon="layers" label="Categorias" />
+                  <NavTab id="dynamic_rates" icon="payments" label="Taxas" />
+                  <NavTab id="audit_logs" icon="history" label="Logs" />
+                  <NavTab id="support" icon="support_agent" label="Suporte" />
+                  <NavTab id="settings" icon="settings" label="Sistema" />
                </>
              )}
           </div>
