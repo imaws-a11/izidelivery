@@ -1258,12 +1258,21 @@ function App() {
         
       if (error) throw error;
       
-      const realEstabs = data?.map(m => {
-        const isOpen = isStoreOpen(m.opening_hours, m.is_open);
-        // Normalização do tipo para garantir consistência nos filtros
-        const normalizedType = (m.store_type || "restaurant").toLowerCase().trim();
-        
-        return {
+       const realEstabs = data?.map(m => {
+         const isOpen = isStoreOpen(m.opening_hours, m.is_open);
+         
+         // Mapeamento de tipos do banco para os filtros do App
+         const rawType = (m.store_type || "restaurant").toLowerCase().trim();
+         let normalizedType = rawType;
+         
+         if (rawType.includes("restaurante")) normalizedType = "restaurant";
+         else if (rawType === "saude") normalizedType = "pharmacy";
+         else if (rawType === "mercado") normalizedType = "market";
+         else if (rawType === "bebidas") normalizedType = "beverages";
+         else if (rawType === "hamburguer") normalizedType = "restaurant";
+         
+         return {
+
           id: m.id,
           name: m.store_name || "Loja Parceira",
           tag: isOpen ? "Aberto Agora" : "Fechado",
@@ -3381,73 +3390,77 @@ function App() {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
 
-        {/* FLOATING NAV */}
-        <nav className="fixed top-0 w-full z-50 flex items-center justify-between px-5 py-4 pointer-events-none">
+        {/* TOP COMPACT HEADER */}
+        <header className="sticky top-0 z-[60] w-full px-5 py-3 flex items-center justify-between bg-black/40 backdrop-blur-2xl border-b border-white/5 transition-all duration-300">
           <button
             onClick={() => setSubView("restaurant_list")}
-            className="pointer-events-auto flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/10 active:scale-95 transition-all"
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-900/40 border border-white/10 active:scale-95 transition-all"
           >
-            <span className="material-symbols-outlined">arrow_back</span>
+            <span className="material-symbols-outlined text-white">arrow_back</span>
           </button>
-          <div className="flex gap-3 pointer-events-auto">
-            <button className="flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/10 active:scale-95 transition-all">
-              <span className="material-symbols-outlined">share</span>
+          
+          <div className="flex-1 px-4 truncate">
+             <h2 className="text-sm font-black text-white uppercase tracking-widest truncate">{shop.name}</h2>
+          </div>
+
+          <div className="flex gap-2">
+            <button className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-900/40 border border-white/10 active:scale-95 transition-all text-white">
+              <span className="material-symbols-outlined text-xl">share</span>
             </button>
-            <button className="flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/10 active:scale-95 transition-all">
-              <span className="material-symbols-outlined">favorite_border</span>
+            <button className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-900/40 border border-white/10 active:scale-95 transition-all text-white">
+              <span className="material-symbols-outlined text-xl">favorite_border</span>
             </button>
           </div>
-        </nav>
-
-        {/* HERO */}
-        <header className="relative w-full h-80 overflow-hidden shrink-0">
-          <img src={shop.banner || shop.img} alt={shop.name} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-          <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-yellow-400/50 to-transparent" />
         </header>
 
-        {/* METADATA */}
-        <section className="px-5 -mt-10 relative z-10 mb-2">
-          <h1
-            className="font-extrabold text-3xl tracking-tighter text-white mb-2 uppercase leading-tight"
-            style={{ textShadow: "0 0 10px rgba(255,215,9,0.5), 0 0 20px rgba(255,215,9,0.3)" }}
-          >
-            {shop.name}
-          </h1>
-          <div className="flex items-center gap-5 text-sm font-medium">
-            <div className="flex items-center gap-1.5 text-yellow-400">
-              <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-              <span className="font-black">{shop.rating}</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-zinc-400">
-              <span className="material-symbols-outlined text-[16px]">schedule</span>
-              <span>{shop.time}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] text-zinc-400">delivery_dining</span>
-              <span className={shop.freeDelivery ? "text-yellow-400 font-bold" : "text-zinc-400"}>
-                {shop.freeDelivery ? "Grátis" : shop.fee}
-              </span>
+        {/* HERO - SLIMMER */}
+        <div className="relative w-full h-64 overflow-hidden shrink-0">
+          <img src={shop.banner || shop.img} alt={shop.name} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+        </div>
+
+        {/* METADATA - REFINED */}
+        <section className="px-5 -mt-12 relative z-10 mb-2">
+          <div className="flex flex-col gap-2">
+            <h1 className="font-black text-3xl tracking-tighter text-white uppercase leading-tight drop-shadow-2xl">
+              {shop.name}
+            </h1>
+            <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest">
+              <div className="flex items-center gap-1.5 text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-lg">
+                <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                <span>{shop.rating}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-zinc-400">
+                <span className="material-symbols-outlined text-[14px]">schedule</span>
+                <span>{shop.time}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-zinc-400">
+                <span className="material-symbols-outlined text-[14px]">local_shipping</span>
+                <span className={shop.freeDelivery ? "text-emerald-400" : ""}>
+                  {shop.freeDelivery ? "Entrega Grátis" : shop.fee}
+                </span>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* CATEGORY TABS */}
-        <nav className="sticky top-0 z-40 mt-8 px-5 py-3 bg-black/90 backdrop-blur-xl border-b border-zinc-900">
-          <div className="flex gap-3 overflow-x-auto no-scrollbar">
+        {/* CATEGORY TABS - STITCHES BELOW HEADER */}
+        <nav className="sticky top-[65px] z-50 mt-4 px-5 py-3 bg-black/60 backdrop-blur-2xl border-b border-white/5 transition-all">
+          <div className="flex gap-2.5 overflow-x-auto no-scrollbar">
             {allCategoryNames.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`px-5 py-2.5 rounded-full font-black text-[11px] uppercase tracking-widest whitespace-nowrap transition-all active:scale-95 ${
+                className={`px-6 py-2 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] whitespace-nowrap transition-all active:scale-95 ${
                   activeCategory === cat
-                    ? "bg-yellow-400 text-black shadow-[0_0_15px_rgba(255,215,9,0.3)]"
-                    : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-white"
+                    ? "bg-yellow-400 text-black shadow-[0_5px_15px_rgba(255,215,9,0.3)]"
+                    : "bg-zinc-900/50 text-zinc-500 border border-white/5 hover:text-white"
                 }`}
               >
                 {cat}
               </button>
             ))}
+
           </div>
         </nav>
 
@@ -8182,7 +8195,9 @@ function App() {
                 walletBalance={walletBalance}
                 setSubView={setSubView}
                 logout={logout}
+                isIziBlackMembership={isIziBlackMembership}
               />
+
             )}
 
             {/* Sub Views */}

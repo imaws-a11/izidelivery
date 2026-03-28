@@ -45,18 +45,22 @@ export const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, n
 
   return (
     <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-      {/* HEADER */}
-      <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
+      {/* HEADER PREMIUM */}
+      <header className="sticky top-0 z-50 bg-black/40 backdrop-blur-2xl flex items-center justify-between px-5 py-3.5 border-b border-white/5 transition-all">
         <div className="flex items-center gap-4">
-          <button onClick={() => setSubView("none")} className="active:scale-90 transition-all">
-            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900/50 border border-white/10 flex items-center justify-center active:scale-90 transition-all">
+            <span className="material-symbols-outlined text-white text-xl">arrow_back</span>
           </button>
-          <h1 className="font-extrabold text-base tracking-tight text-white uppercase">Sua Sacola</h1>
+          <div className="flex flex-col">
+            <h1 className="font-black text-sm tracking-widest text-white uppercase italic">Sua Sacola</h1>
+            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] mt-0.5">Confirme seus pedidos</p>
+          </div>
         </div>
-        <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-3 py-1 rounded-full">
+        <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-3 py-1.5 rounded-full border border-yellow-400/20 shadow-[0_0_15px_rgba(255,215,9,0.1)]">
           {cart.length} {cart.length === 1 ? "item" : "itens"}
         </span>
       </header>
+
 
       <main className="px-5 pt-6 flex flex-col gap-4">
         {/* ITENS */}

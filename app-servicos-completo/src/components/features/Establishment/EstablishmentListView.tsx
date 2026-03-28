@@ -33,35 +33,35 @@ export const EstablishmentListView = ({
 }: EstablishmentListViewProps) => {
   return (
     <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-      <header className="sticky top-0 z-50 px-5 pt-5 pb-4"
-        style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSubView(backView)} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+      <header className="sticky top-0 z-50 px-5 py-3 bg-black/40 backdrop-blur-2xl border-b border-white/5 transition-all">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSubView(backView)} className="size-10 rounded-full bg-zinc-900/50 border border-white/10 flex items-center justify-center active:scale-95 transition-all">
+              <span className="material-symbols-outlined text-white text-xl">arrow_back</span>
             </button>
-            <div>
-              <h1 className="text-xl font-black tracking-tight text-white leading-none">{title}</h1>
-              {subtitle && <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">{subtitle}</p>}
+            <div className="flex flex-col justify-center">
+              <h1 className="text-lg font-black tracking-tight text-white leading-none">{title}</h1>
+              {subtitle && <p className="text-[9px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-1 leading-none">{subtitle}</p>}
             </div>
           </div>
-          <button onClick={() => cartLength > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-            <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-            {cartLength > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cartLength}</span>}
+          <button onClick={() => cartLength > 0 && navigateSubView("cart")} className="relative size-10 rounded-full bg-zinc-900/50 border border-white/10 flex items-center justify-center active:scale-95 transition-all group">
+            <span className="material-symbols-outlined text-zinc-100 text-xl group-hover:text-yellow-400">shopping_bag</span>
+            {cartLength > 0 && <span className="absolute -top-1 -right-1 size-4.5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-black animate-in fade-in zoom-in duration-300">{cartLength}</span>}
           </button>
         </div>
-        <div className="relative">
+        <div className="relative group">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-            <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
+            <span className="material-symbols-outlined text-zinc-500 text-lg group-focus-within:text-yellow-400 transition-colors">search</span>
           </div>
           <input
-            className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
-            placeholder="Buscar..."
+            className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl py-2.5 pl-11 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/20 text-xs font-medium transition-all"
+            placeholder="O que você procura?"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
       </header>
+
 
       <main className="px-5 flex flex-col gap-6">
         {icon && (

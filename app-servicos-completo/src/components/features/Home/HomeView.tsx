@@ -116,46 +116,48 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   return (
     <div className="flex flex-col bg-black text-zinc-100 pb-32 overflow-y-auto no-scrollbar h-full">
-      {/* HEADER */}
-      <header className="sticky top-0 z-50 flex justify-between items-center w-full px-6 py-5"
-        style={{ background: "linear-gradient(to bottom, #000000 60%, transparent)" }}>
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setSubView(subView === "addresses" ? "none" : "addresses")}>
+      {/* HEADER PREMIUM - OTIMIZADO */}
+      <header className="sticky top-0 z-[60] flex justify-between items-center w-full px-5 py-3 bg-black/40 backdrop-blur-2xl border-b border-white/5 transition-all duration-300">
+        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setSubView(subView === "addresses" ? "none" : "addresses")}>
           <div className="relative">
-            <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-yellow-400/20">
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-400/20 group-hover:border-yellow-400 transition-colors">
               <img className="w-full h-full object-cover" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" />
             </div>
-            {userLevel >= 10 && (
-              <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black text-[9px] font-extrabold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-[0_0_10px_rgba(255,215,9,0.5)]">
-                <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
-                VIP
+            {isIziBlackMembership && (
+              <div className="absolute -bottom-0.5 -right-0.5 bg-yellow-400 text-black p-0.5 rounded-full flex items-center justify-center shadow-[0_2px_8px_rgba(255,215,9,0.5)] border-2 border-black">
+                <span className="material-symbols-outlined text-[10px] font-black" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
               </div>
             )}
           </div>
-          <div>
-            <p className="text-zinc-500 text-[10px] font-medium uppercase tracking-widest">Entregar em</p>
+
+          <div className="flex flex-col">
+            <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em] leading-none mb-1">Entregas em</p>
             <div className="flex items-center gap-1">
-              <span className="text-zinc-100 font-bold text-sm tracking-tight max-w-[150px] truncate">
+              <span className="text-white font-black text-xs tracking-tight max-w-[140px] truncate leading-none">
                 {userLocation.loading ? "Buscando..." : userLocation.address}
               </span>
-              <span className="material-symbols-outlined text-yellow-400 text-sm">expand_more</span>
+              <span className="material-symbols-outlined text-yellow-400 text-sm group-hover:translate-y-0.5 transition-transform">expand_more</span>
             </div>
           </div>
         </div>
 
-        <h1 className="text-lg font-extrabold tracking-[0.4em] italic text-yellow-400 hidden md:block uppercase">IZI</h1>
-
-        <div className="flex items-center gap-3">
-          <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-800/50 transition-all active:scale-95">
-            <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => cart.length > 0 && navigateSubView("cart")} 
+            className="group relative w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900/40 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95">
+            <span className="material-symbols-outlined text-zinc-100 text-xl group-hover:text-yellow-400 transition-colors">shopping_bag</span>
             {cart.length > 0 && (
-              <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>
+              <span className="absolute -top-1 -right-1 size-4.5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-black animate-in fade-in zoom-in duration-300">
+                {cart.length}
+              </span>
             )}
           </button>
-          <button onClick={() => setSubView("quest_center")} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-800/50 transition-all active:scale-95">
-            <span className="material-symbols-outlined text-zinc-100">notifications</span>
+          <button onClick={() => setSubView("quest_center")} 
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900/40 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95">
+            <span className="material-symbols-outlined text-zinc-100 text-xl">notifications</span>
           </button>
         </div>
       </header>
+
 
       <main className="px-5 pb-10 flex flex-col gap-8">
         {/* SEARCH */}

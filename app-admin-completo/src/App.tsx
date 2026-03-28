@@ -1499,7 +1499,9 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     setPromoSaving(true);
     if (promoSaveTimer.current) clearTimeout(promoSaveTimer.current);
     try {
-      if (!promo.title || (promoFormType === 'coupon' && promo.discount_value <= 0)) { 
+      console.log("Iniciando savePromotion para:", promoFormType, promo);
+      
+      if (!promo.title || (promoFormType === 'coupon' && !promo.discount_value && promo.discount_value !== 0)) { 
          toastError('Preencha o título e defina um valor de desconto válido.'); 
          return; 
       }
@@ -1513,34 +1515,43 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         discount_value: promo.discount_value || 0,
         min_order_value: promo.min_order_value || 0,
         max_usage: promo.max_usage || 100,
-        expires_at: (promo.expires_at && promo.expires_at.length >= 10) ? new Date(promo.expires_at + (promo.expires_at.includes('T') ? '' : 'T23:59:59')).toISOString() : null,
+        expires_at: (promo.expires_at && promo.expires_at.length >= 10) 
+          ? new Date(promo.expires_at + (promo.expires_at.includes('T') ? '' : 'T23:59:59')).toISOString() 
+          : null,
         is_active: promo.is_active,
-        is_vip: promo.is_vip || false,
-        updated_at: new Date().toISOString()
+        is_vip: promo.is_vip || false
+        // Removido updated_at: new Date().toISOString() pois a coluna não existe na tabela promotions_delivery
       };
 
       if (userRole === 'merchant' && merchantProfile?.merchant_id) {
         payload.merchant_id = merchantProfile.merchant_id;
       }
 
+      console.log("Payload sendo enviado ao Supabase:", payload);
+
       const { error } = promo.id
         ? await supabase.from('promotions_delivery').update(payload).eq('id', promo.id)
         : await supabase.from('promotions_delivery').insert([payload]);
       
       if (error) { 
-        console.error("Erro ao salvar promoção:", error);
+        console.error("Erro do Supabase ao salvar promoção:", error);
         setPromoSaveStatus('error');
         toastError(error.message || 'Erro ao publicar promoção'); 
       }
       else {
+        console.log("Promoção salva com sucesso!");
         setPromoSaveStatus('saved');
         toastSuccess('Promoção publicada com sucesso!');
         fetchPromotions();
-        // Se era uma nova promoção (sem ID), fecha o formulário após 1s
+        
         if (!promo.id) {
           setTimeout(() => {
             setShowPromoForm(false);
-            setPromoForm({ title: '', description: '', image_url: '', coupon_code: '', discount_type: 'percent', discount_value: 10, min_order_value: 0, max_usage: 100, expires_at: '', is_active: true, is_vip: false });
+            setPromoForm({ 
+              title: '', description: '', image_url: '', coupon_code: '', 
+              discount_type: 'percent', discount_value: 10, min_order_value: 0, 
+              max_usage: 100, expires_at: '', is_active: true, is_vip: false 
+            });
           }, 1000);
         }
         setTimeout(() => setPromoSaveStatus('idle'), 2500);
