@@ -302,7 +302,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <span className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">AO VIVO</span>
               </div>
               
-              <div className="flex gap-5 overflow-x-auto no-scrollbar pb-2 -mx-5 px-5 h-[160px]">
+              <div className="flex gap-5 overflow-x-auto no-scrollbar pb-2 -mx-5 px-5 h-[180px]">
                 {activeStories.map(story => (
                   <motion.div 
                     key={story.id} 
@@ -312,7 +312,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       else if (story.isMaster) setShowMasterPerks(true);
                       else showToast(`Izi Flash: Oferta de ${story.discount} ativada para ${story.merchant}! ${story.name || ""}`, "success");
                     }}
-                    className={`relative flex-shrink-0 w-32 h-[150px] rounded-[32px] p-[1.5px] bg-gradient-to-tr ${story.isMaster ? "from-yellow-400 via-zinc-800 to-amber-600 shadow-[0_4px_20px_rgba(255,215,9,0.3)]" : "from-red-500 via-rose-500 to-orange-400 shadow-[0_4px_20px_rgba(239,68,68,0.2)]"} cursor-pointer transition-all group`}
+                    className={`relative flex-shrink-0 w-32 h-[170px] rounded-[32px] p-[1.5px] bg-gradient-to-tr ${story.isMaster ? "from-yellow-400 via-zinc-800 to-amber-600 shadow-[0_4px_20px_rgba(255,215,9,0.3)]" : "from-red-500 via-rose-500 to-orange-400 shadow-[0_4px_20px_rgba(239,68,68,0.2)]"} cursor-pointer transition-all group`}
                   >
                     <div className="size-full rounded-[30.5px] overflow-hidden bg-zinc-900 border-[2px] border-zinc-950 relative">
                       <img src={story.img} className="size-full object-cover brightness-75 group-hover:scale-110 transition-transform duration-1000" />
