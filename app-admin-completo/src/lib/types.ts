@@ -254,3 +254,44 @@ export interface PartnerStore {
   is_active: boolean;
   created_at: string;
 }
+
+export type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'financial' |
+  'settings' | 'support' | 'promotions' | 'categories' | 'dynamic_rates' |
+  'audit_logs' | 'my_store' | 'my_drivers' | 'my_studio' | 'merchants' | 'izi_black' | 'partners';
+
+export type UserRole = 'admin' | 'merchant';
+
+export interface AppSettings {
+  appName: string;
+  supportEmail: string;
+  openingTime: string;
+  closingTime: string;
+  radius: number;
+  baseFee: string;
+  appCommission: number;
+  serviceFee: number;
+  smsNotifications: boolean;
+  emailNotifications: boolean;
+  iziBlackFee: number;
+  iziBlackCashback: number;
+  iziBlackMinOrderFreeShipping: number;
+  flashOfferTitle: string;
+  flashOfferDiscount: number;
+  flashOfferExpiry: string;
+}
+
+export interface DashboardData {
+  totalRevenue: number;
+  totalOrders: number;
+  completedOrdersCount: number;
+  avgTicket: number;
+  netProfit: number;
+  totalCommission: number;
+  deliverySuccessRate: number;
+  dailyRevenue: number[];
+  revenuePath: string;
+  dayLabels: string[];
+  totalOrdersToday: number;
+  categories: any[];
+  topMerchants: any[];
+}
