@@ -1500,16 +1500,20 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     setPromoSaving(true);
     if (promoSaveTimer.current) clearTimeout(promoSaveTimer.current);
     try {
-      if (!promo.title || (promo.discount_value <= 0)) { alert('Preencha os campos obrigatórios.'); return; }
-    const payload: Record<string, unknown> = {
+      if (!promo.title || (promoFormType === 'coupon' && promo.discount_value <= 0)) { 
+         toastError('Preencha o título e defina um valor de desconto válido.'); 
+         return; 
+      }
+      
+      const payload: Record<string, unknown> = {
         title: promo.title,
         description: promo.description,
         image_url: promo.image_url || null,
         coupon_code: promo.coupon_code || null,
         discount_type: promo.discount_type,
-        discount_value: promo.discount_value,
-        min_order_value: promo.min_order_value,
-        max_usage: promo.max_usage,
+        discount_value: promo.discount_value || 0,
+        min_order_value: promo.min_order_value || 0,
+        max_usage: promo.max_usage || 100,
         expires_at: (promo.expires_at && promo.expires_at.length >= 10) ? new Date(promo.expires_at + (promo.expires_at.includes('T') ? '' : 'T23:59:59')).toISOString() : null,
         is_active: promo.is_active,
         is_vip: promo.is_vip || false,
@@ -1526,10 +1530,12 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
       
       if (error) { 
         console.error("Erro ao salvar promoção:", error);
-        setPromoSaveStatus('error'); 
+        setPromoSaveStatus('error');
+        toastError(error.message || 'Erro ao publicar promoção'); 
       }
       else {
         setPromoSaveStatus('saved');
+        toastSuccess('Promoção publicada com sucesso!');
         fetchPromotions();
         // Se era uma nova promoção (sem ID), fecha o formulário após 1s
         if (!promo.id) {
@@ -1540,7 +1546,13 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         }
         setTimeout(() => setPromoSaveStatus('idle'), 2500);
       }
-    } finally { setPromoSaving(false); }
+    } catch (err: any) {
+      console.error("Erro inesperado em savePromotion:", err);
+      setPromoSaveStatus('error');
+      toastError(err.message || 'Erro inesperado ao salvar promoção');
+    } finally { 
+      setPromoSaving(false); 
+    }
   };
 
   const autoSavePromo = (updatedPromo: typeof promoForm & { id?: string }) => {
