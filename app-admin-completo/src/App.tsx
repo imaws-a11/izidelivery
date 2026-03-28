@@ -137,7 +137,6 @@ function App() {
                  <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
                  <NavTab id="my_studio" icon="inventory_2" label="Minha Loja" />
                  <NavTab id="my_drivers" icon="delivery_dining" label="Motoboys" />
-                 <NavTab id="promotions" icon="percent" label="Promoções" />
                  <NavTab id="financial" icon="bar_chart" label="Financeiro" />
                  <NavTab id="settings" icon="settings" label="Config" />
                </>
@@ -191,14 +190,12 @@ function App() {
               {activeTab === 'orders' && userRole === 'merchant' && <OrdersMerchantTab />}
               {activeTab === 'drivers' && userRole === 'admin' && <DriversTab />}
               {activeTab === 'users' && userRole === 'admin' && <UsersTab />}
-              {activeTab === 'categories' && userRole === 'admin' && <CategoriesTab />}
               {activeTab === 'dynamic_rates' && userRole === 'admin' && <DynamicRatesTab />}
               {activeTab === 'audit_logs' && userRole === 'admin' && <AuditLogsTab />}
               {activeTab === 'settings' && userRole === 'admin' && <SettingsTab />}
               {activeTab === 'settings' && userRole === 'merchant' && <MyStoreTab />}
               {activeTab === 'my_drivers' && userRole === 'merchant' && <MyDriversTab />}
               {(activeTab === 'my_studio' || (activeTab === 'financial' && userRole === 'merchant')) && <MyStudioTab />}
-              {activeTab === 'promotions' && <PromotionsTab />}
               {activeTab === 'financial' && userRole === 'admin' && <FinancialTab />}
               {activeTab === 'izi_black' && <IziBlackTab />}
               {activeTab === 'support' && <SupportTab />}

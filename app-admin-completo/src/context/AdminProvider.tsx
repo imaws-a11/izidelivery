@@ -131,7 +131,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [activePreviewTab, setActivePreviewTab] = useState<'info' | 'products' | 'categories' | 'sales' | 'dedicated_slots'>('info');
+  const [activePreviewTab, setActivePreviewTab] = useState<'info' | 'products' | 'categories' | 'sales' | 'dedicated_slots' | 'promotions'>('info');
   const [activeStudioTab, setActiveStudioTab] = useState<'personal' | 'vehicle' | 'finance' | 'documents' | 'wallet' | 'security' | 'general' | 'subcategories'>('personal');
   const [trackingListTab, setTrackingListTab] = useState<'orders' | 'drivers'>('orders');
 

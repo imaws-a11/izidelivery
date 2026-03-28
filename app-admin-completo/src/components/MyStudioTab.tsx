@@ -49,7 +49,11 @@ export default function MyStudioTab() {
     handleAddPeakRule, handleRemovePeakRule,
     selectedZoneForMap, setSelectedZoneForMap,
     newZoneData, setNewZoneData,
-    handleAddZone, handleRemoveZone
+    handleAddZone, handleRemoveZone,
+    promoFilter, setPromoFilter, promoSearch, setPromoSearch,
+    showPromoForm, setShowPromoForm, promoFormType, setPromoFormType,
+    promoForm, setPromoForm, promoSaving, promoSaveStatus,
+    savePromotion, autoSavePromo, fetchPromotions
   } = useAdmin();
 
   const [dateModalOpen, setDateModalOpen] = React.useState(false);
@@ -63,9 +67,9 @@ export default function MyStudioTab() {
     if (userRole === 'merchant') {
       fetchProducts();
       fetchMenuCategories();
-      // fetchMyDedicatedSlots(); // se precisar
+      fetchPromotions();
     }
-  }, [userRole, fetchProducts, fetchMenuCategories]);
+  }, [userRole, fetchProducts, fetchMenuCategories, fetchPromotions]);
 
 
   const renderStudioPanel = (targetItem: Merchant | MerchantProfile, updateItem: (updatedItem: Merchant | MerchantProfile) => void) => (
@@ -75,7 +79,7 @@ export default function MyStudioTab() {
           { id: 'info', label: 'Estande & Geral', icon: 'style' },
           { id: 'sales', label: 'Vendas & Performance', icon: 'monitoring' },
           { id: 'products', label: 'Cardápio Digital', icon: 'restaurant_menu' },
-          { id: 'categories', label: 'Categorias', icon: 'grid_view' },
+          { id: 'promotions', label: 'Promoções & Banners', icon: 'campaign' },
           { id: 'dedicated_slots', label: 'Vagas Dedicadas', icon: 'stars' },
         ].map(t => (
           <button
@@ -404,7 +408,18 @@ export default function MyStudioTab() {
                     <div className="flex items-center gap-3">
                        <button 
                          className="bg-primary text-slate-900 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2"
-                         onClick={() => setSelectedProductStudio({ name: '', price: 0, category: '', is_available: true, merchant_id: targetMerchantId, id: 'new-' + Date.now() })}
+                         onClick={() => setSelectedProductStudio({ 
+                            id: 'new-' + Date.now(), 
+                            name: '', 
+                            description: '', 
+                            price: 0, 
+                            category: '', 
+                            sub_category: '', 
+                            image_url: '', 
+                            is_available: true, 
+                            merchant_id: targetMerchantId, 
+                            option_groups: [] 
+                          })}
                        >
                           <span className="material-symbols-outlined text-lg">add_circle</span>
                           Novo Produto
@@ -489,133 +504,215 @@ export default function MyStudioTab() {
               </div>
             )}
 
-            {activePreviewTab === 'categories' && (
+            {activePreviewTab === 'promotions' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-6 mb-8">
                   <div>
                     <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
-                      <span className="material-symbols-outlined text-primary text-3xl">category</span>
-                      Categorias & Seções
+                      <span className="material-symbols-outlined text-primary text-3xl">campaign</span>
+                      Promoções & Banners
                     </h3>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Organize seu cardápio em seções principais e subcategorias</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Gerencie banners, cupons e ofertas especiais da sua loja</p>
                   </div>
-                  <button 
-                    onClick={() => {
-                      const list = userRole === 'merchant' ? menuCategoriesList : previewCategories;
-                      const updateFn = userRole === 'merchant' ? handleUpdateMenuCategory : (newCat: any) => setPreviewCategories([...previewCategories, { ...newCat, id: `new-${Date.now()}` }]);
-                      updateFn({ name: 'Nova Categoria', sort_order: list.length, is_active: true, parent_id: null });
-                    }}
-                    className="bg-primary text-slate-900 px-8 py-4 rounded-[24px] font-black text-[10px] uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-lg">add</span>
-                    Nova Categoria
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => {
+                        setPromoFormType('banner');
+                        setPromoForm({ 
+                          title: '', description: '', image_url: '', 
+                          is_active: true, merchant_id: targetMerchantId 
+                        });
+                        setShowPromoForm(true);
+                      }}
+                      className="bg-white dark:bg-slate-800 text-slate-500 px-6 py-4 rounded-[24px] font-black text-[10px] uppercase tracking-widest border border-slate-200 dark:border-slate-800 hover:bg-slate-50 transition-all flex items-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-lg">add_photo_alternate</span>
+                      Novo Banner
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setPromoFormType('coupon');
+                        setPromoForm({ 
+                          title: '', description: '', coupon_code: '', 
+                          discount_type: 'percent', discount_value: 0, 
+                          is_active: true, merchant_id: targetMerchantId 
+                        });
+                        setShowPromoForm(true);
+                      }}
+                      className="bg-primary text-slate-900 px-8 py-4 rounded-[24px] font-black text-[10px] uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-lg">confirmation_number</span>
+                      Criar Cupom
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-6">
-                  {(userRole === 'merchant' ? menuCategoriesList : previewCategories).filter(c => !c.parent_id).map((cat, i) => (
-                    <div key={cat.id || i} className="bg-white dark:bg-slate-800 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-xl overflow-hidden group">
-                       <div className="p-6 md:p-8 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/30">
-                          <div className="flex items-center gap-6 flex-1">
-                             <div className="size-12 rounded-2xl bg-white dark:bg-slate-800 shadow-lg flex items-center justify-center text-primary border border-slate-100 dark:border-slate-700">
-                               <span className="material-symbols-outlined text-2xl">folder</span>
-                             </div>
-                             <div className="flex-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Nome da Categoria</label>
-                                <input 
-                                   className="bg-transparent font-black text-lg text-slate-900 dark:text-white focus:outline-none w-full border-b border-transparent focus:border-primary/30 transition-all pb-1"
-                                   defaultValue={cat.name}
-                                   onBlur={(e) => {
-                                     if (e.target.value !== cat.name) {
-                                       const updateFn = userRole === 'merchant' ? handleUpdateMenuCategory : (updated: any) => {
-                                          const idx = previewCategories.findIndex(i => i.id === cat.id);
-                                          const up = [...previewCategories];
-                                          up[idx] = updated;
-                                          setPreviewCategories(up);
-                                       };
-                                       updateFn({ ...cat, name: e.target.value });
-                                     }
-                                   }}
-                                />
-                             </div>
+                {showPromoForm && (
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} 
+                    className="bg-white dark:bg-slate-800 p-8 rounded-[48px] border-2 border-primary/20 shadow-2xl mb-12"
+                  >
+                    <div className="flex justify-between items-center mb-8">
+                      <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase italic">
+                        {promoFormType === 'banner' ? 'Configurar Banner' : 'Configurar Cupom'}
+                      </h4>
+                      <button onClick={() => setShowPromoForm(false)} className="text-slate-400 hover:text-rose-500 transition-colors">
+                        <span className="material-symbols-outlined">close</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Título da Campanha</label>
+                        <input 
+                          className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                          value={promoForm.title} onChange={e => setPromoForm({...promoForm, title: e.target.value})}
+                          placeholder="Ex: 20% OFF em todo o cardápio"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Descrição curta</label>
+                        <input 
+                          className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                          value={promoForm.description} onChange={e => setPromoForm({...promoForm, description: e.target.value})}
+                          placeholder="Ex: Válido até domingo"
+                        />
+                      </div>
+
+                      {promoFormType === 'coupon' && (
+                        <>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Código do Cupom</label>
+                            <input 
+                              className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-black text-lg tracking-widest text-primary focus:ring-2 focus:ring-primary dark:text-white uppercase"
+                              value={promoForm.coupon_code} onChange={e => setPromoForm({...promoForm, coupon_code: e.target.value})}
+                              placeholder="EXEMPLO20"
+                            />
                           </div>
-                          <div className="flex items-center gap-3">
-                             <button 
-                                onClick={() => {
-                                   const updateFn = userRole === 'merchant' ? handleUpdateMenuCategory : (newSub: any) => setPreviewCategories([...previewCategories, { ...newSub, id: `new-sub-${Date.now()}` }]);
-                                   updateFn({ name: 'Nova Subcategoria', is_active: true, parent_id: cat.id, sort_order: 0 });
-                                }}
-                                className="px-5 py-3 rounded-2xl bg-white dark:bg-slate-800 text-[9px] font-black uppercase text-slate-500 hover:text-primary transition-all border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-2"
-                             >
-                               <span className="material-symbols-outlined text-sm">add_box</span>
-                               Subcategoria
-                             </button>
-                             <button 
-                                onClick={async () => {
-                                   if (await showConfirm({ message: `Excluir categoria "${cat.name}" e todas as suas subcategorias?` })) {
-                                      const delFn = userRole === 'merchant' ? handleDeleteMenuCategory : (id: string) => setPreviewCategories(previewCategories.filter(item => item.id !== id && item.parent_id !== id));
-                                      delFn(cat.id, cat.name);
-                                   }
-                                }}
-                                className="size-12 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
-                             >
-                               <span className="material-symbols-outlined">delete</span>
-                             </button>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Valor do Desconto</label>
+                            <div className="flex gap-4">
+                              <input 
+                                type="number"
+                                className="flex-1 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-black text-lg focus:ring-2 focus:ring-primary dark:text-white"
+                                value={promoForm.discount_value} onChange={e => setPromoForm({...promoForm, discount_value: parseFloat(e.target.value)})}
+                              />
+                              <select 
+                                className="bg-slate-100 dark:bg-slate-800 border-none rounded-2xl px-4 font-black text-[10px] uppercase"
+                                value={promoForm.discount_type} onChange={e => setPromoForm({...promoForm, discount_type: e.target.value})}
+                              >
+                                <option value="percent">% Porcentagem</option>
+                                <option value="fixed">R$ Fixo</option>
+                              </select>
+                            </div>
                           </div>
-                       </div>
-                       
-                       {/* Subcategories */}
-                       <div className="p-6 md:p-8 bg-white dark:bg-slate-900/50">
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                             {(userRole === 'merchant' ? menuCategoriesList : previewCategories).filter(s => s.parent_id === cat.id).map(sub => (
-                                <div key={sub.id} className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-slate-950/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 group/sub hover:border-primary/50 transition-all">
-                                   <div className="flex items-center gap-3 flex-1">
-                                      <span className="material-symbols-outlined text-slate-300 text-sm">subdirectory_arrow_right</span>
-                                      <div className="flex-1">
-                                        <input 
-                                           className="bg-transparent font-bold text-sm text-slate-600 dark:text-slate-400 focus:outline-none w-full"
-                                           defaultValue={sub.name}
-                                           onBlur={(e) => {
-                                              if (e.target.value !== sub.name) {
-                                                 const updateFn = userRole === 'merchant' ? handleUpdateMenuCategory : (updated: any) => {
-                                                    const idx = previewCategories.findIndex(i => i.id === sub.id);
-                                                    const up = [...previewCategories];
-                                                    up[idx] = updated;
-                                                    setPreviewCategories(up);
-                                                 };
-                                                 updateFn({ ...sub, name: e.target.value });
-                                              }
-                                           }}
-                                        />
-                                      </div>
-                                   </div>
-                                   <button 
-                                      onClick={async () => {
-                                         if (await showConfirm({ message: `Excluir subcategoria "${sub.name}"?` })) {
-                                            const delFn = userRole === 'merchant' ? handleDeleteMenuCategory : (id: string) => setPreviewCategories(previewCategories.filter(item => item.id !== id));
-                                            delFn(sub.id, sub.name);
-                                         }
-                                      }}
-                                      className="size-8 rounded-xl bg-rose-50 dark:bg-rose-500/5 text-rose-300 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center opacity-0 group-hover/sub:opacity-100"
-                                   >
-                                      <span className="material-symbols-outlined text-base">close</span>
-                                   </button>
-                                </div>
-                             ))}
-                             {(userRole === 'merchant' ? menuCategoriesList : previewCategories).filter(s => s.parent_id === cat.id).length === 0 && (
-                                <div className="col-span-full py-4 text-center">
-                                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic opacity-60">Nenhuma subcategoria definida</p>
-                                </div>
+                        </>
+                      )}
+
+                      {promoFormType === 'banner' && (
+                        <div className="md:col-span-2 space-y-4">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Imagem do Banner</label>
+                          <div className="relative aspect-[3/1] rounded-[32px] overflow-hidden bg-slate-100 dark:bg-slate-900 group border-2 border-dashed border-slate-200 dark:border-slate-800">
+                             {promoForm.image_url ? (
+                               <img src={promoForm.image_url} className="w-full h-full object-cover" />
+                             ) : (
+                               <div className="h-full flex flex-col items-center justify-center text-slate-300">
+                                 <span className="material-symbols-outlined text-4xl mb-2">add_photo_alternate</span>
+                                 <p className="text-[10px] font-black uppercase">Clique para selecionar imagem</p>
+                               </div>
                              )}
+                             <input 
+                               type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer"
+                               onChange={async (e) => {
+                                 const file = e.target.files?.[0];
+                                 if (file) {
+                                   const url = await handleFileUpload(file, 'banners');
+                                   if (url) setPromoForm({...promoForm, image_url: url});
+                                 }
+                               }}
+                             />
                           </div>
-                       </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end gap-3 mt-10">
+                      <button onClick={() => setShowPromoForm(false)} className="px-8 py-4 bg-slate-100 dark:bg-slate-900 text-slate-500 rounded-2xl font-black text-[10px] uppercase">Cancelar</button>
+                      <button 
+                        disabled={promoSaving}
+                        onClick={() => savePromotion(promoForm)}
+                        className="px-12 py-4 bg-primary text-slate-900 rounded-2xl font-black text-[10px] uppercase shadow-xl shadow-primary/20 flex items-center gap-2"
+                      >
+                        {promoSaving ? (
+                          <div className="size-4 border-2 border-slate-900/20 border-t-slate-900 rounded-full animate-spin" />
+                        ) : (
+                          <span className="material-symbols-outlined text-lg">check_circle</span>
+                        )}
+                        Salvar Promoção
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {promotionsList.filter(p => !targetMerchantId || p.merchant_id === targetMerchantId).map((promo, idx) => (
+                    <div key={promo.id || idx} className="bg-white dark:bg-slate-800 rounded-[48px] border border-slate-100 dark:border-slate-800 shadow-xl overflow-hidden group flex flex-col">
+                      {promo.image_url && (
+                        <div className="aspect-[3/1] overflow-hidden">
+                          <img src={promo.image_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={promo.title} />
+                        </div>
+                      )}
+                      <div className="p-8 flex-1">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`size-10 rounded-2xl flex items-center justify-center ${promo.coupon_code ? 'bg-blue-500/10 text-blue-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                              <span className="material-symbols-outlined text-xl">{promo.coupon_code ? 'confirmation_number' : 'campaign'}</span>
+                            </div>
+                            <div>
+                               <h4 className="text-lg font-black text-slate-900 dark:text-white tracking-tighter uppercase italic line-clamp-1">{promo.title}</h4>
+                               {promo.coupon_code && <p className="text-[10px] font-black text-blue-500 dark:text-blue-400 tracking-widest mt-0.5">CUPOM: {promo.coupon_code}</p>}
+                            </div>
+                          </div>
+                          <button 
+                            onClick={async () => {
+                              if (await showConfirm({ message: 'Deseja excluir esta promoção permanentemente?' })) {
+                                await supabase.from('promotions_delivery').delete().eq('id', promo.id);
+                                fetchPromotions();
+                              }
+                            }}
+                            className="p-3 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-2xl transition-all"
+                          >
+                            <span className="material-symbols-outlined">delete</span>
+                          </button>
+                        </div>
+                        <p className="text-[11px] font-bold text-slate-400 line-clamp-2">{promo.description || 'Nenhuma descrição informada'}</p>
+                        
+                        <div className="mt-8 pt-6 border-t border-slate-50 dark:border-slate-900 flex items-center justify-between">
+                           <div className="flex items-center gap-2">
+                              <span className={`size-2 rounded-full ${promo.is_active ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-slate-300'}`}></span>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{promo.is_active ? 'Ativa' : 'Pausada'}</span>
+                           </div>
+                           <button 
+                            onClick={async () => {
+                              await supabase.from('promotions_delivery').update({ is_active: !promo.is_active }).eq('id', promo.id);
+                              fetchPromotions();
+                            }}
+                            className={`w-12 h-6 rounded-full relative transition-all ${promo.is_active ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'}`}
+                           >
+                             <div className={`absolute top-1 size-4 bg-white rounded-full shadow-md transition-all ${promo.is_active ? 'right-1' : 'left-1'}`}></div>
+                           </button>
+                        </div>
+                      </div>
                     </div>
                   ))}
-                  {(userRole === 'merchant' ? menuCategoriesList : previewCategories).filter(c => !c.parent_id).length === 0 && (
-                     <div className="py-20 text-center bg-slate-50 dark:bg-slate-800/50 rounded-[40px] border-2 border-dashed border-slate-100 dark:border-slate-800">
-                        <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">category</span>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhuma categoria ativa</p>
-                     </div>
+
+                  {promotionsList.filter(p => !targetMerchantId || p.merchant_id === targetMerchantId).length === 0 && (
+                    <div className="col-span-full py-24 text-center bg-slate-50/50 dark:bg-slate-950/20 rounded-[64px] border-2 border-dashed border-slate-100 dark:border-slate-800">
+                      <div className="size-20 bg-white dark:bg-slate-900 rounded-[32px] flex items-center justify-center mx-auto mb-6 shadow-sm border border-slate-100 dark:border-slate-800">
+                        <span className="material-symbols-outlined text-4xl text-slate-200 dark:text-slate-800">campaign</span>
+                      </div>
+                      <h4 className="text-xl font-black text-slate-400 italic">Nenhuma promoção ativa</h4>
+                      <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">Crie cupons ou banners para aumentar suas vendas</p>
+                    </div>
                   )}
                 </div>
               </div>
