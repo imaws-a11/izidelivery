@@ -232,12 +232,25 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           };
           setMerchantProfile(profile);
           localStorage.setItem('izi_admin_profile', JSON.stringify(profile));
-          setActiveTab('orders');
+          
+          // Only reset to 'orders' if the current tab is invalid for a merchant or not set
+          setActiveTab(prev => {
+            const validMerchantTabs = ['orders', 'my_studio', 'my_drivers', 'promotions', 'financial', 'settings', 'support'];
+            if (!prev || !validMerchantTabs.includes(prev)) {
+              return 'orders';
+            }
+            return prev;
+          });
         } else {
           setMerchantProfile(null);
-          if (activeTab === 'orders' || activeTab === 'my_store' || activeTab === 'my_studio') {
-            setActiveTab('dashboard');
-          }
+          // Only reset to 'dashboard' if the current tab is invalid for an admin
+          setActiveTab(prev => {
+            const merchantOnlyTabs = ['my_studio', 'my_drivers', 'financial'];
+            if (merchantOnlyTabs.includes(prev)) {
+              return 'dashboard';
+            }
+            return prev;
+          });
         }
       } else {
         toastWarning('Perfil administrativo não encontrado.');
@@ -248,7 +261,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setIsInitialLoading(false);
     }
-  }, [MASTER_ADMIN_EMAIL, handleLogout, activeTab]);
+  }, [MASTER_ADMIN_EMAIL, handleLogout]);
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -663,13 +676,28 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const handleUpdateMyProduct = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingItem || !merchantProfile) return;
+    if (!editingItem) return;
+    
+    const targetMerchantId = userRole === 'merchant' ? merchantProfile?.merchant_id : selectedMerchantPreview?.id;
+    if (!targetMerchantId) {
+      toastError('Erro: Nenhum lojista identificado.');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const { error } = await supabase.from('products_delivery').upsert({
+      const productData = {
         ...editingItem,
-        merchant_id: merchantProfile.merchant_id
-      });
+        merchant_id: targetMerchantId
+      };
+      
+      // Mapear is_available se necessário
+      if ('is_active' in productData) {
+        productData.is_available = productData.is_active;
+        delete productData.is_active;
+      }
+
+      const { error } = await supabase.from('products_delivery').upsert(productData);
       if (error) throw error;
       toastSuccess('Produto salvo!');
       setEditingItem(null);
@@ -716,16 +744,21 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fetchProducts]);
 
   const handleCreateNewProduct = useCallback(async () => {
+    const targetMerchantId = userRole === 'merchant' ? merchantProfile?.merchant_id : selectedMerchantPreview?.id;
+    
     setEditingItem({
       name: '',
       description: '',
       price: 0,
-      is_active: true,
-      category_id: '',
-      image_url: ''
+      is_available: true,
+      category: '',
+      sub_category: '',
+      image_url: '',
+      featured: false,
+      merchant_id: targetMerchantId
     });
     setEditType('my_product');
-  }, []);
+  }, [userRole, merchantProfile, selectedMerchantPreview]);
 
   const handleUpdatePromotion = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -748,19 +781,55 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const handleUpdateMerchant = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
+    
+    const confirm = await showConfirm({
+      title: 'Confirmar Alterações',
+      message: editingItem.id ? 'Deseja salvar as alterações deste lojista?' : 'Confirmar o cadastro deste novo lojista?',
+      confirmLabel: 'Sim, Salvar',
+      cancelLabel: 'Cancelar'
+    });
+    if (!confirm) return;
+
     setIsSaving(true);
     try {
-      const { error } = await supabase.from('admin_users').update({
+      const merchantData: any = {
         store_name: editingItem.store_name,
         store_description: editingItem.store_description,
         store_address: editingItem.store_address,
         store_phone: editingItem.store_phone,
-        is_open: editingItem.is_open,
-        is_active: editingItem.is_active
-      }).eq('id', editingItem.id);
+        store_type: editingItem.store_type || 'restaurant',
+        email: editingItem.email,
+        document: editingItem.document,
+        commission_percent: editingItem.commission_percent,
+        service_fee: editingItem.service_fee,
+        is_active: editingItem.is_active ?? true,
+        role: 'merchant'
+      };
+
+      if (editingItem.password && editingItem.password.trim() !== '') {
+        merchantData.password = editingItem.password;
+      }
+
+      let error;
+      if (editingItem.id && typeof editingItem.id === 'string' && !editingItem.id.startsWith('new-')) {
+        const { error: updateError } = await supabase.from('admin_users').update(merchantData).eq('id', editingItem.id);
+        error = updateError;
+      } else {
+        const { error: upsertError } = await supabase.from('admin_users').upsert({
+          ...merchantData,
+          id: editingItem.id || undefined
+        });
+        error = upsertError;
+      }
       
       if (error) throw error;
-      toastSuccess('Lojista atualizado!');
+      
+      await showConfirm({
+        title: 'Sucesso!',
+        message: 'Os dados do lojista foram salvos com sucesso na plataforma GERAL.',
+        confirmLabel: 'Entendido'
+      });
+
       setEditingItem(null);
       setEditType(null);
       fetchMerchants();

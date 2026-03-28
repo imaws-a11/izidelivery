@@ -74,6 +74,7 @@ export interface Merchant {
   id: string;
   email: string;
   role: 'admin' | 'merchant';
+  password?: string;
   store_name?: string;
   store_logo?: string;
   store_banner?: string;
@@ -111,6 +112,7 @@ export interface MerchantProfile {
   is_open?: boolean;
   store_type?: string;
   free_delivery?: boolean;
+  password?: string;
 }
 
 export interface Product {
