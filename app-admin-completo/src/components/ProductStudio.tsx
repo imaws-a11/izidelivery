@@ -18,6 +18,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
   onClose, 
   onSave, 
   menuCategoriesList,
+  handleFileUpload,
   merchantId,
   fetchMenuCategories
 }) => {

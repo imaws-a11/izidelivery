@@ -104,8 +104,8 @@ export interface AdminContextType {
   setIsSaving: (s: boolean) => void;
 
   // UI state
-  activePreviewTab: 'info' | 'products' | 'categories' | 'sales' | 'dedicated_slots';
-  setActivePreviewTab: (t: 'info' | 'products' | 'categories' | 'sales' | 'dedicated_slots') => void;
+  activePreviewTab: 'info' | 'products' | 'categories' | 'sales' | 'dedicated_slots' | 'promotions';
+  setActivePreviewTab: (t: 'info' | 'products' | 'categories' | 'sales' | 'dedicated_slots' | 'promotions') => void;
   activeStudioTab: 'personal' | 'vehicle' | 'finance' | 'documents' | 'wallet' | 'security' | 'general' | 'subcategories';
   setActiveStudioTab: (t: 'personal' | 'vehicle' | 'finance' | 'documents' | 'wallet' | 'security' | 'general' | 'subcategories') => void;
   trackingListTab: 'orders' | 'drivers';
