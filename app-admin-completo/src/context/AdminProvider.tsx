@@ -352,7 +352,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchMenuCategories = useCallback(async () => {
     if (!merchantProfile?.merchant_id) return;
     try {
-      const { data } = await supabase.from('menu_categories_delivery').select('*').eq('merchant_id', merchantProfile.merchant_id).order('order_index', { ascending: true });
+      const { data } = await supabase.from('merchant_categories_delivery').select('*').eq('merchant_id', merchantProfile.merchant_id).order('sort_order', { ascending: true });
       if (data) setMenuCategoriesList(data as MenuCategory[]);
     } catch (err) {
       console.error('Erro ao buscar categorias do menu:', err);
@@ -530,7 +530,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const { data: prods } = await supabase.from('products_delivery').select('*').eq('merchant_id', merchant.id);
       setPreviewProducts(prods || []);
-      const { data: cats } = await supabase.from('menu_categories_delivery').select('*').eq('merchant_id', merchant.id);
+      const { data: cats } = await supabase.from('merchant_categories_delivery').select('*').eq('merchant_id', merchant.id);
       setPreviewCategories(cats || []);
     } catch (err) {
       console.error('Erro ao carregar preview do lojista:', err);
@@ -712,7 +712,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const handleUpdateMenuCategory = useCallback(async (cat: any) => {
     try {
-      const { error } = await supabase.from('menu_categories_delivery').upsert(cat);
+      const { error } = await supabase.from('merchant_categories_delivery').upsert(cat);
       if (error) throw error;
       fetchMenuCategories();
     } catch (err: any) {
@@ -723,7 +723,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const handleDeleteMenuCategory = useCallback(async (id: string, name: string) => {
     if (!await showConfirm({ message: `Excluir a categoria "${name}"?` })) return;
     try {
-      const { error } = await supabase.from('menu_categories_delivery').delete().eq('id', id);
+      const { error } = await supabase.from('merchant_categories_delivery').delete().eq('id', id);
       if (error) throw error;
       toastSuccess('Categoria removida!');
       fetchMenuCategories();

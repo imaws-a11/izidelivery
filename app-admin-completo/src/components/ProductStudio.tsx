@@ -10,6 +10,7 @@ interface ProductStudioProps {
   menuCategoriesList: any[];
   handleFileUpload: (file: File, path: string) => Promise<string | null>;
   merchantId: string;
+  fetchMenuCategories: () => void;
 }
 
 export const ProductStudio: React.FC<ProductStudioProps> = ({ 
@@ -17,8 +18,8 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
   onClose, 
   onSave, 
   menuCategoriesList,
-  handleFileUpload,
-  merchantId
+  merchantId,
+  fetchMenuCategories
 }) => {
   const [editingItem, setEditingItem] = useState<any>({
     ...product,
@@ -27,6 +28,8 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
   const [activeTab, setActiveTab] = useState<'info' | 'options'>('info');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const [isAddingCategory, setIsAddingCategory] = useState<{ parentId: string | null, title: string } | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   useEffect(() => {
     if (product.id && !product.id.startsWith('new-')) {
@@ -145,6 +148,39 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
       onClose();
     } catch (err: any) {
       toastError('Erro ao salvar: ' + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCreateQuickCategory = (parentId: string | null = null) => {
+    const title = parentId ? 'Criar Subcategoria' : 'Criar Nova Categoria';
+    setIsAddingCategory({ parentId, title });
+    setNewCategoryName('');
+  };
+
+  const saveNewCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    
+    try {
+      setIsSaving(true);
+      const { error } = await supabase
+        .from('merchant_categories_delivery')
+        .insert([{
+          merchant_id: merchantId,
+          name: newCategoryName.trim(),
+          parent_id: isAddingCategory?.parentId,
+          is_active: true,
+          sort_order: 0
+        }]);
+
+      if (error) throw error;
+      
+      toastSuccess(`${isAddingCategory?.title} concluída!`);
+      fetchMenuCategories();
+      setIsAddingCategory(null);
+    } catch (err: any) {
+      toastError('Erro ao criar: ' + err.message);
     } finally {
       setIsSaving(false);
     }
@@ -289,20 +325,86 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                         placeholder="0,00"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Categoria</label>
-                      <select 
-                        value={editingItem.category || ''}
-                        onChange={e => setEditingItem({...editingItem, category: e.target.value, subcategory: ''})}
-                        className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-sm focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner appearance-none cursor-pointer"
-                      >
-                        <option value="" disabled>Selecione</option>
-                        {menuCategoriesList.filter(c => !c.parent_id).map(cat => (
-                          <option key={cat.id} value={cat.name}>{cat.name}</option>
-                        ))}
-                      </select>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center px-4">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Categoria</label>
+                        <button 
+                          onClick={() => handleCreateQuickCategory(null)}
+                          className="flex items-center gap-1 text-primary hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
+                        >
+                          <span className="material-symbols-outlined text-sm">add_circle</span> Criar
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2 p-4 bg-white/5 rounded-[32px] border border-white/5 shadow-inner max-h-[140px] overflow-y-auto scrollbar-hide">
+                        {menuCategoriesList.filter(c => !c.parent_id).length === 0 ? (
+                          <p className="w-full text-center py-4 text-[10px] text-slate-600 font-black uppercase tracking-widest">Nenhuma categoria</p>
+                        ) : (
+                          menuCategoriesList.filter(c => !c.parent_id).map(cat => (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => setEditingItem({...editingItem, category: cat.name, subcategory: ''})}
+                              className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                                editingItem.category === cat.name 
+                                ? 'bg-primary text-slate-950 border-primary shadow-lg shadow-primary/20 scale-105' 
+                                : 'bg-white/5 text-slate-500 border-white/5 hover:bg-white/10 hover:text-white'
+                              }`}
+                            >
+                              {cat.name}
+                            </button>
+                          ))
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {editingItem.category && (
+                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-500">
+                      <div className="flex justify-between items-center px-4">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Subcategoria (Opcional)</label>
+                        <button 
+                          onClick={() => {
+                            const cat = menuCategoriesList.find(c => c.name === editingItem.category && !c.parent_id);
+                            if (cat) handleCreateQuickCategory(cat.id);
+                            else toastError('Selecione uma categoria primeiro');
+                          }}
+                          className="flex items-center gap-1 text-primary hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
+                        >
+                          <span className="material-symbols-outlined text-sm">add_circle</span> Criar
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2 p-4 bg-white/5 rounded-[32px] border border-white/5 shadow-inner max-h-[140px] overflow-y-auto scrollbar-hide">
+                        <button
+                          type="button"
+                          onClick={() => setEditingItem({...editingItem, subcategory: ''})}
+                          className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                            !(editingItem.subcategory || editingItem.sub_category)
+                            ? 'bg-slate-800 text-white border-white/20' 
+                            : 'bg-white/5 text-slate-500 border-white/5 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          Nenhuma
+                        </button>
+                        {menuCategoriesList
+                          .filter(c => c.parent_id === menuCategoriesList.find(pc => pc.name === editingItem.category && !pc.parent_id)?.id)
+                          .map(sub => (
+                            <button
+                              key={sub.id}
+                              type="button"
+                              onClick={() => setEditingItem({...editingItem, subcategory: sub.name, sub_category: sub.name})}
+                              className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                                (editingItem.subcategory === sub.name || editingItem.sub_category === sub.name)
+                                ? 'bg-primary text-slate-950 border-primary shadow-lg shadow-primary/20 scale-105' 
+                                : 'bg-white/5 text-slate-500 border-white/5 hover:bg-white/10 hover:text-white'
+                              }`}
+                            >
+                              {sub.name}
+                            </button>
+                          ))
+                        }
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Descrição</label>
@@ -579,6 +681,69 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
           </div>
         </div>
       </motion.div>
+      {/* Modal de Nova Categoria */}
+      <AnimatePresence>
+        {isAddingCategory && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAddingCategory(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-md bg-slate-950 border border-white/10 rounded-[40px] overflow-hidden shadow-2xl relative z-10"
+            >
+              <div className="p-10 space-y-8">
+                <div className="flex items-center gap-4">
+                  <div className="size-12 rounded-2xl bg-primary flex items-center justify-center text-slate-950">
+                    <span className="material-symbols-outlined font-black">add_circle</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black">{isAddingCategory.title}</h3>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                      {isAddingCategory.parentId ? 'Vincular à categoria selecionada' : 'Nova categoria principal'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Nome da Categoria</label>
+                  <input 
+                    autoFocus
+                    type="text"
+                    value={newCategoryName}
+                    onChange={e => setNewCategoryName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && saveNewCategory()}
+                    placeholder="Ex: Pizzas Gourmet"
+                    className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
+                  />
+                </div>
+
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setIsAddingCategory(null)}
+                    className="flex-1 py-5 text-slate-500 font-black text-[10px] uppercase tracking-widest hover:text-white transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    disabled={isSaving || !newCategoryName.trim()}
+                    onClick={saveNewCategory}
+                    className="flex-[2] py-5 bg-primary text-slate-950 font-black text-[10px] uppercase tracking-widest rounded-3xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {isSaving ? 'Criando...' : 'Salvar Categoria'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
