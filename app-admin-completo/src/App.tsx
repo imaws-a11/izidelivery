@@ -197,7 +197,7 @@ function App() {
               {activeTab === 'settings' && userRole === 'admin' && <SettingsTab />}
               {activeTab === 'my_store' && userRole === 'merchant' && <MyStoreTab />}
               {activeTab === 'my_drivers' && userRole === 'merchant' && <MyDriversTab />}
-              {activeTab === 'my_studio' && <MyStudioTab />}
+              <MyStudioTab />
               {activeTab === 'promotions' && <PromotionsTab />}
               {activeTab === 'financial' && userRole === 'merchant' && <FinancialTab />}
               {activeTab === 'izi_black' && <IziBlackTab />}

@@ -11,6 +11,10 @@ export default function OrdersAdminTab() {
     isLoadingList
   } = useAdmin();
 
+  React.useEffect(() => {
+    fetchAllOrders(ordersPage);
+  }, [fetchAllOrders]);
+
   const ORDERS_PER_PAGE = 50;
 
   return (

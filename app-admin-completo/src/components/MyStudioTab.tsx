@@ -50,6 +50,15 @@ export default function MyStudioTab() {
     handleAddZone, handleRemoveZone
   } = useAdmin();
 
+  React.useEffect(() => {
+    if (userRole === 'merchant') {
+      fetchProducts();
+      fetchMenuCategories();
+      // fetchMyDedicatedSlots(); // se precisar
+    }
+  }, [userRole, fetchProducts, fetchMenuCategories]);
+
+
   const renderStudioPanel = (targetItem: Merchant | MerchantProfile, updateItem: (updatedItem: Merchant | MerchantProfile) => void) => (
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-slate-900 overflow-hidden min-h-0">
       <div className="px-8 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800 flex gap-6 overflow-x-auto scrollbar-hide">
@@ -145,7 +154,7 @@ export default function MyStudioTab() {
                       />
                     </div>
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Telefone Público</label>
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Telefone Público / WhatsApp</label>
                        <input 
                          className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
                          value={targetItem.store_phone || ''}
@@ -161,6 +170,144 @@ export default function MyStudioTab() {
                          onChange={e => updateItem({...targetItem, store_description: e.target.value})}
                        />
                     </div>
+                    <div className="md:col-span-2 space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Endereço de Origem (Para cálculo de entregas)</label>
+                       <input 
+                         className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
+                         value={targetItem.store_address || ''}
+                         onChange={e => updateItem({...targetItem, store_address: e.target.value})}
+                         placeholder="Av. Exemplo, 123 - Bairro"
+                       />
+                    </div>
+                  </div>
+
+                  {userRole === 'admin' && (
+                    <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-8">
+                      <div className="flex items-center gap-4">
+                        <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                          <span className="material-symbols-outlined text-2xl font-bold">admin_panel_settings</span>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Controles Administrativos</h4>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gestão exclusiva de taxas e acessos</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">E-mail de Login</label>
+                          <input 
+                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
+                            type="email"
+                            value={(targetItem as Merchant).email || ''}
+                            onChange={e => updateItem({...targetItem, email: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Tipo de Estabelecimento</label>
+                          <select 
+                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm appearance-none"
+                            value={targetItem.store_type || 'restaurant'}
+                            onChange={e => updateItem({...targetItem, store_type: e.target.value})}
+                          >
+                            <option value="restaurant">Restaurante / Lanchonete</option>
+                            <option value="pharmacy">Farmácia</option>
+                            <option value="market">Mercado / Conveniência</option>
+                            <option value="beverages">Bebidas</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Comissão Base (%)</label>
+                          <input 
+                            type="number" step="0.1"
+                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
+                            value={(targetItem as Merchant).commission_percent || 0}
+                            onChange={e => updateItem({...targetItem, commission_percent: parseFloat(e.target.value) || 0})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Taxa Fixa IZI (R$)</label>
+                          <input 
+                            type="number" step="0.1"
+                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
+                            value={(targetItem as Merchant).service_fee || 0}
+                            onChange={e => updateItem({...targetItem, service_fee: parseFloat(e.target.value) || 0})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Raio de Entrega Livre (km)</label>
+                          <input 
+                            type="number" step="0.1"
+                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
+                            value={targetItem.delivery_radius || 0}
+                            onChange={e => updateItem({...targetItem, delivery_radius: parseFloat(e.target.value) || 0})}
+                          />
+                        </div>
+                        <div className="space-y-2 flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus-within:border-primary/20">
+                          <div>
+                            <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Status da Loja</h4>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">Acesso à plataforma</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => updateItem({...targetItem, is_active: !(targetItem as Merchant).is_active})}
+                            className={`relative w-12 h-6 rounded-full transition-colors ${(targetItem as Merchant).is_active ? 'bg-green-500' : 'bg-red-500'}`}
+                          >
+                            <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${(targetItem as Merchant).is_active ? 'translate-x-6' : ''}`}></span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-8 flex justify-end">
+                    <button
+                      disabled={isSaving}
+                      onClick={async () => {
+                         setIsSaving(true);
+                         try {
+                           const updates: any = {
+                             store_name: targetItem.store_name,
+                             store_description: targetItem.store_description,
+                             store_address: targetItem.store_address,
+                             store_phone: targetItem.store_phone,
+                             store_type: targetItem.store_type,
+                             delivery_radius: targetItem.delivery_radius,
+                             store_banner: targetItem.store_banner,
+                             store_logo: targetItem.store_logo
+                           };
+                           if (userRole === 'admin') {
+                             const admItem = targetItem as Merchant;
+                             if (admItem.email) updates.email = admItem.email;
+                             if (admItem.commission_percent !== undefined) updates.commission_percent = admItem.commission_percent;
+                             if (admItem.service_fee !== undefined) updates.service_fee = admItem.service_fee;
+                             if (admItem.is_active !== undefined) updates.is_active = admItem.is_active;
+                           }
+                           const targetId = userRole === 'merchant' ? (targetItem as MerchantProfile).merchant_id : (targetItem as Merchant).id;
+                           
+                           const { error } = await supabase.from('admin_users').update(updates).eq('id', targetId);
+                           if (error) throw error;
+                           showConfirm('Sucesso', 'Configurações salvadas com sucesso.', 'success');
+                         } catch (err: any) {
+                           showConfirm('Erro', 'Não foi possível salvar: ' + err.message, 'error');
+                         } finally {
+                           setIsSaving(false);
+                         }
+                      }}
+                      className="bg-primary hover:bg-primary/90 text-slate-900 px-10 py-5 rounded-[20px] font-black text-[12px] uppercase tracking-widest transition-all shadow-xl shadow-primary/20 flex items-center gap-3 disabled:opacity-50"
+                    >
+                      {isSaving ? (
+                        <>
+                          <div className="w-4 h-4 rounded-full border-2 border-slate-900/20 border-t-slate-900 animate-spin"></div>
+                          Salvando...
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-lg">save</span>
+                          Salvar Estande
+                        </>
+                      )}
+                    </button>
                   </div>
                 </section>
               </div>
@@ -729,7 +876,7 @@ export default function MyStudioTab() {
 
   return (
     <>
-<div className="flex flex-col h-[calc(100vh-160px)] -m-8 relative overflow-hidden bg-white dark:bg-slate-900 shadow-2xl rounded-[40px] border border-slate-100 dark:border-slate-800">
+<div className={`flex flex-col h-[calc(100vh-160px)] -m-8 relative overflow-hidden bg-white dark:bg-slate-900 shadow-2xl rounded-[40px] border border-slate-100 dark:border-slate-800 ${activeTab === 'my_studio' ? 'block' : 'hidden'}`}>
   {((userRole === 'merchant' && merchantProfile) || (userRole === 'admin' && selectedMerchantPreview)) ? (
     <div className="flex-1 flex flex-col xl:flex-row overflow-hidden pb-10">
       {/* Creative Control Panel Column - Immersive Full Screen */}
@@ -1272,12 +1419,12 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Expira em</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Expira em (Data e Hora)</label>
           <input
-            type="date"
-            value={editingItem.expires_at ? new Date(editingItem.expires_at).toISOString().split('T')[0] : ''}
+            type="datetime-local"
+            value={editingItem.expires_at ? new Date(editingItem.expires_at).toISOString().slice(0, 16) : ''}
             onChange={e => setEditingItem({ ...editingItem, expires_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
-            className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full bg-slate-50 border border-slate-100 dark:bg-slate-800 dark:border-slate-700 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white"
           />
         </div>
         <div className="space-y-1">
@@ -1287,19 +1434,44 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
             value={editingItem.max_usage || ''}
             onChange={e => setEditingItem({ ...editingItem, max_usage: e.target.value })}
             placeholder="0 para ilimitado"
-            className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full bg-slate-50 border border-slate-100 dark:bg-slate-800 dark:border-slate-700 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:text-white"
           />
         </div>
       </div>
-      <div className="space-y-1">
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">URL da Imagem / Banner</label>
-        <input
-          type="text"
-          value={editingItem.banner_url || ''}
-          onChange={e => setEditingItem({ ...editingItem, banner_url: e.target.value })}
-          placeholder="https://exemplo.com/banner.jpg"
-          className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-        />
+      <div className="space-y-2">
+        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Imagem do Banner / Cupom</label>
+        <div className="relative aspect-[3/1] rounded-3xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center group hover:border-primary transition-colors">
+          {editingItem.banner_url ? (
+            <>
+              <img src={editingItem.banner_url} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <span className="bg-white text-slate-900 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">upload</span>
+                  Trocar Imagem
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="text-center p-6 pointer-events-none">
+              <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">add_photo_alternate</span>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Clique para Enviar Imagem</p>
+            </div>
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            className="absolute inset-0 opacity-0 cursor-pointer"
+            onChange={async (e) => {
+               const file = e.target.files?.[0];
+               if (file) {
+                 const url = await handleFileUpload(file, 'banners');
+                 if (url) {
+                    setEditingItem({ ...editingItem, banner_url: url });
+                 }
+               }
+            }}
+          />
+        </div>
       </div>
     </>
   )}

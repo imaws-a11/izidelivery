@@ -16,6 +16,10 @@ export default function CategoriesTab() {
     fetchCategories
   } = useAdmin();
 
+  React.useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
   return (
     <div className="space-y-8 pb-20">
       {/* Categories Header */}

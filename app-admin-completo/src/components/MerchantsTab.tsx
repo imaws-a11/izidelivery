@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAdmin } from '../context/AdminContext';
 
 export default function MerchantsTab() {
   const {
-    merchantsList, isLoadingList, setEditingItem, setEditType, handleUpdateMerchantStatus, handleDeleteMerchant, openMerchantPreview, allOrders, appSettings
+    merchantsList, isLoadingList, setEditingItem, setEditType, handleUpdateMerchantStatus, handleDeleteMerchant, openMerchantPreview, allOrders, appSettings, fetchMerchants, setActiveTab
   } = useAdmin();
+
+  useEffect(() => {
+    fetchMerchants();
+  }, [fetchMerchants]);
 
   return (
     <div className="space-y-8">
@@ -13,16 +17,6 @@ export default function MerchantsTab() {
           <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Gestão de Lojistas</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">Gerencie os estabelecimentos parceiros da plataforma.</p>
         </div>
-        <button 
-          onClick={() => {
-            setEditingItem({ role: 'merchant', is_active: true });
-            setEditType('merchant');
-          }}
-          className="bg-primary text-slate-900 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:brightness-95 transition-all shadow-lg shadow-primary/20"
-        >
-          <span className="material-symbols-outlined text-lg">add_business</span>
-          Novo Lojista
-        </button>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative">
@@ -79,10 +73,10 @@ export default function MerchantsTab() {
                   </td>
                   <td className="px-8 py-6 text-right">
                     <div className="flex items-center justify-end gap-2">
-                       <button onClick={() => openMerchantPreview(m)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-primary hover:text-slate-900 transition-all shadow-sm">
+                       <button onClick={() => { openMerchantPreview(m); setActiveTab('my_studio'); }} className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-primary hover:text-slate-900 transition-all shadow-sm">
                         <span className="material-symbols-outlined text-lg">visibility</span>
                       </button>
-                      <button onClick={() => { setEditingItem(m); setEditType('merchant'); }} className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-primary hover:text-slate-900 transition-all shadow-sm">
+                      <button onClick={() => { openMerchantPreview(m); setActiveTab('my_studio'); }} className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-primary hover:text-slate-900 transition-all shadow-sm">
                         <span className="material-symbols-outlined text-lg">edit</span>
                       </button>
                       <button onClick={() => handleDeleteMerchant(m.id)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100">
