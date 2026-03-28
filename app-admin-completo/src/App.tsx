@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from './lib/supabase';
 import { useAdmin } from './context/AdminContext';
@@ -149,7 +149,7 @@ function App() {
                   <NavTab id="merchants" icon="storefront" label="Lojistas" />
                   <NavTab id="my_studio" icon="inventory_2" label="EstÃºdios" />
                   <NavTab id="drivers" icon="person_pin_circle" label="Entregadores" />
-                  <NavTab id="users" icon="group" label="Clientes" />
+                  <NavTab id="users" icon="group" label="Estúdio" />
                   <NavTab id="dynamic_rates" icon="payments" label="Taxas" />
                   <NavTab id="audit_logs" icon="history" label="Logs" />
                   <NavTab id="support" icon="support_agent" label="Suporte" />
