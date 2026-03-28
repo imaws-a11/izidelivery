@@ -10,6 +10,8 @@ interface ProfileViewProps {
   logout: () => Promise<void>;
   setSubView?: (view: string) => void;
   isIziBlackMembership: boolean;
+  setTab: (tab: "home" | "orders" | "wallet" | "profile") => void;
+  onEditPhoto?: () => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -21,6 +23,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   logout,
   setSubView,
   isIziBlackMembership,
+  setTab,
+  onEditPhoto,
 }) => {
   const nextLevelXP = (userLevel + 1) * 1000;
 
@@ -29,17 +33,34 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32 pt-14">
-      <div className="px-5 pb-8 border-b border-zinc-900">
+    <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32">
+      {/* Header com Voltar */}
+      <header className="sticky top-0 z-50 px-5 py-4 bg-black/60 backdrop-blur-xl border-b border-zinc-900 flex items-center gap-4">
+        <button 
+          onClick={() => { setTab("home"); window.history.back(); }}
+          className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center active:scale-95 transition-all"
+        >
+          <span className="material-symbols-outlined text-white">arrow_back</span>
+        </button>
+        <h1 className="text-sm font-black uppercase tracking-widest">Meu Perfil</h1>
+      </header>
+
+      <div className="px-5 py-8 border-b border-zinc-900">
         <div className="flex items-center gap-5">
           <div className="relative">
-            <div className="size-20 rounded-3xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl">
+            <button 
+              onClick={() => onEditPhoto?.()}
+              className="relative group size-20 rounded-3xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl active:scale-95 transition-all"
+            >
                <img
                   src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "izi"}`}
                   alt="User"
-                  className="size-full"
+                  className="size-full object-cover group-hover:opacity-40 transition-opacity"
                 />
-            </div>
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                   <span className="material-symbols-outlined text-white text-2xl">photo_camera</span>
+                </div>
+            </button>
             {isIziBlackMembership && (
               <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black size-6 rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(255,215,9,0.5)] border-2 border-black z-20">
                 <span className="material-symbols-outlined text-sm font-bold" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
@@ -80,7 +101,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <span className="material-symbols-outlined text-zinc-600 group-hover:text-yellow-400">location_on</span>
           <span className="font-black text-sm">Meus Endereços</span>
         </button>
-        <button className="w-full flex items-center gap-4 py-4 text-left border-b border-zinc-900 last:border-0 group">
+        <button 
+          onClick={() => setSubView?.("payments")}
+          className="w-full flex items-center gap-4 py-4 text-left border-b border-zinc-900 last:border-0 group"
+        >
           <span className="material-symbols-outlined text-zinc-600 group-hover:text-yellow-400">payments</span>
           <span className="font-black text-sm">Métodos de Pagamento</span>
         </button>

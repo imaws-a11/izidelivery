@@ -35,6 +35,7 @@ import { ExploreRestaurantsView } from "./components/features/Home/ExploreRestau
 import { BeverageOffersView } from "./components/features/Home/BeverageOffersView";
 import { RestaurantMenuView } from "./components/features/Home/RestaurantMenuView";
 import { StoreCatalogView } from "./components/features/Home/StoreCatalogView";
+import { PaymentMethodsView } from "./components/features/Profile/PaymentMethodsView";
 
 import { useAuth } from "./hooks/useAuth";
 import type { SavedAddress, Order, Quest } from "./types";
@@ -4425,7 +4426,7 @@ function App() {
                 ) : savedAddresses.map((addr: any, i: number) => (
                   <motion.div key={addr.id || i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                     className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0 w-full group">
-                    {/* Ãƒcone + Info */}
+                    {/* Ãƒ cone + Info */}
                     <button
                       onClick={() => handleSetActiveAddress(addr.id)}
                       className="flex items-center gap-4 flex-1 min-w-0 text-left active:opacity-60 transition-all"
@@ -4478,132 +4479,28 @@ function App() {
   };
 
   const renderPayments = () => {
+    const handleBack = () => {
+      if (paymentsOrigin === "checkout") setSubView("checkout");
+      else if (paymentsOrigin === "izi_black") setSubView("izi_black_purchase");
+      else setSubView("none");
+    };
+
     return (
-      <div className="absolute inset-0 z-40 bg-black text-white flex flex-col overflow-y-auto no-scrollbar pb-32">
-        {/* HEADER */}
-        <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-6 border-b border-zinc-900">
-          <button onClick={() => {
-              if (paymentsOrigin === "checkout") setSubView("checkout");
-              else if (paymentsOrigin === "izi_black") setSubView("izi_black_purchase");
-              else setSubView("none");
-            }} 
-            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
-          </button>
-          <h1 className="text-xl font-black text-white uppercase tracking-tight">Pagamentos</h1>
-        </header>
-
-                <main className="px-5 py-8 space-y-10">
-          {/* RESUMO DE SALDO */}
-          <div className="bg-gradient-to-br from-zinc-900 to-black border border-white/5 p-6 rounded-[35px] flex items-center justify-between shadow-2xl">
-            <div>
-              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Seu Saldo IZI</p>
-              <h2 className="text-3xl font-black text-white">R$ {(userBalance || 0).toFixed(2).replace(".", ",")}</h2>
-            </div>
-            <button onClick={() => setTab("wallet")} className="size-12 rounded-2xl bg-yellow-400 text-black flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-yellow-400/20">
-              <span className="material-symbols-outlined font-bold">add</span>
-            </button>
-          </div>
-          {/* MÃƒâ€°TODOS SMART */}
-          <div className="grid grid-cols-2 gap-4">
-             <button className="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl flex flex-col items-center gap-2 opacity-50 cursor-not-allowed">
-               <span className="material-symbols-outlined text-3xl">apple</span>
-               <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Apple Pay</span>
-             </button>
-             <button 
-               onClick={() => { setPaymentMethod("google_pay"); navigateSubView("checkout"); }}
-               className={`bg-zinc-900 border p-5 rounded-3xl flex flex-col items-center gap-2 transition-all ${paymentMethod === "google_pay" ? "border-yellow-400 ring-4 ring-yellow-400/10" : "border-zinc-800"}`}
-             >
-               <span className="material-symbols-outlined text-3xl text-white">google</span>
-               <span className="text-[10px] font-black uppercase tracking-widest text-white">Google Pay</span>
-             </button>
-          </div>
-
-          {/* LISTA DE CARTÃƒâ€¢ES */}
-          <section className="space-y-6">
-            <div className="flex items-center justify-between px-1">
-              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">CartÃƒµes Salvos</h3>
-              <button 
-                onClick={() => setIsAddingCard(true)}
-                className="text-[10px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/10 px-4 py-2 rounded-full">
-                + Adicionar
-              </button>
-            </div>
-
-            {isLoadingCards ? (
-              <div className="py-10 flex justify-center"><div className="size-6 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin" /></div>
-            ) : savedCards.length === 0 ? (
-               <div className="bg-zinc-900/40 border border-dashed border-zinc-800 rounded-3xl p-10 text-center">
-                 <p className="text-zinc-600 text-xs font-bold uppercase tracking-widest">Nenhum cartão salvo</p>
-               </div>
-            ) : (
-              <div className="space-y-4">
-                {savedCards.map((card: any) => (
-                  <div 
-                    key={card.id} 
-                    onClick={() => handleSetPrimaryCard(card.id)}
-                    className={`relative p-6 rounded-[32px] border-2 transition-all cursor-pointer ${card.active ? "border-yellow-400" : "border-zinc-900"}`}
-                    style={{ background: card.color || "rgba(24,24,27,0.5)" }}
-                  >
-                    <div className="flex justify-between items-start mb-6">
-                      <div className={`size-12 rounded-2xl flex items-center justify-center ${card.active ? "bg-yellow-400 text-black" : "bg-zinc-800 text-zinc-500"}`}>
-                        <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>credit_card</span>
-                      </div>
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteCard(card.id); }} className="size-8 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center">
-                        <span className="material-symbols-outlined text-lg">delete</span>
-                      </button>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">{card.brand}</p>
-                      <p className="font-extrabold text-lg tracking-[0.2em] text-white">•••• •••• •••• {card.last4}</p>
-                    </div>
-                    {card.active && (
-                       <div className="absolute top-6 right-12 bg-yellow-400 text-black text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest">Padrão</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* OUTRAS OPÃƒâ€¡Ãƒâ€¢ES */}
-          <section className="space-y-4">
-            <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] px-1">Outros Métodos</h3>
-            <div className="bg-zinc-900/30 border border-zinc-900 rounded-[32px] overflow-hidden">
-               {[
-                  { id: "wallet", icon: "account_balance_wallet", label: "Saldo Carteira Izi", color: "text-yellow-400" },
-                  { id: "pix", icon: "pix", label: "PIX InstantÃ¢neo", color: "text-emerald-400" },
-                 { id: "google_pay", icon: "google", label: "Google Pay", color: "text-blue-400" },
-                 { id: "bitcoin_lightning", icon: "bolt", label: "Bitcoin Lightning", color: "text-orange-400" },
-                 { id: "dinheiro", icon: "payments", label: "Dinheiro na Entrega", color: "text-zinc-500" },
-                 { id: "cartao_entrega", icon: "credit_card", label: "Cartão na Entrega", color: "text-zinc-500" }
-               ].map((m, i) => (
-                 <button key={m.id} onClick={() => setPaymentMethod(m.id as any)}
-                   className={`w-full flex items-center gap-4 p-4 hover:bg-zinc-900 transition-all active:scale-[0.98] ${i > 0 ? "border-t border-zinc-900/50" : ""}`}>
-                   <span className={`material-symbols-outlined text-xl ${m.color}`} style={{ fontVariationSettings: paymentMethod === m.id ? "'FILL' 1" : "'FILL' 0" }}>{m.icon}</span>
-                   <p className="flex-1 text-left font-black text-sm text-zinc-100">{m.label}</p>
-                   {paymentMethod === m.id && <span className="material-symbols-outlined text-yellow-400 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>}
-                 </button>
-               ))}
-            </div>
-          </section>
-
-          {/* BOTÃƒÆ’O CONFIRMAR (Se vier do checkout) */}
-          {paymentsOrigin === "checkout" && (
-            <button 
-              onClick={() => setSubView("checkout")}
-              className="w-full py-5 rounded-3xl bg-yellow-400 text-black font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-yellow-400/20 active:scale-95 transition-all"
-            >
-              Confirmar Escolha
-            </button>
-          )}
-        </main>
+      <>
+        <PaymentMethodsView 
+          savedCards={savedCards}
+          onBack={handleBack}
+          onAddCard={() => setIsAddingCard(true)}
+          onSetDefault={handleSetPrimaryCard}
+          onDelete={handleDeleteCard}
+          isLoading={isLoadingCards}
+        />
 
         {/* MODAL: ADD CARD */}
         <AnimatePresence>
           {isAddingCard && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-end justify-center p-4">
+              className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-end justify-center p-4">
               <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
                 className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[40px] p-8 shadow-2xl">
                 <div className="flex justify-between items-center mb-8">
@@ -4620,7 +4517,7 @@ function App() {
                        user_id: userId,
                        brand: brand,
                        last_four: last4,
-                       is_default: savedCards.length === 0,
+                       active: savedCards.length === 0,
                        token: token
                      }).select().single();
 
@@ -4650,7 +4547,7 @@ function App() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </>
     );
   };
 
@@ -8032,7 +7929,6 @@ function App() {
       { id: "home",    icon: "explore",                label: "Início"   },
       { id: "wallet",  icon: "account_balance_wallet",  label: "IZI Pay"  },
       { id: "orders",  icon: "receipt_long",            label: "Pedidos"  },
-      { id: "profile", icon: "person",                  label: "Perfil"   },
     ];
 
     return (
@@ -8154,6 +8050,7 @@ function App() {
                 setTransitData={setTransitData}
                 setExploreCategoryState={setExploreCategoryState}
                 setRestaurantInitialCategory={setRestaurantInitialCategory}
+                setTab={setTab}
               />
             )}
             {tab === "orders" && (
@@ -8194,6 +8091,7 @@ function App() {
                 walletBalance={walletBalance}
                 setSubView={setSubView}
                 logout={logout}
+                setTab={setTab}
                 isIziBlackMembership={isIziBlackMembership}
               />
 
@@ -8916,6 +8814,12 @@ function App() {
           />
         ))}
       </AnimatePresence>
+
+      {renderMyQRModal()}
+      {renderTransferModal()}
+      {renderScanQRModal()}
+      {renderWallet()}
+
       {toast && (
         <motion.div
           initial={{ y: -100, opacity: 0 }}

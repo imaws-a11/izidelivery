@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { mapContainerStyle, darkMapStyle, wazeMapStyle } from '../constants/mapStyles';
@@ -7,13 +7,14 @@ import { GoogleMap, Marker } from '@react-google-maps/api';
 // Rastreamento em Tempo Real
 export default function TrackingTab() {
   const {
-    allOrders, recentOrders, driversList, selectedTrackingItem, setSelectedTrackingItem, trackingListTab, setTrackingListTab, isLoaded, mapsLoadError, mapCenterView, darkMapStyle, wazeMapStyle, mapContainerStyle, isCompletingOrder, setIsCompletingOrder, handleCompleteOrder
+    allOrders, driversList, selectedTrackingItem, setSelectedTrackingItem, 
+    trackingListTab, setTrackingListTab, isLoaded, mapsLoadError, mapCenterView
   } = useAdmin();
 
   return (
-  {/* Map View Section */}
-  <div className="relative flex-1 bg-slate-100 dark:bg-slate-900 overflow-hidden border-r border-slate-200 dark:border-slate-800">
-    <div className="absolute inset-0 bg-cover bg-center opacity-40 mix-blend-multiply dark:mix-blend-overlay pointer-events-none" style={{ backgroundImage: "url('https://api.maptiler.com/maps/basic-v2/static/0,0,1/1x1.png')" }}></div>
+    <>
+      {/* Map View Section */}
+      <div className="absolute inset-0 bg-slate-100 dark:bg-slate-900 overflow-hidden border-r border-slate-200 dark:border-slate-800">
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
       <span className="text-slate-300 dark:text-slate-800 font-black text-6xl uppercase tracking-[1em] rotate-12 opacity-20">Mapa de Operações</span>
     </div>
@@ -28,10 +29,10 @@ export default function TrackingTab() {
           scale: selectedTrackingItem?.id === d.id ? 1.2 : 1,
           zIndex: selectedTrackingItem?.id === d.id ? 50 : 30
         }}
-        style={{
+        style={(d.lat && d.lng) ? {
           top: `${((d.lat + 23.5) * 500) % 80 + 10}%`,
           left: `${((d.lng + 46.6) * 500) % 80 + 10}%`
-        }}
+        } : { display: 'none' }}
         className="absolute group cursor-pointer"
       >
         <div className="relative flex flex-col items-center">
@@ -57,7 +58,7 @@ export default function TrackingTab() {
     ) : isLoaded ? (
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
-        center={mapCenter}
+        center={mapCenterView}
         zoom={13}
         options={{
           styles: darkMapStyle,
@@ -70,8 +71,8 @@ export default function TrackingTab() {
           <Marker
             key={driver.id}
             position={{
-              lat: mapCenter.lat + (i * 0.005) * Math.sin(i),
-              lng: mapCenter.lng + (i * 0.005) * Math.cos(i)
+              lat: mapCenterView.lat + (i * 0.005) * Math.sin(i),
+              lng: mapCenterView.lng + (i * 0.005) * Math.cos(i)
             }}
             onClick={() => setSelectedTrackingItem({ type: 'driver', ...driver })}
             icon={typeof google !== 'undefined' ? {
@@ -86,8 +87,8 @@ export default function TrackingTab() {
           <Marker
             key={order.id}
             position={{
-              lat: mapCenter.lat - (i * 0.008) * Math.cos(i),
-              lng: mapCenter.lng + (i * 0.008) * Math.sin(i)
+              lat: mapCenterView.lat - (i * 0.008) * Math.cos(i),
+              lng: mapCenterView.lng + (i * 0.008) * Math.sin(i)
             }}
             onClick={() => setSelectedTrackingItem({ type: 'order', ...order })}
             icon={typeof google !== 'undefined' ? {
@@ -260,12 +261,8 @@ export default function TrackingTab() {
           </motion.div>
         ))
       )}
+      </div>
     </div>
-  </div>
-</div>
-            )}
-
-{/* â â â â â â â MERCHANT ORDERS â â â â â â â */}
-
-  );
+  </>
+);
 }
