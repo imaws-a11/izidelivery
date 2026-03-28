@@ -12,6 +12,10 @@ export default function PromotionsTab() {
     savePromotion, autoSavePromo, fetchMerchants, merchantsList
   } = useAdmin();
 
+  const [dateModalOpen, setDateModalOpen] = React.useState(false);
+  const [tempDate, setTempDate] = React.useState('');
+  const [tempTime, setTempTime] = React.useState('');
+
   React.useEffect(() => {
     fetchPromotions();
     if (userRole === 'admin') {
@@ -281,11 +285,96 @@ export default function PromotionsTab() {
 
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data e Hora de Expiração</label>
-          <input type="datetime-local" value={promoForm.expires_at ? new Date(promoForm.expires_at).toISOString().slice(0, 16) : ''}
-            min={new Date().toISOString().slice(0, 16)}
-            onChange={e => autoSavePromo({...promoForm, expires_at: e.target.value ? new Date(e.target.value).toISOString() : null})}
-            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white" />
+          <button
+            type="button"
+            onClick={() => {
+              if (promoForm.expires_at) {
+                const d = new Date(promoForm.expires_at);
+                setTempDate(d.toISOString().split('T')[0]);
+                setTempTime(d.toTimeString().slice(0, 5));
+              } else {
+                setTempDate(new Date().toISOString().split('T')[0]);
+                setTempTime('23:59');
+              }
+              setDateModalOpen(true);
+            }}
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white flex items-center justify-between group hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary">event</span>
+              <span>
+                {promoForm.expires_at 
+                  ? new Date(promoForm.expires_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                  : 'Definir expiração'}
+              </span>
+            </div>
+            <span className="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors">calendar_month</span>
+          </button>
         </div>
+
+        {/* Date/Time Picker Modal */}
+        {dateModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white dark:bg-slate-900 rounded-[40px] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 max-w-sm w-full"
+            >
+              <div className="text-center mb-8">
+                <div className="size-16 rounded-3xl bg-primary/10 flex items-center justify-center text-primary mx-auto mb-4 border border-primary/20">
+                  <span className="material-symbols-outlined text-3xl">schedule</span>
+                </div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">Agendar Expiração</h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Defina quando a oferta sairá do ar</p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Data</label>
+                  <input 
+                    type="date"
+                    value={tempDate}
+                    onChange={e => setTempDate(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-6 py-4 font-black text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Horário</label>
+                  <input 
+                    type="time"
+                    value={tempTime}
+                    onChange={e => setTempTime(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-6 py-4 font-black text-slate-900 dark:text-white focus:ring-2 focus:ring-primary text-center text-2xl"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mt-10">
+                <button
+                  type="button"
+                  onClick={() => setDateModalOpen(false)}
+                  className="py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-xs uppercase tracking-widest rounded-3xl hover:bg-slate-200 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (tempDate && tempTime) {
+                      const finalDate = new Date(`${tempDate}T${tempTime}:00`);
+                      autoSavePromo({ ...promoForm, expires_at: finalDate.toISOString() });
+                    }
+                    setDateModalOpen(false);
+                  }}
+                  className="py-4 bg-primary text-slate-900 font-black text-xs uppercase tracking-widest rounded-3xl shadow-lg shadow-primary/20 hover:brightness-105 transition-all"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
           <div className="flex items-center gap-3 h-[58px] bg-slate-50 dark:bg-slate-800 rounded-2xl px-5">
