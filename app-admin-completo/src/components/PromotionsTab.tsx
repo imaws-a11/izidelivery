@@ -1,16 +1,21 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
+import { supabase } from '../lib/supabase';
+import { showConfirm } from '../lib/useToast';
+import FlashOffersSection from './FlashOffersSection';
 
 // Promoções e Banners
 export default function PromotionsTab() {
   const {
-    promotionsList, promoFilter, setPromoFilter, promoSearch, setPromoSearch, showPromoForm, setShowPromoForm, promoFormType, setPromoFormType, promoForm, setPromoForm, promoSaving, promoSaveStatus, editingItem, setEditingItem, editType, setEditType, isSaving, userRole, merchantProfile, handleUpdatePromotion, fetchPromotions
+    promotionsList, promoFilter, setPromoFilter, promoSearch, setPromoSearch, showPromoForm, setShowPromoForm, promoFormType, setPromoFormType, promoForm, setPromoForm, promoSaving, promoSaveStatus, editingItem, setEditingItem, editType, setEditType, isSaving, userRole, merchantProfile, handleUpdatePromotion, fetchPromotions,
+    savePromotion, autoSavePromo
   } = useAdmin();
 
   return (
+    <div className="space-y-8">
 
-{/* â â Header â Â */}
+{/* ── Header ── */}
   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
     <div>
       <div className="flex items-center gap-3 mb-1">
@@ -430,9 +435,6 @@ export default function PromotionsTab() {
       merchantId={userRole === 'merchant' ? merchantProfile?.merchant_id : undefined} 
     />
   )}
-
-</div>
-            )}
-
+    </div>
   );
 }
