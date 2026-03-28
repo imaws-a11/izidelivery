@@ -3,8 +3,12 @@ import { useAdmin } from '../context/AdminContext';
 
 export default function UsersTab() {
   const {
-    usersList, stats, setSelectedUser, setSelectedUserStudio, handleUpdateUserStatus, handleDeleteUser, isLoadingList
+    usersList, stats, setSelectedUser, setSelectedUserStudio, handleUpdateUserStatus, handleDeleteUser, isLoadingList, fetchUsers
   } = useAdmin();
+
+  React.useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   return (
     <div className="space-y-8">
@@ -37,10 +41,10 @@ export default function UsersTab() {
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">
                       <div className="size-10 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-400 grayscale">
-                         {u.full_name?.charAt(0) || 'U'}
+                         {u.name?.charAt(0) || 'U'}
                       </div>
                       <div>
-                        <p className="font-black text-sm dark:text-white uppercase tracking-tight">{u.full_name || 'Sem Nome'}</p>
+                        <p className="font-black text-sm dark:text-white uppercase tracking-tight">{u.name || 'Sem Nome'}</p>
                         <p className="text-[10px] font-bold text-slate-400 truncate">{u.email}</p>
                       </div>
                     </div>

@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth as firebaseAuth } from '../lib/firebase';
-import { onAuthStateChanged, signOut, signInWithEmailAndPassword } from 'firebase/auth';
+import { supabase } from '../lib/supabase';
+import type { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
-  session: any;
-  setSession: (s: any) => void;
+  session: Session | null;
+  setSession: (s: Session | null) => void;
   isLoading: boolean;
   logout: () => Promise<void>;
 }
@@ -12,40 +12,26 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<any>(() => {
-    try {
-      const cached = localStorage.getItem('izi_admin_session');
-      return cached ? JSON.parse(cached) : null;
-    } catch { return null; }
-  });
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
-      if (user) {
-        const mockSession = {
-          user: {
-            id: user.uid,
-            email: user.email,
-          },
-          access_token: 'firebase-token',
-        };
-        setSession(mockSession);
-        localStorage.setItem('izi_admin_session', JSON.stringify(mockSession));
-      } else {
-        setSession(null);
-        localStorage.removeItem('izi_admin_session');
-      }
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
       setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const logout = async () => {
-    await signOut(firebaseAuth);
+    await supabase.auth.signOut();
     setSession(null);
-    localStorage.removeItem('izi_admin_session');
   };
 
   return (

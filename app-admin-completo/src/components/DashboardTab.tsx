@@ -4,8 +4,13 @@ import { useAdmin } from '../context/AdminContext';
 
 export default function DashboardTab() {
   const {
-    recentOrders, dashboardData, appSettings, setActiveTab
+    recentOrders, dashboardData, appSettings, setActiveTab, fetchStats, fetchAllOrders
   } = useAdmin();
+
+  React.useEffect(() => {
+    fetchStats();
+    fetchAllOrders(1);
+  }, [fetchStats, fetchAllOrders]);
 
   const totalRevenue = dashboardData.dailyRevenue.reduce((a, b) => a + b, 0);
 
@@ -167,8 +172,8 @@ export default function DashboardTab() {
                   <td className="px-8 py-5 text-sm font-black text-slate-900 dark:text-white">#{o.user_id.slice(0, 5)}</td>
                   <td className="px-8 py-5">
                     <span className={`px-3 py-1 text-[9px] font-black rounded-full uppercase tracking-widest ${
-                      o.status === 'completed' ? 'bg-green-100 text-green-700' :
-                      o.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                      o.status === 'concluido' ? 'bg-green-100 text-green-700' :
+                      o.status === 'cancelado' ? 'bg-red-100 text-red-700' :
                       'bg-yellow-100 text-yellow-700'
                     }`}>
                       {o.status}

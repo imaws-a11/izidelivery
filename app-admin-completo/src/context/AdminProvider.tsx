@@ -951,7 +951,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setPromoSaving(true);
     setPromoSaveStatus('saving');
     try {
-      const { error } = await supabase.from('promotions_delivery').upsert(promo);
+      const cleanPromo = { ...promo };
+      if (cleanPromo.expires_at === '') cleanPromo.expires_at = null;
+      if (cleanPromo.coupon_code === '') cleanPromo.coupon_code = null;
+      if (cleanPromo.image_url === '') cleanPromo.image_url = null;
+      if (cleanPromo.merchant_id === '') cleanPromo.merchant_id = null;
+
+      const { error } = await supabase.from('promotions_delivery').upsert(cleanPromo);
       if (error) throw error;
       setPromoSaveStatus('saved');
       toastSuccess('Promoção publicada com sucesso!');

@@ -3,8 +3,12 @@ import { useAdmin } from '../context/AdminContext';
 
 export default function DriversTab() {
   const {
-    driversList, isLoadingList, setSelectedDriverStudio, handleUpdateDriverStatus, handleDeleteDriver, stats
+    driversList, isLoadingList, setSelectedDriverStudio, handleUpdateDriverStatus, handleDeleteDriver, stats, fetchDrivers
   } = useAdmin();
+
+  React.useEffect(() => {
+    fetchDrivers();
+  }, [fetchDrivers]);
 
   return (
     <div className="space-y-8">
@@ -37,15 +41,15 @@ export default function DriversTab() {
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">
                       <div className="size-10 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-400 grayscale">
-                         {d.full_name?.charAt(0) || 'D'}
+                         {d.name?.charAt(0) || 'D'}
                       </div>
                       <div>
-                        <p className="font-black text-sm dark:text-white uppercase tracking-tight">{d.full_name || 'Sem Nome'}</p>
+                        <p className="font-black text-sm dark:text-white uppercase tracking-tight">{d.name || 'Sem Nome'}</p>
                         <p className="text-[10px] font-bold text-slate-400 truncate">{d.phone}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-6 text-xs font-bold text-slate-500 uppercase tracking-widest">{d.vehicle_type || 'Moto'} • {d.vehicle_plate || 'N/A'}</td>
+                  <td className="px-8 py-6 text-xs font-bold text-slate-500 uppercase tracking-widest">{d.vehicle_type || 'Moto'} • {d.license_plate || 'N/A'}</td>
                   <td className="px-8 py-6 text-center">
                     <span className={`px-3 py-1 text-[9px] font-black rounded-full uppercase tracking-widest ${
                       d.is_active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'

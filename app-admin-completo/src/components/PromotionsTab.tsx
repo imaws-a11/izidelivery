@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { supabase } from '../lib/supabase';
-import { showConfirm } from '../lib/useToast';
+import { showConfirm, toastError } from '../lib/useToast';
 import FlashOffersSection from './FlashOffersSection';
 
 // Promoções e Banners
@@ -237,24 +237,53 @@ export default function PromotionsTab() {
 
         {promoFormType === 'banner' && (
           <div className="space-y-2 md:col-span-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">URL da Imagem do Banner *</label>
-            <input type="text" value={promoForm.image_url}
-              onChange={e => autoSavePromo({...promoForm, image_url: e.target.value})}
-              placeholder="https://exemplo.com/banner.jpg"
-              className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white" />
-            {promoForm.image_url && (
-              <div className="mt-3 rounded-2xl overflow-hidden aspect-video max-h-40 border border-slate-100 dark:border-slate-700">
-                <img src={promoForm.image_url} alt="Preview" className="w-full h-full object-cover" />
-              </div>
-            )}
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Imagem do Banner *</label>
+            <div className="relative aspect-[3/1] rounded-3xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center group hover:border-primary transition-colors">
+              {promoForm.image_url ? (
+                <>
+                  <img src={promoForm.image_url} alt="Banner Preview" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <span className="bg-white text-slate-900 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                      <span className="material-symbols-outlined text-sm">upload</span>
+                      Trocar Imagem
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center p-6 pointer-events-none">
+                  <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">add_photo_alternate</span>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Clique para Enviar Imagem</p>
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const fileExt = file.name.split('.').pop();
+                  const fileName = `${Math.random()}.${fileExt}`;
+                  const filePath = fileName;
+                  try {
+                    const { error: uploadError } = await supabase.storage.from('banners').upload(filePath, file);
+                    if (uploadError) throw uploadError;
+                    const { data } = supabase.storage.from('banners').getPublicUrl(filePath);
+                    autoSavePromo({ ...promoForm, image_url: data.publicUrl });
+                  } catch (error: any) {
+                    toastError(error.message);
+                  }
+                }}
+              />
+            </div>
           </div>
         )}
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data de Expiração</label>
-          <input type="date" value={promoForm.expires_at}
-            min={new Date().toISOString().split('T')[0]}
-            onChange={e => autoSavePromo({...promoForm, expires_at: e.target.value})}
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data e Hora de Expiração</label>
+          <input type="datetime-local" value={promoForm.expires_at ? new Date(promoForm.expires_at).toISOString().slice(0, 16) : ''}
+            min={new Date().toISOString().slice(0, 16)}
+            onChange={e => autoSavePromo({...promoForm, expires_at: e.target.value ? new Date(e.target.value).toISOString() : null})}
             className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white" />
         </div>
         <div className="space-y-2">
