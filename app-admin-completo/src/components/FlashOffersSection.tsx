@@ -1,5 +1,6 @@
 import React from 'react';
 import { supabase } from '../lib/supabase';
+import FlashOfferTimerModal from './FlashOfferTimerModal';
 
 interface FlashOffersSectionProps {
   userRole: string;
@@ -11,6 +12,7 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
   const [loading, setLoading] = React.useState(false);
   const [showForm, setShowForm] = React.useState(false);
   const [merchants, setMerchants] = React.useState<any[]>([]);
+  const [dateModalOpen, setDateModalOpen] = React.useState(false);
   const [form, setForm] = React.useState({
     product_name: '', product_image: '', original_price: '',
     discounted_price: '', merchant_id: '', expires_at: '', description: ''
@@ -132,13 +134,71 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
               )}
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Expira em *</label>
-              <input type="datetime-local" value={form.expires_at} onChange={e => setForm({ ...form, expires_at: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400" />
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Expira em *</label>
+              <button
+                type="button"
+                onClick={() => setDateModalOpen(true)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-3 text-sm font-bold dark:text-white flex items-center justify-between group hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-rose-500">event</span>
+                  <span>
+                    {form.expires_at 
+                      ? new Date(form.expires_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                      : 'Definir expiração'}
+                  </span>
+                </div>
+                <span className="material-symbols-outlined text-slate-400 group-hover:text-rose-500 transition-colors">calendar_month</span>
+              </button>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Imagem do Produto (URL)</label>
-              <input value={form.product_image} onChange={e => setForm({ ...form, product_image: e.target.value })} placeholder="https://..." className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400" />
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Imagem do Produto</label>
+              <div className="relative aspect-video rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center group hover:border-rose-400 transition-colors">
+                {form.product_image ? (
+                  <>
+                    <img src={form.product_image} alt="Preview" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="bg-white text-slate-900 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm">upload</span>
+                        Trocar Foto
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center p-4 pointer-events-none">
+                    <span className="material-symbols-outlined text-3xl text-slate-300 mb-1">add_a_photo</span>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Selecionar Foto</p>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const fileName = `${Math.random()}.${file.name.split('.').pop()}`;
+                    try {
+                      const { error: uploadError } = await supabase.storage.from('products').upload(fileName, file);
+                      if (uploadError) throw uploadError;
+                      const { data } = supabase.storage.from('products').getPublicUrl(fileName);
+                      setForm({ ...form, product_image: data.publicUrl });
+                    } catch (error: any) {
+                      alert('Erro ao enviar imagem: ' + error.message);
+                    }
+                  }}
+                />
+              </div>
             </div>
+
+            <FlashOfferTimerModal
+              isOpen={dateModalOpen}
+              onClose={() => setDateModalOpen(false)}
+              initialDate={form.expires_at}
+              onConfirm={(finalDate) => {
+                setForm({ ...form, expires_at: finalDate });
+              }}
+            />
           </div>
           <div className="flex gap-3 pt-2">
             <button onClick={handleSave} disabled={loading} className="px-8 py-3 bg-rose-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/20 hover:brightness-110 transition-all disabled:opacity-50">
