@@ -6,6 +6,7 @@ import type { Merchant, MerchantProfile, Product, MenuCategory } from '../lib/ty
 
 import { showConfirm, toastError, toastSuccess } from '../lib/useToast';
 import { supabase } from '../lib/supabase';
+import { ProductStudio } from './ProductStudio';
 
 
 export default function MyStudioTab() {
@@ -54,6 +55,9 @@ export default function MyStudioTab() {
   const [dateModalOpen, setDateModalOpen] = React.useState(false);
   const [tempDate, setTempDate] = React.useState('');
   const [tempTime, setTempTime] = React.useState('');
+  const [selectedProductStudio, setSelectedProductStudio] = React.useState<any>(null);
+
+  const targetMerchantId = userRole === 'merchant' ? merchantProfile?.merchant_id : selectedMerchantPreview?.id;
 
   React.useEffect(() => {
     if (userRole === 'merchant') {
@@ -400,7 +404,7 @@ export default function MyStudioTab() {
                     <div className="flex items-center gap-3">
                        <button 
                          className="bg-primary text-slate-900 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2"
-                         onClick={handleCreateNewProduct}
+                         onClick={() => setSelectedProductStudio({ name: '', price: 0, category: '', is_available: true, merchant_id: targetMerchantId, id: 'new-' + Date.now() })}
                        >
                           <span className="material-symbols-outlined text-lg">add_circle</span>
                           Novo Produto
@@ -446,8 +450,7 @@ export default function MyStudioTab() {
                                   className="bg-white dark:bg-slate-800 p-4 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm flex gap-4 items-center group hover:border-primary/30 transition-all cursor-pointer relative overflow-hidden"
                                   onClick={() => {
                                     if (userRole === 'merchant') {
-                                       setEditingItem(p);
-                                       setEditType('my_product');
+                                       setSelectedProductStudio(p);
                                     }
                                   }}
                                 >
@@ -1612,86 +1615,6 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
     </>
   )}
 
-  {editType === 'my_product' && (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Preço (R$)</label>
-          <input
-            type="number"
-            step="0.01"
-            required
-            value={editingItem.price || ''}
-            onChange={e => setEditingItem({ ...editingItem, price: e.target.value })}
-            placeholder="0,00"
-            className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Categoria</label>
-          <select
-            required
-            value={editingItem.category || ''}
-            onChange={e => setEditingItem({ ...editingItem, category: e.target.value, subcategory: '' })}
-            className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-          >
-             <option value="" disabled>Selecione</option>
-             {menuCategoriesList.filter(c => !c.parent_id).map(cat => (
-               <option key={cat.id} value={cat.name}>{cat.name}</option>
-             ))}
-          </select>
-        </div>
-      </div>
-      <div className="space-y-1">
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Subcategoria</label>
-        <select
-          value={editingItem.subcategory || ''}
-          onChange={e => setEditingItem({ ...editingItem, subcategory: e.target.value })}
-          className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-        >
-           <option value="">Nenhuma</option>
-           {menuCategoriesList.filter(c => c.parent_id && c.parent_id === menuCategoriesList.find(parent => parent.name === editingItem.category)?.id).map(sub => (
-             <option key={sub.id} value={sub.name}>{sub.name}</option>
-           ))}
-        </select>
-      </div>
-      <div className="space-y-1">
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Descrição do Item</label>
-        <textarea
-          value={editingItem.description || ''}
-          onChange={e => setEditingItem({ ...editingItem, description: e.target.value })}
-          placeholder="Ingredientes, tamanho, etc..."
-          className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[100px]"
-        />
-      </div>
-      <div className="space-y-1">
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Imagem do Produto</label>
-        <div className="relative group/btn">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                setIsSaving(true);
-                const url = await handleFileUpload(file, 'products');
-                if (url) setEditingItem({ ...editingItem, image_url: url });
-                setIsSaving(false);
-              }
-            }}
-            className="absolute inset-0 opacity-0 cursor-pointer z-10"
-          />
-          <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-3xl px-6 py-4 font-bold text-sm flex items-center gap-3 group-hover/btn:border-primary transition-colors">
-            <span className="material-symbols-outlined text-primary">add_photo_alternate</span>
-            <span className="text-slate-400 truncate">
-              {editingItem.image_url ? 'Imagem Carregada ✓' : 'Clique para enviar imagem'}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  )}
-
   {editType === 'driver' && (
     <div className="grid grid-cols-2 gap-6">
       <div className="space-y-1">
@@ -1735,33 +1658,23 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
     </button>
   </div>
 
-  <div className="grid grid-cols-2 gap-4 mt-8">
-    {editType === 'my_product' && editingItem && editingItem.id ? (
-      <button
-        type="button"
-        onClick={() => handleDeleteProduct(editingItem.id, editingItem.name)}
-        className="w-full bg-red-100 text-red-600 rounded-3xl py-5 font-black uppercase tracking-widest hover:bg-red-200 transition-all flex items-center justify-center gap-2"
-      >
-        <span className="material-symbols-outlined text-lg">delete</span> Excluir
-      </button>
-    ) : (
-      <button
-        type="button"
-        onClick={() => { setEditingItem(null); setEditType(null); }}
-        className="w-full bg-slate-100 text-slate-500 rounded-3xl py-5 font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
-      >
-        Cancelar
-      </button>
-    )}
-    <button
-      type="submit"
-      disabled={isSaving}
-      className="w-full bg-primary text-slate-900 rounded-3xl py-5 font-black uppercase tracking-widest hover:brightness-105 transition-all shadow-xl shadow-primary/20 disabled:opacity-50"
-    >
-      {isSaving ? 'Salvando...' : 'Confirmar & Salvar'}
-    </button>
-  </div>
-</form>
+      <div className="grid grid-cols-2 gap-4 mt-8">
+        <button
+          type="button"
+          onClick={() => { setEditingItem(null); setEditType(null); }}
+          className="w-full bg-slate-100 text-slate-500 rounded-3xl py-5 font-black uppercase tracking-widest hover:bg-slate-200 transition-all font-sans"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="w-full bg-primary text-slate-900 rounded-3xl py-5 font-black uppercase tracking-widest hover:brightness-105 transition-all shadow-xl shadow-primary/20 disabled:opacity-50 font-sans"
+        >
+          {isSaving ? 'Salvando...' : 'Confirmar & Salvar'}
+        </button>
+      </div>
+    </form>
             </motion.div>
           </div>
         )
@@ -3521,6 +3434,19 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
 </motion.div>
             )}
           </AnimatePresence>
+          {selectedProductStudio && (
+            <ProductStudio
+              product={selectedProductStudio}
+              onClose={() => setSelectedProductStudio(null)}
+              onSave={() => {
+                fetchProducts();
+                setSelectedProductStudio(null);
+              }}
+              menuCategoriesList={menuCategoriesList}
+              handleFileUpload={handleFileUpload}
+              merchantId={targetMerchantId || ''}
+            />
+          )}
       </>
   );
 }
