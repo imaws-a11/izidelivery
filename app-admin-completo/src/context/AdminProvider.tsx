@@ -41,7 +41,20 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // Data Lists
-  const [stats, setStats] = useState({ users: 0, drivers: 0, orders: 0, onlineDrivers: 0, revenue: 0 });
+  const [stats, setStats] = useState({ 
+    users: 0, 
+    drivers: 0, 
+    orders: 0, 
+    onlineDrivers: 0, 
+    revenue: 0,
+    merchants: 0,
+    promotions: 0,
+    totalCoupons: 0,
+    canceledOrders: 0,
+    cancelationImpact: 0,
+    activeOffers: 0,
+    couponInvestment: 0
+  });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [usersList, setUsersList] = useState<User[]>([]);
   const [driversList, setDriversList] = useState<Driver[]>([]);
@@ -283,19 +296,36 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Data Fetchers
   const fetchStats = useCallback(async () => {
     try {
-      const { data: userData } = await supabase.from('users_delivery').select('id', { count: 'exact' });
-      const { data: driverData } = await supabase.from('drivers_delivery').select('id', { count: 'exact' });
-      const { data: orderData } = await supabase.from('orders_delivery').select('total_price', { count: 'exact' });
+      const { data: userData } = await supabase.from('users_delivery').select('id');
+      const { data: driverData } = await supabase.from('drivers_delivery').select('id');
+      const { data: orderData } = await supabase.from('orders_delivery').select('total_price, status');
       const { data: onlineData } = await supabase.from('drivers_delivery').select('id').eq('is_online', true);
+      const { data: merchantData } = await supabase.from('admin_users').select('id').eq('role', 'merchant');
+      const { data: promoData } = await supabase.from('promotions_delivery').select('*');
 
-      const totalRevenue = orderData?.reduce((acc, curr) => acc + (curr.total_price || 0), 0) || 0;
+      const completedOrders = orderData?.filter(o => o.status === 'concluido') || [];
+      const canceledOrders = orderData?.filter(o => o.status === 'cancelado') || [];
+      
+      const totalRevenue = completedOrders.reduce((acc, curr) => acc + (curr.total_price || 0), 0);
+      const cancelationImpact = canceledOrders.reduce((acc, curr) => acc + (curr.total_price || 0), 0);
+
+      const coupons = promoData?.filter(p => p.type === 'coupon') || [];
+      const totalCouponsValue = coupons.reduce((acc, curr) => acc + (curr.discount_value || 0), 0);
+      const activeOffers = promoData?.filter(p => p.is_active).length || 0;
 
       setStats({
         users: userData?.length || 0,
         drivers: driverData?.length || 0,
         orders: orderData?.length || 0,
         onlineDrivers: onlineData?.length || 0,
-        revenue: totalRevenue
+        revenue: totalRevenue,
+        merchants: merchantData?.length || 0,
+        promotions: promoData?.length || 0,
+        totalCoupons: coupons.length,
+        canceledOrders: canceledOrders.length,
+        cancelationImpact: cancelationImpact,
+        activeOffers: activeOffers,
+        couponInvestment: totalCouponsValue
       });
     } catch (err) {
       console.error('Erro ao buscar estatísticas:', err);

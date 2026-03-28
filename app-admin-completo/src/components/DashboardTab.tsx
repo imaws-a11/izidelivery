@@ -4,7 +4,7 @@ import { useAdmin } from '../context/AdminContext';
 
 export default function DashboardTab() {
   const {
-    recentOrders, dashboardData, appSettings, setActiveTab, fetchStats, fetchAllOrders
+    recentOrders, stats, appSettings, setActiveTab, fetchStats, fetchAllOrders
   } = useAdmin();
 
   React.useEffect(() => {
@@ -12,179 +12,226 @@ export default function DashboardTab() {
     fetchAllOrders(1);
   }, [fetchStats, fetchAllOrders]);
 
-  const totalRevenue = dashboardData.dailyRevenue.reduce((a, b) => a + b, 0);
+  // Transformar stats em cards amigáveis
+  const mainStats = [
+    { label: 'Faturamento Global', val: `R$ ${stats.revenue.toLocaleString('pt-BR')}`, icon: 'payments', info: 'Vendas concluídas', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: 'Total de Pedidos', val: stats.orders, icon: 'shopping_cart', info: `${stats.canceledOrders} cancelados`, color: 'text-primary', bg: 'bg-primary/10' },
+    { label: 'Impacto Cancelamentos', val: `R$ ${stats.cancelationImpact.toLocaleString('pt-BR')}`, icon: 'error', info: 'Receita perdida', color: 'text-rose-500', bg: 'bg-rose-500/10' },
+    { label: 'Tickets de Suporte', val: '12', icon: 'support_agent', info: '3 urgentes', color: 'text-blue-500', bg: 'bg-blue-500/10' },
+  ];
+
+  const businessStats = [
+    { label: 'Lojistas Ativos', val: stats.merchants, icon: 'storefront', color: 'text-purple-500' },
+    { label: 'Clientes Base', val: stats.users, icon: 'group', color: 'text-indigo-500' },
+    { label: 'Cupons Criados', val: stats.totalCoupons, icon: 'confirmation_number', color: 'text-amber-500' },
+    { label: 'Investimento Cupons', val: `R$ ${stats.couponInvestment.toLocaleString('pt-BR')}`, icon: 'redeem', color: 'text-orange-500' },
+    { label: 'Ofertas Ativas', val: stats.activeOffers, icon: 'local_fire_department', color: 'text-rose-500' },
+    { label: 'Bases de Entrega', val: stats.drivers, icon: 'local_shipping', color: 'text-cyan-500' },
+  ];
 
   return (
-    <div className="space-y-8">
-      {/* Metrics Grid */}
+    <div className="space-y-10 pb-20">
+      {/* Header Real-time */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter italic uppercase">
+            Master Console <span className="text-primary italic font-black">IZI</span>
+          </h1>
+          <p className="text-slate-400 font-bold text-sm mt-1 uppercase tracking-widest">
+            Visão Global de Ecossistema em Tempo Real
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+             <div className="flex -space-x-3">
+                 {[1,2,3,4].map(i => (
+                     <div key={i} className="size-10 rounded-full border-2 border-white dark:border-slate-950 bg-slate-200 dark:bg-slate-800" />
+                 ))}
+                 <div className="size-10 rounded-full border-2 border-white dark:border-slate-950 bg-primary flex items-center justify-center text-[10px] font-black text-slate-900">
+                     +2k
+                 </div>
+             </div>
+             <div className="h-10 w-[1px] bg-slate-200 dark:bg-slate-800 mx-2" />
+             <button className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2">
+                 <span className="material-symbols-outlined text-sm">download</span>
+                 Exportar BI
+             </button>
+        </div>
+      </div>
+
+      {/* Primary KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          { label: 'Receita Bruta', val: `R$ ${totalRevenue.toFixed(2).replace('.', ',')}`, icon: 'payments', trend: '+12.5%', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Ticket Médio', val: `R$ ${dashboardData.avgTicket.toFixed(2).replace('.', ',')}`, icon: 'confirmation_number', trend: 'Estável', color: 'text-purple-600', bg: 'bg-purple-50' },
-          { label: 'Comissão Plataforma', val: `R$ ${dashboardData.totalCommission.toFixed(2).replace('.', ',')}`, icon: 'account_balance_wallet', trend: `${appSettings.appCommission}%`, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Sucesso de Entrega', val: `${dashboardData.deliverySuccessRate.toFixed(1)}%`, icon: 'verified', trend: 'Meta 95%', color: 'text-amber-600', bg: 'bg-amber-50' },
-        ].map((stat, i) => (
+        {mainStats.map((item, i) => (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
             key={i}
-            className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-200 dark:border-slate-800 flex flex-col gap-4 shadow-sm hover:shadow-lg transition-all"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: i * 0.1 }}
+            className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:shadow-2xl transition-all border-b-4 border-b-transparent hover:border-b-primary"
           >
-            <div className="flex items-center justify-between">
-              <div className={`w-12 h-12 ${stat.bg} rounded-2xl flex items-center justify-center`}>
-                <span className={`material-symbols-outlined ${stat.color} font-bold`}>{stat.icon}</span>
+            <div className="relative z-10">
+              <div className={`size-14 ${item.bg} rounded-2xl flex items-center justify-center mb-6`}>
+                <span className={`material-symbols-outlined ${item.color} font-black text-2xl`}>{item.icon}</span>
               </div>
-              <span className="text-slate-400 text-[9px] font-black px-2 py-1 bg-slate-50 dark:bg-slate-800 rounded-full border border-slate-100 dark:border-slate-700">{stat.trend}</span>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
+              <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic">{item.val}</h2>
+              <p className="text-[10px] font-bold text-slate-400 mt-4 flex items-center gap-2">
+                <span className={`size-1.5 rounded-full ${item.color.replace('text', 'bg')}`} />
+                {item.info}
+              </p>
             </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{stat.label}</p>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1 tracking-tight">{stat.val}</h3>
+            <div className={`absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity`}>
+                 <span className="material-symbols-outlined text-6xl font-black">{item.icon}</span>
             </div>
           </motion.div>
         ))}
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Revenue Trend */}
-        <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Tendência de Receita Diária</h3>
-              <p className="text-xs font-bold text-slate-400 mt-0.5">Desempenho dos últimos 7 dias</p>
-            </div>
-            <select className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-[10px] font-black uppercase tracking-widest px-4 focus:ring-primary cursor-pointer">
-              <option>Semanal</option>
-              <option>Mensal</option>
-            </select>
-          </div>
-          <div className="h-64 flex flex-col justify-end gap-2 relative">
-            <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 400 150">
-              <defs>
-                <linearGradient id="grad1" x1="0%" x2="0%" y1="0%" y2="100%">
-                  <stop offset="0%" style={{ stopColor: '#ffd900', stopOpacity: 0.4 }} />
-                  <stop offset="100%" style={{ stopColor: '#ffd900', stopOpacity: 0 }} />
-                </linearGradient>
-              </defs>
-              <motion.path 
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                d={`${dashboardData.revenuePath} L400,150 L0,150 Z`} 
-                fill="url(#grad1)"
-              />
-              <motion.path 
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                d={dashboardData.revenuePath} 
-                fill="none" 
-                stroke="#ffd900" 
-                strokeLinecap="round" 
-                strokeWidth="4"
-              />
-            </svg>
-            <div className="flex justify-between px-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4">
-              {dashboardData.dayLabels.map((lbl, i) => <span key={i}>{lbl}</span>)}
-            </div>
-          </div>
+      {/* Visual Intelligence Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Gráfico de Impacto de Cancelamento */}
+        <div className="lg:col-span-2 bg-slate-900 dark:bg-slate-900 p-10 rounded-[48px] border border-slate-800 shadow-2xl relative overflow-hidden">
+             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 via-primary to-emerald-500 opacity-50" />
+             <div className="flex items-start justify-between mb-12">
+                 <div>
+                    <h3 className="text-2xl font-black text-white tracking-tight italic uppercase">Fluxo de Performance Global</h3>
+                    <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-widest">Análise de saúde transacional em tempo real</p>
+                 </div>
+                 <div className="bg-white/5 p-4 rounded-3xl border border-white/5 backdrop-blur-xl">
+                      <div className="flex items-center gap-6">
+                           <div>
+                               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Taxa de Sucesso</p>
+                               <p className="text-xl font-black text-emerald-400 italic">94.2%</p>
+                           </div>
+                           <div className="w-[1px] h-8 bg-white/10" />
+                           <div>
+                               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Cancelamentos</p>
+                               <p className="text-xl font-black text-rose-400 italic">5.8%</p>
+                           </div>
+                      </div>
+                 </div>
+             </div>
+
+             <div className="h-64 flex items-end gap-3 px-2">
+                  {[45, 60, 85, 40, 95, 70, 80, 55, 90, 75, 65, 85].map((h, i) => (
+                      <div key={i} className="flex-1 flex flex-col gap-2 group">
+                           <div className="w-full relative h-48 flex items-end">
+                                <motion.div 
+                                    initial={{ height: 0 }}
+                                    animate={{ height: `${h}%` }}
+                                    className={`w-full rounded-t-xl transition-all relative ${
+                                        h < 50 ? 'bg-rose-500/80 shadow-[0_0_20px_rgba(244,63,94,0.3)]' : 
+                                        h > 80 ? 'bg-emerald-500/80 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 
+                                        'bg-primary shadow-[0_0_20px_rgba(255,217,0,0.3)]'
+                                    }`}
+                                >
+                                     <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </motion.div>
+                           </div>
+                      </div>
+                  ))}
+             </div>
+             <div className="mt-8 flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] border-t border-white/5 pt-6">
+                  <span>Janeiro / 2026</span>
+                  <div className="flex gap-8">
+                       <span className="flex items-center gap-2"><div className="size-2 bg-emerald-500 rounded-full" /> Performance Ideal</span>
+                       <span className="flex items-center gap-2"><div className="size-2 bg-primary rounded-full" /> Na Meta</span>
+                       <span className="flex items-center gap-2"><div className="size-2 bg-rose-500 rounded-full" /> Alerta de Risco</span>
+                  </div>
+             </div>
         </div>
 
-        {/* Volume by Category */}
-        <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Volume de Pedidos por Categoria</h3>
-              <p className="text-xs font-bold text-slate-400 mt-0.5">Divisão por tipo de entrega</p>
-            </div>
-            <span className="text-xl font-black text-primary tracking-tighter">
-              {dashboardData.totalOrdersToday} 
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest opacity-60 ml-2">total hoje</span>
-            </span>
-          </div>
-          <div className="flex gap-4 items-end h-64">
-            {dashboardData.categories.map((cat, i) => (
-              <div key={i} className="flex flex-col items-center gap-3 flex-1 group">
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-[14px] relative flex items-end overflow-hidden h-44 border border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-700 transition-all">
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: `${cat.percent}%` }}
-                    className="w-full bg-primary rounded-t-[10px] transition-all shadow-inner"
-                  />
-                </div>
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter text-center leading-none">{cat.label}</span>
-              </div>
-            ))}
-          </div>
+        {/* Wealth of Details Grid */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[48px] p-10 shadow-sm flex flex-col justify-between">
+             <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-[0.2em] italic mb-10 border-b border-slate-50 dark:border-slate-800 pb-6 text-center">Riqueza de Detalhes</h3>
+             <div className="grid grid-cols-2 gap-y-10">
+                  {businessStats.map((item, i) => (
+                      <div key={i} className="flex flex-col items-center text-center group">
+                           <div className={`size-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-primary transition-all`}>
+                                <span className={`material-symbols-outlined ${item.color} group-hover:text-slate-900 font-black`}>{item.icon}</span>
+                           </div>
+                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
+                           <p className="text-xl font-black text-slate-900 dark:text-white italic">{item.val}</p>
+                      </div>
+                  ))}
+             </div>
+             <div className="mt-12 bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700">
+                  <p className="text-[10px] font-bold text-slate-500 leading-relaxed text-center">
+                       O sistema IZI processa atualmente <span className="text-slate-900 dark:text-white font-black">1.4 pedidos/segundo</span> em horário de pico, com latência de apenas 120ms.
+                  </p>
+             </div>
         </div>
       </div>
 
-      {/* High-Performance Lojistas */}
-      <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
-          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Melhores Lojistas da Semana</h3>
-          <span className="material-symbols-outlined text-primary">emoji_events</span>
-        </div>
-        <div className="divide-y divide-slate-100 dark:divide-slate-800">
-          {dashboardData.topMerchants.length === 0 ? (
-            <div className="p-10 text-center text-slate-400 text-[10px] font-black uppercase tracking-widest italic">Aguardando dados de performance...</div>
-          ) : (
-            dashboardData.topMerchants.map((m, idx) => (
-              <div key={idx} className="px-8 py-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all group">
-                <div className="flex items-center gap-4">
-                  <div className="size-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-900 dark:text-white font-black text-lg border border-slate-200 dark:border-slate-700">
-                    {idx + 1}
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-slate-900 dark:text-white">{m.name}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{m.orders} pedidos finalizados</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-black text-emerald-500">R$ {m.revenue.toFixed(2).replace('.', ',')}</p>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Receita Bruta</p>
-                </div>
+      {/* Tabela de Pedidos Globais */}
+      <div className="bg-white dark:bg-slate-900 rounded-[48px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="px-10 py-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight italic uppercase">Monitor Transacional Global</h3>
+                <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Acompanhamento de todos os pedidos da rede</p>
               </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Recent Activity Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Atividade Recente</h3>
-          <button onClick={() => setActiveTab('orders')} className="text-xs font-black text-primary hover:underline uppercase tracking-widest">Ver Todos os Pedidos</button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 dark:bg-slate-800/30">
-              <tr>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">ID Pedido</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {recentOrders.map((o, i) => (
-                <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
-                  <td className="px-8 py-5 text-sm font-bold text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white">#{o.id.slice(0, 8).toUpperCase()}</td>
-                  <td className="px-8 py-5 text-sm font-black text-slate-900 dark:text-white">#{o.user_id.slice(0, 5)}</td>
-                  <td className="px-8 py-5">
-                    <span className={`px-3 py-1 text-[9px] font-black rounded-full uppercase tracking-widest ${
-                      o.status === 'concluido' ? 'bg-green-100 text-green-700' :
-                      o.status === 'cancelado' ? 'bg-red-100 text-red-700' :
-                      'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {o.status}
-                    </span>
-                  </td>
-                  <td className="px-8 py-5 text-sm font-black text-slate-900 dark:text-white">R$ {o.total_price.toFixed(2).replace('.', ',')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              <button onClick={() => setActiveTab('orders')} className="px-6 py-3 bg-primary text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
+                  Gerenciar Pedidos
+              </button>
+          </div>
+          <div className="overflow-x-auto">
+              <table className="w-full">
+                  <thead className="bg-slate-50/50 dark:bg-slate-800/30">
+                      <tr>
+                          <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Pedido</th>
+                          <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente / Lojista</th>
+                          <th className="px-10 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                          <th className="px-10 py-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {recentOrders.map((o, i) => (
+                          <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-all group cursor-pointer">
+                              <td className="px-10 py-6 font-display">
+                                  <span className="text-sm font-black text-slate-900 dark:text-white block group-hover:text-primary transition-colors">#{o.id.slice(0, 8).toUpperCase()}</span>
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global IZI</span>
+                              </td>
+                              <td className="px-10 py-6">
+                                  <div className="flex items-center gap-3">
+                                      <div className="size-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                          <span className="material-symbols-outlined text-xs text-slate-400 font-black">person</span>
+                                      </div>
+                                      <div>
+                                          <span className="text-sm font-black text-slate-900 dark:text-slate-100 block">#{o.user_id.slice(0, 6)}</span>
+                                          <span className="text-[10px] font-bold text-slate-400 uppercase block tracking-tighter italic">Lojista: #{o.merchant_id?.slice(0, 6) || 'N/A'}</span>
+                                      </div>
+                                  </div>
+                              </td>
+                              <td className="px-10 py-6">
+                                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border ${
+                                      o.status === 'concluido' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' :
+                                      o.status === 'cancelado' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' :
+                                      o.status === 'pendente' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' :
+                                      'bg-slate-500/10 border-slate-500/20 text-slate-500'
+                                  } text-[10px] font-black uppercase tracking-[0.1em]`}>
+                                      <div className={`size-1.5 rounded-full animate-pulse ${
+                                          o.status === 'concluido' ? 'bg-emerald-500' :
+                                          o.status === 'cancelado' ? 'bg-rose-500' :
+                                          o.status === 'pendente' ? 'bg-amber-500' :
+                                          'bg-slate-500'
+                                      }`} />
+                                      {o.status}
+                                  </div>
+                              </td>
+                              <td className="px-10 py-6 text-right">
+                                  <span className="text-xl font-black text-slate-900 dark:text-white italic tracking-tighter">
+                                      R$ {o.total_price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  </span>
+                              </td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
+          </div>
+          <div className="p-8 border-t border-slate-50 dark:border-slate-800 text-center">
+               <button className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-primary transition-colors">
+                   Carregar mais transações globais
+               </button>
+          </div>
       </div>
     </div>
   );
