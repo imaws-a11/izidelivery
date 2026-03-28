@@ -43,6 +43,11 @@ export default function MyStudioTab() {
     handleUpdatePromotion, handleUpdateDriverStatus, handleDeleteDriver,
     handleAddCredit, fetchUsers, fetchDrivers, fetchMyDrivers,
     fetchCategories, fetchProducts, fetchMenuCategories,
+    isAddingPeakRule, setIsAddingPeakRule, newPeakRule, setNewPeakRule,
+    handleAddPeakRule, handleRemovePeakRule,
+    selectedZoneForMap, setSelectedZoneForMap,
+    newZoneData, setNewZoneData,
+    handleAddZone, handleRemoveZone
   } = useAdmin();
 
   const renderStudioPanel = (targetItem: Merchant | MerchantProfile, updateItem: (updatedItem: Merchant | MerchantProfile) => void) => (
