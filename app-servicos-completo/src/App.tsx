@@ -8037,7 +8037,8 @@ function App() {
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 setSelectedItem={setSelectedItem}
-                availableCoupons={availableCoupons}
+                availableCoupons={availableCoupons.filter((c: any) => c.coupon_code)}
+                banners={availableCoupons.filter((c: any) => !c.coupon_code)}
                 copiedCoupon={copiedCoupon}
                 setCopiedCoupon={setCopiedCoupon}
                 showToast={showToast}

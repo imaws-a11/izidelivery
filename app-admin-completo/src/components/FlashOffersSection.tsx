@@ -48,32 +48,38 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
   React.useEffect(() => { fetchOffers(); fetchMerchants(); }, []);
 
   const handleSave = async () => {
-    if (!form.product_name || !form.original_price || !form.discounted_price || !form.expires_at) {
-      alert('Preencha todos os campos obrigatórios.');
-      return;
-    }
-    const discountPct = Math.round((1 - Number(form.discounted_price) / Number(form.original_price)) * 100);
-    if (discountPct < 20) { alert('Desconto mínimo é 20%.'); return; }
     setLoading(true);
+    
+    // Calcula o percentual de desconto se ambos os preços existirem
+    let discountPct = 0;
+    if (form.original_price && form.discounted_price) {
+      discountPct = Math.round((1 - Number(form.discounted_price) / Number(form.original_price)) * 100);
+    }
+
     const { error } = await supabase.from('flash_offers').insert({
-      title: form.product_name,
-      description: form.description,
+      title: form.product_name || 'Sem título',
+      description: form.description || null,
       merchant_id: form.merchant_id || null,
-      product_name: form.product_name,
+      product_name: form.product_name || 'Sem nome',
       product_image: form.product_image || null,
-      original_price: Number(form.original_price),
-      discounted_price: Number(form.discounted_price),
+      original_price: form.original_price ? Number(form.original_price) : 0,
+      discounted_price: form.discounted_price ? Number(form.discounted_price) : 0,
       discount_percent: discountPct,
-      expires_at: new Date(form.expires_at).toISOString(),
+      expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       is_active: true,
     });
+
     setLoading(false);
     if (!error) {
       setShowForm(false);
       setForm({ product_name: '', product_image: '', original_price: '', discounted_price: '', merchant_id: '', expires_at: '', description: '' });
       fetchOffers();
+    } else {
+      console.error('Erro ao salvar oferta:', error);
+      alert('Erro ao salvar oferta: ' + error.message);
     }
   };
+
 
   const toggleActive = async (id: string, current: boolean) => {
     await supabase.from('flash_offers').update({ is_active: !current }).eq('id', id);
@@ -99,7 +105,8 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
           </div>
           <div>
             <h2 className="text-xl font-black text-slate-900 dark:text-white">Izi Flash</h2>
-            <p className="text-xs text-slate-400">Ofertas com tempo limitado e desconto mínimo de 20%</p>
+            <p className="text-xs text-slate-400">Ofertas com tempo limitado e descontos exclusivos</p>
+
           </div>
         </div>
         <button
@@ -115,7 +122,8 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
           <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Nova Oferta Flash</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Produto *</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Produto</label>
+
               <input value={form.product_name} onChange={e => setForm({ ...form, product_name: e.target.value })} placeholder="Nome do produto" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400" />
             </div>
             <div className="space-y-1.5">
@@ -126,20 +134,24 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preço Original (R$) *</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preço Original (R$)</label>
+
               <input type="number" value={form.original_price} onChange={e => setForm({ ...form, original_price: e.target.value })} placeholder="0,00" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preço com Desconto (R$) *</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preço com Desconto (R$)</label>
+
               <input type="number" value={form.discounted_price} onChange={e => setForm({ ...form, discounted_price: e.target.value })} placeholder="0,00" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400" />
               {form.original_price && form.discounted_price && (
-                <p className={`text-[10px] font-black ${discountPct >= 20 ? 'text-emerald-500' : 'text-red-500'}`}>
-                  Desconto: {discountPct}% {discountPct < 20 ? '(mínimo 20%)' : '✓'}
+                <p className="text-[10px] font-black text-emerald-500">
+                  Desconto: {discountPct}% ✓
                 </p>
               )}
+
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Expira em *</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Expira em</label>
+
               <button
                 type="button"
                 onClick={() => setDateModalOpen(true)}
