@@ -19,7 +19,20 @@ export interface AdminContextType {
   setActiveTab: (tab: Tab) => void;
 
   // Lists
-  stats: { users: number; drivers: number; orders: number; onlineDrivers: number; revenue: number };
+  stats: { 
+    users: number; 
+    drivers: number; 
+    orders: number; 
+    onlineDrivers: number; 
+    revenue: number;
+    merchants: number;
+    promotions: number;
+    totalCoupons: number;
+    canceledOrders: number;
+    cancelationImpact: number;
+    activeOffers: number;
+    couponInvestment: number;
+  };
   recentOrders: Order[];
   usersList: User[];
   driversList: Driver[];
