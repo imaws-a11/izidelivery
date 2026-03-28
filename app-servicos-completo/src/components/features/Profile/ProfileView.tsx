@@ -9,6 +9,7 @@ interface ProfileViewProps {
   walletBalance?: number;
   logout: () => Promise<void>;
   setSubView?: (view: string) => void;
+  isIziBlackMembership: boolean;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -19,6 +20,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   walletBalance = 0,
   logout,
   setSubView,
+  isIziBlackMembership,
 }) => {
   const nextLevelXP = (userLevel + 1) * 1000;
 
@@ -30,12 +32,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32 pt-14">
       <div className="px-5 pb-8 border-b border-zinc-900">
         <div className="flex items-center gap-5">
-          <div className="size-20 rounded-3xl overflow-hidden border border-zinc-800 bg-zinc-900">
-             <img
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "izi"}`}
-                alt="User"
-                className="size-full"
-              />
+          <div className="relative">
+            <div className="size-20 rounded-3xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl">
+               <img
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "izi"}`}
+                  alt="User"
+                  className="size-full"
+                />
+            </div>
+            {isIziBlackMembership && (
+              <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black p-1 rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(255,215,9,0.5)] border-4 border-black">
+                <span className="material-symbols-outlined text-sm font-black" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+              </div>
+            )}
           </div>
           <div>
             <h1 className="text-xl font-black text-white">{userName || "Usuário"}</h1>
