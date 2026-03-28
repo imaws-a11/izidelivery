@@ -11,7 +11,7 @@ import type {
 } from '../lib/types';
 import { useAuth } from './AuthContext';
 import { toastSuccess, toastError, toastWarning, showConfirm } from '../lib/useToast';
-import { uploadToCloudinary } from '../lib/cloudinary';
+
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { session, logout } = useAuth();
@@ -932,17 +932,27 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const handleAddZone = async () => {};
   const handleRemoveZone = async (id: string) => {};
 
-  const handleFileUpload = useCallback(async (file: File, bucket?: string) => {
+  const handleFileUpload = useCallback(async (file: File, bucket = 'products') => {
     try {
-      const url = await uploadToCloudinary(file);
-      if (!url) throw new Error('Upload falhou');
-      return url;
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = fileName;
+
+      const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+      return data.publicUrl;
     } catch (error: any) {
-      console.error('Error uploading to Cloudinary:', error);
-      toastError('Erro ao fazer upload da imagem no Cloudinary.');
+      console.error('Error uploading file:', error);
+      toastError('Erro ao fazer upload da imagem.');
       return null;
     }
   }, []);
+
 
   const handleUpdateDispatchSettings = async (field: string, value: string) => {};
   const handleSeedCategories = async () => {};

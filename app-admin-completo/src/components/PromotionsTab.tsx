@@ -9,7 +9,7 @@ import FlashOffersSection from './FlashOffersSection';
 export default function PromotionsTab() {
   const {
     promotionsList, promoFilter, setPromoFilter, promoSearch, setPromoSearch, showPromoForm, setShowPromoForm, promoFormType, setPromoFormType, promoForm, setPromoForm, promoSaving, promoSaveStatus, userRole, merchantProfile, fetchPromotions,
-    savePromotion, autoSavePromo, fetchMerchants, merchantsList
+    savePromotion, autoSavePromo, fetchMerchants, merchantsList, handleFileUpload
   } = useAdmin();
 
   const [dateModalOpen, setDateModalOpen] = React.useState(false);
@@ -266,16 +266,9 @@ export default function PromotionsTab() {
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  const fileExt = file.name.split('.').pop();
-                  const fileName = `${Math.random()}.${fileExt}`;
-                  const filePath = fileName;
-                  try {
-                    const { error: uploadError } = await supabase.storage.from('banners').upload(filePath, file);
-                    if (uploadError) throw uploadError;
-                    const { data } = supabase.storage.from('banners').getPublicUrl(filePath);
-                    autoSavePromo({ ...promoForm, image_url: data.publicUrl });
-                  } catch (error: any) {
-                    toastError(error.message);
+                  const url = await handleFileUpload(file, 'banners');
+                  if (url) {
+                    autoSavePromo({ ...promoForm, image_url: url });
                   }
                 }}
               />
