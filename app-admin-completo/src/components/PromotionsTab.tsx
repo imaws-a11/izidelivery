@@ -6,13 +6,14 @@ import { toastSuccess, toastError, showConfirm } from '../lib/useToast';
 import { uploadToCloudinary } from '../lib/cloudinary';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import FlashOffersSection from './FlashOffersSection';
 
 export default function PromotionsTab() {
   const {
     promotionsList, fetchPromotions, stats
   } = useAdmin();
 
-  const [activeView, setActiveView] = useState<'all' | 'banners' | 'coupons'>('all');
+  const [activeView, setActiveView] = useState<'all' | 'banners' | 'coupons' | 'flash'>('all');
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<'banner' | 'coupon'>('banner');
   const [isSaving, setIsSaving] = useState(false);
@@ -172,7 +173,8 @@ export default function PromotionsTab() {
           {[
               { id: 'all', label: 'Tudo', icon: 'apps' },
               { id: 'banners', label: 'Banners Home', icon: 'image' },
-              { id: 'coupons', label: 'Cupons Globais', icon: 'local_offer' }
+              { id: 'coupons', label: 'Cupons Globais', icon: 'local_offer' },
+              { id: 'flash', label: 'Izi Flash', icon: 'flash_on' }
           ].map(t => (
               <button
                 key={t.id}
@@ -186,9 +188,12 @@ export default function PromotionsTab() {
       </div>
 
       {/* Promotions Rendering */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-          <AnimatePresence mode="popLayout">
-          {filteredPromos.map((promo) => (
+      {activeView === 'flash' ? (
+          <FlashOffersSection userRole="admin" />
+      ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+              <AnimatePresence mode="popLayout">
+              {filteredPromos.map((promo) => (
               <motion.div
                 key={promo.id}
                 layout
@@ -258,7 +263,8 @@ export default function PromotionsTab() {
               </motion.div>
           ))}
           </AnimatePresence>
-      </div>
+          </div>
+      )}
 
       {/* Promotion Form Modal */}
       <AnimatePresence>

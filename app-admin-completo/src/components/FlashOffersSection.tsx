@@ -19,7 +19,7 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
   const [merchants, setMerchants] = React.useState<any[]>([]);
   const [dateModalOpen, setDateModalOpen] = React.useState(false);
   const [form, setForm] = React.useState({
-    product_name: '', product_image: '', original_price: '',
+    id: '', product_name: '', product_image: '', original_price: '',
     discounted_price: '', merchant_id: '', expires_at: '', description: ''
   });
 
@@ -47,6 +47,21 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
 
   React.useEffect(() => { fetchOffers(); fetchMerchants(); }, []);
 
+  const handleEdit = (offer: any) => {
+    setForm({
+      id: offer.id,
+      product_name: offer.product_name || '',
+      product_image: offer.product_image || '',
+      original_price: offer.original_price?.toString() || '',
+      discounted_price: offer.discounted_price?.toString() || '',
+      merchant_id: offer.merchant_id || '',
+      expires_at: offer.expires_at || '',
+      description: offer.description || '',
+    });
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSave = async () => {
     setLoading(true);
     
@@ -56,7 +71,7 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
       discountPct = Math.round((1 - Number(form.discounted_price) / Number(form.original_price)) * 100);
     }
 
-    const { error } = await supabase.from('flash_offers').insert({
+    const payload = {
       title: form.product_name || 'Sem título',
       description: form.description || null,
       merchant_id: form.merchant_id || null,
@@ -66,13 +81,21 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
       discounted_price: form.discounted_price ? Number(form.discounted_price) : 0,
       discount_percent: discountPct,
       expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      is_active: true,
-    });
+    };
+
+    let error;
+    if (form.id) {
+      const { error: updateError } = await supabase.from('flash_offers').update(payload).eq('id', form.id);
+      error = updateError;
+    } else {
+      const { error: insertError } = await supabase.from('flash_offers').insert({ ...payload, is_active: true });
+      error = insertError;
+    }
 
     setLoading(false);
     if (!error) {
       setShowForm(false);
-      setForm({ product_name: '', product_image: '', original_price: '', discounted_price: '', merchant_id: '', expires_at: '', description: '' });
+      setForm({ id: '', product_name: '', product_image: '', original_price: '', discounted_price: '', merchant_id: '', expires_at: '', description: '' });
       fetchOffers();
     } else {
       console.error('Erro ao salvar oferta:', error);
@@ -110,7 +133,10 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
           </div>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            setForm({ id: '', product_name: '', product_image: '', original_price: '', discounted_price: '', merchant_id: '', expires_at: '', description: '' });
+            setShowForm(!showForm);
+          }}
           className="flex items-center gap-2 px-5 py-3 bg-rose-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/20 hover:brightness-110 transition-all"
         >
           <span className="material-symbols-outlined text-lg">add</span>Nova Oferta Flash
@@ -119,7 +145,7 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
 
       {showForm && (
         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[28px] p-6 space-y-5">
-          <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Nova Oferta Flash</h3>
+          <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">{form.id ? 'Editar Oferta Flash' : 'Nova Oferta Flash'}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Produto</label>
@@ -228,9 +254,12 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
           </div>
           <div className="flex gap-3 pt-2">
             <button onClick={handleSave} disabled={loading} className="px-8 py-3 bg-rose-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/20 hover:brightness-110 transition-all disabled:opacity-50">
-              {loading ? 'Salvando...' : 'Publicar Oferta Flash'}
+              {loading ? 'Salvando...' : form.id ? 'Salvar Alterações' : 'Publicar Oferta Flash'}
             </button>
-            <button onClick={() => setShowForm(false)} className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest">Cancelar</button>
+            <button onClick={() => {
+              setShowForm(false);
+              setForm({ id: '', product_name: '', product_image: '', original_price: '', discounted_price: '', merchant_id: '', expires_at: '', description: '' });
+            }} className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest">Cancelar</button>
           </div>
         </div>
       )}
@@ -281,7 +310,10 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
                     >
                       {offer.is_active ? '● Ativa' : '○ Pausada'}
                     </button>
-                    <button onClick={() => deleteOffer(offer.id)} className="px-3 py-2.5 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl border border-red-100 dark:border-red-500/20 text-[9px] font-black uppercase tracking-widest">
+                    <button onClick={() => handleEdit(offer)} className="px-3 py-2.5 bg-sky-50 dark:bg-sky-500/10 text-sky-500 rounded-xl border border-sky-100 dark:border-sky-500/20 text-[9px] font-black uppercase tracking-widest hover:bg-sky-100 dark:hover:bg-sky-500/20 transition-all">
+                      <span className="material-symbols-outlined text-sm">edit</span>
+                    </button>
+                    <button onClick={() => deleteOffer(offer.id)} className="px-3 py-2.5 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl border border-red-100 dark:border-red-500/20 text-[9px] font-black uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-500/20 transition-all">
                       <span className="material-symbols-outlined text-sm">delete</span>
                     </button>
                   </div>
