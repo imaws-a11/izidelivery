@@ -127,6 +127,26 @@ export interface Product {
   is_available: boolean;
   featured?: boolean;
   created_at?: string;
+  option_groups?: ProductOptionGroup[];
+}
+
+export interface ProductOptionGroup {
+  id: string;
+  product_id: string;
+  name: string;
+  min_select: number;
+  max_select: number;
+  is_required: boolean;
+  sort_order: number;
+  options?: ProductOptionItem[];
+}
+
+export interface ProductOptionItem {
+  id: string;
+  group_id: string;
+  name: string;
+  price: number;
+  sort_order: number;
 }
 
 export interface Category {
