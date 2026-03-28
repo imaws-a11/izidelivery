@@ -195,11 +195,11 @@ function App() {
               {activeTab === 'dynamic_rates' && userRole === 'admin' && <DynamicRatesTab />}
               {activeTab === 'audit_logs' && userRole === 'admin' && <AuditLogsTab />}
               {activeTab === 'settings' && userRole === 'admin' && <SettingsTab />}
-              {activeTab === 'my_store' && userRole === 'merchant' && <MyStoreTab />}
+              {activeTab === 'settings' && userRole === 'merchant' && <MyStoreTab />}
               {activeTab === 'my_drivers' && userRole === 'merchant' && <MyDriversTab />}
-              <MyStudioTab />
+              {(activeTab === 'my_studio' || (activeTab === 'financial' && userRole === 'merchant')) && <MyStudioTab />}
               {activeTab === 'promotions' && <PromotionsTab />}
-              {activeTab === 'financial' && userRole === 'merchant' && <FinancialTab />}
+              {activeTab === 'financial' && userRole === 'admin' && <FinancialTab />}
               {activeTab === 'izi_black' && <IziBlackTab />}
               {activeTab === 'support' && <SupportTab />}
             </motion.div>

@@ -3,14 +3,6 @@ import { BespokeIcons } from "./lib/BespokeIcons";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "./lib/supabase";
-import { auth } from "./lib/firebase";
-import { 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut,
-  updateProfile
-} from "firebase/auth";
 import { toast, toastSuccess, toastError, toastWarning, showConfirm } from "./lib/useToast";
 import { useGoogleMapsLoader } from "./hooks/useGoogleMapsLoader";
 // Mercado Pago

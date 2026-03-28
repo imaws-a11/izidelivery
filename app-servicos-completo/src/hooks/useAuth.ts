@@ -1,17 +1,8 @@
 import { useState, useEffect } from 'react';
-import { auth } from '../lib/firebase';
 import { supabase } from '../lib/supabase';
-import { 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut,
-  updateProfile,
-  type User
-} from "firebase/auth";
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
   const [phone, setPhone] = useState("");
@@ -24,32 +15,38 @@ export const useAuth = () => {
   const [isUserAdmin, setIsUserAdmin] = useState(false);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const u = session?.user || null;
       setUser(u);
-      setUserId(u ? u.uid : null);
+      setUserId(u ? u.id : null);
       if (u) {
-        setUserName(u.displayName || u.email?.split("@")[0] || "Usuário");
-        
-        // Sincronizar com o banco de dados Supabase (Somente se NAO for lojista ou entregador)
-        const { data: isAdmin } = await supabase.from("admin_users").select("id").eq("id", u.uid).maybeSingle();
-        const { data: isDriver } = await supabase.from("drivers_delivery").select("id").eq("id", u.uid).maybeSingle();
+        setUserName(u.user_metadata?.name || u.email?.split("@")[0] || "Usuário");
+        checkRoles(u.id);
+      }
+      setAuthInitLoading(false);
+    });
 
-        setIsUserAdmin(!!isAdmin);
-
-        if (!isAdmin && !isDriver) {
-          await supabase.from("users_delivery").upsert({ 
-            id: u.uid, 
-            name: u.displayName || u.email?.split("@")[0] || "Usuário",
-            email: u.email,
-          });
-        }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const u = session?.user || null;
+      setUser(u);
+      setUserId(u ? u.id : null);
+      if (u) {
+        setUserName(u.user_metadata?.name || u.email?.split("@")[0] || "Usuário");
+        checkRoles(u.id);
       } else {
         setIsUserAdmin(false);
       }
       setAuthInitLoading(false);
     });
-    return () => unsub();
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  const checkRoles = async (uid: string) => {
+    const { data: admin } = await supabase.from("admin_users").select("id").eq("id", uid).maybeSingle();
+    setIsUserAdmin(!!admin);
+  };
 
   const handleLogin = async () => {
     setLoginError("");
@@ -61,10 +58,14 @@ export const useAuth = () => {
     }
     
     try {
-      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
+      });
+      if (error) throw error;
     } catch (err: any) {
       console.error("Login error:", err); 
-      setLoginError(err.code === 'auth/invalid-credential' ? 'Email ou senha inválidos.' : err.message); 
+      setLoginError(err.message === 'Invalid login credentials' ? 'Email ou senha inválidos.' : err.message); 
     } finally {
       setIsLoading(false);
     }
@@ -90,21 +91,29 @@ export const useAuth = () => {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, loginPassword);
-      const user = userCredential.user;
-      
-      await updateProfile(user, {
-        displayName: userName.trim()
-      });
-
-      // Sincronizar com Supabase
-      await supabase.from("users_delivery").upsert({ 
-        id: user.uid, 
-        name: userName.trim(), 
+      const { data, error } = await supabase.auth.signUp({
         email: loginEmail,
-        phone: phone.trim(),
-        created_at: new Date().toISOString()
+        password: loginPassword,
+        options: {
+          data: {
+            name: userName.trim(),
+            phone: phone.trim(),
+          }
+        }
       });
+      if (error) throw error;
+      
+      const user = data.user;
+      if (user) {
+        // Sincronizar com perfil publico
+        await supabase.from("users_delivery").upsert({ 
+          id: user.id, 
+          name: userName.trim(), 
+          email: loginEmail,
+          phone: phone.trim(),
+          created_at: new Date().toISOString()
+        });
+      }
 
     } catch (err: any) {
       console.error("SignUp error:", err);
@@ -116,7 +125,7 @@ export const useAuth = () => {
 
   const logout = async () => {
     setIsUserAdmin(false);
-    await signOut(auth);
+    await supabase.auth.signOut();
   };
 
   return {
@@ -144,3 +153,4 @@ export const useAuth = () => {
     isAdmin: isUserAdmin
   };
 };
+

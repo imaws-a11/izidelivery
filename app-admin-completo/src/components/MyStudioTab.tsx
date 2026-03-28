@@ -4,7 +4,8 @@ import { useAdmin } from '../context/AdminContext';
 import type { Merchant, MerchantProfile, Product, MenuCategory } from '../lib/types';
 
 
-import { showConfirm } from '../lib/useToast';
+import { showConfirm, toastError, toastSuccess } from '../lib/useToast';
+import { supabase } from '../lib/supabase';
 
 
 export default function MyStudioTab() {
@@ -185,7 +186,8 @@ export default function MyStudioTab() {
                     </div>
                   </div>
 
-                  {userRole === 'admin' && (
+                  {/* BLOCO DE CREDENCIAIS (Sempre visível para Admin, ou se for o Lojista editando sua conta) */}
+                  {(userRole === 'admin' || userRole === 'merchant') && (
                     <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-8">
                       <div className="flex items-center gap-4">
                         <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
@@ -203,63 +205,86 @@ export default function MyStudioTab() {
                           <input 
                             className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
                             type="email"
-                            value={(targetItem as Merchant).email || ''}
+                            value={(targetItem as any).email || ''}
                             onChange={e => updateItem({...targetItem, email: e.target.value})}
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Tipo de Estabelecimento</label>
-                          <select 
-                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm appearance-none"
-                            value={targetItem.store_type || 'restaurant'}
-                            onChange={e => updateItem({...targetItem, store_type: e.target.value})}
-                          >
-                            <option value="restaurant">Restaurante / Lanchonete</option>
-                            <option value="pharmacy">Farmácia</option>
-                            <option value="market">Mercado / Conveniência</option>
-                            <option value="beverages">Bebidas</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Comissão Base (%)</label>
-                          <input 
-                            type="number" step="0.1"
-                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
-                            value={(targetItem as Merchant).commission_percent || 0}
-                            onChange={e => updateItem({...targetItem, commission_percent: parseFloat(e.target.value) || 0})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Taxa Fixa IZI (R$)</label>
-                          <input 
-                            type="number" step="0.1"
-                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
-                            value={(targetItem as Merchant).service_fee || 0}
-                            onChange={e => updateItem({...targetItem, service_fee: parseFloat(e.target.value) || 0})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Raio de Entrega Livre (km)</label>
-                          <input 
-                            type="number" step="0.1"
-                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
-                            value={targetItem.delivery_radius || 0}
-                            onChange={e => updateItem({...targetItem, delivery_radius: parseFloat(e.target.value) || 0})}
-                          />
-                        </div>
-                        <div className="space-y-2 flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus-within:border-primary/20">
-                          <div>
-                            <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Status da Loja</h4>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase">Acesso à plataforma</p>
+                          <div className="flex justify-between items-center ml-4">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-slate-500">Senha de Acesso</label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+                                let pass = "";
+                                for(let i=0; i<10; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+                                updateItem({...targetItem, password: pass});
+                              }}
+                              className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
+                            >
+                              Gerar Aleatória
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => updateItem({...targetItem, is_active: !(targetItem as Merchant).is_active})}
-                            className={`relative w-12 h-6 rounded-full transition-colors ${(targetItem as Merchant).is_active ? 'bg-green-500' : 'bg-red-500'}`}
-                          >
-                            <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${(targetItem as Merchant).is_active ? 'translate-x-6' : ''}`}></span>
-                          </button>
+                          <input
+                            type="text"
+                            value={(targetItem as any).password || ''}
+                            onChange={e => updateItem({...targetItem, password: e.target.value})}
+                            placeholder="Deixe em branco para não alterar"
+                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
+                          />
                         </div>
+                        
+                        
+                        {/* CAMPOS ADMINISTRATIVOS EXCLUSIVOS */}
+                        {userRole === 'admin' && (
+                          <>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Tipo de Estabelecimento</label>
+                              <select 
+                                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm appearance-none"
+                                value={targetItem.store_type || 'restaurant'}
+                                onChange={e => updateItem({...targetItem, store_type: e.target.value})}
+                              >
+                                <option value="restaurant">Restaurante / Lanchonete</option>
+                                <option value="pharmacy">Farmácia</option>
+                                <option value="market">Mercado / Conveniência</option>
+                                <option value="beverages">Bebidas</option>
+                              </select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Comissão Base (%)</label>
+                              <input 
+                                type="number" step="0.1"
+                                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
+                                value={(targetItem as Merchant).commission_percent || 0}
+                                onChange={e => updateItem({...targetItem, commission_percent: parseFloat(e.target.value) || 0})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Taxa Fixa IZI (R$)</label>
+                              <input 
+                                type="number" step="0.1"
+                                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
+                                value={(targetItem as Merchant).service_fee || 0}
+                                onChange={e => updateItem({...targetItem, service_fee: parseFloat(e.target.value) || 0})}
+                              />
+                            </div>
+                            <div className="space-y-2 flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus-within:border-primary/20">
+                              <div>
+                                <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Status da Loja</h4>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase">Acesso à plataforma</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => updateItem({...targetItem, is_active: !(targetItem as Merchant).is_active})}
+                                className={`relative w-12 h-6 rounded-full transition-colors ${(targetItem as Merchant).is_active ? 'bg-green-500' : 'bg-red-500'}`}
+                              >
+                                <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${(targetItem as Merchant).is_active ? 'translate-x-6' : ''}`}></span>
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
@@ -268,32 +293,59 @@ export default function MyStudioTab() {
                     <button
                       disabled={isSaving}
                       onClick={async () => {
-                         setIsSaving(true);
+                         const confirm = await showConfirm({
+                           title: 'Confirmar Alterações',
+                           message: 'Deseja salvar as configurações da sua loja?',
+                           confirmLabel: 'Sim, Salvar',
+                           cancelLabel: 'Cancelar'
+                         });
+                         if (!confirm) return;
+
+                          setIsSaving(true);
                          try {
+                           const targetId = userRole === 'merchant' ? (targetItem as MerchantProfile).merchant_id : (targetItem as Merchant).id;
+                           
+                           if (!targetId) throw new Error("ID do lojista não encontrado.");
+
                            const updates: any = {
                              store_name: targetItem.store_name,
                              store_description: targetItem.store_description,
                              store_address: targetItem.store_address,
                              store_phone: targetItem.store_phone,
-                             store_type: targetItem.store_type,
+                             store_type: (targetItem as any).store_type,
                              delivery_radius: targetItem.delivery_radius,
                              store_banner: targetItem.store_banner,
                              store_logo: targetItem.store_logo
                            };
+
+                           // Credenciais (Email/Password)
+                           if ((targetItem as any).email) updates.email = (targetItem as any).email;
+                           if ((targetItem as any).password && (targetItem as any).password.trim() !== '') {
+                             updates.password = (targetItem as any).password;
+                           }
+                           
                            if (userRole === 'admin') {
                              const admItem = targetItem as Merchant;
-                             if (admItem.email) updates.email = admItem.email;
                              if (admItem.commission_percent !== undefined) updates.commission_percent = admItem.commission_percent;
                              if (admItem.service_fee !== undefined) updates.service_fee = admItem.service_fee;
                              if (admItem.is_active !== undefined) updates.is_active = admItem.is_active;
                            }
-                           const targetId = userRole === 'merchant' ? (targetItem as MerchantProfile).merchant_id : (targetItem as Merchant).id;
                            
                            const { error } = await supabase.from('admin_users').update(updates).eq('id', targetId);
                            if (error) throw error;
-                           showConfirm('Sucesso', 'Configurações salvadas com sucesso.', 'success');
+                           
+                           toastSuccess('Configurações salvas com sucesso!');
+
+                           // Limpar senha do preview após salvar
+                           if (userRole === 'admin') {
+                             setSelectedMerchantPreview({...(targetItem as Merchant), password: ''});
+                           } else {
+                             const updatedProfile = {...targetItem, password: ''} as MerchantProfile;
+                             setMerchantProfile(updatedProfile);
+                             localStorage.setItem('izi_admin_profile', JSON.stringify(updatedProfile));
+                           }
                          } catch (err: any) {
-                           showConfirm('Erro', 'Não foi possível salvar: ' + err.message, 'error');
+                           toastError(err.message);
                          } finally {
                            setIsSaving(false);
                          }
@@ -348,10 +400,7 @@ export default function MyStudioTab() {
                     <div className="flex items-center gap-3">
                        <button 
                          className="bg-primary text-slate-900 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2"
-                         onClick={userRole === 'merchant' ? handleCreateNewProduct : () => {
-                            const newP = { id: `new-${Date.now()}`, name: 'Novo Produto', price: '0.00', description: '', image_url: '', category: '', is_active: true, featured: false };
-                            setPreviewProducts([newP, ...previewProducts]);
-                         }}
+                         onClick={handleCreateNewProduct}
                        >
                           <span className="material-symbols-outlined text-lg">add_circle</span>
                           Novo Produto
@@ -923,11 +972,11 @@ export default function MyStudioTab() {
       </button>
     </div>
   )}
-
-            {/* ── Merchant: Financeiro ── */}
-            {
-activeTab === 'financial' && userRole === 'merchant' && (
-  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+</div>
+{/* ── Merchant: Financeiro ── */}
+{activeTab === 'financial' && userRole === 'merchant' && (
+  <div className="flex flex-col h-[calc(100vh-160px)] -m-8 relative overflow-hidden bg-white dark:bg-slate-900 shadow-2xl rounded-[40px] border border-slate-100 dark:border-slate-800 p-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
       <div>
         <div className="flex items-center gap-3 mb-2">
@@ -1015,8 +1064,8 @@ activeTab === 'financial' && userRole === 'merchant' && (
       </div>
     </div>
   </div>
-)
-            }
+</div>
+)}
 
       {/* Edit Modals */}
       {
@@ -1679,10 +1728,10 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
     </div>
     <button
       type="button"
-      onClick={() => setEditingItem({ ...editingItem, is_active: !editingItem.is_active })}
-      className={`w-16 h-10 rounded-full relative transition-colors ${editingItem.is_active ? 'bg-green-500' : 'bg-slate-300'}`}
+      onClick={() => setEditingItem({ ...editingItem, is_available: !editingItem.is_available })}
+      className={`w-16 h-10 rounded-full relative transition-colors ${editingItem.is_available ? 'bg-green-500' : 'bg-slate-300'}`}
     >
-      <div className={`absolute top-1 w-8 h-8 bg-white rounded-full shadow-md transition-all ${editingItem.is_active ? 'left-7' : 'left-1'}`}></div>
+      <div className={`absolute top-1 w-8 h-8 bg-white rounded-full shadow-md transition-all ${editingItem.is_available ? 'left-7' : 'left-1'}`}></div>
     </button>
   </div>
 
@@ -3472,7 +3521,6 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
 </motion.div>
             )}
           </AnimatePresence>
-        </div>
       </>
   );
 }

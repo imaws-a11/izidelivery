@@ -17,6 +17,28 @@ export default function MerchantsTab() {
           <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Gestão de Lojistas</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">Gerencie os estabelecimentos parceiros da plataforma.</p>
         </div>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => {
+              setEditType('merchant');
+              setEditingItem({
+                store_name: '',
+                email: '',
+                password: '',
+                store_type: 'restaurant',
+                commission_percent: appSettings.appCommission || 15,
+                service_fee: appSettings.serviceFee || 1.5,
+                is_active: true,
+                role: 'merchant'
+              });
+              setActiveTab('my_studio');
+            }}
+            className="px-6 py-3 bg-primary text-slate-900 font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-primary/90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20 font-sans"
+          >
+            <span className="material-symbols-outlined text-lg">add</span>
+            Novo Lojista
+          </button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative">
