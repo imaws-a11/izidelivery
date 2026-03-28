@@ -1,6 +1,8 @@
 import React from 'react';
 import { supabase } from '../lib/supabase';
+import { useAdmin } from '../context/AdminContext';
 import FlashOfferTimerModal from './FlashOfferTimerModal';
+
 
 interface FlashOffersSectionProps {
   userRole: string;
@@ -8,9 +10,12 @@ interface FlashOffersSectionProps {
 }
 
 const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) => {
+  const { handleFileUpload } = useAdmin();
   const [offers, setOffers] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [uploadingImage, setUploadingImage] = React.useState(false);
   const [showForm, setShowForm] = React.useState(false);
+
   const [merchants, setMerchants] = React.useState<any[]>([]);
   const [dateModalOpen, setDateModalOpen] = React.useState(false);
   const [form, setForm] = React.useState({
@@ -166,28 +171,37 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
                   </>
                 ) : (
                   <div className="text-center p-4 pointer-events-none">
-                    <span className="material-symbols-outlined text-3xl text-slate-300 mb-1">add_a_photo</span>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Selecionar Foto</p>
+                    {uploadingImage ? (
+                      <div className="w-8 h-8 border-2 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    ) : (
+                      <span className="material-symbols-outlined text-3xl text-slate-300 mb-1">add_a_photo</span>
+                    )}
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                      {uploadingImage ? 'Enviando...' : 'Selecionar Foto'}
+                    </p>
                   </div>
                 )}
+
                 <input
                   type="file"
                   accept="image/*"
                   className="absolute inset-0 opacity-0 cursor-pointer"
+                  disabled={uploadingImage}
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
-                    const fileName = `${Math.random()}.${file.name.split('.').pop()}`;
+                    setUploadingImage(true);
                     try {
-                      const { error: uploadError } = await supabase.storage.from('products').upload(fileName, file);
-                      if (uploadError) throw uploadError;
-                      const { data } = supabase.storage.from('products').getPublicUrl(fileName);
-                      setForm({ ...form, product_image: data.publicUrl });
-                    } catch (error: any) {
-                      alert('Erro ao enviar imagem: ' + error.message);
+                      const url = await handleFileUpload(file, 'products');
+                      if (url) {
+                        setForm({ ...form, product_image: url });
+                      }
+                    } finally {
+                      setUploadingImage(false);
                     }
                   }}
                 />
+
               </div>
             </div>
 
