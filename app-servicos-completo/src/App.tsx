@@ -2283,7 +2283,9 @@ function App() {
       img: f.product_image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600',
       oldPrice: Number(f.original_price),
       price: Number(f.discounted_price),
-      off: `${f.discount_percent}% OFF`,
+      off: f.original_price && f.discounted_price 
+        ? `- R$ ${(Number(f.original_price) - Number(f.discounted_price)).toFixed(2).replace('.', ',')} OFF` 
+        : `- R$ ${(Number(f.original_price) * (Number(f.discount_percent) / 100)).toFixed(2).replace('.', ',')} OFF`,
       desc: f.description || 'Oferta exclusiva e por tempo limitado para membros Izi Black.'
     })) : [
       {

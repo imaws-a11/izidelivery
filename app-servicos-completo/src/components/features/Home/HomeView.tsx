@@ -113,11 +113,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
     const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     const timeLeft = diffHrs > 0 ? diffHrs + "h" : diffMins + "min";
-    const discount = offer.discount_percent
-      ? offer.discount_percent + "% OFF"
-      : offer.discounted_price && offer.original_price
-        ? Math.round((1 - offer.discounted_price / offer.original_price) * 100) + "% OFF"
-        : "Oferta";
+    const savings = offer.original_price && offer.discounted_price
+      ? Number(offer.original_price) - Number(offer.discounted_price)
+      : offer.original_price && offer.discount_percent
+        ? Number(offer.original_price) * (Number(offer.discount_percent) / 100)
+        : null;
+    
+    const discount = savings 
+      ? `- R$ ${savings.toFixed(2).replace('.', ',')}` 
+      : "Oferta Flash";
 
     return {
       id: offer.id,

@@ -92,8 +92,8 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
     fetchOffers();
   };
 
-  const discountPct = form.original_price && form.discounted_price
-    ? Math.round((1 - Number(form.discounted_price) / Number(form.original_price)) * 100)
+  const discountValue = form.original_price && form.discounted_price
+    ? Number(form.original_price) - Number(form.discounted_price)
     : 0;
 
   return (
@@ -144,7 +144,7 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
               <input type="number" value={form.discounted_price} onChange={e => setForm({ ...form, discounted_price: e.target.value })} placeholder="0,00" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400" />
               {form.original_price && form.discounted_price && (
                 <p className="text-[10px] font-black text-emerald-500">
-                  Desconto: {discountPct}% ✓
+                  Economia: R$ {discountValue.toFixed(2).replace('.', ',')} ✓
                 </p>
               )}
 
@@ -260,7 +260,9 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{offer.admin_users?.store_name || 'Sem lojista'}</p>
                       <h4 className="text-sm font-black text-slate-900 dark:text-white leading-tight">{offer.product_name}</h4>
                     </div>
-                    <span className="text-[10px] font-black text-white bg-rose-500 px-2.5 py-1 rounded-xl shrink-0">-{offer.discount_percent}%</span>
+                    <span className="text-[10px] font-black text-white bg-rose-500 px-2.5 py-1 rounded-xl shrink-0">
+                      -R$ {(Number(offer.original_price) - Number(offer.discounted_price)).toFixed(2).replace('.', ',')}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-400 line-through">R$ {Number(offer.original_price).toFixed(2)}</span>
