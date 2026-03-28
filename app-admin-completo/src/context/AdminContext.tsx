@@ -1,55 +1,10 @@
-/**
- * AdminContext
- * Centraliza todos os estados e handlers do painel admin,
- * permitindo que as tabs sejam extraídas como componentes independentes.
- */
 import { createContext, useContext } from 'react';
 import type {
   Order, Driver, User, Merchant, MerchantProfile,
   Product, Category, Promotion, DedicatedSlot,
-  AuditLog, WalletTransaction, MenuCategory, DynamicRatesState
+  AuditLog, WalletTransaction, MenuCategory, DynamicRatesState,
+  Tab, UserRole, AppSettings, DashboardData
 } from '../lib/types';
-
-export type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'financial' |
-  'settings' | 'support' | 'promotions' | 'categories' | 'dynamic_rates' |
-  'audit_logs' | 'my_store' | 'my_drivers' | 'my_studio' | 'merchants' | 'izi_black';
-
-export type UserRole = 'admin' | 'merchant';
-
-export interface AppSettings {
-  appName: string;
-  supportEmail: string;
-  openingTime: string;
-  closingTime: string;
-  radius: number;
-  baseFee: string;
-  appCommission: number;
-  serviceFee: number;
-  smsNotifications: boolean;
-  emailNotifications: boolean;
-  iziBlackFee: number;
-  iziBlackCashback: number;
-  iziBlackMinOrderFreeShipping: number;
-  flashOfferTitle: string;
-  flashOfferDiscount: number;
-  flashOfferExpiry: string;
-}
-
-export interface DashboardData {
-  totalRevenue: number;
-  totalOrders: number;
-  completedOrdersCount: number;
-  avgTicket: number;
-  netProfit: number;
-  totalCommission: number;
-  deliverySuccessRate: number;
-  dailyRevenue: number[];
-  revenuePath: string;
-  dayLabels: string[];
-  totalOrdersToday: number;
-  categories: any[];
-  topMerchants: any[];
-}
 
 export interface AdminContextType {
   // Auth
@@ -57,6 +12,7 @@ export interface AdminContextType {
   userRole: UserRole;
   merchantProfile: MerchantProfile | null;
   setMerchantProfile: (p: MerchantProfile | null) => void;
+  handleLogout: () => Promise<void>;
 
   // Navigation
   activeTab: Tab;
