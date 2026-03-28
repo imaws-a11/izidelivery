@@ -2509,18 +2509,20 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
         city: editingItem.city,
         state: editingItem.state,
         document: editingItem.document,
-        password: editingItem.password,
+        // SEGURANÇA: Não persistir senha em texto plano no banco
+        password: null,
         updated_at: new Date().toISOString()
       });
       if (error) throw error;
       
+      // Sincronizar credenciais com Firebase Auth via Edge Function (sem persistir senha no banco)
       try {
         if (editingItem.email && editingItem.password) {
           const callerEmail = session?.user?.email || '';
           const { data, error: fnError } = await supabase.functions.invoke('manage-merchant-auth', {
             body: {
               targetEmail: editingItem.email,
-              targetPassword: editingItem.password,
+              targetPassword: editingItem.password, // Enviada diretamente para o Firebase, não armazenada
               name: editingItem.store_name || 'Lojista',
               callerEmail: callerEmail,
             }
@@ -3944,6 +3946,8 @@ toastSuccess('Configurações de precificação dinâmica publicadas com sucesso
     handleFileUpload: async () => "",
     handleUpdateDispatchSettings: async () => {},
     handleSeedCategories: async () => {},
+    savePromotion,
+    autoSavePromo,
   } as any;
 
   return (

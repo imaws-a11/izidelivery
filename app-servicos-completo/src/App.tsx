@@ -224,10 +224,9 @@ function App() {
       const cards = data.map((c: any) => ({
         id: c.id,
         brand: c.brand,
-        last4: c.last4,
-        expiry: c.expiry,
+        last4: c.last_four,
+        mp_token: c.token,
         active: c.is_default,
-        stripe_payment_method_id: c.stripe_payment_method_id,
         color: c.brand === "Visa"
           ? "linear-gradient(135deg, #2563eb, #1e40af)"
           : c.brand === "Amex"
@@ -1119,7 +1118,7 @@ function App() {
   const [selectedShop, setSelectedShop] = useState<any>(null);
   const [pixConfirmed, setPixConfirmed] = useState<boolean>(false);
   const [pixCpf, setPixCpf] = useState<string>("");
-  const [stripePaymentMethodId, setStripePaymentMethodId] = useState<string | null>(null);
+
   const [selectedCard, setSelectedCard] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState<string>("Destaques");
   const [restaurantInitialCategory, setRestaurantInitialCategory] = useState("Todos");
@@ -4608,10 +4607,9 @@ function App() {
                      const { data: inserted, error } = await supabase.from("payment_methods").insert({
                        user_id: userId,
                        brand: brand,
-                       last4: last4,
-                       expiry: "12/29",
+                       last_four: last4,
                        is_default: savedCards.length === 0,
-                       stripe_payment_method_id: token
+                       token: token
                      }).select().single();
 
                      if (error) throw error;
@@ -4626,8 +4624,8 @@ function App() {
                         if (inserted) setSelectedCard({
                           id: inserted.id,
                           brand: inserted.brand,
-                          last4: inserted.last4,
-                          stripe_payment_method_id: inserted.stripe_payment_method_id
+                          last4: inserted.last_four,
+                          mp_token: inserted.token
                         });
                      }
                    } catch (err: any) {

@@ -7,7 +7,7 @@ import { createContext, useContext } from 'react';
 import type {
   Order, Driver, User, Merchant, MerchantProfile,
   Product, Category, Promotion, DedicatedSlot,
-  AuditLog, WalletTransaction, DynamicRate, MenuCategory, DynamicRatesState
+  AuditLog, WalletTransaction, MenuCategory, DynamicRatesState
 } from '../lib/types';
 
 export type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'financial' |
@@ -271,6 +271,8 @@ export interface AdminContextType {
   handleFileUpload: (file: File, bucket?: string) => Promise<string | null>;
   handleUpdateDispatchSettings: (field: 'dispatch_priority' | 'scheduling_priority', value: string) => Promise<void>;
   handleSeedCategories: () => Promise<void>;
+  savePromotion: (promo: any) => Promise<void>;
+  autoSavePromo: (updatedPromo: any) => void;
 }
 
 export const AdminContext = createContext<AdminContextType | null>(null);
