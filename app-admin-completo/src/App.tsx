@@ -12,6 +12,7 @@ import OrdersAdminTab from './components/OrdersAdminTab';
 import OrdersMerchantTab from './components/OrdersMerchantTab';
 import DriversTab from './components/DriversTab';
 import UsersTab from './components/UsersTab';
+import PromotionsTab from './components/PromotionsTab';
 
 import DynamicRatesTab from './components/DynamicRatesTab';
 import AuditLogsTab from './components/AuditLogsTab';
@@ -65,7 +66,7 @@ function App() {
         </div>
         <div className="text-center space-y-3">
           <h2 className="text-xl font-black text-white uppercase tracking-tighter">Izi Delivery</h2>
-          <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] animate-pulse">Sincronizando SessÃ£o...</p>
+          <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] animate-pulse">Sincronizando Sessão...</p>
         </div>
       </div>
     );
@@ -84,7 +85,7 @@ function App() {
               <span className="material-symbols-outlined text-4xl text-slate-900 font-black">local_shipping</span>
             </div>
             <h1 className="text-3xl font-black text-white tracking-tighter uppercase mb-2">Painel Admin</h1>
-            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em]">GestÃ£o Delivery de Tudo</p>
+            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em]">Gestão Delivery de Tudo</p>
           </div>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1">
@@ -147,9 +148,10 @@ function App() {
                <>
                   <NavTab id="dashboard" icon="dashboard" label="Home" />
                   <NavTab id="merchants" icon="storefront" label="Lojistas" />
-                  <NavTab id="my_studio" icon="inventory_2" label="EstÃºdios" />
+                  <NavTab id="my_studio" icon="inventory_2" label="Estúdios" />
                   <NavTab id="drivers" icon="person_pin_circle" label="Entregadores" />
                   <NavTab id="users" icon="group" label="Estúdio" />
+                  <NavTab id="promotions" icon="campaign" label="Promoções" />
                   <NavTab id="dynamic_rates" icon="payments" label="Taxas" />
                   <NavTab id="audit_logs" icon="history" label="Logs" />
                   <NavTab id="support" icon="support_agent" label="Suporte" />
@@ -189,6 +191,7 @@ function App() {
               {activeTab === 'orders' && userRole === 'merchant' && <OrdersMerchantTab />}
               {activeTab === 'drivers' && userRole === 'admin' && <DriversTab />}
               {activeTab === 'users' && userRole === 'admin' && <UsersTab />}
+              {activeTab === 'promotions' && userRole === 'admin' && <PromotionsTab />}
               {activeTab === 'dynamic_rates' && userRole === 'admin' && <DynamicRatesTab />}
               {activeTab === 'audit_logs' && userRole === 'admin' && <AuditLogsTab />}
               {activeTab === 'settings' && userRole === 'admin' && <SettingsTab />}
@@ -209,7 +212,7 @@ function App() {
           <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setShowActiveOrdersModal(false)} />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[48px] overflow-hidden shadow-2xl relative z-10 border border-white/10 p-10 font-display">
-                <h2 className="text-2xl font-black uppercase italic mb-6 tracking-tighter">Monitor de OperaÃ§Ãµes Ativas</h2>
+                <h2 className="text-2xl font-black uppercase italic mb-6 tracking-tighter">Monitor de Operações Ativas</h2>
                 <div className="h-96 flex items-center justify-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[32px]">
                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Sincronizando fluxo de pedidos...</p>
                 </div>
