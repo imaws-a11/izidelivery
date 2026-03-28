@@ -41,8 +41,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 />
             </div>
             {isIziBlackMembership && (
-              <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black p-1 rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(255,215,9,0.5)] border-4 border-black">
-                <span className="material-symbols-outlined text-sm font-black" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+              <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black size-6 rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(255,215,9,0.5)] border-2 border-black z-20">
+                <span className="material-symbols-outlined text-sm font-bold" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
               </div>
             )}
           </div>

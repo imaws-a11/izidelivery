@@ -124,7 +124,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <img className="w-full h-full object-cover" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" />
             </div>
             {isIziBlackMembership && (
-              <div className="absolute -bottom-0.5 -right-0.5 bg-yellow-400 text-black p-0.5 rounded-full flex items-center justify-center shadow-[0_2px_8px_rgba(255,215,9,0.5)] border-2 border-black">
+              <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black w-3.5 h-3.5 rounded-full flex items-center justify-center shadow-[0_2px_8px_rgba(255,215,9,0.5)] border border-black z-10">
                 <span className="material-symbols-outlined text-[10px] font-black" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
               </div>
             )}
