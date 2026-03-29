@@ -11,6 +11,8 @@ import type {
 } from '../lib/types';
 import { useAuth } from './AuthContext';
 import { toastSuccess, toastError, toastWarning, showConfirm } from '../lib/useToast';
+import { playIziSound } from '../lib/iziSounds';
+
 
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -434,6 +436,37 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsLoadingList(false);
     }
   }, [userRole, merchantProfile]);
+
+  // Realtime Listeners for Merchant
+  useEffect(() => {
+    if (userRole !== 'merchant' || !merchantProfile?.merchant_id) return;
+
+    const channel = supabase
+      .channel('merchant_orders_realtime')
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'orders_delivery',
+          filter: `merchant_id=eq.${merchantProfile.merchant_id}`
+        },
+        (payload) => {
+          console.log('Novo pedido recebido em tempo real:', payload);
+          // Tocar o som "triiiiimmmm!"
+          playIziSound('merchant');
+          // Mostrar notificação visual
+          setNewOrderNotification({ show: true, orderId: payload.new.id });
+          // Atualizar lista
+          fetchAllOrders(merchantOrdersPage);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userRole, merchantProfile, merchantOrdersPage, fetchAllOrders]);
 
   const fetchSubscriptionOrders = useCallback(async (page = 1) => {
     setIsLoadingList(true);

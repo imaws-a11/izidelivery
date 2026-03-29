@@ -149,7 +149,9 @@ export default function OrdersMerchantTab() {
                       </div>
                       <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Destino</p>
-                        <p className="text-xs font-bold text-slate-600 dark:text-slate-300 line-clamp-2">{parseOrderAddress(o.delivery_address).address}</p>
+                        <p className="text-xs font-bold text-slate-600 dark:text-slate-300 line-clamp-2">
+                          {parseOrderAddress(o.delivery_address).address === 'Buscando localização...' ? 'Localização em processamento' : parseOrderAddress(o.delivery_address).address}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
