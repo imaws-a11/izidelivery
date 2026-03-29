@@ -379,10 +379,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [merchantProfile]);
 
-  const fetchMenuCategories = useCallback(async () => {
-    if (!merchantProfile?.merchant_id) return;
+  const fetchMenuCategories = useCallback(async (explicitMerchantId?: string) => {
+    const idToUse = explicitMerchantId || merchantProfile?.merchant_id;
+    if (!idToUse) return;
     try {
-      const { data } = await supabase.from('merchant_categories_delivery').select('*').eq('merchant_id', merchantProfile.merchant_id).order('sort_order', { ascending: true });
+      const { data } = await supabase.from('merchant_categories_delivery').select('*').eq('merchant_id', idToUse).order('sort_order', { ascending: true });
       if (data) setMenuCategoriesList(data as MenuCategory[]);
     } catch (err) {
       console.error('Erro ao buscar categorias do menu:', err);

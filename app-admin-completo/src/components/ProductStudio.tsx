@@ -10,7 +10,7 @@ interface ProductStudioProps {
   menuCategoriesList: any[];
   handleFileUpload: (file: File, path: string) => Promise<string | null>;
   merchantId: string;
-  fetchMenuCategories: () => void;
+  fetchMenuCategories: (merchantId?: string) => void;
 }
 
 export const ProductStudio: React.FC<ProductStudioProps> = ({ 
@@ -29,7 +29,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
   const [activeTab, setActiveTab] = useState<'info' | 'options'>('info');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
-  const [isAddingCategory, setIsAddingCategory] = useState<{ parentId: string | null, title: string } | null>(null);
+  const [categoryModal, setCategoryModal] = useState<{ mode: 'create' | 'edit', parentId: string | null, categoryId?: string, title: string, initialName?: string } | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
 
   useEffect(() => {
@@ -156,35 +156,102 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
 
   const handleCreateQuickCategory = (parentId: string | null = null) => {
     const title = parentId ? 'Criar Subcategoria' : 'Criar Nova Categoria';
-    setIsAddingCategory({ parentId, title });
+    setCategoryModal({ mode: 'create', parentId, title });
     setNewCategoryName('');
   };
 
-  const saveNewCategory = async () => {
-    if (!newCategoryName.trim()) return;
+  const handleEditCategory = (cat: any) => {
+    setCategoryModal({ mode: 'edit', parentId: cat.parent_id, categoryId: cat.id, title: 'Editar Categoria', initialName: cat.name });
+    setNewCategoryName(cat.name);
+  };
+
+  const saveCategory = async () => {
+    if (!newCategoryName.trim() || !categoryModal) return;
     
     try {
       setIsSaving(true);
-      const { error } = await supabase
-        .from('merchant_categories_delivery')
-        .insert([{
-          merchant_id: merchantId,
-          name: newCategoryName.trim(),
-          parent_id: isAddingCategory?.parentId,
-          is_active: true,
-          sort_order: 0
-        }]);
-
-      if (error) throw error;
+      if (categoryModal.mode === 'create') {
+        const { error } = await supabase
+          .from('merchant_categories_delivery')
+          .insert([{
+            merchant_id: merchantId,
+            name: newCategoryName.trim(),
+            parent_id: categoryModal.parentId,
+            is_active: true,
+            sort_order: 0
+          }]);
+        if (error) throw error;
+        toastSuccess(`${categoryModal.title} concluída!`);
+      } else {
+         const { error } = await supabase
+           .from('merchant_categories_delivery')
+           .update({ name: newCategoryName.trim() })
+           .eq('id', categoryModal.categoryId);
+         if (error) throw error;
+         
+         if (categoryModal.initialName === editingItem.category) {
+           setEditingItem({ ...editingItem, category: newCategoryName.trim() });
+         } else if (categoryModal.initialName === editingItem.subcategory || categoryModal.initialName === editingItem.sub_category) {
+           setEditingItem({ ...editingItem, subcategory: newCategoryName.trim(), sub_category: newCategoryName.trim() });
+         }
+         toastSuccess(`Categoria atualizada!`);
+      }
       
-      toastSuccess(`${isAddingCategory?.title} concluída!`);
-      fetchMenuCategories();
-      setIsAddingCategory(null);
+      // Update the categories explicitly using the current merchantId
+      fetchMenuCategories(merchantId);
+      setCategoryModal(null);
     } catch (err: any) {
-      toastError('Erro ao criar: ' + err.message);
+      toastError('Erro ao salvar categoria: ' + err.message);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const deleteCategory = async () => {
+     if (!categoryModal?.categoryId) return;
+     
+     const hasSubcategories = !categoryModal.parentId && menuCategoriesList.some(c => c.parent_id === categoryModal.categoryId);
+     const message = hasSubcategories 
+       ? 'Esta categoria possui subcategorias. Todas elas também serão EXCLUÍDAS. Deseja continuar?'
+       : 'Deseja excluir esta categoria? Produtos associados poderão ficar sem grupo.';
+
+     if (await showConfirm({ title: 'Atenção, Exclusão!', message, danger: true })) {
+       try {
+         setIsSaving(true);
+         
+         // Se for categoria principal, exclui as subcategorias primeiro para não dar erro de foreign key
+         if (!categoryModal.parentId) {
+           const { error: subError } = await supabase
+             .from('merchant_categories_delivery')
+             .delete()
+             .eq('parent_id', categoryModal.categoryId);
+           if (subError) throw subError;
+         }
+
+         // Exclui a categoria principal (ou subcategoria)
+         const { error } = await supabase
+           .from('merchant_categories_delivery')
+           .delete()
+           .eq('id', categoryModal.categoryId);
+           
+         if (error) throw error;
+         
+         // Limpa do form atual se estiver sendo usado
+         if (categoryModal.initialName === editingItem.category) {
+           setEditingItem({ ...editingItem, category: '', subcategory: '', sub_category: '' });
+         } else if (categoryModal.initialName === editingItem.subcategory || categoryModal.initialName === editingItem.sub_category) {
+           setEditingItem({ ...editingItem, subcategory: '', sub_category: '' });
+         }
+
+         toastSuccess('Categoria excluída com sucesso!');
+         fetchMenuCategories(merchantId);
+         setCategoryModal(null);
+       } catch (err: any) {
+         toastError('Erro ao excluir: ' + err.message);
+       } finally {
+         setIsSaving(false);
+       }
+     }
   };
 
   const addOptionGroup = () => {
@@ -341,18 +408,26 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                           <p className="w-full text-center py-4 text-[10px] text-slate-600 font-black uppercase tracking-widest">Nenhuma categoria</p>
                         ) : (
                           menuCategoriesList.filter(c => !c.parent_id).map(cat => (
-                            <button
-                              key={cat.id}
-                              type="button"
-                              onClick={() => setEditingItem({...editingItem, category: cat.name, subcategory: ''})}
-                              className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                                editingItem.category === cat.name 
-                                ? 'bg-primary text-slate-950 border-primary shadow-lg shadow-primary/20 scale-105' 
-                                : 'bg-white/5 text-slate-500 border-white/5 hover:bg-white/10 hover:text-white'
-                              }`}
-                            >
-                              {cat.name}
-                            </button>
+                            <div key={cat.id} className="relative group flex items-center">
+                              <button
+                                type="button"
+                                onClick={() => setEditingItem({...editingItem, category: cat.name, subcategory: ''})}
+                                className={`px-4 py-3 pr-10 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                                  editingItem.category === cat.name 
+                                  ? 'bg-primary text-slate-950 border-primary shadow-lg shadow-primary/20 scale-105' 
+                                  : 'bg-white/5 text-slate-500 border-white/5 hover:bg-white/10 hover:text-white'
+                                }`}
+                              >
+                                {cat.name}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleEditCategory(cat); }}
+                                className={`absolute right-1 p-1.5 rounded-xl transition-all ${editingItem.category === cat.name ? 'text-slate-900/60 hover:text-slate-900 hover:bg-black/10' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                              >
+                                <span className="material-symbols-outlined text-[14px]">edit</span>
+                              </button>
+                            </div>
                           ))
                         )}
                       </div>
@@ -389,18 +464,26 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                         {menuCategoriesList
                           .filter(c => c.parent_id === menuCategoriesList.find(pc => pc.name === editingItem.category && !pc.parent_id)?.id)
                           .map(sub => (
-                            <button
-                              key={sub.id}
-                              type="button"
-                              onClick={() => setEditingItem({...editingItem, subcategory: sub.name, sub_category: sub.name})}
-                              className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                                (editingItem.subcategory === sub.name || editingItem.sub_category === sub.name)
-                                ? 'bg-primary text-slate-950 border-primary shadow-lg shadow-primary/20 scale-105' 
-                                : 'bg-white/5 text-slate-500 border-white/5 hover:bg-white/10 hover:text-white'
-                              }`}
-                            >
-                              {sub.name}
-                            </button>
+                            <div key={sub.id} className="relative group flex items-center">
+                              <button
+                                type="button"
+                                onClick={() => setEditingItem({...editingItem, subcategory: sub.name, sub_category: sub.name})}
+                                className={`px-4 py-3 pr-10 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                                  (editingItem.subcategory === sub.name || editingItem.sub_category === sub.name)
+                                  ? 'bg-primary text-slate-950 border-primary shadow-lg shadow-primary/20 scale-105' 
+                                  : 'bg-white/5 text-slate-500 border-white/5 hover:bg-white/10 hover:text-white'
+                                }`}
+                              >
+                                {sub.name}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleEditCategory(sub); }}
+                                className={`absolute right-1 p-1.5 rounded-xl transition-all ${(editingItem.subcategory === sub.name || editingItem.sub_category === sub.name) ? 'text-slate-900/60 hover:text-slate-900 hover:bg-black/10' : 'text-slate-500 hover:text-white hover:bg-white/10'}`}
+                              >
+                                <span className="material-symbols-outlined text-[14px]">edit</span>
+                              </button>
+                            </div>
                           ))
                         }
                       </div>
@@ -682,15 +765,15 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
           </div>
         </div>
       </motion.div>
-      {/* Modal de Nova Categoria */}
+      {/* Modal de Categoria */}
       <AnimatePresence>
-        {isAddingCategory && (
+        {categoryModal && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsAddingCategory(null)}
+              onClick={() => setCategoryModal(null)}
               className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             />
             <motion.div
@@ -701,13 +784,16 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
             >
               <div className="p-10 space-y-8">
                 <div className="flex items-center gap-4">
-                  <div className="size-12 rounded-2xl bg-primary flex items-center justify-center text-slate-950">
-                    <span className="material-symbols-outlined font-black">add_circle</span>
+                  <div className={`size-12 rounded-2xl ${categoryModal.mode === 'create' ? 'bg-primary' : 'bg-slate-800 text-white'} flex items-center justify-center ${categoryModal.mode === 'create' ? 'text-slate-950' : ''}`}>
+                    <span className="material-symbols-outlined font-black">{categoryModal.mode === 'create' ? 'add_circle' : 'edit'}</span>
                   </div>
                   <div>
-                    <h3 className="text-xl font-black">{isAddingCategory.title}</h3>
+                    <h3 className="text-xl font-black">{categoryModal.title}</h3>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                      {isAddingCategory.parentId ? 'Vincular à categoria selecionada' : 'Nova categoria principal'}
+                      {categoryModal.mode === 'create' 
+                        ? (categoryModal.parentId ? 'Vincular à categoria selecionada' : 'Nova categoria principal')
+                        : 'Atualize ou remova do cardápio'
+                      }
                     </p>
                   </div>
                 </div>
@@ -719,25 +805,40 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                     type="text"
                     value={newCategoryName}
                     onChange={e => setNewCategoryName(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && saveNewCategory()}
+                    onKeyDown={e => e.key === 'Enter' && saveCategory()}
                     placeholder="Ex: Pizzas Gourmet"
                     className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
                   />
                 </div>
 
                 <div className="flex gap-4">
-                  <button 
-                    onClick={() => setIsAddingCategory(null)}
-                    className="flex-1 py-5 text-slate-500 font-black text-[10px] uppercase tracking-widest hover:text-white transition-all"
-                  >
-                    Cancelar
-                  </button>
+                  <div className="flex-1 flex gap-2">
+                    <button 
+                      onClick={() => setCategoryModal(null)}
+                      className="px-6 py-5 rounded-3xl bg-white/5 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-white transition-all hover:bg-white/10"
+                    >
+                      Cancelar
+                    </button>
+                    {categoryModal.mode === 'edit' && (
+                      <button
+                        disabled={isSaving}
+                        onClick={deleteCategory}
+                        className="px-6 py-5 rounded-3xl bg-red-500/10 text-red-500 font-black text-[10px] uppercase tracking-widest hover:text-white transition-all hover:bg-red-500 flex items-center gap-2 group border border-red-500/20 disabled:opacity-50"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">delete</span>
+                      </button>
+                    )}
+                  </div>
                   <button 
                     disabled={isSaving || !newCategoryName.trim()}
-                    onClick={saveNewCategory}
-                    className="flex-[2] py-5 bg-primary text-slate-950 font-black text-[10px] uppercase tracking-widest rounded-3xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                    onClick={saveCategory}
+                    className="flex-[2] py-5 bg-primary text-slate-950 font-black text-[10px] uppercase tracking-widest rounded-3xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {isSaving ? 'Criando...' : 'Salvar Categoria'}
+                    {isSaving ? (
+                      <><span className="material-symbols-outlined text-[14px] animate-spin">refresh</span> Processando</>
+                    ) : (
+                      <><span className="material-symbols-outlined text-[14px]">save</span> Salvar</>
+                    )}
                   </button>
                 </div>
               </div>

@@ -362,19 +362,26 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       initial={{ opacity: 0, x: 20 }} 
                       animate={{ opacity: 1, x: 0 }} 
                       transition={{ delay: i * 0.1 }}
-                      className="relative flex-shrink-0 w-[240px] h-[100px] rounded-[24px] overflow-hidden group cursor-pointer border border-white/5 transition-all"
+                      className="relative flex-shrink-0 w-[240px] h-[100px] rounded-[24px] overflow-hidden group cursor-pointer transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
                     >
-                       <div className="absolute inset-0 bg-gradient-to-br from-zinc-900/80 to-zinc-900/40 backdrop-blur-xl group-hover:from-yellow-400/10 group-hover:to-zinc-800 transition-colors" />
+                       <img 
+                         src={coupon.image_url || `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400&h=200&sig=${i}`}
+                         alt="Cupom Especial" 
+                         className="absolute inset-0 w-full h-full object-cover brightness-[0.5] group-hover:brightness-[0.4] group-hover:scale-110 transition-all duration-700"
+                       />
+                       
+                       <div className="absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-black via-black/60 to-transparent" />
+
                        <div className="relative z-10 h-full p-4 flex justify-between items-center gap-3">
                           <div className="flex-1">
-                             <div className="flex items-center gap-1.5 mb-2">
-                                <span className="material-symbols-outlined text-[12px] text-yellow-400">confirmation_number</span>
-                                <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest">CUPOM ATIVO</span>
+                             <div className="flex items-center gap-1.5 mb-1.5">
+                                <span className="material-symbols-outlined text-[12px] text-yellow-400 drop-shadow-md">confirmation_number</span>
+                                <span className="text-[9px] font-black text-white px-2 py-0.5 bg-black/40 backdrop-blur-md rounded-md uppercase tracking-widest drop-shadow-md border border-white/5">CUPOM ATIVO</span>
                              </div>
-                             <h5 className="text-lg font-black text-white font-mono leading-none tracking-[0.1em]">{coupon.coupon_code}</h5>
-                             <p className="text-zinc-500 text-[9px] mt-2 font-bold uppercase tracking-tighter">
+                             <h5 className="text-xl font-black text-white font-mono leading-none tracking-[0.1em] drop-shadow-lg">{coupon.coupon_code}</h5>
+                             <p className="text-yellow-400 text-[10px] mt-1.5 font-black uppercase tracking-tighter drop-shadow-md">
                                 {coupon.discount_type === "fixed" ? `R$${coupon.discount_value} OFF` : `${coupon.discount_value}% OFF`}
-                                {coupon.min_order_value > 0 && ` • +R$${coupon.min_order_value}`}
+                                {coupon.min_order_value > 0 && ` • Min R$${coupon.min_order_value}`}
                              </p>
                           </div>
                           
@@ -386,9 +393,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                               setTimeout(() => setCopiedCoupon(null), 2000); 
                               showToast("Código copiado! \uD83C\uDFAB", "success");
                             }}
-                            className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${isCopied ? "bg-emerald-500" : "bg-white/10 group-hover:bg-yellow-400 group-hover:text-black"}`}
+                            className={`size-10 rounded-[14px] flex items-center justify-center transition-all duration-300 backdrop-blur-md shadow-lg border border-white/20 ${isCopied ? "bg-emerald-500 border-none scale-110" : "bg-black/40 group-hover:bg-yellow-400 group-hover:text-black group-hover:border-black/10"}`}
                           >
-                             <span className={`material-symbols-outlined ${isCopied ? "text-white" : "text-white group-hover:text-black"} text-xl`}>
+                             <span className={`material-symbols-outlined ${isCopied ? "text-white" : "text-white group-hover:text-black"} text-lg leading-none`}>
                                {isCopied ? "check" : "content_copy"}
                              </span>
                           </button>
