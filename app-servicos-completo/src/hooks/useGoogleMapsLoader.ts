@@ -1,5 +1,7 @@
 import { useJsApiLoader } from '@react-google-maps/api';
 
+import { GMAPS_KEY } from './config';
+
 const LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 
 /**
@@ -10,7 +12,7 @@ const LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 export function useGoogleMapsLoader() {
   return useJsApiLoader({
     id: 'izi-google-maps',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string ?? '',
+    googleMapsApiKey: GMAPS_KEY,
     libraries: LIBRARIES,
     language: 'pt-BR',
     region: 'BR',
