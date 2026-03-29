@@ -12,6 +12,13 @@ export const ProductSelectorModal: React.FC<ProductSelectorModalProps> = ({ isOp
   const [localSelection, setLocalSelection] = useState<any[]>(selectedProducts);
   const [search, setSearch] = useState("");
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setLocalSelection(selectedProducts);
+      setSearch("");
+    }
+  }, [isOpen, selectedProducts]);
+
   if (!isOpen) return null;
 
   const filteredProducts = products.filter(p => 
