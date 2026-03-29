@@ -26,8 +26,8 @@ export default function OrdersMerchantTab() {
   // Pedidos que precisam de INTERVENÇÃO (Aceitar/Recusar)
   const pendingOrders = myOrders.filter((o: any) => o.status === 'waiting_merchant' || o.status === 'novo');
   
-  // Pedidos aguardando pagamento (PIX)
-  const waitingPaymentOrders = myOrders.filter((o: any) => o.status === 'pendente_pagamento');
+  // Pedidos aguardando pagamento (EXCLUÍDOS DA VISÃO DO LOJISTA ATÉ CONFIRMAÇÃO)
+  const waitingPaymentOrders: any[] = [];
   
   // Pedidos em PRODUÇÃO ou ENTREGA
   const ongoingOrders = myOrders.filter((o: any) => ['preparando', 'pronto', 'pendente', 'waiting_driver', 'accepted', 'picked_up', 'em_rota', 'a_caminho'].includes(o.status));
@@ -225,37 +225,7 @@ export default function OrdersMerchantTab() {
           </div>
       )}
 
-      <AnimatePresence>
-        {waitingPaymentOrders.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="space-y-4"
-          >
-            <h3 className="text-sm font-black text-amber-500 uppercase tracking-[0.2em] flex items-center gap-2 ml-1">
-              <span className="material-symbols-outlined text-lg">hourglass_bottom</span>
-              Aguardando Pagamento (PIX)
-            </h3>
-            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-               {waitingPaymentOrders.map((o: any) => (
-                 <div 
-                  key={o.id} 
-                  onClick={() => setSelectedOrderDetails(o)}
-                  className="min-w-[280px] bg-amber-50/50 dark:bg-amber-500/5 p-4 rounded-3xl border border-amber-100 dark:border-amber-500/10 cursor-pointer hover:border-amber-300 transition-all"
-                >
-                    <div className="flex items-center justify-between mb-2">
-                       <span className="text-[10px] font-black text-amber-600">#DT-{o.id.slice(0,8).toUpperCase()}</span>
-                       <span className="text-[9px] font-black text-amber-400 uppercase italic">Verificando...</span>
-                    </div>
-                    <p className="text-sm font-black text-slate-700 dark:text-amber-100 mb-1">R$ {o.total_price?.toFixed(2).replace('.',',')}</p>
-                    <p className="text-[10px] font-medium text-slate-400 truncate">{parseOrderAddress(o.delivery_address).address}</p>
-                 </div>
-               ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Seção de Aguardando Pagamento removida conforme solicitação */}
 
       <div className="space-y-4">
         <div className="flex items-center justify-between ml-1">
@@ -329,7 +299,7 @@ export default function OrdersMerchantTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {myOrders.map((o: any) => (
+              {myOrders.filter((o: any) => o.status !== 'pendente_pagamento').map((o: any) => (
                 <tr key={o.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                   <td className="px-8 py-6 font-bold text-slate-400 text-sm group-hover:text-primary transition-colors">#DT-{o.id.slice(0, 8).toUpperCase()}</td>
                   <td className="px-8 py-6">
