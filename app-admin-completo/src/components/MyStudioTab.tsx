@@ -60,6 +60,7 @@ export default function MyStudioTab() {
   const [tempDate, setTempDate] = React.useState('');
   const [tempTime, setTempTime] = React.useState('');
   const [selectedProductStudio, setSelectedProductStudio] = React.useState<any>(null);
+  const [productSearch, setProductSearch] = React.useState('');
 
   const targetMerchantId = userRole === 'merchant' ? merchantProfile?.merchant_id : selectedMerchantPreview?.id;
 
@@ -99,7 +100,7 @@ export default function MyStudioTab() {
             key={activePreviewTab}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="max-w-4xl mx-auto w-full"
+            className="max-w-6xl mx-auto w-full"
           >
             {activePreviewTab === 'info' && (
               <div className="space-y-12 pb-20">
@@ -429,7 +430,8 @@ export default function MyStudioTab() {
 
                  <div className="space-y-12">
                    {(() => {
-                      const currentProducts = userRole === 'merchant' ? productsList : previewProducts;
+                      const currentProducts = (userRole === 'merchant' ? productsList : previewProducts)
+                        .filter(p => !productSearch || p.name?.toLowerCase().includes(productSearch.toLowerCase()) || p.category?.toLowerCase().includes(productSearch.toLowerCase()));
                       const grouped: Record<string, any[]> = {};
                       currentProducts.forEach(p => {
                         const cat = p.category || 'Sem Categoria';
@@ -464,9 +466,7 @@ export default function MyStudioTab() {
                                   key={p.id} 
                                   className="bg-white dark:bg-slate-800 p-4 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm flex gap-4 items-center group hover:border-primary/30 transition-all cursor-pointer relative overflow-hidden"
                                   onClick={() => {
-                                    if (userRole === 'merchant') {
-                                       setSelectedProductStudio(p);
-                                    }
+                                     setSelectedProductStudio(p);
                                   }}
                                 >
                                   {p.featured && (
