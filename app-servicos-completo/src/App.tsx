@@ -1134,9 +1134,14 @@ function App() {
   const viewRef = useRef(view);
   const tabRef = useRef(tab);
   const subViewRef = useRef(subView);
+  const userIdRef = useRef(userId);
+  const selectedItemRef = useRef(selectedItem);
 
   useEffect(() => { viewRef.current = view; }, [view]);
   useEffect(() => { tabRef.current = tab; }, [tab]);
+  useEffect(() => { subViewRef.current = subView; }, [subView]);
+  useEffect(() => { userIdRef.current = userId; }, [userId]);
+  useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showLojistasModal, setShowLojistasModal] = useState(false);
@@ -1288,13 +1293,6 @@ function App() {
       setRememberMe(true);
     }
   }, []);
-
-  const userIdRef = useRef(userId);
-  useEffect(() => { userIdRef.current = userId; }, [userId]);
-  const subViewRef = useRef(subView);
-  useEffect(() => { subViewRef.current = subView; }, [subView]);
-  const selectedItemRef = useRef(selectedItem);
-  useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   const [ESTABLISHMENTS, setESTABLISHMENTS] = useState<any[]>([]);
 
   const isStoreOpen = useCallback((openingHours: any, manualOpen: boolean) => {
