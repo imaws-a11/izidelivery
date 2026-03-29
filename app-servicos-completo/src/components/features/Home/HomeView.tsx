@@ -113,21 +113,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
     const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     const timeLeft = diffHrs > 0 ? diffHrs + "h" : diffMins + "min";
-    const savings = offer.original_price && offer.discounted_price
-      ? Number(offer.original_price) - Number(offer.discounted_price)
-      : offer.original_price && offer.discount_percent
-        ? Number(offer.original_price) * (Number(offer.discount_percent) / 100)
-        : null;
     
-    const discount = savings 
-      ? `- R$ ${savings.toFixed(2).replace('.', ',')}` 
-      : "Oferta Flash";
+    // Calcula o preco final
+    let finalPrice = Number(offer.discounted_price);
+    if (!finalPrice && offer.original_price && offer.discount_percent) {
+        finalPrice = Number(offer.original_price) * (1 - (Number(offer.discount_percent) / 100));
+    }
+    
+    const discountText = finalPrice 
+      ? `R$ ${finalPrice.toFixed(2).replace('.', ',')}` 
+      : "Flash";
 
     return {
       id: offer.id,
       merchant: offer.admin_users?.store_name || offer.merchant_name || "Loja",
       name: offer.product_name,
-      discount,
+      discount: discountText,
       timeLeft,
       img: offer.product_image || offer.admin_users?.store_logo || "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=400",
       isMaster: userLevel >= 10 && offer.is_vip,
@@ -302,7 +303,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <span className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">AO VIVO</span>
               </div>
               
-              <div className="flex gap-5 overflow-x-auto no-scrollbar pb-2 -mx-5 px-5 h-[180px]">
+              <div className="flex gap-5 overflow-x-auto no-scrollbar pb-2 -mx-5 px-5 h-[200px]">
                 {activeStories.map(story => (
                   <motion.div 
                     key={story.id} 
@@ -310,9 +311,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     onClick={() => {
                       if (story.isMaster && userLevel < 10) showToast("Esta oferta é exclusiva para membros Tier MASTER.", "info");
                       else if (story.isMaster) setShowMasterPerks(true);
-                      else showToast(`Izi Flash: Oferta de ${story.discount} ativada para ${story.merchant}! ${story.name || ""}`, "success");
+                      else {
+                        const fakeItem = {
+                          id: story.offer.id,
+                          name: story.offer.product_name || "Oferta Izi Flash",
+                          desc: (story.offer.description || "Oferta imperdível por tempo limitado!") + `\n\n📌 Vendido por: ${story.merchant}`,
+                          price: Number(story.offer.discounted_price),
+                          oldPrice: Number(story.offer.original_price),
+                          img: story.img,
+                          merchant_id: story.offer.merchant_id,
+                          merchant_name: story.merchant,
+                          is_flash_offer: true
+                        };
+                        setSelectedItem(fakeItem);
+                        setSubView("product_detail");
+                      }
                     }}
-                    className={`relative flex-shrink-0 w-32 h-[170px] rounded-[32px] p-[1.5px] bg-gradient-to-tr ${story.isMaster ? "from-yellow-400 via-zinc-800 to-amber-600 shadow-[0_4px_20px_rgba(255,215,9,0.3)]" : "from-red-500 via-rose-500 to-orange-400 shadow-[0_4px_20px_rgba(239,68,68,0.2)]"} cursor-pointer transition-all group`}
+                    className={`relative flex-shrink-0 w-32 h-[190px] rounded-[32px] p-[1.5px] bg-gradient-to-tr ${story.isMaster ? "from-yellow-400 via-zinc-800 to-amber-600 shadow-[0_4px_20px_rgba(255,215,9,0.3)]" : "from-red-500 via-rose-500 to-orange-400 shadow-[0_4px_20px_rgba(239,68,68,0.2)]"} cursor-pointer transition-all group`}
                   >
                     <div className="size-full rounded-[30.5px] overflow-hidden bg-zinc-900 border-[2px] border-zinc-950 relative">
                       <img src={story.img} className="size-full object-cover brightness-75 group-hover:scale-110 transition-transform duration-1000" />
@@ -321,7 +336,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       </div>
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-3 flex flex-col justify-end">
                         <p className="text-[8px] font-bold text-white/60 uppercase tracking-tighter truncate leading-none mb-1">{story.merchant}</p>
-                        <h5 className="text-[12px] font-black text-yellow-400 leading-tight tracking-tight uppercase italic">{story.discount}</h5>
+                        <h5 className="text-[14px] font-black text-white leading-tight tracking-tight italic drop-shadow-lg">{story.discount}</h5>
                       </div>
                     </div>
                   </motion.div>
