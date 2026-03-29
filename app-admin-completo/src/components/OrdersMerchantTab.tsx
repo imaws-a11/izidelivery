@@ -2,7 +2,8 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { supabase } from '../lib/supabase';
-import { toastSuccess, toastError } from '../lib/useToast';
+import { toastSuccess, toastError, toastInfo } from '../lib/useToast';
+import { playIziSound } from '../lib/iziSounds';
 
 // Pedidos do Lojista
 export default function OrdersMerchantTab() {
@@ -108,6 +109,17 @@ export default function OrdersMerchantTab() {
             {totalActionableOrders} ações pendentes
           </span>
           <button 
+            onClick={() => {
+              playIziSound('merchant');
+              toastInfo('Testando som de notificação...');
+            }}
+            className="p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-amber-500 transition-all active:scale-95 shadow-sm flex items-center gap-2"
+            title="Testar Som de Notificação"
+          >
+            <span className="material-symbols-outlined">volume_up</span>
+            <span className="text-[10px] font-bold uppercase hidden md:inline">Testar Som</span>
+          </button>
+          <button 
             onClick={() => fetchAllOrders(merchantOrdersPage)}
             disabled={isLoadingList}
             className="p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-primary transition-all active:scale-95 shadow-sm"
@@ -133,24 +145,30 @@ export default function OrdersMerchantTab() {
                      <span className="px-3 py-1 rounded-full bg-orange-500 text-white text-[9px] font-black uppercase tracking-widest animate-pulse">NOVO</span>
                   </div>
                   
-                  <div className="mb-6">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Pedido</p>
-                    <p className="text-xl font-black text-slate-900 dark:text-white">#DT-{o.id.slice(0, 8).toUpperCase()}</p>
-                    <p className="text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-xs">schedule</span>
-                      {new Date(o.created_at).toLocaleString('pt-BR')}
-                    </p>
-                  </div>
+                    <div className="mb-6 flex justify-between items-start">
+                      <div>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Pedido</p>
+                        <p className="text-xl font-black text-slate-900 dark:text-white">#DT-{o.id.slice(0, 8).toUpperCase()}</p>
+                        <p className="text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">schedule</span>
+                          {new Date(o.created_at).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Cliente</p>
+                        <p className="text-sm font-black text-slate-700 dark:text-slate-200">{o.user_name || 'Usuário Izi'}</p>
+                      </div>
+                    </div>
 
                   <div className="space-y-4 mb-8">
                     <div className="flex items-start gap-3">
                       <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800">
                         <span className="material-symbols-outlined text-lg text-rose-500">pin_drop</span>
                       </div>
-                      <div>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Destino</p>
-                        <p className="text-xs font-bold text-slate-600 dark:text-slate-300 line-clamp-2">
-                          {parseOrderAddress(o.delivery_address).address === 'Buscando localização...' ? 'Localização em processamento' : parseOrderAddress(o.delivery_address).address}
+                      <div className="flex-1">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Destino Final</p>
+                        <p className="text-sm font-black text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug">
+                          {parseOrderAddress(o.delivery_address).address === 'Buscando localização...' ? 'Localização em processamento...' : parseOrderAddress(o.delivery_address).address}
                         </p>
                       </div>
                     </div>
@@ -262,7 +280,10 @@ export default function OrdersMerchantTab() {
                   className="bg-white dark:bg-slate-900 p-5 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all cursor-pointer group"
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-primary transition-colors">#DT-{o.id.slice(0, 8).toUpperCase()}</p>
+                    <div>
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Pedido • {o.user_name || 'Cliente Izi'}</p>
+                      <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-primary transition-colors">#DT-{o.id.slice(0, 8).toUpperCase()}</p>
+                    </div>
                     <div className="flex flex-col items-end">
                       <span className={`px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest ${
                         o.status === 'preparando' ? 'bg-amber-100 text-amber-600' :

@@ -75,8 +75,6 @@ function Icon({ name, className = "", size = 20, ...props }: any) {
     'emergency': BespokeIcons.Help,
     'moped': BespokeIcons.Motorcycle,
     'chevron_right': BespokeIcons.ChevronRight,
-    'local_shipping': BespokeIcons.Truck,
-    'directions_car': BespokeIcons.Car,
     'pedal_bike': BespokeIcons.Motorcycle,
     'support_agent': BespokeIcons.Support,
     'badge': BespokeIcons.User,
