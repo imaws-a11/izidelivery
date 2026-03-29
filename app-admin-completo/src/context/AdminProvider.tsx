@@ -368,11 +368,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [merchantProfile]);
 
-  const fetchProducts = useCallback(async () => {
-    if (!merchantProfile?.merchant_id) return;
+  const fetchProducts = useCallback(async (explicitMerchantId?: string) => {
+    const idToUse = explicitMerchantId || merchantProfile?.merchant_id;
+    if (!idToUse) return;
     setIsLoadingList(true);
     try {
-      const { data } = await supabase.from('products_delivery').select('*').eq('merchant_id', merchantProfile.merchant_id);
+      const { data } = await supabase.from('products_delivery').select('*').eq('merchant_id', idToUse);
       if (data) setProductsList(data as Product[]);
     } finally {
       setIsLoadingList(false);
@@ -384,7 +385,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!idToUse) return;
     try {
       const { data } = await supabase.from('merchant_categories_delivery').select('*').eq('merchant_id', idToUse).order('sort_order', { ascending: true });
-      if (data) setMenuCategoriesList(data as MenuCategory[]);
+      if (data) {
+        setMenuCategoriesList(data as MenuCategory[]);
+        if (explicitMerchantId) {
+          setPreviewCategories(data as MenuCategory[]);
+        }
+      }
     } catch (err) {
       console.error('Erro ao buscar categorias do menu:', err);
     }
