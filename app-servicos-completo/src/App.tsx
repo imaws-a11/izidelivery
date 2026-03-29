@@ -208,6 +208,7 @@ function App() {
   const [paymentsOrigin, setPaymentsOrigin] = useState<"checkout" | "profile" | "izi_black">("profile");
 
   const fetchSavedCards = async (uid: string) => {
+    if (!uid) return;
     setIsLoadingCards(true);
     const { data, error } = await supabase
       .from("payment_methods")
@@ -258,6 +259,7 @@ function App() {
   };
 
   const fetchSavedAddresses = async (uid: string) => {
+    if (!uid) return;
     const { data, error } = await supabase
       .from("saved_addresses")
       .select("*")
@@ -384,6 +386,7 @@ function App() {
   }, []);
 
   const fetchWalletBalance = async (uid: string) => {
+    if (!uid) return;
     const { data } = await supabase
       .from("users_delivery")
       .select("wallet_balance, is_izi_black, cashback_earned, user_xp, izi_coins")
@@ -587,6 +590,7 @@ function App() {
   }, [userId, subView]);
   
   const fetchMyOrders = async (uid: string) => {
+    if (!uid) return;
     const { data } = await supabase
       .from("orders_delivery")
       .select("*")
