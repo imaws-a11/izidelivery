@@ -7966,8 +7966,8 @@ function App() {
                 iziCoins={iziCoins}
                 iziCashback={iziCashbackEarned}
                 setShowDepositModal={setShowDepositModal}
-                iziCoinValue={globalSettings?.izi_coin_value || 0.01}
-                iziCoinRate={globalSettings?.izi_coin_rate || 5}
+                iziCoinValue={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0}
+                iziCoinRate={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0}
               />
             )}
             {tab === "profile" && (
@@ -8228,8 +8228,8 @@ function App() {
                     iziCoins={iziCoins}
                     iziCashback={iziCashbackEarned}
                     setShowDepositModal={setShowDepositModal}
-                    iziCoinValue={globalSettings?.izi_coin_value || 0.01}
-                    iziCoinRate={globalSettings?.izi_coin_rate || 5}
+                    iziCoinValue={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0}
+                    iziCoinRate={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0}
                   />
                 </motion.div>
               )}
@@ -8280,7 +8280,7 @@ function App() {
                     setPaymentsOrigin={setPaymentsOrigin}
                     setSubView={setSubView}
                     iziCoins={iziCoins}
-                    iziCoinValue={globalSettings?.izi_coin_value || 0.01}
+                    iziCoinValue={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0}
                   />
                 </motion.div>
               )}
