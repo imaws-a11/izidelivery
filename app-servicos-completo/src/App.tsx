@@ -2283,10 +2283,13 @@ function App() {
       img: f.product_image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600',
       oldPrice: Number(f.original_price),
       price: Number(f.discounted_price),
+      merchant_id: f.merchant_id,
+      merchant_name: f.admin_users?.store_name || 'Loja Parceira',
+      is_flash_offer: true,
       off: f.original_price && f.discounted_price 
         ? `- R$ ${(Number(f.original_price) - Number(f.discounted_price)).toFixed(2).replace('.', ',')} OFF` 
         : `- R$ ${(Number(f.original_price) * (Number(f.discount_percent) / 100)).toFixed(2).replace('.', ',')} OFF`,
-      desc: f.description || 'Oferta exclusiva e por tempo limitado para membros Izi Black.'
+      desc: (f.description || 'Oferta exclusiva e por tempo limitado para membros Izi Black.') + `\n\n📌 Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
     })) : [
       {
         id: 'vip-burger-1',
@@ -2295,8 +2298,11 @@ function App() {
         img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600',
         oldPrice: 59.90,
         price: 29.95,
+        merchant_id: null,
+        merchant_name: 'Burger Gourmet Lab',
+        is_flash_offer: true,
         off: '50% OFF',
-        desc: 'Blend de carne Angus 180g, queijo brie maçaricado, cebola caramelizada no Jack Daniels e pão brioche artesanal.'
+        desc: 'Blend de carne Angus 180g, queijo brie maçaricado, cebola caramelizada no Jack Daniels e pão brioche artesanal.\n\n📌 Vendido por: Burger Gourmet Lab'
       },
       {
         id: 'vip-pizza-1',
@@ -2305,8 +2311,11 @@ function App() {
         img: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600',
         oldPrice: 72.00,
         price: 36.00,
+        merchant_id: null,
+        merchant_name: 'Forneria d\'Oro',
+        is_flash_offer: true,
         off: '50% OFF',
-        desc: 'Massa de fermentação natural, mozzarella fior di latte, azeite de trufas brancas e manjericão fresco.'
+        desc: 'Massa de fermentação natural, mozzarella fior di latte, azeite de trufas brancas e manjericão fresco.\n\n📌 Vendido por: Forneria d\'Oro'
       }
     ];
 
@@ -2369,7 +2378,10 @@ function App() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1, duration: 0.6 }}
               key={deal.id}
-              onClick={() => { handleAddToCart(deal); }}
+              onClick={() => { 
+                setSelectedItem(deal);
+                setSubView("product_detail"); 
+              }}
               className="w-full max-w-[340px] bg-zinc-900/50 rounded-[50px] overflow-hidden border border-white/[0.05] flex flex-col items-center group cursor-pointer active:scale-[0.98] transition-all hover:bg-zinc-900"
             >
               <div className="w-full h-80 relative">

@@ -2,6 +2,8 @@ import React from 'react';
 import { supabase } from '../lib/supabase';
 import { useAdmin } from '../context/AdminContext';
 import FlashOfferTimerModal from './FlashOfferTimerModal';
+import { MerchantSelectorModal } from './MerchantSelectorModal';
+import { ProductSelectorModal } from './ProductSelectorModal';
 
 
 interface FlashOffersSectionProps {
@@ -18,10 +20,23 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
 
   const [merchants, setMerchants] = React.useState<any[]>([]);
   const [dateModalOpen, setDateModalOpen] = React.useState(false);
+  const [merchantModalOpen, setMerchantModalOpen] = React.useState(false);
+  const [productModalOpen, setProductModalOpen] = React.useState(false);
   const [form, setForm] = React.useState({
     id: '', product_name: '', product_image: '', original_price: '',
-    discounted_price: '', merchant_id: '', expires_at: '', description: ''
+    discounted_price: '', merchant_ids: [] as string[], expires_at: '', description: '',
+    selected_products: [] as any[]
   });
+  const [availableProducts, setAvailableProducts] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    if (form.merchant_ids && form.merchant_ids.length > 0) {
+      supabase.from('products_delivery').select('*').in('merchant_id', form.merchant_ids)
+        .then(({ data }) => setAvailableProducts(data || []));
+    } else {
+      setAvailableProducts([]);
+    }
+  }, [form.merchant_ids]);
 
   const fetchOffers = async () => {
     let query = supabase.from('flash_offers').select('*, admin_users(store_name)');
@@ -40,7 +55,7 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
       const { data } = await supabase.from('admin_users').select('id, store_name').eq('id', merchantId).single();
       if (data) {
         setMerchants([data]);
-        setForm(prev => ({ ...prev, merchant_id: merchantId }));
+        setForm(prev => ({ ...prev, merchant_ids: [merchantId] }));
       }
     }
   };
@@ -54,7 +69,8 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
       product_image: offer.product_image || '',
       original_price: offer.original_price?.toString() || '',
       discounted_price: offer.discounted_price?.toString() || '',
-      merchant_id: offer.merchant_id || '',
+      merchant_ids: offer.merchant_id ? [offer.merchant_id] : [],
+      selected_products: [],
       expires_at: offer.expires_at || '',
       description: offer.description || '',
     });
@@ -65,41 +81,59 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
   const handleSave = async () => {
     setLoading(true);
     
-    // Calcula o percentual de desconto se ambos os preços existirem
+    const parseCurrency = (val: any) => {
+      if (!val) return 0;
+      if (typeof val === 'number') return val;
+      return Number(val.replace(',', '.'));
+    };
+
+    const original = parseCurrency(form.original_price);
+    const discounted = parseCurrency(form.discounted_price);
+
     let discountPct = 0;
-    if (form.original_price && form.discounted_price) {
-      discountPct = Math.round((1 - Number(form.discounted_price) / Number(form.original_price)) * 100);
+    if (original > 0 && discounted > 0) {
+      discountPct = Math.round((1 - discounted / original) * 100);
     }
 
     const payload = {
       title: form.product_name || 'Sem título',
       description: form.description || null,
-      merchant_id: form.merchant_id || null,
       product_name: form.product_name || 'Sem nome',
       product_image: form.product_image || null,
-      original_price: form.original_price ? Number(form.original_price) : 0,
-      discounted_price: form.discounted_price ? Number(form.discounted_price) : 0,
+      original_price: original,
+      discounted_price: discounted,
       discount_percent: discountPct,
       expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     };
 
     let error;
-    if (form.id) {
-      const { error: updateError } = await supabase.from('flash_offers').update(payload).eq('id', form.id);
-      error = updateError;
-    } else {
-      const { error: insertError } = await supabase.from('flash_offers').insert({ ...payload, is_active: true });
-      error = insertError;
+    try {
+      if (form.id) {
+        // Edição atualiza o registro único usando o primeiro lojista selecionado (ou null)
+        const mainMerchantId = form.merchant_ids.length > 0 ? form.merchant_ids[0] : null;
+        const { error: updateError } = await supabase.from('flash_offers').update({ ...payload, merchant_id: mainMerchantId }).eq('id', form.id);
+        error = updateError;
+      } else {
+        // Nova oferta: Insere uma linha para CADA lojista selecionado (ou uma única se `Todos`)
+        const insertPayloads = form.merchant_ids.length > 0 
+          ? form.merchant_ids.map(mId => ({ ...payload, merchant_id: mId, is_active: true }))
+          : [{ ...payload, merchant_id: null, is_active: true }];
+        
+        const { error: insertError } = await supabase.from('flash_offers').insert(insertPayloads);
+        error = insertError;
+      }
+    } catch (e: any) {
+      error = e;
     }
 
     setLoading(false);
     if (!error) {
       setShowForm(false);
-      setForm({ id: '', product_name: '', product_image: '', original_price: '', discounted_price: '', merchant_id: '', expires_at: '', description: '' });
+      setForm({ id: '', product_name: '', product_image: '', original_price: '', discounted_price: '', merchant_ids: [], selected_products: [], expires_at: '', description: '' });
       fetchOffers();
     } else {
       console.error('Erro ao salvar oferta:', error);
-      alert('Erro ao salvar oferta: ' + error.message);
+      alert('Erro ao salvar oferta: ' + (error.message || JSON.stringify(error)));
     }
   };
 
@@ -134,7 +168,7 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
         </div>
         <button
           onClick={() => {
-            setForm({ id: '', product_name: '', product_image: '', original_price: '', discounted_price: '', merchant_id: '', expires_at: '', description: '' });
+            setForm({ id: '', product_name: '', product_image: '', original_price: '', discounted_price: '', merchant_ids: [], selected_products: [], expires_at: '', description: '' });
             setShowForm(!showForm);
           }}
           className="flex items-center gap-2 px-5 py-3 bg-rose-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/20 hover:brightness-110 transition-all"
@@ -152,13 +186,59 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
 
               <input value={form.product_name} onChange={e => setForm({ ...form, product_name: e.target.value })} placeholder="Nome do produto" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400" />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lojista</label>
-              <select value={form.merchant_id} onChange={e => setForm({ ...form, merchant_id: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400">
-                <option value="">Selecionar lojista</option>
-                {merchants.map((m: any) => <option key={m.id} value={m.id}>{m.store_name}</option>)}
-              </select>
+            {/* Seleção de Lojistas via Modal */}
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lojistas Associados</label>
+              <button
+                type="button"
+                onClick={() => setMerchantModalOpen(true)}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-3.5 text-sm font-bold dark:text-white flex items-center justify-between group hover:border-yellow-400 transition-all text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-yellow-400/10 flex items-center justify-center">
+                     <span className="material-symbols-outlined text-yellow-500 text-sm">storefront</span>
+                  </div>
+                  <div className="flex flex-col leading-tight">
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">Selecione Lojistas</span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-widest">{form.merchant_ids.length} lojista(s) selecionado(s)</span>
+                  </div>
+                </div>
+                <span className="material-symbols-outlined text-slate-400 group-hover:text-yellow-400 transition-colors">chevron_right</span>
+              </button>
             </div>
+            
+            {/* Construção Inteligente de Combos */}
+            {availableProducts.length > 0 && (
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                   <span>Geração Rápida / Combos</span>
+                   <span className="bg-yellow-400 text-black text-[8px] px-1.5 py-0.5 rounded font-black italic">BETA</span>
+                </label>
+                <div 
+                   onClick={() => setProductModalOpen(true)}
+                   className="w-full relative overflow-hidden bg-gradient-to-br from-zinc-900 to-black border border-yellow-400/20 rounded-2xl p-5 cursor-pointer group hover:border-yellow-400/50 transition-all shadow-[0_0_20px_rgba(255,215,9,0.05)]"
+                >
+                   <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 blur-3xl rounded-full group-hover:bg-yellow-400/20 transition-colors" />
+                   
+                   <div className="relative flex items-center justify-between z-10">
+                     <div className="flex flex-col">
+                        <span className="text-base font-black text-white italic tracking-tight flex items-center gap-2">
+                          <span className="material-symbols-outlined text-yellow-400 text-lg">magic_button</span>
+                          Gerador de Combos
+                        </span>
+                        <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-widest mt-1">
+                          {form.selected_products.length > 0 
+                            ? `${form.selected_products.length} produtos adicionais no combo` 
+                            : "Vincule produtos diretamente do cardápio"}
+                        </span>
+                     </div>
+                     <span className="material-symbols-outlined bg-white/5 text-yellow-400 p-2 rounded-xl border border-white/5 group-hover:bg-yellow-400/20 transition-colors">
+                        arrow_forward
+                     </span>
+                   </div>
+                </div>
+              </div>
+            )}
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preço Original (R$)</label>
 
@@ -251,14 +331,47 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
                 setForm({ ...form, expires_at: finalDate });
               }}
             />
+
+            {/* Injected Modals */}
+            <MerchantSelectorModal 
+              isOpen={merchantModalOpen}
+              onClose={() => setMerchantModalOpen(false)}
+              merchants={merchants}
+              selectedIds={form.merchant_ids}
+              onConfirm={(ids) => {
+                setForm(prev => ({ ...prev, merchant_ids: ids }));
+                setMerchantModalOpen(false);
+              }}
+            />
+
+            <ProductSelectorModal
+              isOpen={productModalOpen}
+              onClose={() => setProductModalOpen(false)}
+              products={availableProducts}
+              selectedProducts={form.selected_products}
+              onConfirm={(selected) => {
+                const totalOriginal = selected.reduce((acc: number, curr: any) => acc + Number(curr.price), 0);
+                const comboName = selected.map((x: any) => x.name).join(" + ");
+                const mainImage = selected.length > 0 ? selected[0].image_url : form.product_image;
+                
+                setForm(prev => ({
+                  ...prev,
+                  selected_products: selected,
+                  product_name: comboName || prev.product_name,
+                  original_price: totalOriginal > 0 ? totalOriginal.toFixed(2).replace('.', ',') : prev.original_price,
+                  product_image: mainImage || prev.product_image
+                }));
+                setProductModalOpen(false);
+              }}
+            />
           </div>
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-2 md:col-span-2">
             <button onClick={handleSave} disabled={loading} className="px-8 py-3 bg-rose-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/20 hover:brightness-110 transition-all disabled:opacity-50">
               {loading ? 'Salvando...' : form.id ? 'Salvar Alterações' : 'Publicar Oferta Flash'}
             </button>
             <button onClick={() => {
               setShowForm(false);
-              setForm({ id: '', product_name: '', product_image: '', original_price: '', discounted_price: '', merchant_id: '', expires_at: '', description: '' });
+              setForm({ id: '', product_name: '', product_image: '', original_price: '', discounted_price: '', merchant_ids: [], selected_products: [], expires_at: '', description: '' });
             }} className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest">Cancelar</button>
           </div>
         </div>
