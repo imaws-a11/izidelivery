@@ -98,27 +98,37 @@ interface Order {
     delivery_lng? : number;
 }
 function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
+  const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: "AIzaSyBi3EJ41-Kh7-ZXjNQ9K1d9AqmoD8UNiO8"
+    googleMapsApiKey: mapsKey,
+    language: 'pt-BR',
+    region: 'BR',
   });
 
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [isNavMode, setIsNavMode] = useState(true);
   const lastDestRef = useRef<string>('');
 
+  // Validar coordenadas: garantir que lat e lng são números válidos
+  const isValidCoord = (c: any): c is { lat: number; lng: number } =>
+    c && typeof c.lat === 'number' && typeof c.lng === 'number' && isFinite(c.lat) && isFinite(c.lng);
+
+  const validDriverCoords = isValidCoord(driverCoords) ? driverCoords : null;
+  const validDestCoords = isValidCoord(destCoords) ? destCoords : null;
+
   // Resolver destino: coordenadas OU endereço texto
-  const resolvedDest = (destCoords?.lat && destCoords?.lng) ? destCoords : (destAddress || null);
+  const resolvedDest = validDestCoords ? validDestCoords : (destAddress || null);
 
   // Calcular rota: imediato na 1a vez e ao mudar destino, depois a cada 30s
   useEffect(() => {
-    if (!isLoaded || !driverCoords || !resolvedDest) return;
+    if (!isLoaded || !validDriverCoords || !resolvedDest) return;
     
     const calcRoute = () => {
       const service = new google.maps.DirectionsService();
       service.route(
         {
-          origin: driverCoords,
+          origin: validDriverCoords,
           destination: resolvedDest,
           travelMode: google.maps.TravelMode.DRIVING,
         },
@@ -140,9 +150,9 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
     // Recalcular a cada 30s para atualizar com a posição do motorista
     const interval = setInterval(calcRoute, 30000);
     return () => clearInterval(interval);
-  }, [isLoaded, driverCoords, resolvedDest]);
+  }, [isLoaded, validDriverCoords, resolvedDest]);
 
-  if (!isLoaded || !driverCoords) return (
+  if (!isLoaded || !validDriverCoords) return (
     <div className="absolute inset-0 bg-slate-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-pulse">
             <Icon name="radar" className="text-primary text-4xl" />
@@ -155,12 +165,12 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
     <div className="absolute inset-0 z-0">
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
-        center={isNavMode ? driverCoords : undefined}
+        center={isNavMode ? validDriverCoords : undefined}
         zoom={16}
         options={mapOptions}
       >
         <Marker 
-          position={driverCoords} 
+          position={validDriverCoords} 
           icon={{
             url: 'https://cdn-icons-png.flaticon.com/128/3448/3448339.png',
             scaledSize: new google.maps.Size(42, 42),
@@ -182,7 +192,7 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
             }}
           />
         ) : (
-          destCoords && <Marker position={destCoords} />
+          validDestCoords && <Marker position={validDestCoords} />
         )}
       </GoogleMap>
 
@@ -314,7 +324,9 @@ function App() {
                     setDriverName(data.name);
                     localStorage.setItem('izi_driver_name', data.name);
                 }
-                if (data.lat && data.lng) setDriverCoords({ lat: data.lat, lng: data.lng });
+                const lat = Number(data.lat);
+                const lng = Number(data.lng);
+                if (isFinite(lat) && isFinite(lng) && lat !== 0 && lng !== 0) setDriverCoords({ lat, lng });
             }
         };
 
