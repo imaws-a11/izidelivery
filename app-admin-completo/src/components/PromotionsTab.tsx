@@ -70,7 +70,6 @@ export default function PromotionsTab() {
 
       const dataToSave = {
         ...formData,
-        type: formType,
         coupon_code: formType === 'coupon' ? formData.coupon_code.toUpperCase().trim() : null,
         image_url: formType === 'banner' ? formData.image_url : null,
         expires_at: formData.expires_at || null

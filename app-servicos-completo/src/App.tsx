@@ -119,7 +119,6 @@ function App() {
     | "brasileira_list"
     | "daily_menus"
     | "exclusive_offer"
-    | "explore_mobility"
     | "shipping_details"
     | "beverages_list"
     | "beverage_offers"
@@ -6197,100 +6196,7 @@ function App() {
     );
   };
 
-  const renderExploreMobility = () => {
-    const services = [
-      { id: "mototaxi", name: "Mototáxi",  desc: "Rapidez para driblar o trÃ¢nsito.", icon: "two_wheeler",    type: "mototaxi"  },
-      { id: "carro",    name: "Motorista Particular", desc: "Viagens executivas exclusivas.", icon: "directions_car", type: "carro"     },
-      { id: "frete",    name: "Fretes & Mudanças", desc: "Força e espaço para volumes.", icon: "local_shipping", type: "utilitario"  },
-      { id: "van",      name: "Van / Grupos", desc: "Capacidade para até 20 pessoas.", icon: "airport_shuttle", type: "van"       },
-    ];
 
-    return (
-      <div className="absolute inset-0 z-40 bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
-        {/* MAPA NO FUNDO */}
-        <div className="absolute inset-0 z-0">
-            <IziTrackingMap routePolyline={routePolyline} 
-              driverLoc={driverLocation} 
-              userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} 
-              onMyLocationClick={updateLocation}
-            />
-           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
-        </div>
-
-        {/* TOP BAR FLUTUANTE */}
-        <header className="relative z-50 flex justify-between items-center px-6 pt-10 pb-4">
-          <button onClick={() => { setSubView("none"); setMobilityStep(1); }} 
-            className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400 active:scale-90 transition-all">
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
-          <div className="text-center">
-             <h1 className="font-black tracking-tighter text-white text-xl uppercase italic">IZI GO</h1>
-             <p className="text-[10px] font-black text-yellow-400/80 tracking-[0.3em] uppercase">Mobilidade Premium</p>
-          </div>
-          <div className="size-12 rounded-2xl overflow-hidden border border-white/10 shadow-xl bg-zinc-900">
-             <img className="size-full object-cover" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" />
-          </div>
-        </header>
-
-        {/* PAINEL INFERIOR (BOTTOM SHEET) */}
-        <motion.main 
-          initial={{ y: "100%" }}
-          animate={{ y: 0 }}
-          className="relative z-40 mt-auto bg-zinc-900/90 backdrop-blur-2xl rounded-t-[40px] border-t border-white/10 p-6 pt-2 pb-12 flex flex-col gap-6"
-        >
-          {/* Alça do painel */}
-          <div className="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto mb-6" />
-
-          <div className="px-2">
-            <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Para onde vamos?</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-6">Escolha o serviço ideal para você</p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[50vh] no-scrollbar pb-6 px-1">
-             {services.map((svc, i) => (
-                <motion.div
-                  key={svc.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  onClick={() => {
-                    setTransitData({ ...transitData, type: svc.type as any, scheduled: false });
-                    setMobilityStep(1);
-                    if (svc.type === 'utilitario') navigateSubView("freight_wizard");
-                    else if (svc.type === 'van') navigateSubView("van_wizard");
-                    else navigateSubView("taxi_wizard");
-                  }}
-                  className="bg-white/5 border border-white/5 hover:border-yellow-400/30 p-5 rounded-3xl flex items-center gap-5 cursor-pointer active:scale-[0.98] transition-all group"
-                >
-                   <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center group-hover:bg-yellow-400 transition-colors">
-                      <span className="material-symbols-outlined text-3xl text-yellow-400 group-hover:text-black">{svc.icon}</span>
-                   </div>
-                   <div className="flex-1">
-                      <h3 className="font-black text-white group-hover:text-yellow-400 transition-colors">{svc.name}</h3>
-                      <p className="text-zinc-500 text-xs mt-0.5 line-clamp-1">{svc.desc}</p>
-                   </div>
-                   <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors">chevron_right</span>
-                </motion.div>
-             ))}
-          </div>
-
-          {/* RECENTES NO PAINEL */}
-          {transitHistory.length > 0 && (
-             <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-6 px-6">
-                {transitHistory.slice(0, 3).map((addr, i) => (
-                   <div key={i} 
-                    onClick={() => { setTransitData({ ...transitData, destination: addr, type: "mototaxi" }); navigateSubView("transit_selection"); }}
-                    className="flex-shrink-0 bg-white/5 border border-white/5 px-4 py-3 rounded-2xl flex items-center gap-3">
-                      <span className="material-symbols-outlined text-zinc-600 text-lg">history</span>
-                      <span className="text-[11px] font-bold text-zinc-400 truncate max-w-[120px]">{addr}</span>
-                   </div>
-                ))}
-             </div>
-          )}
-        </motion.main>
-      </div>
-    );
-  };
 
   const renderFreightWizard = () => {
     const categories = [
@@ -6308,7 +6214,7 @@ function App() {
         </div>
 
         <header className="relative z-50 flex items-center justify-between px-6 pt-10">
-          <button onClick={() => navigateSubView("explore_mobility")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
+          <button onClick={() => setSubView("none")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
             <Icon name="arrow_back" />
           </button>
           <div className="text-right">
@@ -6556,7 +6462,7 @@ function App() {
         </div>
 
         <header className="relative z-50 flex items-center justify-between px-6 pt-10">
-          <button onClick={() => navigateSubView("explore_mobility")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
+          <button onClick={() => setSubView("none")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
             <Icon name="arrow_back" />
           </button>
           <div className="text-right">
@@ -8527,18 +8433,7 @@ function App() {
                   />
                 </motion.div>
               )}
-               {subView === "explore_mobility" && (
-                <motion.div
-                  key="expmob"
-                  initial={{ x: "100%" }}
-                  animate={{ x: 0 }}
-                  exit={{ x: "100%" }}
-                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-                  className="absolute inset-0 z-40"
-                >
-                  {renderExploreMobility()}
-                </motion.div>
-              )}
+
               {subView === "explore_category" && (
                 <motion.div
                   key="expcat"

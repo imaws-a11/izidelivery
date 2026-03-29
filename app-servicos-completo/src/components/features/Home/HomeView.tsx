@@ -41,7 +41,6 @@ interface HomeViewProps {
     | "brasileira_list"
     | "daily_menus"
     | "exclusive_offer"
-    | "explore_mobility"
     | "shipping_details"
     | "beverages_list"
     | "beverage_offers"
