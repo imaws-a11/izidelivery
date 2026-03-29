@@ -190,7 +190,7 @@ export interface AdminContextType {
   fetchDrivers: () => Promise<void>;
   fetchMyDrivers: () => Promise<void>;
   fetchProducts: () => Promise<void>;
-  fetchMenuCategories: () => Promise<void>;
+  fetchMenuCategories: (explicitMerchantId?: string) => Promise<void>;
   fetchAllOrders: (page?: number) => Promise<void>;
   fetchSubscriptionOrders: (page?: number) => Promise<void>;
   fetchCategories: () => Promise<void>;
