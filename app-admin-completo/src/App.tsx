@@ -126,11 +126,10 @@ function App() {
         {/* Navigation Bar */}
         <nav className="z-30 h-24 lg:h-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center px-4 lg:px-8 gap-4 lg:gap-8 shadow-sm">
           <div className="hidden md:flex items-center gap-4 shrink-0 pr-4 border-r border-slate-100 dark:border-slate-800">
-             <div className="bg-primary size-10 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-                <span className="material-symbols-outlined text-slate-900 font-bold">local_shipping</span>
-             </div>
              <div className="flex flex-col">
-                <h1 className="text-slate-900 dark:text-white text-base font-black leading-tight tracking-tight uppercase">IZI ADMIN</h1>
+                <h1 className="text-slate-900 dark:text-white text-base font-black leading-tight tracking-tight uppercase">
+                  {userRole === 'merchant' ? (merchantProfile?.store_name || 'Lojista') : 'Administrador'}
+                </h1>
              </div>
           </div>
 

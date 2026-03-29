@@ -441,8 +441,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </section>
           )}
 
-          {/* GRADE DE SERVIÇOS 3D MASONRY */}
-          <section className="grid grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-auto">
+          {/* GRADE DE SERVIÇOS - DESIGN DO PRINT EM 3 COLUNAS (MENOR) */}
+          <section className="grid grid-cols-3 gap-2 px-1">
             {deliveryServices.map((svc, i) => (
               <motion.div
                 key={i}
@@ -451,43 +451,36 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.05 }}
                 onClick={() => handleServiceSelection(svc)}
-                className={`relative flex flex-col items-center justify-center cursor-pointer transition-all bg-[#1a1b1e]/90 backdrop-blur-md border rounded-[32px] p-6 shadow-2xl overflow-hidden group 
-                  ${svc.highlight === "gold" ? "shadow-[0_0_30px_rgba(251,191,36,0.08)] border-yellow-500/20" : ""}
-                  ${svc.highlight === "cyan" ? "shadow-[0_0_30px_rgba(34,211,238,0.08)] border-cyan-500/20" : ""}
+                className={`relative flex flex-col items-center justify-center cursor-pointer transition-all aspect-square bg-[#1a1b1e] border rounded-[28px] p-2 shadow-xl overflow-hidden group 
+                  ${svc.highlight === "gold" ? "border-yellow-500/10 shadow-[0_0_25px_rgba(251,191,36,0.04)]" : ""}
+                  ${svc.highlight === "cyan" ? "border-cyan-500/10 shadow-[0_0_25px_rgba(34,211,238,0.04)]" : ""}
                   ${svc.highlight === "none" ? "border-white/5" : ""}
-                  hover:scale-[1.02] active:scale-95`}
+                  active:scale-95`}
               >
-                {svc.highlight === "gold" && <div className="absolute inset-0 bg-gradient-to-t from-yellow-400/5 to-transparent transition-opacity opacity-0 group-hover:opacity-100" />}
-                {svc.highlight === "cyan" && <div className="absolute inset-0 bg-gradient-to-t from-cyan-400/5 to-transparent transition-opacity opacity-0 group-hover:opacity-100" />}
-                
-                <div className="relative z-10 w-24 h-24 flex items-center justify-center mb-6 transition-transform group-hover:-translate-y-2 duration-500">
-                  <img 
-                    src={svc.img} 
-                    alt={`Ícone ${svc.label} 3D`} 
-                    className="w-full h-full object-contain drop-shadow-2xl"
-                    onError={(e) => { 
-                      e.currentTarget.style.display = 'none'; 
-                      e.currentTarget.nextElementSibling?.classList.replace('hidden', 'flex'); 
-                    }}
-                  />
-                  {/* Fallback Material Icon */}
-                  <div className="absolute inset-0 hidden items-center justify-center">
-                     <span className={`material-symbols-outlined text-[64px] drop-shadow-xl ${svc.highlight === "gold" ? "text-yellow-400" : svc.highlight === "cyan" ? "text-cyan-400" : "text-white"}`} style={{ fontVariationSettings: "'FILL' 1" }}>
-                       {svc.icon}
-                     </span>
-                  </div>
+                <div className="relative z-10 w-12 h-12 flex items-center justify-center mb-2">
+                   <span 
+                    className={`material-symbols-outlined text-3xl transition-transform group-hover:scale-110 duration-300
+                      ${svc.highlight === "gold" ? "text-yellow-400" : svc.highlight === "cyan" ? "text-cyan-400" : "text-white"}`} 
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                   >
+                     {svc.icon}
+                   </span>
                 </div>
 
-                <div className="text-center relative z-10 flex flex-col items-center gap-2 mt-auto">
-                  <h3 className="font-bold text-[13px] text-white tracking-widest uppercase truncate w-full px-1 drop-shadow-md">
+                <div className="text-center relative z-10 flex flex-col items-center px-1">
+                  <h3 className="font-black text-[9px] text-white tracking-widest uppercase truncate w-full leading-none drop-shadow-md">
                     {svc.label}
                   </h3>
                   {svc.tagline && (
-                    <p className="text-[9px] text-zinc-500 uppercase tracking-[0.2em] font-semibold leading-none">
+                    <p className="text-[6.5px] text-zinc-500 uppercase tracking-widest font-semibold leading-none mt-1 opacity-80">
                       {svc.tagline}
                     </p>
                   )}
                 </div>
+
+                {/* Subtle gradient overlay based on highlight */}
+                {svc.highlight === "gold" && <div className="absolute inset-0 bg-yellow-400/[0.015] pointer-events-none" />}
+                {svc.highlight === "cyan" && <div className="absolute inset-0 bg-cyan-400/[0.015] pointer-events-none" />}
               </motion.div>
             ))}
           </section>
@@ -499,20 +492,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <span className="bg-yellow-400/10 text-yellow-400 text-[8px] font-black px-3 py-1 rounded-full tracking-[0.4em] uppercase mb-3 border border-yellow-400/20">Izi Connect</span>
               <h2 className="text-3xl font-black tracking-tighter text-white italic uppercase leading-none">Vá de Izi.</h2>
             </div>
-            <div className="grid grid-cols-2 gap-y-12 gap-x-8 relative z-10 p-2">
+            <div className="grid grid-cols-4 gap-2 relative z-10 p-2">
               {[
                 { icon: "two_wheeler", label: "Mototáxi", action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("taxi_wizard"); } },
                 { icon: "airport_shuttle", label: "Vans Izi", action: () => { setTransitData({ ...transitData, type: "van", scheduled: false }); navigateSubView("van_wizard"); } },
                 { icon: "directions_car", label: "Carros", action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("taxi_wizard"); } },
                 { icon: "local_shipping", label: "Logística", action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("freight_wizard"); } },
               ].map((svc, i) => (
-                <motion.div key={i} whileTap={{ scale: 0.95 }} onClick={svc.action} className="flex flex-col items-center gap-4 group cursor-pointer transition-all">
-                  <div className="relative w-24 h-24 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-6xl text-white group-hover:text-yellow-400 transition-all duration-500">
+                <motion.div key={i} whileTap={{ scale: 0.95 }} onClick={svc.action} className="flex flex-col items-center gap-2 group cursor-pointer transition-all">
+                  <div className="relative w-12 h-12 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-3xl text-white group-hover:text-yellow-400 transition-all duration-300">
                       {svc.icon}
                     </span>
                   </div>
-                  <span className="text-[10px] font-black text-zinc-500 group-hover:text-white tracking-[0.2em] uppercase transition-colors text-center leading-tight">
+                  <span className="text-[8px] font-black text-zinc-500 group-hover:text-white tracking-tight uppercase transition-colors text-center leading-none">
                     {svc.label}
                   </span>
                 </motion.div>
