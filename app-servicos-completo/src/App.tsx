@@ -411,6 +411,27 @@ function App() {
     if (txData) setWalletTransactions(txData);
   };
 
+  const fetchCartData = async (uid: string) => {
+    if (!uid) return;
+    try {
+      const { data, error } = await supabase
+        .from("users_delivery")
+        .select("cart_data")
+        .eq("id", uid)
+        .single();
+      
+      if (data && data.cart_data && Array.isArray(data.cart_data)) {
+        // Combinar localStorage com DB ou priorizar DB?
+        // Priorizamos o banco para manter consistência entre aparelhos
+        if (data.cart_data.length > 0) {
+          setCart(data.cart_data);
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao buscar sacola sincronizada:", e);
+    }
+  };
+
   const isLoaded = true; // Loaded via index.html
 
   const updateLocation = (onSuccess?: (address: string) => void) => {
@@ -485,6 +506,7 @@ function App() {
       fetchWalletBalance(user.uid);
       fetchSavedCards(user.uid);
       fetchSavedAddresses(user.uid);
+      fetchCartData(user.uid);
       fetchCoupons();
       fetchBeveragePromo();
     } else if (!authInitLoading) {
@@ -530,12 +552,12 @@ function App() {
             showToast(msg, newOrder.status === 'cancelado' ? 'warning' : 'success');
 
             // Se o pagamento lightning foi confirmado, fechar a tela de pagamento
-            if (newOrder.payment_status === 'paid' && subView === "lightning_payment") {
+            if (newOrder.payment_status === 'paid' && subViewRef.current === "lightning_payment") {
               setSubView("payment_success");
             }
 
             // Se o pagamento PIX ou outros foram aprovados (status 'novo')
-            if (newOrder.status === 'novo' && (subView === "pix_payment" || subView === "payment_processing")) {
+            if (newOrder.status === 'novo' && (subViewRef.current === "pix_payment" || subViewRef.current === "payment_processing")) {
               setSubView("payment_success");
               fetchMyOrders(userIdRef.current!);
             }
@@ -555,27 +577,27 @@ function App() {
             }
 
             // TransiçÃƒµes automáticas de tela baseadas no status
-            if (subView === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
+            if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
               showToast("Loja aceitou seu pedido! 🥳", "success");
               setSelectedItem(newOrder); 
               setTimeout(() => setSubView("active_order"), 1000);
             }
-            if (subView === "waiting_merchant" && newOrder.status === "cancelado") {
+            if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
               showToast("Seu pedido foi recusado.", "warning");
               setSubView("none");
-              fetchMyOrders(userId!);
+              fetchMyOrders(userIdRef.current!);
             }
-            if (subView === "waiting_driver" && 
+            if (subViewRef.current === "waiting_driver" && 
                 ["a_caminho", "aceito", "confirmado", "em_rota", "no_local", "picked_up", "saiu_para_entrega"].includes(newOrder.status)) {
               setSelectedItem(newOrder);
               setTimeout(() => setSubView("active_order"), 1500);
             }
-            if (subView === "waiting_driver" && newOrder.status === "cancelado") {
+            if (subViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {
               setSubView("none");
-              fetchMyOrders(userId!);
+              fetchMyOrders(userIdRef.current!);
             }
 
-            if (selectedItem?.id === newOrder.id || !selectedItem) {
+            if (selectedItemRef.current?.id === newOrder.id || !selectedItemRef.current) {
               setSelectedItem(newOrder);
             }
           }
@@ -1269,6 +1291,10 @@ function App() {
 
   const userIdRef = useRef(userId);
   useEffect(() => { userIdRef.current = userId; }, [userId]);
+  const subViewRef = useRef(subView);
+  useEffect(() => { subViewRef.current = subView; }, [subView]);
+  const selectedItemRef = useRef(selectedItem);
+  useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
   const [ESTABLISHMENTS, setESTABLISHMENTS] = useState<any[]>([]);
 
   const isStoreOpen = useCallback((openingHours: any, manualOpen: boolean) => {
@@ -1421,12 +1447,24 @@ function App() {
     } catch { return []; }
   });
 
-  // Persistir carrinho no localStorage sempre que mudar
+  // Persistir carrinho no localStorage e Supabase sempre que mudar
   useEffect(() => {
     try {
       localStorage.setItem("izi_cart", JSON.stringify(cart));
+      
+      // Sincronizar com o banco se estiver logado
+      if (userId) {
+        // Usamos uma técnica de debounce simples ou persistência direta
+        // Para uma sacola de compras, a persistência direta é aceitável dada a frequência de uso
+        supabase.from("users_delivery")
+          .update({ cart_data: cart })
+          .eq("id", userId)
+          .then(({ error }) => {
+            if (error) console.error("Erro ao sincronizar sacola:", error);
+          });
+      }
     } catch {}
-  }, [cart]);
+  }, [cart, userId]);
   const [userLocation, setUserLocation] = useState<{
     address: string;
     loading: boolean;
