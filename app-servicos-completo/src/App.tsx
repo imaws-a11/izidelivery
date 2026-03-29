@@ -623,12 +623,17 @@ function App() {
   };
 
   const fetchCoupons = async () => {
+    console.log("[DEBUG] Fetching coupons/banners...");
     const { data } = await supabase
       .from('promotions_delivery')
       .select('*')
       .eq('is_active', true)
       .order('created_at', { ascending: false });
-    if (data) setAvailableCoupons(data);
+    
+    if (data) {
+      console.log("[DEBUG] Available promotions found:", data.length, data);
+      setAvailableCoupons(data);
+    }
   };
 
   const fetchBeveragePromo = useCallback(async () => {
@@ -704,7 +709,7 @@ function App() {
       }
 
       // Validar data de expiração se houver
-      if (data.end_date && new Date(data.end_date) < new Date()) {
+      if (data.expires_at && new Date(data.expires_at) < new Date()) {
         setCouponError("Este cupom já expirou.");
         setAppliedCoupon(null);
         return;
@@ -1135,6 +1140,7 @@ function App() {
   const tabRef = useRef(tab);
   const subViewRef = useRef(subView);
   const userIdRef = useRef(userId);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
   const selectedItemRef = useRef(selectedItem);
 
   useEffect(() => { viewRef.current = view; }, [view]);
@@ -1203,7 +1209,6 @@ function App() {
   const [activeCategory, setActiveCategory] = useState<string>("Destaques");
   const [restaurantInitialCategory, setRestaurantInitialCategory] = useState("Todos");
   const [activeMenuCategory, setActiveMenuCategory] = useState("Destaques");
-  const [selectedItem, setSelectedItem] = useState<any>(null);
   const [driverLocation, setDriverLocation] = useState<{lat: number, lng: number} | null>(null);
 
   // Sistema de rastreamento do motoboy em tempo real para o cliente
@@ -1437,13 +1442,35 @@ function App() {
       supabase.removeChannel(ordersChannel);
     };
   }, [userId]);
+  
   const [myOrders, setMyOrders] = useState<any[]>([]);
+
+  // Atualiza automaticamente as telas PIX/Lightning se o pagamento for confirmado em tempo real
+  useEffect(() => {
+    if ((subView === "pix_payment" || subView === "lightning_payment") && selectedItem?.id) {
+      const liveOrder = myOrders.find((o) => o.id === selectedItem.id);
+      if (liveOrder && liveOrder.status && liveOrder.status !== "pendente_pagamento") {
+        if (liveOrder.status === "cancelado" || liveOrder.status === "recusado") {
+            toastError("Pagamento recusado ou expirado.");
+            setSubView("payment_error");
+        } else {
+            toastSuccess("Pagamento confirmado com sucesso!");
+            setSubView("none");
+            setTab("orders");
+            setSelectedItem(null);
+        }
+      }
+    }
+  }, [myOrders, subView, selectedItem]);
   const [cart, setCart] = useState<any[]>(() => {
     try {
       const saved = localStorage.getItem("izi_cart");
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
+
+  // Evitar sobrescrever a nuvem com carrinho vazio de um novo aparelho (Race condition do Login)
+  const isFirstEmptySync = useRef(cart.length === 0);
 
   // Persistir carrinho no localStorage e Supabase sempre que mudar
   useEffect(() => {
@@ -1452,13 +1479,20 @@ function App() {
       
       // Sincronizar com o banco se estiver logado
       if (userId) {
-        // Usamos uma técnica de debounce simples ou persistência direta
-        // Para uma sacola de compras, a persistência direta é aceitável dada a frequência de uso
+        // Se a sacola começou vazia, NÃO sincronize o vazio com a nuvem durante o boot do componente. 
+        // Deixe que o load da nuvem (fetchCartData) recupere a sacola real.
+        // Assim evitamos sobrescrever o cart_data de um aparelho 1 com o localstorage vazio de um aparelho 2 recém-logado.
+        if (isFirstEmptySync.current && cart.length === 0) {
+            return;
+        }
+        
+        isFirstEmptySync.current = false; // Destrava a nuvem a partir de agora!
+
         supabase.from("users_delivery")
           .update({ cart_data: cart })
           .eq("id", userId)
           .then(({ error }) => {
-            if (error) console.error("Erro ao sincronizar sacola:", error);
+            if (error) console.error("Erro ao sincronizar sacola na nuvem:", error);
           });
       }
     } catch {}
@@ -1492,6 +1526,15 @@ function App() {
   const [, setCouponError] = useState("");
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [beverageBanners, setBeverageBanners] = useState<any[]>([]);
+  const [bevBannerIndex, setBevBannerIndex] = useState(0);
+  useEffect(() => {
+    if (beverageBanners.length > 1) {
+      const interval = setInterval(() => {
+        setBevBannerIndex(prev => (prev + 1) % beverageBanners.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [beverageBanners.length]);
   const [beverageOffers, setBeverageOffers] = useState<any[]>([]);
 
   // --- MOTOR DE PRECIFICAÃƒâ€¡ÃƒÆ’O DINÃƒâ€šMICA (REAL-TIME DATA) ---
@@ -3085,23 +3128,46 @@ function App() {
         </header>
 
         <main className="p-6 space-y-8">
-            <div className="relative h-64 rounded-[50px] overflow-hidden group border border-white/10">
-              <img 
-                src={beverageBanners.length > 0 ? beverageBanners[0].image_url : "https://images.unsplash.com/photo-1470337458703-46ad1756a187?q=80&w=800"} 
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[3000ms]" 
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent flex flex-col justify-center px-10">
-                 <div className="flex items-center gap-2 mb-4">
-                    <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest w-fit">Aproveite</span>
-                    <span className="bg-yellow-400 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest w-fit">Limitado</span>
+            <div className="relative h-64 rounded-[50px] overflow-hidden group border border-white/10 bg-zinc-900">
+               <AnimatePresence mode="wait">
+                 <motion.div
+                   key={bevBannerIndex}
+                   initial={{ opacity: 0, x: 50 }}
+                   animate={{ opacity: 1, x: 0 }}
+                   exit={{ opacity: 0, x: -50 }}
+                   transition={{ duration: 0.5 }}
+                   className="absolute inset-0"
+                 >
+                   <img 
+                     src={beverageBanners.length > 0 ? beverageBanners[bevBannerIndex].image_url : "https://images.unsplash.com/photo-1470337458703-46ad1756a187?q=80&w=800"} 
+                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[3000ms]" 
+                   />
+                   <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent flex flex-col justify-center px-10">
+                      <div className="flex items-center gap-2 mb-4">
+                         <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest w-fit">Aproveite</span>
+                         <span className="bg-yellow-400 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest w-fit">Limitado</span>
+                      </div>
+                      <h2 className="text-4xl font-black tracking-tighter leading-tight max-w-[250px] italic text-yellow-400">
+                         {beverageBanners.length > 0 ? beverageBanners[bevBannerIndex].title : "Oferta Izi"}
+                      </h2>
+                      <p className="text-[11px] font-bold text-white/60 mt-4 uppercase tracking-[0.2em]">
+                         {beverageBanners.length > 0 ? beverageBanners[bevBannerIndex].description : "Confira nossas ofertas selecionadas"}
+                      </p>
+                   </div>
+                 </motion.div>
+               </AnimatePresence>
+               
+               {beverageBanners.length > 1 && (
+                 <div className="absolute bottom-6 right-10 flex gap-1.5 z-20">
+                   {beverageBanners.map((_: any, i: number) => (
+                     <button 
+                       key={i}
+                       onClick={(e) => { e.stopPropagation(); setBevBannerIndex(i); }}
+                       className={`h-1.5 rounded-full transition-all duration-500 ${i === bevBannerIndex ? 'w-8 bg-yellow-400' : 'w-2 bg-white/20 hover:bg-white/40'}`}
+                     />
+                   ))}
                  </div>
-                 <h2 className="text-4xl font-black tracking-tighter leading-tight max-w-[250px] italic text-yellow-400">
-                    {beverageBanners.length > 0 ? beverageBanners[0].title : "Liquidação de Verão"}
-                 </h2>
-                 <p className="text-[11px] font-bold text-white/60 mt-4 uppercase tracking-[0.2em]">
-                    {beverageBanners.length > 0 ? beverageBanners[0].description : "Até 40% OFF em Packs Selecionados"}
-                 </p>
-              </div>
+               )}
             </div>
 
            <div className="grid grid-cols-1 gap-6 pt-4">
@@ -3740,9 +3806,11 @@ function App() {
             await clearCart();
         }
 
-      } catch (e) {
+      } catch (e: any) {
         console.error("Exceção crítica no fluxo PIX:", e);
-        navigateSubView("payment_error");
+        const errDetail = e.message || "Erro de conexão. Tente novamente.";
+        setSelectedItem((prev: any) => ({ ...prev, pixError: true, pixErrorMessage: errDetail }));
+        setPixConfirmed(true);
       }
     };
 
