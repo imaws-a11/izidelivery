@@ -83,17 +83,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
   };
 
   const deliveryServices = [
-    { icon: "restaurant",     label: "Food",         type: "restaurant", action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("restaurant_list"); } },
-    { icon: "rice_bowl",      label: "Almoço",       type: "restaurant", action: () => { setRestaurantInitialCategory("Almoço"); navigateSubView("restaurant_list"); } },
-    { icon: "local_mall",     label: "Mercados",     type: "market",     action: null },
-    { icon: "local_bar",      label: "Bebidas",      type: "beverages",  action: null },
-    { icon: "local_pharmacy", label: "Saúde",        type: "pharmacy",   action: null },
-    { icon: "pedal_bike",     label: "Envios",       type: null,         action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
-    { icon: "pets",           label: "Petshop",      type: "generic",    action: () => { setExploreCategoryState({ id: "pets", title: "Pet Shop Premium", tagline: "Mimo para seu melhor amigo", primaryColor: "rose-500", icon: "pets", banner: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=1200" }); navigateSubView("explore_category"); } },
-    { icon: "propane_tank",   label: "Gas e Agua",   type: "generic",    action: () => { setExploreCategoryState({ id: "gas", title: "Gás e Água", tagline: "Essencial na sua porta", primaryColor: "blue-500", icon: "propane_tank", banner: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=1200" }); navigateSubView("explore_category"); } },
-    { icon: "kebab_dining",   label: "Açougue",      type: "generic",    action: () => { setExploreCategoryState({ id: "açougue", title: "Corte Prime", tagline: "Os melhores cortes selecionados", primaryColor: "red-600", icon: "kebab_dining", banner: "https://images.unsplash.com/photo-1607623273573-599d0086353f?q=80&w=1200" }); navigateSubView("explore_category"); } },
-    { icon: "bakery_dining",  label: "Padaria",      type: "generic",    action: () => { setExploreCategoryState({ id: "padaria", title: "Padaria Izi", tagline: "Pão quentinho o dia todo", primaryColor: "amber-600", icon: "bakery_dining", banner: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=1200" }); navigateSubView("explore_category"); } },
-    { icon: "nutrition",      label: "Hortifruti",   type: "generic",    action: () => { setExploreCategoryState({ id: "hortifruti", title: "Hortifruti Izi", tagline: "Do campo para sua casa", primaryColor: "emerald-600", icon: "nutrition", banner: "https://images.unsplash.com/photo-1610348725531-843dff563e2c?q=80&w=1200" }); navigateSubView("explore_category"); } },
+    { icon: "restaurant",     img: "/images/comida.png", tagline: "GASTRONOMIA",      highlight: "gold", label: "Comida e Lanche", type: "restaurant", action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("restaurant_list"); } },
+    { icon: "rice_bowl",      img: "/images/almoco.png",   tagline: "ALMOÇO EXPRESS",   highlight: "none", label: "Almoço",       type: "restaurant", action: () => { setRestaurantInitialCategory("Almoço"); navigateSubView("restaurant_list"); } },
+    { icon: "local_mall",     img: "/images/mercados.png", tagline: "MERCAIDT",         highlight: "cyan", label: "Mercados",     type: "market",     action: null },
+    { icon: "local_bar",      img: "/images/bebidas.png",  tagline: "BEBIDAS FINAIS",   highlight: "none", label: "Bebidas",      type: "beverages",  action: null },
+    { icon: "local_pharmacy", img: "/images/saude.png",    tagline: "SAÚDE INTEGRAL",   highlight: "cyan", label: "Saúde",        type: "pharmacy",   action: null },
+    { icon: "pedal_bike",     img: "/images/envios.png",   tagline: "",                 highlight: "none", label: "Envios",       type: null,         action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
+    { icon: "pets",           img: "/images/petshop.png",  tagline: "CONFORTO PET",     highlight: "gold", label: "Petshop",      type: "generic",    action: () => { setExploreCategoryState({ id: "pets", title: "Pet Shop Premium", tagline: "Mimo para seu melhor amigo", primaryColor: "rose-500", icon: "pets", banner: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=1200" }); navigateSubView("explore_category"); } },
+    { icon: "propane_tank",   img: "/images/gas-agua.png", tagline: "VITAIS",           highlight: "cyan", label: "Gas e Agua",   type: "generic",    action: () => { setExploreCategoryState({ id: "gas", title: "Gás e Água", tagline: "Essencial na sua porta", primaryColor: "blue-500", icon: "propane_tank", banner: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=1200" }); navigateSubView("explore_category"); } },
+    { icon: "kebab_dining",   img: "/images/acougue.png",  tagline: "CARNES PRIME",     highlight: "gold", label: "Açougue",      type: "generic",    action: () => { setExploreCategoryState({ id: "açougue", title: "Corte Prime", tagline: "Os melhores cortes selecionados", primaryColor: "red-600", icon: "kebab_dining", banner: "https://images.unsplash.com/photo-1607623273573-599d0086353f?q=80&w=1200" }); navigateSubView("explore_category"); } },
+    { icon: "bakery_dining",  img: "/images/padaria.png",  tagline: "PADARIA ARTESANAL",highlight: "gold", label: "Padaria",      type: "generic",    action: () => { setExploreCategoryState({ id: "padaria", title: "Padaria Izi", tagline: "Pão quentinho o dia todo", primaryColor: "amber-600", icon: "bakery_dining", banner: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=1200" }); navigateSubView("explore_category"); } },
+    { icon: "nutrition",      img: "/images/hortifruti.png",tagline:"FRESCOR HORTI",    highlight: "cyan", label: "Hortifruti",   type: "generic",    action: () => { setExploreCategoryState({ id: "hortifruti", title: "Hortifruti Izi", tagline: "Do campo para sua casa", primaryColor: "emerald-600", icon: "nutrition", banner: "https://images.unsplash.com/photo-1610348725531-843dff563e2c?q=80&w=1200" }); navigateSubView("explore_category"); } },
   ];
 
   const handleServiceSelection = (cat: any) => {
@@ -308,7 +308,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <span className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">AO VIVO</span>
               </div>
               
-              <div className="flex gap-5 overflow-x-auto no-scrollbar pb-2 -mx-5 px-5 h-[200px]">
+              <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2 -mx-5 px-5 h-[200px]">
                 {activeStories.map(story => (
                   <motion.div 
                     key={story.id} 
@@ -332,7 +332,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         setSubView("product_detail");
                       }
                     }}
-                    className={`relative flex-shrink-0 w-32 h-[190px] rounded-[32px] p-[1.5px] bg-gradient-to-tr ${story.isMaster ? "from-yellow-400 via-zinc-800 to-amber-600 shadow-[0_4px_20px_rgba(255,215,9,0.3)]" : "from-red-500 via-rose-500 to-orange-400 shadow-[0_4px_20px_rgba(239,68,68,0.2)]"} cursor-pointer transition-all group`}
+                    className={`relative flex-shrink-0 w-40 h-[190px] snap-center rounded-[32px] p-[1.5px] bg-gradient-to-tr ${story.isMaster ? "from-yellow-400 via-zinc-800 to-amber-600 shadow-[0_4px_20px_rgba(255,215,9,0.3)]" : "from-red-500 via-rose-500 to-orange-400 shadow-[0_4px_20px_rgba(239,68,68,0.2)]"} cursor-pointer transition-all group`}
                   >
                     <div className="size-full rounded-[30.5px] overflow-hidden bg-zinc-900 border-[2px] border-zinc-950 relative">
                       <img src={story.img} className="size-full object-cover brightness-75 group-hover:scale-110 transition-transform duration-1000" />
@@ -353,60 +353,86 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </section>
           )}
 
-          {/* CUPONS HIGHLIGHTS */}
+          {/* CUPONS HIGHLIGHTS / BANNERS DE PUBLICIDADE */}
           {availableCoupons.length > 0 && (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-sm font-black tracking-[0.2em] text-white uppercase italic">Meus Descontos</h3>
-                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">{availableCoupons.length} ATIVOS</span>
+            <section className="space-y-5">
+              <div className="flex items-end justify-between px-2">
+                <div className="space-y-1">
+                  <h3 className="text-2xl font-black tracking-tighter text-white italic uppercase leading-none">Benefícios</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_10px_rgba(251,191,36,0.5)]" />
+                    <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em]">{availableCoupons.length} Banners Ativos</p>
+                  </div>
+                </div>
               </div>
               
-              <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-5 px-5">
+              <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-4 -mx-5 px-5">
                 {availableCoupons.map((coupon, i) => {
                   const isCopied = copiedCoupon === coupon.coupon_code;
+                  // Alta qualidade de imagens para banners de publicidade / cupons
+                  const bannerImages = [
+                    "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=800",
+                    "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=800",
+                    "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=800",
+                    "https://images.unsplash.com/photo-1470337458703-46ad1756a187?q=80&w=800"
+                  ];
+                  const fallbackImg = bannerImages[i % bannerImages.length];
+
                   return (
                     <motion.div 
                       key={coupon.id || i} 
-                      initial={{ opacity: 0, x: 20 }} 
-                      animate={{ opacity: 1, x: 0 }} 
-                      transition={{ delay: i * 0.1 }}
-                      className="relative flex-shrink-0 w-[240px] h-[100px] rounded-[24px] overflow-hidden group cursor-pointer transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+                      whileTap={{ scale: 0.98 }}
+                      className="relative flex-shrink-0 w-[300px] h-[160px] rounded-[32px] overflow-hidden group cursor-pointer transition-all snap-center shadow-[0_10px_40px_rgba(0,0,0,0.8)] border border-white/5 hover:border-white/20"
                     >
                        <img 
-                         src={coupon.image_url || `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400&h=200&sig=${i}`}
-                         alt="Cupom Especial" 
-                         className="absolute inset-0 w-full h-full object-cover brightness-[0.5] group-hover:brightness-[0.4] group-hover:scale-110 transition-all duration-700"
+                         src={coupon.image_url || fallbackImg}
+                         alt="Cupom de Publicidade" 
+                         className="absolute inset-0 w-full h-full object-cover brightness-[0.4] group-hover:brightness-[0.35] group-hover:scale-110 transition-transform duration-1000"
                        />
                        
-                       <div className="absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-black via-black/60 to-transparent" />
+                       <div className="absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-black via-black/80 to-transparent" />
 
-                       <div className="relative z-10 h-full p-4 flex justify-between items-center gap-3">
-                          <div className="flex-1">
-                             <div className="flex items-center gap-1.5 mb-1.5">
-                                <span className="material-symbols-outlined text-[12px] text-yellow-400 drop-shadow-md">confirmation_number</span>
-                                <span className="text-[9px] font-black text-white px-2 py-0.5 bg-black/40 backdrop-blur-md rounded-md uppercase tracking-widest drop-shadow-md border border-white/5">CUPOM ATIVO</span>
+                       <div className="relative z-10 h-full p-6 flex flex-col justify-between">
+                          <div className="flex justify-between items-start">
+                             <div className="bg-yellow-400/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-yellow-400/20 shadow-lg">
+                               <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest flex items-center gap-1.5">
+                                 <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>local_activity</span>
+                                 CUPOM REVELADO
+                               </span>
                              </div>
-                             <h5 className="text-xl font-black text-white font-mono leading-none tracking-[0.1em] drop-shadow-lg">{coupon.coupon_code}</h5>
-                             <p className="text-yellow-400 text-[10px] mt-1.5 font-black uppercase tracking-tighter drop-shadow-md">
-                                {coupon.discount_type === "fixed" ? `R$${coupon.discount_value} OFF` : `${coupon.discount_value}% OFF`}
-                                {coupon.min_order_value > 0 && ` • Min R$${coupon.min_order_value}`}
-                             </p>
+
+                             <button 
+                               onClick={(e) => { 
+                                 e.stopPropagation();
+                                 navigator.clipboard.writeText(coupon.coupon_code).catch(() => {}); 
+                                 setCopiedCoupon(coupon.coupon_code); 
+                                 setTimeout(() => setCopiedCoupon(null), 2000); 
+                                 showToast("Código promocional copiado!", "success");
+                               }}
+                               className={`size-10 rounded-2xl flex items-center justify-center transition-all duration-300 backdrop-blur-md shadow-2xl border ${isCopied ? "bg-emerald-500 border-none scale-105" : "bg-black/40 border-white/10 group-hover:bg-yellow-400 group-hover:border-yellow-400"}`}
+                             >
+                                <span className={`material-symbols-outlined text-lg ${isCopied ? "text-white" : "text-white group-hover:text-black"} transition-colors`}>
+                                  {isCopied ? "done_all" : "content_cut"}
+                                </span>
+                             </button>
                           </div>
                           
-                          <button 
-                            onClick={(e) => { 
-                              e.stopPropagation();
-                              navigator.clipboard.writeText(coupon.coupon_code).catch(() => {}); 
-                              setCopiedCoupon(coupon.coupon_code); 
-                              setTimeout(() => setCopiedCoupon(null), 2000); 
-                              showToast("Código copiado! \uD83C\uDFAB", "success");
-                            }}
-                            className={`size-10 rounded-[14px] flex items-center justify-center transition-all duration-300 backdrop-blur-md shadow-lg border border-white/20 ${isCopied ? "bg-emerald-500 border-none scale-110" : "bg-black/40 group-hover:bg-yellow-400 group-hover:text-black group-hover:border-black/10"}`}
-                          >
-                             <span className={`material-symbols-outlined ${isCopied ? "text-white" : "text-white group-hover:text-black"} text-lg leading-none`}>
-                               {isCopied ? "check" : "content_copy"}
-                             </span>
-                          </button>
+                          <div className="flex flex-col mt-auto">
+                            <div className="flex items-center gap-3">
+                              <h5 className="text-3xl font-black text-white uppercase italic tracking-tighter drop-shadow-2xl">
+                                {coupon.discount_type === "fixed" ? `R$${coupon.discount_value}` : `${coupon.discount_value}%`}
+                              </h5>
+                              <span className="text-zinc-500 font-bold text-xs uppercase tracking-[0.2em] transform translate-y-1">OFF</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-white text-sm font-black tracking-widest uppercase bg-black/50 px-2 py-0.5 rounded-md border border-white/5 shadow-md">
+                                {coupon.coupon_code}
+                              </span>
+                              {coupon.min_order_value > 0 && (
+                                <span className="text-zinc-400 text-[10px] font-medium uppercase tracking-tight">Mín. R${coupon.min_order_value}</span>
+                              )}
+                            </div>
+                          </div>
                        </div>
                     </motion.div>
                   );
@@ -415,27 +441,53 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </section>
           )}
 
-          {/* GRADE DE SERVIÇOS */}
-          <section className="grid grid-cols-3 gap-y-12 gap-x-8">
+          {/* GRADE DE SERVIÇOS 3D MASONRY */}
+          <section className="grid grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-auto">
             {deliveryServices.map((svc, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.05 }}
                 onClick={() => handleServiceSelection(svc)}
-                className="flex flex-col items-center gap-4 group cursor-pointer active:scale-95 transition-all"
+                className={`relative flex flex-col items-center justify-center cursor-pointer transition-all bg-[#1a1b1e]/90 backdrop-blur-md border rounded-[32px] p-6 shadow-2xl overflow-hidden group 
+                  ${svc.highlight === "gold" ? "shadow-[0_0_30px_rgba(251,191,36,0.08)] border-yellow-500/20" : ""}
+                  ${svc.highlight === "cyan" ? "shadow-[0_0_30px_rgba(34,211,238,0.08)] border-cyan-500/20" : ""}
+                  ${svc.highlight === "none" ? "border-white/5" : ""}
+                  hover:scale-[1.02] active:scale-95`}
               >
-                <div className="relative w-20 h-20 flex items-center justify-center">
-                  <div className="absolute inset-0 bg-yellow-400/5 blur-[25px] rounded-full opacity-60 group-hover:opacity-100 transition-all duration-500" />
-                  <div className="relative z-10 w-16 h-16 rounded-[22px] bg-zinc-900 border border-white/5 flex items-center justify-center shadow-2xl transition-transform group-hover:scale-110">
-                    <span className="material-symbols-outlined text-4xl text-white group-hover:text-yellow-400 transition-colors">
-                      {svc.icon}
-                    </span>
+                {svc.highlight === "gold" && <div className="absolute inset-0 bg-gradient-to-t from-yellow-400/5 to-transparent transition-opacity opacity-0 group-hover:opacity-100" />}
+                {svc.highlight === "cyan" && <div className="absolute inset-0 bg-gradient-to-t from-cyan-400/5 to-transparent transition-opacity opacity-0 group-hover:opacity-100" />}
+                
+                <div className="relative z-10 w-24 h-24 flex items-center justify-center mb-6 transition-transform group-hover:-translate-y-2 duration-500">
+                  <img 
+                    src={svc.img} 
+                    alt={`Ícone ${svc.label} 3D`} 
+                    className="w-full h-full object-contain drop-shadow-2xl"
+                    onError={(e) => { 
+                      e.currentTarget.style.display = 'none'; 
+                      e.currentTarget.nextElementSibling?.classList.replace('hidden', 'flex'); 
+                    }}
+                  />
+                  {/* Fallback Material Icon */}
+                  <div className="absolute inset-0 hidden items-center justify-center">
+                     <span className={`material-symbols-outlined text-[64px] drop-shadow-xl ${svc.highlight === "gold" ? "text-yellow-400" : svc.highlight === "cyan" ? "text-cyan-400" : "text-white"}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                       {svc.icon}
+                     </span>
                   </div>
                 </div>
-                <span className="text-[9px] font-black text-zinc-500 group-hover:text-zinc-100 tracking-[0.2em] uppercase transition-colors text-center">{svc.label}</span>
+
+                <div className="text-center relative z-10 flex flex-col items-center gap-2 mt-auto">
+                  <h3 className="font-bold text-[13px] text-white tracking-widest uppercase truncate w-full px-1 drop-shadow-md">
+                    {svc.label}
+                  </h3>
+                  {svc.tagline && (
+                    <p className="text-[9px] text-zinc-500 uppercase tracking-[0.2em] font-semibold leading-none">
+                      {svc.tagline}
+                    </p>
+                  )}
+                </div>
               </motion.div>
             ))}
           </section>
