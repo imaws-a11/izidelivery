@@ -182,6 +182,12 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
           }]);
         if (error) throw error;
         toastSuccess(`${categoryModal.title} concluída!`);
+        
+        if (!categoryModal.parentId) {
+           setEditingItem({ ...editingItem, category: newCategoryName.trim(), subcategory: '' });
+        } else {
+           setEditingItem({ ...editingItem, subcategory: newCategoryName.trim(), sub_category: newCategoryName.trim() });
+        }
       } else {
          const { error } = await supabase
            .from('merchant_categories_delivery')
@@ -316,7 +322,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="w-full max-w-5xl bg-slate-950 rounded-[48px] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,1)] relative z-10 flex flex-col border border-white/5 h-[90vh]"
+        className="w-full max-w-6xl xl:max-w-7xl bg-slate-950 rounded-[48px] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,1)] relative z-10 flex flex-col border border-white/5 h-[90vh]"
       >
         {/* Header */}
         <div className="p-8 md:p-10 border-b border-white/5 flex justify-between items-center bg-black/40">
