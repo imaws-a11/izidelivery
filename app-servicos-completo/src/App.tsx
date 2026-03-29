@@ -761,9 +761,46 @@ function App() {
 
   const handleApplyCoupon = async (code: string) => {
     if (!code) return;
-    const { data } = await supabase.from("promotions").select("*").eq("coupon_code", code.toUpperCase().trim()).eq("is_active", true).single();
-    if (data) { setAppliedCoupon(data); setCouponInput(data.coupon_code); }
-    else { alert("Cupom invalido ou expirado."); }
+    const { data, error } = await supabase
+      .from("promotions_delivery")
+      .select("*")
+      .eq("coupon_code", code.toUpperCase().trim())
+      .eq("is_active", true)
+      .single();
+
+    if (error || !data) {
+      toastError("Cupom inválido ou expirado.");
+      return;
+    }
+
+    // 1. Validação de Expiração
+    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+      toastError("Este cupom já expirou.");
+      return;
+    }
+
+    // 2. Validação de Valor Mínimo
+    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+    if (subtotal < (data.min_order_value || 0)) {
+      toastError(`O valor mínimo para este cupom é R$ ${data.min_order_value.toFixed(2)}.`);
+      return;
+    }
+
+    // 3. Validação de Uso
+    if (data.usage_count >= data.max_usage) {
+      toastError("Este cupom já atingiu o limite de usos.");
+      return;
+    }
+
+    // 4. Validação VIP
+    if (data.is_vip && !isIziBlackMembership) {
+      toastError("Este cupom é exclusivo para membros IZI Black.");
+      return;
+    }
+
+    setAppliedCoupon(data);
+    setCouponInput(data.coupon_code);
+    toastSuccess("Cupom aplicado!");
   };
 
 
@@ -800,6 +837,15 @@ function App() {
 
     const clearCart = async () => {
       const finalCoins = useCoins ? earnedCoins : (iziCoins + earnedCoins);
+      
+      // Incrementa uso do cupom se existir
+      if (appliedCoupon?.id) {
+        await supabase
+          .from("promotions_delivery")
+          .update({ usage_count: (appliedCoupon.usage_count || 0) + 1 })
+          .eq("id", appliedCoupon.id);
+      }
+
       setCart([]);
       setAppliedCoupon(null);
       setCouponInput("");
@@ -1421,13 +1467,21 @@ function App() {
   });
 
   const foodCategories = [
-    { id: "all",        name: "Todos",      icon: "restaurant",    action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
-    { id: "burgers",    name: "Burgers",    icon: "lunch_dining",  action: () => { setRestaurantInitialCategory("Burgers"); navigateSubView("explore_restaurants"); } },
-    { id: "pizza",      name: "Pizza",      icon: "local_pizza",   action: () => { setRestaurantInitialCategory("Pizza"); navigateSubView("explore_restaurants"); } },
-    { id: "japones",    name: "Japonesa",   icon: "set_meal",      action: () => { setRestaurantInitialCategory("Japonesa"); navigateSubView("explore_restaurants"); } },
-    { id: "brasileira", name: "Brasileira", icon: "dinner_dining", action: () => { setRestaurantInitialCategory("Brasileira"); navigateSubView("explore_restaurants"); } },
-    { id: "acai",       name: "Açaí",       icon: "grass",         action: () => { setRestaurantInitialCategory("Açaí"); navigateSubView("explore_restaurants"); } },
-    { id: "daily",      name: "Do Dia",     icon: "today",         action: () => navigateSubView("daily_menus") },
+    { id: "all",        name: "Todos",         icon: "restaurant",    action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
+    { id: "promocoes",  name: "Promoções",     icon: "percent",       action: () => { setRestaurantInitialCategory("Promoções"); navigateSubView("explore_restaurants"); } },
+    { id: "burgers",    name: "Burgers",       icon: "lunch_dining",  action: () => { setRestaurantInitialCategory("Burgers"); navigateSubView("explore_restaurants"); } },
+    { id: "pizza",      name: "Pizza",         icon: "local_pizza",   action: () => { setRestaurantInitialCategory("Pizza"); navigateSubView("explore_restaurants"); } },
+    { id: "doces",      name: "Doces e Bolos", icon: "cake",          action: () => { setRestaurantInitialCategory("Doces e Bolos"); navigateSubView("explore_restaurants"); } },
+    { id: "salgados",   name: "Salgados",      icon: "bakery_dining", action: () => { setRestaurantInitialCategory("Salgados"); navigateSubView("explore_restaurants"); } },
+    { id: "porcoes",    name: "Porções",       icon: "ramen_dining",  action: () => { setRestaurantInitialCategory("Porções"); navigateSubView("explore_restaurants"); } },
+    { id: "japones",    name: "Japonês",       icon: "set_meal",      action: () => { setRestaurantInitialCategory("Japonês"); navigateSubView("explore_restaurants"); } },
+    { id: "massas",     name: "Massas",        icon: "dinner_dining", action: () => { setRestaurantInitialCategory("Massas"); navigateSubView("explore_restaurants"); } },
+    { id: "carnes",     name: "Carnes",        icon: "kebab_dining",  action: () => { setRestaurantInitialCategory("Carnes"); navigateSubView("explore_restaurants"); } },
+    { id: "fit",        name: "Fit",           icon: "eco",           action: () => { setRestaurantInitialCategory("Fit"); navigateSubView("explore_restaurants"); } },
+    { id: "acai",       name: "Açaí",          icon: "grass",         action: () => { setRestaurantInitialCategory("Açaí"); navigateSubView("explore_restaurants"); } },
+    { id: "sorvetes",   name: "Sorvetes",      icon: "icecream",       action: () => { setRestaurantInitialCategory("Sorvetes"); navigateSubView("explore_restaurants"); } },
+    { id: "padaria",    name: "Padaria",       icon: "breakfast_dining", action: () => { setRestaurantInitialCategory("Padaria"); navigateSubView("explore_restaurants"); } },
+    { id: "daily",      name: "Do Dia",        icon: "today",         action: () => navigateSubView("daily_menus") },
   ];
 
   const lunchCategories = [
@@ -2092,105 +2146,27 @@ function App() {
   const renderExploreCategory = () => {
     if (!exploreCategoryState) return null;
 
-    // Filtra os lojistas reais do banco de dados ao invés de usar dados engessados (hardcoded)
-    const shops = ESTABLISHMENTS.filter((estab: any) => {
-        const catId = (exploreCategoryState.id || "").toLowerCase();
-        const type = estab.type.toLowerCase();
-        // Filtro estrito: deve coincidir o tipo OU estar na descrição caso seja uma subcategoria
-        return type === catId || estab.description.toLowerCase().includes(catId);
-    }).map((estab: any) => ({
-      id: estab.id,
-      name: estab.name,
-      rating: estab.rating || "5.0",
-      time: estab.time || "30-50 min",
-      freeDelivery: estab.freeDelivery || true,
-      fee: estab.freeDelivery ? undefined : "R$ 4,90",
-      tag: estab.tag || "Loja Parceira",
-      banner: estab.banner || estab.img,
-      logo: estab.img || estab.banner,
-      type: estab.type,
-    }));
-
     const accentColor = exploreCategoryState.primaryColor;
 
     return (
-      <div className="bg-black text-zinc-100 absolute inset-0 z-40 bg-zinc-900  flex flex-col hide-scrollbar overflow-y-auto pb-40">
-        <div className="relative h-72 shrink-0">
-          <img src={exploreCategoryState.banner} className="size-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#0F172A] via-black/20 to-transparent" />
-          
-          <div className="absolute top-8 left-6 right-6 flex items-center justify-between">
-            <button 
-              onClick={() => setSubView('none')} 
-              className="size-12 rounded-[22px] bg-zinc-900/20 backdrop-blur-3xl border border-white/30 flex items-center justify-center text-white active:scale-90 transition-all font-black"
-            >
-              <Icon name="arrow_back" />
-            </button>
-            <button className="size-12 rounded-[22px] bg-zinc-900/20 backdrop-blur-3xl border border-white/30 flex items-center justify-center text-white active:scale-90 transition-all font-black">
-              <Icon name="search" />
-            </button>
-          </div>
-
-          <div className="absolute bottom-10 left-8">
-             <div className={`px-4 py-1.5 rounded-full bg-${accentColor} text-white text-[10px] font-black uppercase tracking-[0.2em] w-fit mb-3 shadow-lg shadow-${accentColor}/30`}>
-                {exploreCategoryState.tagline}
-             </div>
-             <h1 className="text-4xl font-black text-white tracking-tighter leading-none mb-1">
-                {exploreCategoryState.title}
-             </h1>
-          </div>
-        </div>
-
-        <main className="px-6 space-y-8 -mt-6 relative z-10">
-          <div className="flex gap-4 overflow-x-auto no-scrollbar py-2">
-            {['Em Destaque', 'Mais Próximos', 'Novidades', 'Melhor Avaliados'].map((filter, i) => (
-              <button 
-                key={i} 
-                className={`px-6 py-3 rounded-2xl whitespace-nowrap text-[11px] font-black uppercase tracking-widest transition-all ${i === 0 ? `bg-zinc-900  text-white  shadow-xl shadow-primary/20` : 'bg-zinc-900 bg-zinc-900 border border-zinc-800 border-zinc-800 text-zinc-500'}`}
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
-
-          <div className="space-y-6">
-            {shops.map((shop, i) => (
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                key={shop.id}
-                onClick={() => handleShopClick({ ...shop, type: exploreCategoryState.id })}
-                className="bg-zinc-900 bg-zinc-900 rounded-[45px] overflow-hidden shadow-2xl border border-zinc-800 border-zinc-800 group relative"
-              >
-                <div className="h-44 relative overflow-hidden">
-                  <img src={shop.banner} className="size-full object-cover group-hover:scale-105 transition-transform duration-[2000ms]" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                  <div className="absolute top-4 right-4 bg-zinc-900/95 backdrop-blur px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-xl">
-                     <Icon name="star" />
-                     <span className="text-[11px] font-black text-white">{shop.rating}</span>
-                  </div>
-                </div>
-                <div className="p-6 flex items-center gap-5">
-                  <div className="size-14 rounded-[20px] bg-zinc-900 p-1 shadow-xl shrink-0 border border-slate-50">
-                    <img src={shop.logo} className="size-full rounded-[15px] object-cover" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-black tracking-tight text-white truncate">{shop.name}</h3>
-                    <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                      <span className={`text-${accentColor}`}>{shop.tag}</span>
-                      <span>Ã¢â‚¬¢</span>
-                      <span>{shop.time}</span>
-                      <span>Ã¢â‚¬¢</span>
-                      <span className={shop.freeDelivery ? "text-emerald-500" : ""}>{shop.freeDelivery ? "Grátis" : shop.fee}</span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </main>
-      </div>
+      <EstablishmentListView
+        title={exploreCategoryState.title}
+        subtitle={exploreCategoryState.tagline}
+        icon={exploreCategoryState.icon}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        setSubView={setSubView}
+        establishments={ESTABLISHMENTS}
+        filterFn={(estab: any) => {
+          const catId = (exploreCategoryState.id || "").toLowerCase();
+          const type = estab.type.toLowerCase();
+          return type === catId || estab.description.toLowerCase().includes(catId);
+        }}
+        onShopClick={(shop) => handleShopClick({ ...shop, type: exploreCategoryState.id })}
+        cartLength={cart.length}
+        navigateSubView={navigateSubView}
+        backView="none"
+      />
     );
   };
 
@@ -2635,143 +2611,35 @@ function App() {
     const categoryIcons: Record<string, string> = {
       "Petshop": "pets", "Flores": "local_florist", "Doces & Bolos": "cake",
       "Farmácia": "local_pharmacy", "Mercado": "local_mall",
+      "Gás & Água": "propane_tank", "Açougue": "kebab_dining", "Padaria": "bakery_dining", "Hortifruti": "nutrition"
     };
     const icon = categoryIcons[title] || "storefront";
 
     return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-
-        {/* HEADER */}
-        <header className="sticky top-0 z-50 px-5 pt-5 pb-4"
-          style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-                <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
-              </button>
-              <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">{title}</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Disponível agora</p>
-              </div>
-            </div>
-            <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-              {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>}
-            </button>
-          </div>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
-            </div>
-            <input
-              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
-              placeholder={`Buscar em ${title}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </header>
-
-        <main className="px-5 flex flex-col gap-8">
-
-          {/* BANNER */}
-          <section>
-            <div className="relative h-40 rounded-2xl overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-black flex items-center justify-center">
-                <span className="material-symbols-outlined text-[120px] text-yellow-400/10">{icon}</span>
-              </div>
-              <div className="absolute inset-0 flex flex-col justify-center p-6">
-                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Disponível</span>
-                <h2 className="text-xl font-extrabold text-white leading-tight">{title}<br/>premium na sua porta</h2>
-              </div>
-            </div>
-          </section>
-
-          {/* ESTABELECIMENTOS */}
-          <section>
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="font-extrabold text-base tracking-tight text-white uppercase">Próximos de você</h3>
-                <div className="w-8 h-1 bg-yellow-400 rounded-full mt-1" />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-4 pb-10">
-              {ESTABLISHMENTS.filter((shop: any) => {
-                const sType = (shop.type || "").toLowerCase();
-                const sTag = (shop.tag || "").toLowerCase();
-                const filterMatch = sType === (activeService?.type || "").toLowerCase() || sType === (activeService?.label || "").toLowerCase() || sTag.includes((activeService?.type || "").toLowerCase()) || sTag.includes((activeService?.label || "").toLowerCase());
-                return filterMatch && (shop.name.toLowerCase().includes(searchQuery.toLowerCase()) || sTag.includes(searchQuery.toLowerCase()));
-              }).map((shop: any, i: number) => (
-                <motion.div
-                  key={shop.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  onClick={() => handleShopClick({ ...shop, type: "generic" })}
-                  className="group cursor-pointer active:scale-[0.98] transition-all"
-                >
-                  <div className="relative h-44 rounded-2xl overflow-hidden mb-3">
-                    <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                    <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-white/10">
-                      <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                      <span className="text-xs font-black text-white">{shop.rating}</span>
-                    </div>
-                    {shop.freeDelivery && (
-                      <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
-                        Entrega Grátis
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between px-1">
-                    <div>
-                      <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">{shop.name}</h4>
-                      <div className="flex items-center gap-3 mt-1 text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
-                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">local_fire_department</span>{shop.tag}</span>
-                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">schedule</span>{shop.time}</span>
-                      </div>
-                    </div>
-                    <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 group-hover:bg-yellow-400 group-hover:border-yellow-400 flex items-center justify-center transition-all duration-300">
-                      <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">arrow_forward</span>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-
-              {ESTABLISHMENTS.filter((shop: any) => {
-                const sType = (shop.type || "").toLowerCase();
-                const sTag = (shop.tag || "").toLowerCase();
-                const filterMatch = sType === (activeService?.type || "").toLowerCase() || sType === (activeService?.label || "").toLowerCase() || sTag.includes((activeService?.type || "").toLowerCase()) || sTag.includes((activeService?.label || "").toLowerCase());
-                return filterMatch && (shop.name.toLowerCase().includes(searchQuery.toLowerCase()) || sTag.includes(searchQuery.toLowerCase()));
-              }).length === 0 && (
-                <div className="flex flex-col items-center justify-center py-16 gap-3">
-                  <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
-                  <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum resultado encontrado</p>
-                </div>
-              )}
-            </div>
-          </section>
-
-        </main>
-
-        {cart.length > 0 && (
-          <div className="fixed bottom-24 left-0 w-full px-5 z-50 pointer-events-none">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              className="max-w-md mx-auto bg-zinc-950/95 backdrop-blur-2xl border border-white/5 rounded-3xl px-5 py-4 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.8)] pointer-events-auto">
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black">Sacola</span>
-                <span className="text-white font-black text-sm">{cart.length} {cart.length === 1 ? "item" : "itens"}</span>
-              </div>
-              <button onClick={() => navigateSubView("cart")}
-                className="flex items-center gap-3 bg-yellow-400 text-black px-5 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-[0_0_20px_rgba(255,215,9,0.2)] active:scale-95 transition-all">
-                <span>Ver Sacola</span>
-                <span>R$ {cart.reduce((a: number, b: any) => a + (b.price || 0), 0).toFixed(2).replace(".", ",")}</span>
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </div>
+      <EstablishmentListView
+        title={title}
+        subtitle="Disponível agora"
+        icon={icon}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        setSubView={setSubView}
+        establishments={ESTABLISHMENTS}
+        filterFn={(estab: any) => {
+          const sType = (estab.type || "").toLowerCase();
+          const sTag = (estab.tag || "").toLowerCase();
+          const activeType = (activeService?.type || "").toLowerCase();
+          const activeLabel = (activeService?.label || "").toLowerCase();
+          
+          return sType === activeType || 
+                 sType === activeLabel || 
+                 sTag.includes(activeType) || 
+                 sTag.includes(activeLabel);
+        }}
+        onShopClick={(shop) => handleShopClick({ ...shop, type: "generic" })}
+        cartLength={cart.length}
+        navigateSubView={navigateSubView}
+        backView="none"
+      />
     );
   };
 
@@ -3801,10 +3669,7 @@ function App() {
         const copyPaste = fnData.copyPaste || fnData.copy_paste;
 
         setSelectedItem({ ...order, pixQrCode: qr, pixQrBase64: qrBase64, pixCopyPaste: copyPaste });
-        setCart([]);
-        setAppliedCoupon(null);
-        setCouponInput("");
-        setUserXP((prev: number) => prev + 50);
+        await clearCart();
 
       } catch (e) {
         console.error("Erro PIX:", e);
@@ -3980,8 +3845,7 @@ function App() {
                 setSubView("izi_black_purchase");
             } else {
                 setSelectedItem(order);
-                setCart([]);
-                setAppliedCoupon(null);
+                await clearCart();
                 setTab("orders");
                 setSubView("none");
             }
@@ -6754,7 +6618,7 @@ function App() {
               <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
             </button>
             <div>
-              <h1 className="text-lg font-black tracking-tight text-white">Logística & Envios</h1>
+              <h1 className="text-lg font-black tracking-tight text-white">Envios</h1>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Entregamos qualquer coisa</p>
             </div>
           </div>

@@ -10,22 +10,35 @@ interface CartViewProps {
 
 export const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, navigateSubView }) => {
   const subtotal: number = cart.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0);
-  const taxa: number = 0;
+  const taxa: number = 0; // Grátis no Izi
   const total: number = subtotal + taxa;
+
+  // Mock de Upsell
+  const upsellItems = [
+    { id: "up1", name: "Coca-Cola 2L", price: 12.90, img: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?q=80&w=200", store: "Izi Express" },
+    { id: "up2", name: "Batata Grande", price: 15.00, img: "https://images.unsplash.com/photo-1630384060421-cb20d0e0649d?q=80&w=200", store: "Izi Express" },
+    { id: "up3", name: "Sobremesa do Dia", price: 8.50, img: "https://images.unsplash.com/photo-1551024601-bfc5c97a1b38?q=80&w=200", store: "Izi Express" },
+  ];
+
+  const handleAddToCart = (item: any) => {
+    setCart(prev => [...prev, { ...item, type: "generic" }]);
+  };
 
   if (cart.length === 0) {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col items-center justify-center gap-6">
-        <span className="material-symbols-outlined text-6xl text-zinc-800">shopping_bag</span>
+        <div className="size-24 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center shadow-2xl">
+          <span className="material-symbols-outlined text-4xl text-zinc-700">shopping_bag</span>
+        </div>
         <div className="text-center">
-          <h2 className="text-xl font-black text-white mb-2">Sua sacola está vazia</h2>
-          <p className="text-zinc-500 text-sm">Adicione itens para continuar</p>
+          <h2 className="text-2xl font-black text-white mb-2 italic uppercase">Sua sacola está vazia</h2>
+          <p className="text-zinc-500 text-sm max-w-[200px] font-medium leading-relaxed">Que tal começar a explorar nossas ofertas exclusivas?</p>
         </div>
         <button
           onClick={() => setSubView("none")}
-          className="bg-yellow-400 text-black font-black px-8 py-3 rounded-2xl uppercase tracking-wider active:scale-95 transition-all"
+          className="bg-yellow-400 text-black font-black px-10 py-4 rounded-2xl uppercase tracking-[0.2em] text-[10px] active:scale-95 transition-all shadow-xl shadow-yellow-400/10"
         >
-          Explorar
+          Explorar Agora
         </button>
       </div>
     );
@@ -46,96 +59,155 @@ export const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, n
   return (
     <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
       {/* HEADER PREMIUM */}
-      <header className="sticky top-0 z-50 bg-black/40 backdrop-blur-2xl flex items-center justify-between px-5 py-3.5 border-b border-white/5 transition-all">
-        <div className="flex items-center gap-4">
-          <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900/50 border border-white/10 flex items-center justify-center active:scale-90 transition-all">
+      <header className="sticky top-0 z-[60] bg-black/60 backdrop-blur-2xl flex items-center justify-between px-6 py-5 border-b border-white/5">
+        <div className="flex items-center gap-5">
+          <button onClick={() => setSubView("none")} className="size-11 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center active:scale-90 transition-all">
             <span className="material-symbols-outlined text-white text-xl">arrow_back</span>
           </button>
           <div className="flex flex-col">
-            <h1 className="font-black text-sm tracking-widest text-white uppercase italic">Sua Sacola</h1>
-            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] mt-0.5">Confirme seus pedidos</p>
+            <h1 className="font-black text-lg tracking-tight text-white italic uppercase leading-none">Minha Sacola</h1>
+            <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.3em] mt-1.5 flex items-center gap-1.5">
+               <span className="size-1 rounded-full bg-yellow-400 animate-pulse" />
+               Izi Delivery Experience
+            </p>
           </div>
         </div>
-        <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-3 py-1.5 rounded-full border border-yellow-400/20 shadow-[0_0_15px_rgba(255,215,9,0.1)]">
-          {cart.length} {cart.length === 1 ? "item" : "itens"}
-        </span>
+        <div className="flex flex-col items-end">
+          <span className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1">{cart.length} ITENS</span>
+          <span className="text-white font-black text-xs">R$ {total.toFixed(2).replace(".", ",")}</span>
+        </div>
       </header>
 
+      <main className="px-6 flex flex-col">
+        {/* LISTA DE ITENS - BORDERLESS */}
+        <section className="mt-8 space-y-2">
+          <h2 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-4">Itens Selecionados</h2>
+          {cart.map((item: any, i: number) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="flex items-center gap-5 py-5 border-b border-white/5 last:border-0 group"
+            >
+              <div className="w-20 h-20 rounded-3xl bg-zinc-900 border border-white/5 overflow-hidden shrink-0 shadow-2xl relative">
+                {item.img && <img src={item.img} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[8px] font-bold text-yellow-400 uppercase tracking-widest mb-1 truncate">{item.merchant_name || item.store || "Premium Partner"}</p>
+                <h4 className="font-black text-base text-white truncate leading-tight group-hover:text-yellow-400 transition-colors uppercase italic">{item.name}</h4>
+                <div className="flex items-center gap-2 mt-2">
+                   <p className="text-white font-black text-sm">R$ {Number(item.price || 0).toFixed(2).replace(".", ",")}</p>
+                   {item.oldPrice && <p className="text-[10px] text-zinc-600 line-through font-bold">R$ {item.oldPrice.toFixed(2).replace(".", ",")}</p>}
+                </div>
+              </div>
+              <button
+                onClick={() => handleRemoveItem(i)}
+                className="size-10 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center active:scale-95 transition-all text-zinc-600 hover:text-red-500 hover:border-red-500/30"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </motion.div>
+          ))}
+        </section>
 
-      <main className="px-5 pt-6 flex flex-col gap-4">
-        {/* ITENS */}
-        {cart.map((item: any, i: number) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.04 }}
-            className="flex items-center gap-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4"
-          >
-            <div className="w-16 h-16 rounded-xl bg-zinc-800 overflow-hidden shrink-0">
-              {item.img && <img src={item.img} alt={item.name} className="w-full h-full object-cover" />}
+        {/* UPSELL SECTION */}
+        <section className="mt-12 mb-8">
+           <div className="flex items-center justify-between mb-6">
+              <h3 className="text-[11px] font-black text-white uppercase tracking-[0.2em] italic">Completa seu pedido?</h3>
+              <span className="text-[9px] font-medium text-zinc-500 bg-white/5 px-3 py-1 rounded-full border border-white/5">Sugestões Izi</span>
+           </div>
+           
+           <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6 pb-4">
+              {upsellItems.map(up => (
+                <motion.div 
+                  key={up.id} 
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleAddToCart(up)}
+                  className="flex-shrink-0 w-44 bg-zinc-900/40 border border-white/5 rounded-[32px] p-4 flex flex-col gap-3 group hover:border-yellow-400/20 transition-all cursor-pointer"
+                >
+                   <div className="w-full h-24 rounded-[22px] overflow-hidden bg-zinc-800 shadow-xl group-hover:scale-[1.02] transition-transform">
+                      <img src={up.img} className="size-full object-cover brightness-90 group-hover:brightness-110 transition-all" />
+                   </div>
+                   <div className="px-1">
+                      <p className="text-[8px] font-black text-yellow-400/60 uppercase tracking-widest mb-1">{up.store}</p>
+                      <h5 className="text-[13px] font-black text-white leading-tight uppercase italic">{up.name}</h5>
+                      <div className="flex items-center justify-between mt-2">
+                         <span className="text-sm font-black text-white">R$ {up.price.toFixed(2).replace(".", ",")}</span>
+                         <div className="size-8 rounded-full bg-yellow-400 text-black flex items-center justify-center shadow-lg shadow-yellow-400/10">
+                            <span className="material-symbols-outlined text-lg">add</span>
+                         </div>
+                      </div>
+                   </div>
+                </motion.div>
+              ))}
+           </div>
+        </section>
+
+        {/* RESUMO DE VALORES - BORDERLESS */}
+        <section className="py-8 border-t border-white/10 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-zinc-500 text-sm font-medium uppercase tracking-widest">Subtotal</span>
+            <span className="text-white font-black text-sm tracking-tight">R$ {subtotal.toFixed(2).replace(".", ",")}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-zinc-500 text-sm font-medium uppercase tracking-widest">Taxa de entrega</span>
+            <div className="flex flex-col items-end">
+               <span className="text-emerald-400 font-bold text-sm tracking-widest uppercase italic">Grátis</span>
+               <span className="text-[8px] text-zinc-600 font-bold tracking-[0.2em] uppercase mt-1">Benefício Izi Black</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-black text-sm text-white truncate">{item.name}</h4>
-              <p className="text-yellow-400 font-black text-sm mt-0.5">
-                R$ {Number(item.price || 0).toFixed(2).replace(".", ",")}
+          </div>
+          
+          <div className="pt-8 border-t border-white/10 flex justify-between items-end">
+            <div>
+               <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mb-2 font-black italic">Previsão</p>
+               <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-yellow-400 text-sm">schedule</span>
+                  <span className="font-black text-white text-xs uppercase tracking-tight italic">35 - 45 min</span>
+               </div>
+            </div>
+            <div className="text-right">
+              <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em] mb-1">Valor Total</p>
+              <p className="text-4xl font-black text-white leading-none tracking-tighter" style={{ textShadow: "0 0 30px rgba(255,255,255,0.1)" }}>
+                R$ {total.toFixed(2).replace(".", ",")}
               </p>
             </div>
-            <button
-              onClick={() => handleRemoveItem(i)}
-              className="size-8 rounded-full bg-zinc-800 flex items-center justify-center active:scale-90 transition-all hover:bg-red-500/20"
-            >
-              <span className="material-symbols-outlined text-zinc-500 hover:text-red-400 text-sm transition-colors">
-                close
-              </span>
-            </button>
-          </motion.div>
-        ))}
-
-        {/* TOTAIS */}
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 mt-2 space-y-3">
-          {[
-            { label: "Subtotal", value: `R$ ${subtotal.toFixed(2).replace(".", ",")}` },
-            { label: "Taxa de entrega", value: taxa === 0 ? "Grátis" : `R$ ${taxa.toFixed(2)}`, green: taxa === 0 },
-          ].map((row: any) => (
-            <div key={row.label} className="flex justify-between items-center">
-              <span className="text-zinc-400 text-sm">{row.label}</span>
-              <span className={`text-sm font-bold ${row.green ? "text-emerald-400" : "text-white"}`}>{row.value}</span>
-            </div>
-          ))}
-          <div className="flex justify-between items-center pt-3 border-t border-zinc-800">
-            <span className="text-white font-black uppercase tracking-wider">Total</span>
-            <span
-              className="text-yellow-400 font-black text-xl"
-              style={{ textShadow: "0 0 15px rgba(255,215,9,0.4)" }}
-            >
-              R$ {total.toFixed(2).replace(".", ",")}
-            </span>
           </div>
-        </div>
+        </section>
 
-        {/* LIMPAR */}
+        {/* BOTÃO DE LIMPEZA DISCRETO */}
         <button
           onClick={handleClearCart}
-          className="flex items-center justify-center gap-2 py-3 text-zinc-600 hover:text-red-400 transition-colors active:scale-95"
+          className="my-12 flex items-center justify-center gap-3 py-4 text-zinc-600 hover:text-red-500/80 transition-all active:scale-95 group"
         >
-          <span className="material-symbols-outlined text-sm">delete_outline</span>
-          <span className="text-[11px] font-black uppercase tracking-widest">Limpar sacola</span>
+          <div className="size-8 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-all">
+             <span className="material-symbols-outlined text-lg">delete_outline</span>
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] italic">Esvaziar Sacola</span>
         </button>
       </main>
 
-      {/* FOOTER FIXO */}
-      <div className="fixed bottom-0 left-0 w-full px-5 pb-8 pt-4 bg-black/95 backdrop-blur-xl border-t border-zinc-900 z-50">
+      {/* FOOTER FIXO PREMIUM */}
+      <div className="fixed bottom-0 left-0 w-full px-6 pb-10 pt-6 bg-gradient-to-t from-black via-black/95 to-transparent z-50">
         <button
           onClick={() => navigateSubView("checkout")}
-          className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 shadow-[0_0_20px_rgba(255,215,9,0.2)]"
+          className="w-full h-16 rounded-[25px] flex items-center justify-between px-8 transition-all active:scale-[0.98] relative overflow-hidden group"
           style={{
             background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)",
-            color: "#000",
-            boxShadow: "0 0 30px rgba(255,215,9,0.15)",
+            boxShadow: "0 10px 40px -10px rgba(255, 215, 9, 0.4)",
           }}
         >
-          Ir para Checkout — R$ {total.toFixed(2).replace(".", ",")}
+          <div className="flex flex-col items-start">
+             <span className="text-[8px] font-black uppercase tracking-[0.2em] text-black/40 leading-none mb-1">Finalizar</span>
+             <span className="text-black font-black text-sm uppercase tracking-widest italic">Continuar para Pagamento</span>
+          </div>
+          <div className="flex items-center gap-3">
+             <div className="h-4 w-px bg-black/10" />
+             <span className="text-black font-black text-lg italic tracking-tighter leading-none">R$ {total.toFixed(2).replace(".", ",")}</span>
+          </div>
+          
+          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
         </button>
       </div>
     </div>
