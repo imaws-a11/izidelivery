@@ -178,7 +178,7 @@ export default function SettingsTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-[28px] p-6 space-y-3">
             <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Taxa Base de Entrega</label>
             <div className="relative">
@@ -216,6 +216,33 @@ export default function SettingsTab() {
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-500 font-black text-sm">%</span>
             </div>
+          </div>
+
+          <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-[28px] p-6 space-y-3 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none transition-transform group-hover:scale-110">
+              <span className="material-symbols-outlined text-6xl text-amber-500">toll</span>
+            </div>
+            <label className="block text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1 relative z-10">Cotação Izi Coin</label>
+            <div className="relative z-10 flex items-center justify-between gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-500 font-bold text-xs uppercase">IZI</span>
+                <input
+                  className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-10 pr-2 py-3.5 font-black text-xl text-amber-600 focus:ring-2 focus:ring-amber-300 shadow-inner text-center"
+                  type="number" value={1} disabled
+                />
+              </div>
+              <span className="text-amber-500 font-black text-lg">=</span>
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 font-bold text-xs">R$</span>
+                <input
+                  className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-9 pr-2 py-3.5 font-black text-xl text-emerald-600 focus:ring-2 focus:ring-amber-300 shadow-inner transition-all hover:bg-amber-50/50 dark:hover:bg-slate-800"
+                  type="number" min="0.01" step="0.01"
+                  value={appSettings.iziCoinRate || 1.0}
+                  onChange={(e) => setAppSettings({ ...appSettings, iziCoinRate: parseFloat(e.target.value) || 1.0 })}
+                />
+              </div>
+            </div>
+            <p className="text-[9px] text-amber-600/70 font-bold tracking-widest uppercase mt-4 text-center">DEFINE O VALOR DE MERCADO DA MOEDA</p>
           </div>
         </div>
       </section>

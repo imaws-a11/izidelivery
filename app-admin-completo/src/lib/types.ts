@@ -300,6 +300,7 @@ export interface AppSettings {
   flashOfferTitle: string;
   flashOfferDiscount: number;
   flashOfferExpiry: string;
+  iziCoinRate: number;
 }
 
 export interface DashboardData {

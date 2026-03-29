@@ -1,6 +1,43 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { supabase } from "../../../lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
+import { Html5QrcodeScanner } from "html5-qrcode";
+
+// Wrapper Component para o Leitor de QR Code usando Html5QrcodeScanner
+const ScannerWrapper = ({ onResult }: { onResult: (text: string) => void }) => {
+  useEffect(() => {
+    const html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader",
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      false
+    );
+    
+    html5QrcodeScanner.render(
+      (decodedText: string) => {
+        onResult(decodedText);
+        html5QrcodeScanner.clear().catch(() => {});
+      },
+      (error: any) => { /* ignore logs freq. */ }
+    );
+
+    return () => {
+      html5QrcodeScanner.clear().catch(() => {}); // cleanup no unmount
+    };
+  }, [onResult]);
+
+  return (
+    <div className="w-full flex flex-col items-center">
+      <div id="reader" className="w-full max-w-[300px] rounded-3xl overflow-hidden bg-black" style={{ border: "none" }} />
+      <style>{`
+        #reader__scan_region { background: #18181b; }
+        #reader__dashboard_section_csr button { background: #facc15; color: #000; border-radius: 999px; font-weight: 900; padding: 10px 20px; text-transform: uppercase; font-size: 10px; margin-top: 10px; }
+        #reader { border: none !important; }
+      `}</style>
+      <p className="text-zinc-500 text-xs font-bold w-3/4 max-w-sm mx-auto uppercase tracking-widest text-center mt-6">Aproxime a câmera do QR Code</p>
+    </div>
+  );
+};
+
 
 interface WalletViewProps {
   walletTransactions: any[];
@@ -35,7 +72,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
   setShowDepositModal,
   iziCoinValue = 0.01,
 }) => {
-  const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr">("main");
+  const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr" | "scan">("main");
   const historyRef = useRef<HTMLElement>(null);
 
   // Estados para Transferência
@@ -73,19 +110,20 @@ export const WalletView: React.FC<WalletViewProps> = ({
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
 
-  const handleSearchRecipient = async () => {
-    if (!searchTarget.trim()) return;
+  const handleSearchRecipient = async (query = searchTarget) => {
+    if (!query.trim()) return;
     setIsSearching(true);
+    setSearchTarget(query);
     try {
       const { data, error } = await supabase
         .from("users_delivery")
         .select("id, name, email, phone")
-        .or(`email.eq.${searchTarget},phone.eq.${searchTarget}`)
+        .or(`email.eq.${query},phone.eq.${query},id.eq.${query}`)
         .not("id", "eq", userId)
         .single();
 
       if (error || !data) {
-        showToast?.("Usuário não encontrado", "error");
+        showToast?.("Usuário não encontrado, Tente usar o código identificador", "warning");
         setRecipient(null);
       } else {
         setRecipient(data);
@@ -124,7 +162,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
           user_id: recipient.id,
           amount: val,
           type: "deposito",
-          description: `Transferência recebida de ${userName}`
+          description: `Transferência IZI de ${userName}`
         });
 
       if (err2) throw err2;
@@ -141,6 +179,32 @@ export const WalletView: React.FC<WalletViewProps> = ({
       setIsTransferring(false);
     }
   };
+
+  if (walletMode === "scan") {
+    return (
+      <div className="flex flex-col h-full bg-black text-white p-6 pt-12 items-center text-center gap-10">
+        <header className="w-full flex items-center justify-between mb-4">
+          <button onClick={() => setWalletMode("main")} className="size-10 rounded-full bg-zinc-900 flex items-center justify-center">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <h1 className="font-extrabold text-base uppercase tracking-widest">Escanear QR</h1>
+          <div className="size-10" />
+        </header>
+
+        <ScannerWrapper 
+          onResult={(text) => {
+             // O QR Code pode vir "izipay:ID_DO_USUARIO_OU_LOJISTA" ou o id puro
+             const idText = text.replace("izipay:", "").trim();
+             // Pula pro transfer com busca ativada
+             setWalletMode("transfer");
+             handleSearchRecipient(idText); // Automaticamente processa a string recebida via camera
+          }} 
+        />
+        
+        <button onClick={() => setWalletMode("main")} className="w-full py-4 bg-zinc-900 rounded-2xl font-black uppercase text-sm mt-auto max-w-xs">Cancelar Leitura</button>
+      </div>
+    );
+  }
 
   if (walletMode === "my_qr") {
     return (
@@ -170,7 +234,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
 
   if (walletMode === "transfer") {
     return (
-      <div className="flex flex-col h-full bg-black text-white p-6 pt-12 gap-8">
+      <div className="flex flex-col h-full bg-black text-white p-6 pt-12 gap-8 overflow-y-auto no-scrollbar pb-32">
         <header className="w-full flex items-center justify-between">
           <button onClick={() => { setWalletMode("main"); setRecipient(null); }} className="size-10 rounded-full bg-zinc-900 flex items-center justify-center">
             <span className="material-symbols-outlined">arrow_back</span>
@@ -187,13 +251,13 @@ export const WalletView: React.FC<WalletViewProps> = ({
                 <div className="flex gap-2">
                   <input 
                     type="text" 
-                    placeholder="E-mail ou Telefone"
+                    placeholder="E-mail, Telefone, ou Cód. ID"
                     value={searchTarget}
                     onChange={(e) => setSearchTarget(e.target.value)}
-                    className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 focus:border-yellow-400/50 outline-none transition-all font-bold"
+                    className="flex-1 bg-zinc-900/50 rounded-2xl px-5 py-4 focus:bg-zinc-900 outline-none transition-all font-bold placeholder:font-normal"
                   />
                   <button 
-                    onClick={handleSearchRecipient}
+                    onClick={() => handleSearchRecipient(searchTarget)}
                     disabled={isSearching}
                     className="size-14 bg-yellow-400 rounded-2xl flex items-center justify-center active:scale-95 disabled:opacity-50"
                   >
@@ -204,18 +268,18 @@ export const WalletView: React.FC<WalletViewProps> = ({
             </motion.div>
           ) : (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-10">
-              <div className="flex items-center gap-4 bg-zinc-900/50 p-5 rounded-3xl border border-zinc-800">
+              <div className="flex items-center gap-4 bg-zinc-900/40 p-5 rounded-3xl">
                 <div className="size-14 rounded-full bg-yellow-400 flex items-center justify-center font-black text-black text-xl">
                   {recipient.name[0]}
                 </div>
-                <div className="flex-1">
-                  <p className="font-black uppercase">{recipient.name}</p>
-                  <p className="text-zinc-600 text-xs">{recipient.email || recipient.phone}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-black uppercase truncate">{recipient.name}</p>
+                  <p className="text-zinc-600 text-xs truncate">{recipient.email || recipient.phone || "ID Izi Black Integrado"}</p>
                 </div>
-                <button onClick={() => setRecipient(null)} className="text-xs font-bold text-zinc-500 underline">Trocar</button>
+                <button onClick={() => setRecipient(null)} className="text-[10px] uppercase font-black tracking-widest text-zinc-500 shrink-0">Voltar</button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-4 pt-10">
                 <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest text-center block">Quanto deseja enviar?</label>
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-2xl font-black text-yellow-400">R$</span>
@@ -225,7 +289,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
                     placeholder="0,00"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="bg-transparent text-5xl font-black text-white outline-none w-40 text-center"
+                    className="bg-transparent text-5xl font-black text-white outline-none w-40 text-center placeholder:text-zinc-800"
                   />
                 </div>
                 <p className="text-center text-xs text-zinc-700">Saldo disponível: R$ {walletBalance.toFixed(2).replace(".", ",")}</p>
@@ -234,7 +298,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
               <button 
                 onClick={handleTransfer}
                 disabled={isTransferring || !amount}
-                className="w-full py-5 bg-yellow-400 rounded-2xl font-black text-black uppercase tracking-widest shadow-[0_10px_30px_rgba(255,215,9,0.2)] active:scale-95 disabled:opacity-50 transition-all"
+                className="w-full py-5 bg-yellow-400 rounded-2xl font-black text-black uppercase tracking-widest shadow-[0_10px_30px_rgba(255,215,9,0.2)] active:scale-95 disabled:opacity-50 transition-all mt-4"
               >
                 {isTransferring ? "Processando..." : "Confirmar Envio"}
               </button>
@@ -247,32 +311,30 @@ export const WalletView: React.FC<WalletViewProps> = ({
 
   return (
     <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32">
-      {/* HERO SALDO */}
-      <div className="px-5 pt-14 pb-8 border-b border-zinc-900">
-        <div className="flex items-center gap-2 mb-3">
+      {/* HERO SALDO - REDESIGN CENTRALIZADO */}
+      <div className="px-5 pt-14 pb-8 border-b border-zinc-900/50 flex flex-col items-center">
+        <div className="flex items-center gap-2 mb-6 w-full justify-center">
           <span className="text-yellow-400 font-extrabold italic tracking-[0.3em] text-[10px] uppercase">Izi Pay</span>
           <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
         </div>
-        <div className="flex justify-between items-start">
-          <div>
-            <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-1">Saldo Disponível</p>
-            <div className="flex items-baseline gap-2 mb-6">
-              <span className="font-extrabold text-2xl text-yellow-400 opacity-60">R$</span>
-              <span
-                className="font-extrabold text-5xl tracking-tighter text-white"
-                style={{ textShadow: "0 0 20px rgba(255,215,9,0.3)" }}
-              >
-                {Math.abs(walletBalance).toFixed(2).replace(".", ",")}
-              </span>
-            </div>
+        
+        <div className="flex flex-col items-center justify-center mt-2 mb-10 w-full">
+          <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-2">Seu Saldo IZI</p>
+          <div className="flex items-baseline gap-2">
+            <span className="font-extrabold text-2xl text-yellow-400 opacity-60">R$</span>
+            <span
+              className="font-extrabold text-6xl tracking-tighter text-white"
+              style={{ textShadow: "0 0 20px rgba(255,215,9,0.3)" }}
+            >
+              {Math.abs(walletBalance).toFixed(2).replace(".", ",")}
+            </span>
           </div>
-          <button onClick={() => setShowDepositModal(true)} className="px-4 py-2 bg-zinc-900 rounded-full text-[10px] font-black uppercase tracking-widest border border-zinc-800 active:scale-95">Recarregar</button>
         </div>
 
-        {/* AÇÕES RÁPIDAS */}
-        <div className="grid grid-cols-4 gap-2">
+        {/* AÇÕES RÁPIDAS - SEM GRID SQUARE, NOVO FORMATO MODERNO E CLEAN */}
+        <div className="grid grid-cols-4 gap-2 w-full max-w-sm mx-auto">
           {[
-            { icon: "qr_code_scanner", label: "Escanear", action: () => showToast?.("Leitor em desenvolvimento", "warning") },
+            { icon: "qr_code_scanner", label: "Escanear", action: () => setWalletMode("scan") },
             { icon: "arrow_outward", label: "Enviar", action: () => setWalletMode("transfer") },
             { icon: "history", label: "Extrato", action: () => historyRef.current?.scrollIntoView({ behavior: 'smooth' }) },
             { icon: "qr_code_2", label: "Meu QR", action: () => setWalletMode("my_qr") },
@@ -280,14 +342,14 @@ export const WalletView: React.FC<WalletViewProps> = ({
             <button
               key={a.label}
               onClick={a.action}
-              className="flex flex-col items-center gap-2 py-4 active:scale-95 transition-all group"
+              className="flex flex-col items-center gap-2.5 py-4 active:scale-95 transition-all group"
             >
-              <div className="size-12 rounded-2xl bg-zinc-900/60 border border-zinc-900 flex items-center justify-center group-hover:border-yellow-400/20 transition-all">
-                <span className="material-symbols-outlined text-zinc-500 group-hover:text-yellow-400 transition-colors text-xl">
+              <div className="size-14 rounded-full bg-zinc-900/60 flex items-center justify-center group-hover:bg-yellow-400/10 transition-all">
+                <span className="material-symbols-outlined text-zinc-400 group-hover:text-yellow-400 transition-colors text-xl">
                   {a.icon}
                 </span>
               </div>
-              <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-400 transition-colors">
+              <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest group-hover:text-zinc-300 transition-colors">
                 {a.label}
               </span>
             </button>
@@ -296,25 +358,57 @@ export const WalletView: React.FC<WalletViewProps> = ({
       </div>
 
       <main className="px-5 py-8 space-y-10">
-        {/* STATS */}
-        <div className="grid grid-cols-3 gap-0 border border-zinc-900 rounded-2xl overflow-hidden">
+        {/* STATS - BORDERLESS */}
+        <div className="flex gap-2">
           {[
-            { label: "Gasto total", value: `R$ ${totalGasto.toFixed(0)}`, icon: "shopping_bag" },
+            { label: "Gasto", value: `R$ ${totalGasto.toFixed(0)}`, icon: "shopping_bag" },
             { label: "Recebido", value: `R$ ${totalRecebido.toFixed(0)}`, icon: "add_circle" },
             { label: "Pedidos/mês", value: `${pedidosMes}`, icon: "receipt_long" },
           ].map((s, i) => (
             <div
               key={i}
-              className={`flex flex-col items-center py-5 gap-1 ${i < 2 ? "border-r border-zinc-900" : ""}`}
+              className="flex-1 flex flex-col items-center py-5 gap-1.5 bg-zinc-900/30 rounded-2xl"
             >
-              <span className="material-symbols-outlined text-zinc-700 text-lg">{s.icon}</span>
+              <span className="material-symbols-outlined text-zinc-700 text-lg mb-1">{s.icon}</span>
               <p className="font-extrabold text-sm text-white">{s.value}</p>
-              <p className="text-[9px] text-zinc-700 uppercase tracking-widest">{s.label}</p>
+              <p className="text-[8px] text-zinc-600 uppercase tracking-widest">{s.label}</p>
             </div>
           ))}
         </div>
 
-        {/* CARTÕES */}
+        {/* PONTOS E CASHBACK - BORDERLESS */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1 p-5 bg-zinc-900/40 rounded-[24px]">
+            <div className="flex items-center gap-1.5 mb-2">
+              <span
+                className="material-symbols-outlined text-yellow-400 text-base"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                monetization_on
+              </span>
+              <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">IZI Coins</span>
+            </div>
+            <p className="text-2xl font-extrabold text-white">{iziCoins.toLocaleString("pt-BR")}</p>
+            <p className="text-[9px] text-yellow-400/50 mt-1">
+              ≈ R$ {(iziCoins * iziCoinValue).toFixed(2).replace(".", ",")} em descontos
+            </p>
+          </div>
+          <div className="flex flex-col gap-1 p-5 bg-zinc-900/40 rounded-[24px]">
+            <div className="flex items-center gap-1.5 mb-2">
+              <span
+                className="material-symbols-outlined text-emerald-400 text-base"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                account_balance_wallet
+              </span>
+              <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Cashback</span>
+            </div>
+            <p className="text-2xl font-extrabold text-white">R$ {iziCashback.toFixed(2).replace(".", ",")}</p>
+            <p className="text-[9px] text-zinc-600 mt-1">Disponível para usar</p>
+          </div>
+        </div>
+
+        {/* CARTÕES - BORDERLESS */}
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Meus Cartões</h2>
@@ -328,22 +422,22 @@ export const WalletView: React.FC<WalletViewProps> = ({
               Gerenciar
             </button>
           </div>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-5 px-5 pb-2">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-5 px-5 pb-2">
             {/* Card IZI Digital */}
             <div
-              className="min-w-[260px] h-40 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between border border-zinc-900/80 shrink-0"
-              style={{ background: "linear-gradient(135deg, rgba(255,215,9,0.04) 0%, rgba(0,0,0,0) 100%)" }}
+              className="min-w-[260px] h-40 rounded-[24px] p-5 relative overflow-hidden flex flex-col justify-between shrink-0 bg-[#0a0a0a]"
             >
-              <div className="absolute -top-8 -right-8 w-28 h-28 bg-yellow-400/5 rounded-full blur-2xl" />
-              <div className="flex justify-between items-start">
+              <div className="absolute top-0 right-0 bottom-0 left-0" style={{ background: "linear-gradient(135deg, rgba(255,215,9,0.06) 0%, rgba(0,0,0,0) 100%)" }}/>
+              <div className="absolute -top-8 -right-8 w-28 h-28 bg-yellow-400/10 rounded-full blur-2xl" />
+              <div className="flex justify-between items-start z-10">
                 <span className="font-extrabold italic text-yellow-400/40 tracking-tighter">IZI</span>
-                <span className="material-symbols-outlined text-zinc-800 text-base">contactless</span>
+                <span className="material-symbols-outlined text-zinc-700 text-base">contactless</span>
               </div>
-              <div>
-                <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Digital</p>
-                <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">•••• •••• •••• 8820</p>
+              <div className="z-10">
+                <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-600 mb-1">Cartão Digital</p>
+                <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2 shadow-black drop-shadow-md">•••• •••• •••• 8820</p>
                 <div className="flex justify-between items-center">
-                  <p className="text-[8px] text-zinc-700 uppercase tracking-widest">Val. 12/28</p>
+                  <p className="text-[8px] text-zinc-600 uppercase tracking-widest">Val. 12/28</p>
                   <div className="size-7 rounded-full bg-yellow-400/10 flex items-center justify-center">
                     <span
                       className="material-symbols-outlined text-yellow-400 text-xs"
@@ -358,19 +452,19 @@ export const WalletView: React.FC<WalletViewProps> = ({
             {savedCards.map((card: any) => (
               <div
                 key={card.id}
-                className="min-w-[260px] h-40 border border-zinc-900/80 rounded-2xl p-5 flex flex-col justify-between shrink-0"
+                className="min-w-[260px] h-40 bg-zinc-900/30 rounded-[24px] p-5 flex flex-col justify-between shrink-0"
               >
                 <div className="flex justify-between items-start">
-                  <span className="font-extrabold italic text-zinc-700 tracking-tighter">{card.brand}</span>
-                  <span className="material-symbols-outlined text-zinc-800 text-base">contactless</span>
+                  <span className="font-extrabold italic text-zinc-600 tracking-tighter">{card.brand}</span>
+                  <span className="material-symbols-outlined text-zinc-700 text-base">contactless</span>
                 </div>
                 <div>
-                  <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Físico</p>
+                  <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-600 mb-1">Cartão Físico</p>
                   <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">
                     •••• •••• •••• {card.last4}
                   </p>
                   <div className="flex justify-between items-center">
-                    <p className="text-[8px] text-zinc-700 uppercase">{card.brand}</p>
+                    <p className="text-[8px] text-zinc-600 uppercase">{card.brand}</p>
                     <p className="text-[9px] text-zinc-600">Val. {card.expiry}</p>
                   </div>
                 </div>
@@ -381,54 +475,22 @@ export const WalletView: React.FC<WalletViewProps> = ({
                 setPaymentsOrigin("profile");
                 setSubView("payments");
               }}
-              className="min-w-[120px] h-40 border border-dashed border-zinc-900 rounded-2xl flex flex-col items-center justify-center gap-2 shrink-0 active:scale-95 transition-all hover:border-yellow-400/20 group"
+              className="min-w-[120px] h-40 bg-zinc-900/10 rounded-[24px] flex flex-col items-center justify-center gap-2 shrink-0 active:scale-95 transition-all hover:bg-zinc-900/30 group"
             >
-              <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors text-2xl">
-                add
-              </span>
-              <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-500 transition-colors">
-                Novo Cartão
+              <div className="size-10 rounded-full bg-zinc-900/50 flex align-center justify-center pt-2 group-hover:bg-yellow-400/10 transition-colors">
+                 <span className="material-symbols-outlined text-zinc-600 group-hover:text-yellow-400 transition-colors">add</span>
+              </div>
+              <span className="text-[9px] font-black text-zinc-600 uppercase tracking-wider group-hover:text-zinc-400 mt-2">
+                Novo
               </span>
             </button>
           </div>
         </section>
 
-        {/* PONTOS E CASHBACK */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1 p-5 bg-zinc-900/40 rounded-3xl border border-zinc-900">
-            <div className="flex items-center gap-1.5 mb-2">
-              <span
-                className="material-symbols-outlined text-yellow-400 text-base"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                monetization_on
-              </span>
-              <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">IZI Coins</span>
-            </div>
-            <p className="text-2xl font-extrabold text-white">{iziCoins.toLocaleString("pt-BR")}</p>
-            <p className="text-[9px] text-yellow-400/50">
-              ≈ R$ {(iziCoins * iziCoinValue).toFixed(2).replace(".", ",")} em descontos
-            </p>
-          </div>
-          <div className="flex flex-col gap-1 p-5 bg-zinc-900/40 rounded-3xl border border-zinc-900">
-            <div className="flex items-center gap-1.5 mb-2">
-              <span
-                className="material-symbols-outlined text-emerald-400 text-base"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                account_balance_wallet
-              </span>
-              <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Cashback</span>
-            </div>
-            <p className="text-2xl font-extrabold text-white">R$ {iziCashback.toFixed(2).replace(".", ",")}</p>
-            <p className="text-[9px] text-zinc-700">Disponível para usar</p>
-          </div>
-        </div>
-
         {/* MÉTODOS DE PAGAMENTO */}
         <section>
           <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-2">Formas de Pagamento</h2>
-          <div className="flex flex-col">
+          <div className="flex flex-col bg-zinc-900/20 rounded-[24px] p-2">
             {[
               { icon: "pix", label: "PIX", desc: "Mercado Pago • Instantâneo", id: "pix" },
               { icon: "bolt", label: "Bitcoin Lightning", desc: "LNbits • Satoshis", id: "bitcoin_lightning" },
@@ -440,14 +502,14 @@ export const WalletView: React.FC<WalletViewProps> = ({
                 id: "saldo",
               },
             ].map((m) => (
-              <div key={m.id} className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0">
-                <span className="material-symbols-outlined text-zinc-600 text-xl">{m.icon}</span>
+              <div key={m.id} className="flex items-center gap-4 p-4 border-b border-zinc-900/30 last:border-0 hover:bg-zinc-900/40 rounded-xl transition-all cursor-pointer">
+                <span className={`material-symbols-outlined text-2xl ${paymentMethod === m.id ? "text-yellow-400" : "text-zinc-600"}`} style={{ fontVariationSettings: paymentMethod === m.id ? "'FILL' 1" : "'FILL' 0" }}>{m.icon}</span>
                 <div className="flex-1">
                   <p className="font-black text-sm text-white">{m.label}</p>
                   <p className="text-zinc-600 text-xs mt-0.5">{m.desc}</p>
                 </div>
                 <div
-                  className={`size-2 rounded-full ${paymentMethod === m.id ? "bg-yellow-400" : "bg-zinc-800"}`}
+                  className={`size-2.5 rounded-full ${paymentMethod === m.id ? "bg-yellow-400 shadow-[0_0_10px_rgba(255,215,9,0.5)]" : "bg-zinc-800"}`}
                 />
               </div>
             ))}
@@ -456,46 +518,50 @@ export const WalletView: React.FC<WalletViewProps> = ({
 
         {/* HISTÓRICO */}
         <section ref={historyRef}>
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Histórico</h2>
             <button className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Ver Tudo</button>
           </div>
           <div className="flex flex-col">
             {walletTransactions.length === 0 ? (
-              <div className="py-10 flex flex-col items-center gap-3">
-                <span className="material-symbols-outlined text-4xl text-zinc-900">receipt_long</span>
-                <p className="text-zinc-700 text-sm">Nenhuma transação ainda</p>
+              <div className="py-10 flex flex-col items-center gap-3 bg-zinc-900/20 rounded-[24px]">
+                <span className="material-symbols-outlined text-4xl text-zinc-800">receipt_long</span>
+                <p className="text-zinc-600 text-xs font-black uppercase tracking-widest">Nenhuma transação</p>
               </div>
             ) : (
-              walletTransactions.slice(0, 20).map((t: any, i: number) => {
+              <div className="bg-zinc-900/20 rounded-[24px] p-2">
+              {walletTransactions.slice(0, 20).map((t: any, i: number) => {
                 const tx = txIcon[t.type] || { icon: "payments", color: "text-zinc-400" };
                 return (
-                  <div key={t.id || i} className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0">
-                    <span
-                      className={`material-symbols-outlined text-xl ${tx.color}`}
-                      style={{ fontVariationSettings: "'FILL' 1" }}
-                    >
-                      {tx.icon}
-                    </span>
+                  <div key={t.id || i} className="flex items-center gap-4 py-3 px-3 hover:bg-zinc-900/40 rounded-xl transition-all border-b border-zinc-900/30 last:border-0 cursor-pointer">
+                    <div className="size-12 rounded-2xl bg-zinc-900 flex align-center justify-center shrink-0">
+                      <span
+                        className={`material-symbols-outlined mt-3 text-xl ${tx.color}`}
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                      >
+                        {tx.icon}
+                      </span>
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-white truncate">{t.description || t.type}</p>
-                      <p className="text-[10px] text-zinc-600 uppercase tracking-widest mt-0.5">
+                      <p className="text-sm font-black text-white truncate capitalize">{t.description || t.type}</p>
+                      <p className="text-[9px] text-zinc-500 uppercase tracking-widest mt-1">
                         {new Date(t.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} •{" "}
                         {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
                       <p
-                        className={`font-extrabold text-sm ${["deposito", "reembolso"].includes(t.type) ? "text-emerald-400" : "text-zinc-300"}`}
+                        className={`font-extrabold text-sm ${["deposito", "reembolso"].includes(t.type) ? "text-emerald-400" : "text-white"}`}
                       >
                         {["deposito", "reembolso"].includes(t.type) ? "+" : "-"} R${" "}
                         {Number(t.amount).toFixed(2).replace(".", ",")}
                       </p>
-                      <p className="text-[9px] text-zinc-700 capitalize">{t.type}</p>
+                      <p className="text-[9px] text-zinc-600 capitalize mt-1">{t.type}</p>
                     </div>
                   </div>
                 );
-              })
+              })}
+              </div>
             )}
           </div>
         </section>
@@ -503,5 +569,3 @@ export const WalletView: React.FC<WalletViewProps> = ({
     </div>
   );
 };
-
-

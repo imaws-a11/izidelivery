@@ -125,7 +125,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     iziBlackMinOrderFreeShipping: 50,
     flashOfferTitle: 'Burgers Gourmet',
     flashOfferDiscount: 50,
-    flashOfferExpiry: ''
+    flashOfferExpiry: '',
+    iziCoinRate: 1.0
   });
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'pending' | 'saved' | 'error'>('idle');
 
