@@ -874,6 +874,7 @@ function App() {
       if (paymentMethod === "pix") {
         setPixConfirmed(false);
         setPixCpf("");
+        setSelectedItem({ total_price: total, merchant_id: selectedShop?.id, merchant_name: selectedShop?.name });
         navigateSubView("pix_payment");
         return;
       }
@@ -1742,33 +1743,12 @@ function App() {
 
       if (insertError) throw insertError;
 
-      // 3. Se for PIX ou Lightning, precisamos gerar a fatura real via Edge Function
+      // 3. Se for PIX, redirecionar para tela de CPF + QR Code
       if (paymentMethod === 'pix') {
-         try {
-            const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
-              body: {
-                amount: finalPrice,
-                orderId: order.id,
-                payment_method_id: 'pix',
-                email: user?.email || loginEmail || "cliente@izidelivery.com",
-                customer: { name: userName, cpf: "000.000.000-00" }
-              },
-            });
-            
-            if (!fnErr && fnData?.qrCode) {
-               setPixData({ 
-                 qrCode: fnData.qrCode, 
-                 copyPaste: fnData.copyPaste, 
-                 expirationDate: new Date(Date.now() + 30 * 60 * 1000).toISOString() 
-               });
-               setShowPixPayment(true);
-            } else {
-               // Fallback para modal manual se a função falhar
-               setShowPixPayment(true);
-            }
-         } catch (e) {
-            setShowPixPayment(true); 
-         }
+         setPixConfirmed(false);
+         setPixCpf("");
+         setSelectedItem({ ...order, total_price: finalPrice });
+         setSubView('pix_payment');
       } else if (paymentMethod === 'bitcoin_lightning') {
           try {
             const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
@@ -3632,36 +3612,50 @@ function App() {
       if (pixCpf.replace(/\D/g,"").length < 11) { alert("CPF inválido."); return; }
       setPixConfirmed(true);
       try {
-        // 1. Criar pedido no Supabase
-        if (!selectedShop?.id) { alert("Erro: Estabelecimento não selecionado."); setPixConfirmed(false); return; }
+        let orderId = selectedItem?.id;
+        let orderRef = selectedItem;
 
-        const { data: order, error: orderErr } = await supabase
-          .from("orders_delivery")
-          .insert({
-            user_id: userId,
-            merchant_id: selectedShop.id,
-            status: "pendente_pagamento",
-            total_price: Number(total.toFixed(2)),
-            pickup_address: selectedShop.name || "Endereço do Estabelecimento",
-            delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map(i => `${i.name}`).join(', ')}`,
-            payment_method: "pix",
-            service_type: selectedShop.type || "restaurant",
-          })
-          .select()
-          .single();
+        // Se o pedido já existe (fluxo mobilidade), não criar outro
+        if (!orderId) {
+          // Fluxo restaurante: criar pedido
+          if (!selectedShop?.id) { alert("Erro: Estabelecimento não selecionado."); setPixConfirmed(false); return; }
 
-        if (orderErr || !order) {
-          console.error("Erro ao criar pedido:", orderErr);
-          alert("Não foi possível registrar o pedido no banco de dados. Verifique sua conexão. Detalhe: " + (orderErr?.message || "Erro desconhecido"));
-          navigateSubView("payment_error");
-          return;
+          const { data: order, error: orderErr } = await supabase
+            .from("orders_delivery")
+            .insert({
+              user_id: userId,
+              merchant_id: selectedShop.id,
+              status: "pendente_pagamento",
+              total_price: Number(total.toFixed(2)),
+              pickup_address: selectedShop.name || "Endereço do Estabelecimento",
+              delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map(i => `${i.name}`).join(', ')}`,
+              payment_method: "pix",
+              service_type: selectedShop.type || "restaurant",
+            })
+            .select()
+            .single();
+
+          if (orderErr || !order) {
+            console.error("Erro ao criar pedido:", orderErr);
+            alert("Não foi possível registrar o pedido. Detalhe: " + (orderErr?.message || "Erro desconhecido"));
+            setPixConfirmed(false);
+            return;
+          }
+          orderId = order.id;
+          orderRef = order;
+        } else {
+          // Fluxo mobilidade: pedido já existe, apenas atualizar status
+          await supabase.from("orders_delivery").update({ 
+            status: "pendente_pagamento", 
+            payment_method: "pix" 
+          }).eq("id", orderId);
         }
 
-        // 2. Chamar Edge Function do Mercado Pago (Unificada)
+        // 2. Chamar Edge Function do Mercado Pago
         const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
           body: {
             amount: Number(total.toFixed(2)),
-            orderId: order.id,
+            orderId: orderId,
             payment_method_id: 'pix',
             email: user?.email || loginEmail || "cliente@izidelivery.com",
             customer: {
@@ -3676,7 +3670,7 @@ function App() {
           const detail = fnData?.details || fnData?.error || fnErr?.message || "Erro desconhecido na API do Mercado Pago.";
           alert("Erro ao gerar PIX: " + detail + "\n\nVerifique as chaves MP_ACCESS_TOKEN no Supabase.");
           
-          setSelectedItem({ ...order, pixError: true, pixErrorMessage: detail });
+          setSelectedItem({ ...orderRef, pixError: true, pixErrorMessage: detail });
           setPixConfirmed(true);
           return;
         }
@@ -3686,8 +3680,8 @@ function App() {
         const qrBase64 = fnData.qrCodeBase64 || fnData.qr_code_base64;
         const copyPaste = fnData.copyPaste || fnData.copy_paste;
 
-        setSelectedItem({ ...order, pixQrCode: qr, pixQrBase64: qrBase64, pixCopyPaste: copyPaste });
-        await clearCart();
+        setSelectedItem({ ...orderRef, pixQrCode: qr, pixQrBase64: qrBase64, pixCopyPaste: copyPaste });
+        if (cart.length > 0) await clearCart();
 
       } catch (e) {
         console.error("Erro PIX:", e);
@@ -4102,7 +4096,6 @@ function App() {
   const renderProfile = () => {
     const menuItems = [
       { icon: "location_on",            label: "Endereços",        desc: "Seus endereços salvos",          action: () => setSubView("addresses") },
-      { icon: "credit_card",            label: "Métodos de Pagamento", desc: "Gerencie seus cartões e PIX",     action: () => { setPaymentsOrigin("profile"); setSubView("payments"); } },
       { icon: "account_balance_wallet", label: "Carteira",         desc: "Saldo e extrato",                action: () => setTab("wallet") },
       { icon: "workspace_premium",      label: "IZI Black",        desc: "Benefícios do plano premium",    action: () => { setIziBlackStep("info"); setSubView("izi_black_purchase"); } },
       { icon: "military_tech",          label: "Quests & Ranking", desc: "MissÃƒµes e conquistas",           action: () => setSubView("quest_center") },
@@ -8328,18 +8321,6 @@ function App() {
                   className="absolute inset-0 z-40"
                 >
                   {renderAddresses()}
-                </motion.div>
-              )}
-              {subView === "payments" && (
-                <motion.div
-                  key="pay"
-                  initial={{ x: "100%" }}
-                  animate={{ x: 0 }}
-                  exit={{ x: "100%" }}
-                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-                  className="absolute inset-0 z-40"
-                >
-                  {renderPayments()}
                 </motion.div>
               )}
               {subView === "wallet" && (
