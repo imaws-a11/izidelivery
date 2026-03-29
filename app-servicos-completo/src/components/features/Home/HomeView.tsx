@@ -88,8 +88,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
     { icon: "local_mall",     label: "Mercados",     type: "market",     action: null },
     { icon: "local_bar",      label: "Bebidas",      type: "beverages",  action: null },
     { icon: "local_pharmacy", label: "Saúde",        type: "pharmacy",   action: null },
-    { icon: "pedal_bike",     label: "Logística",    type: null,         action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
+    { icon: "pedal_bike",     label: "Envios",       type: null,         action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
     { icon: "pets",           label: "Petshop",      type: "generic",    action: () => { setExploreCategoryState({ id: "pets", title: "Pet Shop Premium", tagline: "Mimo para seu melhor amigo", primaryColor: "rose-500", icon: "pets", banner: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=1200" }); navigateSubView("explore_category"); } },
+    { icon: "propane_tank",   label: "Gas e Agua",   type: "generic",    action: () => { setExploreCategoryState({ id: "gas", title: "Gás e Água", tagline: "Essencial na sua porta", primaryColor: "blue-500", icon: "propane_tank", banner: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=1200" }); navigateSubView("explore_category"); } },
+    { icon: "kebab_dining",   label: "Açougue",      type: "generic",    action: () => { setExploreCategoryState({ id: "açougue", title: "Corte Prime", tagline: "Os melhores cortes selecionados", primaryColor: "red-600", icon: "kebab_dining", banner: "https://images.unsplash.com/photo-1607623273573-599d0086353f?q=80&w=1200" }); navigateSubView("explore_category"); } },
+    { icon: "bakery_dining",  label: "Padaria",      type: "generic",    action: () => { setExploreCategoryState({ id: "padaria", title: "Padaria Izi", tagline: "Pão quentinho o dia todo", primaryColor: "amber-600", icon: "bakery_dining", banner: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=1200" }); navigateSubView("explore_category"); } },
+    { icon: "nutrition",      label: "Hortifruti",   type: "generic",    action: () => { setExploreCategoryState({ id: "hortifruti", title: "Hortifruti Izi", tagline: "Do campo para sua casa", primaryColor: "emerald-600", icon: "nutrition", banner: "https://images.unsplash.com/photo-1610348725531-843dff563e2c?q=80&w=1200" }); navigateSubView("explore_category"); } },
   ];
 
   const handleServiceSelection = (cat: any) => {
@@ -120,15 +124,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
         finalPrice = Number(offer.original_price) * (1 - (Number(offer.discount_percent) / 100));
     }
     
-    const discountText = finalPrice 
-      ? `R$ ${finalPrice.toFixed(2).replace('.', ',')}` 
-      : "Flash";
+    const originalPrice = Number(offer.original_price);
+    const finalPriceFormatted = finalPrice ? finalPrice.toFixed(2).replace('.', ',') : "Flash";
+    const originalPriceFormatted = originalPrice ? originalPrice.toFixed(2).replace('.', ',') : "";
 
     return {
       id: offer.id,
       merchant: offer.admin_users?.store_name || offer.merchant_name || "Loja",
       name: offer.product_name,
-      discount: discountText,
+      finalPrice: finalPriceFormatted,
+      originalPrice: originalPriceFormatted,
       timeLeft,
       img: offer.product_image || offer.admin_users?.store_logo || "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=400",
       isMaster: userLevel >= 10 && offer.is_vip,
@@ -334,9 +339,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/10 z-20">
                          <span className="text-[7px] font-black text-white whitespace-nowrap">{story.timeLeft}</span>
                       </div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-3 flex flex-col justify-end">
-                        <p className="text-[8px] font-bold text-white/60 uppercase tracking-tighter truncate leading-none mb-1">{story.merchant}</p>
-                        <h5 className="text-[14px] font-black text-white leading-tight tracking-tight italic drop-shadow-lg">{story.discount}</h5>
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/40 to-transparent p-4 flex flex-col justify-end">
+                        <p className="text-[9px] font-bold text-white/50 uppercase tracking-tighter truncate leading-none mb-1">{story.merchant}</p>
+                        <div className="flex flex-col">
+                          {story.originalPrice && <p className="text-[10px] text-white/40 line-through leading-none font-bold">R$ {story.originalPrice}</p>}
+                          <h5 className="text-[17px] font-black text-white leading-none tracking-tight italic drop-shadow-2xl">R$ {story.finalPrice}</h5>
+                        </div>
                       </div>
                     </div>
                   </motion.div>

@@ -37,7 +37,7 @@ export const ExploreRestaurantsView = ({
   const categories = useMemo(() => {
     const list = foodCategories.map(cat => ({
       ...cat,
-      name: cat.name === "Burgers" ? "Burguer" : cat.name // Normalização simples para bater com tags
+      name: cat.name
     }));
     
     if (!list.find(c => c.name === "Todos")) {
@@ -79,7 +79,7 @@ export const ExploreRestaurantsView = ({
                          shopDesc.includes(catNormalized) ||
                          shopName.includes(catNormalized);
                          
-        // Fallback robusto para variações linguísticas (Burguer / Hamburguer / Burger)
+        // Fallback robusto para variações linguísticas (Whitelists de Termos)
         if (!matchesCategory) {
            const burgerTerms = ['burguer', 'hamburguer', 'burger', 'burgers'];
            if (burgerTerms.includes(catNormalized)) {
@@ -99,6 +99,69 @@ export const ExploreRestaurantsView = ({
            if (japaneseTerms.includes(catNormalized)) {
               matchesCategory = japaneseTerms.some(term => 
                 shopFoodCat.includes(term) || shopTag.includes(term) || shopName.includes(term)
+              );
+           }
+
+           const sweetTerms = ['doce', 'bolo', 'confeitaria', 'sobremesa', 'doces_e_bolos', 'doces'];
+           if (sweetTerms.includes(catNormalized)) {
+              matchesCategory = sweetTerms.some(term => 
+                shopFoodCat.includes(term) || shopTag.includes(term) || shopName.includes(term) || shopType.includes(term) || shopDesc.includes(term)
+              );
+           }
+
+           const savoryTerms = ['salgado', 'salgados', 'pastel', 'coxinha', 'salgadinhos'];
+           if (savoryTerms.includes(catNormalized)) {
+              matchesCategory = savoryTerms.some(term => 
+                shopFoodCat.includes(term) || shopTag.includes(term) || shopName.includes(term)
+              );
+           }
+
+           const proportionTerms = ['porcao', 'porcoes', 'petisco', 'fritas'];
+           if (proportionTerms.includes(catNormalized)) {
+              matchesCategory = proportionTerms.some(term => 
+                shopFoodCat.includes(term) || shopTag.includes(term) || shopName.includes(term)
+              );
+           }
+
+           const pastaTerms = ['massa', 'massas', 'macarrao', 'italiana', 'pasta'];
+           if (pastaTerms.includes(catNormalized)) {
+              matchesCategory = pastaTerms.some(term => 
+                shopFoodCat.includes(term) || shopTag.includes(term) || shopName.includes(term)
+              );
+           }
+
+           const meatTerms = ['carne', 'carnes', 'churrasco', 'steak', 'grelhados'];
+           if (meatTerms.includes(catNormalized)) {
+              matchesCategory = meatTerms.some(term => 
+                shopFoodCat.includes(term) || shopTag.includes(term) || shopName.includes(term)
+              );
+           }
+
+           const fitTerms = ['fit', 'fitness', 'saudavel', 'salada', 'low_carb'];
+           if (fitTerms.includes(catNormalized)) {
+              matchesCategory = fitTerms.some(term => 
+                shopFoodCat.includes(term) || shopTag.includes(term) || shopName.includes(term)
+              );
+           }
+
+           const icecreamTerms = ['sorvete', 'sorvetes', 'gelato', 'picolé', 'açai'];
+           if (icecreamTerms.includes(catNormalized)) {
+              matchesCategory = icecreamTerms.some(term => 
+                shopFoodCat.includes(term) || shopTag.includes(term) || shopName.includes(term)
+              );
+           }
+
+           const bakeryTerms = ['padaria', 'pao', 'panificadora', 'cafe', 'breakfast'];
+           if (bakeryTerms.includes(catNormalized)) {
+              matchesCategory = bakeryTerms.some(term => 
+                shopFoodCat.includes(term) || shopTag.includes(term) || shopName.includes(term)
+              );
+           }
+
+           const promoTerms = ['promocao', 'promocoes', 'oferta', 'desconto', 'imperdivel'];
+           if (promoTerms.includes(catNormalized)) {
+              matchesCategory = promoTerms.some(term => 
+                shopFoodCat.includes(term) || shopTag.includes(term) || shopName.includes(term) || shopDesc.includes(term) || shop.freeDelivery
               );
            }
         }
