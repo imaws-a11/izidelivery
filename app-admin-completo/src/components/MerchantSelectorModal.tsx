@@ -12,6 +12,13 @@ export const MerchantSelectorModal: React.FC<MerchantSelectorModalProps> = ({ is
   const [localSelection, setLocalSelection] = useState<string[]>(selectedIds);
   const [search, setSearch] = useState("");
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setLocalSelection(selectedIds);
+      setSearch("");
+    }
+  }, [isOpen, selectedIds]);
+
   if (!isOpen) return null;
 
   const filteredMerchants = merchants.filter(m => 
@@ -89,6 +96,18 @@ export const MerchantSelectorModal: React.FC<MerchantSelectorModalProps> = ({ is
                              <span className="text-[9px] uppercase tracking-widest text-zinc-600 font-bold">Lojista ID: {m.id.substring(0, 8)}</span>
                           </div>
                        </div>
+                       <input 
+                         type="checkbox" 
+                         className="sr-only" 
+                         checked={isSelected} 
+                         onChange={() => {
+                           if (isSelected) {
+                             setLocalSelection(localSelection.filter(id => id !== m.id));
+                           } else {
+                             setLocalSelection([...localSelection, m.id]);
+                           }
+                         }} 
+                       />
                     </label>
                  );
               })}
