@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
-const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string ?? '';
+import { GMAPS_KEY } from '../../../config';
 
 interface AddressSearchInputProps {
   placeholder: string;

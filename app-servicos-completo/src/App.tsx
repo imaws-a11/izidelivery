@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "./lib/supabase";
 import { toast, toastSuccess, toastError, toastWarning, showConfirm } from "./lib/useToast";
 import { useGoogleMapsLoader } from "./hooks/useGoogleMapsLoader";
+import { GMAPS_KEY } from "./config";
 // Mercado Pago
 import { MercadoPagoCardForm } from "./components/MercadoPagoCardForm";
 import { calculateFreightPrice, calculateVanPrice } from "./lib/pricing_engine";
@@ -182,7 +183,7 @@ function App() {
       const { data } = await supabase
         .from('admin_settings_delivery')
         .select('*')
-        .eq('id', '00000000-0000-0000-0000-000000000000' as any)
+        .eq('id', '00000000-0000-0000-0000-000000000000')
         .single();
       if (data) setGlobalSettings(data);
     } catch (e) {}
@@ -435,7 +436,7 @@ function App() {
           if (!address) {
             try {
               const res = await fetch(
-                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&language=pt-BR&result_type=street_address|route`
+                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GMAPS_KEY}&language=pt-BR&result_type=street_address|route`
               );
               const data = await res.json();
               if (data.results?.[0]) {
@@ -1173,7 +1174,8 @@ function App() {
     }
 
     const fetchDriverInitialLoc = async () => {
-      const { data } = await supabase.from('drivers_delivery').select('lat, lng').eq('id', selectedItem.driver_id).maybeSingle();
+      if (!selectedItem?.driver_id) return;
+    const { data } = await supabase.from('drivers_delivery').select('lat, lng').eq('id', selectedItem.driver_id).maybeSingle();
       if (data?.lat) setDriverLocation({ lat: data.lat, lng: data.lng });
     };
     fetchDriverInitialLoc();
@@ -7615,10 +7617,11 @@ function App() {
         {/* Cancelar */}
         <button
           onClick={async () => {
+            if (!selectedItem?.id || !userId) return;
             if (!await showConfirm({ message: "Cancelar a solicitação?" })) return;
             await supabase.from("orders_delivery").update({ status: "cancelado" }).eq("id", selectedItem.id);
             setSubView("none");
-            fetchMyOrders(userId!);
+            fetchMyOrders(userId);
             toastSuccess("Solicitação cancelada.");
           }}
           className="text-white/30 font-black text-[10px] uppercase tracking-widest border border-white/10 px-6 py-3 rounded-2xl hover:bg-white/5 transition-all active:scale-95"
@@ -7658,7 +7661,7 @@ function App() {
     const hasDriver = !!selectedItem.driver_id;
 
     const saveObservation = async () => {
-      if (!schedObsState.trim()) return;
+      if (!selectedItem?.id || !schedObsState.trim()) return;
       setIsSavingObsState(true);
       await supabase.from('orders_delivery').update({ order_notes: schedObsState }).eq('id', selectedItem.id);
       setIsSavingObsState(false);
@@ -7683,9 +7686,12 @@ function App() {
             <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest">{label}</p>
           </div>
           <button onClick={async () => {
+            if (!selectedItem?.id || !userId) return;
             if (!await showConfirm({ message: 'Cancelar este agendamento?' })) return;
             await supabase.from('orders_delivery').update({ status: 'cancelado' }).eq('id', selectedItem.id);
-            setSubView('none'); fetchMyOrders(userId!); toastSuccess('Agendamento cancelado.');
+            setSubView('none'); 
+            fetchMyOrders(userId); 
+            toastSuccess('Agendamento cancelado.');
           }} className="px-4 py-2 border border-red-200  text-red-500 rounded-2xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">
             Cancelar
           </button>
