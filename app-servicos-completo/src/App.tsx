@@ -1572,6 +1572,7 @@ function App() {
   const calculateDistancePrices = async (origin: string, destination: string) => {
     if (!origin || !destination) return;
     setIsCalculatingPrice(true);
+    setDistancePrices({}); // Limpar preços antigos para feedback visual
     try {
       const apiKey = GMAPS_KEY;
       const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
@@ -1589,7 +1590,6 @@ function App() {
         }),
       });
       const data = await res.json();
-      setIsCalculatingPrice(false);
       if (data?.routes?.[0]) {
         const route = data.routes[0];
         const distKm = (route.distanceMeters || 0) / 1000;
@@ -1597,7 +1597,7 @@ function App() {
         const mins = Math.round(secs / 60);
         const durationText = mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60}min` : `${mins} min`;
         const distText = distKm < 1 ? `${Math.round(distKm*1000)} m` : `${distKm.toFixed(1)} km`;
-        setRouteDistance(`${distText} Ã¢â‚¬¢ ${durationText}`);
+        setRouteDistance(`${distText} • ${durationText}`);
         setDistanceValueKm(distKm);
         if (route.polyline?.encodedPolyline) {
           setRoutePolyline(route.polyline.encodedPolyline);
@@ -1635,7 +1635,8 @@ function App() {
               }
             });
       }
-    } catch {
+    } catch (err) {
+      console.error("Error calculating routes:", err);
     } finally {
       setIsCalculatingPrice(false);
     }
@@ -1810,13 +1811,24 @@ function App() {
     return () => clearInterval(adTimer);
   }, []);
 
-  // Recalcular preços ao entrar na tela transit_selection com rota já definida
+  // Monitorar mudanças em origem/destino para calcular preços em tempo real
   useEffect(() => {
-    if (subView === "transit_selection" && transitData.origin && transitData.destination && Object.keys(distancePrices).length === 0) {
-      setRouteDistance("");
-      calculateDistancePrices(transitData.origin, transitData.destination);
+    if ((subView === "taxi_wizard" || subView === "transit_selection") && transitData.origin && transitData.destination) {
+      setIsCalculatingPrice(true);
+      setDistancePrices({});
+      const timer = setTimeout(() => {
+        calculateDistancePrices(transitData.origin, transitData.destination);
+      }, 600);
+      return () => clearTimeout(timer);
     }
-  }, [subView]);
+  }, [transitData.origin, transitData.destination, subView]);
+
+  // Autopreencher origem se estiver vazia ao entrar no wizard
+  useEffect(() => {
+    if (subView === "taxi_wizard" && userLocation.address && !transitData.origin) {
+      setTransitData(prev => ({ ...prev, origin: userLocation.address }));
+    }
+  }, [subView, userLocation.address]);
 
     
   useEffect(() => {
@@ -7157,7 +7169,7 @@ function App() {
         </div>
 
         <header className="relative z-50 flex items-center justify-between px-6 pt-10">
-          <button onClick={() => navigateSubView("explore_mobility")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
+          <button onClick={() => setSubView("none")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
             <Icon name="arrow_back" />
           </button>
           <div className="text-right">
@@ -7190,7 +7202,10 @@ function App() {
                            placeholder="De onde você está saindo?"
                            className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
                            userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                           onSelect={(p) => setTransitData({...transitData, origin: p.formatted_address || ""})}
+                           onSelect={(p) => {
+                             const ori = p.formatted_address || "";
+                             setTransitData(prev => ({...prev, origin: ori}));
+                           }}
                          />
                       </div>
 
@@ -7203,11 +7218,62 @@ function App() {
                            userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                           onSelect={(p) => {
                             const dest = p.formatted_address || "";
-                            setTransitData({...transitData, destination: dest});
-                            if (transitData.origin) calculateDistancePrices(transitData.origin, dest);
+                            setTransitData(prev => ({...prev, destination: dest}));
                           }}
                          />
                       </div>
+
+                      {/* VEÍCULO E PREÇO IMEDIATO */}
+                       <AnimatePresence>
+                         {transitData.destination && transitData.origin && (
+                           <motion.div 
+                             initial={{ opacity: 0, height: 0 }}
+                             animate={{ opacity: 1, height: 'auto' }}
+                             exit={{ opacity: 0, height: 0 }}
+                             className="space-y-4 pt-2 overflow-hidden"
+                           >
+                              <div className="flex items-center gap-3 px-2">
+                                 <h4 className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.3em]">Tipo de Transporte</h4>
+                                 <div className="h-px flex-1 bg-white/5" />
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-3 pb-2">
+                                 {[
+                                   { id: 'mototaxi', label: 'MotoTáxi', icon: 'motorcycle', color: 'text-yellow-400', sub: 'Rápido & Ágil' },
+                                   { id: 'carro', label: 'Carro', icon: 'directions_car', color: 'text-white', sub: 'Executivo Premium' }
+                                 ].map((v) => {
+                                   const isSelected = transitData.type === v.id;
+                                   const price = distancePrices[v.id] || 0;
+                                   
+                                   return (
+                                     <button
+                                       key={v.id}
+                                       onClick={() => setTransitData(prev => ({ ...prev, type: v.id as any, estPrice: price }))}
+                                       className={`p-5 rounded-[35px] transition-all duration-300 flex flex-col items-center gap-2 border relative group overflow-hidden
+                                         ${isSelected ? 'bg-yellow-400 border-yellow-400 shadow-[0_20px_40px_rgba(255,217,9,0.15)]' : 'bg-zinc-900 border-white/5 hover:border-white/10'}
+                                       `}
+                                     >
+                                        <div className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-300
+                                          ${isSelected ? 'bg-black/10 scale-110' : 'bg-white/5 group-hover:bg-white/10'}
+                                        `}>
+                                           <span className={`material-symbols-outlined text-2xl ${isSelected ? 'text-black' : v.color}`}>{v.icon}</span>
+                                        </div>
+                                        <div className="text-center z-10">
+                                           <p className={`text-[11px] font-black uppercase tracking-tighter ${isSelected ? 'text-black' : 'text-white'}`}>{v.label}</p>
+                                           <p className={`text-[8px] font-black uppercase tracking-widest mt-1 opacity-50 ${isSelected ? 'text-black' : 'text-zinc-600'}`}>{v.sub}</p>
+                                           <div className="mt-3">
+                                              <p className={`text-sm font-black italic ${isSelected ? 'text-black' : 'text-yellow-400'} ${isCalculatingPrice ? 'animate-pulse' : ''}`}>
+                                                {isCalculatingPrice ? 'Calculando...' : price > 0 ? `R$ ${price.toFixed(2).replace(".", ",")}` : '---'}
+                                              </p>
+                                           </div>
+                                        </div>
+                                     </button>
+                                   );
+                                 })}
+                              </div>
+                           </motion.div>
+                         )}
+                       </AnimatePresence>
                    </div>
                 </motion.section>
               )}
@@ -7219,29 +7285,65 @@ function App() {
                       <p className="text-zinc-500 text-xs font-medium">Confirme os detalhes e o preço antes de pedir.</p>
                    </div>
 
-                   <div className="bg-white/5 border border-white/5 p-6 rounded-[35px] space-y-6">
-                      <div className="flex items-center gap-4">
-                         <div className="size-12 rounded-2xl bg-yellow-400/10 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-yellow-400 italic">local_atm</span>
+                   <div className="bg-zinc-900/40 border border-white/5 p-7 rounded-[40px] space-y-8 shadow-2xl">
+                      {/* PAGAMENTO */}
+                      <div className="flex items-center gap-5 cursor-pointer group" onClick={() => { setPaymentsOrigin("checkout"); setSubView("payments"); }}>
+                         <div className="size-14 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-500/20 transition-all">
+                            <span className="material-symbols-outlined text-blue-400 text-2xl">credit_card</span>
                          </div>
                          <div className="flex-1">
-                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Preço Estimado</p>
-                            <p className="text-2xl font-black text-yellow-400">
-                              {transitData.estPrice > 0 
-                                ? `R$ ${transitData.estPrice.toFixed(2).replace(".", ",")}` 
-                                : isCalculatingPrice ? "Calculando..." : "..."}
+                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">Pagamento</p>
+                            <div className="flex items-center justify-between">
+                               <p className="text-sm font-black text-white italic">
+                                 {paymentMethod === 'dinheiro' ? 'Dinheiro' : selectedItem?.last4 ? `Cartão • ${selectedItem.last4}` : 'Escolher Método'}
+                               </p>
+                               <span className="material-symbols-outlined text-zinc-700 text-sm group-hover:text-yellow-400 transition-colors">expand_more</span>
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="h-px bg-white/5" />
+
+                      {/* PREÇO E INFO */}
+                      <div className="flex items-center gap-5">
+                         <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
+                            <span className="material-symbols-outlined text-yellow-400 text-2xl italic">local_atm</span>
+                         </div>
+                         <div className="flex-1">
+                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">Preço Estimado</p>
+                            <div className="flex items-center gap-3">
+                               <p className="text-3xl font-black text-yellow-400 tracking-tighter">
+                                 {distancePrices[transitData.type] > 0 
+                                   ? `R$ ${distancePrices[transitData.type].toFixed(2).replace(".", ",")}` 
+                                   : isCalculatingPrice ? "..." : "---"}
+                               </p>
+                               {marketConditions.surgeMultiplier > 1 && (
+                                 <div className="px-2 py-0.5 rounded flex items-center gap-1 bg-yellow-400/10 border border-yellow-400/20">
+                                   <span className="material-symbols-outlined text-[10px] text-yellow-400 font-black italic">bolt</span>
+                                   <span className="text-[9px] font-black text-yellow-400 tracking-tighter">{marketConditions.surgeMultiplier}x</span>
+                                 </div>
+                               )}
+                            </div>
+                            <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
+                               <span className="material-symbols-outlined text-[12px]">schedule</span>
+                               Tempo Est: {routeDistance ? `${Math.round(parseInt(routeDistance)/1000 * 2.2)} min` : '-- min'}
                             </p>
                          </div>
                       </div>
-                      <div className="h-px bg-white/5 w-full" />
-                      <div className="space-y-4">
-                         <div className="flex gap-4 items-start">
-                            <span className="material-symbols-outlined text-zinc-600 text-sm">home</span>
-                            <p className="text-xs font-medium text-zinc-300 truncate">{transitData.origin}</p>
+
+                      <div className="h-px bg-white/5" />
+
+                      {/* CLIENTE LEVEL */}
+                      <div className="flex items-center gap-5">
+                         <div className="size-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                            <span className="material-symbols-outlined text-emerald-400 text-2xl">verified_user</span>
                          </div>
-                         <div className="flex gap-4 items-start">
-                            <span className="material-symbols-outlined text-yellow-400 text-sm">location_on</span>
-                            <p className="text-xs font-medium text-white truncate">{transitData.destination}</p>
+                         <div className="flex-1">
+                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">Perfil do Passageiro</p>
+                            <div className="flex items-center gap-3">
+                               <span className="text-[10px] font-black text-white tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 uppercase">Tier {userLevel >= 10 ? 'Master' : 'Classic'}</span>
+                               {userLevel >= 10 && <span className="material-symbols-outlined text-yellow-400 text-sm">workspace_premium</span>}
+                            </div>
                          </div>
                       </div>
                    </div>
@@ -7251,10 +7353,21 @@ function App() {
 
            <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent">
               <button 
-                onClick={() => mobilityStep < 2 ? setMobilityStep(2) : navigateSubView("mobility_payment")}
-                className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
+                onClick={() => {
+                  if (mobilityStep === 1) {
+                    if (!transitData.origin || !transitData.destination) {
+                      showToast("Preencha todos os endereços", "warning");
+                      return;
+                    }
+                    setMobilityStep(2);
+                  } else {
+                    navigateSubView("mobility_payment");
+                  }
+                }}
+                disabled={mobilityStep === 1 ? (!transitData.origin || !transitData.destination) : (!distancePrices[transitData.type] || isCalculatingPrice)}
+                className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[30px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:grayscale"
               >
-                 <span className="uppercase tracking-widest">{mobilityStep === 1 ? "Próximo Passo" : "Solicitar Agora"}</span>
+                 <span className="uppercase tracking-[0.2em] text-sm">{mobilityStep === 1 ? "Próximo" : "Confirmar Viagem"}</span>
                  <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">{mobilityStep === 1 ? 'arrow_forward' : 'bolt'}</span>
               </button>
            </div>
@@ -7279,7 +7392,7 @@ function App() {
         <motion.button 
           whileTap={{ scale: disabled ? 1 : 0.98 }}
           disabled={disabled}
-          onClick={() => handleConfirmMobility(id)}
+          onClick={() => setPaymentMethod(id)}
           className={`w-full group relative overflow-hidden flex items-center gap-4 p-5 rounded-[32px] transition-all duration-500 border
             ${disabled ? 'opacity-30 grayscale cursor-not-allowed' : 'active:scale-[0.98]'}
             ${isSelected ? 'bg-yellow-400 font-bold border-yellow-400 shadow-[0_20px_40px_rgba(255,217,9,0.15)]' : 'bg-zinc-900/40 backdrop-blur-xl border-white/5 hover:border-white/10 shadow-2xl shadow-black/50'}
@@ -7307,7 +7420,7 @@ function App() {
       <div className="absolute inset-0 z-[115] bg-black flex flex-col hide-scrollbar overflow-y-auto">
         {/* Header imersivo */}
         <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md px-6 py-8 flex items-center gap-5 border-b border-white/5">
-          <button onClick={() => setSubView("transit_selection")} className="size-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-90 transition-all shadow-xl">
+          <button onClick={() => navigateSubView("taxi_wizard")} className="size-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-90 transition-all shadow-xl">
             <span className="material-symbols-outlined text-lg">arrow_back_ios_new</span>
           </button>
           <div className="flex flex-col text-left">
@@ -7316,7 +7429,7 @@ function App() {
           </div>
         </header>
 
-        <div className="flex-1 px-5 py-6 space-y-10 pb-40">
+        <div className="flex-1 px-5 py-6 space-y-10 pb-48">
           {/* Resumo Imersivo e Minimalista */}
           <div className="space-y-4">
             <div className="flex items-center justify-between px-2">
@@ -7425,6 +7538,20 @@ function App() {
              <button className="text-[9px] font-black text-zinc-800 uppercase tracking-widest hover:text-zinc-500 transition-colors">
                Termos de Uso e Política de Privacidade
              </button>
+          </div>
+        </div>
+
+        {/* BOTÃO DE CONFIRMAÇÃO FINAL */}
+        <div className="fixed bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black via-black to-transparent z-50 pointer-events-none">
+          <div className="pointer-events-auto">
+            <button 
+              onClick={() => handleConfirmMobility(paymentMethod)}
+              disabled={!paymentMethod}
+              className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[30px] shadow-2xl active:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale group"
+            >
+              <span className="uppercase tracking-[0.2em] text-sm">Solicitar Viagem</span>
+              <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">bolt</span>
+            </button>
           </div>
         </div>
       </div>

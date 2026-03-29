@@ -172,41 +172,43 @@ export const ExploreRestaurantsView = ({
   }, [establishments, searchQuery, selectedCategory]);
 
   return (
-    <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-      <header className="sticky top-0 z-50 px-5 pt-8 pb-4" style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+    <div className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
+      <header className="fixed top-4 inset-x-4 z-[110] flex flex-col bg-black/60 backdrop-blur-2xl border border-white/10 rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSubView("none")} className="size-9 rounded-2xl bg-zinc-900/60 border border-white/10 flex items-center justify-center active:scale-90 transition-all">
+              <span className="material-symbols-outlined text-zinc-100 text-[20px]">arrow_back</span>
             </button>
             <div>
-              <h1 className="text-xl font-black tracking-tight text-white leading-none">
+              <h1 className="text-sm font-black tracking-tight text-white leading-none">
                 {initialCategory === "Almoço" ? "Almoço Izi" : "Restaurantes"}
               </h1>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">
-                {initialCategory === "Almoço" ? "O que comer no almoço?" : "Explore novos sabores"}
+              <p className="text-[8px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5 opacity-80">
+                {initialCategory === "Almoço" ? "O que comer?" : "Sabores"}
               </p>
             </div>
           </div>
-          <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-            <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-            {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>}
+          <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-9 rounded-2xl bg-zinc-900/60 border border-white/10 flex items-center justify-center active:scale-90 transition-all">
+            <span className="material-symbols-outlined text-zinc-100 text-[20px]">shopping_bag</span>
+            {cart.length > 0 && <span className="absolute -top-1 -right-1 size-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-black">{cart.length}</span>}
           </button>
         </div>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-            <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
+        <div className="px-4 pb-3">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              <span className="material-symbols-outlined text-zinc-500 text-sm">search</span>
+            </div>
+            <input
+              className="w-full bg-black/40 border border-white/5 rounded-xl py-2 pl-9 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/20 text-xs font-medium transition-all"
+              placeholder="Buscar..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-          <input
-            className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
-            placeholder="Buscar pratos ou restaurantes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
         </div>
       </header>
 
-      <main className="px-5 flex flex-col gap-8">
+      <main className="px-5 flex flex-col gap-8 pt-40">
         {/* BANNER VIP */}
         <section>
           <div className="relative h-44 rounded-[2rem] overflow-hidden group cursor-pointer border border-zinc-800">

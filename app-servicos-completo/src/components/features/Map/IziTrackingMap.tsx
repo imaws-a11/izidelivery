@@ -1,6 +1,6 @@
 import { GoogleMap, Marker, Polyline } from '@react-google-maps/api';
 import { useGoogleMapsLoader } from '../../../hooks/useGoogleMapsLoader';
-import { useRef, useCallback, useState, useMemo } from 'react';
+import { useRef, useCallback, useState, useMemo, useEffect } from 'react';
 
 interface IziTrackingMapProps {
   driverLoc?: { lat: number; lng: number } | null;
@@ -49,11 +49,19 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
   const onLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
     
-    // Se a rota for carregada, ajustar o zoom para caber a rota
     if (path.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       path.forEach(p => bounds.extend(p));
-      map.fitBounds(bounds, 80); // 80px de padding
+      map.fitBounds(bounds, 80);
+    }
+  }, [path]);
+
+  // Auto-fit bounds quando o path muda dinamicamente
+  useEffect(() => {
+    if (mapRef.current && path.length > 1) {
+      const bounds = new google.maps.LatLngBounds();
+      path.forEach(p => bounds.extend(p));
+      mapRef.current.fitBounds(bounds, { top: 80, bottom: 80, right: 30, left: 30 });
     }
   }, [path]);
 

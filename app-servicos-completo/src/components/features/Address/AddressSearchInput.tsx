@@ -58,7 +58,7 @@ export const AddressSearchInput = ({
   };
 
   const fetchSuggestions = async (input: string) => {
-    if (!input || input.length < 2) {
+    if (!input || input.length < 3) {
       setSuggestions([]);
       setOpen(false);
       return;
@@ -77,7 +77,7 @@ export const AddressSearchInput = ({
         body.locationBias = {
           circle: {
             center: { latitude: userCoords.lat, longitude: userCoords.lng },
-            radius: 50000, // 50km de raio
+            radius: 10000, // 10km de raio
           },
         };
       }
