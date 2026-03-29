@@ -58,11 +58,13 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
         },
         {
           id: "preparando",
-          label: "Em Preparação",
+          label: "Preparando seu Pedido",
           icon: "restaurant",
           status: [
             "preparando",
             "pronto",
+            "a_caminho_coleta",
+            "chegou_coleta",
             "a_caminho",
             "picked_up",
             "saiu_para_entrega",
@@ -73,15 +75,15 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
         },
         {
           id: "aceito_ent",
-          label: "Indo Coletar",
+          label: "Entregador a caminho da coleta",
           icon: "moped",
-          status: ["a_caminho", "picked_up", "saiu_para_entrega", "em_rota", "no_local", "concluido"],
+          status: ["a_caminho_coleta", "chegou_coleta", "a_caminho", "picked_up", "saiu_para_entrega", "em_rota", "no_local", "concluido"],
         },
         {
           id: "coletado",
           label: "Pedido Coletado",
           icon: "package_2",
-          status: ["picked_up", "saiu_para_entrega", "em_rota", "no_local", "concluido"],
+          status: ["a_caminho", "picked_up", "saiu_para_entrega", "em_rota", "no_local", "concluido"],
         },
         {
           id: "em_rota",
@@ -98,36 +100,76 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
     .findIndex((s) => s.status.includes(selectedItem.status));
   const currentIdx = revIdx === -1 ? 0 : steps.length - 1 - revIdx;
 
+  // Configurações do Bottom Sheet para framer-motion (Sincronizado com feedback de UI Premium)
+  const sheetVariants = {
+    collapsed: { y: "82%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
+    half: { y: "50%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
+    expanded: { y: "15%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } }
+  };
+  const [sheetState, setSheetState] = React.useState<"collapsed" | "half" | "expanded">("half");
+
+  const handleDragEnd = (_: any, info: any) => {
+    if (info.offset.y > 100) {
+      if (sheetState === "expanded") setSheetState("half");
+      else setSheetState("collapsed");
+    } else if (info.offset.y < -100) {
+      if (sheetState === "collapsed") setSheetState("half");
+      else setSheetState("expanded");
+    }
+  };
+
   return (
-    <div className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-hidden pb-32">
-      {/* MAPA PLACEHOLDER OU REAL-TIME */}
-      <div className="relative w-full h-[35vh] bg-zinc-900 overflow-hidden shrink-0">
-        {/* MAPA REAL-TIME IZI FLASH */}
-        <IziTrackingMap driverLoc={driverLocation} userLoc={userLocation} routePolyline={routePolyline} onMyLocationClick={onMyLocationClick} />
+    <div className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-hidden">
+      {/* MAPA FULLSCREEN AO FUNDO */}
+      <div className="absolute inset-0 z-0">
+        <IziTrackingMap 
+          driverLoc={driverLocation} 
+          userLoc={userLocation} 
+          routePolyline={routePolyline} 
+          onMyLocationClick={onMyLocationClick} 
+        />
+        {/* Overlay gradiente suave para profundidade */}
+        <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/70 via-black/20 to-transparent pointer-events-none" />
+      </div>
 
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black z-10 pointer-events-none" />
+      {/* Botão flutuante voltar (sempre visível no topo) */}
+      <div className="absolute top-8 left-6 z-50">
+        <button
+          onClick={() => setSubView("none")}
+          className="size-12 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all shadow-xl"
+        >
+          <Icon name="arrow_back" />
+        </button>
+      </div>
 
-        {/* Botão flutuante voltar */}
-        <div className="absolute top-8 left-6 z-20">
-          <button
-            onClick={() => setSubView("none")}
-            className="size-12 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all"
-          >
-            <Icon name="arrow_back" />
-          </button>
+      {/* BOTTOM SHEET DESLIZANTE GESTUAL */}
+      <motion.div
+        variants={sheetVariants}
+        initial="collapsed"
+        animate={sheetState}
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={0.05}
+        onDragEnd={handleDragEnd}
+        className="absolute inset-x-0 bottom-0 z-40 bg-zinc-950/95 backdrop-blur-3xl rounded-t-[48px] border-t border-white/10 shadow-[0_-20px_80px_rgba(0,0,0,0.8)] flex flex-col cursor-grab active:cursor-grabbing"
+        style={{ height: "100vh" }}
+      >
+        {/* Handle de arraste visível e área sensível maior */}
+        <div className="w-full h-12 flex items-center justify-center shrink-0">
+          <div className="w-14 h-1.5 bg-zinc-800 rounded-full" />
         </div>
 
-        {/* Badge flutuante de status */}
-        <div className="absolute bottom-8 left-6 right-6 z-20">
-          <div className="bg-black/60 backdrop-blur-xl border border-white/10 p-5 rounded-[32px] flex items-center gap-5 shadow-2xl">
-            <div className="size-14 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-lg shadow-primary/20">
+        {/* CABEÇALHO DO SHEET (STATUS RÁPIDO) */}
+        <div className="px-6 pb-6 border-b border-white/5" onClick={() => setSheetState(sheetState === "collapsed" ? "half" : "expanded")}>
+          <div className="bg-white/5 border border-white/10 p-5 rounded-[32px] flex items-center gap-5 shadow-2xl">
+            <div className="size-14 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-lg shadow-yellow-400/20">
               <span className="material-symbols-outlined text-black text-2xl animate-bounce">
                 {steps[currentIdx]?.icon || "sync"}
               </span>
             </div>
             <div className="flex-1">
               <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-1">
-                Logística Ativa
+                Acompanhando
               </p>
               <h3 className="text-lg font-black text-white tracking-tighter leading-none">
                 {steps[currentIdx]?.label || "Sintonizando..."}
@@ -139,161 +181,149 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
             </div>
           </div>
         </div>
-      </div>
 
-      {/* DETALHES COMPLEMENTARES */}
-      <main className="flex-1 overflow-y-auto no-scrollbar px-6 py-10 space-y-12">
-        {/* TRACKING TIMELINE */}
-        <section className="space-y-10">
-          <div className="flex items-center justify-between px-2">
-            <h2 className="text-[11px] font-black text-zinc-600 uppercase tracking-[0.4em]">Fluxo Operacional</h2>
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Real-time</span>
-              <span className="size-2 bg-emerald-500 rounded-full animate-pulse" />
+        {/* CONTEÚDO SCROLLABLE */}
+        <main className="flex-1 overflow-y-auto no-scrollbar px-6 py-8 space-y-12 pb-48">
+          {/* TRACKING TIMELINE */}
+          <section className="space-y-8">
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em]">Fluxo Operacional</h2>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Real-time</span>
+                <span className="size-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              </div>
             </div>
-          </div>
 
-          <div className="relative space-y-12 pl-4">
-            {/* Linha vertical tracejada */}
-            <div className="absolute left-[38px] top-6 bottom-6 w-[2px] bg-zinc-900 border-l border-dashed border-zinc-800" />
+            <div className="relative space-y-10 pl-2">
+              <div className="absolute left-[23px] top-6 bottom-6 w-[1.5px] bg-zinc-900 border-l border-dashed border-zinc-800" />
 
-            {steps.map((s, i) => {
-              const isActive = i <= currentIdx;
-              const isCurrent = i === currentIdx;
-              return (
-                <div
-                  key={s.id}
-                  className={`flex items-start gap-8 relative z-10 transition-all duration-500 ${isActive ? "opacity-100 scale-100" : "opacity-20 scale-95"}`}
-                >
+              {steps.map((s, i) => {
+                const isActive = i <= currentIdx;
+                const isCurrent = i === currentIdx;
+                return (
                   <div
-                    className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${isActive ? "bg-yellow-400 text-black shadow-lg shadow-primary/30 border border-yellow-300/20" : "bg-zinc-900 text-zinc-700"}`}
+                    key={s.id}
+                    className={`flex items-start gap-6 relative z-10 transition-all duration-500 ${isActive ? "opacity-100" : "opacity-30"}`}
                   >
-                    <span
-                      className="material-symbols-outlined text-xl"
-                      style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
+                    <div
+                      className={`size-10 rounded-xl flex items-center justify-center transition-all duration-500 ${isActive ? "bg-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-zinc-900 text-zinc-700"}`}
                     >
-                      {s.icon}
-                    </span>
-                  </div>
-                  <div className="flex-1 pt-1">
-                    <h4 className={`text-base font-black tracking-tight ${isActive ? "text-white" : "text-zinc-600"}`}>
-                      {s.label}
-                    </h4>
-                    {isCurrent && (
-                      <motion.p
-                        initial={{ opacity: 0, x: -5 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="text-yellow-400/60 text-[10px] uppercase font-black tracking-widest mt-1"
+                      <span
+                        className="material-symbols-outlined text-lg"
+                        style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
                       >
-                        Sendo processado agora
-                      </motion.p>
+                        {s.icon}
+                      </span>
+                    </div>
+                    <div className="flex-1 pt-1.5">
+                      <h4 className={`text-sm font-black tracking-tight ${isActive ? "text-white" : "text-zinc-600"}`}>
+                        {s.label}
+                      </h4>
+                      {isCurrent && (
+                        <motion.p
+                          initial={{ opacity: 0, x: -5 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="text-yellow-400/60 text-[9px] uppercase font-black tracking-widest mt-0.5"
+                        >
+                          {s.id === "em_rota" ? "Seu pedido está indo até você" : "Sendo processado agora"}
+                        </motion.p>
+                      )}
+                    </div>
+                    {isActive && (
+                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="mt-2">
+                        <span className="material-symbols-outlined text-emerald-400 text-base">check_circle</span>
+                      </motion.div>
                     )}
                   </div>
-                  {isActive && (
-                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="mt-2.5">
-                      <span className="material-symbols-outlined text-emerald-400 text-lg">check_circle</span>
-                    </motion.div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
+                );
+              })}
+            </div>
+          </section>
 
-        {/* ESTABELECIMENTO / MOTORISTA */}
-        <section className="bg-zinc-900/40 border border-white/5 rounded-[40px] p-8 space-y-8 shadow-inner">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-5">
-              <div
-                className="size-16 rounded-[24px] bg-cover bg-center border border-white/10 shadow-float"
-                style={{
-                  backgroundImage: `url('https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedItem.driver_id || selectedItem.merchant_name || "izi"}')`,
-                }}
-              />
-              <div className="space-y-1">
-                <h4 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none">
-                  {selectedItem.driver_id
-                    ? selectedItem.driver_name || "Entregador Izi"
-                    : selectedItem.merchant_name || "Estabelecimento"}
-                </h4>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">
+          {/* ESTABELECIMENTO / MOTORISTA */}
+          <section className="bg-white/5 border border-white/5 rounded-[32px] p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div
+                  className="size-14 rounded-2xl bg-cover bg-center border border-white/10 shadow-lg"
+                  style={{
+                    backgroundImage: `url('https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedItem.driver_id || selectedItem.merchant_name || "izi"}')`,
+                  }}
+                />
+                <div className="space-y-0.5">
+                  <h4 className="text-lg font-black text-white italic uppercase tracking-tighter leading-none">
+                    {selectedItem.driver_id
+                      ? selectedItem.driver_name || "Entregador Izi"
+                      : selectedItem.merchant_name || "Estabelecimento"}
+                  </h4>
+                  <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest opacity-80">
                     {selectedItem.driver_id ? "Entregador Parceiro" : "Protocolo Izi"} #
                     {String(selectedItem.id).slice(-6)}
-                  </span>
+                  </p>
                 </div>
               </div>
+              <button className="size-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 active:scale-90 transition-all">
+                <Icon name="support_agent" size={18} className="text-zinc-500" />
+              </button>
             </div>
-            <button className="size-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 active:scale-90 transition-all">
-              <Icon name="support_agent" size={20} className="text-zinc-500" />
-            </button>
-          </div>
 
-          {selectedItem.driver_id && (
-            <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
-              <div className="size-10 rounded-xl bg-yellow-400/10 flex items-center justify-center">
-                <Icon name="two_wheeler" className="text-yellow-400" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Veículo Selecionado</p>
-                <p className="text-xs font-bold text-white">
-                  Moto / Placa {String(selectedItem.id).slice(-4).toUpperCase()}
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="flex items-center gap-1">
-                  <span
-                    className="material-symbols-outlined text-yellow-400 text-xs"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    star
-                  </span>
-                  <span className="text-xs font-black text-white">4.9</span>
+            {selectedItem.driver_id && (
+              <div className="flex items-center gap-4 bg-black/40 p-3.5 rounded-2xl border border-white/5">
+                <div className="size-9 rounded-xl bg-yellow-400/10 flex items-center justify-center">
+                  <Icon name="two_wheeler" className="text-yellow-400" size={18} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Veículo</p>
+                  <p className="text-[11px] font-bold text-white">
+                    Moto / Placa {String(selectedItem.id).slice(-4).toUpperCase()}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 bg-yellow-400/10 px-2 py-1 rounded-lg">
+                  <span className="material-symbols-outlined text-yellow-400 text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                  <span className="text-[10px] font-black text-white">4.9</span>
                 </div>
               </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setSubView("order_chat")}
+                className="bg-zinc-900 border border-zinc-800 py-4 rounded-2xl flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-400 active:scale-[0.98] transition-all hover:bg-zinc-800 hover:text-white"
+              >
+                <Icon name="chat" size={16} className="text-yellow-400" />
+                Chat
+              </button>
+              <button className="bg-zinc-900 border border-zinc-800 py-4 rounded-2xl flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-400 active:scale-[0.98] transition-all hover:bg-zinc-800 hover:text-white">
+                <span className="material-symbols-outlined text-yellow-400 text-lg">call</span>
+                Ligar
+              </button>
             </div>
-          )}
+          </section>
 
-          <div className="h-px bg-white/5 mx-2" />
-
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => setSubView("order_chat")}
-              className="bg-zinc-900/80 border border-zinc-800 py-5 rounded-[24px] flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest text-zinc-400 active:scale-[0.98] transition-all hover:bg-zinc-800 hover:text-white"
-            >
-              <Icon name="chat" size={18} className="text-yellow-400" />
-              Abrir Canal Chat
-            </button>
-            <button className="bg-zinc-900/80 border border-zinc-800 py-5 rounded-[24px] flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest text-zinc-400 active:scale-[0.98] transition-all hover:bg-zinc-800 hover:text-white">
-              <span className="material-symbols-outlined text-yellow-400 text-xl">call</span>
-              Ligar Agora
-            </button>
-          </div>
-        </section>
-
-        {/* DADOS DE ENTREGA */}
-        <section className="px-2 space-y-4">
-          <h2 className="text-[11px] font-black text-zinc-600 uppercase tracking-[0.4em]">Destino Final</h2>
-          <div className="flex items-start gap-4 bg-zinc-900/40 p-6 rounded-[32px] border border-white/5">
-            <div className="size-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
-              <Icon name="location_on" className="text-orange-500" />
+          {/* DESTINO */}
+          <section className="px-2 space-y-4">
+            <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em]">Destino Final</h2>
+            <div className="flex items-start gap-4 bg-white/5 p-5 rounded-[28px] border border-white/5">
+              <div className="size-9 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
+                <Icon name="location_on" className="text-orange-500" size={18} />
+              </div>
+              <div>
+                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">Receber em</p>
+                <p className="text-xs font-bold text-zinc-300 leading-tight">{selectedItem.delivery_address}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Receber em</p>
-              <p className="text-sm font-bold text-zinc-300 leading-tight">{selectedItem.delivery_address}</p>
-            </div>
-          </div>
-        </section>
+          </section>
 
-        {/* AJUDA */}
-        <button
-          onClick={() => setSubView("order_support")}
-          className="w-full py-6 rounded-[32px] border-2 border-dashed border-zinc-900/60 text-zinc-800 font-black text-[10px] uppercase tracking-[0.3em] active:scale-95 transition-all flex items-center justify-center gap-3 group hover:border-white/10 hover:text-white mt-10"
-        >
-          <Icon name="help" className="group-hover:text-yellow-400 transition-colors" />
-          Central de Protocolos e Ajuda
-        </button>
-      </main>
+          {/* AJUDA */}
+          <button
+            onClick={() => setSubView("order_support")}
+            className="w-full py-5 rounded-3xl border-2 border-dashed border-zinc-900 text-zinc-700 font-black text-[9px] uppercase tracking-[0.3em] active:scale-95 transition-all flex items-center justify-center gap-2 group hover:border-white/10 hover:text-white"
+          >
+            <Icon name="help" size={16} className="group-hover:text-yellow-400 transition-colors" />
+            Central de Ajuda
+          </button>
+        </main>
+      </motion.div>
     </div>
   );
 };

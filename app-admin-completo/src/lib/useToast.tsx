@@ -27,6 +27,7 @@ export const toast = (message: string, type: ToastType = 'info') => {
 export const toastSuccess = (message: string) => toast(message, 'success');
 export const toastError = (message: string) => toast(message, 'error');
 export const toastWarning = (message: string) => toast(message, 'warning');
+export const toastInfo = (message: string) => toast(message, 'info');
 
 export const showConfirm = (opts: ConfirmOptions): Promise<boolean> =>
   globalShowConfirm ? globalShowConfirm(opts) : Promise.resolve(window.confirm(opts.message));
