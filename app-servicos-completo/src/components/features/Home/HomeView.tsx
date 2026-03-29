@@ -9,7 +9,57 @@ interface HomeViewProps {
   myOrders: any[];
   navigateSubView: (view: string) => void;
   setSubView: (view: string) => void;
-  subView: string;
+  subView: 
+    | "none"
+    | "restaurant_list"
+    | "market_list"
+    | "pharmacy_list"
+    | "restaurant_menu"
+    | "product_detail"
+    | "checkout"
+    | "active_order"
+    | "addresses"
+    | "payments"
+    | "transit_selection"
+    | "taxi_wizard"
+    | "van_wizard"
+    | "freight_wizard"
+    | "generic_list"
+    | "wallet"
+    | "payment_processing"
+    | "payment_error"
+    | "payment_success"
+    | "cart"
+    | "burger_list"
+    | "pizza_list"
+    | "acai_list"
+    | "japonesa_list"
+    | "store_catalog"
+    | "all_pharmacies"
+    | "health_plantao"
+    | "explore_restaurants"
+    | "brasileira_list"
+    | "daily_menus"
+    | "exclusive_offer"
+    | "explore_mobility"
+    | "shipping_details"
+    | "beverages_list"
+    | "beverage_offers"
+    | "explore_category"
+    | "explore_envios"
+    | "pix_payment"
+    | "order_chat"
+    | "quest_center"
+    | "order_support"
+    | "order_feedback"
+    | "mobility_payment"
+    | "waiting_merchant"
+    | "waiting_driver"
+    | "scheduled_order"
+    | "lightning_payment"
+    | "shipping_priority"
+    | "izi_black_purchase"
+    | "card_payment";
   searchQuery: string;
   setSearchQuery: (val: string) => void;
   setSelectedItem: (item: any) => void;
@@ -145,52 +195,61 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   return (
     <div className="flex flex-col bg-black text-zinc-100 pb-32 overflow-y-auto no-scrollbar h-full">
-      {/* HEADER PREMIUM */}
-      <header className="sticky top-0 z-[60] flex flex-col w-full bg-black/40 backdrop-blur-2xl border-b border-white/5 transition-all duration-300">
-        <div className="flex justify-between items-center px-5 py-3">
-          <button 
-            onClick={() => { setTab("profile"); window.history.pushState({ view: "app", tab: "profile", subView: "none" }, ""); }}
-            className="relative active:scale-95 transition-all"
+      {/* HEADER PREMIUM - ILHA FLUTUANTE (DESIGN OTIMIZADO) */}
+      <AnimatePresence>
+        {subView === "none" && (
+          <motion.header 
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -100, opacity: 0 }}
+            className="fixed top-4 inset-x-4 z-[60] flex flex-col bg-black/60 backdrop-blur-2xl border border-white/10 rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden"
           >
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-400/20 hover:border-yellow-400 transition-colors">
-              <img className="w-full h-full object-cover" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" />
-            </div>
-            {isIziBlackMembership && (
-              <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black w-3.5 h-3.5 rounded-full flex items-center justify-center shadow-[0_2px_8px_rgba(255,215,9,0.5)] border border-black z-10">
-                <span className="material-symbols-outlined text-[10px] font-black" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+            <div className="flex justify-between items-center px-4 py-3">
+              <button 
+                onClick={() => { setTab("profile"); window.history.pushState({ view: "app", tab: "profile", subView: "none" }, ""); }}
+                className="relative active:scale-95 transition-all"
+              >
+                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-yellow-400/20 hover:border-yellow-400 transition-colors">
+                  <img className="w-full h-full object-cover" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" />
+                </div>
+                {isIziBlackMembership && (
+                  <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black w-3 h-3 rounded-full flex items-center justify-center shadow-lg border border-black z-10">
+                    <span className="material-symbols-outlined text-[8px] font-black" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+                  </div>
+                )}
+              </button>
+
+              <div className="flex-1 flex flex-col items-center cursor-pointer group px-2" onClick={() => setSubView(subView === "addresses" ? "none" : "addresses")}>
+                <p className="text-zinc-500 text-[7px] font-black uppercase tracking-[0.2em] leading-none mb-1">Entregas em</p>
+                <div className="flex items-center gap-1 max-w-[180px]">
+                  <span className="text-white font-black text-[11px] tracking-tight truncate leading-none">
+                    {userLocation.loading ? "Buscando..." : userLocation.address || "Definir endereço"}
+                  </span>
+                  <span className="material-symbols-outlined text-yellow-400 text-sm group-hover:translate-y-0.5 transition-transform">expand_more</span>
+                </div>
               </div>
-            )}
-          </button>
 
-          <div className="flex-1 flex flex-col items-center cursor-pointer group px-4" onClick={() => setSubView(subView === "addresses" ? "none" : "addresses")}>
-            <p className="text-zinc-500 text-[8px] font-black uppercase tracking-[0.2em] leading-none mb-1">Entregas em</p>
-            <div className="flex items-center gap-1 max-w-full">
-              <span className="text-white font-black text-xs tracking-tight truncate leading-none">
-                {userLocation.loading ? "Buscando..." : userLocation.address || "Definir endereço"}
-              </span>
-              <span className="material-symbols-outlined text-yellow-400 text-sm group-hover:translate-y-0.5 transition-transform">expand_more</span>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => cart.length > 0 && navigateSubView("cart")} 
+                  className="group relative w-9 h-9 flex items-center justify-center rounded-2xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95">
+                  <span className="material-symbols-outlined text-zinc-100 text-[18px] group-hover:text-yellow-400 transition-colors">shopping_bag</span>
+                  {cart.length > 0 && (
+                    <span className="absolute -top-1 -right-1 size-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-black">
+                      {cart.length}
+                    </span>
+                  )}
+                </button>
+                <button onClick={() => setSubView("quest_center")} 
+                  className="w-9 h-9 flex items-center justify-center rounded-2xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95">
+                  <span className="material-symbols-outlined text-zinc-100 text-[18px]">notifications</span>
+                </button>
+              </div>
             </div>
-          </div>
+          </motion.header>
+        )}
+      </AnimatePresence>
 
-          <div className="flex items-center gap-1.5">
-            <button onClick={() => cart.length > 0 && navigateSubView("cart")} 
-              className="group relative w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900/40 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95">
-              <span className="material-symbols-outlined text-zinc-100 text-xl group-hover:text-yellow-400 transition-colors">shopping_bag</span>
-              {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 size-4.5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-black animate-in fade-in zoom-in duration-300">
-                  {cart.length}
-                </span>
-              )}
-            </button>
-            <button onClick={() => setSubView("quest_center")} 
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-900/40 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95">
-              <span className="material-symbols-outlined text-zinc-100 text-xl">notifications</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex flex-col">
+      <main className="flex flex-col pt-[110px]">
         {/* BANNER GIGANTE IMERSIVO */}
         <section className="relative w-full h-[380px] overflow-hidden group">
           <AnimatePresence mode="wait">
