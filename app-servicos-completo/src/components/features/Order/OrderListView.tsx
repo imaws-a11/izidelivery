@@ -25,6 +25,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
   const statusLabel: Record<string, string> = {
     pending: "Aguardando",
     pendente: "Aguardando",
+    pendente_pagamento: "Aguardando Pagamento",
     novo: "Processando",
     waiting_driver: "Aguardando Entregador",
     aceito: "Confirmado",
