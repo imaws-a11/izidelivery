@@ -1,6 +1,6 @@
 import { useJsApiLoader } from '@react-google-maps/api';
 
-import { GMAPS_KEY } from './config';
+import { GMAPS_KEY } from '../config';
 
 const LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 
