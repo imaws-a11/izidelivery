@@ -3536,10 +3536,10 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
               product={selectedProductStudio}
               onClose={() => setSelectedProductStudio(null)}
               onSave={() => {
-                fetchProducts();
+                fetchProducts(targetMerchantId || '');
                 setSelectedProductStudio(null);
               }}
-              menuCategoriesList={menuCategoriesList}
+              menuCategoriesList={userRole === 'merchant' ? menuCategoriesList : previewCategories}
               handleFileUpload={handleFileUpload}
               merchantId={targetMerchantId || ''}
               fetchMenuCategories={fetchMenuCategories}
