@@ -441,49 +441,84 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </section>
           )}
 
-          {/* GRADE DE SERVIÇOS - DESIGN DO PRINT EM 3 COLUNAS (MENOR) */}
-          <section className="grid grid-cols-3 gap-2 px-1">
-            {deliveryServices.map((svc, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, scale: 0.95 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
-                onClick={() => handleServiceSelection(svc)}
-                className={`relative flex flex-col items-center justify-center cursor-pointer transition-all aspect-square bg-[#1a1b1e] border rounded-[28px] p-2 shadow-xl overflow-hidden group 
-                  ${svc.highlight === "gold" ? "border-yellow-500/10 shadow-[0_0_25px_rgba(251,191,36,0.04)]" : ""}
-                  ${svc.highlight === "cyan" ? "border-cyan-500/10 shadow-[0_0_25px_rgba(34,211,238,0.04)]" : ""}
-                  ${svc.highlight === "none" ? "border-white/5" : ""}
-                  active:scale-95`}
-              >
-                <div className="relative z-10 w-12 h-12 flex items-center justify-center mb-2">
-                   <span 
-                    className={`material-symbols-outlined text-3xl transition-transform group-hover:scale-110 duration-300
-                      ${svc.highlight === "gold" ? "text-yellow-400" : svc.highlight === "cyan" ? "text-cyan-400" : "text-white"}`} 
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                   >
-                     {svc.icon}
-                   </span>
-                </div>
+          {/* GRADE DE SERVIÇOS EM CARROSSEL (4X2) */}
+          <div className="relative w-full overflow-hidden">
+            <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide gap-0">
+              {/* PÁGINA 1: Principais (8 itens) */}
+              <div className="min-w-full snap-center grid grid-cols-4 grid-rows-2 gap-1.5 px-1 py-1">
+                {deliveryServices.slice(0, 8).map((svc, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.03 }}
+                    onClick={() => handleServiceSelection(svc)}
+                    className={`relative flex flex-col items-center justify-center cursor-pointer transition-all aspect-square bg-[#1a1b1e] border rounded-[18px] p-2 shadow-lg overflow-hidden group 
+                      ${svc.highlight === "gold" ? "border-yellow-500/10 shadow-[0_0_15px_rgba(251,191,36,0.03)]" : ""}
+                      ${svc.highlight === "cyan" ? "border-cyan-500/10 shadow-[0_0_15px_rgba(34,211,238,0.03)]" : ""}
+                      ${svc.highlight === "none" ? "border-white/5" : ""}
+                      active:scale-95`}
+                  >
+                    <div className="relative z-10 w-9 h-9 flex items-center justify-center mb-1">
+                       <span 
+                        className={`material-symbols-outlined text-[20px] transition-transform group-hover:scale-110 duration-300
+                          ${svc.highlight === "gold" ? "text-yellow-400" : svc.highlight === "cyan" ? "text-cyan-400" : "text-white"}`} 
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                       >
+                         {svc.icon}
+                       </span>
+                    </div>
 
-                <div className="text-center relative z-10 flex flex-col items-center px-1">
-                  <h3 className="font-black text-[9px] text-white tracking-widest uppercase truncate w-full leading-none drop-shadow-md">
-                    {svc.label}
-                  </h3>
-                  {svc.tagline && (
-                    <p className="text-[6.5px] text-zinc-500 uppercase tracking-widest font-semibold leading-none mt-1 opacity-80">
-                      {svc.tagline}
-                    </p>
-                  )}
-                </div>
+                    <div className="text-center relative z-10 flex flex-col items-center px-1">
+                      <h3 className="font-black text-[7px] text-white tracking-tight uppercase truncate w-full leading-none drop-shadow-md">
+                        {svc.label.split(' ')[0]}
+                      </h3>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
 
-                {/* Subtle gradient overlay based on highlight */}
-                {svc.highlight === "gold" && <div className="absolute inset-0 bg-yellow-400/[0.015] pointer-events-none" />}
-                {svc.highlight === "cyan" && <div className="absolute inset-0 bg-cyan-400/[0.015] pointer-events-none" />}
-              </motion.div>
-            ))}
-          </section>
+              {/* PÁGINA 2: Especializados (Restante) */}
+              <div className="min-w-full snap-center grid grid-cols-4 grid-rows-2 gap-1.5 px-1 py-1">
+                {deliveryServices.slice(8).map((svc, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    onClick={() => handleServiceSelection(svc)}
+                    className={`relative flex flex-col items-center justify-center cursor-pointer transition-all aspect-square bg-[#1a1b1e] border rounded-[18px] p-2 shadow-lg overflow-hidden group 
+                       ${svc.highlight === "gold" ? "border-yellow-500/10 shadow-[0_0_15px_rgba(251,191,36,0.03)]" : ""}
+                       ${svc.highlight === "cyan" ? "border-cyan-500/20 shadow-[0_0_15px_rgba(34,211,238,0.03)]" : ""}
+                       ${svc.highlight === "none" ? "border-white/5" : ""}
+                       active:scale-95`}
+                  >
+                    <div className="relative z-10 w-9 h-9 flex items-center justify-center mb-1">
+                       <span 
+                        className={`material-symbols-outlined text-[20px] transition-transform group-hover:scale-110 duration-300
+                          ${svc.highlight === "gold" ? "text-yellow-400" : svc.highlight === "cyan" ? "text-cyan-400" : "text-white"}`} 
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                       >
+                         {svc.icon}
+                       </span>
+                    </div>
+
+                    <div className="text-center relative z-10 flex flex-col items-center px-1">
+                      <h3 className="font-black text-[7px] text-white tracking-tight uppercase truncate w-full leading-none drop-shadow-md">
+                        {svc.label.split(' ')[0]}
+                      </h3>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            {/* Pagination Indicators (opcional) */}
+            <div className="flex justify-center gap-1.5 mt-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 opacity-100" />
+              <div className="w-1.5 h-1.5 rounded-full bg-zinc-700 opacity-50" />
+            </div>
+          </div>
 
           {/* MOBILIDADE */}
           <section className="bg-gradient-to-br from-zinc-900 via-zinc-900 to-black rounded-[40px] p-8 border border-white/5 relative overflow-hidden group shadow-2xl">
