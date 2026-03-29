@@ -5159,28 +5159,60 @@ function App() {
     // Ã¢â€â‚¬Ã¢â€â‚¬ SUCESSO Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     if (iziBlackStep === 'success') {
       return (
-        <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center px-6 gap-10">
-          <motion.div initial={{ scale: 0, rotate: -10 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 200 }}>
-            <div className="size-28 rounded-full flex items-center justify-center"
-              style={{ background: "radial-gradient(circle, rgba(255,215,9,0.15) 0%, rgba(255,215,9,0.03) 100%)", boxShadow: "0 0 60px rgba(255,215,9,0.2), inset 0 0 40px rgba(255,215,9,0.05)" }}>
-              <span className="material-symbols-outlined text-6xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+        <div className="absolute inset-0 z-50 bg-[#000000] flex flex-col items-center justify-center px-6 gap-12 overflow-hidden">
+          <motion.div 
+            initial={{ scale: 0, rotate: -20, opacity: 0 }} 
+            animate={{ scale: 1, rotate: 0, opacity: 1 }} 
+            transition={{ type: "spring", stiffness: 200, damping: 15 }}
+            className="relative"
+          >
+            <div className="absolute inset-0 bg-yellow-400/10 blur-[100px] rounded-full" />
+            <div className="size-32 rounded-full flex items-center justify-center relative overflow-hidden group">
+              <span className="material-symbols-outlined text-7xl text-yellow-500" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
             </div>
           </motion.div>
-          <div className="text-center space-y-3">
-            <p className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.5em]">Protocolo Ativado</p>
-            <h2 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">IZI Black</h2>
-            <p className="text-zinc-600 text-sm max-w-xs mx-auto">Bem-vindo ao clube de privilégios. Seus benefícios já estão ativos.</p>
+
+          <div className="text-center space-y-4">
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-yellow-500 text-[11px] font-black uppercase tracking-[0.6em]"
+            >
+              Protocolo Ativado
+            </motion.p>
+            <motion.h2 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-5xl font-black text-white uppercase tracking-tighter leading-none italic"
+            >
+              IZI <span className="text-yellow-500">BLACK</span>
+            </motion.h2>
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="text-zinc-500 text-sm max-w-xs mx-auto leading-relaxed font-medium"
+            >
+              Bem-vindo à elite. Seus privilégios exclusivos já estão vinculados à sua conta com sucesso.
+            </motion.p>
           </div>
-          <button onClick={() => { setSubView("none"); setIziBlackStep("info"); }}
-            className="w-full max-w-xs py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
-            style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 40px rgba(255,215,9,0.2)" }}>
-            Começar a Usar
-          </button>
+
+          <motion.button 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            onClick={() => { setSubView("none"); setIziBlackStep("info"); }}
+            className="w-full max-w-xs py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all text-zinc-900"
+            style={{ backgroundColor: "#FBBF24" }}
+          >
+            Começar Experiência Elite
+          </motion.button>
         </div>
       );
     }
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ PAGAMENTO Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     if (iziBlackStep === 'payment') {
       const walletBal = walletTransactions.reduce((acc: number, t: any) =>
         ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
@@ -5193,188 +5225,173 @@ function App() {
       ];
 
       return (
-        <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
-          <header className="bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
-            <button onClick={() => setIziBlackStep("info")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+        <div className="absolute inset-0 z-50 bg-[#000000] text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
+          <header className="bg-transparent sticky top-0 z-50 flex items-center gap-4 px-5 py-6">
+            <button onClick={() => setIziBlackStep("info")} className="size-10 flex items-center justify-center active:scale-90 transition-all text-white">
+              <span className="material-symbols-outlined text-zinc-400">arrow_back</span>
             </button>
-            <h1 className="font-extrabold text-base text-white uppercase tracking-tight">Assinatura IZI Black</h1>
+            <h1 className="font-black text-base text-white uppercase tracking-tight">Checkout IZI Black</h1>
           </header>
-          <main className="px-5 py-10 max-w-sm mx-auto w-full space-y-8">
+          <main className="px-5 py-6 max-w-sm mx-auto w-full space-y-12">
             <div className="text-center space-y-1">
-              <p className="text-zinc-600 text-xs uppercase tracking-widest">Investimento mensal</p>
-              <p className="font-black text-white leading-none" style={{ fontSize: "64px", textShadow: "0 0 30px rgba(255,215,9,0.2)" }}>
-                29<span className="text-3xl text-yellow-400/60">,90</span>
-              </p>
-              <p className="text-zinc-700 text-xs">Cancele quando quiser Ã¢â‚¬¢ Renovação automática</p>
+              <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Plano de Elite</p>
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-2xl font-black text-white mt-2">R$</span>
+                <p className="font-black text-white leading-none tracking-tighter" style={{ fontSize: "72px" }}>
+                  29<span className="text-3xl text-zinc-500 font-black">,90</span>
+                </p>
+              </div>
+              <p className="text-zinc-600 text-[10px] font-bold mt-2 uppercase text-center">Mensal, cancele quando quiser</p>
             </div>
 
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest mb-3">Forma de pagamento</p>
-              {subOptions.map((m) => (
-                <button key={m.id} 
-                  onClick={() => !m.disabled && setPaymentMethod(m.id as any)}
-                  disabled={m.disabled}
-                  className={`w-full flex items-center gap-4 px-0 py-4 border-b transition-all active:opacity-60 text-left ${paymentMethod === m.id ? "border-yellow-400/30" : "border-zinc-900"} ${m.disabled ? "opacity-30 cursor-not-allowed" : ""}`}>
-                  <span className={`material-symbols-outlined text-xl ${paymentMethod === m.id ? "text-yellow-400" : "text-zinc-700"}`}>{m.icon}</span>
-                  <span className={`font-black text-sm flex-1 ${paymentMethod === m.id ? "text-white" : "text-zinc-600"}`}>{m.label}</span>
-                  <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${paymentMethod === m.id ? "border-yellow-400" : "border-zinc-800"}`}>
-                    {paymentMethod === m.id && <div className="size-2.5 rounded-full bg-yellow-400" />}
-                  </div>
-                </button>
-              ))}
+            <div className="space-y-4">
+              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Pagamento</p>
+              <div className="flex flex-col">
+                {subOptions.map((m) => (
+                  <button key={m.id} 
+                    onClick={() => !m.disabled && setPaymentMethod(m.id as any)}
+                    disabled={m.disabled}
+                    className={`w-full flex items-center gap-4 py-6 transition-all border-b border-zinc-900 last:border-0 ${m.disabled ? "opacity-30 cursor-not-allowed" : "active:opacity-75"}`}>
+                    <div className={`flex items-center justify-center ${paymentMethod === m.id ? "text-yellow-500" : "text-zinc-600"}`}>
+                      <span className="material-symbols-outlined text-xl">{m.icon}</span>
+                    </div>
+                    <span className={`font-black text-sm flex-1 text-left ${paymentMethod === m.id ? "text-white" : "text-zinc-500"}`}>{m.label}</span>
+                    <div className="flex items-center justify-center">
+                      <span className={`material-symbols-outlined text-lg ${paymentMethod === m.id ? "text-yellow-500" : "text-transparent"}`} style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest">CPF</p>
+            <div className="space-y-4">
+              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Documento (CPF)</p>
               <input type="text" inputMode="numeric" value={cpf} onChange={(e) => setCpf(e.target.value)}
                 placeholder="000.000.000-00"
-                className="w-full bg-transparent border-b border-zinc-900 py-3 text-white placeholder:text-zinc-800 focus:outline-none focus:border-yellow-400/30 text-sm font-medium tracking-widest transition-all" />
+                className="w-full bg-transparent border-b border-zinc-900 py-4 text-white placeholder:text-zinc-800 focus:outline-none focus:border-yellow-500 focus:border-b-2 text-sm font-black tracking-widest transition-all" />
             </div>
 
             <button onClick={handleSubscribeReal} disabled={isLoading}
-              className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all disabled:opacity-30"
-              style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
-              {isLoading ? "Processando..." : "Confirmar Ã¢â‚¬â€ R$ 29,90/mês"}
+              className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-30 text-zinc-900"
+              style={{ backgroundColor: "#FBBF24" }}>
+              {isLoading ? "Processando..." : "Ativar Assinatura Elite"}
             </button>
           </main>
         </div>
       );
     }
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ TELA PRINCIPAL Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     const perks = [
-      { icon: "delivery_dining",    title: "Taxa Zero",        desc: "Entrega grátis em toda a cidade, sem limite",    highlight: true },
-      { icon: "bolt",               title: "Prioridade",       desc: "Seus pedidos sempre primeiro na fila",           highlight: false },
-      { icon: "stars",              title: "Cashback 5%",      desc: "Pontos dobrados em todos os pedidos",            highlight: false },
-      { icon: "support_agent",      title: "Suporte VIP",      desc: "Canal exclusivo 24 horas por dia",               highlight: false },
-      { icon: "confirmation_number",title: "Cupons Black",     desc: "Ofertas exclusivas só para membros",             highlight: false },
-      { icon: "qr_code_scanner",    title: "Early Access",     desc: "Novidades e lançamentos antes de todos",         highlight: false },
+      { icon: "delivery_dining",    title: "Taxa Zero",        desc: "Entrega grátis em toda a cidade, sem limite.",    highlight: true },
+      { icon: "bolt",               title: "Prioridade IZI",   desc: "Seus pedidos sempre primeiro na fila.",           highlight: false },
+      { icon: "stars",              title: "Cashback 5%",      desc: "Pontos dobrados em todos os pedidos.",            highlight: false },
+      { icon: "support_agent",      title: "Suporte VIP",      desc: "Canal exclusivo 24 horas via App.",               highlight: false },
+      { icon: "confirmation_number",title: "Cupons Black",     desc: "Ofertas exclusivas só para membros.",             highlight: false },
+      { icon: "qr_code_scanner",    title: "Early Access",     desc: "Lançamentos e novidades antecipadas.",         highlight: false },
     ];
 
     return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
-        <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
-          <button onClick={() => setSubView(iziBlackOrigin === "checkout" ? "checkout" : "none")}
-            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+      <div className="absolute inset-0 z-50 bg-[#000000] text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
+        <header className="px-6 pt-10 pb-4 flex items-center justify-between sticky top-0 z-[60] bg-transparent">
+          <button onClick={handleClose}
+            className="size-10 flex items-center justify-center active:scale-90 transition-all text-white drop-shadow-md">
             <span className="material-symbols-outlined text-zinc-100">close</span>
           </button>
-          <h1 className="font-extrabold text-base text-white uppercase tracking-tight">IZI Black</h1>
+          <div className="text-center drop-shadow-md">
+            <h2 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none mb-0.5">Izi <span className="text-yellow-500">Black</span></h2>
+            <p className="text-[8px] text-yellow-500 font-black uppercase tracking-[0.4em]">Elite</p>
+          </div>
           <div className="size-10" />
         </header>
 
-        <main className="px-5 flex flex-col gap-10 pb-8">
-
-          {/* BANNER VIP Ã¢â‚¬â€ para membros */}
-          {isIziBlackMembership ? (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              className="relative overflow-hidden mt-4 px-0 py-8 border-b border-zinc-900">
-
-              <div className="relative z-10 flex items-start justify-between mb-6">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="material-symbols-outlined text-yellow-400 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
-                    <span className="text-yellow-400 text-[9px] font-black uppercase tracking-[0.4em]">Membro Ativo</span>
-                  </div>
-                  <h2 className="text-2xl font-black text-white tracking-tighter uppercase leading-none">IZI Black</h2>
-                  <p className="text-zinc-600 text-xs mt-1">Protocolo de Privilégio Elite</p>
+        <main className="relative z-10 flex flex-col">
+          <section className="mb-12 mt-[-88px]">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8 }}
+              className="relative h-[480px] overflow-hidden group"
+              style={{ backgroundImage: 'url("/izi_black_allblack.png")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#000' }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black/90" />
+              
+              <div className="absolute inset-x-8 bottom-10 space-y-4">
+                <div className="flex flex-col">
+                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.4em] mb-2 animate-pulse">Status: Aberto</span>
+                  <h3 className="text-5xl font-black text-white leading-[0.9] uppercase tracking-tighter italic">
+                    All<br/>Black.
+                  </h3>
                 </div>
-                <div className="size-12 rounded-2xl flex items-center justify-center"
-                  style={{ background: "rgba(255,215,9,0.06)", border: "1px solid rgba(255,215,9,0.12)" }}>
-                  <span className="material-symbols-outlined text-xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>diamond</span>
-                </div>
-              </div>
-              <div className="relative z-10 grid grid-cols-3 border-t border-zinc-800/40 pt-4 gap-0">
-                {[
-                  { label: "Nível",    value: String(userLevel) },
-                  { label: "XP",       value: String(userXP) },
-                  { label: "Cashback", value: "5%" },
-                ].map((s, i) => (
-                  <div key={i} className={`flex flex-col items-center gap-0.5 ${i < 2 ? "border-r border-zinc-800/40" : ""}`}>
-                    <p className="font-black text-base text-white">{s.value}</p>
-                    <p className="text-[9px] text-zinc-700 uppercase tracking-widest">{s.label}</p>
+
+                <div className="flex items-end gap-3 pt-4">
+                  <div className="flex items-start gap-1">
+                    <span className="text-zinc-600 font-black text-xl mt-1 italic">R$</span>
+                    <span className="text-6xl font-black text-white tracking-tighter leading-none italic">29</span>
+                    <span className="text-2xl font-black text-zinc-600 mt-1">,90</span>
                   </div>
-                ))}
+                  <div className="mb-1">
+                    <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest italic">Por mês</p>
+                  </div>
+                </div>
               </div>
             </motion.div>
-          ) : (
-            /* HERO para não-membros */
-            <div className="text-center pt-8 space-y-5">
-              <div className="size-20 rounded-3xl flex items-center justify-center mx-auto"
-                style={{ background: "rgba(255,215,9,0.06)", border: "1px solid rgba(255,215,9,0.1)" }}>
-                <span className="material-symbols-outlined text-4xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
-              </div>
-              <div>
-                <p className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.4em] mb-2">Privilégio Elite</p>
-                <h2 className="text-4xl font-extrabold text-white leading-none tracking-tighter">O melhor do<br/>ecossistema IZI.</h2>
-              </div>
-              <div className="inline-flex items-baseline gap-1 px-6 py-3 rounded-2xl"
-                style={{ background: "rgba(255,215,9,0.04)", border: "1px solid rgba(255,215,9,0.08)" }}>
-                <span className="font-black text-4xl text-white">29</span>
-                <span className="font-black text-xl text-yellow-400/40">,90</span>
-                <span className="text-zinc-600 text-sm font-bold">/mês</span>
-              </div>
-            </div>
-          )}
+          </section>
 
-          {/* BENEFÃƒCIOS Ã¢â‚¬â€ sem cards, estilo lista premium */}
-          <div>
-            <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest mb-2">
-              {isIziBlackMembership ? "Benefícios Ativos" : "Incluso no plano"}
-            </p>
+          <section className="px-8 space-y-2">
+            <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-6">Seus Privilégios</h3>
+
             <div className="flex flex-col">
               {perks.map((p, i) => (
-                <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                  className={`flex items-center gap-5 py-6 ${i < perks.length - 1 ? "border-b border-zinc-900" : ""} ${p.highlight ? "relative" : ""}`}>
-                  {p.highlight && (
-                    <div className="absolute inset-0 -mx-5 pointer-events-none"
-                      style={{ background: "rgba(255,215,9,0.02)" }} />
-                  )}
-                  <div className="size-12 rounded-2xl flex items-center justify-center shrink-0 relative z-10"
-                    style={{ background: "rgba(255,215,9,0.06)", border: "1px solid rgba(255,215,9,0.08)" }}>
-                    <span className="material-symbols-outlined text-2xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>{p.icon}</span>
+                <motion.div 
+                  key={i} 
+                  initial={{ opacity: 0, y: 10 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.2 + i * 0.08 }}
+                  className="flex items-start gap-6 py-6 border-b border-zinc-900 last:border-0 group"
+                >
+                  <div className={`mt-0.5 ${p.highlight ? 'text-yellow-500' : 'text-zinc-600'} transition-all duration-300`}>
+                    <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>{p.icon}</span>
                   </div>
-                  <div className="flex-1 relative z-10">
-                    <div className="flex items-center gap-2">
-                      <p className="font-black text-base text-white tracking-tight">{p.title}</p>
-                      {p.highlight && <span className="text-[8px] font-black text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded uppercase tracking-wider">Top</span>}
-                    </div>
-                    <p className="text-zinc-500 text-sm mt-0.5">{p.desc}</p>
+                  <div className="flex-1">
+                    <p className="font-black text-sm text-white tracking-tight uppercase mb-0.5">{p.title}</p>
+                    <p className="text-zinc-500 text-xs font-medium leading-relaxed">{p.desc}</p>
                   </div>
-                  {isIziBlackMembership && (
-                    <div className="size-1.5 rounded-full bg-emerald-400 shrink-0 relative z-10" />
-                  )}
                 </motion.div>
               ))}
             </div>
-          </div>
+          </section>
 
-          {/* CTA */}
-          {!isIziBlackMembership ? (
-            <button onClick={() => setIziBlackStep("payment")}
-              className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
-              style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
-              Assinar por R$ 29,90/mês
-            </button>
-          ) : (
-            <div className="flex flex-col items-center gap-3 py-2">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-emerald-400" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
-                <span className="text-emerald-400 font-black text-sm uppercase tracking-wider">Membro Ativo</span>
+          <section className="px-8 mt-16 pb-12">
+            {!isIziBlackMembership ? (
+              <div className="space-y-6">
+                <button onClick={() => setIziBlackStep("payment")}
+                  className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all text-zinc-900 shadow-[0_0_20px_rgba(251,191,36,0.15)]"
+                  style={{ backgroundColor: "#FBBF24" }}>
+                  Quero ser IZI Black Agora
+                </button>
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <p className="text-zinc-700 text-[9px] font-black uppercase tracking-[0.3em]">Ambiente Seguro 256-bit</p>
+                </div>
               </div>
-              <button className="text-zinc-700 text-[10px] font-black uppercase tracking-widest hover:text-zinc-500 transition-colors">
-                Gerenciar Assinatura
-              </button>
-            </div>
-          )}
-
-          <p className="text-zinc-900 text-[10px] text-center">Cancele quando quiser Ã¢â‚¬¢ Sem fidelidade</p>
+            ) : (
+              <div className="flex flex-col items-center gap-6 py-10 border-t border-b border-zinc-900">
+                <div className="text-yellow-500 animate-pulse">
+                  <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                </div>
+                <div className="text-center">
+                  <h4 className="text-white font-black text-lg uppercase tracking-tight italic">Assinatura Ativa</h4>
+                  <p className="text-zinc-500 text-xs mt-1">Sua jornada de elite já começou.</p>
+                </div>
+              </div>
+            )}
+            
+            <p className="text-zinc-800 text-[10px] text-center mt-8 font-bold uppercase tracking-widest">Cancele quando quiser • Sem fidelidade</p>
+          </section>
 
         </main>
       </div>
     );
   };
-
   const renderIziBlackWelcome = () => {
     return (
       <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 sm:p-12">
