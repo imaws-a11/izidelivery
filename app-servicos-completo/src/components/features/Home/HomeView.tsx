@@ -116,11 +116,21 @@ export const HomeView: React.FC<HomeViewProps> = ({
   React.useEffect(() => {
     if (banners && banners.length > 1) {
       const interval = setInterval(() => {
-        setActiveBannerIndex(prev => (prev + 1) % banners.length);
-      }, 5000);
+        const nextIndex = (activeBannerIndex + 1) % banners.length;
+        setActiveBannerIndex(nextIndex);
+        
+        // Scrollar fisicamente o carrossel
+        const carousel = document.getElementById('home-banner-carousel');
+        if (carousel) {
+          carousel.scrollTo({
+            left: carousel.offsetWidth * nextIndex,
+            behavior: 'smooth'
+          });
+        }
+      }, 6000);
       return () => clearInterval(interval);
     }
-  }, [banners?.length]);
+  }, [banners?.length, activeBannerIndex]);
 
   const handleBannerClickAction = (banner: any) => {
     if (banner.target_view) {
@@ -219,7 +229,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 )}
               </button>
 
-              <div className="flex-1 flex flex-col items-center cursor-pointer group px-2" onClick={() => setSubView(subView === "addresses" ? "none" : "addresses")}>
+              <div className="flex-1 flex flex-col items-center cursor-pointer group px-2" onClick={() => setSubView("addresses")}>
                 <p className="text-zinc-500 text-[7px] font-black uppercase tracking-[0.2em] leading-none mb-1">Entregas em</p>
                 <div className="flex items-center gap-1 max-w-[180px]">
                   <span className="text-white font-black text-[11px] tracking-tight truncate leading-none">
@@ -250,72 +260,71 @@ export const HomeView: React.FC<HomeViewProps> = ({
       </AnimatePresence>
 
       <main className="flex flex-col pt-[110px]">
-        {/* BANNER GIGANTE IMERSIVO */}
-        <section className="relative w-full h-[380px] overflow-hidden group">
-          <AnimatePresence mode="wait">
+        {/* BANNER GIGANTE IMERSIVO - CARROSSEL SWIPE */}
+        <section className="relative w-full h-[380px] group">
+          <div className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar w-full h-full" id="home-banner-carousel">
             {banners && banners.length > 0 ? (
-              <motion.div
-                key={banners[activeBannerIndex]?.id}
-                initial={{ opacity: 0, scale: 1.05 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.8 }}
-                onClick={() => handleBannerClickAction(banners[activeBannerIndex])}
-                className="absolute inset-0 cursor-pointer"
-              >
-                <img 
-                  className="w-full h-full object-cover brightness-[0.8] saturate-[1.2]" 
-                  src={banners[activeBannerIndex]?.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1200"} 
-                  alt={banners[activeBannerIndex]?.title || "Promoção Izi"} 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black to-transparent" />
+              banners.map((banner: any, i: number) => (
+                <div
+                  key={banner.id || i}
+                  className="snap-center shrink-0 w-full h-full relative cursor-pointer"
+                  onClick={() => handleBannerClickAction(banner)}
+                >
+                  <img 
+                    className="w-full h-full object-cover brightness-[0.8] saturate-[1.2]" 
+                    src={banner.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1200"} 
+                    alt={banner.title || "Promoção Izi"} 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black to-transparent" />
 
-                <div className="absolute inset-x-0 bottom-0 px-6 pb-12 z-20">
-                  <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="flex flex-col"
-                  >
-                    <span className="bg-white/10 backdrop-blur-md text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-[0.2em] w-fit mb-4 border border-white/10">
-                      Exclusivo Izi
-                    </span>
-                    <h2 className="text-4xl font-black text-white leading-[0.9] tracking-tighter uppercase italic drop-shadow-2xl">
-                      {banners[activeBannerIndex]?.title || "Experimente o Novo"}
-                    </h2>
-                    <p className="text-zinc-300 text-xs font-medium mt-4 line-clamp-2 max-w-[280px] leading-relaxed drop-shadow-lg">
-                      {banners[activeBannerIndex]?.description || "Confira as melhores ofertas selecionadas especialmente para você hoje."}
-                    </p>
-                    <div className="flex gap-4 mt-8">
-                       <button className="flex items-center gap-2 px-8 py-3.5 bg-yellow-400 text-black font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-2xl shadow-yellow-400/20">
-                          Aproveitar Agora
-                       </button>
-                    </div>
-                  </motion.div>
+                  <div className="absolute inset-x-0 bottom-0 px-6 pb-12 z-20">
+                    <motion.div
+                      initial={{ y: 20, opacity: 0 }}
+                      whileInView={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.1 }}
+                      className="flex flex-col"
+                    >
+                      <span className="bg-white/10 backdrop-blur-md text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-[0.2em] w-fit mb-4 border border-white/10">
+                        Exclusivo Izi
+                      </span>
+                      <h2 className="text-4xl font-black text-white leading-[0.9] tracking-tighter uppercase italic drop-shadow-2xl">
+                        {banner.title || "Experimente o Novo"}
+                      </h2>
+                      <p className="text-zinc-300 text-xs font-medium mt-4 line-clamp-2 max-w-[280px] leading-relaxed drop-shadow-lg">
+                        {banner.description || "Confira as melhores ofertas selecionadas especialmente para você hoje."}
+                      </p>
+                      <div className="flex gap-4 mt-8">
+                         <button className="flex items-center gap-2 px-8 py-3.5 bg-yellow-400 text-black font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-2xl shadow-yellow-400/20">
+                            Aproveitar Agora
+                         </button>
+                      </div>
+                    </motion.div>
+                  </div>
                 </div>
-              </motion.div>
+              ))
             ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="absolute inset-0 bg-zinc-900 flex items-center justify-center"
-              >
+              <div className="snap-center shrink-0 w-full h-full relative bg-zinc-900 flex items-center justify-center cursor-pointer" onClick={() => navigateSubView('exclusive_offer')}>
                 <img className="absolute inset-0 w-full h-full object-cover brightness-[0.4]" src="https://images.unsplash.com/photo-1621939106968-3e28cb404c04?q=80&w=1200" alt="Izi" />
                 <div className="relative z-10 text-center">
                   <h2 className="text-2xl font-black text-white uppercase italic">Seja Izi Black</h2>
                   <p className="text-zinc-400 text-[10px] mt-2 uppercase tracking-widest">Taxa zero e benefícios reais</p>
                 </div>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
+          </div>
 
           {banners && banners.length > 1 && (
             <div className="absolute bottom-6 right-6 flex gap-1.5 z-30">
               {banners.map((_: any, i: number) => (
-                <div 
+                <button 
                   key={i} 
-                  className={`h-1 rounded-full transition-all duration-500 ${i === activeBannerIndex ? 'w-6 bg-yellow-400' : 'w-2 bg-white/20'}`}
+                  onClick={(e) => {
+                     e.stopPropagation();
+                     const carousel = document.getElementById('home-banner-carousel');
+                     if (carousel) carousel.scrollTo({ left: carousel.offsetWidth * i, behavior: 'smooth' });
+                  }}
+                  className={`h-1.5 rounded-full transition-all duration-500 hover:bg-white/40 ${i === activeBannerIndex ? 'w-8 bg-yellow-400' : 'w-2 bg-white/20'}`}
                 />
               ))}
             </div>
