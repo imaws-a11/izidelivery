@@ -4,7 +4,7 @@ import { supabase } from './lib/supabase';
 import { playIziSound } from './lib/iziSounds';
 import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
-import { GoogleMap, useJsApiLoader, Marker, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer } from '@react-google-maps/api';
 
 
 const mapContainerStyle = { width: '100%', height: '100%' };
@@ -28,7 +28,7 @@ const mapOptions = {
     ]
 };
 
-function Icon({ name, className = "", size = 20, ...props }: any) {
+function Icon({ name, className = "", size = 20 }: any) {
   const icons: Record<string, any> = {
     'grid_view': BespokeIcons.Home,
     'stars': BespokeIcons.Star,
@@ -96,6 +96,13 @@ interface Order {
     pickup_lng? : number;
     delivery_lat? : number;
     delivery_lng? : number;
+    user_name?: string;
+    delivery_address?: string;
+    pickup_address?: string;
+    items?: any;
+    payment_method?: string;
+    merchant_name?: string;
+    notes?: string;
 }
 function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -438,13 +445,13 @@ function App() {
         if (!driverId || !isAuthenticated) return;
         const savedMission = localStorage.getItem('Izi_active_mission');
         if (savedMission) { setActiveTab('active_mission'); return; }
-        supabase.from('orders_delivery').select('id, status, service_type, pickup_address, delivery_address, total_price')
+        supabase.from('orders_delivery').select('*')
             .eq('driver_id', driverId).order('created_at', { ascending: false }).limit(10)
             .then(({ data: orders, error: qErr }) => {
                 if (qErr) { console.error('Erro busca missão:', qErr.message); return; }
-                const activeOrder = orders?.find((o: any) => ['a_caminho', 'saiu_para_entrega', 'em_rota', 'no_local'].includes(o.status));
+                const activeOrder = orders?.find((o: any) => ['saiu_para_coleta', 'no_local', 'picked_up', 'a_caminho', 'em_rota', 'saiu_para_entrega'].includes(o.status));
                 if (activeOrder) {
-                    const mission: any = { id: activeOrder.id, realId: activeOrder.id, type: activeOrder.service_type || 'delivery', origin: activeOrder.pickup_address || 'Origem', destination: activeOrder.delivery_address || 'Destino', price: activeOrder.total_price || 0, status: activeOrder.status, customer: 'Cliente Izi' };
+                    const mission: any = { ...activeOrder, realId: activeOrder.id, type: activeOrder.service_type || 'delivery', origin: activeOrder.pickup_address || 'Origem', destination: activeOrder.delivery_address || 'Destino', price: activeOrder.total_price || 0, status: activeOrder.status, customer: activeOrder.user_name || 'Cliente Izi' };
                     setActiveMission(mission);
                     localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                     setActiveTab('active_mission');
@@ -630,12 +637,12 @@ function App() {
         setIsAccepting(true);
         try {
             const targetId = order.realId || order.id;
-            const { data: realOrder, error: findError } = await supabase.from('orders_delivery').select('id, status, pickup_lat, pickup_lng, delivery_lat, delivery_lng').eq('id', targetId).single();
+            const { data: realOrder, error: findError } = await supabase.from('orders_delivery').select('*').eq('id', targetId).single();
             if (findError || !realOrder || !['pendente', 'pronto', 'waiting_driver'].includes(realOrder.status)) { toastError('Pedido indisponível ou já aceito.'); setOrders(prev => prev.filter((o: any) => o.id !== order.id)); return; }
             if (!driverId) { toastError('Sessão expirada. Faça login novamente.'); return; }
-            const { error } = await supabase.from('orders_delivery').update({ status: 'a_caminho', driver_id: driverId }).eq('id', realOrder.id);
+            const { error } = await supabase.from('orders_delivery').update({ status: 'saiu_para_coleta', driver_id: driverId }).eq('id', realOrder.id);
             if (error) { toastError('Erro ao aceitar corrida.'); return; }
-            const mission = { ...order, ...realOrder, id: realOrder.id, realId: realOrder.id, status: 'a_caminho' };
+            const mission = { ...order, ...realOrder, id: realOrder.id, realId: realOrder.id, status: 'saiu_para_coleta' };
             setActiveMission(mission);
             localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
             setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
@@ -1247,162 +1254,217 @@ function App() {
         if (!activeMission) return null;
         const details = getTypeDetails(activeMission.type);
         const isMobility = activeMission.type === 'mototaxi' || activeMission.type === 'car_ride';
+        
+        // Helper para extrair itens se estiverem no endereço ou no JSON
+        const getOrderItems = () => {
+            if (activeMission.items && Array.isArray(activeMission.items)) return activeMission.items;
+            const address = activeMission.delivery_address || activeMission.destination || '';
+            if (address.includes('| ITENS:')) {
+                return address.split('| ITENS:')[1].split(',').map(i => ({ name: i.trim() }));
+            }
+            return [];
+        };
+
+        const orderItems = getOrderItems();
+        const addressOnly = (activeMission.delivery_address || activeMission.destination || '').split('| ITENS:')[0].trim();
+
+        // Status Label & Color logic
+        const getStatusDisplay = () => {
+            switch(activeMission.status) {
+                case 'saiu_para_coleta': return { label: 'Indo retirar', color: 'text-blue-400', bg: 'bg-blue-400/10', icon: 'navigation' };
+                case 'no_local': return { label: 'No local de coleta', color: 'text-amber-400', bg: 'bg-amber-400/10', icon: 'location_on' };
+                case 'picked_up': return { label: 'Pedido coletado', color: 'text-emerald-400', bg: 'bg-emerald-400/10', icon: 'package_2' };
+                case 'a_caminho': 
+                case 'em_rota': return { label: 'Em rota de entrega', color: 'text-primary', bg: 'bg-primary/10', icon: 'moped' };
+                default: return { label: 'Em andamento', color: 'text-white/40', bg: 'bg-white/5', icon: 'radar' };
+            }
+        };
+
+        const statusDisplay = getStatusDisplay();
+
         return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-[#020617] flex flex-col overflow-hidden">
-                {/* Header - esconde em modo mapa */}
+                {/* Header Compacto */}
                 {!isMapOnly && (
-                <div className="px-6 py-5 bg-black/40 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-4">
-                        <div className={`size-12 rounded-[18px] ${details.bg} ${details.color} flex items-center justify-center border border-current/10`}><Icon name="satellite_alt" className="text-2xl animate-pulse" /></div>
-                        <div><p className="text-[9px] font-black text-primary uppercase tracking-[0.4em]">Em Andamento</p><h2 className="text-base font-black text-white tracking-tight uppercase">Missão em Rota</h2></div>
+                    <div className="px-6 py-4 bg-black/40 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className={`size-10 rounded-xl ${statusDisplay.bg} ${statusDisplay.color} flex items-center justify-center border border-current/10`}>
+                                <Icon name={statusDisplay.icon} size={20} className="animate-pulse" />
+                            </div>
+                            <div>
+                                <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em]">ID #{activeMission.realId?.slice(0,8).toUpperCase()}</p>
+                                <h2 className="text-sm font-black text-white tracking-tight uppercase">{statusDisplay.label}</h2>
+                            </div>
+                        </div>
+                        <button onClick={() => setIsSOSActive(true)} className="size-10 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center text-red-500 active:scale-90 transition-all">
+                            <Icon name="emergency" size={18} />
+                        </button>
                     </div>
-                    <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-2xl">
-                        <div className="size-1.5 bg-emerald-400 rounded-full animate-pulse" /><span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Ativo</span>
-                    </div>
-                </div>
                 )}
-                 <div className="flex-1 bg-[#030a1a] relative overflow-hidden">
+
+                <div className="flex-1 bg-[#030a1a] relative overflow-hidden">
                     <IziRealTimeMap 
                       driverCoords={driverCoords} 
-                      destCoords={activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega'
+                      destCoords={activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega'
                         ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng } 
                         : { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng }
                       }
-                      destAddress={activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega'
-                        ? (activeMission.destination || activeMission.delivery_address)
+                      destAddress={activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega'
+                        ? addressOnly
                         : (activeMission.origin || activeMission.pickup_address)
                       }
                     />
                     <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#020617]/40 via-transparent to-[#030712]/40" />
                     
-                    {/* Info overlay no canto superior direito */}
-                    <div className="absolute top-5 right-5 flex flex-col items-end gap-2 shrink-0">
-                        <div className="bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-right shadow-2xl">
-                            <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mb-1">Pagamento</p>
-                            <div className="flex items-center justify-end gap-2">
-                              <span className="text-xl font-black text-primary tracking-tight">R$ {activeMission.price.toFixed(2)}</span>
-                              <div className="size-5 rounded-full bg-primary/20 flex items-center justify-center"><Icon name="payments" size={12} className="text-primary" /></div>
-                            </div>
-                        </div>
-                        
-                        {/* Status do Estabelecimento para o Motoboy Flash */}
-                        {activeMission.status === 'pronto' ? (
-                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-emerald-500 text-white rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-lg shadow-emerald-500/20">
-                                <Icon name="check_circle" className="text-xs" />
-                                <span className="text-[9px] font-black uppercase tracking-widest">Pedido Pronto!</span>
-                            </motion.div>
-                        ) : (
-                            <div className="bg-blue-500/20 backdrop-blur-md border border-blue-500/30 text-blue-400 rounded-xl px-3 py-1.5 flex items-center gap-2">
-                                <div className="size-1.5 bg-blue-400 rounded-full animate-pulse" />
-                                <span className="text-[9px] font-black uppercase tracking-widest">Em Preparo...</span>
-                            </div>
-                        )}
-                    </div>
-
                     {/* Botão flutuante para alternar modo mapa / painel completo */}
                     <button 
                         onClick={() => setIsMapOnly(!isMapOnly)}
-                        className={`absolute bottom-6 left-6 z-50 h-14 px-5 rounded-2xl flex items-center justify-center gap-2.5 border shadow-2xl transition-all active:scale-90 ${isMapOnly ? 'bg-primary text-slate-950 border-primary/50 shadow-primary/30' : 'bg-slate-900/80 text-white border-white/10 backdrop-blur-md shadow-black/30'}`}
-                        title={isMapOnly ? 'Voltar ao Painel' : 'Modo Mapa'}
+                        className={`absolute bottom-6 left-6 z-50 h-12 px-5 rounded-xl flex items-center justify-center gap-2.5 border shadow-2xl transition-all active:scale-90 ${isMapOnly ? 'bg-primary text-slate-950 border-primary/50 shadow-primary/30' : 'bg-slate-900/80 text-white border-white/10 backdrop-blur-md shadow-black/30'}`}
                     >
-                        <span className="material-symbols-outlined text-xl">
-                            {isMapOnly ? 'expand_less' : 'map'}
-                        </span>
-                        <span className="text-[9px] font-black uppercase tracking-widest">
-                            {isMapOnly ? 'Painel' : 'Só Mapa'}
-                        </span>
+                        <span className="material-symbols-outlined text-xl">{isMapOnly ? 'expand_less' : 'expand_more'}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">{isMapOnly ? 'Abrir Painel' : 'Recolher'}</span>
+                    </button>
+
+                    {/* Navegação Rápida no Mapa */}
+                    <button 
+                         onClick={() => {
+                            const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega';
+                            const lat = isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat;
+                            const lng = isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng;
+                            const addressText = isDeliveryPhase ? addressOnly : (activeMission.origin || activeMission.pickup_address);
+                            let destination = '';
+                            if (lat && lng) destination = `${lat},${lng}`;
+                            else if (addressText) destination = encodeURIComponent(addressText);
+                            if (destination) window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
+                        }}
+                        className="absolute bottom-6 right-6 z-50 size-12 bg-blue-600/90 text-white rounded-xl flex items-center justify-center border border-white/10 shadow-2xl active:scale-90 transition-all"
+                    >
+                        <Icon name="navigation" size={20} />
                     </button>
                 </div>
 
-                {/* Painel inferior - esconde em modo mapa */}
+                {/* Painel Inferior Expandido */}
                 {!isMapOnly && (
-                <div className="px-5 pt-6 pb-10 bg-[#030712] border-t border-white/5 space-y-5 shrink-0 shadow-[0_-20px_40px_rgba(0,0,0,0.5)]">
-                    <div className="bg-white/[0.03] border border-white/8 rounded-[28px] p-6 space-y-4 shadow-inner">
-                        <div className="flex items-start gap-4">
-                            <div className="mt-1.5 size-2.5 rounded-full bg-blue-500/40 ring-4 ring-blue-500/10 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">{isMobility ? 'Origem / Coleta' : 'Estabelecimento / Coleta'}</p>
-                                <p className="text-sm font-bold text-white/70 leading-tight">{activeMission.origin || activeMission.pickup_address}</p>
+                <div className="max-h-[60%] overflow-y-auto no-scrollbar bg-[#030712] border-t border-white/5 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] flex flex-col">
+                    <div className="p-6 space-y-6">
+                        {/* Seção 1: Cliente e Pagamento */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="size-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
+                                    <Icon name="person" size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Cliente</p>
+                                    <h3 className="text-base font-black text-white">{activeMission.user_name || activeMission.customer || 'Usuário Izi'}</h3>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[8px] font-black text-primary uppercase tracking-widest">Valor a Receber</p>
+                                <p className="text-2xl font-black text-primary">R$ {activeMission.price?.toFixed(2).replace('.', ',')}</p>
+                                <p className="text-[8px] text-white/30 uppercase font-black">{activeMission.payment_method === 'dinheiro' ? 'Dinheiro (Na Entrega)' : 'Pago pelo App'}</p>
                             </div>
                         </div>
-                        <div className="ml-[4px] h-6 w-[1.5px] bg-gradient-to-b from-blue-500/20 to-primary/20" />
-                        <div className="flex items-start gap-4">
-                            <div className="mt-1.5 size-2.5 rounded-full bg-primary ring-4 ring-primary/20 shrink-0 shadow-[0_0_12px_rgba(255,217,0,0.6)]" />
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">{isMobility ? 'Destino do Passageiro' : 'Endereço de Entrega'}</p>
-                                <p className="text-sm font-black text-white leading-tight">{activeMission.destination || activeMission.delivery_address}</p>
+
+                        {/* Seção 2: Itens do Pedido (se houver) */}
+                        {orderItems.length > 0 && (
+                            <div className="bg-white/[0.02] border border-white/5 rounded-[24px] p-5 space-y-3">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Icon name="package_2" className="text-white/20" size={14} />
+                                    <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Itens do Pedido</p>
+                                </div>
+                                <div className="space-y-2">
+                                    {orderItems.map((item: any, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-center text-xs font-bold text-white/70">
+                                            <span>{item.quantity ? `${item.quantity}x ` : ''}{item.name}</span>
+                                            {item.price && <span className="text-white/30">R$ {item.price.toFixed(2)}</span>}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Seção 3: Endereços com Linha de Tempo */}
+                        <div className="bg-white/[0.03] border border-white/8 rounded-[28px] p-6 space-y-5">
+                            <div className="relative">
+                                <div className="absolute left-[11px] top-6 bottom-6 w-[2px] bg-gradient-to-b from-blue-500/20 via-primary/20 to-primary/40" />
+                                
+                                <div className="flex items-start gap-5 relative z-10">
+                                    <div className={`mt-1.5 size-6 rounded-full flex items-center justify-center shrink-0 ${['saiu_para_coleta', 'no_local'].includes(activeMission.status || '') ? 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)] ring-4 ring-blue-500/20' : 'bg-white/10'}`}>
+                                        <Icon name="hospital" size={12} className="text-white" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Retirada: {activeMission.merchant_name || 'Estabelecimento'}</p>
+                                        <p className="text-sm font-bold text-white/80 leading-tight">{activeMission.origin || activeMission.pickup_address}</p>
+                                    </div>
+                                </div>
+
+                                <div className="h-8" />
+
+                                <div className="flex items-start gap-5 relative z-10">
+                                    <div className={`mt-1.5 size-6 rounded-full flex items-center justify-center shrink-0 ${['picked_up', 'a_caminho', 'em_rota'].includes(activeMission.status || '') ? 'bg-primary shadow-[0_0_12px_rgba(255,217,0,0.5)] ring-4 ring-primary/20' : 'bg-white/10'}`}>
+                                        <Icon name="location_on" size={12} className="text-slate-900" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Entrega: {activeMission.user_name || activeMission.customer || 'Cliente'}</p>
+                                        <p className="text-sm font-black text-white leading-tight">{addressOnly}</p>
+                                        {activeMission.notes && <p className="mt-2 text-[10px] text-primary/60 border-l border-primary/20 pl-2 italic">Obs: {activeMission.notes}</p>}
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
+                        {/* Seção 4: Botões de Ação */}
+                        <div className="pt-2">
+                            {/* Aceite -> No Local */}
+                            {(activeMission.status === 'saiu_para_coleta' || ['confirmado', 'preparando'].includes(activeMission.status || '')) && (
+                                <button 
+                                    onClick={() => handleUpdateStatus('no_local')} 
+                                    disabled={isAccepting}
+                                    className="w-full h-16 bg-gradient-to-r from-blue-600 to-blue-400 text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-2xl shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                >
+                                    <Icon name="location_on" size={24} />Cheguei no Local
+                                </button>
+                            )}
+
+                            {/* No Local -> Coletado */}
+                            {(activeMission.status === 'no_local' || activeMission.status === 'pronto') && (
+                                <button 
+                                    onClick={() => handleUpdateStatus('picked_up')} 
+                                    disabled={isAccepting}
+                                    className={`w-full h-16 font-black text-sm uppercase tracking-widest rounded-2xl shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 ${activeMission.status === 'pronto' ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-emerald-500/20 animate-pulse' : 'bg-gradient-to-r from-emerald-600 to-emerald-400 text-white shadow-emerald-500/10'}`}
+                                >
+                                    <Icon name="package_2" size={24} />Confirmar Coleta
+                                </button>
+                            )}
+
+                            {/* Coletado -> A Caminho */}
+                            {activeMission.status === 'picked_up' && (
+                                <button 
+                                    onClick={() => handleUpdateStatus('a_caminho')} 
+                                    disabled={isAccepting}
+                                    className="w-full h-16 bg-gradient-to-r from-yellow-500 to-yellow-400 text-black font-black text-sm uppercase tracking-widest rounded-2xl shadow-2xl shadow-yellow-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                >
+                                    <Icon name="moped" size={24} />Iniciar Entrega
+                                </button>
+                            )}
+
+                            {/* A Caminho -> Concluído */}
+                            {(activeMission.status === 'a_caminho' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega') && (
+                                <button 
+                                    onClick={() => handleUpdateStatus('concluido')} 
+                                    disabled={isAccepting}
+                                    className="w-full h-16 bg-gradient-to-r from-primary to-yellow-400 text-slate-900 font-black text-sm uppercase tracking-widest rounded-2xl shadow-2xl shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                >
+                                    <Icon name="check_circle" size={24} />{isMobility ? 'Concluir Corrida' : 'Finalizar Entrega'}
+                                </button>
+                            )}
+                        </div>
                     </div>
-                    <div className="flex gap-3">
-                        <button 
-                            onClick={() => {
-                                const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega';
-                                const lat = isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat;
-                                const lng = isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng;
-                                const addressText = isDeliveryPhase ? (activeMission.destination || activeMission.delivery_address) : (activeMission.origin || activeMission.pickup_address);
-                                let destination = '';
-                                if (lat && lng) {
-                                    destination = `${lat},${lng}`;
-                                } else if (addressText) {
-                                    destination = encodeURIComponent(addressText);
-                                }
-                                if (destination) {
-                                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
-                                }
-                            }}
-                            className="flex-1 h-14 bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
-                        >
-                            <Icon name="navigation" className="text-xl" />
-                            <span className="text-[8px] font-black uppercase tracking-widest">Navegar</span>
-                        </button>
-                        <button onClick={() => setIsSOSActive(true)} className="size-14 bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"><Icon name="emergency" className="text-xl" /></button>
-                    </div>
-                    {/* BOTÕES DINÂMICOS DE PROGRESSO */}
-                    {(!activeMission.status || ['a_caminho', 'confirmado', 'preparando'].includes(activeMission.status)) && (
-                        <button 
-                            onClick={() => handleUpdateStatus('no_local')} 
-                            disabled={isAccepting}
-                            className="w-full h-16 bg-gradient-to-r from-blue-600 to-blue-400 text-white font-black text-sm uppercase tracking-widest rounded-[22px] shadow-2xl shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                        >
-                            <Icon name="location_on" className="text-2xl" />Cheguei no Local
-                        </button>
-                    )}
-
-                    {(activeMission.status === 'no_local' || activeMission.status === 'pronto') && (
-                        <button 
-                            onClick={() => handleUpdateStatus('picked_up')} 
-                            disabled={isAccepting}
-                            className={`w-full h-16 font-black text-sm uppercase tracking-widest rounded-[22px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 ${activeMission.status === 'pronto' ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-emerald-500/20 animate-pulse' : 'bg-gradient-to-r from-emerald-600 to-emerald-400 text-white shadow-emerald-500/10'}`}
-                        >
-                            <Icon name="package_2" className="text-2xl" />{activeMission.status === 'pronto' ? '📦 Coletar Pedido Pronto!' : 'Confirmar Coleta'}
-                        </button>
-                    )}
-
-                    {activeMission.status === 'picked_up' && (
-                        <button 
-                            onClick={() => handleUpdateStatus('em_rota')} 
-                            disabled={isAccepting}
-                            className="w-full h-16 bg-gradient-to-r from-yellow-500 to-yellow-400 text-black font-black text-sm uppercase tracking-widest rounded-[22px] shadow-2xl shadow-yellow-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                        >
-                            <Icon name="moped" className="text-2xl" />Iniciar Entrega
-                        </button>
-                    )}
-
-                    {(activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega') && (
-                        <button 
-                            onClick={() => handleUpdateStatus('concluido')} 
-                            disabled={isAccepting}
-                            className="w-full h-16 bg-gradient-to-r from-primary to-yellow-400 text-slate-900 font-black text-sm uppercase tracking-widest rounded-[22px] shadow-2xl shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                        >
-                            <Icon name="check_circle" className="text-2xl" />{isMobility ? 'Concluir Corrida' : 'Finalizar Entrega'}
-                        </button>
-                    )}
                 </div>
                 )}
             </motion.div>
         );
-    };
+    };;
 
     const renderSOS = () => (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="fixed inset-0 z-[200] bg-red-950 flex flex-col items-center justify-center p-8 text-center">
