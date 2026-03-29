@@ -142,6 +142,7 @@ function App() {
   const [iziBlackOrigin, setIziBlackOrigin] = useState<"home" | "checkout">("home");
   const [iziBlackStep, setIziBlackStep] = useState<"info" | "payment" | "pix_qr" | "success">("info");
   const [iziBlackPixCode, setIziBlackPixCode] = useState("");
+  const [isUsingCoins, setIsUsingCoins] = useState(false);
 
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; expirationDate: string } | null>(null);
   const [lightningData, setLightningData] = useState<{ payment_request: string; satoshis: number; btc_price_brl: number } | null>(null);
@@ -809,10 +810,45 @@ function App() {
   };
 
 
+  const clearCart = async () => {
+    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+    const couponDiscount = appliedCoupon
+      ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100)
+      : 0;
+    
+    const total = Math.max(0, subtotal - couponDiscount);
+    const coinRate = globalSettings?.izi_coin_rate || 1;
+    const earnedCoins = Math.floor(total * coinRate);
+    const finalCoins = isUsingCoins ? earnedCoins : (iziCoins + earnedCoins);
+    
+    // Incrementa uso do cupom se existir
+    if (appliedCoupon?.id) {
+      await supabase
+        .from("promotions_delivery")
+        .update({ usage_count: (appliedCoupon.usage_count || 0) + 1 })
+        .eq("id", appliedCoupon.id);
+    }
+
+    setCart([]);
+    setAppliedCoupon(null);
+    setCouponInput("");
+    setUserXP((prev: number) => prev + 50);
+    setIziCoins(finalCoins);
+    
+    if (userId) {
+      await supabase.from("users_delivery").update({ 
+        izi_coins: finalCoins,
+        user_xp: (userXP + 50) 
+      }).eq("id", userId);
+    }
+  };
+
   const handlePlaceOrder = async (useCoins: boolean = false) => {
     if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
     if (!userId) { alert("Faça login para continuar."); return; }
     if (cart.length === 0) { alert("Seu carrinho está vazio."); return; }
+    
+    setIsUsingCoins(useCoins);
 
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
     const couponDiscount = appliedCoupon
@@ -825,9 +861,6 @@ function App() {
     const coinDiscount = useCoins ? iziCoins * coinValue : 0;
     const total = Math.max(0, subtotal - couponDiscount - coinDiscount);
 
-    const coinRate = globalSettings?.izi_coin_rate || 1;
-    const earnedCoins = Math.floor(total * coinRate);
-
     const orderBase = {
       user_id: userId,
       merchant_id: selectedShop?.id || null,
@@ -838,31 +871,6 @@ function App() {
       payment_method: paymentMethod,
       service_type: selectedShop?.type || "restaurant",
       notes: paymentMethod === "dinheiro" && changeFor ? `TROCO PARA: R$ ${changeFor}` : "",
-    };
-
-    const clearCart = async () => {
-      const finalCoins = useCoins ? earnedCoins : (iziCoins + earnedCoins);
-      
-      // Incrementa uso do cupom se existir
-      if (appliedCoupon?.id) {
-        await supabase
-          .from("promotions_delivery")
-          .update({ usage_count: (appliedCoupon.usage_count || 0) + 1 })
-          .eq("id", appliedCoupon.id);
-      }
-
-      setCart([]);
-      setAppliedCoupon(null);
-      setCouponInput("");
-      setUserXP((prev: number) => prev + 50);
-      setIziCoins(finalCoins);
-      
-      if (userId) {
-        await supabase.from("users_delivery").update({ 
-          izi_coins: finalCoins,
-          user_xp: (userXP + 50) 
-        }).eq("id", userId);
-      }
     };
 
     try {
@@ -3610,6 +3618,7 @@ function App() {
 
     const handlePixConfirm = async () => {
       if (pixCpf.replace(/\D/g,"").length < 11) { alert("CPF inválido."); return; }
+      console.log("Iniciando fluxo PIX para total:", total);
       setPixConfirmed(true);
       try {
         let orderId = selectedItem?.id;
@@ -3617,9 +3626,14 @@ function App() {
 
         // Se o pedido já existe (fluxo mobilidade), não criar outro
         if (!orderId) {
-          // Fluxo restaurante: criar pedido
-          if (!selectedShop?.id) { alert("Erro: Estabelecimento não selecionado."); setPixConfirmed(false); return; }
+          if (!selectedShop?.id) { 
+            console.error("Estabelecimento não selecionado");
+            alert("Erro: Estabelecimento não selecionado."); 
+            setPixConfirmed(false); 
+            return; 
+          }
 
+          console.log("Criando pedido inicial 'pendente_pagamento'...");
           const { data: order, error: orderErr } = await supabase
             .from("orders_delivery")
             .insert({
@@ -3643,8 +3657,9 @@ function App() {
           }
           orderId = order.id;
           orderRef = order;
+          console.log("Pedido criado com sucesso ID:", orderId);
         } else {
-          // Fluxo mobilidade: pedido já existe, apenas atualizar status
+          console.log("Atualizando pedido existente para 'pendente_pagamento' ID:", orderId);
           await supabase.from("orders_delivery").update({ 
             status: "pendente_pagamento", 
             payment_method: "pix" 
@@ -3652,6 +3667,7 @@ function App() {
         }
 
         // 2. Chamar Edge Function do Mercado Pago
+        console.log("Chamando edge function process-mp-payment...");
         const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
           body: {
             amount: Number(total.toFixed(2)),
@@ -3666,9 +3682,8 @@ function App() {
         });
 
         if (fnErr || !(fnData?.qrCode || fnData?.qr_code)) {
-          console.error("Erro MP PIX:", fnErr, fnData);
-          const detail = fnData?.details || fnData?.error || fnErr?.message || "Erro desconhecido na API do Mercado Pago.";
-          alert("Erro ao gerar PIX: " + detail + "\n\nVerifique as chaves MP_ACCESS_TOKEN no Supabase.");
+          console.error("Erro MP PIX ou dados ausentes:", fnErr, fnData);
+          const detail = fnData?.details || fnData?.error || fnErr?.message || "Erro ao gerar os dados do QR Code no Mercado Pago.";
           
           setSelectedItem({ ...orderRef, pixError: true, pixErrorMessage: detail });
           setPixConfirmed(true);
@@ -3676,15 +3691,21 @@ function App() {
         }
 
         // 3. Atualizar UI com QR real
+        console.log("QR Code recebido com sucesso. Atualizando UI.");
         const qr = fnData.qrCode || fnData.qr_code;
         const qrBase64 = fnData.qrCodeBase64 || fnData.qr_code_base64;
         const copyPaste = fnData.copyPaste || fnData.copy_paste;
 
         setSelectedItem({ ...orderRef, pixQrCode: qr, pixQrBase64: qrBase64, pixCopyPaste: copyPaste });
-        if (cart.length > 0) await clearCart();
+        
+        // Limpar sacola após sucesso na geração do PIX
+        if (cart.length > 0) {
+            console.log("Limpando sacola...");
+            await clearCart();
+        }
 
       } catch (e) {
-        console.error("Erro PIX:", e);
+        console.error("Exceção crítica no fluxo PIX:", e);
         navigateSubView("payment_error");
       }
     };
