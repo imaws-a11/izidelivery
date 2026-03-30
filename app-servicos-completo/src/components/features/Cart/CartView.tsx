@@ -12,6 +12,7 @@ export const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, n
   const subtotal: number = cart.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0);
   const taxa: number = 0; // Grátis no Izi
   const total: number = subtotal + taxa;
+  const getAddonDetails = (item: any) => Array.isArray(item.addonDetails) ? item.addonDetails : [];
 
   // Mock de Upsell
   const upsellItems = [
@@ -97,6 +98,15 @@ export const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, n
               <div className="flex-1 min-w-0">
                 <p className="text-[8px] font-bold text-yellow-400 uppercase tracking-widest mb-1 truncate">{item.merchant_name || item.store || "Premium Partner"}</p>
                 <h4 className="font-black text-base text-white truncate leading-tight group-hover:text-yellow-400 transition-colors uppercase italic">{item.name}</h4>
+                {getAddonDetails(item).length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {getAddonDetails(item).map((addon: any) => (
+                      <p key={`${item.cartId || item.id}-${addon.group_id}-${addon.id}`} className="text-[10px] text-zinc-500 font-bold leading-relaxed">
+                        {addon.group_name}: {addon.name} x{addon.quantity} - R$ {Number(addon.total_price || 0).toFixed(2).replace(".", ",")}
+                      </p>
+                    ))}
+                  </div>
+                )}
                 <div className="flex items-center gap-2 mt-2">
                    <p className="text-white font-black text-sm">R$ {Number(item.price || 0).toFixed(2).replace(".", ",")}</p>
                    {item.oldPrice && <p className="text-[10px] text-zinc-600 line-through font-bold">R$ {item.oldPrice.toFixed(2).replace(".", ",")}</p>}
@@ -213,5 +223,3 @@ export const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, n
     </div>
   );
 };
-
-

@@ -3,6 +3,57 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { toastSuccess, toastError, showConfirm } from '../lib/useToast';
 
+const OPTION_LIBRARY_TABLE = 'merchant_product_option_templates_delivery';
+
+const toNumber = (value: any, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const normalizeOptionItem = (option: any, sortOrder = 0) => ({
+  id: option?.id,
+  name: `${option?.name || ''}`.trim(),
+  price: toNumber(option?.price, 0),
+  sort_order: toNumber(option?.sort_order, sortOrder),
+});
+
+const normalizeOptionGroup = (group: any, sortOrder = 0) => {
+  const minSelect = Math.max(0, toNumber(group?.min_select, 0));
+  const maxSelect = Math.max(minSelect || 1, toNumber(group?.max_select, minSelect || 1));
+
+  return {
+    id: group?.id,
+    name: `${group?.name || ''}`.trim(),
+    min_select: minSelect,
+    max_select: maxSelect,
+    is_required: Boolean(group?.is_required),
+    sort_order: toNumber(group?.sort_order, sortOrder),
+    options: Array.isArray(group?.options)
+      ? group.options
+          .filter((option: any) => `${option?.name || ''}`.trim())
+          .map((option: any, index: number) => normalizeOptionItem(option, index))
+      : []
+  };
+};
+
+const cloneOptionGroup = (group: any, sortOrder = 0) => ({
+  ...normalizeOptionGroup(group, sortOrder),
+  id: undefined,
+  options: Array.isArray(group?.options)
+    ? group.options.map((option: any, index: number) => ({
+        ...normalizeOptionItem(option, index),
+        id: undefined,
+      }))
+    : []
+});
+
+const isReusableOptionGroup = (group: any) => {
+  const normalized = normalizeOptionGroup(group);
+  return Boolean(normalized.name) && normalized.options.length > 0;
+};
+
+const getOptionGroupKey = (group: any) => normalizeOptionGroup(group).name.toLowerCase();
+
 interface ProductStudioProps {
   product: any;
   onClose: () => void;
@@ -24,19 +75,160 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
 }) => {
   const [editingItem, setEditingItem] = useState<any>({
     ...product,
-    option_groups: product.option_groups || []
+    option_groups: Array.isArray(product.option_groups)
+      ? product.option_groups.map((group: any, index: number) => normalizeOptionGroup(group, index))
+      : []
   });
   const [activeTab, setActiveTab] = useState<'info' | 'options'>('info');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
+  const [studioOptionLibrary, setStudioOptionLibrary] = useState<any[]>([]);
   const [categoryModal, setCategoryModal] = useState<{ mode: 'create' | 'edit', parentId: string | null, categoryId?: string, title: string, initialName?: string } | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const storageKey = `izi-option-library-${merchantId}`;
+
+  useEffect(() => {
+    setEditingItem({
+      ...product,
+      option_groups: Array.isArray(product.option_groups)
+        ? product.option_groups.map((group: any, index: number) => normalizeOptionGroup(group, index))
+        : []
+    });
+  }, [product]);
 
   useEffect(() => {
     if (product.id && !product.id.startsWith('new-')) {
       fetchOptions();
     }
   }, [product.id]);
+
+  useEffect(() => {
+    loadOptionLibrary();
+  }, [merchantId]);
+
+  const readOptionLibraryFromLocal = () => {
+    try {
+      const cached = localStorage.getItem(storageKey);
+      if (!cached) return [];
+
+      const parsed = JSON.parse(cached);
+      return Array.isArray(parsed)
+        ? parsed.map((group: any, index: number) => normalizeOptionGroup(group, index)).filter(isReusableOptionGroup)
+        : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const writeOptionLibraryToLocal = (groups: any[]) => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(groups));
+    } catch (err) {
+      console.warn('Nao foi possivel salvar a biblioteca local de adicionais.', err);
+    }
+  };
+
+  const mergeGroupsIntoLibrary = (baseGroups: any[], incomingGroups: any[]) => {
+    const merged = new Map<string, any>();
+
+    baseGroups.forEach((group, index) => {
+      const normalized = normalizeOptionGroup(group, index);
+      if (isReusableOptionGroup(normalized)) {
+        merged.set(getOptionGroupKey(normalized), normalized);
+      }
+    });
+
+    incomingGroups.forEach((group, index) => {
+      const normalized = normalizeOptionGroup(group, baseGroups.length + index);
+      if (isReusableOptionGroup(normalized)) {
+        merged.set(getOptionGroupKey(normalized), normalized);
+      }
+    });
+
+    return Array.from(merged.values()).map((group, index) => ({
+      ...normalizeOptionGroup(group, index),
+      sort_order: index,
+    }));
+  };
+
+  const persistOptionLibrary = async (groups: any[]) => {
+    const normalizedGroups = groups
+      .map((group, index) => normalizeOptionGroup(group, index))
+      .filter(isReusableOptionGroup)
+      .map((group, index) => ({ ...group, sort_order: index }));
+
+    setStudioOptionLibrary(normalizedGroups);
+    writeOptionLibraryToLocal(normalizedGroups);
+
+    try {
+      const { error: deleteError } = await supabase
+        .from(OPTION_LIBRARY_TABLE)
+        .delete()
+        .eq('merchant_id', merchantId);
+
+      if (deleteError) throw deleteError;
+
+      if (normalizedGroups.length > 0) {
+        const { error: insertError } = await supabase
+          .from(OPTION_LIBRARY_TABLE)
+          .insert(
+            normalizedGroups.map((group, index) => ({
+              merchant_id: merchantId,
+              name: group.name,
+              sort_order: index,
+              template_data: {
+                ...group,
+                sort_order: index,
+              }
+            }))
+          );
+
+        if (insertError) throw insertError;
+      }
+    } catch (err) {
+      console.warn('Biblioteca remota de adicionais indisponivel. Mantendo cache local.', err);
+    }
+
+    return normalizedGroups;
+  };
+
+  const loadOptionLibrary = async () => {
+    if (!merchantId) return;
+
+    setIsLoadingLibrary(true);
+    const localGroups = readOptionLibraryFromLocal();
+
+    if (localGroups.length > 0) {
+      setStudioOptionLibrary(localGroups);
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from(OPTION_LIBRARY_TABLE)
+        .select('*')
+        .eq('merchant_id', merchantId)
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+
+      const remoteGroups = (data || [])
+        .map((row: any, index: number) => normalizeOptionGroup(row.template_data || row, index))
+        .filter(isReusableOptionGroup);
+
+      if (remoteGroups.length > 0 || localGroups.length === 0) {
+        setStudioOptionLibrary(remoteGroups);
+        writeOptionLibraryToLocal(remoteGroups);
+      }
+    } catch (err) {
+      console.warn('Nao foi possivel carregar a biblioteca remota de adicionais.', err);
+      if (localGroups.length === 0) {
+        setStudioOptionLibrary([]);
+      }
+    } finally {
+      setIsLoadingLibrary(false);
+    }
+  };
 
   const fetchOptions = async () => {
     setIsLoadingOptions(true);
@@ -51,7 +243,10 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
         .order('sort_order', { ascending: true });
 
       if (groupsError) throw groupsError;
-      setEditingItem((prev: any) => ({ ...prev, option_groups: groups || [] }));
+      setEditingItem((prev: any) => ({
+        ...prev,
+        option_groups: (groups || []).map((group: any, index: number) => normalizeOptionGroup(group, index))
+      }));
     } catch (err: any) {
       toastError('Erro ao carregar adicionais: ' + err.message);
     } finally {
@@ -60,18 +255,19 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
   };
 
   const handleSave = async () => {
-    if (!editingItem.name || !editingItem.price) {
-      toastError('Nome e Preço são obrigatórios');
+    if (!editingItem.name?.trim()) {
+      toastError('Nome do produto obrigatorio.');
       return;
     }
 
     setIsSaving(true);
     try {
       const isNew = !editingItem.id || editingItem.id.startsWith('new-');
+      const normalizedGroups = (editingItem.option_groups || []).map((group: any, index: number) => normalizeOptionGroup(group, index));
       const productData = {
-        name: editingItem.name,
+        name: editingItem.name.trim(),
         description: editingItem.description,
-        price: Number(editingItem.price),
+        price: Math.max(0, toNumber(editingItem.price, 0)),
         category: editingItem.category,
         sub_category: editingItem.subcategory || editingItem.sub_category,
         image_url: editingItem.image_url,
@@ -98,11 +294,6 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
         if (error) throw error;
       }
 
-      // Save Option Groups
-      // Simple strategy: Delete all existing options and re-insert (common for complex forms)
-      // Or manage it carefully. Let's do a cleaner approach if possible, but for delivery, re-sync is common.
-      
-      // Delete existing groups (cascades to items if foreign key is set correctly)
       if (!isNew) {
         await supabase
           .from('product_options_groups_delivery')
@@ -110,15 +301,15 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
           .eq('product_id', productId);
       }
 
-      if (editingItem.option_groups && editingItem.option_groups.length > 0) {
-        for (const group of editingItem.option_groups) {
+      if (normalizedGroups.length > 0) {
+        for (const group of normalizedGroups) {
           const { data: newGroup, error: groupError } = await supabase
             .from('product_options_groups_delivery')
             .insert([{
               product_id: productId,
               name: group.name,
-              min_select: group.min_select || 0,
-              max_select: group.max_select || 1,
+              min_select: group.min_select,
+              max_select: group.max_select,
               is_required: group.is_required || false,
               sort_order: group.sort_order || 0
             }])
@@ -131,7 +322,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
             const itemsToInsert = group.options.map((opt: any, idx: number) => ({
               group_id: newGroup.id,
               name: opt.name,
-              price: Number(opt.price) || 0,
+              price: toNumber(opt.price, 0),
               sort_order: opt.sort_order || idx
             }));
 
@@ -143,6 +334,9 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
           }
         }
       }
+
+      const mergedLibrary = mergeGroupsIntoLibrary(studioOptionLibrary, normalizedGroups);
+      await persistOptionLibrary(mergedLibrary);
 
       toastSuccess('Produto salvo com sucesso!');
       onSave();
@@ -315,6 +509,51 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
     setEditingItem({ ...editingItem, option_groups: groups });
   };
 
+  const applyLibraryGroupToProduct = (group: any) => {
+    setEditingItem((prev: any) => ({
+      ...prev,
+      option_groups: [...(prev.option_groups || []), cloneOptionGroup(group, (prev.option_groups || []).length)]
+    }));
+    toastSuccess(`Grupo "${group.name}" adicionado ao produto.`);
+  };
+
+  const saveGroupToLibrary = async (group: any) => {
+    if (!isReusableOptionGroup(group)) {
+      toastError('Informe um nome e pelo menos um item para salvar no estudio.');
+      return;
+    }
+
+    const mergedLibrary = mergeGroupsIntoLibrary(studioOptionLibrary, [group]);
+    await persistOptionLibrary(mergedLibrary);
+    toastSuccess(`Grupo "${group.name}" salvo no estudio do lojista.`);
+  };
+
+  const saveAllGroupsToLibrary = async () => {
+    const reusableGroups = (editingItem.option_groups || []).filter(isReusableOptionGroup);
+    if (reusableGroups.length === 0) {
+      toastError('Crie pelo menos um grupo com itens para salvar no estudio.');
+      return;
+    }
+
+    const mergedLibrary = mergeGroupsIntoLibrary(studioOptionLibrary, reusableGroups);
+    await persistOptionLibrary(mergedLibrary);
+    toastSuccess('Biblioteca de adicionais atualizada no estudio.');
+  };
+
+  const removeGroupFromLibrary = async (group: any) => {
+    if (!await showConfirm({
+      title: 'Remover do estudio',
+      message: `Deseja remover o grupo "${group.name}" da biblioteca do lojista?`,
+      danger: true
+    })) {
+      return;
+    }
+
+    const nextLibrary = studioOptionLibrary.filter(savedGroup => getOptionGroupKey(savedGroup) !== getOptionGroupKey(group));
+    await persistOptionLibrary(nextLibrary);
+    toastSuccess(`Grupo "${group.name}" removido do estudio.`);
+  };
+
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 md:p-10 text-white overflow-hidden">
       <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={onClose}></div>
@@ -393,11 +632,13 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                       <input 
                         type="number" 
                         step="0.01"
-                        value={editingItem.price || ''}
-                        onChange={e => setEditingItem({...editingItem, price: e.target.value})}
+                        min="0"
+                        value={editingItem.price ?? ''}
+                        onChange={e => setEditingItem({...editingItem, price: e.target.value === '' ? '' : toNumber(e.target.value, 0)})}
                         className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
                         placeholder="0,00"
                       />
+                      <p className="text-[10px] font-bold text-slate-500 ml-4 uppercase tracking-widest">Aceita R$ 0,00 quando o valor estiver nos adicionais.</p>
                     </div>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center px-4">
@@ -580,6 +821,78 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                   </button>
                 </div>
 
+                <div className="bg-white/5 p-8 rounded-[40px] border border-white/5 space-y-6">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="size-12 rounded-2xl bg-white/10 flex items-center justify-center text-primary">
+                        <span className="material-symbols-outlined font-black">inventory</span>
+                      </div>
+                      <div>
+                        <h4 className="font-black text-lg">Biblioteca do Estudio</h4>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Reaproveite complementos e adicionais em novos produtos</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={saveAllGroupsToLibrary}
+                      disabled={isSaving || (editingItem.option_groups || []).length === 0}
+                      className="flex items-center justify-center gap-3 px-6 py-4 rounded-3xl bg-white/10 text-white font-black text-[10px] uppercase tracking-widest border border-white/10 hover:bg-white/15 transition-all disabled:opacity-40"
+                    >
+                      <span className="material-symbols-outlined text-lg">save</span>
+                      Salvar grupos no estudio
+                    </button>
+                  </div>
+
+                  {isLoadingLibrary ? (
+                    <div className="py-12 flex flex-col items-center justify-center text-primary/50 animate-pulse">
+                      <span className="material-symbols-outlined text-5xl mb-3 animate-spin">refresh</span>
+                      <p className="text-[10px] font-black uppercase tracking-widest">Carregando biblioteca...</p>
+                    </div>
+                  ) : studioOptionLibrary.length === 0 ? (
+                    <div className="py-12 border-2 border-dashed border-white/5 rounded-[32px] flex flex-col items-center justify-center text-slate-600">
+                      <span className="material-symbols-outlined text-5xl mb-3">library_add</span>
+                      <p className="font-bold">Nenhum grupo salvo no estudio</p>
+                      <p className="text-xs">Os grupos criados aqui poderao ser reaproveitados nos proximos produtos.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                      {studioOptionLibrary.map((group: any, index: number) => (
+                        <div key={`${group.name}-${index}`} className="bg-black/30 rounded-[32px] p-5 border border-white/5 flex flex-col gap-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <p className="text-sm font-black">{group.name}</p>
+                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                {group.options?.length || 0} itens - min {group.min_select} - max {group.max_select}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => removeGroupFromLibrary(group)}
+                              className="size-10 rounded-2xl bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center border border-red-500/20"
+                            >
+                              <span className="material-symbols-outlined text-lg">delete</span>
+                            </button>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            {(group.options || []).map((option: any, optionIndex: number) => (
+                              <span key={`${group.name}-${option.name}-${optionIndex}`} className="px-3 py-2 rounded-2xl bg-white/5 text-[10px] font-black uppercase tracking-widest text-slate-300 border border-white/5">
+                                {option.name} {option.price > 0 ? `- R$ ${option.price.toFixed(2).replace('.', ',')}` : '- R$ 0,00'}
+                              </span>
+                            ))}
+                          </div>
+
+                          <button
+                            onClick={() => applyLibraryGroupToProduct(group)}
+                            className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-3xl bg-primary text-slate-950 font-black text-[10px] uppercase tracking-widest hover:scale-[1.01] active:scale-[0.99] transition-all"
+                          >
+                            <span className="material-symbols-outlined text-lg">playlist_add</span>
+                            Usar neste produto
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {isLoadingOptions ? (
                   <div className="py-20 flex flex-col items-center justify-center text-primary/50 animate-pulse">
                      <span className="material-symbols-outlined text-6xl mb-4 animate-spin">refresh</span>
@@ -617,7 +930,8 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                                   <input 
                                     type="number" 
                                     value={group.min_select}
-                                    onChange={e => updateGroup(gIdx, 'min_select', parseInt(e.target.value))}
+                                    min="0"
+                                    onChange={e => updateGroup(gIdx, 'min_select', toNumber(e.target.value, 0))}
                                     className="w-12 bg-transparent border-none p-0 text-center font-bold focus:ring-0"
                                   />
                                 </div>
@@ -627,7 +941,8 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                                   <input 
                                     type="number" 
                                     value={group.max_select}
-                                    onChange={e => updateGroup(gIdx, 'max_select', parseInt(e.target.value))}
+                                    min="1"
+                                    onChange={e => updateGroup(gIdx, 'max_select', toNumber(e.target.value, 1))}
                                     className="w-12 bg-transparent border-none p-0 text-center font-bold focus:ring-0"
                                   />
                                 </div>
@@ -640,6 +955,13 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                                 Obrigatório
                               </button>
                               
+                              <button
+                                onClick={() => saveGroupToLibrary(group)}
+                                className="px-6 py-4 rounded-3xl text-[10px] font-black uppercase tracking-widest transition-all bg-white/5 text-white border border-white/10 hover:bg-white/10"
+                              >
+                                Salvar no estudio
+                              </button>
+
                               <button 
                                 onClick={() => removeOptionGroup(gIdx)}
                                 className="size-14 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center border border-red-500/20"
@@ -687,8 +1009,9 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                                     <input 
                                       type="number" 
                                       step="0.01"
-                                      value={opt.price}
-                                      onChange={e => updateOptionItem(gIdx, oIdx, 'price', e.target.value)}
+                                      min="0"
+                                      value={opt.price ?? ''}
+                                      onChange={e => updateOptionItem(gIdx, oIdx, 'price', e.target.value === '' ? 0 : toNumber(e.target.value, 0))}
                                       className="w-full bg-transparent border-none p-0 font-bold text-sm focus:ring-0 text-primary"
                                       placeholder="0,00"
                                     />
