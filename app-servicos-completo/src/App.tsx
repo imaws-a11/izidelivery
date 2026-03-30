@@ -893,7 +893,7 @@ function App() {
       status: "novo",
       total_price: total,
       pickup_address: selectedShop?.name || "Endereço do Estabelecimento",
-      delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map(i => `${i.name} (R$ ${Number(i.price).toFixed(2)})`).join(', ')}`,
+      delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map((i: any) => formatCartItemSummary(i)).join(', ')}`,
       payment_method: paymentMethod,
       service_type: selectedShop?.type || "restaurant",
       notes: paymentMethod === "dinheiro" && changeFor ? `TROCO PARA: R$ ${changeFor}` : "",
@@ -3743,7 +3743,7 @@ function App() {
               status: "pendente_pagamento",
               total_price: Number(total.toFixed(2)),
               pickup_address: selectedShop.name || "Endereço do Estabelecimento",
-              delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map(i => `${i.name}`).join(', ')}`,
+              delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map((i: any) => formatCartItemSummary(i)).join(', ')}`,
               payment_method: "pix",
               service_type: selectedShop.type || "restaurant",
             })
@@ -5914,6 +5914,98 @@ function App() {
   const [selectedOptions, setSelectedOptions] = useState<any>({});
   const [addonsLoading, setAddonsLoading] = useState(false);
 
+  const getGroupSelections = (groupId: string) => selectedOptions[groupId] || [];
+  const getGroupSelectedCount = (groupId: string) =>
+    getGroupSelections(groupId).reduce((acc: number, item: any) => acc + (Number(item.quantity) || 0), 0);
+  const getOptionQuantity = (groupId: string, itemId: string) =>
+    getGroupSelections(groupId).find((item: any) => item.id === itemId)?.quantity || 0;
+  const getSelectedOptionEntries = (optionsState: any = selectedOptions) =>
+    Object.entries(optionsState).flatMap(([groupId, items]: [string, any]) =>
+      (Array.isArray(items) ? items : []).map((item: any) => ({
+        ...item,
+        group_id: groupId,
+        quantity: Number(item.quantity) || 0,
+        unit_price: Number(item.price) || 0,
+        total_price: (Number(item.price) || 0) * (Number(item.quantity) || 0),
+      }))
+    );
+  const calculateAddonsPrice = (optionsState: any = selectedOptions) =>
+    getSelectedOptionEntries(optionsState).reduce((acc: number, item: any) => acc + item.total_price, 0);
+  const buildCartItemDetails = (product: any, optionsState: any) => {
+    const detailedOptions = getSelectedOptionEntries(optionsState)
+      .filter((item: any) => item.quantity > 0)
+      .map((item: any) => {
+        const group = productAddonGroups.find((addonGroup: any) => addonGroup.id === item.group_id);
+        return {
+          ...item,
+          group_name: group?.name || item.group_name || "Complemento",
+        };
+      });
+
+    return {
+      addonDetails: detailedOptions,
+      addonSummaryText: detailedOptions.length > 0
+        ? detailedOptions.map((item: any) => `${item.group_name}: ${item.name} x${item.quantity} (R$ ${item.total_price.toFixed(2).replace(".", ",")})`).join("; ")
+        : "",
+    };
+  };
+  const formatCartItemSummary = (item: any) =>
+    `${item.name} (R$ ${Number(item.price || 0).toFixed(2)})${item.addonSummaryText ? ` [${item.addonSummaryText}]` : ""}`;
+
+  const updateOptionQuantity = (group: any, item: any, delta: number) => {
+    let didHitLimit = false;
+
+    setSelectedOptions((prev: any) => {
+      const current = Array.isArray(prev[group.id]) ? prev[group.id] : [];
+      const maxAllowed = Math.max(Number(group.max_select) || 1, 1);
+      const currentCount = current.reduce((acc: number, currentItem: any) => acc + (Number(currentItem.quantity) || 0), 0);
+      const existingIndex = current.findIndex((currentItem: any) => currentItem.id === item.id);
+      const existingQuantity = existingIndex >= 0 ? Number(current[existingIndex].quantity) || 0 : 0;
+      let nextGroup = [...current];
+
+      if (delta > 0) {
+        if (maxAllowed === 1) {
+          nextGroup = [{ ...item, quantity: 1 }];
+        } else {
+          if (currentCount >= maxAllowed) {
+            didHitLimit = true;
+            return prev;
+          }
+
+          if (existingIndex >= 0) {
+            nextGroup[existingIndex] = { ...nextGroup[existingIndex], quantity: existingQuantity + 1 };
+          } else {
+            nextGroup.push({ ...item, quantity: 1 });
+          }
+        }
+      } else if (delta < 0) {
+        if (existingIndex === -1) return prev;
+
+        const nextQuantity = existingQuantity + delta;
+        if (nextQuantity <= 0) {
+          nextGroup.splice(existingIndex, 1);
+        } else {
+          nextGroup[existingIndex] = { ...nextGroup[existingIndex], quantity: nextQuantity };
+        }
+      } else {
+        return prev;
+      }
+
+      const nextState = { ...prev };
+      if (nextGroup.length > 0) {
+        nextState[group.id] = nextGroup;
+      } else {
+        delete nextState[group.id];
+      }
+
+      return nextState;
+    });
+
+    if (didHitLimit) {
+      showToast(`Limite de ${group.max_select} seleções em ${group.name}`, "error");
+    }
+  };
+
   const fetchProductAddons = async (productId: string) => {
     setAddonsLoading(true);
     try {
@@ -5961,30 +6053,6 @@ function App() {
     }
   }, [subView, selectedItem?.id, selectedItem?.uid]);
 
-  const toggleOption = (group: any, item: any) => {
-    const current = selectedOptions[group.id] || [];
-    const isSelected = current.some((i: any) => i.id === item.id);
-    
-    if (isSelected) {
-      setSelectedOptions({
-        ...selectedOptions,
-        [group.id]: current.filter((i: any) => i.id !== item.id)
-      });
-    } else {
-      if (group.max_select === 1) {
-        setSelectedOptions({
-          ...selectedOptions,
-          [group.id]: [item]
-        });
-      } else if (current.length < group.max_select) {
-        setSelectedOptions({
-          ...selectedOptions,
-          [group.id]: [...current, item]
-        });
-      }
-    }
-  };
-
   const renderProductDetail = () => {
     if (!selectedItem) return null;
 
@@ -6004,6 +6072,12 @@ function App() {
     const itemImage =
       selectedItem.img ||
       "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop";
+    const selectedAddonEntries = getSelectedOptionEntries().filter((item: any) => item.quantity > 0).map((item: any) => ({
+      ...item,
+      group_name: productAddonGroups.find((group: any) => group.id === item.group_id)?.name || "Complemento",
+    }));
+    const addonsPrice = calculateAddonsPrice();
+    const totalProductPrice = selectedItem.price + addonsPrice;
 
     return (
       <div className="absolute inset-0 z-[70] bg-[#f8f9fc] bg-zinc-900 flex flex-col hide-scrollbar overflow-y-auto">
@@ -6095,24 +6169,59 @@ function App() {
 
                   <div className="space-y-3">
                     {group.items.map((item: any) => {
-                      const isSelected = (selectedOptions[group.id] || []).some((i: any) => i.id === item.id);
+                      const optionQuantity = getOptionQuantity(group.id, item.id);
+                      const isSelected = optionQuantity > 0;
+                      const groupSelectedCount = getGroupSelectedCount(group.id);
+                      const maxAllowed = Math.max(Number(group.max_select) || 1, 1);
                       return (
                         <div 
                           key={item.id}
-                          onClick={() => toggleOption(group, item)}
+                          onClick={() => updateOptionQuantity(group, item, 1)}
                           className={`group p-4 rounded-3xl border transition-all flex items-center justify-between cursor-pointer active:scale-[0.98] ${isSelected ? 'bg-yellow-400 border-yellow-400' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
                         >
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-4 min-w-0">
                              <div className={`size-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-black border-black' : 'border-zinc-700'}`}>
-                                {isSelected && <span className="material-symbols-rounded text-yellow-400 text-sm font-black">check</span>}
+                                 {isSelected && <span className="material-symbols-rounded text-yellow-400 text-sm font-black">check</span>}
+                              </div>
+                             <div className="min-w-0">
+                               <span className={`font-bold transition-colors block ${isSelected ? 'text-black' : 'text-zinc-300 group-hover:text-white'}`}>{item.name}</span>
+                               {isSelected && (
+                                 <span className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-black/70' : 'text-zinc-500'}`}>
+                                   {optionQuantity} un. selecionada{optionQuantity > 1 ? 's' : ''}
+                                 </span>
+                               )}
                              </div>
-                             <span className={`font-bold transition-colors ${isSelected ? 'text-black' : 'text-zinc-300 group-hover:text-white'}`}>{item.name}</span>
                           </div>
-                          {item.price > 0 && (
-                            <span className={`font-black text-xs ${isSelected ? 'text-black' : 'text-yellow-400'}`}>
-                              + R$ {item.price.toFixed(2).replace('.', ',')}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-3 shrink-0">
+                            <div className="text-right">
+                              <span className={`font-black text-xs block ${isSelected ? 'text-black' : 'text-yellow-400'}`}>
+                                {item.price > 0 ? `+ R$ ${item.price.toFixed(2).replace('.', ',')}` : 'Grátis'}
+                              </span>
+                              <span className={`text-[10px] font-bold uppercase tracking-widest ${isSelected ? 'text-black/70' : 'text-zinc-600'}`}>
+                                {groupSelectedCount}/{maxAllowed}
+                              </span>
+                            </div>
+                            <div
+                              className={`flex items-center gap-2 rounded-2xl border px-2 py-1.5 ${isSelected ? 'bg-black/10 border-black/10' : 'bg-black/20 border-white/10'}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                onClick={() => updateOptionQuantity(group, item, -1)}
+                                className={`size-8 rounded-xl flex items-center justify-center transition-all ${isSelected ? 'bg-black text-yellow-400' : 'bg-white/5 text-zinc-500'}`}
+                              >
+                                <span className="material-symbols-rounded text-lg">remove</span>
+                              </button>
+                              <span className={`min-w-6 text-center font-black text-sm ${isSelected ? 'text-black' : 'text-white'}`}>
+                                {optionQuantity}
+                              </span>
+                              <button
+                                onClick={() => updateOptionQuantity(group, item, 1)}
+                                className={`size-8 rounded-xl flex items-center justify-center transition-all ${isSelected ? 'bg-black text-yellow-400' : 'bg-yellow-400 text-black'}`}
+                              >
+                                <span className="material-symbols-rounded text-lg font-black">add</span>
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
@@ -6120,6 +6229,30 @@ function App() {
                 </section>
               ))}
             </div>
+
+            {selectedAddonEntries.length > 0 && (
+              <section className="bg-white/5 border border-white/10 rounded-[32px] p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Resumo dos complementos</h3>
+                  <span className="text-yellow-400 font-black text-sm">+ R$ {addonsPrice.toFixed(2).replace(".", ",")}</span>
+                </div>
+                <div className="space-y-3">
+                  {selectedAddonEntries.map((item: any) => (
+                    <div key={`${item.group_id}-${item.id}`} className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-white font-bold text-sm">{item.name}</p>
+                        <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">
+                          {item.group_name} - {item.quantity} un. x R$ {item.unit_price.toFixed(2).replace(".", ",")}
+                        </p>
+                      </div>
+                      <span className="text-yellow-400 font-black text-sm whitespace-nowrap">
+                        R$ {item.total_price.toFixed(2).replace(".", ",")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
@@ -6155,23 +6288,28 @@ function App() {
             whileTap={{ scale: 0.96 }}
             onClick={() => {
               // Validar obrigatoriedade
-              const missingRequired = productAddonGroups.filter(g => g.is_required && (!selectedOptions[g.id] || selectedOptions[g.id].length < g.min_select));
+              const missingRequired = productAddonGroups.filter(g => g.is_required && getGroupSelectedCount(g.id) < g.min_select);
               if (missingRequired.length > 0) {
                  return showToast(`Escolha pelo menos ${missingRequired[0].min_select} em: ${missingRequired[0].name}`, "error");
               }
 
-              const addonsPrice = Object.values(selectedOptions).flat().reduce((acc: number, cur: any) => acc + (parseFloat(cur.price) || 0), 0);
-              
+              const cartItemDetails = buildCartItemDetails(selectedItem, selectedOptions);
+              const addonsPrice = calculateAddonsPrice();
+               
               const itemWithAddons = {
                 ...selectedItem,
                 selectedOptions: selectedOptions,
-                cartId: `${selectedItem.id}-${Date.now()}`,
+                addonDetails: cartItemDetails.addonDetails,
+                addonSummaryText: cartItemDetails.addonSummaryText,
                 price: selectedItem.price + addonsPrice,
                 originalPrice: selectedItem.price,
                 addonsTotal: addonsPrice
               };
-              
-              const itemsToAdd = Array(tempQuantity).fill(itemWithAddons);
+               
+              const itemsToAdd = Array.from({ length: tempQuantity }, (_, index) => ({
+                ...itemWithAddons,
+                cartId: `${selectedItem.id}-${Date.now()}-${index}`,
+              }));
               setCart([...cart, ...itemsToAdd]);
               handleBack();
               showToast("Item adicionado!", "success");
@@ -6188,7 +6326,7 @@ function App() {
             </div>
             <span className="font-black text-xl bg-white/20 bg-black/10 px-4 py-1.5 rounded-2xl tracking-tighter">
               R${" "}
-              {((selectedItem.price + Object.values(selectedOptions).flat().reduce((acc: number, cur: any) => acc + (parseFloat(cur.price) || 0), 0)) * tempQuantity).toFixed(2).replace(".", ",")}
+              {(totalProductPrice * tempQuantity).toFixed(2).replace(".", ",")}
             </span>
           </motion.button>
         </div>

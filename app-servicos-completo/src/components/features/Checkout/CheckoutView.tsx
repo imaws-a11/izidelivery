@@ -50,6 +50,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
 }) => {
   const [useCoins, setUseCoins] = React.useState(false);
   const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+  const getAddonDetails = (item: any) => Array.isArray(item.addonDetails) ? item.addonDetails : [];
   const couponDiscount = appliedCoupon
     ? appliedCoupon.discount_type === "fixed"
       ? appliedCoupon.discount_value
@@ -268,7 +269,17 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-black text-sm truncate uppercase italic tracking-tight">{item.name}</p>
-                    <p className="text-zinc-600 text-[9px] font-bold uppercase tracking-widest mt-1">Premium Quality</p>
+                    {getAddonDetails(item).length > 0 ? (
+                      <div className="mt-1.5 space-y-1">
+                        {getAddonDetails(item).map((addon: any) => (
+                          <p key={`${item.cartId || item.id}-${addon.group_id}-${addon.id}`} className="text-zinc-600 text-[9px] font-bold tracking-widest leading-relaxed">
+                            {addon.group_name}: {addon.name} x{addon.quantity} - R$ {Number(addon.total_price || 0).toFixed(2).replace(".", ",")}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-zinc-600 text-[9px] font-bold uppercase tracking-widest mt-1">Premium Quality</p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-white font-black text-xs">R$ {Number(item.price || 0).toFixed(2).replace(".", ",")}</p>
@@ -411,6 +422,5 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     </div>
   );
 };
-
 
 
