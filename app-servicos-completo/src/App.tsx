@@ -389,7 +389,7 @@ function App() {
     if (!uid) return;
     const { data } = await supabase
       .from("users_delivery")
-      .select("wallet_balance, is_izi_black, cashback_earned, user_xp, izi_coins")
+      .select("wallet_balance, is_izi_black, cashback_earned, user_xp, izi_coins, cpf")
       .eq("id", uid)
       .single();
     if (data) {
@@ -398,6 +398,7 @@ function App() {
       setIziCashbackEarned(data.cashback_earned || 0);
       setUserXP(data.user_xp || 0);
       setIziCoins(data.izi_coins || 0);
+      setProfileCpf(data.cpf || "");
     }
 
     // Buscar transacoes reais
@@ -681,6 +682,112 @@ function App() {
     }
   }, [globalSettings]);
 
+  const normalizeCpf = (value?: string | null) => `${value || ""}`.replace(/\D/g, "");
+  const getBenefitTrackingCpf = () => normalizeCpf(profileCpf || pixCpf || cpf);
+
+  const hasBenefitBeenUsed = async (sourceType: "coupon" | "flash_offer", sourceId: string) => {
+    const filters: string[] = [];
+    if (userId) filters.push(`user_id.eq.${userId}`);
+
+    const trackedCpf = getBenefitTrackingCpf();
+    if (trackedCpf) filters.push(`cpf.eq.${trackedCpf}`);
+    if (filters.length === 0) return false;
+
+    const { data, error } = await supabase
+      .from("benefit_redemptions_delivery")
+      .select("id")
+      .eq("source_type", sourceType)
+      .eq("source_id", sourceId)
+      .or(filters.join(","))
+      .limit(1);
+
+    if (error) {
+      console.error(`Erro ao verificar uso de ${sourceType}:`, error);
+      return false;
+    }
+
+    return Boolean(data && data.length > 0);
+  };
+
+  const validateCouponRules = async (coupon: any, subtotal: number) => {
+    if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+      return "Este cupom já expirou.";
+    }
+
+    if (subtotal < (coupon.min_order_value || 0)) {
+      return `O valor mínimo para este cupom é R$ ${coupon.min_order_value.toFixed(2)}.`;
+    }
+
+    if (coupon.usage_count >= coupon.max_usage) {
+      return "Este cupom já atingiu o limite de usos.";
+    }
+
+    if (coupon.is_vip && !isIziBlackMembership) {
+      return "Este cupom é exclusivo para membros IZI Black.";
+    }
+
+    if (coupon.id && await hasBenefitBeenUsed("coupon", coupon.id)) {
+      return "Este cupom já foi utilizado por este CPF/usuário.";
+    }
+
+    return null;
+  };
+
+  const validateFlashOfferRules = async (item: any) => {
+    if (!item?.is_flash_offer || !item?.id) return null;
+    if (await hasBenefitBeenUsed("flash_offer", item.id)) {
+      return "Esta oferta já foi utilizada por este CPF/usuário.";
+    }
+    return null;
+  };
+
+  const registerBenefitUsage = async (sourceType: "coupon" | "flash_offer", sourceId: string, orderId?: string) => {
+    const trackedCpf = getBenefitTrackingCpf();
+    const { error } = await supabase
+      .from("benefit_redemptions_delivery")
+      .insert({
+        source_type: sourceType,
+        source_id: sourceId,
+        user_id: userId || null,
+        cpf: trackedCpf || null,
+        order_id: orderId || null,
+      });
+
+    if (error) throw error;
+  };
+
+  const ensureCartBenefitsAreAvailable = async () => {
+    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+
+    if (appliedCoupon) {
+      const couponError = await validateCouponRules(appliedCoupon, subtotal);
+      if (couponError) return couponError;
+    }
+
+    const flashOfferIds = [...new Set(cart.filter((item: any) => item.is_flash_offer).map((item: any) => item.id).filter(Boolean))];
+    for (const offerId of flashOfferIds) {
+      const flashOfferError = await validateFlashOfferRules({ id: offerId, is_flash_offer: true });
+      if (flashOfferError) return flashOfferError;
+    }
+
+    return null;
+  };
+
+  const registerPendingBenefitUsages = async (orderId?: string) => {
+    if (appliedCoupon?.id) {
+      await registerBenefitUsage("coupon", appliedCoupon.id, orderId);
+      await supabase
+        .from("promotions_delivery")
+        .update({ usage_count: (appliedCoupon.usage_count || 0) + 1 })
+        .eq("id", appliedCoupon.id);
+    }
+
+    const flashOfferIds = [...new Set(cart.filter((item: any) => item.is_flash_offer).map((item: any) => item.id).filter(Boolean))];
+    for (const offerId of flashOfferIds) {
+      await registerBenefitUsage("flash_offer", offerId, orderId);
+    }
+  };
+
   const validateCoupon = async (code: string) => {
     if (!code.trim()) return;
     setIsValidatingCoupon(true);
@@ -701,15 +808,9 @@ function App() {
       }
 
       const subtotal = cart.reduce((acc, item) => acc + (item.price || 0), 0);
-      if (data.min_order_value && subtotal < data.min_order_value) {
-        setCouponError(`Pedido mínimo de R$ ${data.min_order_value.toFixed(2).replace(".", ",")} para este cupom.`);
-        setAppliedCoupon(null);
-        return;
-      }
-
-      // Validar data de expiração se houver
-      if (data.expires_at && new Date(data.expires_at) < new Date()) {
-        setCouponError("Este cupom já expirou.");
+      const couponError = await validateCouponRules(data, subtotal);
+      if (couponError) {
+        setCouponError(couponError);
         setAppliedCoupon(null);
         return;
       }
@@ -731,6 +832,12 @@ function App() {
 
   const handleAddToCart = async (item: any) => {
     try {
+      const flashOfferError = await validateFlashOfferRules(item);
+      if (flashOfferError) {
+        showToast(flashOfferError, "error");
+        return;
+      }
+
       // Verificar se o produto tem adicionais cadastrados no banco
       const { data: groups, error } = await supabase
         .from('product_options_groups_delivery')
@@ -780,6 +887,9 @@ function App() {
             desc: p.description || "",
             price: p.price,
             img: p.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600",
+            merchant_id: shop.id,
+            merchant_name: shop.name,
+            store: shop.name,
           });
         });
         const categories = Object.entries(grouped).map(([name, items]) => ({ name, items }));
@@ -805,28 +915,10 @@ function App() {
       return;
     }
 
-    // 1. Validação de Expiração
-    if (data.expires_at && new Date(data.expires_at) < new Date()) {
-      toastError("Este cupom já expirou.");
-      return;
-    }
-
-    // 2. Validação de Valor Mínimo
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    if (subtotal < (data.min_order_value || 0)) {
-      toastError(`O valor mínimo para este cupom é R$ ${data.min_order_value.toFixed(2)}.`);
-      return;
-    }
-
-    // 3. Validação de Uso
-    if (data.usage_count >= data.max_usage) {
-      toastError("Este cupom já atingiu o limite de usos.");
-      return;
-    }
-
-    // 4. Validação VIP
-    if (data.is_vip && !isIziBlackMembership) {
-      toastError("Este cupom é exclusivo para membros IZI Black.");
+    const couponError = await validateCouponRules(data, subtotal);
+    if (couponError) {
+      toastError(couponError);
       return;
     }
 
@@ -836,7 +928,7 @@ function App() {
   };
 
 
-  const clearCart = async () => {
+  const clearCart = async (orderId?: string) => {
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
     const couponDiscount = appliedCoupon
       ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100)
@@ -847,13 +939,7 @@ function App() {
     const earnedCoins = Math.floor(total * coinRate);
     const finalCoins = isUsingCoins ? earnedCoins : (iziCoins + earnedCoins);
     
-    // Incrementa uso do cupom se existir
-    if (appliedCoupon?.id) {
-      await supabase
-        .from("promotions_delivery")
-        .update({ usage_count: (appliedCoupon.usage_count || 0) + 1 })
-        .eq("id", appliedCoupon.id);
-    }
+    await registerPendingBenefitUsages(orderId);
 
     setCart([]);
     setAppliedCoupon(null);
@@ -873,6 +959,12 @@ function App() {
     if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
     if (!userId) { alert("Faça login para continuar."); return; }
     if (cart.length === 0) { alert("Seu carrinho está vazio."); return; }
+
+    const benefitError = await ensureCartBenefitsAreAvailable();
+    if (benefitError) {
+      toastError(benefitError);
+      return;
+    }
     
     setIsUsingCoins(useCoins);
 
@@ -951,7 +1043,7 @@ function App() {
           setLightningData({ ...lData, payment_request: lData.lightningInvoice });
           setSelectedItem({ ...order, ...lData });
           
-          await clearCart();
+          await clearCart(order.id);
           navigateSubView("lightning_payment");
         } catch (err) {
           console.error("Exceção Lightning:", err);
@@ -991,7 +1083,7 @@ function App() {
         });
 
         setSelectedItem(order);
-        await clearCart();
+        await clearCart(order.id);
         navigateSubView("waiting_merchant");
         return;
       }
@@ -1014,7 +1106,7 @@ function App() {
             return;
           }
           setSelectedItem(order);
-          await clearCart();
+          await clearCart(order.id);
           navigateSubView("waiting_merchant");
           setIsLoading(false);
         }, 2000);
@@ -1044,7 +1136,7 @@ function App() {
         }
 
         setSelectedItem(order);
-        await clearCart();
+        await clearCart(order.id);
         setChangeFor("");
         navigateSubView("waiting_merchant");
         return;
@@ -1513,6 +1605,7 @@ function App() {
   const [deliveryType] = useState<"delivery" | "pickup">("delivery");
 
   const [cpf, setCpf] = useState<string>("");
+  const [profileCpf, setProfileCpf] = useState<string>("");
   const [orderNotes] = useState<string>("");
   const [showPixPayment, setShowPixPayment] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
@@ -3802,7 +3895,7 @@ function App() {
         // Limpar sacola após sucesso na geração do PIX
         if (cart.length > 0) {
             console.log("Limpando sacola...");
-            await clearCart();
+            await clearCart(orderId);
         }
 
       } catch (e: any) {
@@ -3981,7 +4074,7 @@ function App() {
                 setSubView("izi_black_purchase");
             } else {
                 setSelectedItem(order);
-                await clearCart();
+                await clearCart(order.id);
                 setTab("orders");
                 setSubView("none");
             }
@@ -8534,6 +8627,9 @@ function App() {
                     setCart={setCart}
                     setSubView={setSubView}
                     navigateSubView={navigateSubView}
+                    merchantProducts={(selectedShop?.categories || []).flatMap((category: any) => category.items || [])}
+                    merchantName={selectedShop?.name || cart[0]?.merchant_name || cart[0]?.store || "Loja Parceira"}
+                    handleAddToCart={handleAddToCart}
                   />
                 </motion.div>
               )}

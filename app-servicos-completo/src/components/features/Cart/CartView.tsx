@@ -6,24 +6,20 @@ interface CartViewProps {
   setCart: React.Dispatch<React.SetStateAction<any[]>>;
   setSubView: (view: string) => void;
   navigateSubView: (view: string) => void;
+  merchantProducts: any[];
+  merchantName?: string;
+  handleAddToCart: (item: any) => void;
 }
 
-export const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, navigateSubView }) => {
+export const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, navigateSubView, merchantProducts, merchantName, handleAddToCart }) => {
   const subtotal: number = cart.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0);
   const taxa: number = 0; // Grátis no Izi
   const total: number = subtotal + taxa;
   const getAddonDetails = (item: any) => Array.isArray(item.addonDetails) ? item.addonDetails : [];
-
-  // Mock de Upsell
-  const upsellItems = [
-    { id: "up1", name: "Coca-Cola 2L", price: 12.90, img: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?q=80&w=200", store: "Izi Express" },
-    { id: "up2", name: "Batata Grande", price: 15.00, img: "https://images.unsplash.com/photo-1630384060421-cb20d0e0649d?q=80&w=200", store: "Izi Express" },
-    { id: "up3", name: "Sobremesa do Dia", price: 8.50, img: "https://images.unsplash.com/photo-1551024601-bfc5c97a1b38?q=80&w=200", store: "Izi Express" },
-  ];
-
-  const handleAddToCart = (item: any) => {
-    setCart(prev => [...prev, { ...item, type: "generic" }]);
-  };
+  const cartProductIds = new Set(cart.map((item: any) => item.id));
+  const suggestedMerchantProducts = (merchantProducts || [])
+    .filter((item: any) => item?.id && !cartProductIds.has(item.id))
+    .slice(0, 8);
 
   if (cart.length === 0) {
     return (
@@ -123,28 +119,29 @@ export const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, n
         </section>
 
         {/* UPSELL SECTION */}
+        {suggestedMerchantProducts.length > 0 && (
         <section className="mt-12 mb-8">
            <div className="flex items-center justify-between mb-6">
               <h3 className="text-[11px] font-black text-white uppercase tracking-[0.2em] italic">Completa seu pedido?</h3>
-              <span className="text-[9px] font-medium text-zinc-500 bg-white/5 px-3 py-1 rounded-full border border-white/5">Sugestões Izi</span>
+              <span className="text-[9px] font-medium text-zinc-500 bg-white/5 px-3 py-1 rounded-full border border-white/5">{merchantName || "Loja"}</span>
            </div>
            
            <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6 pb-4">
-              {upsellItems.map(up => (
+              {suggestedMerchantProducts.map((product: any) => (
                 <motion.div 
-                  key={up.id} 
+                  key={product.id} 
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => handleAddToCart(up)}
+                  onClick={() => handleAddToCart(product)}
                   className="flex-shrink-0 w-44 bg-zinc-900/40 border border-white/5 rounded-[32px] p-4 flex flex-col gap-3 group hover:border-yellow-400/20 transition-all cursor-pointer"
                 >
                    <div className="w-full h-24 rounded-[22px] overflow-hidden bg-zinc-800 shadow-xl group-hover:scale-[1.02] transition-transform">
-                      <img src={up.img} className="size-full object-cover brightness-90 group-hover:brightness-110 transition-all" />
+                      <img src={product.img} className="size-full object-cover brightness-90 group-hover:brightness-110 transition-all" />
                    </div>
                    <div className="px-1">
-                      <p className="text-[8px] font-black text-yellow-400/60 uppercase tracking-widest mb-1">{up.store}</p>
-                      <h5 className="text-[13px] font-black text-white leading-tight uppercase italic">{up.name}</h5>
+                      <p className="text-[8px] font-black text-yellow-400/60 uppercase tracking-widest mb-1">{product.store || merchantName || "Loja"}</p>
+                      <h5 className="text-[13px] font-black text-white leading-tight uppercase italic">{product.name}</h5>
                       <div className="flex items-center justify-between mt-2">
-                         <span className="text-sm font-black text-white">R$ {up.price.toFixed(2).replace(".", ",")}</span>
+                         <span className="text-sm font-black text-white">R$ {Number(product.price || 0).toFixed(2).replace(".", ",")}</span>
                          <div className="size-8 rounded-full bg-yellow-400 text-black flex items-center justify-center shadow-lg shadow-yellow-400/10">
                             <span className="material-symbols-outlined text-lg">add</span>
                          </div>
@@ -154,6 +151,7 @@ export const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, n
               ))}
            </div>
         </section>
+        )}
 
         {/* RESUMO DE VALORES - BORDERLESS */}
         <section className="py-8 border-t border-white/10 space-y-4">
