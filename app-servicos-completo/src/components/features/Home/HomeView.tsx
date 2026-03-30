@@ -375,7 +375,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <span className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">AO VIVO</span>
               </div>
               
-              <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2 -mx-5 px-5 h-[200px]">
+              <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2 -mx-5 px-5 h-[244px]">
                 {activeStories.map(story => (
                   <motion.div 
                     key={story.id} 
@@ -385,7 +385,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       else if (story.isMaster) setShowMasterPerks(true);
                       else {
                         const fakeItem = {
-                          id: story.offer.id,
+                          id: story.offer.product_id || story.offer.id,
                           name: story.offer.product_name || "Oferta Izi Flash",
                           desc: (story.offer.description || "Oferta imperdível por tempo limitado!") + `\n\n📌 Vendido por: ${story.merchant}`,
                           price: Number(story.offer.discounted_price),
@@ -393,24 +393,55 @@ export const HomeView: React.FC<HomeViewProps> = ({
                           img: story.img,
                           merchant_id: story.offer.merchant_id,
                           merchant_name: story.merchant,
-                          is_flash_offer: true
+                          is_flash_offer: true,
+                          flash_offer_id: story.offer.id
                         };
                         setSelectedItem(fakeItem);
                         setSubView("product_detail");
                       }
                     }}
-                    className={`relative flex-shrink-0 w-40 h-[190px] snap-center rounded-[32px] p-[1.5px] bg-gradient-to-tr ${story.isMaster ? "from-yellow-400 via-zinc-800 to-amber-600 shadow-[0_4px_20px_rgba(255,215,9,0.3)]" : "from-red-500 via-rose-500 to-orange-400 shadow-[0_4px_20px_rgba(239,68,68,0.2)]"} cursor-pointer transition-all group`}
+                    className={`relative flex-shrink-0 w-[28rem] h-[228px] snap-center rounded-[34px] p-[1.5px] ${story.isMaster ? "bg-gradient-to-tr from-yellow-400 via-zinc-800 to-amber-600 shadow-[0_4px_20px_rgba(255,215,9,0.3)]" : "bg-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.35)]"} cursor-pointer transition-all group`}
                   >
-                    <div className="size-full rounded-[30.5px] overflow-hidden bg-zinc-900 border-[2px] border-zinc-950 relative">
+                    <div className={`size-full rounded-[32.5px] overflow-hidden bg-zinc-900 relative ${story.isMaster ? "border-[2px] border-zinc-950" : "border border-white/10"}`}>
                       <img src={story.img} className="size-full object-cover brightness-75 group-hover:scale-110 transition-transform duration-1000" />
-                      <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/10 z-20">
-                         <span className="text-[7px] font-black text-white whitespace-nowrap">{story.timeLeft}</span>
+                      <div className="absolute top-3 left-3 right-3 z-20 flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1 bg-black/58 backdrop-blur-xl px-3 py-2.5 rounded-[20px] border border-white/10 shadow-[0_8px_20px_rgba(0,0,0,0.28)]">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="material-symbols-outlined text-[14px] text-white/75 shrink-0">storefront</span>
+                            <div className="min-w-0">
+                              <span className="text-[12px] font-black text-white tracking-tight leading-tight line-clamp-2 block">
+                                {story.merchant}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="bg-zinc-950/86 backdrop-blur-xl px-3 py-2 rounded-[20px] border border-white/10 shadow-[0_10px_24px_rgba(0,0,0,0.35)] shrink-0">
+                          <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[14px] text-yellow-400 shrink-0">timer</span>
+                            <div className="flex flex-col items-end">
+                              <span className="text-[7px] font-black text-white/45 uppercase tracking-[0.18em] leading-none">Termina em</span>
+                              <span className="text-[14px] font-black text-yellow-400 leading-none tracking-tight mt-1">
+                                {story.timeLeft}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/40 to-transparent p-4 flex flex-col justify-end">
-                        <p className="text-[9px] font-bold text-white/50 uppercase tracking-tighter truncate leading-none mb-1">{story.merchant}</p>
-                        <div className="flex flex-col">
-                          {story.originalPrice && <p className="text-[10px] text-white/40 line-through leading-none font-bold">R$ {story.originalPrice}</p>}
-                          <h5 className="text-[17px] font-black text-white leading-none tracking-tight italic drop-shadow-2xl">R$ {story.finalPrice}</h5>
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/75 to-transparent px-4 pt-12 pb-4 flex flex-col justify-end">
+                        <h5 className="text-[19px] font-black text-white leading-[1.02] tracking-tight drop-shadow-2xl line-clamp-2">
+                          {story.name}
+                        </h5>
+                        <div className="flex items-end justify-between gap-3 mt-3">
+                          <div className="flex flex-col">
+                            {story.originalPrice && (
+                              <p className="text-[14px] text-white/65 line-through leading-none font-black tracking-tight mb-1">
+                                R$ {story.originalPrice}
+                              </p>
+                            )}
+                            <h6 className="text-[22px] font-black text-white leading-none tracking-tight italic drop-shadow-2xl">
+                              R$ {story.finalPrice}
+                            </h6>
+                          </div>
                         </div>
                       </div>
                     </div>

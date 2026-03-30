@@ -684,6 +684,13 @@ function App() {
 
   const normalizeCpf = (value?: string | null) => `${value || ""}`.replace(/\D/g, "");
   const getBenefitTrackingCpf = () => normalizeCpf(profileCpf || pixCpf || cpf);
+  const getFlashOfferSourceId = (item: any) => item?.flash_offer_id || item?.offer_id || item?.id || null;
+  const normalizeFlashOfferProductKey = (value?: string | null) =>
+    String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
 
   const hasBenefitBeenUsed = async (sourceType: "coupon" | "flash_offer", sourceId: string) => {
     const filters: string[] = [];
@@ -734,8 +741,9 @@ function App() {
   };
 
   const validateFlashOfferRules = async (item: any) => {
-    if (!item?.is_flash_offer || !item?.id) return null;
-    if (await hasBenefitBeenUsed("flash_offer", item.id)) {
+    const sourceId = getFlashOfferSourceId(item);
+    if (!item?.is_flash_offer || !sourceId) return null;
+    if (await hasBenefitBeenUsed("flash_offer", sourceId)) {
       return "Esta oferta já foi utilizada por este CPF/usuário.";
     }
     return null;
@@ -764,7 +772,12 @@ function App() {
       if (couponError) return couponError;
     }
 
-    const flashOfferIds = [...new Set(cart.filter((item: any) => item.is_flash_offer).map((item: any) => item.id).filter(Boolean))];
+    const flashOfferIds = [...new Set(
+      cart
+        .filter((item: any) => item.is_flash_offer)
+        .map((item: any) => getFlashOfferSourceId(item))
+        .filter(Boolean)
+    )];
     for (const offerId of flashOfferIds) {
       const flashOfferError = await validateFlashOfferRules({ id: offerId, is_flash_offer: true });
       if (flashOfferError) return flashOfferError;
@@ -782,7 +795,12 @@ function App() {
         .eq("id", appliedCoupon.id);
     }
 
-    const flashOfferIds = [...new Set(cart.filter((item: any) => item.is_flash_offer).map((item: any) => item.id).filter(Boolean))];
+    const flashOfferIds = [...new Set(
+      cart
+        .filter((item: any) => item.is_flash_offer)
+        .map((item: any) => getFlashOfferSourceId(item))
+        .filter(Boolean)
+    )];
     for (const offerId of flashOfferIds) {
       await registerBenefitUsage("flash_offer", offerId, orderId);
     }
@@ -877,19 +895,53 @@ function App() {
 
       console.log("Produtos recebidos:", products?.length, products?.[0]);
       if (products && products.length > 0) {
+        const activeProductOffers = (flashOffers || []).filter((offer: any) =>
+          offer?.merchant_id === shop.id &&
+          offer?.is_active &&
+          (!offer?.expires_at || new Date(offer.expires_at).getTime() > Date.now())
+        );
+        const offersByProductId = new Map<string, any>();
+        const offersByProductName = new Map<string, any>();
+        activeProductOffers.forEach((offer: any) => {
+          if (offer?.product_id) {
+            const productId = String(offer.product_id);
+            if (!offersByProductId.has(productId)) {
+              offersByProductId.set(productId, offer);
+            }
+          }
+
+          const productNameKey = normalizeFlashOfferProductKey(offer?.product_name);
+          if (productNameKey && !offersByProductName.has(productNameKey)) {
+            offersByProductName.set(productNameKey, offer);
+          }
+        });
+
         const grouped: Record<string, any[]> = {};
         products.forEach((p: any) => {
           const cat = p.category || p.subcategory || (isRestaurant ? "Cardápio" : "Produtos");
           if (!grouped[cat]) grouped[cat] = [];
+          const linkedOffer =
+            offersByProductId.get(String(p.id)) ||
+            offersByProductName.get(normalizeFlashOfferProductKey(p.name));
+          const discountedPrice = linkedOffer ? Number(linkedOffer.discounted_price) : Number(p.price);
+          const hasLinkedOffer = Boolean(
+            linkedOffer &&
+            Number.isFinite(discountedPrice) &&
+            discountedPrice >= 0 &&
+            discountedPrice < Number(p.price)
+          );
           grouped[cat].push({
             id: p.id,
             name: p.name,
             desc: p.description || "",
-            price: p.price,
+            price: hasLinkedOffer ? discountedPrice : p.price,
+            oldPrice: hasLinkedOffer ? Number(p.price) : undefined,
             img: p.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600",
             merchant_id: shop.id,
             merchant_name: shop.name,
             store: shop.name,
+            is_flash_offer: hasLinkedOffer,
+            flash_offer_id: hasLinkedOffer ? linkedOffer.id : undefined,
           });
         });
         const categories = Object.entries(grouped).map(([name, items]) => ({ name, items }));
@@ -2430,7 +2482,7 @@ function App() {
 
   const renderExclusiveOffer = () => {
     const displayDeals = flashOffers.length > 0 ? flashOffers.map(f => ({
-      id: f.id,
+      id: f.product_id || f.id,
       name: f.product_name,
       store: f.admin_users?.store_name || 'Loja Parceira',
       img: f.product_image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600',
@@ -2439,6 +2491,7 @@ function App() {
       merchant_id: f.merchant_id,
       merchant_name: f.admin_users?.store_name || 'Loja Parceira',
       is_flash_offer: true,
+      flash_offer_id: f.id,
       off: f.original_price && f.discounted_price 
         ? `- R$ ${(Number(f.original_price) - Number(f.discounted_price)).toFixed(2).replace('.', ',')} OFF` 
         : `- R$ ${(Number(f.original_price) * (Number(f.discount_percent) / 100)).toFixed(2).replace('.', ',')} OFF`,
@@ -3573,9 +3626,16 @@ function App() {
                         <h3 className="font-black text-base uppercase tracking-tight text-white group-hover:text-yellow-400 transition-colors leading-tight flex-1">
                           {item.name}
                         </h3>
-                        <span className="text-yellow-400 font-black text-sm whitespace-nowrap" style={{ textShadow: "0 0 10px rgba(255,215,9,0.5)" }}>
-                          R$ {item.price.toFixed(2).replace(".", ",")}
-                        </span>
+                        <div className="flex flex-col items-end shrink-0">
+                          {item.oldPrice && (
+                            <span className="text-[10px] text-zinc-500 line-through font-bold whitespace-nowrap">
+                              R$ {item.oldPrice.toFixed(2).replace(".", ",")}
+                            </span>
+                          )}
+                          <span className="text-yellow-400 font-black text-sm whitespace-nowrap" style={{ textShadow: "0 0 10px rgba(255,215,9,0.5)" }}>
+                            R$ {item.price.toFixed(2).replace(".", ",")}
+                          </span>
+                        </div>
                       </div>
                       <p className="text-zinc-500 text-sm leading-relaxed max-w-[85%]">{item.desc}</p>
                     </div>
@@ -3695,7 +3755,14 @@ function App() {
                     <div className="px-1">
                       <div className="flex justify-between items-start mb-1 gap-3">
                         <h3 className="font-black text-base uppercase tracking-tight text-white group-hover:text-yellow-400 transition-colors leading-tight flex-1">{item.name}</h3>
-                        <span className="text-yellow-400 font-black text-sm whitespace-nowrap">R$ {Number(item.price).toFixed(2).replace(".", ",")}</span>
+                        <div className="flex flex-col items-end shrink-0">
+                          {item.oldPrice && (
+                            <span className="text-[10px] text-zinc-500 line-through font-bold whitespace-nowrap">
+                              R$ {Number(item.oldPrice).toFixed(2).replace(".", ",")}
+                            </span>
+                          )}
+                          <span className="text-yellow-400 font-black text-sm whitespace-nowrap">R$ {Number(item.price).toFixed(2).replace(".", ",")}</span>
+                        </div>
                       </div>
                       <p className="text-zinc-500 text-xs leading-relaxed">{item.desc}</p>
                     </div>
