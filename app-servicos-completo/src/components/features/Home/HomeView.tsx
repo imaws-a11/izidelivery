@@ -369,13 +369,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <section className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
-                  <div className="size-1.5 rounded-full bg-red-500 animate-ping" />
+                  <div className="size-1.5 rounded-full bg-yellow-400 animate-ping" />
                   <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] italic">Izi Flash</h3>
                 </div>
-                <span className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">AO VIVO</span>
+                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">AO VIVO</span>
               </div>
               
-              <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2 -mx-5 px-5 h-[244px]">
+              <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2 -mx-5 px-5 h-[252px]">
                 {activeStories.map(story => (
                   <motion.div 
                     key={story.id} 
@@ -400,16 +400,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         setSubView("product_detail");
                       }
                     }}
-                    className={`relative flex-shrink-0 w-[28rem] h-[228px] snap-center rounded-[34px] p-[1.5px] ${story.isMaster ? "bg-gradient-to-tr from-yellow-400 via-zinc-800 to-amber-600 shadow-[0_4px_20px_rgba(255,215,9,0.3)]" : "bg-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.35)]"} cursor-pointer transition-all group`}
+                    className={`relative flex-shrink-0 w-[56rem] h-[236px] snap-center rounded-[34px] p-[1.5px] ${story.isMaster ? "bg-gradient-to-tr from-yellow-400 via-zinc-800 to-amber-600 shadow-[0_4px_20px_rgba(255,215,9,0.3)]" : "bg-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.35)]"} cursor-pointer transition-all group`}
                   >
                     <div className={`size-full rounded-[32.5px] overflow-hidden bg-zinc-900 relative ${story.isMaster ? "border-[2px] border-zinc-950" : "border border-white/10"}`}>
                       <img src={story.img} className="size-full object-cover brightness-75 group-hover:scale-110 transition-transform duration-1000" />
                       <div className="absolute top-3 left-3 right-3 z-20 flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1 bg-black/58 backdrop-blur-xl px-3 py-2.5 rounded-[20px] border border-white/10 shadow-[0_8px_20px_rgba(0,0,0,0.28)]">
+                        <div className="min-w-0 flex-1 bg-black/58 backdrop-blur-xl px-3.5 py-3 rounded-[20px] border border-white/10 shadow-[0_8px_20px_rgba(0,0,0,0.28)]">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="material-symbols-outlined text-[14px] text-white/75 shrink-0">storefront</span>
                             <div className="min-w-0">
-                              <span className="text-[12px] font-black text-white tracking-tight leading-tight line-clamp-2 block">
+                              <span className="text-[13px] font-black text-white tracking-tight leading-tight whitespace-normal break-words block">
                                 {story.merchant}
                               </span>
                             </div>
@@ -451,15 +451,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </section>
           )}
 
-          {/* CUPONS HIGHLIGHTS / BANNERS DE PUBLICIDADE */}
+          {/* CUPONS HIGHLIGHTS */}
           {availableCoupons.length > 0 && (
             <section className="space-y-5">
               <div className="flex items-end justify-between px-2">
                 <div className="space-y-1">
-                  <h3 className="text-2xl font-black tracking-tighter text-white italic uppercase leading-none">Benefícios</h3>
+                  <h3 className="text-2xl font-black tracking-tighter text-white italic uppercase leading-none">Cupons</h3>
                   <div className="flex items-center gap-2">
                     <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_10px_rgba(251,191,36,0.5)]" />
-                    <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em]">{availableCoupons.length} Banners Ativos</p>
+                    <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em]">{availableCoupons.length} Cupons Ativos</p>
                   </div>
                 </div>
               </div>
@@ -480,22 +480,29 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <motion.div 
                       key={coupon.id || i} 
                       whileTap={{ scale: 0.98 }}
-                      className="relative flex-shrink-0 w-[300px] h-[160px] rounded-[32px] overflow-hidden group cursor-pointer transition-all snap-center shadow-[0_10px_40px_rgba(0,0,0,0.8)] border border-white/5 hover:border-white/20"
+                      onClick={() => {
+                        navigator.clipboard.writeText(coupon.coupon_code).catch(() => {});
+                        setCopiedCoupon(coupon.coupon_code);
+                        setTimeout(() => setCopiedCoupon(null), 2000);
+                        showToast("Código promocional copiado!", "success");
+                      }}
+                      className="relative flex-shrink-0 w-[360px] h-[196px] rounded-[36px] overflow-hidden group cursor-pointer transition-all snap-center shadow-[0_14px_40px_rgba(0,0,0,0.7)] border border-white/10 hover:border-yellow-400/30"
                     >
                        <img 
                          src={coupon.image_url || fallbackImg}
-                         alt="Cupom de Publicidade" 
-                         className="absolute inset-0 w-full h-full object-cover brightness-[0.4] group-hover:brightness-[0.35] group-hover:scale-110 transition-transform duration-1000"
+                         alt={coupon.title || "Cupom"} 
+                         className="absolute inset-0 w-full h-full object-cover brightness-[0.32] saturate-[1.05] group-hover:scale-110 transition-transform duration-1000"
                        />
                        
-                       <div className="absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-black via-black/80 to-transparent" />
+                       <div className="absolute inset-0 bg-gradient-to-br from-black/85 via-black/58 to-black/90" />
+                       <div className="absolute inset-y-0 right-0 w-32 bg-yellow-400/10 blur-3xl opacity-70" />
 
                        <div className="relative z-10 h-full p-6 flex flex-col justify-between">
-                          <div className="flex justify-between items-start">
-                             <div className="bg-yellow-400/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-yellow-400/20 shadow-lg">
+                          <div className="flex justify-between items-start gap-3">
+                             <div className="bg-white/8 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
                                <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest flex items-center gap-1.5">
-                                 <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>local_activity</span>
-                                 CUPOM REVELADO
+                                 <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>sell</span>
+                                 Cupom Izi
                                </span>
                              </div>
 
@@ -507,28 +514,46 @@ export const HomeView: React.FC<HomeViewProps> = ({
                                  setTimeout(() => setCopiedCoupon(null), 2000); 
                                  showToast("Código promocional copiado!", "success");
                                }}
-                               className={`size-10 rounded-2xl flex items-center justify-center transition-all duration-300 backdrop-blur-md shadow-2xl border ${isCopied ? "bg-emerald-500 border-none scale-105" : "bg-black/40 border-white/10 group-hover:bg-yellow-400 group-hover:border-yellow-400"}`}
+                               className={`size-11 rounded-2xl flex items-center justify-center transition-all duration-300 backdrop-blur-md shadow-2xl border ${isCopied ? "bg-emerald-500 border-none scale-105" : "bg-black/40 border-white/10 group-hover:bg-yellow-400 group-hover:border-yellow-400"}`}
                              >
                                 <span className={`material-symbols-outlined text-lg ${isCopied ? "text-white" : "text-white group-hover:text-black"} transition-colors`}>
-                                  {isCopied ? "done_all" : "content_cut"}
+                                  {isCopied ? "done_all" : "content_copy"}
                                 </span>
                              </button>
                           </div>
                           
                           <div className="flex flex-col mt-auto">
-                            <div className="flex items-center gap-3">
-                              <h5 className="text-3xl font-black text-white uppercase italic tracking-tighter drop-shadow-2xl">
-                                {coupon.discount_type === "fixed" ? `R$${coupon.discount_value}` : `${coupon.discount_value}%`}
-                              </h5>
-                              <span className="text-zinc-500 font-bold text-xs uppercase tracking-[0.2em] transform translate-y-1">OFF</span>
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="min-w-0">
+                                <p className="text-[10px] font-black text-white/45 uppercase tracking-[0.24em]">Código</p>
+                                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                  <span className="text-white text-base font-black tracking-[0.18em] uppercase bg-black/40 px-3 py-1.5 rounded-xl border border-white/10 shadow-md">
+                                    {coupon.coupon_code}
+                                  </span>
+                                  {coupon.min_order_value > 0 && (
+                                    <span className="text-zinc-300 text-[10px] font-black uppercase tracking-[0.12em]">
+                                      Mín. R${coupon.min_order_value}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="shrink-0 text-right">
+                                <p className="text-[10px] font-black text-white/45 uppercase tracking-[0.24em]">Desconto</p>
+                                <div className="flex items-end gap-2 mt-1 justify-end">
+                                  <h5 className="text-4xl font-black text-white uppercase italic tracking-tighter drop-shadow-2xl leading-none">
+                                    {coupon.discount_type === "fixed" ? `R$${coupon.discount_value}` : `${coupon.discount_value}%`}
+                                  </h5>
+                                  <span className="text-yellow-400 font-black text-xs uppercase tracking-[0.2em] mb-1">OFF</span>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-white text-sm font-black tracking-widest uppercase bg-black/50 px-2 py-0.5 rounded-md border border-white/5 shadow-md">
-                                {coupon.coupon_code}
-                              </span>
-                              {coupon.min_order_value > 0 && (
-                                <span className="text-zinc-400 text-[10px] font-medium uppercase tracking-tight">Mín. R${coupon.min_order_value}</span>
-                              )}
+                            <div className="mt-4">
+                              <h6 className="text-lg font-black text-white tracking-tight leading-tight line-clamp-2">
+                                {coupon.title || "Economia liberada para o seu próximo pedido"}
+                              </h6>
+                              <p className="text-[11px] text-zinc-300/80 font-medium leading-relaxed line-clamp-2 mt-2">
+                                {coupon.description || "Toque no banner para copiar e usar no checkout."}
+                              </p>
                             </div>
                           </div>
                        </div>
