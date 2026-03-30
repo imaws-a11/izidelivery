@@ -7,6 +7,7 @@ import type { Merchant, MerchantProfile, Product, MenuCategory } from '../lib/ty
 import { showConfirm, toastError, toastSuccess } from '../lib/useToast';
 import { supabase } from '../lib/supabase';
 import { ProductStudio } from './ProductStudio';
+import FlashOffersSection from './FlashOffersSection';
 
 
 export default function MyStudioTab() {
@@ -63,6 +64,9 @@ export default function MyStudioTab() {
   const [productSearch, setProductSearch] = React.useState('');
 
   const targetMerchantId = userRole === 'merchant' ? merchantProfile?.merchant_id : selectedMerchantPreview?.id;
+  const merchantPromotionCards = promotionsList
+    .filter(p => !targetMerchantId || p.merchant_id === targetMerchantId)
+    .filter(p => userRole !== 'merchant' || Boolean(p.coupon_code));
 
   React.useEffect(() => {
     if (userRole === 'merchant') {
@@ -80,7 +84,7 @@ export default function MyStudioTab() {
           { id: 'info', label: 'Estande & Geral', icon: 'style' },
           { id: 'sales', label: 'Vendas & Performance', icon: 'monitoring' },
           { id: 'products', label: 'Cardápio Digital', icon: 'restaurant_menu' },
-          { id: 'promotions', label: 'Promoções & Banners', icon: 'campaign' },
+          { id: 'promotions', label: userRole === 'merchant' ? 'Promoções & Ofertas' : 'Promoções & Banners', icon: 'campaign' },
           { id: 'dedicated_slots', label: 'Vagas Dedicadas', icon: 'stars' },
         ].map(t => (
           <button
@@ -510,25 +514,31 @@ export default function MyStudioTab() {
                   <div>
                     <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
                       <span className="material-symbols-outlined text-primary text-3xl">campaign</span>
-                      Promoções & Banners
+                      {userRole === 'merchant' ? 'Promoções & Ofertas' : 'Promoções & Banners'}
                     </h3>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Gerencie banners, cupons e ofertas especiais da sua loja</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                      {userRole === 'merchant'
+                        ? 'Gerencie cupons e ofertas aplicadas direto nos produtos da sua loja'
+                        : 'Gerencie banners, cupons e ofertas especiais da sua loja'}
+                    </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => {
-                        setPromoFormType('banner');
-                        setPromoForm({ 
-                          title: '', description: '', image_url: '', 
-                          is_active: true, merchant_id: targetMerchantId 
-                        });
-                        setShowPromoForm(true);
-                      }}
-                      className="bg-white dark:bg-slate-800 text-slate-500 px-6 py-4 rounded-[24px] font-black text-[10px] uppercase tracking-widest border border-slate-200 dark:border-slate-800 hover:bg-slate-50 transition-all flex items-center gap-2"
-                    >
-                      <span className="material-symbols-outlined text-lg">add_photo_alternate</span>
-                      Novo Banner
-                    </button>
+                    {userRole !== 'merchant' && (
+                      <button 
+                        onClick={() => {
+                          setPromoFormType('banner');
+                          setPromoForm({ 
+                            title: '', description: '', image_url: '', 
+                            is_active: true, merchant_id: targetMerchantId 
+                          });
+                          setShowPromoForm(true);
+                        }}
+                        className="bg-white dark:bg-slate-800 text-slate-500 px-6 py-4 rounded-[24px] font-black text-[10px] uppercase tracking-widest border border-slate-200 dark:border-slate-800 hover:bg-slate-50 transition-all flex items-center gap-2"
+                      >
+                        <span className="material-symbols-outlined text-lg">add_photo_alternate</span>
+                        Novo Banner
+                      </button>
+                    )}
                     <button 
                       onClick={() => {
                         setPromoFormType('coupon');
@@ -553,7 +563,7 @@ export default function MyStudioTab() {
                   >
                     <div className="flex justify-between items-center mb-8">
                       <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase italic">
-                        {promoFormType === 'banner' ? 'Configurar Banner' : 'Configurar Cupom'}
+                        {promoFormType === 'banner' && userRole !== 'merchant' ? 'Configurar Banner' : 'Configurar Cupom'}
                       </h4>
                       <button onClick={() => setShowPromoForm(false)} className="text-slate-400 hover:text-rose-500 transition-colors">
                         <span className="material-symbols-outlined">close</span>
@@ -608,7 +618,7 @@ export default function MyStudioTab() {
                         </>
                       )}
 
-                      {promoFormType === 'banner' && (
+                      {promoFormType === 'banner' && userRole !== 'merchant' && (
                         <div className="md:col-span-2 space-y-4">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Imagem do Banner</label>
                           <div className="relative aspect-[3/1] rounded-[32px] overflow-hidden bg-slate-100 dark:bg-slate-900 group border-2 border-dashed border-slate-200 dark:border-slate-800">
@@ -653,8 +663,12 @@ export default function MyStudioTab() {
                   </motion.div>
                 )}
 
+                {userRole === 'merchant' && targetMerchantId && (
+                  <FlashOffersSection userRole="merchant" merchantId={targetMerchantId} />
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {promotionsList.filter(p => !targetMerchantId || p.merchant_id === targetMerchantId).map((promo, idx) => (
+                  {merchantPromotionCards.map((promo, idx) => (
                     <div key={promo.id || idx} className="bg-white dark:bg-slate-800 rounded-[48px] border border-slate-100 dark:border-slate-800 shadow-xl overflow-hidden group flex flex-col">
                       {promo.image_url && (
                         <div className="aspect-[3/1] overflow-hidden">
@@ -705,13 +719,17 @@ export default function MyStudioTab() {
                     </div>
                   ))}
 
-                  {promotionsList.filter(p => !targetMerchantId || p.merchant_id === targetMerchantId).length === 0 && (
+                  {merchantPromotionCards.length === 0 && (
                     <div className="col-span-full py-24 text-center bg-slate-50/50 dark:bg-slate-950/20 rounded-[64px] border-2 border-dashed border-slate-100 dark:border-slate-800">
                       <div className="size-20 bg-white dark:bg-slate-900 rounded-[32px] flex items-center justify-center mx-auto mb-6 shadow-sm border border-slate-100 dark:border-slate-800">
                         <span className="material-symbols-outlined text-4xl text-slate-200 dark:text-slate-800">campaign</span>
                       </div>
-                      <h4 className="text-xl font-black text-slate-400 italic">Nenhuma promoção ativa</h4>
-                      <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">Crie cupons ou banners para aumentar suas vendas</p>
+                      <h4 className="text-xl font-black text-slate-400 italic">
+                        {userRole === 'merchant' ? 'Nenhum cupom ativo' : 'Nenhuma promoção ativa'}
+                      </h4>
+                      <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">
+                        {userRole === 'merchant' ? 'Crie cupons ou ofertas para aumentar suas vendas' : 'Crie cupons ou banners para aumentar suas vendas'}
+                      </p>
                     </div>
                   )}
                 </div>
