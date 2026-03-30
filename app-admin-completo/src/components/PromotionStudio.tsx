@@ -97,15 +97,15 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
   }, [fetchPromotions, fetchFlashOffers, fetchMerchants]);
 
   useEffect(() => {
-    if (activeTab === 'flash' && formData.merchant_ids.length > 0) {
+    if ((activeTab === 'flash' || activeTab === 'coupon') && formData.merchant_ids.length > 0) {
       fetchProducts(formData.merchant_ids);
     }
   }, [activeTab, formData.merchant_ids, fetchProducts]);
 
   const filteredPromos = promotionsList.filter(p => {
     if (merchantId) return p.merchant_id === merchantId;
-    if (userRole === 'admin') return true; // Show all to admin if no merchantId provided
-    return p.merchant_id === null; // Global
+    if (userRole === 'admin') return true; 
+    return p.merchant_id === null; 
   });
 
   const banners = filteredPromos.filter(p => p.image_url && !p.coupon_code);
@@ -158,10 +158,12 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       max_usage: formData.max_usage,
       expires_at: formData.expires_at || null,
       is_active: formData.is_active,
-      is_vip: formData.is_vip,
+      is_vip: activeTab === 'banner' ? true : formData.is_vip,
       merchant_id: formData.merchant_id,
       coupon_code: activeTab === 'coupon' ? formData.coupon_code.toUpperCase().trim() : null,
       image_url: activeTab === 'banner' ? formData.image_url : null,
+      target_merchants: activeTab === 'coupon' ? formData.merchant_ids : null,
+      target_products: activeTab === 'coupon' ? formData.selected_product_ids : null,
     };
 
     const { error } = formData.id 
@@ -254,7 +256,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       max_usage: 100,
       expires_at: '',
       is_active: true,
-      is_vip: false,
+      is_vip: type === 'banner' ? true : false,
       merchant_id: merchantId,
       merchant_ids: merchantId ? [merchantId] : [],
       selected_product_ids: []
@@ -263,7 +265,6 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
 
   const openEdit = (item: any, type: PromoType) => {
     if (type === 'flash') {
-      const matchedProduct = availableProducts.find(p => p.id === item.product_id);
       setFormData({
         id: item.id,
         title: item.title,
@@ -274,12 +275,15 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
         is_active: item.is_active,
         merchant_ids: [item.merchant_id],
         selected_product_ids: item.product_id ? [item.product_id] : [],
-        merchant_id: item.merchant_id
+        merchant_id: item.merchant_id,
+        is_vip: false
       });
     } else {
       setFormData({
         ...item,
-        expires_at: item.expires_at ? format(new Date(item.expires_at), 'yyyy-MM-dd') : ''
+        expires_at: item.expires_at ? format(new Date(item.expires_at), 'yyyy-MM-dd') : '',
+        merchant_ids: item.target_merchants || (item.merchant_id ? [item.merchant_id] : []),
+        selected_product_ids: item.target_products || []
       });
     }
     setActiveTab(type);
@@ -287,7 +291,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
   };
 
   const tabs = [
-    { id: 'banner', label: 'Banners Home', icon: 'branding_watermark', color: 'text-sky-500' },
+    { id: 'banner', label: 'Banners Home (Izi Black)', icon: 'workspace_premium', color: 'text-amber-500' },
     { id: 'coupon', label: 'Cupons de Desconto', icon: 'confirmation_number', color: 'text-primary' },
     { id: 'flash', label: 'Izi Flash (Ofertas)', icon: 'local_fire_department', color: 'text-rose-500' },
   ];
@@ -369,8 +373,10 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                         <div className="flex items-center gap-4 mb-4">
                             <span className={`material-symbols-outlined text-4xl ${tabs.find(t => t.id === activeTab)?.color}`}>{tabs.find(t => t.id === activeTab)?.icon}</span>
                             <div>
-                                <h3 className="text-xl font-black italic uppercase tracking-tighter">Configurar {tabs.find(t => t.id === activeTab)?.label}</h3>
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Preencha os detalhes da sua campanha</p>
+                                <h3 className="text-xl font-black italic uppercase tracking-tighter">Editar detalhes</h3>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                    {activeTab === 'banner' ? 'Configuração exclusiva para Assinantes Izi Black' : 'Preencha os detalhes da sua campanha'}
+                                </p>
                             </div>
                         </div>
 
@@ -389,7 +395,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
 
                              {activeTab === 'banner' && (
                                  <div className="space-y-2 md:col-span-2">
-                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Imagem do Banner (Alta Resolução)</label>
+                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Imagem do Banner (Exclusiva Izi Black)</label>
                                      <div className="aspect-[3/1] rounded-[40px] bg-white/5 border-2 border-dashed border-white/10 relative overflow-hidden group hover:border-primary/50 transition-colors cursor-pointer">
                                          {formData.image_url ? (
                                              <>
@@ -400,8 +406,8 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                              </>
                                          ) : (
                                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-slate-500 group-hover:text-primary transition-colors">
-                                                 <span className="material-symbols-outlined text-6xl">add_photo_alternate</span>
-                                                 <span className="text-xs font-black uppercase tracking-widest text-center px-10">Recomendado: 1200x400 para melhor visualização na home</span>
+                                                 <span className="material-symbols-outlined text-6xl text-amber-500">workspace_premium</span>
+                                                 <span className="text-xs font-black uppercase tracking-widest text-center px-10">Banner Premium Izi Black - Desktop/Mobile 1200x400</span>
                                              </div>
                                          )}
                                          <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleFileUpload} />
@@ -423,7 +429,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                  </div>
                              )}
 
-                             {activeTab === 'flash' && (
+                             {(activeTab === 'coupon' || activeTab === 'flash') && (
                                  <>
                                     <div className="space-y-2 md:col-span-2">
                                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Lojistas Associados</label>
@@ -433,7 +439,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                             className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-left flex justify-between items-center group hover:bg-white/10 transition-all font-display"
                                         >
                                             <span className={formData.merchant_ids.length ? 'text-white' : 'text-slate-500'}>
-                                                {formData.merchant_ids.length ? `${formData.merchant_ids.length} lojistas selecionados` : 'Clique para selecionar os lojistas'}
+                                                {formData.merchant_ids.length ? `${formData.merchant_ids.length} lojistas participantes` : 'Clique para selecionar os lojistas'}
                                             </span>
                                             <span className="material-symbols-outlined text-slate-500 group-hover:text-primary transition-colors">storefront</span>
                                         </button>
@@ -448,7 +454,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                             className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-left flex justify-between items-center group hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed font-display"
                                         >
                                             <span className={formData.selected_product_ids.length ? 'text-white' : 'text-slate-500'}>
-                                                {formData.selected_product_ids.length ? `${formData.selected_product_ids.length} produtos selecionados` : 'Clique para selecionar os produtos'}
+                                                {formData.selected_product_ids.length ? `${formData.selected_product_ids.length} produtos exclusivos` : 'Clique para selecionar os produtos'}
                                             </span>
                                             <span className="material-symbols-outlined text-slate-500 group-hover:text-primary transition-colors">restaurant_menu</span>
                                         </button>
@@ -457,7 +463,9 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                              )}
 
                              <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Tipo de Desconto</label>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
+                                    {activeTab === 'banner' ? 'Tipo Desconto Izi Black' : 'Tipo de Desconto'}
+                                </label>
                                 <select 
                                    value={formData.discount_type}
                                    onChange={e => setFormData({...formData, discount_type: e.target.value})}
@@ -469,7 +477,9 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                              </div>
 
                              <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Valor do Desconto</label>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
+                                    {activeTab === 'banner' ? 'Valor OFF na Adesão' : 'Valor do Desconto'}
+                                </label>
                                 <input 
                                     type="number" 
                                     step="0.01"
@@ -501,21 +511,22 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                              </div>
 
                              <div className="md:col-span-2 pt-4 flex gap-6">
-                                <label className="flex-1 flex items-center justify-between p-6 bg-white/5 border border-white/5 rounded-[32px] cursor-pointer group hover:bg-white/10 transition-all">
+                                <label className="flex-1 flex items-center justify-between p-6 bg-white/5 border border-white/5 rounded-[32px] cursor-pointer group hover:bg-white/10 transition-all border-amber-500/20 border">
                                     <div className="flex items-center gap-4">
                                         <div className="size-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
                                             <span className="material-symbols-outlined">workspace_premium</span>
                                         </div>
                                         <div>
-                                            <p className="text-sm font-black">Cliente VIP Black</p>
-                                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Exclusividade para assinantes</p>
+                                            <p className="text-sm font-black">Cliente Izi Black</p>
+                                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Ativado por padrão para Banners</p>
                                         </div>
                                     </div>
                                     <input 
                                         type="checkbox" 
-                                        checked={formData.is_vip}
+                                        checked={activeTab === 'banner' ? true : formData.is_vip}
+                                        disabled={activeTab === 'banner'}
                                         onChange={e => setFormData({...formData, is_vip: e.target.checked})}
-                                        className="size-8 rounded-xl bg-white/5 border-white/10 text-primary focus:ring-primary transition-all" 
+                                        className="size-8 rounded-xl bg-white/5 border-white/10 text-amber-500 focus:ring-amber-500 transition-all" 
                                     />
                                 </label>
 
@@ -615,11 +626,16 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                             </div>
                             <div className="p-8 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <span className={`size-2.5 rounded-full ${item.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-700'}`}></span>
-                                    <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{item.is_active ? 'Visível na Home' : 'Pausado'}</span>
+                                    <span className={`size-2.5 rounded-full ${item.is_active ? 'bg-amber-500 animate-pulse' : 'bg-slate-700'}`}></span>
+                                    <span className="text-[10px] font-black uppercase text-amber-500 tracking-widest">{item.is_active ? 'Ativo (Exclusivo Black)' : 'Pausado'}</span>
                                 </div>
-                                <div className="text-[10px] font-black text-slate-700 uppercase tracking-widest">
-                                    {item.expires_at ? format(new Date(item.expires_at), 'dd MMM yyyy', { locale: ptBR }) : 'Permanente'}
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+                                        -{item.discount_type === 'percent' ? `${item.discount_value}%` : `R$ ${item.discount_value}`} na adesão
+                                    </span>
+                                    <div className="text-[9px] font-bold text-slate-700 uppercase tracking-widest mt-1">
+                                        {item.expires_at ? format(new Date(item.expires_at), 'dd MMM yyyy', { locale: ptBR }) : 'Permanente'}
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
