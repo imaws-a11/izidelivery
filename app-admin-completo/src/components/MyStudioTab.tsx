@@ -8,6 +8,7 @@ import { showConfirm, toastError, toastSuccess } from '../lib/useToast';
 import { supabase } from '../lib/supabase';
 import { ProductStudio } from './ProductStudio';
 import FlashOffersSection from './FlashOffersSection';
+import PromotionStudio from './PromotionStudio';
 
 
 export default function MyStudioTab() {
@@ -508,7 +509,7 @@ export default function MyStudioTab() {
               </div>
             )}
 
-            {activePreviewTab === 'promotions' && (
+            {activePreviewTab === 'promotions' && ( <PromotionStudio userRole={userRole as any} merchantId={targetMerchantId} onClose={() => setActivePreviewTab('metrics')} /> ) } {false && (
               <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-6 mb-8">
                   <div>
