@@ -40,7 +40,6 @@ import { AddressesView } from "./components/features/AddressesView";
 import { PixPaymentView } from "./components/features/PixPaymentView";
 import { CardPaymentView } from "./components/features/CardPaymentView";
 import { LightningPaymentView } from "./components/features/LightningPaymentView";
-import { BeverageOffersView } from "./components/features/BeverageOffersView";
 
 import { useAuth } from "./hooks/useAuth";
 import type { SavedAddress, Order, Quest } from "./types";
@@ -6540,157 +6539,11 @@ function App() {
     </div>
   );
 
-  const renderWaitingDriver = () => (
-    <div className="absolute inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center">
-      <div className="size-24 rounded-full bg-yellow-400/10 flex items-center justify-center mb-8 relative">
-        <div className="absolute inset-0 rounded-full bg-yellow-400/20 animate-ping" />
-        <span className="material-symbols-outlined text-5xl text-yellow-400 relative z-10">
-          two_wheeler
-        </span>
-      </div>
-      <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-3">
-        Buscando Entregador
-      </h2>
-      <p className="text-zinc-400 font-medium max-w-[240px] leading-relaxed">
-        Seu pedido está pronto! Estamos localizando o condutor Izi mais próximo
-        de você. 🛵
-      </p>
-    </div>
-  );
 
-  const renderOrderChat = () => (
-    <div className="absolute inset-0 z-50 bg-black flex flex-col">
-      <header className="px-5 py-6 border-b border-zinc-900 flex items-center gap-4">
-        <button
-          onClick={() => setSubView("active_order")}
-          className="size-10 rounded-full bg-zinc-900 flex items-center justify-center"
-        >
-          <span className="material-symbols-outlined text-white">close</span>
-        </button>
-        <div>
-          <h2 className="text-lg font-black text-white uppercase tracking-tight leading-none">
-            Chat com Suporte
-          </h2>
-          <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-1">
-            Online
-          </p>
-        </div>
-      </header>
-      <div className="flex-1 p-5 overflow-y-auto space-y-4 no-scrollbar">
-        <div className="flex justify-start">
-          <div className="bg-zinc-900 p-4 rounded-3xl rounded-tl-lg max-w-[85%] border border-zinc-800">
-            <p className="text-sm text-zinc-300">
-              Olá! Como podemos ajudar com seu pedido?
-            </p>
-          </div>
-        </div>
-      </div>
-      <div className="p-5 border-t border-zinc-900 flex gap-3">
-        <input
-          type="text"
-          placeholder="Escreva sua mensagem..."
-          className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 text-white text-sm focus:outline-none focus:border-yellow-400/50"
-        />
-        <button className="size-14 rounded-2xl bg-yellow-400 text-black flex items-center justify-center shadow-lg shadow-yellow-400/20">
-          <span className="material-symbols-outlined font-black">send</span>
-        </button>
-      </div>
-    </div>
-  );
 
-  const renderOrderSupport = () => (
-    <div className="absolute inset-0 z-50 bg-black flex flex-col p-8 items-center justify-center text-center space-y-8">
-      <div className="size-20 rounded-3xl bg-blue-500/10 flex items-center justify-center">
-        <span className="material-symbols-outlined text-4xl text-blue-500">
-          help
-        </span>
-      </div>
-      <div>
-        <h2 className="text-2xl font-black text-white uppercase tracking-tight">
-          Central de Ajuda
-        </h2>
-        <p className="text-zinc-500 mt-2">
-          Precisa de ajuda com o seu pedido? Nossa equipe de suporte está à
-          disposição 24/7.
-        </p>
-      </div>
-      <div className="w-full space-y-4">
-        <button
-          onClick={() => setSubView("order_chat")}
-          className="w-full py-4 bg-white text-black font-black rounded-2xl uppercase tracking-widest"
-        >
-          Falar com Consultor
-        </button>
-        <button
-          onClick={() => setSubView("none")}
-          className="w-full py-4 bg-zinc-900 text-zinc-400 font-black rounded-2xl uppercase tracking-widest"
-        >
-          Voltar
-        </button>
-      </div>
-    </div>
-  );
 
-  const renderOrderFeedback = () => (
-    <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-center">
-      <div className="size-20 rounded-full bg-yellow-400/10 flex items-center justify-center mb-8">
-        <span className="material-symbols-outlined text-4xl text-yellow-400">
-          rate_review
-        </span>
-      </div>
-      <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-4">
-        Como foi sua experiência?
-      </h2>
-      <div className="flex gap-2 mb-10">
-        {[1, 2, 3, 4, 5].map((s) => (
-          <button
-            key={s}
-            className="size-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-yellow-400 hover:border-yellow-400/40 transition-all"
-          >
-            <span className="material-symbols-outlined font-black">star</span>
-          </button>
-        ))}
-      </div>
-      <button
-        onClick={() => setSubView("none")}
-        className="w-full py-4 bg-yellow-400 text-black font-black rounded-2xl uppercase tracking-widest shadow-xl shadow-yellow-400/20"
-      >
-        Enviar Avaliação
-      </button>
-    </div>
-  );
 
-  const renderQuestCenter = () => (
-    <div className="absolute inset-0 z-50 bg-black flex flex-col">
-      <header className="header p-8 border-b border-zinc-900 flex items-center gap-4">
-        <button
-          onClick={() => setSubView("none")}
-          className="p-3 bg-zinc-900 rounded-2xl text-white"
-        >
-          <span className="material-symbols-outlined">arrow_back</span>
-        </button>
-        <h2 className="text-xl font-black text-white uppercase italic">
-          Izi Quests
-        </h2>
-      </header>
-      <div className="flex-1 p-8 overflow-y-auto no-scrollbar space-y-6">
-        <div className="p-6 bg-gradient-to-br from-yellow-400/10 to-orange-400/5 border border-yellow-400/20 rounded-[32px] relative overflow-hidden">
-          <div className="relative z-10">
-            <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">
-              Missão Semanal
-            </span>
-            <h3 className="text-lg font-black text-white mt-1">
-              Explorador Izi
-            </h3>
-            <p className="text-xs text-zinc-500 mt-2">
-              Faça 3 pedidos em estabelecimentos diferentes esta semana para
-              ganhar 500 IziCoins!
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+
 
   const renderAddresses = () => {
     return (
@@ -12320,29 +12173,7 @@ function App() {
     );
   };
 
-  // Temporário: Placeholders para funções ausentes
-  const renderProductDetail = () => null;
-  const renderOrderDetail = () => null;
-  const renderSearch = () => null;
-  const renderReferralSystem = () => null;
-  const renderOrderSupport = () => null;
-  const renderOrderFeedback = () => null;
-  const renderOrderChat = () => null;
-  const renderQuestCenter = () => null;
-  const renderExploreCategory = () => null;
-  const renderPaymentProcessing = () => null;
-  const renderPaymentError = () => null;
-  const renderPaymentSuccess = () => null;
-  const renderWaitingMerchant = () => null;
-  const renderWaitingDriver = () => null;
-  const renderIziBlackPurchase = () => null;
-  const renderAIConcierge = () => null;
-  const renderIziBlackWelcome = () => null;
-  const renderIziBlackCard = () => null;
-  const renderMasterPerks = () => null;
-  const renderMyQRModal = () => null;
-  const renderTransferModal = () => null;
-  const renderScanQRModal = () => null;
+
 
   return (
     <div className="h-full bg-black selection:bg-yellow-400/30">
