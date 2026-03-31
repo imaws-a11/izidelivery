@@ -338,7 +338,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchUsers = useCallback(async () => {
     setIsLoadingList(true);
     try {
-      let query = supabase.from('users_delivery').select('*').order('created_at', { ascending: false });
+      let query = supabase.from('users_delivery').select('*').eq('is_deleted', false).order('created_at', { ascending: false });
       if (userStatusFilter !== 'all') {
         if (userStatusFilter === 'active') query = query.eq('is_active', true);
         else if (userStatusFilter === 'suspended') query = query.eq('is_active', false);
@@ -353,7 +353,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchDrivers = useCallback(async () => {
     setIsLoadingList(true);
     try {
-      const { data } = await supabase.from('drivers_delivery').select('*').order('name', { ascending: true });
+      const { data } = await supabase.from('drivers_delivery').select('*').eq('is_deleted', false).order('name', { ascending: true });
       if (data) setDriversList(data as Driver[]);
     } finally {
       setIsLoadingList(false);
@@ -364,7 +364,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!merchantProfile?.merchant_id) return;
     setIsLoadingList(true);
     try {
-      const { data } = await supabase.from('drivers_delivery').select('*').eq('merchant_id', merchantProfile.merchant_id);
+      const { data } = await supabase.from('drivers_delivery').select('*').eq('merchant_id', merchantProfile.merchant_id).eq('is_deleted', false);
       if (data) setMyDriversList(data as Driver[]);
     } finally {
       setIsLoadingList(false);
@@ -568,7 +568,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchMerchants = useCallback(async () => {
     setIsLoadingList(true);
     try {
-      const { data } = await supabase.from('admin_users').select('*').eq('role', 'merchant').order('store_name', { ascending: true });
+      const { data } = await supabase.from('admin_users').select('*').eq('role', 'merchant').eq('is_deleted', false).order('store_name', { ascending: true });
       if (data) setMerchantsList(data as Merchant[]);
     } finally {
       setIsLoadingList(false);
@@ -712,7 +712,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!await showConfirm({ message: 'Excluir este entregador?' })) return;
     try {
       const { error } = await supabase.from('drivers_delivery').delete().eq('id', id);
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23503') {
+          await supabase.from('drivers_delivery').update({ is_deleted: true, is_active: false }).eq('id', id);
+          toastWarning('Este entregador possui histórico de pedidos e não pode ser completamente removido. Ele foi movido para a lixeira.');
+        } else {
+          throw error;
+        }
+      } else {
+        toastSuccess('Entregador removido!');
+      }
       fetchMyDrivers();
     } catch (err: any) {
       toastError(err.message);
@@ -925,7 +934,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!await showConfirm({ message: 'Excluir este lojista?' })) return;
     try {
       const { error } = await supabase.from('admin_users').delete().eq('id', id);
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23503') {
+          await supabase.from('admin_users').update({ is_deleted: true, is_active: false }).eq('id', id);
+          toastWarning('Este lojista possui registros vinculados e não pode ser excluído. Ele foi arquivado.');
+        } else {
+          throw error;
+        }
+      } else {
+        toastSuccess('Lojista removido!');
+      }
       fetchMerchants();
     } catch (err: any) {
       toastError(err.message);
@@ -946,7 +964,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!await showConfirm({ message: 'Excluir este entregador?' })) return;
     try {
       const { error } = await supabase.from('drivers_delivery').delete().eq('id', id);
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23503') {
+          await supabase.from('drivers_delivery').update({ is_deleted: true, is_active: false }).eq('id', id);
+          toastWarning('O entregador possui histórico de pedidos e não pode ser removido integralmente. Ele foi arquivado.');
+        } else {
+          throw error;
+        }
+      } else {
+        toastSuccess('Entregador removido!');
+      }
       fetchDrivers();
     } catch (err: any) {
       toastError(err.message);
@@ -980,7 +1007,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!await showConfirm({ message: 'Excluir este cliente?' })) return;
     try {
       const { error } = await supabase.from('users_delivery').delete().eq('id', id);
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23503') {
+          await supabase.from('users_delivery').update({ is_deleted: true, is_active: false }).eq('id', id);
+          toastWarning('Este cliente possui histórico de pedidos e não pode ser excluído. Ele foi arquivado.');
+        } else {
+          throw error;
+        }
+      } else {
+        toastSuccess('Cliente removido!');
+      }
       fetchUsers();
     } catch (err: any) {
       toastError(err.message);
@@ -1097,6 +1133,23 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const handleUpdateDispatchSettings = async (field: string, value: string) => {};
   const handleSeedCategories = async () => {};
 
+  const handleSaveAppSettings = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('app_settings_delivery')
+        .upsert(appSettings);
+      
+      if (error) throw error;
+      toastSuccess('Configurações salvas com sucesso!');
+      logAction('Update Settings', 'System', appSettings);
+    } catch (err: any) {
+      toastError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [appSettings, logAction]);
+
   const savePromotion = useCallback(async (promo: any) => {
     setPromoSaving(true);
     setPromoSaveStatus('saving');
@@ -1194,7 +1247,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     handleConfirmSubscriptionPayment, handleAddPeakRule, handleRemovePeakRule, 
     saveDynamicRates, saveSpecificRateMetadata, handleAddZone, handleRemoveZone, 
     handleFileUpload, handleUpdateDispatchSettings, handleSeedCategories, savePromotion, 
-    autoSavePromo
+    autoSavePromo,
+    handleSaveAppSettings
   };
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

@@ -20,9 +20,9 @@ interface PromotionStudioProps {
 type PromoType = 'banner' | 'coupon' | 'flash';
 
 export default function PromotionStudio({ merchantId = null, userRole, onClose, isModal = false }: PromotionStudioProps) {
-  const { fetchPromotions, promotionsList, stats } = useAdmin();
+  const { fetchPromotions, promotionsList, stats, appSettings, setAppSettings, handleSaveAppSettings } = useAdmin();
   
-  const [activeTab, setActiveTab] = useState<PromoType>('banner');
+  const [activeTab, setActiveTab] = useState<PromoType>('coupon');
   const [showForm, setShowForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -108,8 +108,8 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
     return p.merchant_id === null; 
   });
 
-  const banners = filteredPromos.filter(p => p.image_url && !p.coupon_code);
-  const coupons = filteredPromos.filter(p => p.coupon_code);
+  const banners = filteredPromos.filter(p => p.image_url && !p.coupon_code && !p.is_vip);
+  const coupons = filteredPromos.filter(p => p.coupon_code && !p.is_vip);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -158,7 +158,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       max_usage: formData.max_usage,
       expires_at: formData.expires_at || null,
       is_active: formData.is_active,
-      is_vip: activeTab === 'banner' ? true : formData.is_vip,
+      is_vip: formData.is_vip,
       merchant_id: formData.merchant_id,
       coupon_code: activeTab === 'coupon' ? formData.coupon_code.toUpperCase().trim() : null,
       image_url: activeTab === 'banner' ? formData.image_url : null,
@@ -171,6 +171,13 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       : await supabase.from('promotions_delivery').insert([dataToSave]);
 
     if (error) throw error;
+
+    // Se é um banner e alterou o preço da assinatura
+    if (activeTab === 'banner' && dataToSave.min_order_value !== appSettings.iziBlackFee) {
+        const newSettings = { ...appSettings, iziBlackFee: dataToSave.min_order_value };
+        setAppSettings(newSettings);
+        await supabase.from('app_settings_delivery').upsert(newSettings);
+    }
 
     toastSuccess(`Promoção ${formData.id ? 'atualizada' : 'criada'} com sucesso!`);
     setShowForm(false);
@@ -256,7 +263,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       max_usage: 100,
       expires_at: '',
       is_active: true,
-      is_vip: type === 'banner' ? true : false,
+      is_vip: false,
       merchant_id: merchantId,
       merchant_ids: merchantId ? [merchantId] : [],
       selected_product_ids: []
@@ -291,7 +298,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
   };
 
   const tabs = [
-    { id: 'banner', label: 'Banners Home (Izi Black)', icon: 'workspace_premium', color: 'text-amber-500' },
+    { id: 'banner', label: 'Banners Home (Geral)', icon: 'view_carousel', color: 'text-amber-500' },
     { id: 'coupon', label: 'Cupons de Desconto', icon: 'confirmation_number', color: 'text-primary' },
     { id: 'flash', label: 'Izi Flash (Ofertas)', icon: 'local_fire_department', color: 'text-rose-500' },
   ];
@@ -375,7 +382,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                             <div>
                                 <h3 className="text-xl font-black italic uppercase tracking-tighter">Editar detalhes</h3>
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                    {activeTab === 'banner' ? 'Configuração exclusiva para Assinantes Izi Black' : 'Preencha os detalhes da sua campanha'}
+                                    {activeTab === 'banner' ? 'Banner promocional para todos os usuários' : 'Preencha os detalhes da sua campanha'}
                                 </p>
                             </div>
                         </div>
@@ -395,7 +402,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
 
                              {activeTab === 'banner' && (
                                  <div className="space-y-2 md:col-span-2">
-                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Imagem do Banner (Exclusiva Izi Black)</label>
+                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Imagem do Banner (Público Geral)</label>
                                      <div className="aspect-[3/1] rounded-[40px] bg-white/5 border-2 border-dashed border-white/10 relative overflow-hidden group hover:border-primary/50 transition-colors cursor-pointer">
                                          {formData.image_url ? (
                                              <>
@@ -406,8 +413,8 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                              </>
                                          ) : (
                                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-slate-500 group-hover:text-primary transition-colors">
-                                                 <span className="material-symbols-outlined text-6xl text-amber-500">workspace_premium</span>
-                                                 <span className="text-xs font-black uppercase tracking-widest text-center px-10">Banner Premium Izi Black - Desktop/Mobile 1200x400</span>
+                                                 <span className="material-symbols-outlined text-6xl text-slate-500">add_photo_alternate</span>
+                                                 <span className="text-xs font-black uppercase tracking-widest text-center px-10">Banner Home Geral - Desktop/Mobile 1200x400</span>
                                              </div>
                                          )}
                                          <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleFileUpload} />
@@ -419,12 +426,12 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                  <div className="space-y-2 md:col-span-2">
                                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Código Único (CUPOM)</label>
                                      <input 
-                                        type="text" 
-                                        required
-                                        value={formData.coupon_code} 
-                                        onChange={e => setFormData({...formData, coupon_code: e.target.value.toUpperCase()})}
-                                        className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-black text-2xl text-center text-primary tracking-[0.3em] focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
-                                        placeholder="EX: IZI20OFF"
+                                         type="text" 
+                                         required
+                                         value={formData.coupon_code} 
+                                         onChange={e => setFormData({...formData, coupon_code: e.target.value.toUpperCase()})}
+                                         className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-black text-2xl text-center text-primary tracking-[0.3em] focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
+                                         placeholder="EX: IZI20OFF"
                                      />
                                  </div>
                              )}
@@ -464,7 +471,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
 
                              <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
-                                    {activeTab === 'banner' ? 'Tipo Desconto Izi Black' : 'Tipo de Desconto'}
+                                     Tipo de Desconto
                                 </label>
                                 <select 
                                    value={formData.discount_type}
@@ -478,7 +485,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
 
                              <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
-                                    {activeTab === 'banner' ? 'Valor OFF na Adesão' : 'Valor do Desconto'}
+                                     Valor do Desconto
                                 </label>
                                 <input 
                                     type="number" 
@@ -490,18 +497,21 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                              </div>
 
                              <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Pedido Mínimo (R$)</label>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
+                                     {activeTab === 'banner' ? 'Preço da Assinatura (R$)' : 'Pedido Mínimo (R$)'}
+                                </label>
                                 <input 
                                     type="number" 
                                     step="0.01"
-                                    value={formData.min_order_value}
+                                    value={formData.min_order_value || 0}
                                     onChange={e => setFormData({...formData, min_order_value: parseFloat(e.target.value)})}
                                     className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-black text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
+                                    placeholder="0.00"
                                 />
                              </div>
 
                              <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Expira em (Vencimento)</label>
+                                <label className="text-[10px) font-black text-slate-500 uppercase tracking-widest ml-4">Expira em (Vencimento)</label>
                                 <input 
                                     type={activeTab === 'flash' ? 'datetime-local' : 'date'}
                                     value={formData.expires_at}
@@ -511,25 +521,6 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                              </div>
 
                              <div className="md:col-span-2 pt-4 flex gap-6">
-                                <label className="flex-1 flex items-center justify-between p-6 bg-white/5 border border-white/5 rounded-[32px] cursor-pointer group hover:bg-white/10 transition-all border-amber-500/20 border">
-                                    <div className="flex items-center gap-4">
-                                        <div className="size-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-                                            <span className="material-symbols-outlined">workspace_premium</span>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-black">Cliente Izi Black</p>
-                                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Ativado por padrão para Banners</p>
-                                        </div>
-                                    </div>
-                                    <input 
-                                        type="checkbox" 
-                                        checked={activeTab === 'banner' ? true : formData.is_vip}
-                                        disabled={activeTab === 'banner'}
-                                        onChange={e => setFormData({...formData, is_vip: e.target.checked})}
-                                        className="size-8 rounded-xl bg-white/5 border-white/10 text-amber-500 focus:ring-amber-500 transition-all" 
-                                    />
-                                </label>
-
                                 <label className="flex-1 flex items-center justify-between p-6 bg-white/5 border border-white/5 rounded-[32px] cursor-pointer group hover:bg-white/10 transition-all">
                                     <div className="flex items-center gap-4">
                                         <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
@@ -627,14 +618,17 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                             <div className="p-8 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <span className={`size-2.5 rounded-full ${item.is_active ? 'bg-amber-500 animate-pulse' : 'bg-slate-700'}`}></span>
-                                    <span className="text-[10px] font-black uppercase text-amber-500 tracking-widest">{item.is_active ? 'Ativo (Exclusivo Black)' : 'Pausado'}</span>
+                                    <span className="text-[10px] font-black uppercase text-amber-500 tracking-widest">{item.is_active ? 'Ativo' : 'Pausado'}</span>
                                 </div>
                                 <div className="flex flex-col items-end">
                                     <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
-                                        -{item.discount_type === 'percent' ? `${item.discount_value}%` : `R$ ${item.discount_value}`} na adesão
+                                        {item.discount_type === 'percent' ? `${item.discount_value}% OFF` : `R$ ${item.discount_value} OFF`}
                                     </span>
+                                    <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">
+                                        Pedido Mín: R$ {item.min_order_value?.toFixed(2).replace('.', ',')}
+                                    </div>
                                     <div className="text-[9px] font-bold text-slate-700 uppercase tracking-widest mt-1">
-                                        {item.expires_at ? format(new Date(item.expires_at), 'dd MMM yyyy', { locale: ptBR }) : 'Permanente'}
+                                        {item.expires_at ? format(new Date(item.expires_at), 'dd MMM yyyy', { locale: ptBR }) : 'Oferta Permanente'}
                                     </div>
                                 </div>
                             </div>
@@ -747,7 +741,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
           merchants={merchants}
           selectedIds={formData.merchant_ids}
           onConfirm={(ids) => {
-            setFormData(prev => ({
+            setFormData((prev: any) => ({
               ...prev,
               merchant_ids: ids,
               selected_product_ids: []
@@ -763,7 +757,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
           products={availableProducts}
           selectedProducts={availableProducts.filter(p => formData.selected_product_ids.includes(p.id))}
           onConfirm={(selected) => {
-            setFormData(prev => ({
+            setFormData((prev: any) => ({
               ...prev,
               selected_product_ids: selected.map((p: any) => p.id)
             }));
