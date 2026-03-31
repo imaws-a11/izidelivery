@@ -15,6 +15,12 @@ import { GMAPS_KEY } from "./config";
 // Mercado Pago
 import { MercadoPagoCardForm } from "./components/MercadoPagoCardForm";
 import { calculateFreightPrice, calculateVanPrice } from "./lib/pricing_engine";
+import {
+  formatPromotionBenefit,
+  getCartTotals,
+  getPromotionDiscountAmount,
+  isFreeShippingPromotion,
+} from "./lib/promotionUtils";
 
 // Novos Componentes Modulares
 import { Icon } from "./components/common/Icon";
@@ -30,6 +36,8 @@ import { CartView } from "./components/features/Cart/CartView";
 import { CheckoutView } from "./components/features/Checkout/CheckoutView";
 import { ActiveOrderView } from "./components/features/Order/ActiveOrderView";
 import { EstablishmentListView } from "./components/features/Establishment/EstablishmentListView";
+import { BeveragesListView } from "./components/features/BeveragesListView";
+import { PharmacyListView } from "./components/features/PharmacyListView";
 import { ExploreRestaurantsView } from "./components/features/Home/ExploreRestaurantsView";
 import { BeverageOffersView } from "./components/features/Home/BeverageOffersView";
 import { RestaurantMenuView } from "./components/features/Home/RestaurantMenuView";
@@ -1164,11 +1172,7 @@ function App() {
 
   const clearCart = async (orderId?: string) => {
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const couponDiscount = appliedCoupon
-      ? appliedCoupon.discount_type === "fixed"
-        ? appliedCoupon.discount_value
-        : (subtotal * appliedCoupon.discount_value) / 100
-      : 0;
+    const couponDiscount = getPromotionDiscountAmount(appliedCoupon, subtotal);
 
     const total = Math.max(0, subtotal - couponDiscount);
     const coinRate = globalSettings?.izi_coin_rate || 1;
@@ -1251,26 +1255,22 @@ function App() {
     setIsUsingCoins(useCoins);
 
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const couponDiscount = appliedCoupon
-      ? appliedCoupon.discount_type === "fixed"
-        ? appliedCoupon.discount_value
-        : (subtotal * appliedCoupon.discount_value) / 100
-      : 0;
-
     const coinValue = globalSettings?.izi_coin_value || 0.01;
     const coinDiscount = useCoins ? iziCoins * coinValue : 0;
     const deliveryFee = calculateDeliveryFee();
-    const total = Math.max(
-      0,
-      subtotal + deliveryFee - couponDiscount - coinDiscount,
-    );
+    const { effectiveDeliveryFee, total } = getCartTotals({
+      subtotal,
+      deliveryFee,
+      promotion: appliedCoupon,
+      coinDiscount,
+    });
 
     const orderBase = {
       user_id: userId,
       merchant_id: selectedShop?.id || cart[0]?.merchant_id || null,
       status: "novo",
       total_price: total,
-      delivery_fee: deliveryFee,
+      delivery_fee: effectiveDeliveryFee,
       pickup_address: selectedShop?.name || "Endereço do Estabelecimento",
       delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map((i: any) => formatCartItemSummary(i)).join(", ")}`,
       payment_method: paymentMethod,
@@ -4206,12 +4206,14 @@ function App() {
                         </span>
                         <div>
                           <p className="text-3xl font-black text-white leading-none">
-                            {cpn.discount_type === "percent"
-                              ? `${cpn.discount_value}%`
-                              : `R$ ${cpn.discount_value}`}
-                            <span className="text-base text-zinc-400 ml-1">
-                              OFF
-                            </span>
+                            {formatPromotionBenefit(cpn, {
+                              includeOffSuffix: false,
+                            })}
+                            {!isFreeShippingPromotion(cpn) && (
+                              <span className="text-base text-zinc-400 ml-1">
+                                OFF
+                              </span>
+                            )}
                           </p>
                           {cpn.coupon_code && (
                             <button
@@ -5645,16 +5647,14 @@ function App() {
 
   const renderPixPayment = () => {
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const discount = appliedCoupon
-      ? appliedCoupon.discount_type === "fixed"
-        ? appliedCoupon.discount_value
-        : (subtotal * appliedCoupon.discount_value) / 100
-      : 0;
-    const cartTotal = Math.max(0, subtotal - discount);
-    const total =
-      pixConfirmed && selectedItem?.total_price
-        ? Number(selectedItem.total_price)
-        : cartTotal;
+    const { total: cartTotal } = getCartTotals({
+      subtotal,
+      deliveryFee: calculateDeliveryFee(),
+      promotion: appliedCoupon,
+    });
+    const total = selectedItem?.total_price
+      ? Number(selectedItem.total_price)
+      : cartTotal;
 
     const formatCpf = (v: string) =>
       v
@@ -5799,7 +5799,9 @@ function App() {
         <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
           <button
             onClick={() => {
-              setSubView("checkout");
+              setSubView(
+                paymentsOrigin === "izi_black" ? "izi_black_purchase" : "checkout",
+              );
               setPixConfirmed(false);
               setPixCpf("");
             }}
@@ -5994,13 +5996,16 @@ function App() {
   };
 
   const renderCardPayment = () => {
+    const isSubscription = paymentsOrigin === "izi_black";
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const discount = appliedCoupon
-      ? appliedCoupon.discount_type === "fixed"
-        ? appliedCoupon.discount_value
-        : (subtotal * appliedCoupon.discount_value) / 100
-      : 0;
-    const total = Math.max(0, subtotal - discount);
+    const { total: checkoutTotal } = getCartTotals({
+      subtotal,
+      deliveryFee: isSubscription ? 0 : calculateDeliveryFee(),
+      promotion: appliedCoupon,
+    });
+    const total = isSubscription
+      ? Number(selectedItem?.total_price || 29.9)
+      : checkoutTotal;
 
     const handleConfirmCard = async (
       token: string,
@@ -6011,7 +6016,6 @@ function App() {
     ) => {
       setIsLoading(true);
       try {
-        const isSubscription = paymentsOrigin === "izi_black";
         const orderBase = {
           user_id: userId,
           merchant_id: isSubscription ? null : selectedShop?.id || null,
@@ -6027,11 +6031,16 @@ function App() {
           service_type: isSubscription ? "subscription" : "restaurant",
         };
 
-        const { data: order } = await supabase
-          .from("orders_delivery")
-          .insert(orderBase)
-          .select()
-          .single();
+        let order = isSubscription && selectedItem?.id ? selectedItem : null;
+        if (!order) {
+          const { data: createdOrder } = await supabase
+            .from("orders_delivery")
+            .insert(orderBase)
+            .select()
+            .single();
+          order = createdOrder;
+        }
+
         if (!order) {
           toastError("Erro ao criar pedido.");
           return;
@@ -6095,7 +6104,9 @@ function App() {
       <div className="absolute inset-0 z-40 bg-black text-white flex flex-col overflow-y-auto no-scrollbar pb-10">
         <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-6 border-b border-zinc-900 text-white">
           <button
-            onClick={() => setSubView("checkout")}
+            onClick={() =>
+              setSubView(isSubscription ? "izi_black_purchase" : "checkout")
+            }
             className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center"
           >
             <span className="material-symbols-outlined text-zinc-100">
@@ -6107,7 +6118,9 @@ function App() {
               Cartão de Crédito
             </h1>
             <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">
-              {selectedShop?.name || "Venda Digital"}
+              {isSubscription
+                ? "Assinatura IZI Black"
+                : selectedShop?.name || "Venda Digital"}
             </p>
           </div>
         </header>
@@ -8076,6 +8089,7 @@ function App() {
         // 2. Disparar o fluxo de pagamento correto
         if (paymentMethod === "cartao") {
           setIsLoading(false);
+          setSelectedItem(orderData);
           setPaymentsOrigin("izi_black");
           setSubView("card_payment");
           return;
@@ -12605,6 +12619,259 @@ function App() {
                   {renderCardPayment()}
                 </motion.div>
               )}
+              {/* ── Listas de Estabelecimentos ── */}
+              {(["restaurant_list","burger_list","pizza_list","acai_list","japonesa_list","brasileira_list","daily_menus"] as const).some(v => subView === v) && (
+                <motion.div
+                  key="rest_list"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-40"
+                >
+                  <EstablishmentListView
+                    title={
+                      subView === "burger_list" ? "Hamburguerias" :
+                      subView === "pizza_list" ? "Pizzarias" :
+                      subView === "acai_list" ? "Açaí & Bowls" :
+                      subView === "japonesa_list" ? "Culinária Japonesa" :
+                      subView === "brasileira_list" ? "Comida Brasileira" :
+                      subView === "daily_menus" ? "Almoço Express" :
+                      "Restaurantes"
+                    }
+                    subtitle={
+                      subView === "daily_menus" ? "Pratos do dia por perto" : "Cardápios disponíveis agora"
+                    }
+                    icon="restaurant"
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    setSubView={setSubView}
+                    establishments={ESTABLISHMENTS}
+                    filterFn={(shop: any) => {
+                      const q = searchQuery.toLowerCase();
+                      const matchName = shop.name.toLowerCase().includes(q);
+                      if (subView === "burger_list") return (shop.tag || "").toLowerCase().includes("burger") && matchName;
+                      if (subView === "pizza_list") return (shop.tag || "").toLowerCase().includes("pizza") && matchName;
+                      if (subView === "acai_list") return (shop.tag || "").toLowerCase().includes("açaí") && matchName;
+                      if (subView === "japonesa_list") return (shop.tag || "").toLowerCase().includes("japon") && matchName;
+                      if (subView === "brasileira_list") return (shop.tag || "").toLowerCase().includes("brasile") && matchName;
+                      if (subView === "daily_menus") return (shop.restaurantInitialCategory === "Almoço" || (shop.tag || "").toLowerCase().includes("almoço")) && matchName;
+                      return shop.type === "restaurant" && matchName;
+                    }}
+                    onShopClick={handleShopClick}
+                    cartLength={cart.length}
+                    navigateSubView={navigateSubView}
+                    backView="none"
+                  />
+                </motion.div>
+              )}
+
+              {subView === "market_list" && (
+                <motion.div
+                  key="mkt_list"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-40"
+                >
+                  <EstablishmentListView
+                    title="Mercados"
+                    subtitle="Supermercados e mercearias"
+                    icon="local_mall"
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    setSubView={setSubView}
+                    establishments={ESTABLISHMENTS}
+                    filterFn={(shop: any) => shop.type === "market" && shop.name.toLowerCase().includes(searchQuery.toLowerCase())}
+                    onShopClick={handleShopClick}
+                    cartLength={cart.length}
+                    navigateSubView={navigateSubView}
+                    backView="none"
+                  />
+                </motion.div>
+              )}
+
+              {subView === "pharmacy_list" && (
+                <motion.div
+                  key="pharm_list"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-40"
+                >
+                  <PharmacyListView
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    setSubView={setSubView}
+                    navigateSubView={navigateSubView}
+                    cart={cart}
+                    ESTABLISHMENTS={ESTABLISHMENTS}
+                    handleShopClick={handleShopClick}
+                  />
+                </motion.div>
+              )}
+
+              {(subView === "all_pharmacies") && (
+                <motion.div
+                  key="allpharm"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-40"
+                >
+                  <PharmacyListView
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    setSubView={setSubView}
+                    navigateSubView={navigateSubView}
+                    cart={cart}
+                    ESTABLISHMENTS={ESTABLISHMENTS}
+                    handleShopClick={handleShopClick}
+                  />
+                </motion.div>
+              )}
+
+              {subView === "beverages_list" && (
+                <motion.div
+                  key="bev_list"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-40"
+                >
+                  <BeveragesListView
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    setSubView={setSubView}
+                    navigateSubView={navigateSubView}
+                    cart={cart}
+                    ESTABLISHMENTS={ESTABLISHMENTS}
+                    handleShopClick={handleShopClick}
+                  />
+                </motion.div>
+              )}
+
+              {subView === "generic_list" && (
+                <motion.div
+                  key="gen_list"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-40"
+                >
+                  <EstablishmentListView
+                    title={activeService?.label || "Explorar"}
+                    subtitle={activeService?.tagline || "Lojas disponíveis"}
+                    icon={activeService?.icon || "storefront"}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    setSubView={setSubView}
+                    establishments={ESTABLISHMENTS}
+                    filterFn={(shop: any) => shop.type === "generic" && shop.name.toLowerCase().includes(searchQuery.toLowerCase())}
+                    onShopClick={handleShopClick}
+                    cartLength={cart.length}
+                    navigateSubView={navigateSubView}
+                    backView="none"
+                  />
+                </motion.div>
+              )}
+
+              {subView === "explore_restaurants" && (
+                <motion.div
+                  key="exp_rest"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-40"
+                >
+                  <ExploreRestaurantsView
+                    ESTABLISHMENTS={ESTABLISHMENTS}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    handleShopClick={handleShopClick}
+                    setSubView={setSubView}
+                    navigateSubView={navigateSubView}
+                    cart={cart}
+                    restaurantInitialCategory={restaurantInitialCategory}
+                    setRestaurantInitialCategory={setRestaurantInitialCategory}
+                  />
+                </motion.div>
+              )}
+
+              {subView === "beverage_offers" && (
+                <motion.div
+                  key="bev_offers"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-40"
+                >
+                  <BeverageOffersView
+                    setSubView={setSubView}
+                    navigateSubView={navigateSubView}
+                    cart={cart}
+                    ESTABLISHMENTS={ESTABLISHMENTS}
+                    handleShopClick={handleShopClick}
+                    showToast={showToast}
+                  />
+                </motion.div>
+              )}
+
+              {subView === "explore_envios" && (
+                <motion.div
+                  key="exp_envios"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-40"
+                >
+                  <div className="absolute inset-0 bg-black text-zinc-100 flex flex-col">
+                    <header className="sticky top-0 z-50 px-5 py-4 bg-black/80 backdrop-blur-xl border-b border-white/5 flex items-center gap-4">
+                      <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+                        <span className="material-symbols-outlined text-white">arrow_back</span>
+                      </button>
+                      <div>
+                        <h1 className="text-lg font-black text-white tracking-tight leading-none">Izi Envios</h1>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-yellow-400 mt-0.5">Motoboy & Frete express</p>
+                      </div>
+                    </header>
+                    <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center">
+                      <div className="size-24 rounded-3xl bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-5xl text-yellow-400">pedal_bike</span>
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-black text-white uppercase tracking-tight">Envie qualquer coisa</h2>
+                        <p className="text-zinc-500 text-sm mt-2 leading-relaxed max-w-[260px]">Motoboy express para coletas e entregas rápidas pela cidade.</p>
+                      </div>
+                      <div className="w-full space-y-3 mt-4">
+                        <button
+                          onClick={() => { setTransitData({ ...transitData, type: "utilitario" }); navigateSubView("freight_wizard"); }}
+                          className="w-full py-5 bg-yellow-400 text-black font-black rounded-2xl uppercase tracking-widest flex items-center justify-center gap-3"
+                        >
+                          <span className="material-symbols-outlined">send</span>
+                          Solicitar Motoboy
+                        </button>
+                        <button
+                          onClick={() => { setTransitData({ ...transitData, type: "van" }); navigateSubView("van_wizard"); }}
+                          className="w-full py-5 bg-zinc-900 border border-zinc-800 text-white font-black rounded-2xl uppercase tracking-widest flex items-center justify-center gap-3"
+                        >
+                          <span className="material-symbols-outlined">airport_shuttle</span>
+                          Solicitar Van
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               {subView === "explore_category" && (
                 <motion.div
                   key="expcat"
@@ -12910,7 +13177,6 @@ function App() {
       {renderMyQRModal()}
       {renderTransferModal()}
       {renderScanQRModal()}
-      {renderWallet()}
 
       {toast && (
         <motion.div

@@ -47,6 +47,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
     expires_at: '',
     is_active: true,
     is_vip: false,
+    is_free_shipping: false,
     merchant_id: merchantId,
     // Flash specific
     merchant_ids: merchantId ? [merchantId] : [],
@@ -147,23 +148,26 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
   const saveStandardPromotion = async () => {
     if (activeTab === 'coupon' && !formData.coupon_code) throw new Error('Código do cupom é obrigatório');
     if (activeTab === 'banner' && !formData.image_url) throw new Error('Imagem do banner é obrigatória');
+    if (activeTab === 'coupon' && !formData.is_free_shipping && Number(formData.discount_value || 0) <= 0)
+      throw new Error('Informe um valor de desconto maior que zero');
 
     const dataToSave = {
       title: formData.title,
       description: formData.description,
-      discount_type: formData.discount_type,
-      discount_value: Number(formData.discount_value || 0),
+      discount_type: formData.is_free_shipping ? 'free_shipping' : formData.discount_type,
+      discount_value: formData.is_free_shipping ? 0 : Number(formData.discount_value || 0),
       min_order_value: Number(formData.min_order_value || 0),
       max_usage: formData.max_usage,
       expires_at: formData.expires_at || null,
       is_active: formData.is_active,
       is_vip: formData.is_vip,
+      is_free_shipping: formData.is_free_shipping,
       merchant_id: formData.merchant_id,
       coupon_code: activeTab === 'coupon' ? formData.coupon_code.toUpperCase().trim() : null,
       image_url: activeTab === 'banner' ? formData.image_url : null,
       target_merchants: activeTab === 'coupon' ? formData.merchant_ids : null,
       target_products: activeTab === 'coupon' ? formData.selected_product_ids : null,
-      type: activeTab, // Adicionando o tipo para consistência no banco
+      type: activeTab,
     };
 
     const { error } = formData.id 
@@ -264,6 +268,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       expires_at: '',
       is_active: true,
       is_vip: false,
+      is_free_shipping: false,
       merchant_id: merchantId,
       merchant_ids: merchantId ? [merchantId] : [],
       selected_product_ids: []
@@ -290,7 +295,8 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
         ...item,
         expires_at: item.expires_at ? format(new Date(item.expires_at), 'yyyy-MM-dd') : '',
         merchant_ids: item.target_merchants || (item.merchant_id ? [item.merchant_id] : []),
-        selected_product_ids: item.target_products || []
+        selected_product_ids: item.target_products || [],
+        is_free_shipping: item.is_free_shipping || item.discount_type === 'free_shipping' || false,
       });
     }
     setActiveTab(type);
@@ -423,7 +429,50 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                              )}
 
                              {activeTab === 'coupon' && (
-                                 <div className="space-y-2 md:col-span-2">
+                                 <>
+                                   {/* Seletor de tipo de cupom */}
+                                   <div className="space-y-3 md:col-span-2">
+                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Tipo de Cupom</label>
+                                     <div className="grid grid-cols-2 gap-4">
+                                       <button
+                                         type="button"
+                                         onClick={() => setFormData({ ...formData, is_free_shipping: false })}
+                                         className={`flex items-center gap-4 p-5 rounded-3xl border-2 transition-all ${
+                                           !formData.is_free_shipping
+                                             ? 'border-primary bg-primary/10 text-primary'
+                                             : 'border-white/10 bg-white/5 text-slate-500 hover:bg-white/10'
+                                         }`}
+                                       >
+                                         <div className="size-10 rounded-xl bg-current/10 flex items-center justify-center shrink-0">
+                                           <span className="material-symbols-outlined text-xl">percent</span>
+                                         </div>
+                                         <div className="text-left">
+                                           <p className="text-sm font-black">Desconto em Produto</p>
+                                           <p className="text-[9px] font-bold uppercase tracking-widest opacity-70">% ou R$ no carrinho</p>
+                                         </div>
+                                       </button>
+                                       <button
+                                         type="button"
+                                         onClick={() => setFormData({ ...formData, is_free_shipping: true })}
+                                         className={`flex items-center gap-4 p-5 rounded-3xl border-2 transition-all ${
+                                           formData.is_free_shipping
+                                             ? 'border-sky-400 bg-sky-400/10 text-sky-400'
+                                             : 'border-white/10 bg-white/5 text-slate-500 hover:bg-white/10'
+                                         }`}
+                                       >
+                                         <div className="size-10 rounded-xl flex items-center justify-center shrink-0">
+                                           <span className="material-symbols-outlined text-xl">local_shipping</span>
+                                         </div>
+                                         <div className="text-left">
+                                           <p className="text-sm font-black">Frete Grátis</p>
+                                           <p className="text-[9px] font-bold uppercase tracking-widest opacity-70">Zera a taxa de entrega</p>
+                                         </div>
+                                       </button>
+                                     </div>
+                                   </div>
+
+                                   {/* Código do cupom */}
+                                   <div className="space-y-2 md:col-span-2">
                                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Código Único (CUPOM)</label>
                                      <input 
                                          type="text" 
@@ -431,9 +480,10 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                          value={formData.coupon_code} 
                                          onChange={e => setFormData({...formData, coupon_code: e.target.value.toUpperCase()})}
                                          className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-black text-2xl text-center text-primary tracking-[0.3em] focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
-                                         placeholder="EX: IZI20OFF"
+                                         placeholder={formData.is_free_shipping ? 'EX: FRETEFREE' : 'EX: IZI20OFF'}
                                      />
-                                 </div>
+                                   </div>
+                                 </>
                              )}
 
                              {(activeTab === 'coupon' || activeTab === 'flash') && (
@@ -469,32 +519,50 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                  </>
                              )}
 
-                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
-                                     Tipo de Desconto
-                                </label>
-                                <select 
-                                   value={formData.discount_type}
-                                   onChange={e => setFormData({...formData, discount_type: e.target.value})}
-                                   className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all outline-none"
-                                >
-                                    <option value="percent" className="bg-slate-900 border-none">Porcentagem (%)</option>
-                                    <option value="fixed" className="bg-slate-900 border-none">Valor Fixo (R$)</option>
-                                </select>
-                             </div>
+                                       {/* Tipo de Desconto e Valor – ocultados no modo Frete Grátis */}
+                              {!formData.is_free_shipping && (
+                                <>
+                                  <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
+                                        Tipo de Desconto
+                                    </label>
+                                    <select 
+                                       value={formData.discount_type}
+                                       onChange={e => setFormData({...formData, discount_type: e.target.value})}
+                                       className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all outline-none"
+                                    >
+                                        <option value="percent" className="bg-slate-900 border-none">Porcentagem (%)</option>
+                                        <option value="fixed" className="bg-slate-900 border-none">Valor Fixo (R$)</option>
+                                    </select>
+                                  </div>
 
-                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
-                                     Valor do Desconto
-                                </label>
-                                <input 
-                                    type="text" 
-                                    inputMode="decimal"
-                                    value={formData.discount_value?.toString().replace('.', ',')}
-                                    onChange={e => setFormData({...formData, discount_value: e.target.value.replace(',', '.')})}
-                                    className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-black text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
-                                />
-                             </div>
+                                  <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
+                                        Valor do Desconto
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        inputMode="decimal"
+                                        value={formData.discount_value?.toString().replace('.', ',')}
+                                        onChange={e => setFormData({...formData, discount_value: e.target.value.replace(',', '.')})}
+                                        className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-black text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
+                                    />
+                                  </div>
+                                </>
+                              )}
+
+                              {/* Banner de Frete Grátis */}
+                              {formData.is_free_shipping && activeTab === 'coupon' && (
+                                <div className="col-span-2 flex items-center gap-5 p-6 bg-sky-500/10 border border-sky-500/30 rounded-3xl">
+                                  <div className="size-12 rounded-2xl bg-sky-500/20 flex items-center justify-center text-sky-400 shrink-0">
+                                    <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>local_shipping</span>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-black text-sky-400">Cupom de Frete Grátis</p>
+                                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">Este cupom zera a taxa de entrega cobrada pelo Izi. Defina um pedido mínimo abaixo se quiser restringir o uso.</p>
+                                  </div>
+                                </div>
+                              )}
 
                              <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
@@ -659,50 +727,84 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                         </motion.div>
                     ))}
 
-                    {activeTab === 'coupon' && coupons.map(item => (
-                        <motion.div layout key={item.id} className="bg-slate-900 border border-white/5 rounded-[48px] p-10 flex flex-col gap-6 group hover:border-primary/50 transition-all shadow-2xl relative">
+                    {activeTab === 'coupon' && coupons.map(item => {
+                      const isFreeShipping = item.is_free_shipping || item.discount_type === 'free_shipping';
+                      return (
+                        <motion.div layout key={item.id} className={`bg-slate-900 border rounded-[48px] p-10 flex flex-col gap-6 group transition-all shadow-2xl relative ${
+                          isFreeShipping
+                            ? 'border-sky-500/20 hover:border-sky-400/60'
+                            : 'border-white/5 hover:border-primary/50'
+                        }`}>
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Cupom de Desconto</p>
-                                    <h4 className="text-4xl font-black italic tracking-widest text-primary uppercase">{item.coupon_code}</h4>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
+                                      {isFreeShipping ? 'Cupom Frete Grátis' : 'Cupom de Desconto'}
+                                    </p>
+                                    <h4 className={`text-4xl font-black italic tracking-widest uppercase ${
+                                      isFreeShipping ? 'text-sky-400' : 'text-primary'
+                                    }`}>{item.coupon_code}</h4>
                                 </div>
-                                <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                                    <span className="material-symbols-outlined text-2xl">confirmation_number</span>
+                                <div className={`size-12 rounded-2xl flex items-center justify-center ${
+                                  isFreeShipping ? 'bg-sky-500/10 text-sky-400' : 'bg-primary/10 text-primary'
+                                }`}>
+                                    <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                                      {isFreeShipping ? 'local_shipping' : 'confirmation_number'}
+                                    </span>
                                 </div>
                             </div>
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 <h5 className="text-xl font-black text-white italic uppercase tracking-tighter">{item.title}</h5>
-                                {item.is_vip && (
-                                   <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full mb-1 w-fit">
-                                       <span className="material-symbols-outlined text-[14px] text-amber-500" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
-                                       <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Exclusivo Izi Black</span>
-                                   </div>
-                                )}
+                                <div className="flex flex-wrap gap-2">
+                                  {isFreeShipping && (
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-500/10 border border-sky-500/20 rounded-full w-fit">
+                                        <span className="material-symbols-outlined text-[14px] text-sky-400" style={{ fontVariationSettings: "'FILL' 1" }}>local_shipping</span>
+                                        <span className="text-[9px] font-black text-sky-400 uppercase tracking-widest">Frete Grátis</span>
+                                    </div>
+                                  )}
+                                  {item.is_vip && (
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full w-fit">
+                                        <span className="material-symbols-outlined text-[14px] text-amber-500" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
+                                        <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Exclusivo Izi Black</span>
+                                    </div>
+                                  )}
+                                </div>
                                 <p className="text-xs font-bold text-slate-500 line-clamp-2">{item.description}</p>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                                <div className={`p-4 rounded-2xl border ${
+                                  isFreeShipping ? 'bg-sky-500/5 border-sky-500/20' : 'bg-white/5 border-white/5'
+                                }`}>
                                     <p className="text-[9px] font-black text-slate-500 uppercase mb-1">Benefício</p>
-                                    <p className="text-base font-black text-emerald-400">
-                                        {item.discount_type === 'percent' ? `${item.discount_value}% OFF` : `R$ ${item.discount_value} OFF`}
+                                    <p className={`text-base font-black ${
+                                      isFreeShipping ? 'text-sky-400' : 'text-emerald-400'
+                                    }`}>
+                                        {isFreeShipping
+                                          ? 'Frete Grátis'
+                                          : item.discount_type === 'percent'
+                                            ? `${item.discount_value}% OFF`
+                                            : `R$ ${item.discount_value} OFF`
+                                        }
                                     </p>
                                 </div>
                                 <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
                                     <p className="text-[9px] font-black text-slate-500 uppercase mb-1">Pedido Mín.</p>
-                                    <p className="text-base font-black text-white">R$ {item.min_order_value}</p>
+                                    <p className="text-base font-black text-white">
+                                      {Number(item.min_order_value) > 0 ? `R$ ${Number(item.min_order_value).toFixed(2).replace('.',',')}` : 'Sem mínimo'}
+                                    </p>
                                 </div>
                             </div>
                             <div className="flex items-center justify-between pt-4 border-t border-white/5">
                                 <div className="flex items-center gap-3">
                                      <button onClick={() => openEdit(item, 'coupon')} className="text-slate-500 hover:text-primary transition-colors uppercase font-black text-[9px] tracking-widest">Editar</button>
-                                      <button onClick={() => handleDelete(item.id!, 'coupon')} className="text-slate-500 hover:text-rose-500 transition-colors uppercase font-black text-[9px] tracking-widest">Excluir</button>
+                                     <button onClick={() => handleDelete(item.id!, 'coupon')} className="text-slate-500 hover:text-rose-500 transition-colors uppercase font-black text-[9px] tracking-widest">Excluir</button>
                                 </div>
                                 <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${item.is_active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-800 text-slate-500'}`}>
                                     {item.is_active ? 'Ativo' : 'Pausado'}
                                 </div>
                             </div>
                         </motion.div>
-                    ))}
+                      );
+                    })}
 
                     {activeTab === 'flash' && flashOffers.map(item => (
                         <motion.div layout key={item.id} className="bg-slate-900 border border-white/5 rounded-[48px] overflow-hidden group hover:border-rose-500/50 transition-all shadow-2xl relative">

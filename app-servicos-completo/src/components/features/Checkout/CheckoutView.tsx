@@ -1,5 +1,10 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  formatCurrencyBRL,
+  formatPromotionBenefit,
+  getCartTotals,
+} from "../../../lib/promotionUtils";
 
 interface CheckoutViewProps {
   cart: any[];
@@ -53,14 +58,13 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   const [useCoins, setUseCoins] = React.useState(false);
   const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
   const getAddonDetails = (item: any) => Array.isArray(item.addonDetails) ? item.addonDetails : [];
-  const couponDiscount = appliedCoupon
-    ? appliedCoupon.discount_type === "fixed"
-      ? appliedCoupon.discount_value
-      : (subtotal * appliedCoupon.discount_value) / 100
-    : 0;
-  
   const coinDiscount = useCoins ? iziCoins * iziCoinValue : 0;
-  const total = Math.max(0, subtotal + deliveryFee - couponDiscount - coinDiscount);
+  const { couponDiscount, effectiveDeliveryFee, total } = getCartTotals({
+    subtotal,
+    deliveryFee,
+    promotion: appliedCoupon,
+    coinDiscount,
+  });
   const walletBal = walletTransactions.reduce(
     (acc: number, t: any) =>
       ["deposito", "reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount),
@@ -318,7 +322,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                  <div className="flex items-center gap-3">
                    <span className="material-symbols-outlined text-emerald-400 text-lg">check_circle</span>
                    <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest">
-                     {appliedCoupon.coupon_code} — {appliedCoupon.discount_type === "fixed" ? `R$ ${appliedCoupon.discount_value.toFixed(2)} OFF` : `${appliedCoupon.discount_value}% OFF`}
+                     {appliedCoupon.coupon_code} — {formatPromotionBenefit(appliedCoupon)}
                    </p>
                  </div>
                  <button onClick={() => { setAppliedCoupon(null); setCouponInput(""); }} className="text-emerald-400/40 hover:text-red-400 transition-all">
@@ -358,8 +362,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.2em] italic">Taxa Izi</span>
-                <span className={deliveryFee > 0 ? "text-white font-black text-sm" : "text-emerald-400 font-black text-xs uppercase tracking-tighter"}>
-                  {deliveryFee > 0 ? `R$ ${deliveryFee.toFixed(2).replace(".", ",")}` : "Grátis"}
+                <span className={effectiveDeliveryFee > 0 ? "text-white font-black text-sm" : "text-emerald-400 font-black text-xs uppercase tracking-tighter"}>
+                  {effectiveDeliveryFee > 0 ? formatCurrencyBRL(effectiveDeliveryFee) : "Gratis"}
                 </span>
               </div>
               {couponDiscount > 0 && (
@@ -426,5 +430,3 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     </div>
   );
 };
-
-

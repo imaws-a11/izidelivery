@@ -170,7 +170,7 @@ export interface Promotion {
   description?: string;
   image_url?: string;
   coupon_code?: string;
-  discount_type: 'percent' | 'fixed';
+  discount_type: 'percent' | 'fixed' | 'free_shipping';
   discount_value: number;
   min_order_value: number;
   max_usage: number;
@@ -178,6 +178,7 @@ export interface Promotion {
   expires_at?: string;
   is_active: boolean;
   is_vip?: boolean;
+  is_free_shipping?: boolean;
   merchant_id?: string;
   type?: 'banner' | 'coupon' | 'flash';
   target_merchants?: string[];
