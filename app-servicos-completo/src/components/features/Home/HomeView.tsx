@@ -606,7 +606,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">AO VIVO</span>
               </div>
               
-              <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2 -mx-5 px-5 h-[252px]">
+              <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2 -mx-5 px-5 h-[134px]">
                 {activeStories.map(story => (
                   <motion.div 
                     key={story.id} 
@@ -631,45 +631,45 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         setSubView("product_detail");
                       }
                     }}
-                    className={`relative flex-shrink-0 w-[56rem] h-[236px] snap-center rounded-[34px] p-[1.5px] ${story.isMaster ? "bg-gradient-to-tr from-yellow-400 via-zinc-800 to-amber-600 shadow-[0_4px_20px_rgba(255,215,9,0.3)]" : "bg-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.35)]"} cursor-pointer transition-all group`}
+                    className={`relative flex-shrink-0 w-[28rem] h-[118px] snap-center rounded-[20px] p-[1px] ${story.isMaster ? "bg-gradient-to-tr from-yellow-400 via-zinc-800 to-amber-600 shadow-[0_4px_10px_rgba(255,215,9,0.2)]" : "bg-white/10 shadow-[0_5px_15px_rgba(0,0,0,0.35)]"} cursor-pointer transition-all group`}
                   >
-                    <div className={`size-full rounded-[32.5px] overflow-hidden bg-zinc-900 relative ${story.isMaster ? "border-[2px] border-zinc-950" : "border border-white/10"}`}>
+                    <div className={`size-full rounded-[19px] overflow-hidden bg-zinc-900 relative ${story.isMaster ? "border-[1.5px] border-zinc-950" : "border border-white/10"}`}>
                       <img src={story.img} className="size-full object-cover brightness-75 group-hover:scale-110 transition-transform duration-1000" />
-                      <div className="absolute top-3 left-3 right-3 z-20 flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1 bg-black/58 backdrop-blur-xl px-3.5 py-3 rounded-[20px] border border-white/10 shadow-[0_8px_20px_rgba(0,0,0,0.28)]">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="material-symbols-outlined text-[14px] text-white/75 shrink-0">storefront</span>
+                      <div className="absolute top-2 left-2 right-2 z-20 flex items-start justify-between gap-1.5">
+                        <div className="min-w-0 flex-1 bg-black/58 backdrop-blur-xl px-2 py-1.5 rounded-[12px] border border-white/10 shadow-[0_4px_10px_rgba(0,0,0,0.28)]">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="material-symbols-outlined text-[10px] text-white/75 shrink-0">storefront</span>
                             <div className="min-w-0">
-                              <span className="text-[13px] font-black text-white tracking-tight leading-tight whitespace-normal break-words block">
+                              <span className="text-[9px] font-black text-white tracking-tight leading-tight whitespace-normal break-words block truncate">
                                 {story.merchant}
                               </span>
                             </div>
                           </div>
                         </div>
-                        <div className="bg-zinc-950/86 backdrop-blur-xl px-3 py-2 rounded-[20px] border border-white/10 shadow-[0_10px_24px_rgba(0,0,0,0.35)] shrink-0">
-                          <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[14px] text-yellow-400 shrink-0">timer</span>
+                        <div className="bg-zinc-950/86 backdrop-blur-xl px-2 py-1.5 rounded-[12px] border border-white/10 shadow-[0_5px_12px_rgba(0,0,0,0.35)] shrink-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[10px] text-yellow-400 shrink-0">timer</span>
                             <div className="flex flex-col items-end">
-                              <span className="text-[7px] font-black text-white/45 uppercase tracking-[0.18em] leading-none">Termina em</span>
-                              <span className="text-[14px] font-black text-yellow-400 leading-none tracking-tight mt-1">
+                              <span className="text-[5px] font-black text-white/45 uppercase tracking-[0.18em] leading-none">Termina em</span>
+                              <span className="text-[10px] font-black text-yellow-400 leading-none tracking-tight mt-0.5">
                                 {story.timeLeft}
                               </span>
                             </div>
                           </div>
                         </div>
                       </div>
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/75 to-transparent px-4 pt-12 pb-4 flex flex-col justify-end">
-                        <h5 className="text-[19px] font-black text-white leading-[1.02] tracking-tight drop-shadow-2xl line-clamp-2">
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/75 to-transparent px-3 pt-6 pb-2.5 flex flex-col justify-end">
+                        <h5 className="text-[13px] font-black text-white leading-[1.02] tracking-tight drop-shadow-2xl line-clamp-1">
                           {story.name}
                         </h5>
-                        <div className="flex items-end justify-between gap-3 mt-3">
-                          <div className="flex flex-col">
+                        <div className="flex items-end justify-between gap-2 mt-1.5">
+                          <div className="flex items-center gap-2">
                             {story.originalPrice && (
-                              <p className="text-[14px] text-white/65 line-through leading-none font-black tracking-tight mb-1">
+                              <p className="text-[10px] text-white/65 line-through leading-none font-black tracking-tight">
                                 R$ {story.originalPrice}
                               </p>
                             )}
-                            <h6 className="text-[22px] font-black text-white leading-none tracking-tight italic drop-shadow-2xl">
+                            <h6 className="text-[14px] font-black text-white leading-none tracking-tight italic drop-shadow-2xl">
                               R$ {story.finalPrice}
                             </h6>
                           </div>
@@ -797,7 +797,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           {/* GRADE DE SERVIÇOS EM CARROSSEL (4X2) */}
           <div className="relative w-full overflow-hidden">
-            <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide gap-0">
+            <div className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-0">
               {/* PÁGINA 1: Principais (8 itens) */}
               <div className="min-w-full snap-center grid grid-cols-4 grid-rows-2 gap-1.5 px-1 py-1">
                 {deliveryServices.slice(0, 8).map((svc, i) => (

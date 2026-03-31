@@ -177,6 +177,9 @@ export interface Promotion {
   is_active: boolean;
   is_vip?: boolean;
   merchant_id?: string;
+  type?: 'banner' | 'coupon' | 'flash';
+  target_merchants?: string[];
+  target_products?: string[];
   created_at?: string;
 }
 

@@ -72,13 +72,17 @@ export const AddressSearchInput = ({
         languageCode: "pt-BR",
       };
 
-      // Adiciona locationBias se temos coordenadas do usuário
+      // Adiciona locationBias e origin se temos coordenadas do usuário para ranking e distância
       if (userCoords?.lat && userCoords?.lng) {
         body.locationBias = {
           circle: {
             center: { latitude: userCoords.lat, longitude: userCoords.lng },
-            radius: 10000, // 10km de raio
+            radius: 5000, // 5km de raio de preferência mais forte
           },
+        };
+        body.origin = {
+          latitude: userCoords.lat,
+          longitude: userCoords.lng,
         };
       }
 
@@ -89,7 +93,7 @@ export const AddressSearchInput = ({
           headers: {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": GMAPS_KEY,
-            "X-Goog-FieldMask": "suggestions.placePrediction.text,suggestions.placePrediction.placeId,suggestions.placePrediction.structuredFormat",
+            "X-Goog-FieldMask": "suggestions.placePrediction.text,suggestions.placePrediction.placeId,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.distanceMeters",
           },
           body: JSON.stringify(body),
         }
@@ -99,6 +103,7 @@ export const AddressSearchInput = ({
         .map((s: any) => ({
           description: s.placePrediction?.text?.text || "",
           place_id: s.placePrediction?.placeId || "",
+          distanceMeters: s.placePrediction?.distanceMeters || 0,
           structured_formatting: {
             main_text: s.placePrediction?.structuredFormat?.mainText?.text || "",
             secondary_text: s.placePrediction?.structuredFormat?.secondaryText?.text || "",
@@ -120,6 +125,15 @@ export const AddressSearchInput = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  /**
+   * Formata a distância de forma amigável
+   */
+  const formatDistance = (meters: number) => {
+    if (!meters) return null;
+    if (meters < 1000) return `${Math.round(meters)}m`;
+    return `${(meters / 1000).toFixed(1)}km`;
   };
 
   /**
@@ -248,8 +262,23 @@ export const AddressSearchInput = ({
                   <span className="material-symbols-outlined" style={{ fontSize: "16px", color: "#ffd900" }}>location_on</span>
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: "13px", color: "#f8fafc", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {s.structured_formatting?.main_text || s.description}
+                  <div style={{ fontWeight: 700, fontSize: "13px", color: "#f8fafc", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {s.structured_formatting?.main_text || s.description}
+                    </span>
+                    {s.distanceMeters > 0 && (
+                      <span style={{ 
+                        fontSize: "9px", 
+                        background: "rgba(255,255,255,0.06)", 
+                        color: "rgba(255,255,255,0.4)", 
+                        padding: "2px 6px", 
+                        borderRadius: "6px",
+                        fontWeight: 800,
+                        flexShrink: 0
+                      }}>
+                        {formatDistance(s.distanceMeters)}
+                      </span>
+                    )}
                   </div>
                   {s.structured_formatting?.secondary_text && (
                     <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>

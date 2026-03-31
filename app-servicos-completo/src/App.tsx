@@ -4556,6 +4556,7 @@ function App() {
                   <AddressSearchInput
                     placeholder="Busque rua, nÃƒºmero, bairro..."
                     initialValue={newAddrStreet}
+                    userCoords={userLocation?.lat && userLocation?.lng ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                     onSelect={(place: any) => {
                       setNewAddrStreet(place.formatted_address || "");
                       // Tenta extrair cidade se disponível
