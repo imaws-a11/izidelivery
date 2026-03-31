@@ -20,12 +20,11 @@ interface PromotionStudioProps {
 type PromoType = 'banner' | 'coupon' | 'flash';
 
 export default function PromotionStudio({ merchantId = null, userRole, onClose, isModal = false }: PromotionStudioProps) {
-  const { fetchPromotions, promotionsList, stats, appSettings, setAppSettings, handleSaveAppSettings } = useAdmin();
+  const { fetchPromotions, promotionsList, stats, appSettings, setAppSettings } = useAdmin();
   
   const [activeTab, setActiveTab] = useState<PromoType>('coupon');
   const [showForm, setShowForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [loadingItems, setLoadingItems] = useState(false);
   
   // Flash Offer States
   const [flashOffers, setFlashOffers] = useState<any[]>([]);
@@ -108,8 +107,8 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
     return p.merchant_id === null; 
   });
 
-  const banners = filteredPromos.filter(p => p.image_url && !p.coupon_code && !p.is_vip);
-  const coupons = filteredPromos.filter(p => p.coupon_code && !p.is_vip);
+  const banners = filteredPromos.filter(p => (p.image_url || p.type === 'banner') && !p.coupon_code);
+  const coupons = filteredPromos.filter(p => (p.coupon_code || p.type === 'coupon'));
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -251,7 +250,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
     }
   };
 
-  const resetForm = (type: PromoType) => {
+  const resetForm = () => {
     setFormData({
       id: '',
       title: '',
@@ -337,7 +336,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
           </div>
           <div className="flex items-center gap-4">
              <button 
-                onClick={() => { resetForm(activeTab); setShowForm(true); }}
+                onClick={() => { resetForm(); setShowForm(true); }}
                 className="bg-primary text-slate-950 px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all"
              >
                 Novo Item
@@ -539,6 +538,24 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                         className="size-8 rounded-xl bg-white/5 border-white/10 text-emerald-500 focus:ring-emerald-500 transition-all" 
                                     />
                                 </label>
+
+                                <label className="flex-1 flex items-center justify-between p-6 bg-white/5 border border-white/5 rounded-[32px] cursor-pointer group hover:bg-white/10 transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="size-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                                            <span className="material-symbols-outlined">stars</span>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-black text-amber-500">Exclusivo Black</p>
+                                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest text-amber-500/60">Somente membros VIP</p>
+                                        </div>
+                                    </div>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.is_vip}
+                                        onChange={e => setFormData({...formData, is_vip: e.target.checked})}
+                                        className="size-8 rounded-xl bg-white/5 border-white/10 text-amber-500 focus:ring-amber-500 transition-all" 
+                                    />
+                                </label>
                              </div>
 
                              <div className="md:col-span-2 space-y-2">
@@ -610,10 +627,16 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent p-8 flex flex-col justify-end">
                                     <h4 className="text-xl font-black italic uppercase tracking-tighter text-white">{item.title}</h4>
                                     <p className="text-xs font-bold text-slate-400 mt-1">{item.description}</p>
+                                    {item.is_vip && (
+                                        <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 border border-amber-500/30 rounded-full">
+                                            <span className="material-symbols-outlined text-[14px] text-amber-500" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
+                                            <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Exclusivo Izi Black</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="absolute top-6 right-6 flex gap-2">
                                      <button onClick={() => openEdit(item, 'banner')} className="size-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white hover:bg-primary hover:text-slate-950 transition-all"><span className="material-symbols-outlined text-lg">edit</span></button>
-                                     <button onClick={() => handleDelete(item.id, 'banner')} className="size-10 rounded-xl bg-rose-500/20 backdrop-blur-md flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all"><span className="material-symbols-outlined text-lg">delete</span></button>
+                                      <button onClick={() => handleDelete(item.id!, 'banner')} className="size-10 rounded-xl bg-rose-500/20 backdrop-blur-md flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all"><span className="material-symbols-outlined text-lg">delete</span></button>
                                 </div>
                             </div>
                             <div className="p-8 flex items-center justify-between">
@@ -649,6 +672,12 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                             </div>
                             <div className="space-y-4">
                                 <h5 className="text-xl font-black text-white italic uppercase tracking-tighter">{item.title}</h5>
+                                {item.is_vip && (
+                                   <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full mb-1 w-fit">
+                                       <span className="material-symbols-outlined text-[14px] text-amber-500" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
+                                       <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Exclusivo Izi Black</span>
+                                   </div>
+                                )}
                                 <p className="text-xs font-bold text-slate-500 line-clamp-2">{item.description}</p>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -666,7 +695,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                             <div className="flex items-center justify-between pt-4 border-t border-white/5">
                                 <div className="flex items-center gap-3">
                                      <button onClick={() => openEdit(item, 'coupon')} className="text-slate-500 hover:text-primary transition-colors uppercase font-black text-[9px] tracking-widest">Editar</button>
-                                     <button onClick={() => handleDelete(item.id, 'coupon')} className="text-slate-500 hover:text-rose-500 transition-colors uppercase font-black text-[9px] tracking-widest">Excluir</button>
+                                      <button onClick={() => handleDelete(item.id!, 'coupon')} className="text-slate-500 hover:text-rose-500 transition-colors uppercase font-black text-[9px] tracking-widest">Excluir</button>
                                 </div>
                                 <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${item.is_active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-800 text-slate-500'}`}>
                                     {item.is_active ? 'Ativo' : 'Pausado'}
@@ -712,7 +741,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                      </div>
                                      <div className="flex gap-2">
                                          <button onClick={() => openEdit(item, 'flash')} className="size-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all"><span className="material-symbols-outlined">edit</span></button>
-                                         <button onClick={() => handleDelete(item.id, 'flash')} className="size-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all"><span className="material-symbols-outlined">delete</span></button>
+                                          <button onClick={() => handleDelete(item.id!, 'flash')} className="size-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all"><span className="material-symbols-outlined">delete</span></button>
                                      </div>
                                 </div>
                             </div>

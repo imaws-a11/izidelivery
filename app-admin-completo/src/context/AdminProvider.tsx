@@ -558,7 +558,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchAuditLogs = useCallback(async () => {
     setIsLoadingList(true);
     try {
-      const { data } = await supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(100);
+      const { data } = await supabase.from('audit_logs_delivery').select('*').order('created_at', { ascending: false }).limit(100);
       if (data) setAuditLogsList(data as AuditLog[]);
     } finally {
       setIsLoadingList(false);
