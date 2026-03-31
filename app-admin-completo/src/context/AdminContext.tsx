@@ -37,6 +37,8 @@ export interface AdminContextType {
   usersList: User[];
   driversList: Driver[];
   allOrders: Order[];
+  dashboardOrders: Order[];
+  setDashboardOrders: (orders: Order[]) => void;
   myDriversList: Driver[];
   merchantsList: Merchant[];
   productsList: Product[];
