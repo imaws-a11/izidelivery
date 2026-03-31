@@ -1007,6 +1007,20 @@ function App() {
     }
   };
 
+  const calculateDeliveryFee = () => {
+    let shop = selectedShop;
+    if (!shop && cart.length > 0) {
+      const merchantId = cart[0].merchant_id || cart[0].store_id;
+      shop = ESTABLISHMENTS.find(e => e.id === merchantId);
+    }
+    if (!shop) return 0;
+    if (shop.freeDelivery === true || shop.free_delivery === true) return 0;
+    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+    const minOrderIziBlack = globalSettings?.izi_black_min_order_free_shipping || 50;
+    if (isIziBlackMembership && subtotal >= minOrderIziBlack) return 0;
+    return Number(globalSettings?.base_fee || 5.0);
+  };
+
   const handlePlaceOrder = async (useCoins: boolean = false) => {
     if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
     if (!userId) { alert("Faça login para continuar."); return; }
@@ -1029,13 +1043,15 @@ function App() {
     
     const coinValue = globalSettings?.izi_coin_value || 0.01;
     const coinDiscount = useCoins ? iziCoins * coinValue : 0;
-    const total = Math.max(0, subtotal - couponDiscount - coinDiscount);
+    const deliveryFee = calculateDeliveryFee();
+    const total = Math.max(0, subtotal + deliveryFee - couponDiscount - coinDiscount);
 
     const orderBase = {
       user_id: userId,
-      merchant_id: selectedShop?.id || null,
+      merchant_id: selectedShop?.id || cart[0]?.merchant_id || null,
       status: "novo",
       total_price: total,
+      delivery_fee: deliveryFee,
       pickup_address: selectedShop?.name || "Endereço do Estabelecimento",
       delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map((i: any) => formatCartItemSummary(i)).join(', ')}`,
       payment_method: paymentMethod,
@@ -8731,6 +8747,7 @@ function App() {
                     setSubView={setSubView}
                     iziCoins={iziCoins}
                     iziCoinValue={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0}
+                    deliveryFee={calculateDeliveryFee()}
                   />
                 </motion.div>
               )}
