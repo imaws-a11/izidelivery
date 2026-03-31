@@ -146,11 +146,14 @@ function App() {
              ) : (
                <>
                   <NavTab id="dashboard" icon="dashboard" label="Home" />
+                   <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
                   <NavTab id="merchants" icon="storefront" label="Lojistas" />
                   <NavTab id="my_studio" icon="inventory_2" label="Estúdios" />
                   <NavTab id="drivers" icon="person_pin_circle" label="Entregadores" />
-                  <NavTab id="users" icon="group" label="Estúdio" />
+                  <NavTab id="users" icon="group" label="Usuários" />
+                   <NavTab id="izi_black" icon="workspace_premium" label="Izi Black VIP" />
                   <NavTab id="promotions" icon="campaign" label="Promoções" />
+                   <NavTab id="financial" icon="bar_chart" label="Financeiro" />
                   <NavTab id="dynamic_rates" icon="payments" label="Taxas" />
                   <NavTab id="audit_logs" icon="history" label="Logs" />
                   <NavTab id="support" icon="support_agent" label="Suporte" />

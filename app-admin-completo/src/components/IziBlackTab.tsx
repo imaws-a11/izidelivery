@@ -1,28 +1,123 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
-import type { Order } from '../lib/types';
+import { supabase } from '../lib/supabase';
+import { toastSuccess, toastError, showConfirm } from '../lib/useToast';
+import { format } from 'date-fns';
+
 
 // Membros Izi Black
 export default function IziBlackTab() {
   const {
     subscriptionOrders, 
     subscriptionOrdersPage, 
-    setSubscriptionOrdersPage, 
     subscriptionOrdersTotalCount, 
     handleConfirmSubscriptionPayment, 
     fetchSubscriptionOrders, 
+    fetchPromotions,
     appSettings,
     setAppSettings,
+    handleSaveAppSettings,
     usersList,
     promotionsList,
     isLoadingList,
     handleDeleteOrder,
-    setActiveTab,
-    setPromoForm,
-    setPromoFormType,
-    setShowPromoForm
   } = useAdmin();
+
+  const [showBenefitModal, setShowBenefitModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [benefitData, setBenefitData] = useState<any>({
+    id: '',
+    title: '',
+    description: '',
+    image_url: '',
+    coupon_code: '',
+    discount_type: 'percent',
+    discount_value: 0,
+    min_order_value: 0,
+    expires_at: '',
+    is_active: true,
+    is_vip: true,
+    target_users: [], // IDs dos usuários selecionados para cashback individual
+  });
+
+  const [userSearch, setUserSearch] = useState('');
+
+  const resetBenefitForm = () => {
+    setBenefitData({
+      id: '',
+      title: '',
+      description: '',
+      image_url: '',
+      coupon_code: '',
+      discount_type: 'percent',
+      discount_value: 0,
+      min_order_value: 0,
+      expires_at: '',
+      is_active: true,
+      is_vip: true,
+      target_users: [],
+    });
+    setUserSearch('');
+  };
+
+  const handleSaveBenefit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const isBanner = !!benefitData.image_url && !benefitData.coupon_code;
+      if (isBanner && !benefitData.image_url) throw new Error('Banner exige imagem');
+      if (!isBanner && !benefitData.coupon_code) throw new Error('CUPOM exige um código');
+
+      const dataToSave = {
+        title: benefitData.title,
+        description: benefitData.description,
+        discount_type: benefitData.discount_type,
+        discount_value: benefitData.discount_percent || 0, // Usando o percent que mapeamos no modal
+        min_order_value: benefitData.min_order_value || 0,
+        expires_at: benefitData.expires_at || null,
+        is_active: benefitData.is_active,
+        is_vip: true,
+        coupon_code: !isBanner ? (benefitData.coupon_code || `VIP_${Date.now()}`).toUpperCase().trim() : null,
+        image_url: isBanner ? benefitData.image_url : null,
+        target_users: benefitData.title === 'Cashback Individual' ? benefitData.target_users : [],
+      };
+
+      const { error } = benefitData.id 
+        ? await supabase.from('promotions_delivery').update(dataToSave).eq('id', benefitData.id)
+        : await supabase.from('promotions_delivery').insert([dataToSave]);
+
+      if (error) throw error;
+
+      // Se alterou o valor do plano no benefício, atualiza a configuração global
+      if (benefitData.min_order_value !== appSettings.iziBlackFee) {
+        const newSettings = { ...appSettings, iziBlackFee: benefitData.min_order_value };
+        setAppSettings(newSettings);
+        await supabase.from('app_settings_delivery').upsert(newSettings);
+      }
+
+      toastSuccess(`Benefício Izi Black ${benefitData.id ? 'atualizado' : 'publicado'}!`);
+      setShowBenefitModal(false);
+      fetchPromotions();
+    } catch (err: any) {
+      toastError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteBenefit = async (id: string) => {
+    if (!await showConfirm({ message: 'Excluir esta recompensa Izi Black?' })) return;
+    try {
+      const { error } = await supabase.from('promotions_delivery').delete().eq('id', id);
+      if (error) throw error;
+      toastSuccess('Recompensa removida');
+      fetchPromotions();
+    } catch (err) {
+      toastError('Erro ao excluir');
+    }
+  };
+
 
   const ORDERS_PER_PAGE = 50;
 
@@ -106,10 +201,14 @@ export default function IziBlackTab() {
               </div>
             </div>
 
-            <div className="p-4 rounded-3xl bg-amber-50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10">
-               <p className="text-[9px] font-bold text-amber-600 dark:text-amber-500/80 uppercase tracking-widest leading-relaxed">
-                 As alterações entram em vigor imediatamente para todos os membros ativos.
-               </p>
+            <div className="pt-4">
+              <button 
+                onClick={handleSaveAppSettings}
+                className="w-full py-4 bg-primary text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-lg">save</span>
+                Salvar Configurações
+              </button>
             </div>
           </div>
         </div>
@@ -119,10 +218,10 @@ export default function IziBlackTab() {
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-3">
               <span className="material-symbols-outlined text-emerald-500">card_giftcard</span>
-              Recompensas e Surpresas VIP
+              Exclusivos Izi Black
             </h3>
             <button 
-              onClick={() => { setPromoFormType('coupon'); setPromoForm({ title:'', description:'', image_url:'', coupon_code:'', discount_type:'percent', discount_value:10, min_order_value:0, max_usage:100, expires_at:'', is_active:true, is_vip:true }); setShowPromoForm(true); setActiveTab('promotions'); }}
+              onClick={() => { resetBenefitForm(); setShowBenefitModal(true); }}
               className="flex items-center gap-2 px-5 py-3 bg-primary text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:brightness-110 transition-all">
               <span className="material-symbols-outlined text-lg">add</span>
               Nova Recompensa
@@ -150,8 +249,11 @@ export default function IziBlackTab() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => { setPromoFormType(p.coupon_code ? 'coupon' : 'banner'); setPromoForm(p); setShowPromoForm(true); setActiveTab('promotions'); }} className="size-9 rounded-xl bg-white dark:bg-slate-700 text-slate-400 hover:text-primary transition-colors flex items-center justify-center shadow-sm">
+                  <button onClick={() => { setBenefitData({ ...p, expires_at: p.expires_at ? format(new Date(p.expires_at), 'yyyy-MM-dd') : '' }); setShowBenefitModal(true); }} className="size-9 rounded-xl bg-white dark:bg-slate-700 text-slate-400 hover:text-primary transition-colors flex items-center justify-center shadow-sm">
                     <span className="material-symbols-outlined text-lg">edit</span>
+                  </button>
+                  <button onClick={() => p.id && handleDeleteBenefit(p.id)} className="size-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center border border-rose-100 dark:border-rose-500/20">
+                    <span className="material-symbols-outlined text-lg">delete</span>
                   </button>
                 </div>
               </div>
@@ -267,6 +369,224 @@ export default function IziBlackTab() {
           </div>
         )}
       </div>
+
+      {/* Benefit Editor Modal */}
+      <AnimatePresence>
+        {showBenefitModal && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl" onClick={() => setShowBenefitModal(false)} />
+            <motion.div 
+              initial={{ opacity:0, scale:0.95 }} 
+              animate={{ opacity:1, scale:1 }}
+              exit={{ opacity:0, scale:0.95 }}
+              className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[48px] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] relative z-10 p-10 border border-slate-200 dark:border-white/5 h-[80vh] flex flex-col font-display"
+            >
+              <div className="flex justify-between items-center mb-10">
+                <div>
+                  <h4 className="text-2xl font-black italic uppercase tracking-tighter dark:text-white">Exclusivos Izi Black</h4>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Configure recompensas exclusivas em tempo real</p>
+                </div>
+                <button onClick={() => setShowBenefitModal(false)} className="size-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-primary flex items-center justify-center transition-all">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar space-y-8 pb-10">
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo de Benefício</label>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {[
+                      { id: 'free_shipping', label: 'Frete Grátis', icon: 'local_shipping', color: 'bg-emerald-500', desc: 'Isenção total na taxa de entrega' },
+                      { id: 'cashback', label: 'Cashback', icon: 'payments', color: 'bg-blue-500', desc: 'Saldo devolvido no saldo' },
+                      { id: 'cashback_ind', label: 'Cashback Individual', icon: 'person_add', color: 'bg-blue-600', desc: 'Cashback para pessoas específicas' },
+                      { id: 'coupon_black', label: 'Cupom Black', icon: 'confirmation_number', color: 'bg-amber-500', desc: 'Cupom de desconto especial' },
+                      { id: 'priority', label: 'Prioridade Izi', icon: 'bolt', color: 'bg-purple-500', desc: 'Entrega e suporte priorizados' },
+                    ].map((type) => (
+                      <button
+                        key={type.id}
+                        type="button"
+                        onClick={() => setBenefitData({
+                          ...benefitData, 
+                          title: type.label, 
+                          description: type.desc,
+                          discount_type: 'percent',
+                          discount_percent: type.label.includes('Cashback') ? 5 : (type.label === 'Cupom Black' ? 10 : 0)
+                        })}
+                        className={`flex flex-col items-center justify-center p-4 rounded-3xl border-2 transition-all gap-2 text-center group ${
+                          benefitData.title === type.label 
+                          ? 'border-primary bg-primary/5 dark:bg-primary/10' 
+                          : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-200 dark:hover:border-slate-700'
+                        }`}
+                      >
+                        <div className={`size-10 rounded-xl ${type.color} text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+                          <span className="material-symbols-outlined text-lg">{type.icon}</span>
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-tight text-slate-900 dark:text-white leading-tight">{type.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Título do Benefício</label>
+                  <input type="text" value={benefitData.title} onChange={e => setBenefitData({...benefitData, title:e.target.value})} placeholder="Ex: Black Friday Izi VIP"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-6 py-4 font-bold dark:text-white" />
+                </div>
+
+                <div className="space-y-4">
+                  <AnimatePresence mode="wait">
+                    {benefitData.title === 'Frete Grátis' ? (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }} 
+                        animate={{ opacity: 1, y: 0 }} 
+                        exit={{ opacity: 0, y: -10 }}
+                        key="shipping"
+                        className="p-8 rounded-[32px] bg-emerald-500/10 border border-emerald-500/20 flex flex-col items-center justify-center text-center gap-4"
+                      >
+                        <div className="size-16 rounded-[24px] bg-emerald-500 text-white flex items-center justify-center shadow-xl shadow-emerald-500/20">
+                          <span className="material-symbols-outlined text-3xl">local_shipping</span>
+                        </div>
+                        <div>
+                          <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">Frete Grátis Ativo</p>
+                          <p className="text-[10px] font-bold text-emerald-700/60 uppercase tracking-widest mt-1">Isenção total para membros premium</p>
+                        </div>
+                      </motion.div>
+                    ) : benefitData.title === 'Prioridade Izi' ? (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }} 
+                        animate={{ opacity: 1, y: 0 }} 
+                        exit={{ opacity: 0, y: -10 }}
+                        key="priority"
+                        className="p-8 rounded-[32px] bg-purple-500/10 border border-purple-500/20 flex flex-col items-center justify-center text-center gap-4"
+                      >
+                        <div className="size-16 rounded-[24px] bg-purple-500 text-white flex items-center justify-center shadow-xl shadow-purple-500/20">
+                          <span className="material-symbols-outlined text-3xl">bolt</span>
+                        </div>
+                        <div>
+                          <p className="text-xl font-black text-purple-600 dark:text-purple-400">Prioridade Izi Ativa</p>
+                          <p className="text-[10px] font-bold text-purple-700/60 uppercase tracking-widest mt-1">Suporte e entregas priorizadas</p>
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }} 
+                        animate={{ opacity: 1, y: 0 }} 
+                        exit={{ opacity: 0, y: -10 }}
+                        key="value_config"
+                        className="space-y-4"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between ml-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Valor do Benefício</label>
+                            
+                            {benefitData.title === 'Cashback' ? (
+                              <div className="px-4 py-1.5 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-100 dark:border-blue-500/20">
+                                 <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Apenas Porcentagem (%)</span>
+                              </div>
+                            ) : (
+                              <div className="flex bg-slate-50 dark:bg-slate-800/50 rounded-xl p-1 border border-slate-100 dark:border-white/5">
+                                <button 
+                                  type="button" 
+                                  onClick={() => setBenefitData({...benefitData, discount_type: 'percent'})}
+                                  className={`px-4 py-1.5 text-[10px] font-black rounded-lg transition-all ${benefitData.discount_type === 'percent' ? 'bg-white dark:bg-slate-700 shadow-lg text-primary' : 'text-slate-400 opacity-50'}`}
+                                >
+                                  %
+                                </button>
+                                <button 
+                                  type="button" 
+                                  onClick={() => setBenefitData({...benefitData, discount_type: 'fixed'})}
+                                  className={`px-4 py-1.5 text-[10px] font-black rounded-lg transition-all ${benefitData.discount_type === 'fixed' ? 'bg-white dark:bg-slate-700 shadow-lg text-primary' : 'text-slate-400 opacity-50'}`}
+                                >
+                                  R$
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          <div className="relative">
+                            <input type="number" step="0.01" value={benefitData.discount_percent || 0} 
+                              onChange={e => setBenefitData({...benefitData, discount_percent:parseFloat(e.target.value)})}
+                              className={`w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-6 py-4 font-black dark:text-white text-xl ${benefitData.title.includes('Cashback') ? 'pr-14' : ''}`} 
+                            />
+                            {benefitData.title.includes('Cashback') && (
+                              <span className="absolute right-6 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">%</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {benefitData.title === 'Cashback Individual' && (
+                          <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                            <div className="flex items-center justify-between ml-1">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Selecionar Membros VIP ({benefitData.target_users?.length || 0})</label>
+                              <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-xs text-slate-400">search</span>
+                                <input 
+                                  type="text" 
+                                  placeholder="Filtrar por nome..." 
+                                  value={userSearch}
+                                  onChange={e => setUserSearch(e.target.value)}
+                                  className="bg-transparent border-none text-[10px] font-bold uppercase tracking-tight focus:ring-0 p-0 w-32"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 gap-2 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar">
+                              {usersList
+                                .filter(u => u.is_izi_black && (u.name?.toLowerCase().includes(userSearch.toLowerCase()) || !userSearch))
+                                .map(user => (
+                                  <label key={user.id} className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all border ${
+                                    benefitData.target_users?.includes(user.id) 
+                                      ? 'bg-blue-500/10 border-blue-500/30' 
+                                      : 'bg-slate-50 dark:bg-slate-800/40 border-slate-100 dark:border-white/5 hover:border-slate-200'
+                                  }`}>
+                                    <div className="flex items-center gap-3">
+                                      <div className={`size-8 rounded-lg flex items-center justify-center font-black text-[10px] ${
+                                        benefitData.target_users?.includes(user.id) ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                                      }`}>
+                                        {user.name?.[0]?.toUpperCase() || 'U'}
+                                      </div>
+                                      <div>
+                                        <p className="text-xs font-black text-slate-700 dark:text-slate-200">{user.name || 'Sem nome'}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase">{user.phone || 'Sem telefone'}</p>
+                                      </div>
+                                    </div>
+                                    <input 
+                                      type="checkbox" 
+                                      className="sr-only"
+                                      checked={benefitData.target_users?.includes(user.id)}
+                                      onChange={() => {
+                                        const current = benefitData.target_users || [];
+                                        const next = current.includes(user.id) 
+                                          ? current.filter((id: string) => id !== user.id)
+                                          : [...current, user.id];
+                                        setBenefitData({ ...benefitData, target_users: next });
+                                      }}
+                                    />
+                                    <div className={`size-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                                      benefitData.target_users?.includes(user.id) ? 'bg-blue-500 border-blue-500' : 'border-slate-200 dark:border-slate-700'
+                                    }`}>
+                                      {benefitData.target_users?.includes(user.id) && <span className="material-symbols-outlined text-white text-xs">check</span>}
+                                    </div>
+                                  </label>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              <div className="pt-8 flex gap-4 border-t border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900">
+                <button onClick={() => setShowBenefitModal(false)} type="button" className="flex-1 py-5 rounded-[24px] bg-slate-100 dark:bg-slate-800 font-black tracking-widest text-[10px] uppercase dark:text-slate-400">Descartar</button>
+                <button onClick={handleSaveBenefit} disabled={isSaving} className="flex-[2] py-5 rounded-[24px] bg-primary text-slate-900 font-black tracking-widest text-[10px] uppercase shadow-xl shadow-primary/20 hover:brightness-110 active:scale-95 transition-all">
+                  Ativar agora
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

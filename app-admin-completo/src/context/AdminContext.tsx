@@ -243,6 +243,7 @@ export interface AdminContextType {
   handleSeedCategories: () => Promise<void>;
   savePromotion: (promo: any) => Promise<void>;
   autoSavePromo: (updatedPromo: any) => void;
+  handleSaveAppSettings: () => Promise<void>;
 }
 
 export const AdminContext = createContext<AdminContextType | null>(null);
