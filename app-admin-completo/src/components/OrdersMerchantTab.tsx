@@ -81,9 +81,16 @@ export default function OrdersMerchantTab() {
 
   const parseOrderAddress = (fullAddress: string) => {
     const parts = (fullAddress || '').split('| ITENS:');
+    const rawItems = parts[1] ? parts[1].split(',').map(i => i.trim()).filter(Boolean) : [];
+    
+    // Tenta limpar preços da string para exibição na lista legada
+    const cleanItems = rawItems.map(item => {
+        return item.replace(/\(R\$.*?\)/g, '').trim();
+    });
+
     return {
       address: parts[0]?.trim(),
-      items: parts[1] ? parts[1].split(',').map(i => i.trim()).filter(Boolean) : []
+      items: cleanItems
     };
   };
 
@@ -470,17 +477,107 @@ export default function OrdersMerchantTab() {
                           <div>
                               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 ml-1">Itens do Pedido</h4>
                               <div className="space-y-3">
-                                  {parseOrderAddress(selectedOrderDetails.delivery_address).items.length > 0 ? (
-                                      parseOrderAddress(selectedOrderDetails.delivery_address).items.map((item: string, idx: number) => (
-                                          <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                                              <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                                  <span className="material-symbols-outlined text-primary text-xl">fastfood</span>
+                                  {selectedOrderDetails.items && Array.isArray(selectedOrderDetails.items) && selectedOrderDetails.items.length > 0 ? (
+                                      <>
+                                          {selectedOrderDetails.items.map((it: any, idx: number) => (
+                                              <div key={idx} className="flex justify-between items-start p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 group hover:border-primary/20 transition-all">
+                                                  <div className="flex items-start gap-4">
+                                                       <div className="size-8 rounded-lg bg-white dark:bg-slate-900 flex items-center justify-center text-[10px] font-black text-primary border border-slate-100 dark:border-slate-800 group-hover:scale-110 transition-transform">
+                                                           {it.quantity || 1}x
+                                                       </div>
+                                                       <div>
+                                                           <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{it.name || it.product_name || 'Produto'}</p>
+                                                           {it.options && it.options.length > 0 && (
+                                                               <p className="text-[10px] text-slate-400 font-medium italic">
+                                                                   + {it.options.map((opt: any) => opt.name).join(', ')}
+                                                               </p>
+                                                           )}
+                                                       </div>
+                                                  </div>
+                                                  <div className="text-right">
+                                                      <p className="text-sm font-black text-slate-900 dark:text-white">
+                                                          R$ {Number((it.price || 0) * (it.quantity || 1)).toFixed(2).replace('.', ',')}
+                                                      </p>
+                                                      {it.quantity > 1 && (
+                                                          <p className="text-[9px] font-bold text-slate-400 uppercase">
+                                                              Un: R$ {Number(it.price || 0).toFixed(2).replace('.', ',')}
+                                                          </p>
+                                                      )}
+                                                  </div>
                                               </div>
-                                              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{item}</p>
+                                          ))}
+
+                                          {/* Financial Summary */}
+                                          <div className="mt-6 p-6 rounded-3xl bg-slate-100/50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-700/50 space-y-3">
+                                               <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                   <span>Subtotal</span>
+                                                   <span>R$ {Number(selectedOrderDetails.total_price - (selectedOrderDetails.delivery_fee || 0) + (selectedOrderDetails.discount || 0)).toFixed(2).replace('.', ',')}</span>
+                                               </div>
+                                               {selectedOrderDetails.delivery_fee > 0 && (
+                                                   <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                       <span>Taxa de Entrega</span>
+                                                       <span className="text-blue-500 font-black">+ R$ {Number(selectedOrderDetails.delivery_fee).toFixed(2).replace('.', ',')}</span>
+                                                   </div>
+                                               )}
+                                               {selectedOrderDetails.discount > 0 && (
+                                                   <div className="flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                       <div className="flex items-center gap-1">
+                                                           <span>Desconto Aplicado</span>
+                                                           {selectedOrderDetails.coupon_code && (
+                                                               <span className="px-1.5 py-0.5 bg-rose-50 text-rose-500 rounded border border-rose-100 text-[8px] font-black">{selectedOrderDetails.coupon_code}</span>
+                                                           )}
+                                                       </div>
+                                                       <span className="text-rose-500 font-black">- R$ {Number(selectedOrderDetails.discount).toFixed(2).replace('.', ',')}</span>
+                                                   </div>
+                                               )}
+                                               <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                                                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Líquido</span>
+                                                   <span className="text-xl font-black text-primary italic">R$ {Number(selectedOrderDetails.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                               </div>
                                           </div>
-                                      ))
+                                      </>
+                                  ) : parseOrderAddress(selectedOrderDetails.delivery_address).items.length > 0 ? (
+                                      <div className="space-y-3">
+                                          {parseOrderAddress(selectedOrderDetails.delivery_address).items.map((item: string, idx: number) => (
+                                              <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                                                  <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                      <span className="material-symbols-outlined text-primary text-xl">fastfood</span>
+                                                  </div>
+                                                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{item}</p>
+                                              </div>
+                                          ))}
+
+                                          {/* Resumo Financeiro Legado */}
+                                          <div className="mt-6 p-6 rounded-3xl bg-slate-100/50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-700/50 space-y-3">
+                                               <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                   <span>Subtotal</span>
+                                                   <span>R$ {Number(selectedOrderDetails.total_price - (selectedOrderDetails.delivery_fee || 0) + (selectedOrderDetails.discount || 0)).toFixed(2).replace('.', ',')}</span>
+                                               </div>
+                                               {selectedOrderDetails.delivery_fee > 0 && (
+                                                   <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                       <span>Taxa de Entrega</span>
+                                                       <span className="text-blue-500 font-black">+ R$ {Number(selectedOrderDetails.delivery_fee).toFixed(2).replace('.', ',')}</span>
+                                                   </div>
+                                               )}
+                                               {selectedOrderDetails.discount > 0 && (
+                                                   <div className="flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                        <div className="flex items-center gap-1">
+                                                            <span>Desconto</span>
+                                                            {selectedOrderDetails.coupon_code && (
+                                                                <span className="px-1.5 py-0.5 bg-rose-50 text-rose-500 rounded border border-rose-100 text-[8px] font-black">{selectedOrderDetails.coupon_code}</span>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-rose-500 font-black">- R$ {Number(selectedOrderDetails.discount).toFixed(2).replace('.', ',')}</span>
+                                                   </div>
+                                               )}
+                                               <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                                                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Líquido</span>
+                                                   <span className="text-xl font-black text-primary italic">R$ {Number(selectedOrderDetails.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                               </div>
+                                          </div>
+                                      </div>
                                   ) : (
-                                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 border-dashed text-center">
+                                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 border-dashed text-center opacity-60">
                                           <p className="text-xs font-bold text-slate-400">Detalhes dos itens não disponíveis</p>
                                       </div>
                                   )}
