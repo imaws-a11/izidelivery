@@ -94,6 +94,7 @@ export interface Merchant {
   scheduling_priority?: 'exclusive' | 'global';
   opening_hours?: Record<string, { active: boolean; open: string; close: string }>;
   free_delivery?: boolean;
+  estimated_time?: string;
   created_at: string;
   updated_at?: string;
 }
@@ -113,6 +114,7 @@ export interface MerchantProfile {
   is_open?: boolean;
   store_type?: string;
   free_delivery?: boolean;
+  estimated_time?: string;
   password?: string;
 }
 

@@ -457,7 +457,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                                       img: data.avatar_url || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop",
                                       tag: data.segment || data.type || "Restaurante",
                                       rating: "5.0",
-                                      time: "30-45 min",
+                                      time: data.estimated_time || "30-45 min",
                                       freeDelivery: data.free_delivery || false,
                                       service_fee: data.service_fee || 5.0,
                                       type: data.type || "restaurant"

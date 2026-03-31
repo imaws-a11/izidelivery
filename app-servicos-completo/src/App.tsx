@@ -1542,7 +1542,7 @@ function App() {
           isOpen,
           rating: "4.9",
           dist: "1.5 km",
-          time: "30-40 min",
+          time: m.estimated_time || "30-45 min",
           img: m.store_logo || "https://images.unsplash.com/photo-1552566626-52f8b828add9?q=80&w=200",
           banner: m.store_banner || "https://images.unsplash.com/photo-1514933651103-005eec06ccc0?q=80&w=800",
           freeDelivery: !!m.free_delivery,

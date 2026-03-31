@@ -125,6 +125,27 @@ export default function MyStoreTab() {
               </div>
               <PremiumToggle active={!!merchantProfile.free_delivery} onClick={() => updateProfileField('free_delivery', !merchantProfile.free_delivery)} color="blue" />
             </div>
+
+            {/* TEMPO DE ENTREGA */}
+            <button 
+              onClick={async () => {
+                const newTime = prompt('Defina o tempo de preparo + entrega (ex: 30-45 min):', merchantProfile.estimated_time || '30-45 min');
+                if (newTime !== null) {
+                  updateProfileField('estimated_time', newTime);
+                }
+              }}
+              className="flex items-center gap-6 px-8 py-6 bg-slate-50 dark:bg-slate-800/50 rounded-[32px] border border-slate-100 dark:border-white/5 shadow-inner hover:bg-slate-100 dark:hover:bg-slate-800 transition-all group/time"
+            >
+              <div className="space-y-1 text-left">
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Preparo + Entrega</p>
+                <p className="text-sm font-black uppercase tracking-widest text-primary">
+                  {merchantProfile.estimated_time || '30-45 min'}
+                </p>
+              </div>
+              <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center group-hover/time:bg-primary/20 transition-colors">
+                <span className="material-symbols-outlined text-primary text-xl">timer</span>
+              </div>
+            </button>
           </div>
         </div>
       </div>
@@ -200,7 +221,7 @@ export default function MyStoreTab() {
                  {[
                    { label: 'Pessoas na Loja', val: Math.floor(Math.random()*40)+10, icon: 'groups' },
                    { label: 'Conversão Média', val: '12.4%', icon: 'ads_click' },
-                   { label: 'Tempo de Preparo', val: '18 min', icon: 'timer' }
+                   { label: 'Preparo + Entrega', val: merchantProfile.estimated_time || '30-45 min', icon: 'timer' }
                  ].map((stat, i) => (
                    <div key={i} className="p-8 bg-white/5 rounded-[40px] border border-white/5 hover:bg-white/[0.08] transition-all group/stat">
                       <div className="flex items-center justify-between mb-4">
