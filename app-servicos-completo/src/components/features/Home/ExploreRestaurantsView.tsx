@@ -1,5 +1,9 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  formatPromotionBenefit,
+  isFreeShippingPromotion,
+} from "../../../lib/promotionUtils";
 
 
 interface ExploreRestaurantsViewProps {
@@ -261,8 +265,12 @@ export const ExploreRestaurantsView = ({
                     <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest">{cpn.title || "Oferta Especial"}</span>
                     <div>
                       <p className="text-3xl font-black text-white leading-none">
-                        {cpn.discount_type === "percent" ? `${cpn.discount_value}%` : `R$ ${cpn.discount_value}`}
-                        <span className="text-base text-zinc-400 ml-1">OFF</span>
+                        {formatPromotionBenefit(cpn, {
+                          includeOffSuffix: false,
+                        })}
+                        {!isFreeShippingPromotion(cpn) && (
+                          <span className="text-base text-zinc-400 ml-1">OFF</span>
+                        )}
                       </p>
                       {cpn.coupon_code && (
                         <button onClick={() => { navigator.clipboard.writeText(cpn.coupon_code); setCopiedCoupon(cpn.coupon_code); setTimeout(() => setCopiedCoupon(null), 2000); }} className="mt-2 flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/30 px-3 py-1 rounded-full active:scale-95 transition-all">
