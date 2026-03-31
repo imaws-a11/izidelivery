@@ -56,6 +56,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     cancelationImpact: 0,
     activeOffers: 0,
     couponInvestment: 0
+  });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [usersList, setUsersList] = useState<User[]>([]);
   const [driversList, setDriversList] = useState<Driver[]>([]);
@@ -1250,8 +1251,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showPromoForm, setShowPromoForm, promoFormType, setPromoFormType, promoForm, 
     setPromoForm, promoSaving, promoSaveStatus, expandedLogId, setExpandedLogId, 
     isCompletingOrder, setIsCompletingOrder, newOrderNotification, setNewOrderNotification, 
-    isWalletLoading, showAddCreditModal, setShowAddCreditModal, 
-    creditToAdd, setCreditToAdd, showWalletStatementModal, 
+    isWalletLoading, showAddCreditModal, setShowAddCreditModal, walletTransactions,
+    isAddingCredit, creditToAdd, setCreditToAdd, showWalletStatementModal, 
     setShowWalletStatementModal, isAddingPeakRule, setIsAddingPeakRule, newPeakRule, 
     setNewPeakRule, newZoneData, setNewZoneData, mapSearch, setMapSearch, isGeolocating, 
     setIsGeolocating, mapCenterView, setMapCenterView, fixedGridCenter, setFixedGridCenter, 
