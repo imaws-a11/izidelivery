@@ -314,6 +314,94 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
             </div>
           </section>
 
+          {/* ITENS DO PEDIDO */}
+          <section className="px-2 space-y-4">
+            <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em]">Itens do Pedido</h2>
+            <div className="bg-white/5 border border-white/5 rounded-[32px] p-6 space-y-4">
+              {selectedItem.items && Array.isArray(selectedItem.items) && selectedItem.items.length > 0 ? (
+                selectedItem.items.map((it: any, idx: number) => (
+                  <div key={idx} className="flex justify-between items-start pb-4 border-b border-white/5 last:pb-0 last:border-0">
+                    <div className="flex items-start gap-4">
+                      <div className="size-8 rounded-lg bg-yellow-400/20 flex items-center justify-center text-[10px] font-black text-yellow-500 border border-yellow-400/10 shrink-0">
+                        {it.quantity || 1}x
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white leading-tight">{it.name || it.product_name || 'Produto'}</p>
+                        {it.options && it.options.length > 0 && (
+                          <p className="text-[10px] text-zinc-500 font-medium italic mt-1">
+                            + {it.options.map((opt: any) => opt.name).join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-black text-white">
+                        R$ {Number((it.price || 0) * (it.quantity || 1)).toFixed(2).replace('.', ',')}
+                      </p>
+                      {it.quantity > 1 && (
+                        <p className="text-[9px] font-bold text-zinc-500 uppercase mt-0.5">
+                          Un: R$ {Number(it.price || 0).toFixed(2).replace('.', ',')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="opacity-60 text-center py-2">
+                  <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Sem itens registrados</p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* RESUMO FINANCEIRO */}
+          <section className="px-2 space-y-4">
+            <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em]">Resumo Financeiro</h2>
+            <div className="bg-white/5 border border-white/5 rounded-[32px] p-6 space-y-4">
+              <div className="flex justify-between text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                <span>Subtotal</span>
+                <span className="text-zinc-300">R$ {Number((selectedItem.total_price || 0) - (selectedItem.delivery_fee || 0) + (selectedItem.discount || 0)).toFixed(2).replace('.', ',')}</span>
+              </div>
+              
+              {selectedItem.delivery_fee > 0 && (
+                <div className="flex justify-between text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                  <span>Taxa de Entrega</span>
+                  <span className="text-yellow-400 font-black">+ R$ {Number(selectedItem.delivery_fee).toFixed(2).replace('.', ',')}</span>
+                </div>
+              )}
+              
+              {selectedItem.discount > 0 && (
+                <div className="flex justify-between items-center text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                  <div className="flex items-center gap-2">
+                    <span>Descontos</span>
+                    {selectedItem.coupon_code && (
+                      <span className="px-1.5 py-0.5 bg-rose-500/20 text-rose-400 rounded border border-rose-500/20 text-[8px] font-black">{selectedItem.coupon_code}</span>
+                    )}
+                  </div>
+                  <span className="text-rose-400 font-black">- R$ {Number(selectedItem.discount).toFixed(2).replace('.', ',')}</span>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-white/10 flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Total Pago</span>
+                <span className="text-2xl font-black text-white italic tracking-tighter">R$ {Number(selectedItem.total_price || 0).toFixed(2).replace('.', ',')}</span>
+              </div>
+              
+              <div className="pt-2 flex flex-col gap-1 items-end">
+                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[10px]">check_circle</span>
+                  Pago via {String(selectedItem.payment_method || 'Pix').toUpperCase()}
+                </span>
+                {selectedItem.payment_status === 'pending' && (
+                  <span className="text-[9px] font-black uppercase tracking-widest text-amber-500 flex items-center gap-1 animate-pulse mt-1">
+                    <span className="material-symbols-outlined text-[10px]">schedule</span>
+                    Aguardando Confirmação
+                  </span>
+                )}
+              </div>
+            </div>
+          </section>
+
           {/* AJUDA */}
           <button
             onClick={() => setSubView("order_support")}

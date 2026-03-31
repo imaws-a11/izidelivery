@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "../../../lib/supabase";
 
 interface HomeViewProps {
   userLevel: number;
@@ -110,6 +111,31 @@ export const HomeView: React.FC<HomeViewProps> = ({
   setTab,
 }) => {
   const [activeBannerIndex, setActiveBannerIndex] = React.useState(0);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<{ establishments: any[], products: any[] }>({ establishments: [], products: [] });
+
+  // Busca Inteligente
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchQuery.length >= 3) {
+        setIsSearching(true);
+        try {
+          const { data, error } = await supabase.rpc('search_all_izi', { search_query: searchQuery });
+          if (!error && data) {
+            setSearchResults(data);
+          }
+        } catch (err) {
+          console.error("Erro na busca inteligente:", err);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults({ establishments: [], products: [] });
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   // Auto-scroll banners
   React.useEffect(() => {
@@ -331,19 +357,182 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </section>
 
         <div className="px-5 -mt-6 relative z-30 space-y-12 pb-12">
-          {/* SEARCH */}
           <div className="relative group shadow-2xl shadow-black/40">
             <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 group-focus-within:text-yellow-400 transition-colors text-xl">search</span>
+              {isSearching ? (
+                <div className="size-5 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <span className="material-symbols-outlined text-zinc-500 group-focus-within:text-yellow-400 transition-colors text-xl">search</span>
+              )}
             </div>
             <input
               className="w-full bg-zinc-900/90 backdrop-blur-xl border border-white/5 rounded-2xl py-4.5 pl-14 pr-12 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 transition-all text-sm font-semi-bold"
-              placeholder="O que você deseja pedir hoje?"
+              placeholder="Pesquisar lojas ou produtos..."
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery.length > 0 && (
+              <button 
+                onClick={() => setSearchQuery("")}
+                className="absolute inset-y-0 right-4 flex items-center text-zinc-500 hover:text-white"
+              >
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
+            )}
           </div>
+
+          {/* RESULTADOS DA BUSCA INTELIGENTE */}
+          <AnimatePresence>
+            {searchQuery.length >= 1 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute inset-x-0 top-full mt-4 z-[100] bg-zinc-950 border border-white/10 rounded-[32px] shadow-[0_24px_80px_rgba(0,0,0,0.9)] overflow-hidden"
+              >
+                <div className="max-h-[60vh] overflow-y-auto no-scrollbar p-6 space-y-8">
+                  {/* LOJAS ENCONTRADAS */}
+                  {searchResults.establishments.length > 0 && (
+                    <section>
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-4 px-2">Lojas</h4>
+                      <div className="space-y-2">
+                        {searchResults.establishments.map((shop) => (
+                          <motion.div
+                            key={shop.id}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => {
+                              const shopData = ESTABLISHMENTS.find(e => e.id === shop.id) || shop;
+                              handleShopClick(shopData);
+                              setSearchQuery("");
+                            }}
+                            className="flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-colors cursor-pointer group"
+                          >
+                            <div className="size-12 rounded-xl overflow-hidden bg-zinc-900 border border-white/5">
+                              <img src={shop.img} className="size-full object-cover" alt={shop.name} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h5 className="text-sm font-black text-white group-hover:text-yellow-400 transition-colors uppercase italic">{shop.name}</h5>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                 <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">{shop.tag || "Restaurante"}</p>
+                                 <span className="size-1 rounded-full bg-zinc-800" />
+                                 <p className="text-[10px] text-emerald-400 font-black uppercase tracking-tighter shadow-sm">
+                                   {shop.freeDelivery ? "Frete Grátis" : `Frete R$ ${Number(shop.service_fee || 5.90).toFixed(2).replace('.', ',')}`}
+                                 </p>
+                              </div>
+                            </div>
+                            <span className="material-symbols-outlined text-zinc-700">arrow_forward_ios</span>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* PRODUTOS ENCONTRADOS */}
+                  {searchResults.products.length > 0 && (
+                    <section>
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-4 px-2">Produtos</h4>
+                      <div className="grid grid-cols-1 gap-3">
+                        {searchResults.products.map((product) => (
+                          <motion.div
+                            key={product.id}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={async () => {
+                              try {
+                                // Primeiro seleciona a loja
+                                let shop = ESTABLISHMENTS.find(e => e.id === product.merchant_id);
+                                
+                                if (!shop) {
+                                  // Se não estiver no cache (ex: busca global), buscamos no Supabase
+                                  const { data, error } = await supabase
+                                    .from('admin_users')
+                                    .select('*')
+                                    .eq('id', product.merchant_id)
+                                    .single();
+                                    
+                                  if (!error && data) {
+                                    shop = {
+                                      id: data.id,
+                                      name: data.store_name || data.name,
+                                      img: data.avatar_url || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop",
+                                      tag: data.segment || data.type || "Restaurante",
+                                      rating: "5.0",
+                                      time: "30-45 min",
+                                      freeDelivery: data.free_delivery || false,
+                                      service_fee: data.service_fee || 5.0,
+                                      type: data.type || "restaurant"
+                                    };
+                                  }
+                                }
+
+                                if (shop) {
+                                  handleShopClick(shop);
+                                  // Espera um pouco para a vista mudar e então abre o detalhe do produto
+                                  setTimeout(() => {
+                                    setSelectedItem({
+                                      id: product.id,
+                                      name: product.name,
+                                      price: Number(product.price),
+                                      img: product.img,
+                                      desc: product.description,
+                                      merchant_id: product.merchant_id,
+                                      merchant_name: product.merchant_name
+                                    });
+                                    setSubView("product_detail");
+                                  }, 300);
+                                } else {
+                                  showToast("Loja não disponível no momento", "error");
+                                }
+                              } catch (err) {
+                                console.error("Erro ao abrir produto:", err);
+                                showToast("Erro ao abrir produto", "error");
+                              }
+                              setSearchQuery("");
+                            }}
+                            className="flex gap-4 p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-yellow-400/30 transition-all cursor-pointer group"
+                          >
+                            <div className="size-16 rounded-xl overflow-hidden bg-zinc-900 shrink-0">
+                              <img src={product.img} className="size-full object-cover" alt={product.name} />
+                            </div>
+                            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                              <h5 className="text-xs font-black text-white group-hover:text-yellow-400 transition-colors uppercase leading-tight line-clamp-2">{product.name}</h5>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-sm font-black text-white italic">R$ {Number(product.price).toFixed(2).replace('.', ',')}</span>
+                                <span className="text-[8px] font-black text-zinc-500 uppercase tracking-tighter truncate">em {product.merchant_name}</span>
+                              </div>
+                            </div>
+                            <div className="size-8 rounded-full bg-yellow-400 flex items-center justify-center self-center shrink-0">
+                               <span className="material-symbols-outlined text-black font-black text-sm">add</span>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* NENHUM RESULTADO */}
+                  {!isSearching && searchQuery.length >= 3 && searchResults.establishments.length === 0 && searchResults.products.length === 0 && (
+                    <div className="py-12 flex flex-col items-center gap-4 text-center">
+                      <div className="size-16 rounded-full bg-zinc-900 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
+                      </div>
+                      <div>
+                        <p className="text-white font-black text-sm uppercase italic">Nenhum resultado para "{searchQuery}"</p>
+                        <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-widest">Tente buscar por outro termo ou categoria</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {isSearching && (
+                     <div className="py-12 flex flex-col items-center gap-4">
+                        <div className="size-10 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                        <p className="text-[10px] text-zinc-500 font-black uppercase tracking-[0.2em]">Buscando no Izi...</p>
+                     </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* ACOMPANHAMENTO EM TEMPO REAL - LIVE ACTIVITY STYLE */}
           {activeOrder && (

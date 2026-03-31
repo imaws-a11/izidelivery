@@ -25,7 +25,7 @@ export const RestaurantMenuView: React.FC<RestaurantMenuViewProps> = ({
     rating: "4.9",
     tag: "Artesanal • Premium",
     time: "20-30 min",
-    freeDelivery: true,
+    freeDelivery: false,
     img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1000",
     banner: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1200",
     categories: [

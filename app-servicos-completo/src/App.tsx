@@ -502,11 +502,11 @@ function App() {
       setView("app");
       window.history.replaceState({ view: "app", tab: "home", subView: "none" }, "");
       
-      fetchMyOrders(user.uid);
-      fetchWalletBalance(user.uid);
-      fetchSavedCards(user.uid);
-      fetchSavedAddresses(user.uid);
-      fetchCartData(user.uid);
+      fetchMyOrders(userId!);
+      fetchWalletBalance(userId!);
+      fetchSavedCards(userId!);
+      fetchSavedAddresses(userId!);
+      fetchCartData(userId!);
       fetchCoupons();
       fetchBeveragePromo();
     } else if (!authInitLoading) {
@@ -540,17 +540,19 @@ function App() {
               'pendente': 'O lojista recebeu seu pedido! 🥳',
               'aceito': 'O estabelecimento aceitou seu pedido! 🥳',
               'confirmado': 'Pedido confirmado! O preparo começou. ✅',
-              'preparando': 'Seu pedido está sendo preparado com carinho! Ã°Å¸³',
+              'preparando': 'Seu pedido está sendo preparado com carinho! 🥗',
               'no_preparo': 'Seu pedido já está no preparo! 🥗',
-              'waiting_driver': 'Pedido aceito! Estão buscando um entregador. 🛵',
+              'waiting_driver': 'Pedido aceito! Buscando o melhor entregador para você. 🛵',
               'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. 📦',
-              'a_caminho': 'O motoboy aceitou e está indo coletar seu pedido! Ã°Å¸Ã¯¸',
-              'picked_up': 'Pedido coletado! O motoboy está iniciando a entrega. Ã°Å¸Å¡â‚¬',
-              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! Ã°Å¸â€ºµ',
-              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. Ã°Å¸',
-              'no_local': 'O motoboy chegou ao seu endereço! Ã°Å¸â€â€',
-              'concluido': 'Pedido entregue com sucesso! Bom apetite. Ã¢Å“¨',
-              'cancelado': 'Ah não! Seu pedido foi cancelado. Ã¢Å¡ Ã¯¸'
+              'saiu_para_coleta': 'O motoboy aceitou e está indo retirar seu pedido! 🛵',
+              'picked_up': 'Pedido coletado! O motoboy iniciou a entrega para você. 🚀',
+              'a_caminho': 'Motoboy a caminho! Sua entrega está em rota. 🛵',
+              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! 🛵',
+              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. 🛵',
+              'no_local': 'O motoboy chegou ao seu endereço! 🔔',
+              'concluido': 'Pedido entregue com sucesso! Bom apetite. ✨',
+              'cancelado': 'Ah não! Seu pedido foi cancelado. ⚠️',
+              'recusado': 'Desculpe, o estabelecimento não pôde aceitar o pedido agora. ⚠️'
             };
 
             const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
@@ -1030,9 +1032,12 @@ function App() {
     // Se o valor mínimo para frete grátis for maior que 0 e o usuário for IZI Black
     if (isIziBlackMembership && subtotal >= minOrderIziBlack && minOrderIziBlack > 0) return 0;
     
-    // Se for IZI Black mas não atingiu o mínimo, aplica a taxa base
-    // OU se o mínimo for 0, o benefício de frete grátis é desabilitado por padrão (opcional dependendo da regra de negócio)
+    // 3. Taxa individual do estabelecimento cadastrada no banco
+    if (shop.service_fee !== undefined && shop.service_fee !== null) {
+      return Number(shop.service_fee);
+    }
     
+    // Fallback: Taxa base global
     return Number(globalSettings?.base_fee || 5.90);
   };
 
@@ -5999,7 +6004,7 @@ function App() {
                            </div>
                            <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Izi Surprise</h4>
                         </div>
-                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Como membro nível 3, você recebe mimos exclusivos todos os meses. Fique atento Ãƒ s suas notificaçÃƒµes!</p>
+                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Como membro nível 3, você recebe mimos exclusivos todos os meses. Fique atento às suas notificações!</p>
                       </div>
                     )}
                   </div>
@@ -6013,7 +6018,7 @@ function App() {
           {/* Integration Links */}
           <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="py-10 px-7 space-y-2">
             {[
-              { icon: 'military_tech', title: 'Izi Battle Pass', sub: 'MissÃƒµes e Ranking Global', action: () => { setShowIziBlackCard(false); setSubView("quest_center"); }, active: true },
+              { icon: 'military_tech', title: 'Izi Battle Pass', sub: 'Missões e Ranking Global', action: () => { setShowIziBlackCard(false); setSubView("quest_center"); }, active: true },
               { icon: 'workspace_premium', title: 'Próximas Recompensas', sub: 'O que vem por aí', action: () => setShowMasterPerks(true), active: true },
             ].map((item, i) => (
               <Fragment key={i}>
@@ -6036,7 +6041,7 @@ function App() {
           </motion.section>
 
           <div className="text-center pt-8 pb-4">
-            <p className="text-[8px] font-black text-white/[0.06] uppercase tracking-[0.5em] italic">Izi Black Ã‚· Membro Fundador desde 2024</p>
+            <p className="text-[8px] font-black text-white/[0.06] uppercase tracking-[0.5em] italic">Izi Black · Membro Fundador desde 2024</p>
           </div>
         </main>
       </div>
