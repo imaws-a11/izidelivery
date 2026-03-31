@@ -4946,7 +4946,7 @@ function App() {
           <section>
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Meus CartÃƒµes</h2>
-              <button onClick={() => { setPaymentsOrigin("profile"); setSubView("payments"); }}
+              <button onClick={() => { setPaymentsOrigin("profile"); setSubView("mobility_payment"); }}
                 className="text-yellow-400 text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity">
                 Gerenciar
               </button>
@@ -4987,7 +4987,7 @@ function App() {
                   </div>
                 </div>
               ))}
-              <button onClick={() => { setPaymentsOrigin("profile"); setSubView("payments"); }}
+              <button onClick={() => { setPaymentsOrigin("profile"); setSubView("mobility_payment"); }}
                 className="min-w-[120px] h-40 border border-dashed border-zinc-900 rounded-2xl flex flex-col items-center justify-center gap-2 shrink-0 active:scale-95 transition-all hover:border-yellow-400/20 group">
                 <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors text-2xl">add</span>
                 <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-500 transition-colors">Novo Cartão</span>
@@ -7652,7 +7652,7 @@ function App() {
 
                    <div className="bg-zinc-900/40 border border-white/5 p-7 rounded-[40px] space-y-8 shadow-2xl">
                       {/* PAGAMENTO */}
-                      <div className="flex items-center gap-5 cursor-pointer group" onClick={() => { setPaymentsOrigin("checkout"); setSubView("payments"); }}>
+                      <div className="flex items-center gap-5 cursor-pointer group" onClick={() => { setPaymentsOrigin("checkout"); setSubView("mobility_payment"); }}>
                          <div className="size-14 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-500/20 transition-all">
                             <span className="material-symbols-outlined text-blue-400 text-2xl">credit_card</span>
                          </div>
@@ -7785,7 +7785,12 @@ function App() {
       <div className="absolute inset-0 z-[115] bg-black flex flex-col hide-scrollbar overflow-y-auto">
         {/* Header imersivo */}
         <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md px-6 py-8 flex items-center gap-5 border-b border-white/5">
-          <button onClick={() => navigateSubView("taxi_wizard")} className="size-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-90 transition-all shadow-xl">
+          <button onClick={() => {
+            if (transitData.type === 'van') navigateSubView("van_wizard");
+            else if (transitData.type === 'utilitario') navigateSubView("shipping_details");
+            else if (transitData.vehicleCategory?.includes('Fiorino') || transitData.vehicleCategory?.includes('Caminhão')) navigateSubView("freight_wizard");
+            else navigateSubView("taxi_wizard");
+          }} className="size-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-90 transition-all shadow-xl">
             <span className="material-symbols-outlined text-lg">arrow_back_ios_new</span>
           </button>
           <div className="flex flex-col text-left">
@@ -8214,7 +8219,7 @@ function App() {
             style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
             Tentar Novamente
           </button>
-          <button onClick={() => { setPaymentsOrigin("checkout"); setSubView("payments"); }}
+          <button onClick={() => { setPaymentsOrigin("checkout"); setSubView("mobility_payment"); }}
             className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-zinc-900 text-zinc-500 hover:border-yellow-400/20 hover:text-yellow-400 transition-all active:scale-95">
             Trocar Forma de Pagamento
           </button>
