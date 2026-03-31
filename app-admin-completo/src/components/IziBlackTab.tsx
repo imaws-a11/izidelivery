@@ -34,6 +34,7 @@ export default function IziBlackTab() {
     coupon_code: '',
     discount_type: 'percent',
     discount_value: 0,
+    discount_percent: 0,
     min_order_value: 0,
     expires_at: '',
     is_active: true,
@@ -52,6 +53,7 @@ export default function IziBlackTab() {
       coupon_code: '',
       discount_type: 'percent',
       discount_value: 0,
+      discount_percent: 0,
       min_order_value: 0,
       expires_at: '',
       is_active: true,
@@ -67,18 +69,18 @@ export default function IziBlackTab() {
     try {
       const isBanner = !!benefitData.image_url && !benefitData.coupon_code;
       if (isBanner && !benefitData.image_url) throw new Error('Banner exige imagem');
-      if (!isBanner && !benefitData.coupon_code) throw new Error('CUPOM exige um código');
+      if (benefitData.title === 'Cupom Black' && !benefitData.coupon_code) throw new Error('CUPOM exige um código');
 
       const dataToSave = {
         title: benefitData.title,
         description: benefitData.description,
         discount_type: benefitData.discount_type,
-        discount_value: benefitData.discount_percent || 0, // Usando o percent que mapeamos no modal
-        min_order_value: benefitData.min_order_value || 0,
+        discount_value: benefitData.title === 'Cupom Black' && benefitData.discount_type === 'fixed' ? Number(benefitData.discount_percent || 0) : Number(benefitData.discount_percent || 0),
+        min_order_value: Number(benefitData.min_order_value || 0),
         expires_at: benefitData.expires_at || null,
         is_active: benefitData.is_active,
         is_vip: true,
-        coupon_code: !isBanner ? (benefitData.coupon_code || `VIP_${Date.now()}`).toUpperCase().trim() : null,
+        coupon_code: benefitData.title === 'Cupom Black' ? (benefitData.coupon_code || `VIP_${Date.now()}`).toUpperCase().trim() : null,
         image_url: isBanner ? benefitData.image_url : null,
         target_users: benefitData.title === 'Cashback Individual' ? benefitData.target_users : [],
       };
@@ -172,9 +174,9 @@ export default function IziBlackTab() {
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço da Assinatura (Mês)</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
-                <input type="number" step="0.01" 
-                  value={appSettings.iziBlackFee}
-                  onChange={e => setAppSettings({ ...appSettings, iziBlackFee: parseFloat(e.target.value) || 0 })}
+                <input type="text" inputMode="decimal"
+                  value={appSettings.iziBlackFee?.toString().replace('.', ',')}
+                  onChange={e => setAppSettings({ ...appSettings, iziBlackFee: e.target.value.replace(',', '.') as any })}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl pl-10 pr-5 py-4 font-black text-lg focus:ring-2 focus:ring-primary dark:text-white" />
               </div>
             </div>
@@ -183,9 +185,9 @@ export default function IziBlackTab() {
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Taxa de Cashback (%)</label>
               <div className="relative">
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">%</span>
-                <input type="number" 
-                  value={appSettings.iziBlackCashback}
-                  onChange={e => setAppSettings({ ...appSettings, iziBlackCashback: parseInt(e.target.value) || 0 })}
+                <input type="text" inputMode="decimal"
+                  value={appSettings.iziBlackCashback?.toString().replace('.', ',')}
+                  onChange={e => setAppSettings({ ...appSettings, iziBlackCashback: e.target.value.replace(',', '.') as any })}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 font-black text-lg focus:ring-2 focus:ring-primary dark:text-white" />
               </div>
             </div>
@@ -194,9 +196,9 @@ export default function IziBlackTab() {
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Min. Pedido Frete Grátis</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
-                <input type="number" 
-                  value={appSettings.iziBlackMinOrderFreeShipping}
-                  onChange={e => setAppSettings({ ...appSettings, iziBlackMinOrderFreeShipping: parseInt(e.target.value) || 0 })}
+                <input type="text" inputMode="decimal"
+                  value={appSettings.iziBlackMinOrderFreeShipping?.toString().replace('.', ',')}
+                  onChange={e => setAppSettings({ ...appSettings, iziBlackMinOrderFreeShipping: e.target.value.replace(',', '.') as any })}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl pl-10 pr-5 py-4 font-black text-lg focus:ring-2 focus:ring-primary dark:text-white" />
               </div>
             </div>
@@ -249,7 +251,7 @@ export default function IziBlackTab() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => { setBenefitData({ ...p, expires_at: p.expires_at ? format(new Date(p.expires_at), 'yyyy-MM-dd') : '' }); setShowBenefitModal(true); }} className="size-9 rounded-xl bg-white dark:bg-slate-700 text-slate-400 hover:text-primary transition-colors flex items-center justify-center shadow-sm">
+                  <button onClick={() => { setBenefitData({ ...p, discount_percent: p.discount_value, expires_at: p.expires_at ? format(new Date(p.expires_at), 'yyyy-MM-dd') : '' }); setShowBenefitModal(true); }} className="size-9 rounded-xl bg-white dark:bg-slate-700 text-slate-400 hover:text-primary transition-colors flex items-center justify-center shadow-sm">
                     <span className="material-symbols-outlined text-lg">edit</span>
                   </button>
                   <button onClick={() => p.id && handleDeleteBenefit(p.id)} className="size-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center border border-rose-100 dark:border-rose-500/20">
@@ -427,11 +429,19 @@ export default function IziBlackTab() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Título do Benefício</label>
-                  <input type="text" value={benefitData.title} onChange={e => setBenefitData({...benefitData, title:e.target.value})} placeholder="Ex: Black Friday Izi VIP"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-6 py-4 font-bold dark:text-white" />
-                </div>
+                {benefitData.title === 'Cupom Black' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Código Único (CUPOM)</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={benefitData.coupon_code} 
+                      onChange={e => setBenefitData({...benefitData, coupon_code: e.target.value.toUpperCase()})}
+                      className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-6 py-4 font-black text-xl text-amber-500 tracking-[0.2em] focus:ring-2 focus:ring-amber-500 transition-all"
+                      placeholder="EX: VIP20OFF"
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-4">
                   <AnimatePresence mode="wait">
@@ -479,7 +489,7 @@ export default function IziBlackTab() {
                           <div className="flex items-center justify-between ml-1">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Valor do Benefício</label>
                             
-                            {benefitData.title === 'Cashback' ? (
+                            {benefitData.title.includes('Cashback') ? (
                               <div className="px-4 py-1.5 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-100 dark:border-blue-500/20">
                                  <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Apenas Porcentagem (%)</span>
                               </div>
@@ -503,12 +513,14 @@ export default function IziBlackTab() {
                             )}
                           </div>
                           <div className="relative">
-                            <input type="number" step="0.01" value={benefitData.discount_percent || 0} 
-                              onChange={e => setBenefitData({...benefitData, discount_percent:parseFloat(e.target.value)})}
+                            <input type="text" inputMode="decimal" value={benefitData.discount_percent?.toString().replace('.', ',') || ''} 
+                              onChange={e => setBenefitData({...benefitData, discount_percent: e.target.value.replace(',', '.')})}
                               className={`w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-6 py-4 font-black dark:text-white text-xl ${benefitData.title.includes('Cashback') ? 'pr-14' : ''}`} 
                             />
-                            {benefitData.title.includes('Cashback') && (
+                            {benefitData.title.includes('Cashback') ? (
                               <span className="absolute right-6 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">%</span>
+                            ) : (
+                              <span className="absolute right-6 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">{benefitData.discount_type === 'percent' ? '%' : 'R$'}</span>
                             )}
                           </div>
                         </div>

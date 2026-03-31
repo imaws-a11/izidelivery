@@ -153,8 +153,8 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       title: formData.title,
       description: formData.description,
       discount_type: formData.discount_type,
-      discount_value: formData.discount_value,
-      min_order_value: formData.min_order_value,
+      discount_value: Number(formData.discount_value || 0),
+      min_order_value: Number(formData.min_order_value || 0),
       max_usage: formData.max_usage,
       expires_at: formData.expires_at || null,
       is_active: formData.is_active,
@@ -187,7 +187,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
   const saveFlashOffer = async () => {
     if (!formData.merchant_ids.length) throw new Error('Selecione pelo menos um lojista');
     if (!formData.selected_product_ids.length) throw new Error('Selecione pelo menos um produto');
-    if (formData.discount_value <= 0) throw new Error('Informe um desconto válido');
+    if (Number(formData.discount_value) <= 0) throw new Error('Informe um desconto válido');
 
     const expiresAt = formData.expires_at
       ? new Date(formData.expires_at).toISOString()
@@ -201,10 +201,10 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       let discountPercent = 0;
 
       if (formData.discount_type === 'fixed') {
-        discountedPrice = Math.max(originalPrice - formData.discount_value, 0);
+        discountedPrice = Math.max(originalPrice - Number(formData.discount_value || 0), 0);
         discountPercent = originalPrice > 0 ? Math.round((1 - (discountedPrice / originalPrice)) * 100) : 0;
       } else {
-        discountPercent = Math.min(formData.discount_value, 100);
+        discountPercent = Math.min(Number(formData.discount_value || 0), 100);
         discountedPrice = Number((originalPrice * (1 - (discountPercent / 100))).toFixed(2));
       }
 
@@ -488,10 +488,10 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                      Valor do Desconto
                                 </label>
                                 <input 
-                                    type="number" 
-                                    step="0.01"
-                                    value={formData.discount_value}
-                                    onChange={e => setFormData({...formData, discount_value: parseFloat(e.target.value)})}
+                                    type="text" 
+                                    inputMode="decimal"
+                                    value={formData.discount_value?.toString().replace('.', ',')}
+                                    onChange={e => setFormData({...formData, discount_value: e.target.value.replace(',', '.')})}
                                     className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-black text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
                                 />
                              </div>
@@ -501,12 +501,12 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                      {activeTab === 'banner' ? 'Preço da Assinatura (R$)' : 'Pedido Mínimo (R$)'}
                                 </label>
                                 <input 
-                                    type="number" 
-                                    step="0.01"
-                                    value={formData.min_order_value || 0}
-                                    onChange={e => setFormData({...formData, min_order_value: parseFloat(e.target.value)})}
+                                    type="text" 
+                                    inputMode="decimal"
+                                    value={formData.min_order_value?.toString().replace('.', ',') || ''}
+                                    onChange={e => setFormData({...formData, min_order_value: e.target.value.replace(',', '.')})}
                                     className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-black text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
-                                    placeholder="0.00"
+                                    placeholder="0,00"
                                 />
                              </div>
 

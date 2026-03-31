@@ -1,5 +1,3 @@
-import React, { useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 
 // Configurações do Sistema
@@ -150,10 +148,11 @@ export default function SettingsTab() {
                 <input
                   className="w-full px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-violet-300 text-sm font-bold dark:text-white pr-14"
                   type="number"
-                  min="1"
+                  min="0.1"
                   max="100"
+                  step="0.1"
                   value={appSettings.radius}
-                  onChange={(e) => setAppSettings({ ...appSettings, radius: parseInt(e.target.value) || 1 })}
+                  onChange={(e) => setAppSettings({ ...appSettings, radius: parseFloat(e.target.value) || 1 })}
                 />
                 <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">km</span>
               </div>
@@ -185,9 +184,10 @@ export default function SettingsTab() {
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400 font-black text-sm">R$</span>
               <input
                 className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-10 pr-4 py-3.5 font-black text-2xl text-emerald-600 focus:ring-2 focus:ring-emerald-300 shadow-inner"
-                type="text"
+                type="number"
+                step="0.01"
                 value={appSettings.baseFee}
-                onChange={(e) => setAppSettings({ ...appSettings, baseFee: e.target.value })}
+                onChange={(e) => setAppSettings({ ...appSettings, baseFee: parseFloat(e.target.value) || 0 })}
               />
             </div>
           </div>
@@ -197,9 +197,9 @@ export default function SettingsTab() {
             <div className="relative">
               <input
                 className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-primary focus:ring-2 focus:ring-primary/30 shadow-inner"
-                type="number" min="0" max="50"
+                type="number" min="0" max="50" step="0.01"
                 value={appSettings.appCommission}
-                onChange={(e) => setAppSettings({ ...appSettings, appCommission: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setAppSettings({ ...appSettings, appCommission: parseFloat(e.target.value) || 0 })}
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-primary font-black text-sm">%</span>
             </div>
@@ -210,9 +210,9 @@ export default function SettingsTab() {
             <div className="relative">
               <input
                 className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-blue-600 focus:ring-2 focus:ring-blue-300 shadow-inner"
-                type="number" min="0" max="20"
+                type="number" min="0" max="20" step="0.01"
                 value={appSettings.serviceFee}
-                onChange={(e) => setAppSettings({ ...appSettings, serviceFee: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setAppSettings({ ...appSettings, serviceFee: parseFloat(e.target.value) || 0 })}
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-500 font-black text-sm">%</span>
             </div>

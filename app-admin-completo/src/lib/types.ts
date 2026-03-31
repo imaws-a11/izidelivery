@@ -289,7 +289,7 @@ export interface AppSettings {
   openingTime: string;
   closingTime: string;
   radius: number;
-  baseFee: string;
+  baseFee: number;
   appCommission: number;
   serviceFee: number;
   smsNotifications: boolean;

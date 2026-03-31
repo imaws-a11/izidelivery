@@ -56,7 +56,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     cancelationImpact: 0,
     activeOffers: 0,
     couponInvestment: 0
-  });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [usersList, setUsersList] = useState<User[]>([]);
   const [driversList, setDriversList] = useState<Driver[]>([]);
@@ -117,7 +116,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     openingTime: '08:00',
     closingTime: '23:00',
     radius: 15,
-    baseFee: '7,50',
+    baseFee: 7.50,
     appCommission: 12,
     serviceFee: 2,
     smsNotifications: true,
@@ -607,6 +606,33 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error('Erro ao carregar preview do lojista:', err);
     }
   }, []);
+
+  // Global data loading once userRole is determined
+  useEffect(() => {
+    if (!userRole) return;
+
+    // Common fetches
+    fetchAppSettings();
+    
+    if (userRole === 'admin') {
+      fetchStats();
+      fetchUsers();
+      fetchDrivers();
+      fetchMerchants();
+      fetchCategories();
+      fetchPromotions();
+      fetchDynamicRates();
+      fetchAllOrders();
+      fetchSubscriptionOrders();
+    } else if (userRole === 'merchant') {
+      fetchMyDrivers();
+      fetchProducts();
+      fetchMenuCategories();
+      fetchAllOrders();
+      fetchPromotions();
+      fetchMyDedicatedSlots();
+    }
+  }, [userRole, fetchAppSettings, fetchStats, fetchUsers, fetchDrivers, fetchMerchants, fetchCategories, fetchPromotions, fetchDynamicRates, fetchAllOrders, fetchSubscriptionOrders, fetchMyDrivers, fetchProducts, fetchMenuCategories, fetchMyDedicatedSlots]);
 
 
   // Handlers
@@ -1224,8 +1250,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showPromoForm, setShowPromoForm, promoFormType, setPromoFormType, promoForm, 
     setPromoForm, promoSaving, promoSaveStatus, expandedLogId, setExpandedLogId, 
     isCompletingOrder, setIsCompletingOrder, newOrderNotification, setNewOrderNotification, 
-    walletTransactions, isWalletLoading, showAddCreditModal, setShowAddCreditModal, 
-    creditToAdd, setCreditToAdd, isAddingCredit, showWalletStatementModal, 
+    isWalletLoading, showAddCreditModal, setShowAddCreditModal, 
+    creditToAdd, setCreditToAdd, showWalletStatementModal, 
     setShowWalletStatementModal, isAddingPeakRule, setIsAddingPeakRule, newPeakRule, 
     setNewPeakRule, newZoneData, setNewZoneData, mapSearch, setMapSearch, isGeolocating, 
     setIsGeolocating, mapCenterView, setMapCenterView, fixedGridCenter, setFixedGridCenter, 
