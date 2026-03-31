@@ -3,7 +3,13 @@ import { BespokeIcons } from "./lib/BespokeIcons";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "./lib/supabase";
-import { toast, toastSuccess, toastError, toastWarning, showConfirm } from "./lib/useToast";
+import {
+  toast,
+  toastSuccess,
+  toastError,
+  toastWarning,
+  showConfirm,
+} from "./lib/useToast";
 import { useGoogleMapsLoader } from "./hooks/useGoogleMapsLoader";
 import { GMAPS_KEY } from "./config";
 // Mercado Pago
@@ -29,6 +35,12 @@ import { BeverageOffersView } from "./components/features/Home/BeverageOffersVie
 import { RestaurantMenuView } from "./components/features/Home/RestaurantMenuView";
 import { StoreCatalogView } from "./components/features/Home/StoreCatalogView";
 import { PaymentMethodsView } from "./components/features/Profile/PaymentMethodsView";
+import { MobilityWizard } from "./components/features/Mobility/MobilityWizard";
+import { AddressesView } from "./components/features/AddressesView";
+import { PixPaymentView } from "./components/features/PixPaymentView";
+import { CardPaymentView } from "./components/features/CardPaymentView";
+import { LightningPaymentView } from "./components/features/LightningPaymentView";
+import { BeverageOffersView } from "./components/features/BeverageOffersView";
 
 import { useAuth } from "./hooks/useAuth";
 import type { SavedAddress, Order, Quest } from "./types";
@@ -43,7 +55,7 @@ function App() {
 
   // Carrega a Google Maps API uma única vez para toda a aplicação (singleton)
   useGoogleMapsLoader();
-  
+
   const {
     user,
     userId,
@@ -66,7 +78,7 @@ function App() {
     handleSignUp,
     setIsLoading,
     logout,
-    isAdmin
+    isAdmin,
   } = useAuth();
 
   const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
@@ -77,13 +89,18 @@ function App() {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
   const [depositPixCode, setDepositPixCode] = useState("");
-  const [cartAnimations, setCartAnimations] = useState<{id: string, x: number, y: number, img: string}[]>([]);
+  const [cartAnimations, setCartAnimations] = useState<
+    { id: string; x: number; y: number; img: string }[]
+  >([]);
 
   const triggerCartAnimation = (e: React.MouseEvent, img: string) => {
     const id = Date.now().toString() + Math.random();
-    setCartAnimations(prev => [...prev, { id, x: e.clientX, y: e.clientY, img }]);
+    setCartAnimations((prev) => [
+      ...prev,
+      { id, x: e.clientX, y: e.clientY, img },
+    ]);
     setTimeout(() => {
-      setCartAnimations(prev => prev.filter(a => a.id !== id));
+      setCartAnimations((prev) => prev.filter((a) => a.id !== id));
     }, 800);
   };
 
@@ -138,17 +155,35 @@ function App() {
     | "izi_black_purchase"
     | "card_payment"
   >("none");
-  const [iziBlackOrigin, setIziBlackOrigin] = useState<"home" | "checkout">("home");
-  const [iziBlackStep, setIziBlackStep] = useState<"info" | "payment" | "pix_qr" | "success">("info");
+  const [iziBlackOrigin, setIziBlackOrigin] = useState<"home" | "checkout">(
+    "home",
+  );
+  const [iziBlackStep, setIziBlackStep] = useState<
+    "info" | "payment" | "pix_qr" | "success"
+  >("info");
   const [iziBlackPixCode, setIziBlackPixCode] = useState("");
   const [isUsingCoins, setIsUsingCoins] = useState(false);
 
-  const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; expirationDate: string } | null>(null);
-  const [lightningData, setLightningData] = useState<{ payment_request: string; satoshis: number; btc_price_brl: number } | null>(null);
+  const [pixData, setPixData] = useState<{
+    qrCode: string;
+    copyPaste: string;
+    expirationDate: string;
+  } | null>(null);
+  const [lightningData, setLightningData] = useState<{
+    payment_request: string;
+    satoshis: number;
+    btc_price_brl: number;
+  } | null>(null);
 
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "info" | "warning";
+  } | null>(null);
   const toastTimeoutRef = useRef<any>(null);
-  const showToast = (message: string, type: 'success' | 'info' | 'warning' = 'info') => {
+  const showToast = (
+    message: string,
+    type: "success" | "info" | "warning" = "info",
+  ) => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ message, type });
     toastTimeoutRef.current = setTimeout(() => {
@@ -156,7 +191,7 @@ function App() {
       toastTimeoutRef.current = null;
     }, 4000);
   };
-  const toastError = (message: string) => showToast(message, 'warning');
+  const toastError = (message: string) => showToast(message, "warning");
 
   // --- Izi Elite Client Features ---
   const [userXP, setUserXP] = useState(0);
@@ -164,11 +199,15 @@ function App() {
   const [userLevel] = useState(12);
   const [nextLevelXP] = useState(2500);
   const [isAIOpen, setIsAIOpen] = useState(false);
-  const [schedObsState, setSchedObsState] = useState('');
-  const [schedChatInputState, setSchedChatInputState] = useState('');
-  const [schedMessagesState, setSchedMessagesState] = useState<{id: string; text: string; from: 'user'|'driver'; time: string}[]>([]);
+  const [schedObsState, setSchedObsState] = useState("");
+  const [schedChatInputState, setSchedChatInputState] = useState("");
+  const [schedMessagesState, setSchedMessagesState] = useState<
+    { id: string; text: string; from: "user" | "driver"; time: string }[]
+  >([]);
   const [isSavingObsState, setIsSavingObsState] = useState(false);
-  const [aiMessage, setAiMessage] = useState("Olá! Sou seu assistente Izi. Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?");
+  const [aiMessage, setAiMessage] = useState(
+    "Olá! Sou seu assistente Izi. Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?",
+  );
   const [isIziBlackMembership, setIsIziBlackMembership] = useState(false);
   const [iziCashbackEarned, setIziCashbackEarned] = useState(0);
   const [showIziBlackCard, setShowIziBlackCard] = useState(false);
@@ -181,22 +220,19 @@ function App() {
   const fetchGlobalSettings = useCallback(async () => {
     try {
       const { data } = await supabase
-        .from('admin_settings_delivery')
-        .select('*')
-        .eq('id', '00000000-0000-0000-0000-000000000000')
+        .from("admin_settings_delivery")
+        .select("*")
+        .eq("id", "00000000-0000-0000-0000-000000000000")
         .single();
       if (data) setGlobalSettings(data);
     } catch (e) {}
   }, []);
 
-  const [timeLeft, setTimeLeft] = useState<{h: string, m: string, s: string}>({h: '00', m: '00', s: '00'});
+  const [timeLeft, setTimeLeft] = useState<{ h: string; m: string; s: string }>(
+    { h: "00", m: "00", s: "00" },
+  );
 
-
-
-// Fetch payment methods when entering payments screen
-
-
-
+  // Fetch payment methods when entering payments screen
 
   const [savedCards, setSavedCards] = useState<any[]>([]);
   const [isLoadingCards, setIsLoadingCards] = useState(false);
@@ -204,8 +240,15 @@ function App() {
   const [isShowingMyQR, setIsShowingMyQR] = useState(false);
   const [isScanningQR, setIsScanningQR] = useState(false);
   const [transferTarget, setTransferTarget] = useState<any>(null);
-  const [newCardData, setNewCardData] = useState({ number: "", expiry: "", cvv: "", brand: "Visa" });
-  const [paymentsOrigin, setPaymentsOrigin] = useState<"checkout" | "profile" | "izi_black">("profile");
+  const [newCardData, setNewCardData] = useState({
+    number: "",
+    expiry: "",
+    cvv: "",
+    brand: "Visa",
+  });
+  const [paymentsOrigin, setPaymentsOrigin] = useState<
+    "checkout" | "profile" | "izi_black"
+  >("profile");
 
   const fetchSavedCards = async (uid: string) => {
     if (!uid) return;
@@ -222,11 +265,12 @@ function App() {
         last4: c.last_four,
         mp_token: c.token,
         active: c.is_default,
-        color: c.brand === "Visa"
-          ? "linear-gradient(135deg, #2563eb, #1e40af)"
-          : c.brand === "Amex"
-            ? "linear-gradient(135deg, #047857, #065f46)"
-            : "linear-gradient(135deg, #1e293b, #0f172a)",
+        color:
+          c.brand === "Visa"
+            ? "linear-gradient(135deg, #2563eb, #1e40af)"
+            : c.brand === "Amex"
+              ? "linear-gradient(135deg, #047857, #065f46)"
+              : "linear-gradient(135deg, #1e293b, #0f172a)",
       }));
       setSavedCards(cards);
       // Se tem cartão padrão, define o método de pagamento
@@ -237,16 +281,28 @@ function App() {
   };
   const handleSetPrimaryCard = async (cardId: string) => {
     if (!userId) return;
-    await supabase.from("payment_methods").update({ is_default: false }).eq("user_id", userId);
-    await supabase.from("payment_methods").update({ is_default: true }).eq("id", cardId);
-    setSavedCards((prev: any[]) => prev.map((c: any) => ({ ...c, active: c.id === cardId })));
+    await supabase
+      .from("payment_methods")
+      .update({ is_default: false })
+      .eq("user_id", userId);
+    await supabase
+      .from("payment_methods")
+      .update({ is_default: true })
+      .eq("id", cardId);
+    setSavedCards((prev: any[]) =>
+      prev.map((c: any) => ({ ...c, active: c.id === cardId })),
+    );
     setPaymentMethod("cartao");
   };
 
   const handleDeleteCard = async (cardId: string) => {
     if (!userId) return;
     if (await showConfirm({ message: "Remover este cartão?" })) {
-      await supabase.from("payment_methods").delete().eq("id", cardId).eq("user_id", userId);
+      await supabase
+        .from("payment_methods")
+        .delete()
+        .eq("id", cardId)
+        .eq("user_id", userId);
       const updated = savedCards.filter((c: any) => c.id !== cardId);
       setSavedCards(updated);
       const wasActive = savedCards.find((c: any) => c.id === cardId)?.active;
@@ -276,9 +332,9 @@ function App() {
       }));
       setSavedAddresses(addresses);
       // Sincroniza o local atual se houver um endereço ativo no banco
-      const active = addresses.find(a => a.active);
+      const active = addresses.find((a) => a.active);
       if (active) {
-        setUserLocation(prev => ({ ...prev, address: active.street }));
+        setUserLocation((prev) => ({ ...prev, address: active.street }));
       }
     }
   };
@@ -287,45 +343,52 @@ function App() {
     null,
   );
   const [isAddingAddress, setIsAddingAddress] = useState(false);
-  const [newAddrLabel, setNewAddrLabel] = useState('');
-  const [newAddrStreet, setNewAddrStreet] = useState('');
-  const [newAddrDetails, setNewAddrDetails] = useState('');
-  const [newAddrCity, setNewAddrCity] = useState('');
+  const [newAddrLabel, setNewAddrLabel] = useState("");
+  const [newAddrStreet, setNewAddrStreet] = useState("");
+  const [newAddrDetails, setNewAddrDetails] = useState("");
+  const [newAddrCity, setNewAddrCity] = useState("");
   const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   const resetAddressForm = () => {
-    setNewAddrLabel(''); setNewAddrStreet(''); setNewAddrDetails(''); setNewAddrCity('');
-    setEditingAddress(null); setIsAddingAddress(false);
+    setNewAddrLabel("");
+    setNewAddrStreet("");
+    setNewAddrDetails("");
+    setNewAddrCity("");
+    setEditingAddress(null);
+    setIsAddingAddress(false);
   };
 
   const openEditAddress = (addr: SavedAddress) => {
     setEditingAddress(addr);
-    setNewAddrLabel(addr.label || '');
-    setNewAddrStreet(addr.street || '');
-    setNewAddrDetails(addr.details || '');
-    setNewAddrCity(addr.city || '');
+    setNewAddrLabel(addr.label || "");
+    setNewAddrStreet(addr.street || "");
+    setNewAddrDetails(addr.details || "");
+    setNewAddrCity(addr.city || "");
     setIsAddingAddress(true);
   };
 
   const handleSaveAddress = async () => {
     if (!userId) return;
     if (!newAddrLabel.trim() || !newAddrStreet.trim()) {
-      toastError('Preencha pelo menos o rótulo e a rua.');
+      toastError("Preencha pelo menos o rótulo e a rua.");
       return;
     }
     setIsSavingAddress(true);
     try {
       if (editingAddress) {
-        const { error } = await supabase.from('saved_addresses').update({
-          label: newAddrLabel.trim(),
-          street: newAddrStreet.trim(),
-          details: newAddrDetails.trim() || null,
-          city: newAddrCity.trim() || null,
-        }).eq('id', editingAddress.id);
+        const { error } = await supabase
+          .from("saved_addresses")
+          .update({
+            label: newAddrLabel.trim(),
+            street: newAddrStreet.trim(),
+            details: newAddrDetails.trim() || null,
+            city: newAddrCity.trim() || null,
+          })
+          .eq("id", editingAddress.id);
         if (error) throw error;
-        toastSuccess('Endereço atualizado!');
+        toastSuccess("Endereço atualizado!");
       } else {
-        const { error } = await supabase.from('saved_addresses').insert({
+        const { error } = await supabase.from("saved_addresses").insert({
           user_id: userId,
           label: newAddrLabel.trim(),
           street: newAddrStreet.trim(),
@@ -334,12 +397,12 @@ function App() {
           is_active: savedAddresses.length === 0,
         });
         if (error) throw error;
-        toastSuccess('Endereço salvo com sucesso!');
+        toastSuccess("Endereço salvo com sucesso!");
       }
       resetAddressForm();
       fetchSavedAddresses(userId);
     } catch (e: any) {
-      toastError('Erro ao salvar: ' + e.message);
+      toastError("Erro ao salvar: " + e.message);
     } finally {
       setIsSavingAddress(false);
     }
@@ -348,25 +411,34 @@ function App() {
   const handleDeleteAddress = async (addrId: string | number) => {
     if (!userId) return;
     try {
-      const { error } = await supabase.from('saved_addresses').delete().eq('id', addrId);
+      const { error } = await supabase
+        .from("saved_addresses")
+        .delete()
+        .eq("id", addrId);
       if (error) throw error;
-      toastSuccess('Endereço removido.');
+      toastSuccess("Endereço removido.");
       fetchSavedAddresses(userId);
     } catch (e: any) {
-      toastError('Erro ao remover: ' + e.message);
+      toastError("Erro ao remover: " + e.message);
     }
   };
 
   const handleSetActiveAddress = async (addrId: string | number) => {
     if (!userId) return;
     try {
-      await supabase.from('saved_addresses').update({ is_active: false }).eq('user_id', userId);
-      const { error } = await supabase.from('saved_addresses').update({ is_active: true }).eq('id', addrId);
+      await supabase
+        .from("saved_addresses")
+        .update({ is_active: false })
+        .eq("user_id", userId);
+      const { error } = await supabase
+        .from("saved_addresses")
+        .update({ is_active: true })
+        .eq("id", addrId);
       if (error) throw error;
-      toastSuccess('Endereço padrão atualizado!');
+      toastSuccess("Endereço padrão atualizado!");
       fetchSavedAddresses(userId);
     } catch (e: any) {
-      toastError('Erro ao definir endereço: ' + e.message);
+      toastError("Erro ao definir endereço: " + e.message);
     }
   };
 
@@ -376,8 +448,13 @@ function App() {
     fetchGlobalSettings();
     fetchBeveragePromo();
     const interval = setInterval(fetchMarketData, 20000);
-    const flashChannel = supabase.channel('flash_offers_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'flash_offers' }, fetchFlashOffers)
+    const flashChannel = supabase
+      .channel("flash_offers_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "flash_offers" },
+        fetchFlashOffers,
+      )
       .subscribe();
     return () => {
       clearInterval(interval);
@@ -389,7 +466,9 @@ function App() {
     if (!uid) return;
     const { data } = await supabase
       .from("users_delivery")
-      .select("wallet_balance, is_izi_black, cashback_earned, user_xp, izi_coins, cpf")
+      .select(
+        "wallet_balance, is_izi_black, cashback_earned, user_xp, izi_coins, cpf",
+      )
       .eq("id", uid)
       .single();
     if (data) {
@@ -419,7 +498,7 @@ function App() {
         .select("cart_data")
         .eq("id", uid)
         .single();
-      
+
       if (data && data.cart_data && Array.isArray(data.cart_data)) {
         // Combinar localStorage com DB ou priorizar DB?
         // Priorizamos o banco para manter consistência entre aparelhos
@@ -437,7 +516,10 @@ function App() {
   const updateLocation = (onSuccess?: (address: string) => void) => {
     setUserLocation((prev) => ({ ...prev, loading: true }));
     if (!("geolocation" in navigator)) {
-      setUserLocation({ address: "Geolocalização não disponível", loading: false });
+      setUserLocation({
+        address: "Geolocalização não disponível",
+        loading: false,
+      });
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -461,25 +543,34 @@ function App() {
           if (!address) {
             try {
               const res = await fetch(
-                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GMAPS_KEY}&language=pt-BR&result_type=street_address|route`
+                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GMAPS_KEY}&language=pt-BR&result_type=street_address|route`,
               );
               const data = await res.json();
               if (data.results?.[0]) {
                 address = data.results[0].formatted_address;
               }
-            } catch { /* silent */ }
+            } catch {
+              /* silent */
+            }
           }
 
           // ÃƒÅ¡ltimo fallback: Nominatim
           if (!address) {
             const nomRes = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
             );
             const nomData = await nomRes.json();
-            address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "Localização atual";
+            address =
+              nomData.display_name?.split(",").slice(0, 3).join(",").trim() ||
+              "Localização atual";
           }
 
-          setUserLocation({ address, loading: false, lat: latitude, lng: longitude });
+          setUserLocation({
+            address,
+            loading: false,
+            lat: latitude,
+            lng: longitude,
+          });
           setTransitData((prev) => ({ ...prev, origin: address }));
           if (onSuccess) onSuccess(address);
         } catch {
@@ -487,9 +578,12 @@ function App() {
         }
       },
       () => {
-        setUserLocation({ address: "Permissão de localização negada", loading: false });
+        setUserLocation({
+          address: "Permissão de localização negada",
+          loading: false,
+        });
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000 },
     );
   };
 
@@ -500,8 +594,11 @@ function App() {
   useEffect(() => {
     if (user) {
       setView("app");
-      window.history.replaceState({ view: "app", tab: "home", subView: "none" }, "");
-      
+      window.history.replaceState(
+        { view: "app", tab: "home", subView: "none" },
+        "",
+      );
+
       fetchMyOrders(userId!);
       fetchWalletBalance(userId!);
       fetchSavedCards(userId!);
@@ -524,57 +621,74 @@ function App() {
         (payload) => {
           const newOrder = payload.new as any;
           const oldOrder = payload.old as any;
-          
+
           if (newOrder.user_id !== userIdRef.current) return;
 
           // Se o status mudou, mostrar notificação personalizada
           if (!oldOrder || (oldOrder && newOrder.status !== oldOrder.status)) {
-             fetchMyOrders(userIdRef.current!);
+            fetchMyOrders(userIdRef.current!);
           }
 
           // Se o status mudou, mostrar notificação personalizada
           if (oldOrder && newOrder.status !== oldOrder.status) {
             const statusMessages: Record<string, string> = {
-              'novo': 'Pagamento aprovado! O lojista já recebeu seu pedido. ⚡',
-              'pendente_pagamento': 'Aguardando confirmação do pagamento... 💳',
-              'pendente': 'O lojista recebeu seu pedido! 🥳',
-              'aceito': 'O estabelecimento aceitou seu pedido! 🥳',
-              'confirmado': 'Pedido confirmado! O preparo começou. ✅',
-              'preparando': 'Seu pedido está sendo preparado com carinho! 🥗',
-              'no_preparo': 'Seu pedido já está no preparo! 🥗',
-              'waiting_driver': 'Pedido aceito! Buscando o melhor entregador para você. 🛵',
-              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. 📦',
-              'saiu_para_coleta': 'O motoboy aceitou e está indo retirar seu pedido! 🛵',
-              'picked_up': 'Pedido coletado! O motoboy iniciou a entrega para você. 🚀',
-              'a_caminho': 'Motoboy a caminho! Sua entrega está em rota. 🛵',
-              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! 🛵',
-              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. 🛵',
-              'no_local': 'O motoboy chegou ao seu endereço! 🔔',
-              'concluido': 'Pedido entregue com sucesso! Bom apetite. ✨',
-              'cancelado': 'Ah não! Seu pedido foi cancelado. ⚠️',
-              'recusado': 'Desculpe, o estabelecimento não pôde aceitar o pedido agora. ⚠️'
+              novo: "Pagamento aprovado! O lojista já recebeu seu pedido. ⚡",
+              pendente_pagamento: "Aguardando confirmação do pagamento... 💳",
+              pendente: "O lojista recebeu seu pedido! 🥳",
+              aceito: "O estabelecimento aceitou seu pedido! 🥳",
+              confirmado: "Pedido confirmado! O preparo começou. ✅",
+              preparando: "Seu pedido está sendo preparado com carinho! 🥗",
+              no_preparo: "Seu pedido já está no preparo! 🥗",
+              waiting_driver:
+                "Pedido aceito! Buscando o melhor entregador para você. 🛵",
+              pronto: "Pedido pronto! Aguardando o motoboy para coleta. 📦",
+              saiu_para_coleta:
+                "O motoboy aceitou e está indo retirar seu pedido! 🛵",
+              picked_up:
+                "Pedido coletado! O motoboy iniciou a entrega para você. 🚀",
+              a_caminho: "Motoboy a caminho! Sua entrega está em rota. 🛵",
+              saiu_para_entrega:
+                "Fique atento! Seu pedido saiu para entrega! 🛵",
+              em_rota: "Motoboy a caminho! Prepare-se para receber seu Izi. 🛵",
+              no_local: "O motoboy chegou ao seu endereço! 🔔",
+              concluido: "Pedido entregue com sucesso! Bom apetite. ✨",
+              cancelado: "Ah não! Seu pedido foi cancelado. ⚠️",
+              recusado:
+                "Desculpe, o estabelecimento não pôde aceitar o pedido agora. ⚠️",
             };
 
-            const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
-            showToast(msg, newOrder.status === 'cancelado' ? 'warning' : 'success');
+            const msg =
+              statusMessages[newOrder.status] ||
+              `Status do pedido atualizado: ${newOrder.status}`;
+            showToast(
+              msg,
+              newOrder.status === "cancelado" ? "warning" : "success",
+            );
 
             // Se o pagamento lightning foi confirmado, fechar a tela de pagamento
-            if (newOrder.payment_status === 'paid' && subViewRef.current === "lightning_payment") {
+            if (
+              newOrder.payment_status === "paid" &&
+              subViewRef.current === "lightning_payment"
+            ) {
               setSubView("payment_success");
             }
 
             // Se o pagamento PIX ou outros foram aprovados (status 'novo')
-            if (newOrder.status === 'novo' && (subViewRef.current === "pix_payment" || subViewRef.current === "payment_processing")) {
+            if (
+              newOrder.status === "novo" &&
+              (subViewRef.current === "pix_payment" ||
+                subViewRef.current === "payment_processing")
+            ) {
               setSubView("payment_success");
               fetchMyOrders(userIdRef.current!);
             }
 
             // Abrir tela de avaliação ao concluir (exceto para assinaturas Izi Black)
-            if (newOrder.status === 'concluido') {
+            if (newOrder.status === "concluido") {
               setSelectedItem(newOrder);
-              
+
               setTimeout(() => {
-                if (newOrder.service_type === 'subscription') {
+                if (newOrder.service_type === "subscription") {
                   setShowIziBlackWelcome(true);
                   setSubView("none");
                 } else {
@@ -584,31 +698,61 @@ function App() {
             }
 
             // TransiçÃƒµes automáticas de tela baseadas no status
-            if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
+            if (
+              subViewRef.current === "waiting_merchant" &&
+              [
+                "aceito",
+                "confirmado",
+                "preparando",
+                "pendente",
+                "no_preparo",
+                "pronto",
+                "waiting_driver",
+              ].includes(newOrder.status)
+            ) {
               showToast("Loja aceitou seu pedido! 🥳", "success");
-              setSelectedItem(newOrder); 
+              setSelectedItem(newOrder);
               setTimeout(() => setSubView("active_order"), 1000);
             }
-            if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
+            if (
+              subViewRef.current === "waiting_merchant" &&
+              newOrder.status === "cancelado"
+            ) {
               showToast("Seu pedido foi recusado.", "warning");
               setSubView("none");
               fetchMyOrders(userIdRef.current!);
             }
-            if (subViewRef.current === "waiting_driver" && 
-                ["a_caminho", "aceito", "confirmado", "em_rota", "no_local", "picked_up", "saiu_para_entrega"].includes(newOrder.status)) {
+            if (
+              subViewRef.current === "waiting_driver" &&
+              [
+                "a_caminho",
+                "aceito",
+                "confirmado",
+                "em_rota",
+                "no_local",
+                "picked_up",
+                "saiu_para_entrega",
+              ].includes(newOrder.status)
+            ) {
               setSelectedItem(newOrder);
               setTimeout(() => setSubView("active_order"), 1500);
             }
-            if (subViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {
+            if (
+              subViewRef.current === "waiting_driver" &&
+              newOrder.status === "cancelado"
+            ) {
               setSubView("none");
               fetchMyOrders(userIdRef.current!);
             }
 
-            if (selectedItemRef.current?.id === newOrder.id || !selectedItemRef.current) {
+            if (
+              selectedItemRef.current?.id === newOrder.id ||
+              !selectedItemRef.current
+            ) {
               setSelectedItem(newOrder);
             }
           }
-          
+
           if (userIdRef.current) fetchMyOrders(userIdRef.current);
         },
       )
@@ -618,7 +762,7 @@ function App() {
       supabase.removeChannel(sub);
     };
   }, [userId, subView]);
-  
+
   const fetchMyOrders = async (uid: string) => {
     if (!uid) return;
     const { data } = await supabase
@@ -632,11 +776,11 @@ function App() {
   const fetchCoupons = async () => {
     console.log("[DEBUG] Fetching coupons/banners...");
     const { data } = await supabase
-      .from('promotions_delivery')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
-    
+      .from("promotions_delivery")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+
     if (data) {
       console.log("[DEBUG] Available promotions found:", data.length, data);
       setAvailableCoupons(data);
@@ -647,51 +791,59 @@ function App() {
     try {
       // 1. Buscar Banners específicos para bebidas ou banners gerais ativos
       const { data: banners } = await supabase
-        .from('promotions_delivery')
-        .select('*')
-        .eq('is_active', true)
-        .is('coupon_code', null)
-        .order('created_at', { ascending: false });
-      
+        .from("promotions_delivery")
+        .select("*")
+        .eq("is_active", true)
+        .is("coupon_code", null)
+        .order("created_at", { ascending: false });
+
       if (banners) {
         // Filtra banners que mencionam bebidas no título ou descrição
-        const bevBanners = banners.filter(b => 
-          (b.title?.toLowerCase().includes('bebida') || b.description?.toLowerCase().includes('bebida') ||
-           b.title?.toLowerCase().includes('gelada') || b.description?.toLowerCase().includes('gelada'))
+        const bevBanners = banners.filter(
+          (b) =>
+            b.title?.toLowerCase().includes("bebida") ||
+            b.description?.toLowerCase().includes("bebida") ||
+            b.title?.toLowerCase().includes("gelada") ||
+            b.description?.toLowerCase().includes("gelada"),
         );
-        setBeverageBanners(bevBanners.length > 0 ? bevBanners : banners.slice(0, 1));
+        setBeverageBanners(
+          bevBanners.length > 0 ? bevBanners : banners.slice(0, 1),
+        );
       }
 
       // 2. Buscar Produtos da categoria Bebidas para a tela de ofertas
       const { data: pDeals } = await supabase
-        .from('products_delivery')
-        .select('*')
-        .eq('is_available', true)
-        .eq('category', 'Bebidas')
+        .from("products_delivery")
+        .select("*")
+        .eq("is_available", true)
+        .eq("category", "Bebidas")
         .limit(8);
-      
+
       if (pDeals) {
         const discountPct = globalSettings?.flash_offer_discount || 25;
-        const discountMult = 1 / (1 - (discountPct / 100)); // Calculate back to original price
-        
-        const formatted = pDeals.map(p => ({
+        const discountMult = 1 / (1 - discountPct / 100); // Calculate back to original price
+
+        const formatted = pDeals.map((p) => ({
           id: p.id,
           name: p.name,
           price: p.price,
           oldPrice: p.price * (discountMult || 1.25),
           off: `${discountPct}%`,
-          img: p.image_url || "https://images.unsplash.com/photo-1596753738914-7bc33e08f58b?q=80&w=400",
-          cat: p.category || "Bebidas"
+          img:
+            p.image_url ||
+            "https://images.unsplash.com/photo-1596753738914-7bc33e08f58b?q=80&w=400",
+          cat: p.category || "Bebidas",
         }));
         setBeverageOffers(formatted);
       }
-    } catch (err) {
-    }
+    } catch (err) {}
   }, [globalSettings]);
 
-  const normalizeCpf = (value?: string | null) => `${value || ""}`.replace(/\D/g, "");
+  const normalizeCpf = (value?: string | null) =>
+    `${value || ""}`.replace(/\D/g, "");
   const getBenefitTrackingCpf = () => normalizeCpf(profileCpf || pixCpf || cpf);
-  const getFlashOfferSourceId = (item: any) => item?.flash_offer_id || item?.offer_id || item?.id || null;
+  const getFlashOfferSourceId = (item: any) =>
+    item?.flash_offer_id || item?.offer_id || item?.id || null;
   const normalizeFlashOfferProductKey = (value?: string | null) =>
     String(value || "")
       .normalize("NFD")
@@ -699,7 +851,10 @@ function App() {
       .trim()
       .toLowerCase();
 
-  const hasBenefitBeenUsed = async (sourceType: "coupon" | "flash_offer", sourceId: string) => {
+  const hasBenefitBeenUsed = async (
+    sourceType: "coupon" | "flash_offer",
+    sourceId: string,
+  ) => {
     const filters: string[] = [];
     if (userId) filters.push(`user_id.eq.${userId}`);
 
@@ -740,7 +895,7 @@ function App() {
       return "Este cupom é exclusivo para membros IZI Black.";
     }
 
-    if (coupon.id && await hasBenefitBeenUsed("coupon", coupon.id)) {
+    if (coupon.id && (await hasBenefitBeenUsed("coupon", coupon.id))) {
       return "Este cupom já foi utilizado por este CPF/usuário.";
     }
 
@@ -756,7 +911,11 @@ function App() {
     return null;
   };
 
-  const registerBenefitUsage = async (sourceType: "coupon" | "flash_offer", sourceId: string, orderId?: string) => {
+  const registerBenefitUsage = async (
+    sourceType: "coupon" | "flash_offer",
+    sourceId: string,
+    orderId?: string,
+  ) => {
     const trackedCpf = getBenefitTrackingCpf();
     const { error } = await supabase
       .from("benefit_redemptions_delivery")
@@ -779,14 +938,19 @@ function App() {
       if (couponError) return couponError;
     }
 
-    const flashOfferIds = [...new Set(
-      cart
-        .filter((item: any) => item.is_flash_offer)
-        .map((item: any) => getFlashOfferSourceId(item))
-        .filter(Boolean)
-    )];
+    const flashOfferIds = [
+      ...new Set(
+        cart
+          .filter((item: any) => item.is_flash_offer)
+          .map((item: any) => getFlashOfferSourceId(item))
+          .filter(Boolean),
+      ),
+    ];
     for (const offerId of flashOfferIds) {
-      const flashOfferError = await validateFlashOfferRules({ id: offerId, is_flash_offer: true });
+      const flashOfferError = await validateFlashOfferRules({
+        id: offerId,
+        is_flash_offer: true,
+      });
       if (flashOfferError) return flashOfferError;
     }
 
@@ -802,12 +966,14 @@ function App() {
         .eq("id", appliedCoupon.id);
     }
 
-    const flashOfferIds = [...new Set(
-      cart
-        .filter((item: any) => item.is_flash_offer)
-        .map((item: any) => getFlashOfferSourceId(item))
-        .filter(Boolean)
-    )];
+    const flashOfferIds = [
+      ...new Set(
+        cart
+          .filter((item: any) => item.is_flash_offer)
+          .map((item: any) => getFlashOfferSourceId(item))
+          .filter(Boolean),
+      ),
+    ];
     for (const offerId of flashOfferIds) {
       await registerBenefitUsage("flash_offer", offerId, orderId);
     }
@@ -820,10 +986,10 @@ function App() {
 
     try {
       const { data, error } = await supabase
-        .from('promotions_delivery')
-        .select('*')
-        .eq('coupon_code', code.trim().toUpperCase())
-        .eq('is_active', true)
+        .from("promotions_delivery")
+        .select("*")
+        .eq("coupon_code", code.trim().toUpperCase())
+        .eq("is_active", true)
         .single();
 
       if (error || !data) {
@@ -850,8 +1016,6 @@ function App() {
     }
   };
 
-
-
   const getItemCount = (id: number) =>
     cart.filter((item) => item.id === id).length;
 
@@ -865,9 +1029,9 @@ function App() {
 
       // Verificar se o produto tem adicionais cadastrados no banco
       const { data: groups, error } = await supabase
-        .from('product_options_groups_delivery')
-        .select('id')
-        .eq('product_id', item.id)
+        .from("product_options_groups_delivery")
+        .select("id")
+        .eq("product_id", item.id)
         .limit(1);
 
       if (groups && groups.length > 0) {
@@ -902,10 +1066,12 @@ function App() {
 
       console.log("Produtos recebidos:", products?.length, products?.[0]);
       if (products && products.length > 0) {
-        const activeProductOffers = (flashOffers || []).filter((offer: any) =>
-          offer?.merchant_id === shop.id &&
-          offer?.is_active &&
-          (!offer?.expires_at || new Date(offer.expires_at).getTime() > Date.now())
+        const activeProductOffers = (flashOffers || []).filter(
+          (offer: any) =>
+            offer?.merchant_id === shop.id &&
+            offer?.is_active &&
+            (!offer?.expires_at ||
+              new Date(offer.expires_at).getTime() > Date.now()),
         );
         const offersByProductId = new Map<string, any>();
         const offersByProductName = new Map<string, any>();
@@ -917,7 +1083,9 @@ function App() {
             }
           }
 
-          const productNameKey = normalizeFlashOfferProductKey(offer?.product_name);
+          const productNameKey = normalizeFlashOfferProductKey(
+            offer?.product_name,
+          );
           if (productNameKey && !offersByProductName.has(productNameKey)) {
             offersByProductName.set(productNameKey, offer);
           }
@@ -925,17 +1093,22 @@ function App() {
 
         const grouped: Record<string, any[]> = {};
         products.forEach((p: any) => {
-          const cat = p.category || p.subcategory || (isRestaurant ? "Cardápio" : "Produtos");
+          const cat =
+            p.category ||
+            p.subcategory ||
+            (isRestaurant ? "Cardápio" : "Produtos");
           if (!grouped[cat]) grouped[cat] = [];
           const linkedOffer =
             offersByProductId.get(String(p.id)) ||
             offersByProductName.get(normalizeFlashOfferProductKey(p.name));
-          const discountedPrice = linkedOffer ? Number(linkedOffer.discounted_price) : Number(p.price);
+          const discountedPrice = linkedOffer
+            ? Number(linkedOffer.discounted_price)
+            : Number(p.price);
           const hasLinkedOffer = Boolean(
             linkedOffer &&
             Number.isFinite(discountedPrice) &&
             discountedPrice >= 0 &&
-            discountedPrice < Number(p.price)
+            discountedPrice < Number(p.price),
           );
           grouped[cat].push({
             id: p.id,
@@ -943,7 +1116,9 @@ function App() {
             desc: p.description || "",
             price: hasLinkedOffer ? discountedPrice : p.price,
             oldPrice: hasLinkedOffer ? Number(p.price) : undefined,
-            img: p.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600",
+            img:
+              p.image_url ||
+              "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600",
             merchant_id: shop.id,
             merchant_name: shop.name,
             store: shop.name,
@@ -951,14 +1126,16 @@ function App() {
             flash_offer_id: hasLinkedOffer ? linkedOffer.id : undefined,
           });
         });
-        const categories = Object.entries(grouped).map(([name, items]) => ({ name, items }));
+        const categories = Object.entries(grouped).map(([name, items]) => ({
+          name,
+          items,
+        }));
         setSelectedShop({ ...shop, categories });
       }
     } catch (e) {}
 
     navigateSubView(targetView);
   };
-
 
   const handleApplyCoupon = async (code: string) => {
     if (!code) return;
@@ -986,18 +1163,19 @@ function App() {
     toastSuccess("Cupom aplicado!");
   };
 
-
   const clearCart = async (orderId?: string) => {
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
     const couponDiscount = appliedCoupon
-      ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100)
+      ? appliedCoupon.discount_type === "fixed"
+        ? appliedCoupon.discount_value
+        : (subtotal * appliedCoupon.discount_value) / 100
       : 0;
-    
+
     const total = Math.max(0, subtotal - couponDiscount);
     const coinRate = globalSettings?.izi_coin_rate || 1;
     const earnedCoins = Math.floor(total * coinRate);
-    const finalCoins = isUsingCoins ? earnedCoins : (iziCoins + earnedCoins);
-    
+    const finalCoins = isUsingCoins ? earnedCoins : iziCoins + earnedCoins;
+
     await registerPendingBenefitUsages(orderId);
 
     setCart([]);
@@ -1005,12 +1183,15 @@ function App() {
     setCouponInput("");
     setUserXP((prev: number) => prev + 50);
     setIziCoins(finalCoins);
-    
+
     if (userId) {
-      await supabase.from("users_delivery").update({ 
-        izi_coins: finalCoins,
-        user_xp: (userXP + 50) 
-      }).eq("id", userId);
+      await supabase
+        .from("users_delivery")
+        .update({
+          izi_coins: finalCoins,
+          user_xp: userXP + 50,
+        })
+        .eq("id", userId);
     }
   };
 
@@ -1018,40 +1199,56 @@ function App() {
     let shop = selectedShop;
     if (!shop && cart.length > 0) {
       const merchantId = cart[0].merchant_id || cart[0].store_id;
-      shop = ESTABLISHMENTS.find(e => e.id === merchantId);
+      shop = ESTABLISHMENTS.find((e) => e.id === merchantId);
     }
     if (!shop) return 0;
-    
+
     // 1. Respeitar a configuração do lojista no banco
     if (shop.freeDelivery === true || shop.free_delivery === true) return 0;
-    
+
     // 2. Benefício IZI Black (se aplicável)
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const minOrderIziBlack = Number(globalSettings?.izi_black_min_order_free_shipping || 50);
-    
+    const minOrderIziBlack = Number(
+      globalSettings?.izi_black_min_order_free_shipping || 50,
+    );
+
     // Se o valor mínimo para frete grátis for maior que 0 e o usuário for IZI Black
-    if (isIziBlackMembership && subtotal >= minOrderIziBlack && minOrderIziBlack > 0) return 0;
-    
+    if (
+      isIziBlackMembership &&
+      subtotal >= minOrderIziBlack &&
+      minOrderIziBlack > 0
+    )
+      return 0;
+
     // 3. Taxa individual do estabelecimento cadastrada no banco
     if (shop.service_fee !== undefined && shop.service_fee !== null) {
       return Number(shop.service_fee);
     }
-    
+
     // Fallback: Taxa base global
-    return Number(globalSettings?.base_fee || 5.90);
+    return Number(globalSettings?.base_fee || 5.9);
   };
 
   const handlePlaceOrder = async (useCoins: boolean = false) => {
-    if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
-    if (!userId) { alert("Faça login para continuar."); return; }
-    if (cart.length === 0) { alert("Seu carrinho está vazio."); return; }
+    if (!paymentMethod) {
+      alert("Selecione uma forma de pagamento.");
+      return;
+    }
+    if (!userId) {
+      alert("Faça login para continuar.");
+      return;
+    }
+    if (cart.length === 0) {
+      alert("Seu carrinho está vazio.");
+      return;
+    }
 
     const benefitError = await ensureCartBenefitsAreAvailable();
     if (benefitError) {
       toastError(benefitError);
       return;
     }
-    
+
     setIsUsingCoins(useCoins);
 
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
@@ -1060,11 +1257,14 @@ function App() {
         ? appliedCoupon.discount_value
         : (subtotal * appliedCoupon.discount_value) / 100
       : 0;
-    
+
     const coinValue = globalSettings?.izi_coin_value || 0.01;
     const coinDiscount = useCoins ? iziCoins * coinValue : 0;
     const deliveryFee = calculateDeliveryFee();
-    const total = Math.max(0, subtotal + deliveryFee - couponDiscount - coinDiscount);
+    const total = Math.max(
+      0,
+      subtotal + deliveryFee - couponDiscount - coinDiscount,
+    );
 
     const orderBase = {
       user_id: userId,
@@ -1073,22 +1273,38 @@ function App() {
       total_price: total,
       delivery_fee: deliveryFee,
       pickup_address: selectedShop?.name || "Endereço do Estabelecimento",
-      delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map((i: any) => formatCartItemSummary(i)).join(', ')}`,
+      delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map((i: any) => formatCartItemSummary(i)).join(", ")}`,
       payment_method: paymentMethod,
       service_type: selectedShop?.type || "restaurant",
-      notes: paymentMethod === "dinheiro" && changeFor ? `TROCO PARA: R$ ${changeFor}` : "",
+      notes:
+        paymentMethod === "dinheiro" && changeFor
+          ? `TROCO PARA: R$ ${changeFor}`
+          : "",
     };
 
     try {
       // Ã¢â€â‚¬Ã¢â€â‚¬ PAGAMENTOS DIGITAIS (Pendente Confirmação) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-      const isDigital = ["pix", "cartao", "bitcoin_lightning", "google_pay"].includes(paymentMethod);
-      const initialStatus = isDigital ? "pendente_pagamento" : (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega" ? "waiting_merchant" : "novo");
+      const isDigital = [
+        "pix",
+        "cartao",
+        "bitcoin_lightning",
+        "google_pay",
+      ].includes(paymentMethod);
+      const initialStatus = isDigital
+        ? "pendente_pagamento"
+        : paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega"
+          ? "waiting_merchant"
+          : "novo";
 
       // Ã¢â€â‚¬Ã¢â€â‚¬ PIX (Mercado Pago) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       if (paymentMethod === "pix") {
         setPixConfirmed(false);
         setPixCpf("");
-        setSelectedItem({ total_price: total, merchant_id: selectedShop?.id, merchant_name: selectedShop?.name });
+        setSelectedItem({
+          total_price: total,
+          merchant_id: selectedShop?.id,
+          merchant_name: selectedShop?.name,
+        });
         navigateSubView("pix_payment");
         return;
       }
@@ -1096,25 +1312,33 @@ function App() {
       // Ã¢â€â‚¬Ã¢â€â‚¬ BITCOIN LIGHTNING Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       if (paymentMethod === "bitcoin_lightning") {
         navigateSubView("payment_processing");
-        const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ 
-          ...orderBase, 
-          status: "pendente_pagamento",
-        }).select().single();
-        
-        if (insertError || !order) { 
-          alert("Não foi possível registrar o pedido para pagamento Lightning: " + (insertError?.message || "Erro desconhecido"));
-          navigateSubView("payment_error"); 
-          return; 
+        const { data: order, error: insertError } = await supabase
+          .from("orders_delivery")
+          .insert({
+            ...orderBase,
+            status: "pendente_pagamento",
+          })
+          .select()
+          .single();
+
+        if (insertError || !order) {
+          alert(
+            "Não foi possível registrar o pedido para pagamento Lightning: " +
+              (insertError?.message || "Erro desconhecido"),
+          );
+          navigateSubView("payment_error");
+          return;
         }
 
         try {
-          const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
-            body: { 
-              amount: Number(total.toFixed(2)), 
-              orderId: order.id, 
-              memo: `Pedido ${selectedShop?.name || "IziDelivery"}` 
-            },
-          });
+          const { data: lnData, error: lnErr } =
+            await supabase.functions.invoke("create-lightning-invoice", {
+              body: {
+                amount: Number(total.toFixed(2)),
+                orderId: order.id,
+                memo: `Pedido ${selectedShop?.name || "IziDelivery"}`,
+              },
+            });
 
           if (lnErr || !lnData?.payment_request) {
             console.error("Erro Lightning total:", lnErr, lnData);
@@ -1123,14 +1347,17 @@ function App() {
             return;
           }
 
-          const lData = { 
-            lightningInvoice: lnData.payment_request, 
-            satoshis: lnData.satoshis, 
-            btc_price_brl: lnData.btc_price_brl 
+          const lData = {
+            lightningInvoice: lnData.payment_request,
+            satoshis: lnData.satoshis,
+            btc_price_brl: lnData.btc_price_brl,
           };
-          setLightningData({ ...lData, payment_request: lData.lightningInvoice });
+          setLightningData({
+            ...lData,
+            payment_request: lData.lightningInvoice,
+          });
           setSelectedItem({ ...order, ...lData });
-          
+
           await clearCart(order.id);
           navigateSubView("lightning_payment");
         } catch (err) {
@@ -1143,30 +1370,43 @@ function App() {
 
       // Ã¢â€â‚¬Ã¢â€â‚¬ SALDO DA CARTEIRA Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       if (paymentMethod === "saldo") {
-        const walletBal = walletTransactions.reduce((acc: number, t: any) =>
-          ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
+        const walletBal = walletTransactions.reduce(
+          (acc: number, t: any) =>
+            ["deposito", "reembolso"].includes(t.type)
+              ? acc + Number(t.amount)
+              : acc - Number(t.amount),
+          0,
+        );
 
         if (walletBal < total) {
-          alert(`Saldo insuficiente. Seu saldo: R$ ${walletBal.toFixed(2).replace(".",",")}`);
+          alert(
+            `Saldo insuficiente. Seu saldo: R$ ${walletBal.toFixed(2).replace(".", ",")}`,
+          );
           setIsLoading(false);
           return;
         }
 
         navigateSubView("payment_processing");
-        const { data: order } = await supabase.from("orders_delivery").insert({ 
-          ...orderBase, 
-          status: "waiting_merchant",
-          payment_status: "paid"
-        }).select().single();
-        
-        if (!order) { 
+        const { data: order } = await supabase
+          .from("orders_delivery")
+          .insert({
+            ...orderBase,
+            status: "waiting_merchant",
+            payment_status: "paid",
+          })
+          .select()
+          .single();
+
+        if (!order) {
           alert("Erro ao debitar saldo. Tente novamente.");
-          navigateSubView("payment_error"); 
-          return; 
+          navigateSubView("payment_error");
+          return;
         }
 
         await supabase.from("wallet_transactions").insert({
-          user_id: userId, type: "pagamento", amount: total,
+          user_id: userId,
+          type: "pagamento",
+          amount: total,
           description: `Pedido em ${selectedShop?.name || "Loja"}`,
         });
 
@@ -1182,11 +1422,15 @@ function App() {
         navigateSubView("payment_processing");
         // Simulação de processamento Google Pay
         setTimeout(async () => {
-          const { data: order, error } = await supabase.from("orders_delivery").insert({ 
-            ...orderBase, 
-            status: "waiting_merchant",
-            payment_status: "paid"
-          }).select().single();
+          const { data: order, error } = await supabase
+            .from("orders_delivery")
+            .insert({
+              ...orderBase,
+              status: "waiting_merchant",
+              payment_status: "paid",
+            })
+            .select()
+            .single();
 
           if (error || !order) {
             toastError("Erro ao processar Google Pay.");
@@ -1203,22 +1447,29 @@ function App() {
 
       // Ã¢â€â‚¬Ã¢â€â‚¬ DINHEIRO / CARTÃƒÆ’O NA ENTREGA Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       if (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") {
-        if (!selectedShop?.id) { alert("Erro: Estabelecimento não selecionado."); setIsLoading(false); return; }
-        
+        if (!selectedShop?.id) {
+          alert("Erro: Estabelecimento não selecionado.");
+          setIsLoading(false);
+          return;
+        }
+
         const { data: order, error: insertError } = await supabase
           .from("orders_delivery")
-          .insert({ 
-            ...orderBase, 
+          .insert({
+            ...orderBase,
             merchant_id: selectedShop.id,
             status: "waiting_merchant",
-            total_price: Number(total.toFixed(2))
+            total_price: Number(total.toFixed(2)),
           })
           .select()
           .single();
 
         if (insertError || !order) {
           console.error(`Erro insert ${paymentMethod}:`, insertError);
-          alert("Não foi possível processar o pedido. Erro: " + (insertError?.message || "Tente novamente."));
+          alert(
+            "Não foi possível processar o pedido. Erro: " +
+              (insertError?.message || "Tente novamente."),
+          );
           setIsLoading(false);
           return;
         }
@@ -1235,7 +1486,6 @@ function App() {
         setSubView("card_payment");
         return;
       }
-
     } catch (e) {
       console.error("Erro ao criar pedido:", e);
       navigateSubView("payment_error");
@@ -1250,20 +1500,18 @@ function App() {
     }
   }, [subView, userId]);
 
-// Simular movimento do entregador
+  // Simular movimento do entregador
   useEffect(() => {
     if (subView === "active_order") {
       const interval = setInterval(() => {
-        setDriverPos(prev => ({
+        setDriverPos((prev) => ({
           lat: prev.lat + (Math.random() - 0.5) * 0.001,
-          lng: prev.lng + (Math.random() - 0.5) * 0.001
+          lng: prev.lng + (Math.random() - 0.5) * 0.001,
         }));
       }, 3000);
       return () => clearInterval(interval);
     }
   }, [subView]);
-
-
 
   useEffect(() => {
     if (!globalSettings?.flash_offer_expiry) return;
@@ -1272,35 +1520,43 @@ function App() {
       const now = Date.now();
       const diff = target - now;
       if (diff <= 0) {
-        setTimeLeft({h: '00', m: '00', s: '00'});
+        setTimeLeft({ h: "00", m: "00", s: "00" });
         clearInterval(timer);
         return;
       }
-      const h = Math.floor(diff / (1000 * 60 * 60)).toString().padStart(2, '0');
-      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
-      const s = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
-      setTimeLeft({h, m, s});
+      const h = Math.floor(diff / (1000 * 60 * 60))
+        .toString()
+        .padStart(2, "0");
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+        .toString()
+        .padStart(2, "0");
+      const s = Math.floor((diff % (1000 * 60)) / 1000)
+        .toString()
+        .padStart(2, "0");
+      setTimeLeft({ h, m, s });
     }, 1000);
     return () => clearInterval(timer);
   }, [globalSettings]);
 
   const fetchFlashOffers = async () => {
     const { data } = await supabase
-      .from('flash_offers')
-      .select('*, admin_users(store_name, store_logo)')
-      .eq('is_active', true)
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false });
+      .from("flash_offers")
+      .select("*, admin_users(store_name, store_logo)")
+      .eq("is_active", true)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false });
     if (data) setFlashOffers(data);
   };
 
   const [rating, setRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState("");
-  const [chatMessages, setChatMessages] = useState<{id: string, sender: string, text: string, time: string}[]>([]);
+  const [chatMessages, setChatMessages] = useState<
+    { id: string; sender: string; text: string; time: string }[]
+  >([]);
   const [chatInput, setChatInput] = useState("");
 
   const [exploreCategoryState, setExploreCategoryState] = useState<{
-    id: 'flowers' | 'sweets' | 'pets' | 'gas' | 'butcher';
+    id: "flowers" | "sweets" | "pets" | "gas" | "butcher";
     title: string;
     tagline: string;
     primaryColor: string;
@@ -1309,9 +1565,36 @@ function App() {
   } | null>(null);
 
   const [quests] = useState([
-    { id: 1, title: 'Explorador Urbano', desc: 'Peça em 3 categorias diferentes hoje', xp: 500, progress: 1, total: 3, icon: 'explore', color: '#fbbf24' },
-    { id: 2, title: 'Amigo do Peito', desc: 'Indique um amigo para a Izi', xp: 1000, progress: 0, total: 1, icon: 'group_add', color: '#10b981' },
-    { id: 3, title: 'Madrugador Izi', desc: 'Peça café da manhã antes das 9h', xp: 300, progress: 0, total: 1, icon: 'wb_sunny', color: '#f59e0b' },
+    {
+      id: 1,
+      title: "Explorador Urbano",
+      desc: "Peça em 3 categorias diferentes hoje",
+      xp: 500,
+      progress: 1,
+      total: 3,
+      icon: "explore",
+      color: "#fbbf24",
+    },
+    {
+      id: 2,
+      title: "Amigo do Peito",
+      desc: "Indique um amigo para a Izi",
+      xp: 1000,
+      progress: 0,
+      total: 1,
+      icon: "group_add",
+      color: "#10b981",
+    },
+    {
+      id: 3,
+      title: "Madrugador Izi",
+      desc: "Peça café da manhã antes das 9h",
+      xp: 300,
+      progress: 0,
+      total: 1,
+      icon: "wb_sunny",
+      color: "#f59e0b",
+    },
   ]);
 
   // Refs para manter o estado atual sempre acessível nos handlers
@@ -1322,20 +1605,53 @@ function App() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const selectedItemRef = useRef(selectedItem);
 
-  useEffect(() => { viewRef.current = view; }, [view]);
-  useEffect(() => { tabRef.current = tab; }, [tab]);
-  useEffect(() => { subViewRef.current = subView; }, [subView]);
-  useEffect(() => { userIdRef.current = userId; }, [userId]);
-  useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
+  useEffect(() => {
+    tabRef.current = tab;
+  }, [tab]);
+  useEffect(() => {
+    subViewRef.current = subView;
+  }, [subView]);
+  useEffect(() => {
+    userIdRef.current = userId;
+  }, [userId]);
+  useEffect(() => {
+    selectedItemRef.current = selectedItem;
+  }, [selectedItem]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showLojistasModal, setShowLojistasModal] = useState(false);
   const partnerStores = [
-    { id: 'izi_paulista', name: "Izi Hub Central - Paulista", address: "Av. Paulista, 1000, Bela Vista, São Paulo - SP", phone: "(11) 98888-7777", hours: "08h - 22h", type: "Hub Logístico" },
-    { id: 'posto_augusta', name: "Izi Posto Shell - Augusta", address: "Rua Augusta, 500, Consolação, São Paulo - SP", phone: "(11) 97777-6666", hours: "24h", type: "Ponto de Retirada" },
-    { id: 'loja_oscar', name: "Izi Express - Oscar Freire", address: "Rua Oscar Freire, 300, Jardins, São Paulo - SP", phone: "(11) 96666-5555", hours: "07h - 23h", type: "Loja Parceira" }
+    {
+      id: "izi_paulista",
+      name: "Izi Hub Central - Paulista",
+      address: "Av. Paulista, 1000, Bela Vista, São Paulo - SP",
+      phone: "(11) 98888-7777",
+      hours: "08h - 22h",
+      type: "Hub Logístico",
+    },
+    {
+      id: "posto_augusta",
+      name: "Izi Posto Shell - Augusta",
+      address: "Rua Augusta, 500, Consolação, São Paulo - SP",
+      phone: "(11) 97777-6666",
+      hours: "24h",
+      type: "Ponto de Retirada",
+    },
+    {
+      id: "loja_oscar",
+      name: "Izi Express - Oscar Freire",
+      address: "Rua Oscar Freire, 300, Jardins, São Paulo - SP",
+      phone: "(11) 96666-5555",
+      hours: "07h - 23h",
+      type: "Loja Parceira",
+    },
   ];
-  useEffect(() => { subViewRef.current = subView; }, [subView]);
+  useEffect(() => {
+    subViewRef.current = subView;
+  }, [subView]);
 
   // Suporte ao botão voltar do hardware/navegador
   useEffect(() => {
@@ -1348,7 +1664,10 @@ function App() {
             { view: "app", tab: t || tabRef.current, subView: "none" },
             "",
           );
-          setSubView("none"); setShopRating(0); setDriverRating(0); setFbComment("");
+          setSubView("none");
+          setShopRating(0);
+          setDriverRating(0);
+          setFbComment("");
           return;
         }
         if (v) setView(v);
@@ -1386,9 +1705,13 @@ function App() {
 
   const [selectedCard, setSelectedCard] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState<string>("Destaques");
-  const [restaurantInitialCategory, setRestaurantInitialCategory] = useState("Todos");
+  const [restaurantInitialCategory, setRestaurantInitialCategory] =
+    useState("Todos");
   const [activeMenuCategory, setActiveMenuCategory] = useState("Destaques");
-  const [driverLocation, setDriverLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [driverLocation, setDriverLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
   // Sistema de rastreamento do motoboy em tempo real para o cliente
   useEffect(() => {
@@ -1399,24 +1722,36 @@ function App() {
 
     const fetchDriverInitialLoc = async () => {
       if (!selectedItem?.driver_id) return;
-    const { data } = await supabase.from('drivers_delivery').select('lat, lng').eq('id', selectedItem.driver_id).maybeSingle();
+      const { data } = await supabase
+        .from("drivers_delivery")
+        .select("lat, lng")
+        .eq("id", selectedItem.driver_id)
+        .maybeSingle();
       if (data?.lat) setDriverLocation({ lat: data.lat, lng: data.lng });
     };
     fetchDriverInitialLoc();
 
-    const channel = supabase.channel(`driver_loc_${selectedItem.driver_id}`)
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'drivers_delivery',
-        filter: `id=eq.${selectedItem.driver_id}` 
-      }, (payload) => {
-        const newLoc = payload.new as any;
-        if (newLoc.lat) setDriverLocation({ lat: newLoc.lat, lng: newLoc.lng });
-      })
+    const channel = supabase
+      .channel(`driver_loc_${selectedItem.driver_id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "drivers_delivery",
+          filter: `id=eq.${selectedItem.driver_id}`,
+        },
+        (payload) => {
+          const newLoc = payload.new as any;
+          if (newLoc.lat)
+            setDriverLocation({ lat: newLoc.lat, lng: newLoc.lng });
+        },
+      )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedItem?.driver_id]);
 
   const [tempQuantity, setTempQuantity] = useState(1);
@@ -1437,7 +1772,11 @@ function App() {
     // Novos campos para Frete e Van
     vehicleCategory: "Fiorino/Furgão",
     helpers: 0,
-    accessibility: { stairsAtOrigin: false, stairsAtDestination: false, serviceElevator: false },
+    accessibility: {
+      stairsAtOrigin: false,
+      stairsAtDestination: false,
+      serviceElevator: false,
+    },
     cargoPhotos: [] as string[],
     passengers: 1,
     tripType: "only_one_way" as "only_one_way" | "round_trip" | "hourly",
@@ -1450,7 +1789,9 @@ function App() {
     invoiceNumber: "",
     pickupSector: "",
   });
-  const [distancePrices, setDistancePrices] = useState<Record<string, number>>({});
+  const [distancePrices, setDistancePrices] = useState<Record<string, number>>(
+    {},
+  );
   const [distanceValueKm, setDistanceValueKm] = useState(0);
   const [routePolyline, setRoutePolyline] = useState<string>("");
   const [routeDistance, setRouteDistance] = useState<string>("");
@@ -1465,7 +1806,9 @@ function App() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobilityExpanded, setIsMobilityExpanded] = useState(false);
-  const [editingAddress, setEditingAddress] = useState<SavedAddress | null>(null);
+  const [editingAddress, setEditingAddress] = useState<SavedAddress | null>(
+    null,
+  );
 
   useEffect(() => {
     const savedEmail = localStorage.getItem("savedEmail");
@@ -1491,18 +1834,18 @@ function App() {
     if (!openingHours || Object.keys(openingHours).length === 0) return true;
 
     const now = new Date();
-    const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+    const days = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
     const today = days[now.getDay()];
     const config = openingHours[today];
 
     if (!config || !config.active) return false;
 
-    const [openH, openM] = config.open.split(':').map(Number);
-    const [closeH, closeM] = config.close.split(':').map(Number);
-    
+    const [openH, openM] = config.open.split(":").map(Number);
+    const [closeH, closeM] = config.close.split(":").map(Number);
+
     const nowH = now.getHours();
     const nowM = now.getMinutes();
-    
+
     const nowInMinutes = nowH * 60 + nowM;
     const openInMinutes = openH * 60 + openM;
     const closeInMinutes = closeH * 60 + closeM;
@@ -1513,48 +1856,51 @@ function App() {
   const fetchRealEstablishments = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('role', 'merchant')
-        .eq('is_active', true);
-        
-      if (error) throw error;
-      
-       const realEstabs = data?.map(m => {
-         const isOpen = isStoreOpen(m.opening_hours, m.is_open);
-         
-         // Mapeamento de tipos do banco para os filtros do App
-         const rawType = (m.store_type || "restaurant").toLowerCase().trim();
-         let normalizedType = rawType;
-         
-         if (rawType.includes("restaurante")) normalizedType = "restaurant";
-         else if (rawType === "saude") normalizedType = "pharmacy";
-         else if (rawType === "mercado") normalizedType = "market";
-         else if (rawType === "bebidas") normalizedType = "beverages";
-         else if (rawType === "hamburguer") normalizedType = "restaurant";
-         
-         return {
+        .from("admin_users")
+        .select("*")
+        .eq("role", "merchant")
+        .eq("is_active", true);
 
-          id: m.id,
-          name: m.store_name || "Loja Parceira",
-          tag: isOpen ? "Aberto Agora" : "Fechado",
-          statusTag: isOpen ? "Aberto" : "Fechado",
-          isOpen,
-          rating: "4.9",
-          dist: "1.5 km",
-          time: m.estimated_time || "30-45 min",
-          img: m.store_logo || "https://images.unsplash.com/photo-1552566626-52f8b828add9?q=80&w=200",
-          banner: m.store_banner || "https://images.unsplash.com/photo-1514933651103-005eec06ccc0?q=80&w=800",
-          freeDelivery: !!m.free_delivery,
-          type: normalizedType,
-          foodCategory: m.food_category || "all",
-          description: m.store_description || "",
-        };
-      }) || [];
-      
+      if (error) throw error;
+
+      const realEstabs =
+        data?.map((m) => {
+          const isOpen = isStoreOpen(m.opening_hours, m.is_open);
+
+          // Mapeamento de tipos do banco para os filtros do App
+          const rawType = (m.store_type || "restaurant").toLowerCase().trim();
+          let normalizedType = rawType;
+
+          if (rawType.includes("restaurante")) normalizedType = "restaurant";
+          else if (rawType === "saude") normalizedType = "pharmacy";
+          else if (rawType === "mercado") normalizedType = "market";
+          else if (rawType === "bebidas") normalizedType = "beverages";
+          else if (rawType === "hamburguer") normalizedType = "restaurant";
+
+          return {
+            id: m.id,
+            name: m.store_name || "Loja Parceira",
+            tag: isOpen ? "Aberto Agora" : "Fechado",
+            statusTag: isOpen ? "Aberto" : "Fechado",
+            isOpen,
+            rating: "4.9",
+            dist: "1.5 km",
+            time: m.estimated_time || "30-45 min",
+            img:
+              m.store_logo ||
+              "https://images.unsplash.com/photo-1552566626-52f8b828add9?q=80&w=200",
+            banner:
+              m.store_banner ||
+              "https://images.unsplash.com/photo-1514933651103-005eec06ccc0?q=80&w=800",
+            freeDelivery: !!m.free_delivery,
+            type: normalizedType,
+            foodCategory: m.food_category || "all",
+            description: m.store_description || "",
+          };
+        }) || [];
+
       setESTABLISHMENTS(realEstabs);
-    } catch (err) {
-    }
+    } catch (err) {}
   }, [isStoreOpen]);
 
   useEffect(() => {
@@ -1566,7 +1912,7 @@ function App() {
       "Hoje é sexta! Temos cupons especiais de 20% em bebidas para membros Izi Black. Ãƒ°Ã…¸Ã‚Ã‚»",
       "Baseado no seu histórico, você costuma pedir em mercados Ãƒ s 19h. Deseja agendar suas compras?",
       "O trÃ¢nsito está pesado hoje. Sugiro usar o Mototáxi para chegar mais rápido ao seu destino.",
-      "Você está a apenas 250 XP de subir para o nível 13! Que tal um pedido extra hoje?"
+      "Você está a apenas 250 XP de subir para o nível 13! Que tal um pedido extra hoje?",
     ];
     let index = 0;
     const interval = setInterval(() => {
@@ -1576,18 +1922,18 @@ function App() {
 
     // Inscrição em tempo real para atualizaçÃƒµes de status da loja
     const channel = supabase
-      .channel('admin_users_updates')
+      .channel("admin_users_updates")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'admin_users',
-          filter: 'role=eq.merchant'
+          event: "*",
+          schema: "public",
+          table: "admin_users",
+          filter: "role=eq.merchant",
         },
         () => {
           fetchRealEstablishments();
-        }
+        },
       )
       .subscribe();
 
@@ -1599,21 +1945,21 @@ function App() {
 
   useEffect(() => {
     if (!userId) return;
-    
+
     // Inscrição em tempo real para atualizaçÃƒµes dos pedidos do próprio cliente
     const ordersChannel = supabase
-      .channel('my_orders_realtime')
+      .channel("my_orders_realtime")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'orders_delivery',
-          filter: `user_id=eq.${userId}`
+          event: "*",
+          schema: "public",
+          table: "orders_delivery",
+          filter: `user_id=eq.${userId}`,
         },
         () => {
           fetchMyOrders(userId);
-        }
+        },
       )
       .subscribe();
 
@@ -1621,22 +1967,32 @@ function App() {
       supabase.removeChannel(ordersChannel);
     };
   }, [userId]);
-  
+
   const [myOrders, setMyOrders] = useState<any[]>([]);
 
   // Atualiza automaticamente as telas PIX/Lightning se o pagamento for confirmado em tempo real
   useEffect(() => {
-    if ((subView === "pix_payment" || subView === "lightning_payment") && selectedItem?.id) {
+    if (
+      (subView === "pix_payment" || subView === "lightning_payment") &&
+      selectedItem?.id
+    ) {
       const liveOrder = myOrders.find((o) => o.id === selectedItem.id);
-      if (liveOrder && liveOrder.status && liveOrder.status !== "pendente_pagamento") {
-        if (liveOrder.status === "cancelado" || liveOrder.status === "recusado") {
-            toastError("Pagamento recusado ou expirado.");
-            setSubView("payment_error");
+      if (
+        liveOrder &&
+        liveOrder.status &&
+        liveOrder.status !== "pendente_pagamento"
+      ) {
+        if (
+          liveOrder.status === "cancelado" ||
+          liveOrder.status === "recusado"
+        ) {
+          toastError("Pagamento recusado ou expirado.");
+          setSubView("payment_error");
         } else {
-            toastSuccess("Pagamento confirmado com sucesso!");
-            setSubView("none");
-            setTab("orders");
-            setSelectedItem(null);
+          toastSuccess("Pagamento confirmado com sucesso!");
+          setSubView("none");
+          setTab("orders");
+          setSelectedItem(null);
         }
       }
     }
@@ -1645,7 +2001,9 @@ function App() {
     try {
       const saved = localStorage.getItem("izi_cart");
       return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   });
 
   // Evitar sobrescrever a nuvem com carrinho vazio de um novo aparelho (Race condition do Login)
@@ -1655,23 +2013,25 @@ function App() {
   useEffect(() => {
     try {
       localStorage.setItem("izi_cart", JSON.stringify(cart));
-      
+
       // Sincronizar com o banco se estiver logado
       if (userId) {
-        // Se a sacola começou vazia, NÃO sincronize o vazio com a nuvem durante o boot do componente. 
+        // Se a sacola começou vazia, NÃO sincronize o vazio com a nuvem durante o boot do componente.
         // Deixe que o load da nuvem (fetchCartData) recupere a sacola real.
         // Assim evitamos sobrescrever o cart_data de um aparelho 1 com o localstorage vazio de um aparelho 2 recém-logado.
         if (isFirstEmptySync.current && cart.length === 0) {
-            return;
+          return;
         }
-        
+
         isFirstEmptySync.current = false; // Destrava a nuvem a partir de agora!
 
-        supabase.from("users_delivery")
+        supabase
+          .from("users_delivery")
           .update({ cart_data: cart })
           .eq("id", userId)
           .then(({ error }) => {
-            if (error) console.error("Erro ao sincronizar sacola na nuvem:", error);
+            if (error)
+              console.error("Erro ao sincronizar sacola na nuvem:", error);
           });
       }
     } catch {}
@@ -1685,7 +2045,15 @@ function App() {
     address: "Buscando localização...",
     loading: true,
   });
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro" | "cartao_entrega" | "saldo" | "bitcoin_lightning" | "google_pay">(() => (localStorage.getItem("preferredPaymentMethod") as any) || "cartao");
+  const [paymentMethod, setPaymentMethod] = useState<
+    | "pix"
+    | "cartao"
+    | "dinheiro"
+    | "cartao_entrega"
+    | "saldo"
+    | "bitcoin_lightning"
+    | "google_pay"
+  >(() => (localStorage.getItem("preferredPaymentMethod") as any) || "cartao");
   const [changeFor, setChangeFor] = useState("");
   useEffect(() => {
     localStorage.setItem("preferredPaymentMethod", paymentMethod);
@@ -1710,7 +2078,7 @@ function App() {
   useEffect(() => {
     if (beverageBanners.length > 1) {
       const interval = setInterval(() => {
-        setBevBannerIndex(prev => (prev + 1) % beverageBanners.length);
+        setBevBannerIndex((prev) => (prev + 1) % beverageBanners.length);
       }, 5000);
       return () => clearInterval(interval);
     }
@@ -1728,93 +2096,225 @@ function App() {
       weather: {
         rain: { multiplier: 1.3, active: true },
         storm: { multiplier: 1.8, active: true },
-        snow: { multiplier: 2.5, active: false }
+        snow: { multiplier: 2.5, active: false },
       },
       baseValues: {
-        mototaxi_min: 6.0, mototaxi_km: 2.5,
-        carro_min: 14.0, carro_km: 4.5,
-        van_min: 35.0, van_km: 8.0,
-        utilitario_min: 10.0, utilitario_km: 3.0,
-        isDynamicActive: true
-      }
-    }
+        mototaxi_min: 6.0,
+        mototaxi_km: 2.5,
+        carro_min: 14.0,
+        carro_km: 4.5,
+        van_min: 35.0,
+        van_km: 8.0,
+        utilitario_min: 10.0,
+        utilitario_km: 3.0,
+        isDynamicActive: true,
+      },
+    },
   });
 
   const foodCategories = [
-    { id: "all",        name: "Todos",         icon: "restaurant",    action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
-    { id: "promocoes",  name: "Promoções",     icon: "percent",       action: () => { setRestaurantInitialCategory("Promoções"); navigateSubView("explore_restaurants"); } },
-    { id: "burgers",    name: "Burgers",       icon: "lunch_dining",  action: () => { setRestaurantInitialCategory("Burgers"); navigateSubView("explore_restaurants"); } },
-    { id: "pizza",      name: "Pizza",         icon: "local_pizza",   action: () => { setRestaurantInitialCategory("Pizza"); navigateSubView("explore_restaurants"); } },
-    { id: "doces",      name: "Doces e Bolos", icon: "cake",          action: () => { setRestaurantInitialCategory("Doces e Bolos"); navigateSubView("explore_restaurants"); } },
-    { id: "salgados",   name: "Salgados",      icon: "bakery_dining", action: () => { setRestaurantInitialCategory("Salgados"); navigateSubView("explore_restaurants"); } },
-    { id: "porcoes",    name: "Porções",       icon: "ramen_dining",  action: () => { setRestaurantInitialCategory("Porções"); navigateSubView("explore_restaurants"); } },
-    { id: "japones",    name: "Japonês",       icon: "set_meal",      action: () => { setRestaurantInitialCategory("Japonês"); navigateSubView("explore_restaurants"); } },
-    { id: "massas",     name: "Massas",        icon: "dinner_dining", action: () => { setRestaurantInitialCategory("Massas"); navigateSubView("explore_restaurants"); } },
-    { id: "carnes",     name: "Carnes",        icon: "kebab_dining",  action: () => { setRestaurantInitialCategory("Carnes"); navigateSubView("explore_restaurants"); } },
-    { id: "fit",        name: "Fit",           icon: "eco",           action: () => { setRestaurantInitialCategory("Fit"); navigateSubView("explore_restaurants"); } },
-    { id: "acai",       name: "Açaí",          icon: "grass",         action: () => { setRestaurantInitialCategory("Açaí"); navigateSubView("explore_restaurants"); } },
-    { id: "sorvetes",   name: "Sorvetes",      icon: "icecream",       action: () => { setRestaurantInitialCategory("Sorvetes"); navigateSubView("explore_restaurants"); } },
-    { id: "padaria",    name: "Padaria",       icon: "breakfast_dining", action: () => { setRestaurantInitialCategory("Padaria"); navigateSubView("explore_restaurants"); } },
-    { id: "daily",      name: "Do Dia",        icon: "today",         action: () => navigateSubView("daily_menus") },
+    {
+      id: "all",
+      name: "Todos",
+      icon: "restaurant",
+      action: () => {
+        setRestaurantInitialCategory("Todos");
+        navigateSubView("explore_restaurants");
+      },
+    },
+    {
+      id: "promocoes",
+      name: "Promoções",
+      icon: "percent",
+      action: () => {
+        setRestaurantInitialCategory("Promoções");
+        navigateSubView("explore_restaurants");
+      },
+    },
+    {
+      id: "burgers",
+      name: "Burgers",
+      icon: "lunch_dining",
+      action: () => {
+        setRestaurantInitialCategory("Burgers");
+        navigateSubView("explore_restaurants");
+      },
+    },
+    {
+      id: "pizza",
+      name: "Pizza",
+      icon: "local_pizza",
+      action: () => {
+        setRestaurantInitialCategory("Pizza");
+        navigateSubView("explore_restaurants");
+      },
+    },
+    {
+      id: "doces",
+      name: "Doces e Bolos",
+      icon: "cake",
+      action: () => {
+        setRestaurantInitialCategory("Doces e Bolos");
+        navigateSubView("explore_restaurants");
+      },
+    },
+    {
+      id: "salgados",
+      name: "Salgados",
+      icon: "bakery_dining",
+      action: () => {
+        setRestaurantInitialCategory("Salgados");
+        navigateSubView("explore_restaurants");
+      },
+    },
+    {
+      id: "porcoes",
+      name: "Porções",
+      icon: "ramen_dining",
+      action: () => {
+        setRestaurantInitialCategory("Porções");
+        navigateSubView("explore_restaurants");
+      },
+    },
+    {
+      id: "japones",
+      name: "Japonês",
+      icon: "set_meal",
+      action: () => {
+        setRestaurantInitialCategory("Japonês");
+        navigateSubView("explore_restaurants");
+      },
+    },
+    {
+      id: "massas",
+      name: "Massas",
+      icon: "dinner_dining",
+      action: () => {
+        setRestaurantInitialCategory("Massas");
+        navigateSubView("explore_restaurants");
+      },
+    },
+    {
+      id: "carnes",
+      name: "Carnes",
+      icon: "kebab_dining",
+      action: () => {
+        setRestaurantInitialCategory("Carnes");
+        navigateSubView("explore_restaurants");
+      },
+    },
+    {
+      id: "fit",
+      name: "Fit",
+      icon: "eco",
+      action: () => {
+        setRestaurantInitialCategory("Fit");
+        navigateSubView("explore_restaurants");
+      },
+    },
+    {
+      id: "acai",
+      name: "Açaí",
+      icon: "grass",
+      action: () => {
+        setRestaurantInitialCategory("Açaí");
+        navigateSubView("explore_restaurants");
+      },
+    },
+    {
+      id: "sorvetes",
+      name: "Sorvetes",
+      icon: "icecream",
+      action: () => {
+        setRestaurantInitialCategory("Sorvetes");
+        navigateSubView("explore_restaurants");
+      },
+    },
+    {
+      id: "padaria",
+      name: "Padaria",
+      icon: "breakfast_dining",
+      action: () => {
+        setRestaurantInitialCategory("Padaria");
+        navigateSubView("explore_restaurants");
+      },
+    },
+    {
+      id: "daily",
+      name: "Do Dia",
+      icon: "today",
+      action: () => navigateSubView("daily_menus"),
+    },
   ];
 
   const lunchCategories = [
-    { id: "all",     name: "Todos",           icon: "restaurant" },
-    { id: "promo",   name: "Promoção do Dia", icon: "percent" },
-    { id: "monte",   name: "Monte o seu",     icon: "flatware" },
-    { id: "pratos",  name: "Pratos feitos",   icon: "rice_bowl" },
-    { id: "marmita", name: "Marmitas",        icon: "lunch_dining" },
+    { id: "all", name: "Todos", icon: "restaurant" },
+    { id: "promo", name: "Promoção do Dia", icon: "percent" },
+    { id: "monte", name: "Monte o seu", icon: "flatware" },
+    { id: "pratos", name: "Pratos feitos", icon: "rice_bowl" },
+    { id: "marmita", name: "Marmitas", icon: "lunch_dining" },
   ];
 
   const fetchMarketData = async () => {
     try {
       // 1. Buscar Configurações Centrais do Admin
       const { data: ratesData } = await supabase
-        .from('dynamic_rates_delivery')
-        .select('*');
-      
+        .from("dynamic_rates_delivery")
+        .select("*");
+
       const config = {
-        equilibrium: ratesData?.find(r => r.type === 'equilibrium')?.metadata || marketConditions.settings.equilibrium,
-        weather: ratesData?.find(r => r.type === 'weather_rules')?.metadata || marketConditions.settings.weather,
-        baseValues: ratesData?.find(r => r.type === 'base_values')?.metadata || marketConditions.settings.baseValues
+        equilibrium:
+          ratesData?.find((r) => r.type === "equilibrium")?.metadata ||
+          marketConditions.settings.equilibrium,
+        weather:
+          ratesData?.find((r) => r.type === "weather_rules")?.metadata ||
+          marketConditions.settings.weather,
+        baseValues:
+          ratesData?.find((r) => r.type === "base_values")?.metadata ||
+          marketConditions.settings.baseValues,
       };
 
       // 2. Contagem de Motoristas On-line (Oferta Real)
       const { count: onlineDrivers } = await supabase
-        .from('drivers_delivery')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_online', true);
+        .from("drivers_delivery")
+        .select("*", { count: "exact", head: true })
+        .eq("is_online", true);
 
       // 3. Viagens/Pedidos Abertos (Demanda Real)
       const { count: pendingOrders } = await supabase
-        .from('orders_delivery')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending');
+        .from("orders_delivery")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pending");
 
       // 4. Clima (Simulação estruturada - pronta para API externa)
       const weathers = ["Ensolarado", "Nublado", "Chuva Leve", "Tempestade"];
       const hour = new Date().getHours();
-      const currentWeather = (hour > 18 || hour < 6) ? "Nublado" : weathers[Math.floor(Math.random() * 2)];
+      const currentWeather =
+        hour > 18 || hour < 6
+          ? "Nublado"
+          : weathers[Math.floor(Math.random() * 2)];
 
       // 5. Lógica de Equilíbrio de Marketplace usando Configurações do Admin
-      const drivers = onlineDrivers || 5; 
+      const drivers = onlineDrivers || 5;
       const orders = pendingOrders || 0;
       const ratio = orders / drivers;
 
       // Cálculo do Multiplicador (Surge) baseado no Threshold e Sensibilidade do Admin
       let surge = 1.0;
       const { threshold, sensitivity, maxSurge } = config.equilibrium;
-      
+
       if (ratio > threshold) {
         surge = 1.0 + (ratio - threshold) * sensitivity;
       }
 
       // 6. Aplicar Fatores Climáticos Ativos
-      if (currentWeather === "Tempestade" && config.weather.storm.active) surge += (config.weather.storm.multiplier - 1);
-      if (currentWeather === "Chuva Leve" && config.weather.rain.active) surge += (config.weather.rain.multiplier - 1);
-      
+      if (currentWeather === "Tempestade" && config.weather.storm.active)
+        surge += config.weather.storm.multiplier - 1;
+      if (currentWeather === "Chuva Leve" && config.weather.rain.active)
+        surge += config.weather.rain.multiplier - 1;
+
       // Horário de Pico (Fixado ou Dinâmico)
-      if (hour >= 18 && hour <= 21) surge += 0.3; 
+      if (hour >= 18 && hour <= 21) surge += 0.3;
 
       // 7. Limites de Segurança (Hard Caps vindos do Admin)
       const finalSurge = Math.max(1.0, Math.min(maxSurge, surge));
@@ -1824,10 +2324,9 @@ function App() {
         traffic: ratio > 1.5 ? "Congestionado" : "Normal",
         weather: currentWeather,
         surgeMultiplier: parseFloat(finalSurge.toFixed(2)),
-        settings: config as any
+        settings: config as any,
       });
-    } catch (error) {
-    }
+    } catch (error) {}
   };
 
   useEffect(() => {
@@ -1837,77 +2336,102 @@ function App() {
   }, []);
 
   const calculateDynamicPrice = (basePrice: number) => {
-    return marketConditions.settings.baseValues.isDynamicActive 
-      ? basePrice * marketConditions.surgeMultiplier 
+    return marketConditions.settings.baseValues.isDynamicActive
+      ? basePrice * marketConditions.surgeMultiplier
       : basePrice;
   };
 
   // Calcula preços usando Routes API (nova, não deprecated)
-  const calculateDistancePrices = async (origin: string, destination: string) => {
+  const calculateDistancePrices = async (
+    origin: string,
+    destination: string,
+  ) => {
     if (!origin || !destination) return;
     setIsCalculatingPrice(true);
     setDistancePrices({}); // Limpar preços antigos para feedback visual
     try {
       const apiKey = GMAPS_KEY;
-      const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline",
+      const res = await fetch(
+        "https://routes.googleapis.com/directions/v2:computeRoutes",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask":
+              "routes.duration,routes.distanceMeters,routes.polyline",
+          },
+          body: JSON.stringify({
+            origin: { address: origin },
+            destination: { address: destination },
+            travelMode: "DRIVE",
+            languageCode: "pt-BR",
+          }),
         },
-        body: JSON.stringify({
-          origin: { address: origin },
-          destination: { address: destination },
-          travelMode: "DRIVE",
-          languageCode: "pt-BR",
-        }),
-      });
+      );
       const data = await res.json();
       if (data?.routes?.[0]) {
         const route = data.routes[0];
         const distKm = (route.distanceMeters || 0) / 1000;
-        const secs = parseInt(route.duration?.replace("s","") || "0");
+        const secs = parseInt(route.duration?.replace("s", "") || "0");
         const mins = Math.round(secs / 60);
-        const durationText = mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60}min` : `${mins} min`;
-        const distText = distKm < 1 ? `${Math.round(distKm*1000)} m` : `${distKm.toFixed(1)} km`;
+        const durationText =
+          mins >= 60
+            ? `${Math.floor(mins / 60)}h ${mins % 60}min`
+            : `${mins} min`;
+        const distText =
+          distKm < 1
+            ? `${Math.round(distKm * 1000)} m`
+            : `${distKm.toFixed(1)} km`;
         setRouteDistance(`${distText} • ${durationText}`);
         setDistanceValueKm(distKm);
         if (route.polyline?.encodedPolyline) {
           setRoutePolyline(route.polyline.encodedPolyline);
         }
-          const bv = marketConditions.settings.baseValues;
-          const surge = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
-          const mototaxi_min = parseFloat(String(bv.mototaxi_min)) || 6.0;
-          const mototaxi_km  = parseFloat(String(bv.mototaxi_km))  || 2.5;
-          const carro_min    = parseFloat(String(bv.carro_min))    || 14.0;
-          const carro_km     = parseFloat(String(bv.carro_km))     || 4.5;
-          const van_min      = parseFloat(String(bv.van_min))      || 35.0;
-          const van_km       = parseFloat(String(bv.van_km))       || 8.0;
-          const utilitario_min = parseFloat(String(bv.utilitario_min)) || 10.0;
-          const utilitario_km  = parseFloat(String(bv.utilitario_km))  || 3.0;
-          const newPrices = {
-            mototaxi:   parseFloat((Math.max(mototaxi_min,   mototaxi_km   * distKm * surge)).toFixed(2)),
-            carro:      parseFloat((Math.max(carro_min,       carro_km      * distKm * surge)).toFixed(2)),
-            van:        parseFloat((Math.max(van_min,         van_km        * distKm * surge)).toFixed(2)),
-            utilitario: parseFloat((Math.max(utilitario_min,  utilitario_km * distKm * surge)).toFixed(2)),
-          };
-          setDistancePrices(newPrices);
-          // Atualizar estPrice no transitData para uso no pagamento
-          setTransitData(prev => ({ ...prev, estPrice: newPrices[prev.type] || newPrices.mototaxi }));
+        const bv = marketConditions.settings.baseValues;
+        const surge =
+          (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
+        const mototaxi_min = parseFloat(String(bv.mototaxi_min)) || 6.0;
+        const mototaxi_km = parseFloat(String(bv.mototaxi_km)) || 2.5;
+        const carro_min = parseFloat(String(bv.carro_min)) || 14.0;
+        const carro_km = parseFloat(String(bv.carro_km)) || 4.5;
+        const van_min = parseFloat(String(bv.van_min)) || 35.0;
+        const van_km = parseFloat(String(bv.van_km)) || 8.0;
+        const utilitario_min = parseFloat(String(bv.utilitario_min)) || 10.0;
+        const utilitario_km = parseFloat(String(bv.utilitario_km)) || 3.0;
+        const newPrices = {
+          mototaxi: parseFloat(
+            Math.max(mototaxi_min, mototaxi_km * distKm * surge).toFixed(2),
+          ),
+          carro: parseFloat(
+            Math.max(carro_min, carro_km * distKm * surge).toFixed(2),
+          ),
+          van: parseFloat(
+            Math.max(van_min, van_km * distKm * surge).toFixed(2),
+          ),
+          utilitario: parseFloat(
+            Math.max(utilitario_min, utilitario_km * distKm * surge).toFixed(2),
+          ),
+        };
+        setDistancePrices(newPrices);
+        // Atualizar estPrice no transitData para uso no pagamento
+        setTransitData((prev) => ({
+          ...prev,
+          estPrice: newPrices[prev.type] || newPrices.mototaxi,
+        }));
 
-          // Buscar motoristas online reais
-          supabase
-            .from('drivers_delivery')
-            .select('id, name, vehicle_type, rating')
-            .eq('is_online', true)
-            .limit(5)
-            .then(({ data }) => {
-              if (data) {
-                setNearbyDrivers(data);
-                setNearbyDriversCount(data.length);
-              }
-            });
+        // Buscar motoristas online reais
+        supabase
+          .from("drivers_delivery")
+          .select("id, name, vehicle_type, rating")
+          .eq("is_online", true)
+          .limit(5)
+          .then(({ data }) => {
+            if (data) {
+              setNearbyDrivers(data);
+              setNearbyDriversCount(data.length);
+            }
+          });
       }
     } catch (err) {
       console.error("Error calculating routes:", err);
@@ -1931,40 +2455,46 @@ function App() {
       return;
     }
 
-    const isShipping = transitData.type === 'utilitario' || transitData.type === 'van';
+    const isShipping =
+      transitData.type === "utilitario" || transitData.type === "van";
     const bv = marketConditions.settings.baseValues;
-    const basePrices: Record<string, number> = { 
-      mototaxi: bv.mototaxi_min || 6, 
-      carro: bv.carro_min || 14, 
-      van: bv.van_min || 35, 
-      utilitario: bv.utilitario_min || 10 
+    const basePrices: Record<string, number> = {
+      mototaxi: bv.mototaxi_min || 6,
+      carro: bv.carro_min || 14,
+      van: bv.van_min || 35,
+      utilitario: bv.utilitario_min || 10,
     };
-    
+
     // Calcular preço final usando o novo motor de precificação se disponível ou o fallback dinÃ¢mico
     let finalPrice = 0;
-    if (transitData.type === 'utilitario') {
-       finalPrice = calculateFreightPrice({
-          baseFare: 45,
-          distanceInKm: distanceValueKm || 1,
-          distanceRate: 2.8,
-          helperCount: transitData.helpers,
-          helperRate: 35,
-          hasStairs: transitData.accessibility.stairsAtOrigin || transitData.accessibility.stairsAtDestination
-       }).totalPrice;
-    } else if (transitData.type === 'van') {
-       finalPrice = calculateVanPrice({
-          baseFare: 80,
-          distanceInKm: distanceValueKm || 1,
-          distanceRate: 3.5,
-          stopCount: transitData.stops.length,
-          stopRate: 15,
-          isDaily: transitData.tripType === 'hourly',
-          hours: 4,
-          hourlyRate: 45
-       }).totalPrice;
+    if (transitData.type === "utilitario") {
+      finalPrice = calculateFreightPrice({
+        baseFare: 45,
+        distanceInKm: distanceValueKm || 1,
+        distanceRate: 2.8,
+        helperCount: transitData.helpers,
+        helperRate: 35,
+        hasStairs:
+          transitData.accessibility.stairsAtOrigin ||
+          transitData.accessibility.stairsAtDestination,
+      }).totalPrice;
+    } else if (transitData.type === "van") {
+      finalPrice = calculateVanPrice({
+        baseFare: 80,
+        distanceInKm: distanceValueKm || 1,
+        distanceRate: 3.5,
+        stopCount: transitData.stops.length,
+        stopRate: 15,
+        isDaily: transitData.tripType === "hourly",
+        hours: 4,
+        hourlyRate: 45,
+      }).totalPrice;
     } else {
-       const rawP = distancePrices[transitData.type] || calculateDynamicPrice(basePrices[transitData.type] || 6);
-       finalPrice = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || 6) : rawP;
+      const rawP =
+        distancePrices[transitData.type] ||
+        calculateDynamicPrice(basePrices[transitData.type] || 6);
+      finalPrice =
+        isNaN(rawP) || !rawP ? basePrices[transitData.type] || 6 : rawP;
     }
 
     setIsLoading(true);
@@ -1976,12 +2506,21 @@ function App() {
       total_price: finalPrice,
       service_type: transitData.type,
       pickup_address: transitData.origin,
-      delivery_address: `${transitData.destination} | OBS: ${isShipping 
-        ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
-        : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`}`,
+      delivery_address: `${transitData.destination} | OBS: ${
+        isShipping
+          ? `ENVIO: ${transitData.packageDesc || "Objeto"} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
+          : `VIAGEM: Transporte de passageiro (${transitData.type === "mototaxi" ? "MotoTáxi" : "Particular"})`
+      }`,
       payment_method: paymentMethod,
-      payment_status: (paymentMethod === 'dinheiro' || paymentMethod === 'pix' || paymentMethod === 'bitcoin_lightning') ? 'pending' : 'paid',
-      scheduled_at: transitData.scheduled ? `${transitData.scheduledDate}T${transitData.scheduledTime}:00` : null
+      payment_status:
+        paymentMethod === "dinheiro" ||
+        paymentMethod === "pix" ||
+        paymentMethod === "bitcoin_lightning"
+          ? "pending"
+          : "paid",
+      scheduled_at: transitData.scheduled
+        ? `${transitData.scheduledDate}T${transitData.scheduledTime}:00`
+        : null,
     };
 
     try {
@@ -1996,9 +2535,9 @@ function App() {
           user_id: userId,
           type: "pagamento",
           amount: finalPrice,
-          description: `Viagem: ${transitData.origin.split(',')[0]} para ${transitData.destination.split(',')[0]}`
+          description: `Viagem: ${transitData.origin.split(",")[0]} para ${transitData.destination.split(",")[0]}`,
         });
-        setWalletBalance(prev => prev - finalPrice);
+        setWalletBalance((prev) => prev - finalPrice);
       }
 
       // 2. Criar o pedido no banco
@@ -2011,43 +2550,54 @@ function App() {
       if (insertError) throw insertError;
 
       // 3. Se for PIX, redirecionar para tela de CPF + QR Code
-      if (paymentMethod === 'pix') {
-         setPixConfirmed(false);
-         setPixCpf("");
-         setSelectedItem({ ...order, total_price: finalPrice });
-         setSubView('pix_payment');
-      } else if (paymentMethod === 'bitcoin_lightning') {
-          try {
-            const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
-              body: { amount: finalPrice, orderId: order.id, memo: `Viagem Izi #${order.id}` },
+      if (paymentMethod === "pix") {
+        setPixConfirmed(false);
+        setPixCpf("");
+        setSelectedItem({ ...order, total_price: finalPrice });
+        setSubView("pix_payment");
+      } else if (paymentMethod === "bitcoin_lightning") {
+        try {
+          const { data: lnData, error: lnErr } =
+            await supabase.functions.invoke("create-lightning-invoice", {
+              body: {
+                amount: finalPrice,
+                orderId: order.id,
+                memo: `Viagem Izi #${order.id}`,
+              },
             });
-            if (!lnErr && lnData?.payment_request) {
-               setLightningData({ 
-                 payment_request: lnData.payment_request, 
-                 satoshis: Math.round(finalPrice * 2000), // Exemplo de conversão
-                 btc_price_brl: 350000 
-               });
-               setSubView("lightning_payment");
-            }
-          } catch(e) {}
+          if (!lnErr && lnData?.payment_request) {
+            setLightningData({
+              payment_request: lnData.payment_request,
+              satoshis: Math.round(finalPrice * 2000), // Exemplo de conversão
+              btc_price_brl: 350000,
+            });
+            setSubView("lightning_payment");
+          }
+        } catch (e) {}
       }
 
       // Salvar no histórico
-      const newHistory = [transitData.destination, ...transitHistory.filter(h => h !== transitData.destination)].slice(0, 10);
+      const newHistory = [
+        transitData.destination,
+        ...transitHistory.filter((h) => h !== transitData.destination),
+      ].slice(0, 10);
       setTransitHistory(newHistory);
       localStorage.setItem("transitHistory", JSON.stringify(newHistory));
 
       setSelectedItem(order);
-      
-      if (paymentMethod !== 'pix' && paymentMethod !== 'bitcoin_lightning') {
-        toastSuccess(isShipping ? "Pedido de envio criado!" : "Procurando motorista mais próximo...");
+
+      if (paymentMethod !== "pix" && paymentMethod !== "bitcoin_lightning") {
+        toastSuccess(
+          isShipping
+            ? "Pedido de envio criado!"
+            : "Procurando motorista mais próximo...",
+        );
         if (transitData.scheduled) {
           setSubView("payment_success");
         } else {
           setSubView("active_order");
         }
       }
-
     } catch (err: any) {
       console.error("Erro no fluxo de mobilidade:", err);
       toastError("Não foi possível criar seu pedido: " + err.message);
@@ -2066,7 +2616,11 @@ function App() {
 
   // Monitorar mudanças em origem/destino para calcular preços em tempo real
   useEffect(() => {
-    if ((subView === "taxi_wizard" || subView === "transit_selection") && transitData.origin && transitData.destination) {
+    if (
+      (subView === "taxi_wizard" || subView === "transit_selection") &&
+      transitData.origin &&
+      transitData.destination
+    ) {
       setIsCalculatingPrice(true);
       setDistancePrices({});
       const timer = setTimeout(() => {
@@ -2078,36 +2632,45 @@ function App() {
 
   // Autopreencher origem se estiver vazia ao entrar no wizard
   useEffect(() => {
-    if (subView === "taxi_wizard" && userLocation.address && !transitData.origin) {
-      setTransitData(prev => ({ ...prev, origin: userLocation.address }));
+    if (
+      subView === "taxi_wizard" &&
+      userLocation.address &&
+      !transitData.origin
+    ) {
+      setTransitData((prev) => ({ ...prev, origin: userLocation.address }));
     }
   }, [subView, userLocation.address]);
 
-    
   useEffect(() => {
     let html5QrCode: any = null;
     if (isScanningQR) {
       setTimeout(() => {
-        const reader = document.getElementById('reader');
-        if (reader && typeof (window as any).Html5Qrcode !== 'undefined') {
+        const reader = document.getElementById("reader");
+        if (reader && typeof (window as any).Html5Qrcode !== "undefined") {
           html5QrCode = new (window as any).Html5Qrcode("reader");
-          html5QrCode.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            (decodedText: string) => {
-              if (decodedText.startsWith("izi:transfer:")) {
-                const parts = decodedText.split(":");
-                const targetId = parts[2];
-                const targetEmail = parts[3];
-                const targetPhone = parts[4];
-                setTransferTarget({ id: targetId, email: targetEmail, phone: targetPhone });
-                setIsScanningQR(false);
-                html5QrCode.stop();
-                toastSuccess("Usuário Identificado!");
-              }
-            },
-            () => {}
-          ).catch((e: any) => console.error(e));
+          html5QrCode
+            .start(
+              { facingMode: "environment" },
+              { fps: 10, qrbox: { width: 250, height: 250 } },
+              (decodedText: string) => {
+                if (decodedText.startsWith("izi:transfer:")) {
+                  const parts = decodedText.split(":");
+                  const targetId = parts[2];
+                  const targetEmail = parts[3];
+                  const targetPhone = parts[4];
+                  setTransferTarget({
+                    id: targetId,
+                    email: targetEmail,
+                    phone: targetPhone,
+                  });
+                  setIsScanningQR(false);
+                  html5QrCode.stop();
+                  toastSuccess("Usuário Identificado!");
+                }
+              },
+              () => {},
+            )
+            .catch((e: any) => console.error(e));
         }
       }, 500);
     }
@@ -2118,73 +2681,148 @@ function App() {
     };
   }, [isScanningQR]);
 
-
-
   const renderBurgerList = () => {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-        <header className="sticky top-0 z-50 px-5 pt-5 pb-4" style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
+        <header
+          className="sticky top-0 z-50 px-5 pt-5 pb-4"
+          style={{
+            background: "linear-gradient(to bottom, #000000 70%, transparent)",
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("restaurant_list")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-                <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+              <button
+                onClick={() => setSubView("restaurant_list")}
+                className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+              >
+                <span className="material-symbols-outlined text-zinc-100">
+                  arrow_back
+                </span>
               </button>
               <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">Burgers</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Artesanais & Smash</p>
+                <h1 className="text-xl font-black tracking-tight text-white leading-none">
+                  Burgers
+                </h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">
+                  Artesanais & Smash
+                </p>
               </div>
             </div>
-            <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-              {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>}
+            <button
+              onClick={() => cart.length > 0 && navigateSubView("cart")}
+              className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+            >
+              <span className="material-symbols-outlined text-zinc-100">
+                shopping_bag
+              </span>
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                  {cart.length}
+                </span>
+              )}
             </button>
           </div>
           <div className="relative">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
+              <span className="material-symbols-outlined text-zinc-500 text-xl">
+                search
+              </span>
             </div>
-            <input className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
-              placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            <input
+              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
+              placeholder="Buscar..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </header>
         <main className="px-5 flex flex-col gap-4 pb-10">
-          {ESTABLISHMENTS.filter((s: any) => 
-            s.type === "restaurant" && 
-            (s.description.toLowerCase().includes("burger") || s.name.toLowerCase().includes("burger")) && 
-            s.name.toLowerCase().includes(searchQuery.toLowerCase())
+          {ESTABLISHMENTS.filter(
+            (s: any) =>
+              s.type === "restaurant" &&
+              (s.description.toLowerCase().includes("burger") ||
+                s.name.toLowerCase().includes("burger")) &&
+              s.name.toLowerCase().includes(searchQuery.toLowerCase()),
           ).map((shop: any, i: number) => (
-            <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              onClick={() => handleShopClick({ ...shop, type: "restaurant" })} className="group cursor-pointer active:scale-[0.98] transition-all">
+            <motion.div
+              key={shop.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              onClick={() => handleShopClick({ ...shop, type: "restaurant" })}
+              className="group cursor-pointer active:scale-[0.98] transition-all"
+            >
               <div className="relative h-44 rounded-2xl overflow-hidden mb-3">
-                <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                <img
+                  src={shop.img}
+                  alt={shop.name}
+                  className="size-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-white/10">
-                  <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <span className="text-xs font-black text-white">{shop.rating}</span>
+                  <span
+                    className="material-symbols-outlined text-[14px] text-yellow-400"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    star
+                  </span>
+                  <span className="text-xs font-black text-white">
+                    {shop.rating}
+                  </span>
                 </div>
-                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                {shop.freeDelivery && (
+                  <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
+                    Entrega Grátis
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between px-1">
                 <div>
-                  <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">{shop.name}</h4>
+                  <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">
+                    {shop.name}
+                  </h4>
                   <div className="flex items-center gap-3 mt-1 text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
-                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">schedule</span>{shop.time}</span>
-                    <span className={shop.freeDelivery ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
-                      <span className="material-symbols-outlined text-[13px]">delivery_dining</span>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px]">
+                        schedule
+                      </span>
+                      {shop.time}
+                    </span>
+                    <span
+                      className={
+                        shop.freeDelivery
+                          ? "text-emerald-400 flex items-center gap-1"
+                          : "flex items-center gap-1"
+                      }
+                    >
+                      <span className="material-symbols-outlined text-[13px]">
+                        delivery_dining
+                      </span>
                       {shop.freeDelivery ? "Grátis" : shop.fee}
                     </span>
                   </div>
                 </div>
                 <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 group-hover:bg-yellow-400 group-hover:border-yellow-400 flex items-center justify-center transition-all duration-300">
-                  <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">arrow_forward</span>
+                  <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">
+                    arrow_forward
+                  </span>
                 </div>
               </div>
             </motion.div>
           ))}
-          {ESTABLISHMENTS.filter((s: any) => (s.tag || s.type || "").toLowerCase().includes("burger") && s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+          {ESTABLISHMENTS.filter(
+            (s: any) =>
+              (s.tag || s.type || "").toLowerCase().includes("burger") &&
+              s.name.toLowerCase().includes(searchQuery.toLowerCase()),
+          ).length === 0 && (
             <div className="flex flex-col items-center py-16 gap-3">
-              <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
-              <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum resultado</p>
+              <span className="material-symbols-outlined text-4xl text-zinc-700">
+                search_off
+              </span>
+              <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">
+                Nenhum resultado
+              </p>
             </div>
           )}
         </main>
@@ -2195,68 +2833,145 @@ function App() {
   const renderPizzaList = () => {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-        <header className="sticky top-0 z-50 px-5 pt-5 pb-4" style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
+        <header
+          className="sticky top-0 z-50 px-5 pt-5 pb-4"
+          style={{
+            background: "linear-gradient(to bottom, #000000 70%, transparent)",
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("restaurant_list")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-                <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+              <button
+                onClick={() => setSubView("restaurant_list")}
+                className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+              >
+                <span className="material-symbols-outlined text-zinc-100">
+                  arrow_back
+                </span>
               </button>
               <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">Pizzas</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">As melhores da cidade</p>
+                <h1 className="text-xl font-black tracking-tight text-white leading-none">
+                  Pizzas
+                </h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">
+                  As melhores da cidade
+                </p>
               </div>
             </div>
-            <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-              {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>}
+            <button
+              onClick={() => cart.length > 0 && navigateSubView("cart")}
+              className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+            >
+              <span className="material-symbols-outlined text-zinc-100">
+                shopping_bag
+              </span>
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                  {cart.length}
+                </span>
+              )}
             </button>
           </div>
           <div className="relative">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
+              <span className="material-symbols-outlined text-zinc-500 text-xl">
+                search
+              </span>
             </div>
-            <input className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
-              placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            <input
+              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
+              placeholder="Buscar..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </header>
         <main className="px-5 flex flex-col gap-4 pb-10">
-          {ESTABLISHMENTS.filter((s: any) => 
-            s.type === "restaurant" && 
-            (s.description.toLowerCase().includes("pizza") || s.name.toLowerCase().includes("pizza")) && 
-            s.name.toLowerCase().includes(searchQuery.toLowerCase())
+          {ESTABLISHMENTS.filter(
+            (s: any) =>
+              s.type === "restaurant" &&
+              (s.description.toLowerCase().includes("pizza") ||
+                s.name.toLowerCase().includes("pizza")) &&
+              s.name.toLowerCase().includes(searchQuery.toLowerCase()),
           ).map((shop: any, i: number) => (
-            <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              onClick={() => handleShopClick({ ...shop, type: "restaurant" })} className="group cursor-pointer active:scale-[0.98] transition-all">
+            <motion.div
+              key={shop.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              onClick={() => handleShopClick({ ...shop, type: "restaurant" })}
+              className="group cursor-pointer active:scale-[0.98] transition-all"
+            >
               <div className="relative h-44 rounded-2xl overflow-hidden mb-3">
-                <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                <img
+                  src={shop.img}
+                  alt={shop.name}
+                  className="size-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-white/10">
-                  <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <span className="text-xs font-black text-white">{shop.rating}</span>
+                  <span
+                    className="material-symbols-outlined text-[14px] text-yellow-400"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    star
+                  </span>
+                  <span className="text-xs font-black text-white">
+                    {shop.rating}
+                  </span>
                 </div>
-                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                {shop.freeDelivery && (
+                  <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
+                    Entrega Grátis
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between px-1">
                 <div>
-                  <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">{shop.name}</h4>
+                  <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">
+                    {shop.name}
+                  </h4>
                   <div className="flex items-center gap-3 mt-1 text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
-                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">schedule</span>{shop.time}</span>
-                    <span className={shop.freeDelivery ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
-                      <span className="material-symbols-outlined text-[13px]">delivery_dining</span>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px]">
+                        schedule
+                      </span>
+                      {shop.time}
+                    </span>
+                    <span
+                      className={
+                        shop.freeDelivery
+                          ? "text-emerald-400 flex items-center gap-1"
+                          : "flex items-center gap-1"
+                      }
+                    >
+                      <span className="material-symbols-outlined text-[13px]">
+                        delivery_dining
+                      </span>
                       {shop.freeDelivery ? "Grátis" : shop.fee}
                     </span>
                   </div>
                 </div>
                 <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 group-hover:bg-yellow-400 group-hover:border-yellow-400 flex items-center justify-center transition-all duration-300">
-                  <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">arrow_forward</span>
+                  <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">
+                    arrow_forward
+                  </span>
                 </div>
               </div>
             </motion.div>
           ))}
-          {ESTABLISHMENTS.filter((s: any) => (s.tag || s.type || "").toLowerCase().includes("pizza") && s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+          {ESTABLISHMENTS.filter(
+            (s: any) =>
+              (s.tag || s.type || "").toLowerCase().includes("pizza") &&
+              s.name.toLowerCase().includes(searchQuery.toLowerCase()),
+          ).length === 0 && (
             <div className="flex flex-col items-center py-16 gap-3">
-              <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
-              <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum resultado</p>
+              <span className="material-symbols-outlined text-4xl text-zinc-700">
+                search_off
+              </span>
+              <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">
+                Nenhum resultado
+              </p>
             </div>
           )}
         </main>
@@ -2267,68 +2982,149 @@ function App() {
   const renderAcaiList = () => {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-        <header className="sticky top-0 z-50 px-5 pt-5 pb-4" style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
+        <header
+          className="sticky top-0 z-50 px-5 pt-5 pb-4"
+          style={{
+            background: "linear-gradient(to bottom, #000000 70%, transparent)",
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("restaurant_list")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-                <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+              <button
+                onClick={() => setSubView("restaurant_list")}
+                className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+              >
+                <span className="material-symbols-outlined text-zinc-100">
+                  arrow_back
+                </span>
               </button>
               <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">Açaí</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Cremoso e gelado</p>
+                <h1 className="text-xl font-black tracking-tight text-white leading-none">
+                  Açaí
+                </h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">
+                  Cremoso e gelado
+                </p>
               </div>
             </div>
-            <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-              {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>}
+            <button
+              onClick={() => cart.length > 0 && navigateSubView("cart")}
+              className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+            >
+              <span className="material-symbols-outlined text-zinc-100">
+                shopping_bag
+              </span>
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                  {cart.length}
+                </span>
+              )}
             </button>
           </div>
           <div className="relative">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
+              <span className="material-symbols-outlined text-zinc-500 text-xl">
+                search
+              </span>
             </div>
-            <input className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
-              placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            <input
+              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
+              placeholder="Buscar..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </header>
         <main className="px-5 flex flex-col gap-4 pb-10">
-          {ESTABLISHMENTS.filter((s: any) => 
-            s.type === "restaurant" && 
-            (s.description.toLowerCase().includes("açai") || s.description.toLowerCase().includes("açaí") || s.name.toLowerCase().includes("acai") || s.name.toLowerCase().includes("açaí")) && 
-            s.name.toLowerCase().includes(searchQuery.toLowerCase())
+          {ESTABLISHMENTS.filter(
+            (s: any) =>
+              s.type === "restaurant" &&
+              (s.description.toLowerCase().includes("açai") ||
+                s.description.toLowerCase().includes("açaí") ||
+                s.name.toLowerCase().includes("acai") ||
+                s.name.toLowerCase().includes("açaí")) &&
+              s.name.toLowerCase().includes(searchQuery.toLowerCase()),
           ).map((shop: any, i: number) => (
-            <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              onClick={() => handleShopClick({ ...shop, type: "restaurant" })} className="group cursor-pointer active:scale-[0.98] transition-all">
+            <motion.div
+              key={shop.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              onClick={() => handleShopClick({ ...shop, type: "restaurant" })}
+              className="group cursor-pointer active:scale-[0.98] transition-all"
+            >
               <div className="relative h-44 rounded-2xl overflow-hidden mb-3">
-                <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                <img
+                  src={shop.img}
+                  alt={shop.name}
+                  className="size-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-white/10">
-                  <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <span className="text-xs font-black text-white">{shop.rating}</span>
+                  <span
+                    className="material-symbols-outlined text-[14px] text-yellow-400"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    star
+                  </span>
+                  <span className="text-xs font-black text-white">
+                    {shop.rating}
+                  </span>
                 </div>
-                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                {shop.freeDelivery && (
+                  <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
+                    Entrega Grátis
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between px-1">
                 <div>
-                  <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">{shop.name}</h4>
+                  <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">
+                    {shop.name}
+                  </h4>
                   <div className="flex items-center gap-3 mt-1 text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
-                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">schedule</span>{shop.time}</span>
-                    <span className={shop.freeDelivery ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
-                      <span className="material-symbols-outlined text-[13px]">delivery_dining</span>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px]">
+                        schedule
+                      </span>
+                      {shop.time}
+                    </span>
+                    <span
+                      className={
+                        shop.freeDelivery
+                          ? "text-emerald-400 flex items-center gap-1"
+                          : "flex items-center gap-1"
+                      }
+                    >
+                      <span className="material-symbols-outlined text-[13px]">
+                        delivery_dining
+                      </span>
                       {shop.freeDelivery ? "Grátis" : shop.fee}
                     </span>
                   </div>
                 </div>
                 <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 group-hover:bg-yellow-400 group-hover:border-yellow-400 flex items-center justify-center transition-all duration-300">
-                  <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">arrow_forward</span>
+                  <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">
+                    arrow_forward
+                  </span>
                 </div>
               </div>
             </motion.div>
           ))}
-          {ESTABLISHMENTS.filter((s: any) => ((s.tag || s.type || "").toLowerCase().includes("açai") || (s.tag || s.type || "").toLowerCase().includes("açaí") || (s.tag || s.type || "").toLowerCase().includes("acai")) && s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+          {ESTABLISHMENTS.filter(
+            (s: any) =>
+              ((s.tag || s.type || "").toLowerCase().includes("açai") ||
+                (s.tag || s.type || "").toLowerCase().includes("açaí") ||
+                (s.tag || s.type || "").toLowerCase().includes("acai")) &&
+              s.name.toLowerCase().includes(searchQuery.toLowerCase()),
+          ).length === 0 && (
             <div className="flex flex-col items-center py-16 gap-3">
-              <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
-              <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum resultado</p>
+              <span className="material-symbols-outlined text-4xl text-zinc-700">
+                search_off
+              </span>
+              <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">
+                Nenhum resultado
+              </p>
             </div>
           )}
         </main>
@@ -2339,68 +3135,148 @@ function App() {
   const renderJaponesaList = () => {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-        <header className="sticky top-0 z-50 px-5 pt-5 pb-4" style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
+        <header
+          className="sticky top-0 z-50 px-5 pt-5 pb-4"
+          style={{
+            background: "linear-gradient(to bottom, #000000 70%, transparent)",
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("restaurant_list")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-                <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+              <button
+                onClick={() => setSubView("restaurant_list")}
+                className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+              >
+                <span className="material-symbols-outlined text-zinc-100">
+                  arrow_back
+                </span>
               </button>
               <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">Japonesa</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Sushi & temaki</p>
+                <h1 className="text-xl font-black tracking-tight text-white leading-none">
+                  Japonesa
+                </h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">
+                  Sushi & temaki
+                </p>
               </div>
             </div>
-            <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-              {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>}
+            <button
+              onClick={() => cart.length > 0 && navigateSubView("cart")}
+              className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+            >
+              <span className="material-symbols-outlined text-zinc-100">
+                shopping_bag
+              </span>
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                  {cart.length}
+                </span>
+              )}
             </button>
           </div>
           <div className="relative">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
+              <span className="material-symbols-outlined text-zinc-500 text-xl">
+                search
+              </span>
             </div>
-            <input className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
-              placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            <input
+              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
+              placeholder="Buscar..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </header>
         <main className="px-5 flex flex-col gap-4 pb-10">
-          {ESTABLISHMENTS.filter((s: any) => 
-            s.type === "restaurant" && 
-            (s.description.toLowerCase().includes("japones") || s.description.toLowerCase().includes("sushi") || s.name.toLowerCase().includes("sushi")) && 
-            s.name.toLowerCase().includes(searchQuery.toLowerCase())
+          {ESTABLISHMENTS.filter(
+            (s: any) =>
+              s.type === "restaurant" &&
+              (s.description.toLowerCase().includes("japones") ||
+                s.description.toLowerCase().includes("sushi") ||
+                s.name.toLowerCase().includes("sushi")) &&
+              s.name.toLowerCase().includes(searchQuery.toLowerCase()),
           ).map((shop: any, i: number) => (
-            <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              onClick={() => handleShopClick({ ...shop, type: "restaurant" })} className="group cursor-pointer active:scale-[0.98] transition-all">
+            <motion.div
+              key={shop.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              onClick={() => handleShopClick({ ...shop, type: "restaurant" })}
+              className="group cursor-pointer active:scale-[0.98] transition-all"
+            >
               <div className="relative h-44 rounded-2xl overflow-hidden mb-3">
-                <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                <img
+                  src={shop.img}
+                  alt={shop.name}
+                  className="size-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-white/10">
-                  <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <span className="text-xs font-black text-white">{shop.rating}</span>
+                  <span
+                    className="material-symbols-outlined text-[14px] text-yellow-400"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    star
+                  </span>
+                  <span className="text-xs font-black text-white">
+                    {shop.rating}
+                  </span>
                 </div>
-                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                {shop.freeDelivery && (
+                  <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
+                    Entrega Grátis
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between px-1">
                 <div>
-                  <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">{shop.name}</h4>
+                  <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">
+                    {shop.name}
+                  </h4>
                   <div className="flex items-center gap-3 mt-1 text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
-                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">schedule</span>{shop.time}</span>
-                    <span className={shop.freeDelivery ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
-                      <span className="material-symbols-outlined text-[13px]">delivery_dining</span>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px]">
+                        schedule
+                      </span>
+                      {shop.time}
+                    </span>
+                    <span
+                      className={
+                        shop.freeDelivery
+                          ? "text-emerald-400 flex items-center gap-1"
+                          : "flex items-center gap-1"
+                      }
+                    >
+                      <span className="material-symbols-outlined text-[13px]">
+                        delivery_dining
+                      </span>
                       {shop.freeDelivery ? "Grátis" : shop.fee}
                     </span>
                   </div>
                 </div>
                 <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 group-hover:bg-yellow-400 group-hover:border-yellow-400 flex items-center justify-center transition-all duration-300">
-                  <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">arrow_forward</span>
+                  <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">
+                    arrow_forward
+                  </span>
                 </div>
               </div>
             </motion.div>
           ))}
-          {ESTABLISHMENTS.filter((s: any) => ((s.tag || s.type || "").toLowerCase().includes("japones") || (s.tag || s.type || "").toLowerCase().includes("sushi") || (s.tag || s.type || "").toLowerCase().includes("temaki")) && s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+          {ESTABLISHMENTS.filter(
+            (s: any) =>
+              ((s.tag || s.type || "").toLowerCase().includes("japones") ||
+                (s.tag || s.type || "").toLowerCase().includes("sushi") ||
+                (s.tag || s.type || "").toLowerCase().includes("temaki")) &&
+              s.name.toLowerCase().includes(searchQuery.toLowerCase()),
+          ).length === 0 && (
             <div className="flex flex-col items-center py-16 gap-3">
-              <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
-              <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum resultado</p>
+              <span className="material-symbols-outlined text-4xl text-zinc-700">
+                search_off
+              </span>
+              <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">
+                Nenhum resultado
+              </p>
             </div>
           )}
         </main>
@@ -2425,9 +3301,13 @@ function App() {
         filterFn={(estab: any) => {
           const catId = (exploreCategoryState.id || "").toLowerCase();
           const type = estab.type.toLowerCase();
-          return type === catId || estab.description.toLowerCase().includes(catId);
+          return (
+            type === catId || estab.description.toLowerCase().includes(catId)
+          );
         }}
-        onShopClick={(shop) => handleShopClick({ ...shop, type: exploreCategoryState.id })}
+        onShopClick={(shop) =>
+          handleShopClick({ ...shop, type: exploreCategoryState.id })
+        }
         cartLength={cart.length}
         navigateSubView={navigateSubView}
         backView="none"
@@ -2437,9 +3317,9 @@ function App() {
 
   const renderExploreRestaurants = () => {
     const isLunchMode = restaurantInitialCategory === "Almoço";
-    
+
     return (
-      <ExploreRestaurantsView 
+      <ExploreRestaurantsView
         setSubView={setSubView}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -2464,102 +3344,137 @@ function App() {
         <header className="sticky top-0 z-50 bg-black/80  backdrop-blur-3xl border-b border-slate-200/50 border-zinc-800/50 pb-6 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.05)]">
           <div className="flex items-center p-6 pb-2 justify-between">
             <div className="flex items-center gap-5">
-              <button onClick={() => setSubView('restaurant_list')} className="size-12 rounded-[22px] bg-white bg-zinc-900 shadow-2xl border border-zinc-800 border-zinc-800 flex items-center justify-center active:scale-90 transition-all group">
+              <button
+                onClick={() => setSubView("restaurant_list")}
+                className="size-12 rounded-[22px] bg-white bg-zinc-900 shadow-2xl border border-zinc-800 border-zinc-800 flex items-center justify-center active:scale-90 transition-all group"
+              >
                 <Icon name="arrow_back" />
               </button>
               <div>
-                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Cardápios do Dia</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500">Sugestões Especiais</p>
+                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">
+                  Cardápios do Dia
+                </h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500">
+                  Sugestões Especiais
+                </p>
               </div>
             </div>
           </div>
         </header>
 
         <main className="p-6 space-y-10 pt-8">
-           <div className="bg-pink-500/5 p-8 rounded-[45px] border border-pink-500/10 mb-2">
-             <h2 className="text-lg font-black text-pink-600  mb-2 leading-none uppercase tracking-tighter">Ofertas de Hoje</h2>
-             <p className="text-xs font-medium text-zinc-500">Seus pratos favoritos com preços exclusivos para hoje.</p>
-           </div>
+          <div className="bg-pink-500/5 p-8 rounded-[45px] border border-pink-500/10 mb-2">
+            <h2 className="text-lg font-black text-pink-600  mb-2 leading-none uppercase tracking-tighter">
+              Ofertas de Hoje
+            </h2>
+            <p className="text-xs font-medium text-zinc-500">
+              Seus pratos favoritos com preços exclusivos para hoje.
+            </p>
+          </div>
 
-           <div className="grid grid-cols-1 gap-6">
-                {specials.map((p, i) => (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.1 }}
-                  key={p.id}
-                  onClick={() => { handleAddToCart(p); }}
-                  className="bg-white bg-zinc-900 rounded-[50px] p-6 shadow-2xl border border-zinc-800 border-zinc-800 group relative active:scale-95 transition-all overflow-hidden"
-                >
-                  <div className="flex gap-6">
-                    <div className="size-32 rounded-[35px] overflow-hidden shrink-0 shadow-2xl relative">
-                       <img src={p.img} className="size-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                       <div className="absolute top-3 left-3 bg-pink-500 text-white text-[9px] font-black px-2 py-1 rounded-lg shadow-lg">HOJE</div>
-                    </div>
-                    <div className="flex-1 flex flex-col justify-center min-w-0">
-                       <p className="text-[9px] font-black uppercase tracking-widest text-pink-500 mb-1">{p.store}</p>
-                       <h3 className="text-lg font-black text-white leading-tight mb-2 truncate group-hover:text-pink-500 transition-colors">{p.name}</h3>
-                       <p className="text-[10px] text-zinc-500 font-medium line-clamp-2 leading-relaxed mb-4">{p.desc}</p>
-                       <div className="flex items-center justify-between">
-                         <span className="text-xl font-black text-white">R$ {p.price.toFixed(2).replace('.', ',')}</span>
-                         <div className="size-11 rounded-[18px] bg-pink-50  text-pink-500 flex items-center justify-center group-hover:bg-pink-500 group-hover:text-white transition-all shadow-lg">
-                           <Icon name="add" />
-                         </div>
-                       </div>
+          <div className="grid grid-cols-1 gap-6">
+            {specials.map((p, i) => (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.1 }}
+                key={p.id}
+                onClick={() => {
+                  handleAddToCart(p);
+                }}
+                className="bg-white bg-zinc-900 rounded-[50px] p-6 shadow-2xl border border-zinc-800 border-zinc-800 group relative active:scale-95 transition-all overflow-hidden"
+              >
+                <div className="flex gap-6">
+                  <div className="size-32 rounded-[35px] overflow-hidden shrink-0 shadow-2xl relative">
+                    <img
+                      src={p.img}
+                      className="size-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                    <div className="absolute top-3 left-3 bg-pink-500 text-white text-[9px] font-black px-2 py-1 rounded-lg shadow-lg">
+                      HOJE
                     </div>
                   </div>
-                </motion.div>
-             ))}
-           </div>
+                  <div className="flex-1 flex flex-col justify-center min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-pink-500 mb-1">
+                      {p.store}
+                    </p>
+                    <h3 className="text-lg font-black text-white leading-tight mb-2 truncate group-hover:text-pink-500 transition-colors">
+                      {p.name}
+                    </h3>
+                    <p className="text-[10px] text-zinc-500 font-medium line-clamp-2 leading-relaxed mb-4">
+                      {p.desc}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xl font-black text-white">
+                        R$ {p.price.toFixed(2).replace(".", ",")}
+                      </span>
+                      <div className="size-11 rounded-[18px] bg-pink-50  text-pink-500 flex items-center justify-center group-hover:bg-pink-500 group-hover:text-white transition-all shadow-lg">
+                        <Icon name="add" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </main>
       </div>
     );
   };
 
   const renderExclusiveOffer = () => {
-    const displayDeals = flashOffers.length > 0 ? flashOffers.map(f => ({
-      id: f.product_id || f.id,
-      name: f.product_name,
-      store: f.admin_users?.store_name || 'Loja Parceira',
-      img: f.product_image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600',
-      oldPrice: Number(f.original_price),
-      price: Number(f.discounted_price),
-      merchant_id: f.merchant_id,
-      merchant_name: f.admin_users?.store_name || 'Loja Parceira',
-      is_flash_offer: true,
-      flash_offer_id: f.id,
-      off: f.original_price && f.discounted_price 
-        ? `- R$ ${(Number(f.original_price) - Number(f.discounted_price)).toFixed(2).replace('.', ',')} OFF` 
-        : `- R$ ${(Number(f.original_price) * (Number(f.discount_percent) / 100)).toFixed(2).replace('.', ',')} OFF`,
-      desc: (f.description || 'Oferta exclusiva e por tempo limitado para membros Izi Black.') + `\n\n📌 Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
-    })) : [
-      {
-        id: 'vip-burger-1',
-        name: 'The Ultimate Izi Black Burger',
-        store: 'Burger Gourmet Lab',
-        img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600',
-        oldPrice: 59.90,
-        price: 29.95,
-        merchant_id: null,
-        merchant_name: 'Burger Gourmet Lab',
-        is_flash_offer: true,
-        off: '50% OFF',
-        desc: 'Blend de carne Angus 180g, queijo brie maçaricado, cebola caramelizada no Jack Daniels e pão brioche artesanal.\n\n📌 Vendido por: Burger Gourmet Lab'
-      },
-      {
-        id: 'vip-pizza-1',
-        name: 'Pizza Trufada Individual',
-        store: 'Forneria d\'Oro',
-        img: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600',
-        oldPrice: 72.00,
-        price: 36.00,
-        merchant_id: null,
-        merchant_name: 'Forneria d\'Oro',
-        is_flash_offer: true,
-        off: '50% OFF',
-        desc: 'Massa de fermentação natural, mozzarella fior di latte, azeite de trufas brancas e manjericão fresco.\n\n📌 Vendido por: Forneria d\'Oro'
-      }
-    ];
+    const displayDeals =
+      flashOffers.length > 0
+        ? flashOffers.map((f) => ({
+            id: f.product_id || f.id,
+            name: f.product_name,
+            store: f.admin_users?.store_name || "Loja Parceira",
+            img:
+              f.product_image ||
+              "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600",
+            oldPrice: Number(f.original_price),
+            price: Number(f.discounted_price),
+            merchant_id: f.merchant_id,
+            merchant_name: f.admin_users?.store_name || "Loja Parceira",
+            is_flash_offer: true,
+            flash_offer_id: f.id,
+            off:
+              f.original_price && f.discounted_price
+                ? `- R$ ${(Number(f.original_price) - Number(f.discounted_price)).toFixed(2).replace(".", ",")} OFF`
+                : `- R$ ${(Number(f.original_price) * (Number(f.discount_percent) / 100)).toFixed(2).replace(".", ",")} OFF`,
+            desc:
+              (f.description ||
+                "Oferta exclusiva e por tempo limitado para membros Izi Black.") +
+              `\n\n📌 Vendido por: ${f.admin_users?.store_name || "Loja Parceira"}`,
+          }))
+        : [
+            {
+              id: "vip-burger-1",
+              name: "The Ultimate Izi Black Burger",
+              store: "Burger Gourmet Lab",
+              img: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600",
+              oldPrice: 59.9,
+              price: 29.95,
+              merchant_id: null,
+              merchant_name: "Burger Gourmet Lab",
+              is_flash_offer: true,
+              off: "50% OFF",
+              desc: "Blend de carne Angus 180g, queijo brie maçaricado, cebola caramelizada no Jack Daniels e pão brioche artesanal.\n\n📌 Vendido por: Burger Gourmet Lab",
+            },
+            {
+              id: "vip-pizza-1",
+              name: "Pizza Trufada Individual",
+              store: "Forneria d'Oro",
+              img: "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600",
+              oldPrice: 72.0,
+              price: 36.0,
+              merchant_id: null,
+              merchant_name: "Forneria d'Oro",
+              is_flash_offer: true,
+              off: "50% OFF",
+              desc: "Massa de fermentação natural, mozzarella fior di latte, azeite de trufas brancas e manjericão fresco.\n\n📌 Vendido por: Forneria d'Oro",
+            },
+          ];
 
     return (
       <div className="absolute inset-0 z-[100] bg-zinc-950 text-white flex flex-col hide-scrollbar overflow-y-auto pb-40">
@@ -2570,19 +3485,23 @@ function App() {
 
         <header className="relative z-10 p-8 flex flex-col items-center gap-8 pt-12">
           <div className="w-full flex items-center justify-between">
-            <button 
-              onClick={() => setSubView("none")} 
+            <button
+              onClick={() => setSubView("none")}
               className="size-12 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center active:scale-90 transition-all group"
             >
               <Icon name="arrow_back" />
             </button>
-            
+
             <div className="flex flex-col items-center">
               <div className="flex items-center gap-2 mb-1">
                 <Icon name="bolt" />
-                <span className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.4em]">Ofertas Flash</span>
+                <span className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.4em]">
+                  Ofertas Flash
+                </span>
               </div>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">Exclusivo Membros Izi Black</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">
+                Exclusivo Membros Izi Black
+              </p>
             </div>
 
             <div className="size-12 rounded-full bg-yellow-400/5 border border-yellow-400/10 flex items-center justify-center">
@@ -2592,24 +3511,42 @@ function App() {
 
           {/* Luxury Timer Panel */}
           <div className="relative w-full max-w-[340px] rounded-[40px] bg-white/[0.02] border border-white/[0.05] p-8 flex flex-col items-center justify-center gap-2 overflow-hidden shadow-none">
-             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent" />
-             <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-2">As ofertas terminam em:</p>
-             <div className="flex items-center gap-4">
-                <div className="flex flex-col items-center">
-                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{timeLeft.h}</span>
-                  <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">Horas</span>
-                </div>
-                <span className="text-4xl font-black text-yellow-400 -mt-2">:</span>
-                <div className="flex flex-col items-center">
-                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{timeLeft.m}</span>
-                  <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">Minutos</span>
-                </div>
-                <span className="text-4xl font-black text-yellow-400 -mt-2">:</span>
-                <div className="flex flex-col items-center">
-                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{timeLeft.s}</span>
-                  <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">Segundos</span>
-                </div>
-             </div>
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent" />
+            <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-2">
+              As ofertas terminam em:
+            </p>
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col items-center">
+                <span className="text-4xl font-black text-white tabular-nums tracking-tighter">
+                  {timeLeft.h}
+                </span>
+                <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">
+                  Horas
+                </span>
+              </div>
+              <span className="text-4xl font-black text-yellow-400 -mt-2">
+                :
+              </span>
+              <div className="flex flex-col items-center">
+                <span className="text-4xl font-black text-white tabular-nums tracking-tighter">
+                  {timeLeft.m}
+                </span>
+                <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">
+                  Minutos
+                </span>
+              </div>
+              <span className="text-4xl font-black text-yellow-400 -mt-2">
+                :
+              </span>
+              <div className="flex flex-col items-center">
+                <span className="text-4xl font-black text-white tabular-nums tracking-tighter">
+                  {timeLeft.s}
+                </span>
+                <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">
+                  Segundos
+                </span>
+              </div>
+            </div>
           </div>
         </header>
 
@@ -2620,36 +3557,53 @@ function App() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1, duration: 0.6 }}
               key={deal.id}
-              onClick={() => { 
+              onClick={() => {
                 setSelectedItem(deal);
-                setSubView("product_detail"); 
+                setSubView("product_detail");
               }}
               className="w-full max-w-[340px] bg-zinc-900/50 rounded-[50px] overflow-hidden border border-white/[0.05] flex flex-col items-center group cursor-pointer active:scale-[0.98] transition-all hover:bg-zinc-900"
             >
               <div className="w-full h-80 relative">
-                <img src={deal.img} className="size-full object-cover group-hover:scale-105 transition-transform duration-[3000ms]" />
+                <img
+                  src={deal.img}
+                  className="size-full object-cover group-hover:scale-105 transition-transform duration-[3000ms]"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
                 <div className="absolute top-6 left-6 bg-yellow-400 px-6 py-2 rounded-full shadow-lg shadow-yellow-400/20">
-                  <span className="text-[10px] text-black font-black uppercase tracking-widest">{deal.off}</span>
+                  <span className="text-[10px] text-black font-black uppercase tracking-widest">
+                    {deal.off}
+                  </span>
                 </div>
               </div>
-              
+
               <div className="p-10 flex flex-col items-center text-center -mt-16 relative z-10 w-full">
-                <h3 className="text-2xl font-black text-white tracking-tighter leading-tight mb-2 drop-shadow-xl">{deal.name}</h3>
-                <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-4 opacity-80">{deal.store}</p>
-                <p className="text-[11px] text-zinc-500 font-medium mb-8 max-w-[260px] line-clamp-2">{deal.desc}</p>
-                
+                <h3 className="text-2xl font-black text-white tracking-tighter leading-tight mb-2 drop-shadow-xl">
+                  {deal.name}
+                </h3>
+                <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-4 opacity-80">
+                  {deal.store}
+                </p>
+                <p className="text-[11px] text-zinc-500 font-medium mb-8 max-w-[260px] line-clamp-2">
+                  {deal.desc}
+                </p>
+
                 <div className="w-full flex flex-col items-center gap-6">
                   <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black text-zinc-700 line-through tracking-widest mb-1">R$ {deal.oldPrice.toFixed(2).replace('.', ',')}</span>
+                    <span className="text-[10px] font-black text-zinc-700 line-through tracking-widest mb-1">
+                      R$ {deal.oldPrice.toFixed(2).replace(".", ",")}
+                    </span>
                     <span className="text-4xl font-black text-white tracking-tighter flex items-center gap-2">
-                      <span className="text-yellow-400 text-lg uppercase font-black">R$</span>
-                      {deal.price.toFixed(2).replace('.', ',')}
+                      <span className="text-yellow-400 text-lg uppercase font-black">
+                        R$
+                      </span>
+                      {deal.price.toFixed(2).replace(".", ",")}
                     </span>
                   </div>
-                  
+
                   <div className="w-full bg-white/[0.03] border border-white/5 py-4 rounded-full group-hover:bg-yellow-400 group-hover:border-yellow-400 transition-all flex items-center justify-center gap-3">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 group-hover:text-black transition-colors">Adicionar ao Carrinho</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 group-hover:text-black transition-colors">
+                      Adicionar ao Carrinho
+                    </span>
                     <Icon name="add_circle" />
                   </div>
                 </div>
@@ -2664,68 +3618,148 @@ function App() {
   const renderBrasileiraList = () => {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-        <header className="sticky top-0 z-50 px-5 pt-5 pb-4" style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
+        <header
+          className="sticky top-0 z-50 px-5 pt-5 pb-4"
+          style={{
+            background: "linear-gradient(to bottom, #000000 70%, transparent)",
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("restaurant_list")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-                <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+              <button
+                onClick={() => setSubView("restaurant_list")}
+                className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+              >
+                <span className="material-symbols-outlined text-zinc-100">
+                  arrow_back
+                </span>
               </button>
               <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">Brasileira</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Comida de verdade</p>
+                <h1 className="text-xl font-black tracking-tight text-white leading-none">
+                  Brasileira
+                </h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">
+                  Comida de verdade
+                </p>
               </div>
             </div>
-            <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-              {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>}
+            <button
+              onClick={() => cart.length > 0 && navigateSubView("cart")}
+              className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+            >
+              <span className="material-symbols-outlined text-zinc-100">
+                shopping_bag
+              </span>
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                  {cart.length}
+                </span>
+              )}
             </button>
           </div>
           <div className="relative">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
+              <span className="material-symbols-outlined text-zinc-500 text-xl">
+                search
+              </span>
             </div>
-            <input className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
-              placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            <input
+              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
+              placeholder="Buscar..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </header>
         <main className="px-5 flex flex-col gap-4 pb-10">
-          {ESTABLISHMENTS.filter((s: any) => 
-            s.type === "restaurant" && 
-            (s.description.toLowerCase().includes("brasileira") || s.description.toLowerCase().includes("caseira") || s.description.toLowerCase().includes("marmita")) && 
-            s.name.toLowerCase().includes(searchQuery.toLowerCase())
+          {ESTABLISHMENTS.filter(
+            (s: any) =>
+              s.type === "restaurant" &&
+              (s.description.toLowerCase().includes("brasileira") ||
+                s.description.toLowerCase().includes("caseira") ||
+                s.description.toLowerCase().includes("marmita")) &&
+              s.name.toLowerCase().includes(searchQuery.toLowerCase()),
           ).map((shop: any, i: number) => (
-            <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              onClick={() => handleShopClick({ ...shop, type: "restaurant" })} className="group cursor-pointer active:scale-[0.98] transition-all">
+            <motion.div
+              key={shop.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              onClick={() => handleShopClick({ ...shop, type: "restaurant" })}
+              className="group cursor-pointer active:scale-[0.98] transition-all"
+            >
               <div className="relative h-44 rounded-2xl overflow-hidden mb-3">
-                <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                <img
+                  src={shop.img}
+                  alt={shop.name}
+                  className="size-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-white/10">
-                  <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <span className="text-xs font-black text-white">{shop.rating}</span>
+                  <span
+                    className="material-symbols-outlined text-[14px] text-yellow-400"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    star
+                  </span>
+                  <span className="text-xs font-black text-white">
+                    {shop.rating}
+                  </span>
                 </div>
-                {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                {shop.freeDelivery && (
+                  <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
+                    Entrega Grátis
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between px-1">
                 <div>
-                  <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">{shop.name}</h4>
+                  <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">
+                    {shop.name}
+                  </h4>
                   <div className="flex items-center gap-3 mt-1 text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
-                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">schedule</span>{shop.time}</span>
-                    <span className={shop.freeDelivery ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
-                      <span className="material-symbols-outlined text-[13px]">delivery_dining</span>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px]">
+                        schedule
+                      </span>
+                      {shop.time}
+                    </span>
+                    <span
+                      className={
+                        shop.freeDelivery
+                          ? "text-emerald-400 flex items-center gap-1"
+                          : "flex items-center gap-1"
+                      }
+                    >
+                      <span className="material-symbols-outlined text-[13px]">
+                        delivery_dining
+                      </span>
                       {shop.freeDelivery ? "Grátis" : shop.fee}
                     </span>
                   </div>
                 </div>
                 <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 group-hover:bg-yellow-400 group-hover:border-yellow-400 flex items-center justify-center transition-all duration-300">
-                  <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">arrow_forward</span>
+                  <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">
+                    arrow_forward
+                  </span>
                 </div>
               </div>
             </motion.div>
           ))}
-          {ESTABLISHMENTS.filter((s: any) => ((s.tag || s.type || "").toLowerCase().includes("brasileira") || (s.tag || s.type || "").toLowerCase().includes("caseira") || (s.tag || s.type || "").toLowerCase().includes("marmita")) && s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+          {ESTABLISHMENTS.filter(
+            (s: any) =>
+              ((s.tag || s.type || "").toLowerCase().includes("brasileira") ||
+                (s.tag || s.type || "").toLowerCase().includes("caseira") ||
+                (s.tag || s.type || "").toLowerCase().includes("marmita")) &&
+              s.name.toLowerCase().includes(searchQuery.toLowerCase()),
+          ).length === 0 && (
             <div className="flex flex-col items-center py-16 gap-3">
-              <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
-              <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum resultado</p>
+              <span className="material-symbols-outlined text-4xl text-zinc-700">
+                search_off
+              </span>
+              <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">
+                Nenhum resultado
+              </p>
             </div>
           )}
         </main>
@@ -2741,60 +3775,81 @@ function App() {
         <header className="sticky top-0 z-50 bg-black/80  backdrop-blur-3xl border-b border-yellow-400/20 pb-6 shadow-xl">
           <div className="flex items-center p-6 pb-2 justify-between">
             <div className="flex items-center gap-5">
-              <button 
-                onClick={() => navigateSubView('pharmacy_list')} 
+              <button
+                onClick={() => navigateSubView("pharmacy_list")}
                 className="size-12 rounded-[22px] bg-white bg-zinc-900 shadow-2xl border border-zinc-800 border-zinc-800 flex items-center justify-center active:scale-90 transition-all group"
               >
                 <Icon name="arrow_back" />
               </button>
               <div>
-                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Plantão de SaÃƒºde</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Ofertas RelÃ¢mpago de Hoje</p>
+                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">
+                  Plantão de SaÃƒºde
+                </h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
+                  Ofertas RelÃ¢mpago de Hoje
+                </p>
               </div>
             </div>
           </div>
         </header>
 
         <main className="p-6 space-y-8 pt-8">
-           <div className="bg-slate-900 text-white p-10 rounded-[60px] relative overflow-hidden shadow-2xl mb-4">
-              <div className="relative z-10">
-                <Icon name="medical_services" />
-                <h2 className="text-4xl font-black tracking-tighter mb-4 leading-none">Cuidado Premium <br />Pela Metade do Preço</h2>
-                <p className="opacity-60 text-sm font-medium max-w-[200px]">Somente nas próximas 12 horas ou enquanto durarem os estoques.</p>
-              </div>
-              <div className="absolute -right-10 -bottom-10 size-64 bg-yellow-400/20 rounded-full blur-[100px]" />
-           </div>
+          <div className="bg-slate-900 text-white p-10 rounded-[60px] relative overflow-hidden shadow-2xl mb-4">
+            <div className="relative z-10">
+              <Icon name="medical_services" />
+              <h2 className="text-4xl font-black tracking-tighter mb-4 leading-none">
+                Cuidado Premium <br />
+                Pela Metade do Preço
+              </h2>
+              <p className="opacity-60 text-sm font-medium max-w-[200px]">
+                Somente nas próximas 12 horas ou enquanto durarem os estoques.
+              </p>
+            </div>
+            <div className="absolute -right-10 -bottom-10 size-64 bg-yellow-400/20 rounded-full blur-[100px]" />
+          </div>
 
-           <div className="grid grid-cols-1 gap-6">
-              {healthOffers.map((item, i) => (
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  key={item.id}
-                  onClick={() => { handleAddToCart(item); }}
-                  className="p-6 bg-white bg-zinc-900 rounded-[50px] shadow-2xl border border-slate-50 border-zinc-800 flex items-center gap-6 group relative active:scale-95 transition-all overflow-hidden"
-                >
-                  <div className="size-32 rounded-[35px] overflow-hidden shrink-0 shadow-xl group-hover:scale-105 transition-transform duration-500">
-                     <img src={item.img} className="size-full object-cover" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-yellow-400 mb-1">{item.store} Ã¢â‚¬¢ {item.cat}</p>
-                    <h3 className="text-lg font-black text-white mb-3 leading-tight truncate group-hover:text-yellow-400 transition-colors">{item.name}</h3>
-                    <div className="flex items-center gap-4">
-                       <div className="flex flex-col">
-                          <span className="text-2xl font-black text-white">R$ {item.price.toFixed(2).replace('.', ',')}</span>
-                          <span className="text-sm font-bold text-zinc-500 line-through opacity-60">R$ {item.oldPrice.toFixed(2).replace('.', ',')}</span>
-                       </div>
-                       <div className="bg-red-500 text-white px-3 py-1.5 rounded-2xl text-[10px] font-black shadow-lg">{item.off}</div>
+          <div className="grid grid-cols-1 gap-6">
+            {healthOffers.map((item, i) => (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                key={item.id}
+                onClick={() => {
+                  handleAddToCart(item);
+                }}
+                className="p-6 bg-white bg-zinc-900 rounded-[50px] shadow-2xl border border-slate-50 border-zinc-800 flex items-center gap-6 group relative active:scale-95 transition-all overflow-hidden"
+              >
+                <div className="size-32 rounded-[35px] overflow-hidden shrink-0 shadow-xl group-hover:scale-105 transition-transform duration-500">
+                  <img src={item.img} className="size-full object-cover" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-yellow-400 mb-1">
+                    {item.store} Ã¢â‚¬¢ {item.cat}
+                  </p>
+                  <h3 className="text-lg font-black text-white mb-3 leading-tight truncate group-hover:text-yellow-400 transition-colors">
+                    {item.name}
+                  </h3>
+                  <div className="flex items-center gap-4">
+                    <div className="flex flex-col">
+                      <span className="text-2xl font-black text-white">
+                        R$ {item.price.toFixed(2).replace(".", ",")}
+                      </span>
+                      <span className="text-sm font-bold text-zinc-500 line-through opacity-60">
+                        R$ {item.oldPrice.toFixed(2).replace(".", ",")}
+                      </span>
+                    </div>
+                    <div className="bg-red-500 text-white px-3 py-1.5 rounded-2xl text-[10px] font-black shadow-lg">
+                      {item.off}
                     </div>
                   </div>
-                  <div className="size-12 rounded-[22px] bg-yellow-400 text-white flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
-                    <Icon name="add_shopping_cart" />
-                  </div>
-                </motion.div>
-              ))}
-           </div>
+                </div>
+                <div className="size-12 rounded-[22px] bg-yellow-400 text-white flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                  <Icon name="add_shopping_cart" />
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </main>
       </div>
     );
@@ -2809,7 +3864,7 @@ function App() {
       dist: estab.dist || "0.5 km",
       freeDelivery: estab.freeDelivery || true,
       fee: estab.freeDelivery ? undefined : "R$ 4,90",
-      img: estab.img
+      img: estab.img,
     }));
 
     return (
@@ -2817,54 +3872,76 @@ function App() {
         <header className="sticky top-0 z-50 bg-white/80 bg-zinc-900/80 backdrop-blur-3xl border-b border-slate-200/50 border-zinc-800 pb-6">
           <div className="flex items-center p-6 pb-2 justify-between">
             <div className="flex items-center gap-5">
-              <button onClick={() => setSubView('pharmacy_list')} className="size-12 rounded-[22px] bg-white bg-zinc-900 shadow-2xl border border-zinc-800 border-zinc-800 flex items-center justify-center active:scale-90 transition-all group">
+              <button
+                onClick={() => setSubView("pharmacy_list")}
+                className="size-12 rounded-[22px] bg-white bg-zinc-900 shadow-2xl border border-zinc-800 border-zinc-800 flex items-center justify-center active:scale-90 transition-all group"
+              >
                 <Icon name="arrow_back" />
               </button>
               <div>
-                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Todas as Farmácias</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Unidades Próximas</p>
+                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">
+                  Todas as Farmácias
+                </h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
+                  Unidades Próximas
+                </p>
               </div>
             </div>
           </div>
           <div className="px-6 mt-4">
             <div className="flex items-center bg-white bg-zinc-900/80 rounded-[28px] px-6 h-16 border border-zinc-800 border-zinc-800 focus-within:border-yellow-400/40 transition-all shadow-xl relative group overflow-hidden">
-               <Icon name="search" />
-               <input className="bg-transparent border-none focus:ring-0 w-full text-base placeholder:text-zinc-500 font-bold text-white outline-none relative z-10" placeholder="Buscar farmácia..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              <Icon name="search" />
+              <input
+                className="bg-transparent border-none focus:ring-0 w-full text-base placeholder:text-zinc-500 font-bold text-white outline-none relative z-10"
+                placeholder="Buscar farmácia..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
           </div>
         </header>
 
         <main className="p-6 space-y-6 pt-8">
-          {list.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((pharm, i) => (
-            <motion.div
-              key={pharm.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => handleShopClick({ ...pharm, type: 'pharmacy' })}
-              className="p-6 bg-white bg-zinc-900 rounded-[50px] shadow-2xl border border-slate-50 border-zinc-800 flex items-center gap-6 group relative active:scale-95 transition-all overflow-hidden"
-            >
-              <div className="size-24 rounded-[30px] overflow-hidden shrink-0 shadow-xl group-hover:scale-110 transition-transform duration-500">
-                 <img src={pharm.img} className="size-full object-cover" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-black text-white mb-2 leading-tight truncate group-hover:text-yellow-400 transition-colors">{pharm.name}</h3>
-                <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                  <div className="flex items-center gap-1.5">
-                    <Icon name="star" />
-                    <span className="text-white">{pharm.rating}</span>
-                  </div>
-                  <span>Ã¢â‚¬¢</span>
-                  <span>{pharm.time}</span>
-                  <span>Ã¢â‚¬¢</span>
-                  <span className={pharm.freeDelivery ? "text-emerald-500" : ""}>{pharm.freeDelivery ? "Grátis" : pharm.fee}</span>
+          {list
+            .filter((s) =>
+              s.name.toLowerCase().includes(searchQuery.toLowerCase()),
+            )
+            .map((pharm, i) => (
+              <motion.div
+                key={pharm.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                onClick={() => handleShopClick({ ...pharm, type: "pharmacy" })}
+                className="p-6 bg-white bg-zinc-900 rounded-[50px] shadow-2xl border border-slate-50 border-zinc-800 flex items-center gap-6 group relative active:scale-95 transition-all overflow-hidden"
+              >
+                <div className="size-24 rounded-[30px] overflow-hidden shrink-0 shadow-xl group-hover:scale-110 transition-transform duration-500">
+                  <img src={pharm.img} className="size-full object-cover" />
                 </div>
-              </div>
-              <div className="size-12 rounded-[22px] bg-slate-100 bg-zinc-900 flex items-center justify-center group-hover:bg-yellow-400 transition-colors">
-                <Icon name="arrow_forward" />
-              </div>
-            </motion.div>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-black text-white mb-2 leading-tight truncate group-hover:text-yellow-400 transition-colors">
+                    {pharm.name}
+                  </h3>
+                  <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                    <div className="flex items-center gap-1.5">
+                      <Icon name="star" />
+                      <span className="text-white">{pharm.rating}</span>
+                    </div>
+                    <span>Ã¢â‚¬¢</span>
+                    <span>{pharm.time}</span>
+                    <span>Ã¢â‚¬¢</span>
+                    <span
+                      className={pharm.freeDelivery ? "text-emerald-500" : ""}
+                    >
+                      {pharm.freeDelivery ? "Grátis" : pharm.fee}
+                    </span>
+                  </div>
+                </div>
+                <div className="size-12 rounded-[22px] bg-slate-100 bg-zinc-900 flex items-center justify-center group-hover:bg-yellow-400 transition-colors">
+                  <Icon name="arrow_forward" />
+                </div>
+              </motion.div>
+            ))}
         </main>
       </div>
     );
@@ -2875,9 +3952,15 @@ function App() {
     const title = shop.label || "Explorar";
 
     const categoryIcons: Record<string, string> = {
-      "Petshop": "pets", "Flores": "local_florist", "Doces & Bolos": "cake",
-      "Farmácia": "local_pharmacy", "Mercado": "local_mall",
-      "Gás & Água": "propane_tank", "Açougue": "kebab_dining", "Padaria": "bakery_dining", "Hortifruti": "nutrition"
+      Petshop: "pets",
+      Flores: "local_florist",
+      "Doces & Bolos": "cake",
+      Farmácia: "local_pharmacy",
+      Mercado: "local_mall",
+      "Gás & Água": "propane_tank",
+      Açougue: "kebab_dining",
+      Padaria: "bakery_dining",
+      Hortifruti: "nutrition",
     };
     const icon = categoryIcons[title] || "storefront";
 
@@ -2895,11 +3978,13 @@ function App() {
           const sTag = (estab.tag || "").toLowerCase();
           const activeType = (activeService?.type || "").toLowerCase();
           const activeLabel = (activeService?.label || "").toLowerCase();
-          
-          return sType === activeType || 
-                 sType === activeLabel || 
-                 sTag.includes(activeType) || 
-                 sTag.includes(activeLabel);
+
+          return (
+            sType === activeType ||
+            sType === activeLabel ||
+            sTag.includes(activeType) ||
+            sTag.includes(activeLabel)
+          );
         }}
         onShopClick={(shop) => handleShopClick({ ...shop, type: "generic" })}
         cartLength={cart.length}
@@ -2911,39 +3996,103 @@ function App() {
 
   const renderRestaurantList = () => {
     const foodCategories = [
-      { id: "all",        name: "Todos",      icon: "restaurant",    action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
-      { id: "burgers",    name: "Burgers",    icon: "lunch_dining",  action: () => { setRestaurantInitialCategory("Burgers"); navigateSubView("explore_restaurants"); } },
-      { id: "pizza",      name: "Pizza",      icon: "local_pizza",   action: () => { setRestaurantInitialCategory("Pizza"); navigateSubView("explore_restaurants"); } },
-      { id: "japones",    name: "Japonesa",   icon: "set_meal",      action: () => { setRestaurantInitialCategory("Japonesa"); navigateSubView("explore_restaurants"); } },
-      { id: "brasileira", name: "Brasileira", icon: "dinner_dining", action: () => { setRestaurantInitialCategory("Brasileira"); navigateSubView("explore_restaurants"); } },
-      { id: "acai",       name: "Açaí",       icon: "grass",         action: () => { setRestaurantInitialCategory("Açaí"); navigateSubView("explore_restaurants"); } },
-      { id: "daily",      name: "Do Dia",     icon: "today",         action: () => navigateSubView("daily_menus") },
+      {
+        id: "all",
+        name: "Todos",
+        icon: "restaurant",
+        action: () => {
+          setRestaurantInitialCategory("Todos");
+          navigateSubView("explore_restaurants");
+        },
+      },
+      {
+        id: "burgers",
+        name: "Burgers",
+        icon: "lunch_dining",
+        action: () => {
+          setRestaurantInitialCategory("Burgers");
+          navigateSubView("explore_restaurants");
+        },
+      },
+      {
+        id: "pizza",
+        name: "Pizza",
+        icon: "local_pizza",
+        action: () => {
+          setRestaurantInitialCategory("Pizza");
+          navigateSubView("explore_restaurants");
+        },
+      },
+      {
+        id: "japones",
+        name: "Japonesa",
+        icon: "set_meal",
+        action: () => {
+          setRestaurantInitialCategory("Japonesa");
+          navigateSubView("explore_restaurants");
+        },
+      },
+      {
+        id: "brasileira",
+        name: "Brasileira",
+        icon: "dinner_dining",
+        action: () => {
+          setRestaurantInitialCategory("Brasileira");
+          navigateSubView("explore_restaurants");
+        },
+      },
+      {
+        id: "acai",
+        name: "Açaí",
+        icon: "grass",
+        action: () => {
+          setRestaurantInitialCategory("Açaí");
+          navigateSubView("explore_restaurants");
+        },
+      },
+      {
+        id: "daily",
+        name: "Do Dia",
+        icon: "today",
+        action: () => navigateSubView("daily_menus"),
+      },
     ];
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-
         {/* HEADER */}
-        <header className="sticky top-0 z-50 px-5 pt-5 pb-4"
-          style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
+        <header
+          className="sticky top-0 z-50 px-5 pt-5 pb-4"
+          style={{
+            background: "linear-gradient(to bottom, #000000 70%, transparent)",
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setSubView("none")}
                 className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
               >
-                <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+                <span className="material-symbols-outlined text-zinc-100">
+                  arrow_back
+                </span>
               </button>
               <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">Restaurantes</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Descubra novos sabores</p>
+                <h1 className="text-xl font-black tracking-tight text-white leading-none">
+                  Restaurantes
+                </h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">
+                  Descubra novos sabores
+                </p>
               </div>
             </div>
             <button
               onClick={() => cart.length > 0 && navigateSubView("cart")}
               className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
             >
-              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
+              <span className="material-symbols-outlined text-zinc-100">
+                shopping_bag
+              </span>
               {cart.length > 0 && (
                 <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
                   {cart.length}
@@ -2955,7 +4104,9 @@ function App() {
           {/* Search */}
           <div className="relative">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
+              <span className="material-symbols-outlined text-zinc-500 text-xl">
+                search
+              </span>
             </div>
             <input
               className="w-full bg-zinc-900/50 border-0 border-b border-zinc-900 rounded-2xl py-3.5 pl-12 pr-10 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-yellow-400/20 text-sm font-medium transition-all"
@@ -2964,15 +4115,19 @@ function App() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="absolute inset-y-0 right-4 flex items-center">
-                <span className="material-symbols-outlined text-zinc-500 text-sm">close</span>
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute inset-y-0 right-4 flex items-center"
+              >
+                <span className="material-symbols-outlined text-zinc-500 text-sm">
+                  close
+                </span>
               </button>
             )}
           </div>
         </header>
 
         <main className="px-5 flex flex-col gap-10">
-
           {/* BANNER */}
           <section>
             <div className="relative h-40 rounded-2xl overflow-hidden group cursor-pointer">
@@ -2982,8 +4137,14 @@ function App() {
                 alt="Restaurantes"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-transparent flex flex-col justify-center p-6">
-                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Ofertas VIP</span>
-                <h2 className="text-xl font-extrabold text-white leading-tight">Os melhores sabores<br/>na sua porta</h2>
+                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">
+                  Ofertas VIP
+                </span>
+                <h2 className="text-xl font-extrabold text-white leading-tight">
+                  Os melhores sabores
+                  <br />
+                  na sua porta
+                </h2>
               </div>
             </div>
           </section>
@@ -3000,50 +4161,82 @@ function App() {
                   onClick={cat.action}
                   className="flex-shrink-0 flex items-center gap-2 bg-zinc-900/80 border border-zinc-800 hover:border-yellow-400/42.5 rounded-full text-zinc-400 transition-all active:scale-95 group"
                 >
-                  <span className="material-symbols-outlined text-[18px] group-hover:text-yellow-400 transition-colors">{cat.icon}</span>
-                  <span className="text-[11px] font-black uppercase tracking-wider whitespace-nowrap">{cat.name}</span>
+                  <span className="material-symbols-outlined text-[18px] group-hover:text-yellow-400 transition-colors">
+                    {cat.icon}
+                  </span>
+                  <span className="text-[11px] font-black uppercase tracking-wider whitespace-nowrap">
+                    {cat.name}
+                  </span>
                 </motion.button>
               ))}
             </div>
           </section>
 
           {/* CUPONS VIP */}
-          {availableCoupons.filter(p => p.is_vip).length > 0 && (
+          {availableCoupons.filter((p) => p.is_vip).length > 0 && (
             <section>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Ofertas VIP</h3>
-                <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest animate-pulse">Exclusivo</span>
+                <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">
+                  Ofertas VIP
+                </h3>
+                <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest animate-pulse">
+                  Exclusivo
+                </span>
               </div>
               <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-5 px-5">
-                {availableCoupons.filter(p => p.is_vip).map((cpn, i) => (
-                  <motion.div
-                    key={cpn.id || i}
-                    initial={{ opacity: 0, x: 30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.08 }}
-                    className="flex-shrink-0 w-72 h-36 rounded-2xl relative overflow-hidden group border border-zinc-800 cursor-pointer active:scale-95 transition-all"
-                  >
-                    <img src={cpn.image_url || "https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=800"} className="absolute inset-0 size-full object-cover opacity-40 group-hover:scale-110 transition-transform duration-700" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent p-5 flex flex-col justify-between">
-                      <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest">{cpn.title || "Oferta Especial"}</span>
-                      <div>
-                        <p className="text-3xl font-black text-white leading-none">
-                          {cpn.discount_type === "percent" ? `${cpn.discount_value}%` : `R$ ${cpn.discount_value}`}
-                          <span className="text-base text-zinc-400 ml-1">OFF</span>
-                        </p>
-                        {cpn.coupon_code && (
-                          <button
-                            onClick={() => { navigator.clipboard.writeText(cpn.coupon_code); setCopiedCoupon(cpn.coupon_code); setTimeout(() => setCopiedCoupon(null), 2000); }}
-                            className="mt-2 flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/30 px-3 py-1 rounded-full active:scale-95 transition-all"
-                          >
-                            <span className="text-yellow-400 text-[10px] font-black tracking-widest">{cpn.coupon_code}</span>
-                            <span className="material-symbols-outlined text-yellow-400 text-xs">{copiedCoupon === cpn.coupon_code ? "check_circle" : "content_copy"}</span>
-                          </button>
-                        )}
+                {availableCoupons
+                  .filter((p) => p.is_vip)
+                  .map((cpn, i) => (
+                    <motion.div
+                      key={cpn.id || i}
+                      initial={{ opacity: 0, x: 30 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.08 }}
+                      className="flex-shrink-0 w-72 h-36 rounded-2xl relative overflow-hidden group border border-zinc-800 cursor-pointer active:scale-95 transition-all"
+                    >
+                      <img
+                        src={
+                          cpn.image_url ||
+                          "https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=800"
+                        }
+                        className="absolute inset-0 size-full object-cover opacity-40 group-hover:scale-110 transition-transform duration-700"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent p-5 flex flex-col justify-between">
+                        <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest">
+                          {cpn.title || "Oferta Especial"}
+                        </span>
+                        <div>
+                          <p className="text-3xl font-black text-white leading-none">
+                            {cpn.discount_type === "percent"
+                              ? `${cpn.discount_value}%`
+                              : `R$ ${cpn.discount_value}`}
+                            <span className="text-base text-zinc-400 ml-1">
+                              OFF
+                            </span>
+                          </p>
+                          {cpn.coupon_code && (
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(cpn.coupon_code);
+                                setCopiedCoupon(cpn.coupon_code);
+                                setTimeout(() => setCopiedCoupon(null), 2000);
+                              }}
+                              className="mt-2 flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/30 px-3 py-1 rounded-full active:scale-95 transition-all"
+                            >
+                              <span className="text-yellow-400 text-[10px] font-black tracking-widest">
+                                {cpn.coupon_code}
+                              </span>
+                              <span className="material-symbols-outlined text-yellow-400 text-xs">
+                                {copiedCoupon === cpn.coupon_code
+                                  ? "check_circle"
+                                  : "content_copy"}
+                              </span>
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  ))}
               </div>
             </section>
           )}
@@ -3052,33 +4245,52 @@ function App() {
           <section>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="font-extrabold text-base tracking-tight text-white uppercase">Mais Próximos</h3>
+                <h3 className="font-extrabold text-base tracking-tight text-white uppercase">
+                  Mais Próximos
+                </h3>
                 <div className="w-8 h-1 bg-yellow-400 rounded-full mt-1" />
               </div>
               <button className="text-[10px] font-black uppercase tracking-widest text-yellow-400 flex items-center gap-1">
-                Filtrar <span className="material-symbols-outlined text-sm">filter_list</span>
+                Filtrar{" "}
+                <span className="material-symbols-outlined text-sm">
+                  filter_list
+                </span>
               </button>
             </div>
 
             <div className="flex flex-col gap-4 pb-10">
-              {ESTABLISHMENTS.filter(shop =>
-                shop.type === 'restaurant' &&
-                shop.name.toLowerCase().includes(searchQuery.toLowerCase())
+              {ESTABLISHMENTS.filter(
+                (shop) =>
+                  shop.type === "restaurant" &&
+                  shop.name.toLowerCase().includes(searchQuery.toLowerCase()),
               ).map((shop, i) => (
                 <motion.div
                   key={shop.id}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  onClick={() => handleShopClick({ ...shop, type: "restaurant" })}
+                  onClick={() =>
+                    handleShopClick({ ...shop, type: "restaurant" })
+                  }
                   className="group cursor-pointer active:scale-[0.98] transition-all"
                 >
                   <div className="relative h-48 rounded-2xl overflow-hidden mb-3">
-                    <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <img
+                      src={shop.img}
+                      alt={shop.name}
+                      className="size-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                     <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-white/10">
-                      <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                      <span className="text-xs font-black text-white">{shop.rating}</span>
+                      <span
+                        className="material-symbols-outlined text-[14px] text-yellow-400"
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                      >
+                        star
+                      </span>
+                      <span className="text-xs font-black text-white">
+                        {shop.rating}
+                      </span>
                     </div>
                     {shop.freeDelivery && (
                       <div className="absolute bottom-3 left-3 bg-emerald-500/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-white/10">
@@ -3088,34 +4300,47 @@ function App() {
                   </div>
                   <div className="flex items-center justify-between px-1">
                     <div>
-                      <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">{shop.name}</h4>
+                      <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">
+                        {shop.name}
+                      </h4>
                       <div className="flex items-center gap-3 mt-1 text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
                         <span className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[13px]">local_fire_department</span>
+                          <span className="material-symbols-outlined text-[13px]">
+                            local_fire_department
+                          </span>
                           {shop.tag}
                         </span>
                         <span className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[13px]">schedule</span>
+                          <span className="material-symbols-outlined text-[13px]">
+                            schedule
+                          </span>
                           {shop.time}
                         </span>
                       </div>
                     </div>
                     <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 group-hover:bg-yellow-400 group-hover:border-yellow-400 flex items-center justify-center transition-all duration-300">
-                      <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">arrow_forward</span>
+                      <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">
+                        arrow_forward
+                      </span>
                     </div>
                   </div>
                 </motion.div>
               ))}
 
-              {ESTABLISHMENTS.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+              {ESTABLISHMENTS.filter((s) =>
+                s.name.toLowerCase().includes(searchQuery.toLowerCase()),
+              ).length === 0 && (
                 <div className="flex flex-col items-center justify-center py-16 gap-3">
-                  <span className="material-symbols-outlined text-4xl text-zinc-700">search_off</span>
-                  <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">Nenhum restaurante encontrado</p>
+                  <span className="material-symbols-outlined text-4xl text-zinc-700">
+                    search_off
+                  </span>
+                  <p className="text-[11px] font-black uppercase text-zinc-600 tracking-widest">
+                    Nenhum restaurante encontrado
+                  </p>
                 </div>
               )}
             </div>
           </section>
-
         </main>
       </div>
     );
@@ -3124,26 +4349,50 @@ function App() {
   const renderMarketList = () => {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-        <header className="sticky top-0 z-50 px-5 pt-5 pb-4"
-          style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
+        <header
+          className="sticky top-0 z-50 px-5 pt-5 pb-4"
+          style={{
+            background: "linear-gradient(to bottom, #000000 70%, transparent)",
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-                <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+              <button
+                onClick={() => setSubView("none")}
+                className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+              >
+                <span className="material-symbols-outlined text-zinc-100">
+                  arrow_back
+                </span>
               </button>
               <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">Mercados</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Compras do dia a dia</p>
+                <h1 className="text-xl font-black tracking-tight text-white leading-none">
+                  Mercados
+                </h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">
+                  Compras do dia a dia
+                </p>
               </div>
             </div>
-            <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-              {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>}
+            <button
+              onClick={() => cart.length > 0 && navigateSubView("cart")}
+              className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+            >
+              <span className="material-symbols-outlined text-zinc-100">
+                shopping_bag
+              </span>
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                  {cart.length}
+                </span>
+              )}
             </button>
           </div>
           <div className="relative">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
+              <span className="material-symbols-outlined text-zinc-500 text-xl">
+                search
+              </span>
             </div>
             <input
               className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
@@ -3158,41 +4407,87 @@ function App() {
           <section>
             <div className="relative h-36 rounded-2xl overflow-hidden mb-6">
               <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-black flex items-center justify-center">
-                <span className="material-symbols-outlined text-[100px] text-yellow-400/10">local_mall</span>
+                <span className="material-symbols-outlined text-[100px] text-yellow-400/10">
+                  local_mall
+                </span>
               </div>
               <div className="absolute inset-0 flex flex-col justify-center p-5">
-                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Disponível agora</span>
-                <h2 className="text-lg font-extrabold text-white leading-tight">Mercados premium<br/>na sua porta</h2>
+                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">
+                  Disponível agora
+                </span>
+                <h2 className="text-lg font-extrabold text-white leading-tight">
+                  Mercados premium
+                  <br />
+                  na sua porta
+                </h2>
               </div>
             </div>
           </section>
 
           <div className="flex flex-col gap-4 pb-10">
-            {ESTABLISHMENTS.filter((shop: any) =>
-              (shop.type === 'market' || shop.type === 'mercado' || shop.type === 'mercados') && shop.name.toLowerCase().includes(searchQuery.toLowerCase())
+            {ESTABLISHMENTS.filter(
+              (shop: any) =>
+                (shop.type === "market" ||
+                  shop.type === "mercado" ||
+                  shop.type === "mercados") &&
+                shop.name.toLowerCase().includes(searchQuery.toLowerCase()),
             ).map((shop: any, i: number) => (
-              <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+              <motion.div
+                key={shop.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
                 onClick={() => handleShopClick({ ...shop, type: "generic" })}
-                className="group cursor-pointer active:scale-[0.98] transition-all">
+                className="group cursor-pointer active:scale-[0.98] transition-all"
+              >
                 <div className="relative h-44 rounded-2xl overflow-hidden mb-3">
-                  <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <img
+                    src={shop.img}
+                    alt={shop.name}
+                    className="size-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-white/10">
-                    <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                    <span className="text-xs font-black text-white">{shop.rating}</span>
+                    <span
+                      className="material-symbols-outlined text-[14px] text-yellow-400"
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                      star
+                    </span>
+                    <span className="text-xs font-black text-white">
+                      {shop.rating}
+                    </span>
                   </div>
-                  {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                  {shop.freeDelivery && (
+                    <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
+                      Entrega Grátis
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center justify-between px-1">
                   <div>
-                    <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">{shop.name}</h4>
+                    <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">
+                      {shop.name}
+                    </h4>
                     <div className="flex items-center gap-3 mt-1 text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">schedule</span>{shop.time}</span>
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">local_fire_department</span>{shop.tag}</span>
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px]">
+                          schedule
+                        </span>
+                        {shop.time}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px]">
+                          local_fire_department
+                        </span>
+                        {shop.tag}
+                      </span>
                     </div>
                   </div>
                   <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 group-hover:bg-yellow-400 group-hover:border-yellow-400 flex items-center justify-center transition-all duration-300">
-                    <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">arrow_forward</span>
+                    <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">
+                      arrow_forward
+                    </span>
                   </div>
                 </div>
               </motion.div>
@@ -3206,26 +4501,50 @@ function App() {
   const renderBeveragesList = () => {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-        <header className="sticky top-0 z-50 px-5 pt-5 pb-4"
-          style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
+        <header
+          className="sticky top-0 z-50 px-5 pt-5 pb-4"
+          style={{
+            background: "linear-gradient(to bottom, #000000 70%, transparent)",
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-                <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+              <button
+                onClick={() => setSubView("none")}
+                className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+              >
+                <span className="material-symbols-outlined text-zinc-100">
+                  arrow_back
+                </span>
               </button>
               <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">Bebidas</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Distribuidoras e adegas</p>
+                <h1 className="text-xl font-black tracking-tight text-white leading-none">
+                  Bebidas
+                </h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">
+                  Distribuidoras e adegas
+                </p>
               </div>
             </div>
-            <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-              {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>}
+            <button
+              onClick={() => cart.length > 0 && navigateSubView("cart")}
+              className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+            >
+              <span className="material-symbols-outlined text-zinc-100">
+                shopping_bag
+              </span>
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                  {cart.length}
+                </span>
+              )}
             </button>
           </div>
           <div className="relative">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
+              <span className="material-symbols-outlined text-zinc-500 text-xl">
+                search
+              </span>
             </div>
             <input
               className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
@@ -3240,42 +4559,85 @@ function App() {
           <section>
             <div className="relative h-36 rounded-2xl overflow-hidden mb-6">
               <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-black flex items-center justify-center">
-                <span className="material-symbols-outlined text-[100px] text-yellow-400/10">local_bar</span>
+                <span className="material-symbols-outlined text-[100px] text-yellow-400/10">
+                  local_bar
+                </span>
               </div>
               <div className="absolute inset-0 flex flex-col justify-center p-5">
-                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Disponível agora</span>
-                <h2 className="text-lg font-extrabold text-white leading-tight">Bebidas premium<br/>na sua porta</h2>
+                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">
+                  Disponível agora
+                </span>
+                <h2 className="text-lg font-extrabold text-white leading-tight">
+                  Bebidas premium
+                  <br />
+                  na sua porta
+                </h2>
               </div>
             </div>
           </section>
 
           <div className="flex flex-col gap-4 pb-10">
-            {ESTABLISHMENTS.filter((shop: any) =>
-              (shop.type === "beverages" || shop.type === "bebidas") &&
-              shop.name.toLowerCase().includes(searchQuery.toLowerCase())
+            {ESTABLISHMENTS.filter(
+              (shop: any) =>
+                (shop.type === "beverages" || shop.type === "bebidas") &&
+                shop.name.toLowerCase().includes(searchQuery.toLowerCase()),
             ).map((shop: any, i: number) => (
-              <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+              <motion.div
+                key={shop.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
                 onClick={() => handleShopClick({ ...shop, type: "generic" })}
-                className="group cursor-pointer active:scale-[0.98] transition-all">
+                className="group cursor-pointer active:scale-[0.98] transition-all"
+              >
                 <div className="relative h-44 rounded-2xl overflow-hidden mb-3">
-                  <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <img
+                    src={shop.img}
+                    alt={shop.name}
+                    className="size-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-white/10">
-                    <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                    <span className="text-xs font-black text-white">{shop.rating}</span>
+                    <span
+                      className="material-symbols-outlined text-[14px] text-yellow-400"
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                      star
+                    </span>
+                    <span className="text-xs font-black text-white">
+                      {shop.rating}
+                    </span>
                   </div>
-                  {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                  {shop.freeDelivery && (
+                    <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
+                      Entrega Grátis
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center justify-between px-1">
                   <div>
-                    <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">{shop.name}</h4>
+                    <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">
+                      {shop.name}
+                    </h4>
                     <div className="flex items-center gap-3 mt-1 text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">schedule</span>{shop.time}</span>
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">local_fire_department</span>{shop.tag}</span>
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px]">
+                          schedule
+                        </span>
+                        {shop.time}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px]">
+                          local_fire_department
+                        </span>
+                        {shop.tag}
+                      </span>
                     </div>
                   </div>
                   <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 group-hover:bg-yellow-400 group-hover:border-yellow-400 flex items-center justify-center transition-all duration-300">
-                    <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">arrow_forward</span>
+                    <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">
+                      arrow_forward
+                    </span>
                   </div>
                 </div>
               </motion.div>
@@ -3292,107 +4654,152 @@ function App() {
     return (
       <div className="bg-black text-zinc-100 absolute inset-0 z-50 bg-slate-950 text-white flex flex-col hide-scrollbar overflow-y-auto pb-32">
         <header className="sticky top-0 z-[60] bg-slate-950/80 backdrop-blur-2xl border-b border-white/10 p-6 flex items-center gap-6">
-           <button 
+          <button
             onClick={() => setSubView("beverages_list")}
             className="size-12 rounded-2xl bg-zinc-900/5 flex items-center justify-center text-white border border-white/10 active:scale-90 transition-all"
           >
             <Icon name="arrow_back" />
           </button>
           <div className="flex-1">
-            <h1 className="text-2xl font-black tracking-tighter leading-none mb-1">Ofertas Geladas</h1>
-            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-[0.2em]">Seleção Premium de Ofertas</p>
+            <h1 className="text-2xl font-black tracking-tighter leading-none mb-1">
+              Ofertas Geladas
+            </h1>
+            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-[0.2em]">
+              Seleção Premium de Ofertas
+            </p>
           </div>
-          <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-12 rounded-2xl bg-zinc-900/5 border border-white/10 flex items-center justify-center group active:scale-95 transition-all">
+          <button
+            onClick={() => cart.length > 0 && navigateSubView("cart")}
+            className="relative size-12 rounded-2xl bg-zinc-900/5 border border-white/10 flex items-center justify-center group active:scale-95 transition-all"
+          >
             <Icon name="shopping_bag" />
-            {cart.length > 0 && <span className="absolute -top-1.5 -right-1.5 size-6 bg-yellow-400 text-white text-[10px] font-black rounded-full flex items-center justify-center ring-4 ring-slate-950 shadow-xl">{cart.length}</span>}
+            {cart.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 size-6 bg-yellow-400 text-white text-[10px] font-black rounded-full flex items-center justify-center ring-4 ring-slate-950 shadow-xl">
+                {cart.length}
+              </span>
+            )}
           </button>
         </header>
 
         <main className="p-6 space-y-8">
-            <div className="relative h-64 rounded-[50px] overflow-hidden group border border-white/10 bg-zinc-900">
-               <AnimatePresence mode="wait">
-                 <motion.div
-                   key={bevBannerIndex}
-                   initial={{ opacity: 0, x: 50 }}
-                   animate={{ opacity: 1, x: 0 }}
-                   exit={{ opacity: 0, x: -50 }}
-                   transition={{ duration: 0.5 }}
-                   className="absolute inset-0"
-                 >
-                   <img 
-                     src={beverageBanners.length > 0 ? beverageBanners[bevBannerIndex].image_url : "https://images.unsplash.com/photo-1470337458703-46ad1756a187?q=80&w=800"} 
-                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[3000ms]" 
-                   />
-                   <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent flex flex-col justify-center px-10">
-                      <div className="flex items-center gap-2 mb-4">
-                         <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest w-fit">Aproveite</span>
-                         <span className="bg-yellow-400 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest w-fit">Limitado</span>
-                      </div>
-                      <h2 className="text-4xl font-black tracking-tighter leading-tight max-w-[250px] italic text-yellow-400">
-                         {beverageBanners.length > 0 ? beverageBanners[bevBannerIndex].title : "Oferta Izi"}
-                      </h2>
-                      <p className="text-[11px] font-bold text-white/60 mt-4 uppercase tracking-[0.2em]">
-                         {beverageBanners.length > 0 ? beverageBanners[bevBannerIndex].description : "Confira nossas ofertas selecionadas"}
-                      </p>
-                   </div>
-                 </motion.div>
-               </AnimatePresence>
-               
-               {beverageBanners.length > 1 && (
-                 <div className="absolute bottom-6 right-10 flex gap-1.5 z-20">
-                   {beverageBanners.map((_: any, i: number) => (
-                     <button 
-                       key={i}
-                       onClick={(e) => { e.stopPropagation(); setBevBannerIndex(i); }}
-                       className={`h-1.5 rounded-full transition-all duration-500 ${i === bevBannerIndex ? 'w-8 bg-yellow-400' : 'w-2 bg-white/20 hover:bg-white/40'}`}
-                     />
-                   ))}
-                 </div>
-               )}
-            </div>
+          <div className="relative h-64 rounded-[50px] overflow-hidden group border border-white/10 bg-zinc-900">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={bevBannerIndex}
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.5 }}
+                className="absolute inset-0"
+              >
+                <img
+                  src={
+                    beverageBanners.length > 0
+                      ? beverageBanners[bevBannerIndex].image_url
+                      : "https://images.unsplash.com/photo-1470337458703-46ad1756a187?q=80&w=800"
+                  }
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[3000ms]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent flex flex-col justify-center px-10">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest w-fit">
+                      Aproveite
+                    </span>
+                    <span className="bg-yellow-400 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest w-fit">
+                      Limitado
+                    </span>
+                  </div>
+                  <h2 className="text-4xl font-black tracking-tighter leading-tight max-w-[250px] italic text-yellow-400">
+                    {beverageBanners.length > 0
+                      ? beverageBanners[bevBannerIndex].title
+                      : "Oferta Izi"}
+                  </h2>
+                  <p className="text-[11px] font-bold text-white/60 mt-4 uppercase tracking-[0.2em]">
+                    {beverageBanners.length > 0
+                      ? beverageBanners[bevBannerIndex].description
+                      : "Confira nossas ofertas selecionadas"}
+                  </p>
+                </div>
+              </motion.div>
+            </AnimatePresence>
 
-           <div className="grid grid-cols-1 gap-6 pt-4">
-              {deals.map((item, i) => (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.1 }}
-                  key={item.id}
-                  className="bg-zinc-900/5 border border-white/10 rounded-[45px] p-5 flex items-center gap-6 group hover:bg-zinc-900/10 transition-all cursor-pointer relative overflow-hidden"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="size-32 rounded-[35px] overflow-hidden shrink-0 shadow-2xl relative z-10">
-                     <img src={item.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" title={item.name} />
-                     <div className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-black px-3 py-1.5 rounded-2xl shadow-xl backdrop-blur-md">-{item.off}</div>
+            {beverageBanners.length > 1 && (
+              <div className="absolute bottom-6 right-10 flex gap-1.5 z-20">
+                {beverageBanners.map((_: any, i: number) => (
+                  <button
+                    key={i}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBevBannerIndex(i);
+                    }}
+                    className={`h-1.5 rounded-full transition-all duration-500 ${i === bevBannerIndex ? "w-8 bg-yellow-400" : "w-2 bg-white/20 hover:bg-white/40"}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 pt-4">
+            {deals.map((item, i) => (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.1 }}
+                key={item.id}
+                className="bg-zinc-900/5 border border-white/10 rounded-[45px] p-5 flex items-center gap-6 group hover:bg-zinc-900/10 transition-all cursor-pointer relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="size-32 rounded-[35px] overflow-hidden shrink-0 shadow-2xl relative z-10">
+                  <img
+                    src={item.img}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    title={item.name}
+                  />
+                  <div className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-black px-3 py-1.5 rounded-2xl shadow-xl backdrop-blur-md">
+                    -{item.off}
                   </div>
-                  <div className="flex-1 min-w-0 relative z-10">
-                     <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.2em] mb-1.5">{item.cat}</p>
-                     <h3 className="text-lg font-black tracking-tight mb-4 leading-tight truncate">{item.name}</h3>
-                     <div className="flex items-center justify-between">
-                        <div className="flex flex-col">
-                           <span className="text-xl font-black text-yellow-400 leading-none mb-1">R$ {item.price.toFixed(2).replace(".", ",")}</span>
-                           <span className="text-xs text-white/40 line-through font-bold">R$ {item.oldPrice.toFixed(2).replace(".", ",")}</span>
+                </div>
+                <div className="flex-1 min-w-0 relative z-10">
+                  <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.2em] mb-1.5">
+                    {item.cat}
+                  </p>
+                  <h3 className="text-lg font-black tracking-tight mb-4 leading-tight truncate">
+                    {item.name}
+                  </h3>
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-xl font-black text-yellow-400 leading-none mb-1">
+                        R$ {item.price.toFixed(2).replace(".", ",")}
+                      </span>
+                      <span className="text-xs text-white/40 line-through font-bold">
+                        R$ {item.oldPrice.toFixed(2).replace(".", ",")}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToCart(item);
+                        }}
+                        className="size-11 rounded-2xl bg-yellow-400 text-white flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-110 active:scale-90 transition-all"
+                      >
+                        <span className="material-symbols-outlined font-black">
+                          {getItemCount(item.id) > 0
+                            ? "add_shopping_cart"
+                            : "add"}
+                        </span>
+                      </button>
+                      {getItemCount(item.id) > 0 && (
+                        <div className="bg-zinc-900 text-white size-9 rounded-[14px] flex items-center justify-center text-xs font-black shadow-xl">
+                          {getItemCount(item.id)}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
-                            className="size-11 rounded-2xl bg-yellow-400 text-white flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-110 active:scale-90 transition-all"
-                          >
-                            <span className="material-symbols-outlined font-black">
-                              {getItemCount(item.id) > 0 ? 'add_shopping_cart' : 'add'}
-                            </span>
-                          </button>
-                          {getItemCount(item.id) > 0 && (
-                            <div className="bg-zinc-900 text-white size-9 rounded-[14px] flex items-center justify-center text-xs font-black shadow-xl">
-                              {getItemCount(item.id)}
-                            </div>
-                          )}
-                        </div>
-                     </div>
+                      )}
+                    </div>
                   </div>
-                </motion.div>
-              ))}
-           </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </main>
 
         {/* MASTER CART CTA */}
@@ -3408,20 +4815,28 @@ function App() {
                 className="w-full bg-yellow-400 h-[80px] rounded-[35px] px-2 flex items-center justify-between shadow-[0_30px_60px_-15px_rgba(255,193,7,0.4)] transition-all active:scale-[0.98] group overflow-hidden relative"
               >
                 <div className="absolute inset-0 bg-zinc-900/20 transform -skew-x-12 -translate-x-full group-hover:animate-[shimmer_2s_infinite]" />
-                
+
                 <div className="flex items-center gap-4 ml-2">
                   <div className="bg-black/10 text-white size-14 rounded-[24px] flex items-center justify-center font-black text-xl backdrop-blur-md">
                     {cart.length}
                   </div>
                   <div className="flex flex-col items-start">
-                    <span className="font-black text-white text-sm tracking-[0.2em] uppercase leading-none mb-1">CARRINHO</span>
-                    <span className="text-[10px] font-bold text-black/50 uppercase tracking-widest">Finalizar Pedido</span>
+                    <span className="font-black text-white text-sm tracking-[0.2em] uppercase leading-none mb-1">
+                      CARRINHO
+                    </span>
+                    <span className="text-[10px] font-bold text-black/50 uppercase tracking-widest">
+                      Finalizar Pedido
+                    </span>
                   </div>
                 </div>
 
                 <div className="bg-black text-white h-14 px-8 rounded-[24px] flex items-center justify-center mr-2 shadow-2xl">
                   <span className="font-black text-lg tracking-tight">
-                    R$ {cart.reduce((a, b) => a + (b.price || 0), 0).toFixed(2).replace(".", ",")}
+                    R${" "}
+                    {cart
+                      .reduce((a, b) => a + (b.price || 0), 0)
+                      .toFixed(2)
+                      .replace(".", ",")}
                   </span>
                 </div>
               </button>
@@ -3435,26 +4850,50 @@ function App() {
   const renderPharmacyList = () => {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-        <header className="sticky top-0 z-50 px-5 pt-5 pb-4"
-          style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
+        <header
+          className="sticky top-0 z-50 px-5 pt-5 pb-4"
+          style={{
+            background: "linear-gradient(to bottom, #000000 70%, transparent)",
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-                <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+              <button
+                onClick={() => setSubView("none")}
+                className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+              >
+                <span className="material-symbols-outlined text-zinc-100">
+                  arrow_back
+                </span>
               </button>
               <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">Farmácias</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">SaÃƒºde e bem-estar</p>
+                <h1 className="text-xl font-black tracking-tight text-white leading-none">
+                  Farmácias
+                </h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">
+                  SaÃƒºde e bem-estar
+                </p>
               </div>
             </div>
-            <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-              {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>}
+            <button
+              onClick={() => cart.length > 0 && navigateSubView("cart")}
+              className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+            >
+              <span className="material-symbols-outlined text-zinc-100">
+                shopping_bag
+              </span>
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                  {cart.length}
+                </span>
+              )}
             </button>
           </div>
           <div className="relative">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
+              <span className="material-symbols-outlined text-zinc-500 text-xl">
+                search
+              </span>
             </div>
             <input
               className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
@@ -3469,41 +4908,87 @@ function App() {
           <section>
             <div className="relative h-36 rounded-2xl overflow-hidden mb-6">
               <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-black flex items-center justify-center">
-                <span className="material-symbols-outlined text-[100px] text-yellow-400/10">local_pharmacy</span>
+                <span className="material-symbols-outlined text-[100px] text-yellow-400/10">
+                  local_pharmacy
+                </span>
               </div>
               <div className="absolute inset-0 flex flex-col justify-center p-5">
-                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Disponível agora</span>
-                <h2 className="text-lg font-extrabold text-white leading-tight">Farmácias premium<br/>na sua porta</h2>
+                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">
+                  Disponível agora
+                </span>
+                <h2 className="text-lg font-extrabold text-white leading-tight">
+                  Farmácias premium
+                  <br />
+                  na sua porta
+                </h2>
               </div>
             </div>
           </section>
 
           <div className="flex flex-col gap-4 pb-10">
-            {ESTABLISHMENTS.filter((shop: any) =>
-              (shop.type === 'pharmacy' || shop.type === 'farmacia' || shop.type === 'saude') && shop.name.toLowerCase().includes(searchQuery.toLowerCase())
+            {ESTABLISHMENTS.filter(
+              (shop: any) =>
+                (shop.type === "pharmacy" ||
+                  shop.type === "farmacia" ||
+                  shop.type === "saude") &&
+                shop.name.toLowerCase().includes(searchQuery.toLowerCase()),
             ).map((shop: any, i: number) => (
-              <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+              <motion.div
+                key={shop.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
                 onClick={() => handleShopClick({ ...shop, type: "generic" })}
-                className="group cursor-pointer active:scale-[0.98] transition-all">
+                className="group cursor-pointer active:scale-[0.98] transition-all"
+              >
                 <div className="relative h-44 rounded-2xl overflow-hidden mb-3">
-                  <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <img
+                    src={shop.img}
+                    alt={shop.name}
+                    className="size-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-white/10">
-                    <span className="material-symbols-outlined text-[14px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                    <span className="text-xs font-black text-white">{shop.rating}</span>
+                    <span
+                      className="material-symbols-outlined text-[14px] text-yellow-400"
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                      star
+                    </span>
+                    <span className="text-xs font-black text-white">
+                      {shop.rating}
+                    </span>
                   </div>
-                  {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
+                  {shop.freeDelivery && (
+                    <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">
+                      Entrega Grátis
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center justify-between px-1">
                   <div>
-                    <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">{shop.name}</h4>
+                    <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">
+                      {shop.name}
+                    </h4>
                     <div className="flex items-center gap-3 mt-1 text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">schedule</span>{shop.time}</span>
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[13px]">local_fire_department</span>{shop.tag}</span>
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px]">
+                          schedule
+                        </span>
+                        {shop.time}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px]">
+                          local_fire_department
+                        </span>
+                        {shop.tag}
+                      </span>
                     </div>
                   </div>
                   <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 group-hover:bg-yellow-400 group-hover:border-yellow-400 flex items-center justify-center transition-all duration-300">
-                    <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">arrow_forward</span>
+                    <span className="material-symbols-outlined text-lg text-zinc-400 group-hover:text-black transition-colors">
+                      arrow_forward
+                    </span>
                   </div>
                 </div>
               </motion.div>
@@ -3522,49 +5007,108 @@ function App() {
       time: "20-30 min",
       freeDelivery: false,
       img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1000",
-      banner: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1200",
+      banner:
+        "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1200",
       categories: [
         {
           name: "Populares do Mestre",
           items: [
-            { id: 101, name: "Filet Mignon Au Poivre", desc: "Filet grelhado com crosta de pimentas negras e molho demi-glace artesanal.", price: 89.00, img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=600" },
-            { id: 102, name: "Pasta de Trufas Negras", desc: "Massa fresca envolta em creme de parmesão envelhecido e trufas frescas.", price: 74.00, img: "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?q=80&w=600" },
-            { id: 103, name: "Bisque de Lagosta", desc: "Creme aveludado de lagosta com toque de conhaque e ervas finas.", price: 62.00, img: "https://images.unsplash.com/photo-1547592166-23ac45744acd?q=80&w=600" },
-            { id: 104, name: "Fondant de Chocolate 70%", desc: "Bolo quente com centro cremoso servido com gelato de baunilha Bourbon.", price: 45.00, img: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?q=80&w=600" },
-          ]
+            {
+              id: 101,
+              name: "Filet Mignon Au Poivre",
+              desc: "Filet grelhado com crosta de pimentas negras e molho demi-glace artesanal.",
+              price: 89.0,
+              img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=600",
+            },
+            {
+              id: 102,
+              name: "Pasta de Trufas Negras",
+              desc: "Massa fresca envolta em creme de parmesão envelhecido e trufas frescas.",
+              price: 74.0,
+              img: "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?q=80&w=600",
+            },
+            {
+              id: 103,
+              name: "Bisque de Lagosta",
+              desc: "Creme aveludado de lagosta com toque de conhaque e ervas finas.",
+              price: 62.0,
+              img: "https://images.unsplash.com/photo-1547592166-23ac45744acd?q=80&w=600",
+            },
+            {
+              id: 104,
+              name: "Fondant de Chocolate 70%",
+              desc: "Bolo quente com centro cremoso servido com gelato de baunilha Bourbon.",
+              price: 45.0,
+              img: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?q=80&w=600",
+            },
+          ],
         },
-        { name: "Entradas", items: [
-          { id: 201, name: "Carpaccio de Wagyu", desc: "Fatias finas de wagyu com alcaparras e parmesão.", price: 52.00, img: "https://images.unsplash.com/photo-1607189860920-34ef073e7a77?q=80&w=600" },
-        ]},
-        { name: "Sobremesas", items: [
-          { id: 301, name: "CrÃƒ¨me BrÃƒ»lée", desc: "Clássico francês com crosta caramelizada na hora.", price: 38.00, img: "https://images.unsplash.com/photo-1470124182917-cc6e71b22ecc?q=80&w=600" },
-        ]},
-        { name: "Bebidas", items: [
-          { id: 401, name: "Ãƒgua com Gás", desc: "500ml gelada.", price: 9.00, img: "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?q=80&w=600" },
-        ]},
-      ]
+        {
+          name: "Entradas",
+          items: [
+            {
+              id: 201,
+              name: "Carpaccio de Wagyu",
+              desc: "Fatias finas de wagyu com alcaparras e parmesão.",
+              price: 52.0,
+              img: "https://images.unsplash.com/photo-1607189860920-34ef073e7a77?q=80&w=600",
+            },
+          ],
+        },
+        {
+          name: "Sobremesas",
+          items: [
+            {
+              id: 301,
+              name: "CrÃƒ¨me BrÃƒ»lée",
+              desc: "Clássico francês com crosta caramelizada na hora.",
+              price: 38.0,
+              img: "https://images.unsplash.com/photo-1470124182917-cc6e71b22ecc?q=80&w=600",
+            },
+          ],
+        },
+        {
+          name: "Bebidas",
+          items: [
+            {
+              id: 401,
+              name: "Ãƒgua com Gás",
+              desc: "500ml gelada.",
+              price: 9.0,
+              img: "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?q=80&w=600",
+            },
+          ],
+        },
+      ],
     };
 
-    const allCategoryNames = ["Destaques", ...(shop.categories || []).map((c: any) => c.name)];
+    const allCategoryNames = [
+      "Destaques",
+      ...(shop.categories || []).map((c: any) => c.name),
+    ];
 
-    const displayCategories = activeCategory === "Destaques"
-      ? shop.categories || []
-      : (shop.categories || []).filter((c: any) => c.name === activeCategory);
+    const displayCategories =
+      activeCategory === "Destaques"
+        ? shop.categories || []
+        : (shop.categories || []).filter((c: any) => c.name === activeCategory);
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-
         {/* TOP COMPACT HEADER */}
         <header className="sticky top-0 z-[60] w-full px-5 py-3 flex items-center justify-between bg-black/40 backdrop-blur-2xl border-b border-white/5 transition-all duration-300">
           <button
             onClick={() => setSubView("restaurant_list")}
             className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-900/40 border border-white/10 active:scale-95 transition-all"
           >
-            <span className="material-symbols-outlined text-white">arrow_back</span>
+            <span className="material-symbols-outlined text-white">
+              arrow_back
+            </span>
           </button>
-          
+
           <div className="flex-1 px-4 truncate">
-             <h2 className="text-sm font-black text-white uppercase tracking-widest truncate">{shop.name}</h2>
+            <h2 className="text-sm font-black text-white uppercase tracking-widest truncate">
+              {shop.name}
+            </h2>
           </div>
 
           <div className="flex gap-2">
@@ -3572,14 +5116,20 @@ function App() {
               <span className="material-symbols-outlined text-xl">share</span>
             </button>
             <button className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-900/40 border border-white/10 active:scale-95 transition-all text-white">
-              <span className="material-symbols-outlined text-xl">favorite_border</span>
+              <span className="material-symbols-outlined text-xl">
+                favorite_border
+              </span>
             </button>
           </div>
         </header>
 
         {/* HERO - SLIMMER */}
         <div className="relative w-full h-64 overflow-hidden shrink-0">
-          <img src={shop.banner || shop.img} alt={shop.name} className="w-full h-full object-cover" />
+          <img
+            src={shop.banner || shop.img}
+            alt={shop.name}
+            className="w-full h-full object-cover"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
         </div>
 
@@ -3591,15 +5141,24 @@ function App() {
             </h1>
             <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest">
               <div className="flex items-center gap-1.5 text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-lg">
-                <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                <span
+                  className="material-symbols-outlined text-[14px]"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  star
+                </span>
                 <span>{shop.rating}</span>
               </div>
               <div className="flex items-center gap-1.5 text-zinc-400">
-                <span className="material-symbols-outlined text-[14px]">schedule</span>
+                <span className="material-symbols-outlined text-[14px]">
+                  schedule
+                </span>
                 <span>{shop.time}</span>
               </div>
               <div className="flex items-center gap-1.5 text-zinc-400">
-                <span className="material-symbols-outlined text-[14px]">local_shipping</span>
+                <span className="material-symbols-outlined text-[14px]">
+                  local_shipping
+                </span>
                 <span className={shop.freeDelivery ? "text-emerald-400" : ""}>
                   {shop.freeDelivery ? "Entrega Grátis" : shop.fee}
                 </span>
@@ -3624,7 +5183,6 @@ function App() {
                 {cat}
               </button>
             ))}
-
           </div>
         </nav>
 
@@ -3644,17 +5202,29 @@ function App() {
                     transition={{ delay: idx * 0.05 }}
                     className={`group relative flex flex-col gap-4 ${idx % 2 === 1 ? "md:mt-12" : ""}`}
                   >
-                    <div 
-                      onClick={() => { setSelectedItem(item); setSubView("product_detail"); }}
+                    <div
+                      onClick={() => {
+                        setSelectedItem(item);
+                        setSubView("product_detail");
+                      }}
                       className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-[1.02] cursor-pointer"
                     >
-                      <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
+                      <img
+                        src={item.img}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToCart(item);
+                        }}
                         className="absolute bottom-5 right-5 w-14 h-14 rounded-2xl bg-yellow-400 text-black shadow-[0_0_20px_rgba(255,215,9,0.4)] flex items-center justify-center active:scale-90 transition-all"
                       >
-                        <span className="material-symbols-outlined font-bold">add</span>
+                        <span className="material-symbols-outlined font-bold">
+                          add
+                        </span>
                       </button>
                     </div>
                     <div className="px-2">
@@ -3668,12 +5238,19 @@ function App() {
                               R$ {item.oldPrice.toFixed(2).replace(".", ",")}
                             </span>
                           )}
-                          <span className="text-yellow-400 font-black text-sm whitespace-nowrap" style={{ textShadow: "0 0 10px rgba(255,215,9,0.5)" }}>
+                          <span
+                            className="text-yellow-400 font-black text-sm whitespace-nowrap"
+                            style={{
+                              textShadow: "0 0 10px rgba(255,215,9,0.5)",
+                            }}
+                          >
                             R$ {item.price.toFixed(2).replace(".", ",")}
                           </span>
                         </div>
                       </div>
-                      <p className="text-zinc-500 text-sm leading-relaxed max-w-[85%]">{item.desc}</p>
+                      <p className="text-zinc-500 text-sm leading-relaxed max-w-[85%]">
+                        {item.desc}
+                      </p>
                     </div>
                   </motion.div>
                 ))}
@@ -3691,8 +5268,12 @@ function App() {
               className="max-w-md mx-auto bg-zinc-950/95 backdrop-blur-2xl border border-white/5 rounded-3xl px-5 py-4 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.8)] pointer-events-auto"
             >
               <div className="flex flex-col">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black">Sua Sacola</span>
-                <span className="text-white font-black text-sm">{cart.length} {cart.length === 1 ? "item" : "itens"}</span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black">
+                  Sua Sacola
+                </span>
+                <span className="text-white font-black text-sm">
+                  {cart.length} {cart.length === 1 ? "item" : "itens"}
+                </span>
               </div>
               <button
                 onClick={() => navigateSubView("cart")}
@@ -3700,54 +5281,102 @@ function App() {
               >
                 <span>Ver Sacola</span>
                 <span style={{ textShadow: "0 0 10px rgba(255,215,9,0.5)" }}>
-                  R$ {cart.reduce((a: number, b: any) => a + (b.price || 0), 0).toFixed(2).replace(".", ",")}
+                  R${" "}
+                  {cart
+                    .reduce((a: number, b: any) => a + (b.price || 0), 0)
+                    .toFixed(2)
+                    .replace(".", ",")}
                 </span>
               </button>
             </motion.div>
           </div>
         )}
-
       </div>
     );
   };
 
   const renderStoreCatalog = () => {
-    const shop = selectedShop || { name: "Loja", rating: "5.0", time: "30 min", freeDelivery: false, img: "", banner: "", categories: [] };
-    const allCategoryNames = ["Destaques", ...(shop.categories || []).map((c: any) => c.name)];
-    const displayCategories = activeCategory === "Destaques"
-      ? shop.categories || []
-      : (shop.categories || []).filter((c: any) => c.name === activeCategory);
+    const shop = selectedShop || {
+      name: "Loja",
+      rating: "5.0",
+      time: "30 min",
+      freeDelivery: false,
+      img: "",
+      banner: "",
+      categories: [],
+    };
+    const allCategoryNames = [
+      "Destaques",
+      ...(shop.categories || []).map((c: any) => c.name),
+    ];
+    const displayCategories =
+      activeCategory === "Destaques"
+        ? shop.categories || []
+        : (shop.categories || []).filter((c: any) => c.name === activeCategory);
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
         <nav className="fixed top-0 w-full z-50 flex items-center justify-between px-5 py-4 pointer-events-none">
-          <button onClick={() => setSubView("none")} className="pointer-events-auto flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/10 active:scale-95 transition-all">
+          <button
+            onClick={() => setSubView("none")}
+            className="pointer-events-auto flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/10 active:scale-95 transition-all"
+          >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="pointer-events-auto relative flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/10 active:scale-95 transition-all">
+          <button
+            onClick={() => cart.length > 0 && navigateSubView("cart")}
+            className="pointer-events-auto relative flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/10 active:scale-95 transition-all"
+          >
             <span className="material-symbols-outlined">shopping_bag</span>
-            {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>}
+            {cart.length > 0 && (
+              <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                {cart.length}
+              </span>
+            )}
           </button>
         </nav>
 
         <header className="relative w-full h-72 overflow-hidden shrink-0">
-          <img src={shop.banner || shop.img || "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=800"} alt={shop.name} className="w-full h-full object-cover" />
+          <img
+            src={
+              shop.banner ||
+              shop.img ||
+              "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=800"
+            }
+            alt={shop.name}
+            className="w-full h-full object-cover"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
           <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-yellow-400/50 to-transparent" />
         </header>
 
         <section className="px-5 -mt-8 relative z-10 mb-2">
-          <h1 className="font-extrabold text-2xl tracking-tighter text-white mb-2 uppercase leading-tight">{shop.name}</h1>
+          <h1 className="font-extrabold text-2xl tracking-tighter text-white mb-2 uppercase leading-tight">
+            {shop.name}
+          </h1>
           <div className="flex items-center gap-5 text-sm font-medium">
             <div className="flex items-center gap-1.5 text-yellow-400">
-              <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+              <span
+                className="material-symbols-outlined text-[16px]"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                star
+              </span>
               <span className="font-black">{shop.rating}</span>
             </div>
             <div className="flex items-center gap-1.5 text-zinc-400">
-              <span className="material-symbols-outlined text-[16px]">schedule</span>
+              <span className="material-symbols-outlined text-[16px]">
+                schedule
+              </span>
               <span>{shop.time}</span>
             </div>
-            <span className={shop.freeDelivery ? "text-yellow-400 font-bold text-sm" : "text-zinc-400 text-sm"}>
+            <span
+              className={
+                shop.freeDelivery
+                  ? "text-yellow-400 font-bold text-sm"
+                  : "text-zinc-400 text-sm"
+              }
+            >
               {shop.freeDelivery ? "Entrega Grátis" : shop.fee}
             </span>
           </div>
@@ -3756,8 +5385,11 @@ function App() {
         <nav className="sticky top-0 z-40 mt-6 px-5 py-3 bg-black/90 backdrop-blur-xl border-b border-zinc-900">
           <div className="flex gap-3 overflow-x-auto no-scrollbar">
             {allCategoryNames.map((cat) => (
-              <button key={cat} onClick={() => setActiveCategory(cat)}
-                className={`px-5 py-2.5 rounded-full font-black text-[11px] uppercase tracking-widest whitespace-nowrap transition-all active:scale-95 ${activeCategory === cat ? "bg-yellow-400 text-black shadow-[0_0_15px_rgba(255,215,9,0.3)]" : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-white"}`}>
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-5 py-2.5 rounded-full font-black text-[11px] uppercase tracking-widest whitespace-nowrap transition-all active:scale-95 ${activeCategory === cat ? "bg-yellow-400 text-black shadow-[0_0_15px_rgba(255,215,9,0.3)]" : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-white"}`}
+              >
                 {cat}
               </button>
             ))}
@@ -3767,40 +5399,75 @@ function App() {
         <main className="px-5 pt-8 space-y-12">
           {displayCategories.length === 0 && (
             <div className="flex flex-col items-center py-20 gap-3">
-              <span className="material-symbols-outlined text-5xl text-zinc-800">storefront</span>
-              <p className="text-zinc-600 text-sm font-bold uppercase tracking-widest">Cardápio em breve</p>
+              <span className="material-symbols-outlined text-5xl text-zinc-800">
+                storefront
+              </span>
+              <p className="text-zinc-600 text-sm font-bold uppercase tracking-widest">
+                Cardápio em breve
+              </p>
             </div>
           )}
           {displayCategories.map((category: any) => (
             <section key={category.name}>
-              <h2 className="font-black text-base uppercase tracking-widest text-zinc-500 mb-6 border-l-4 border-yellow-400 pl-4">{category.name}</h2>
+              <h2 className="font-black text-base uppercase tracking-widest text-zinc-500 mb-6 border-l-4 border-yellow-400 pl-4">
+                {category.name}
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {(category.items || []).map((item: any, idx: number) => (
-                  <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
-                    className={`group relative flex flex-col gap-3 ${idx % 2 === 1 ? "md:mt-10" : ""}`}>
-                    <div 
-                      onClick={() => { setSelectedItem(item); setSubView("product_detail"); }}
-                      className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-[1.02] cursor-pointer">
-                      <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className={`group relative flex flex-col gap-3 ${idx % 2 === 1 ? "md:mt-10" : ""}`}
+                  >
+                    <div
+                      onClick={() => {
+                        setSelectedItem(item);
+                        setSubView("product_detail");
+                      }}
+                      className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-[1.02] cursor-pointer"
+                    >
+                      <img
+                        src={item.img}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                      <button onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
-                        className="absolute bottom-4 right-4 w-12 h-12 rounded-2xl bg-yellow-400 text-black shadow-[0_0_20px_rgba(255,215,9,0.4)] flex items-center justify-center active:scale-90 transition-all">
-                        <span className="material-symbols-outlined font-bold">add</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToCart(item);
+                        }}
+                        className="absolute bottom-4 right-4 w-12 h-12 rounded-2xl bg-yellow-400 text-black shadow-[0_0_20px_rgba(255,215,9,0.4)] flex items-center justify-center active:scale-90 transition-all"
+                      >
+                        <span className="material-symbols-outlined font-bold">
+                          add
+                        </span>
                       </button>
                     </div>
                     <div className="px-1">
                       <div className="flex justify-between items-start mb-1 gap-3">
-                        <h3 className="font-black text-base uppercase tracking-tight text-white group-hover:text-yellow-400 transition-colors leading-tight flex-1">{item.name}</h3>
+                        <h3 className="font-black text-base uppercase tracking-tight text-white group-hover:text-yellow-400 transition-colors leading-tight flex-1">
+                          {item.name}
+                        </h3>
                         <div className="flex flex-col items-end shrink-0">
                           {item.oldPrice && (
                             <span className="text-[10px] text-zinc-500 line-through font-bold whitespace-nowrap">
-                              R$ {Number(item.oldPrice).toFixed(2).replace(".", ",")}
+                              R${" "}
+                              {Number(item.oldPrice)
+                                .toFixed(2)
+                                .replace(".", ",")}
                             </span>
                           )}
-                          <span className="text-yellow-400 font-black text-sm whitespace-nowrap">R$ {Number(item.price).toFixed(2).replace(".", ",")}</span>
+                          <span className="text-yellow-400 font-black text-sm whitespace-nowrap">
+                            R$ {Number(item.price).toFixed(2).replace(".", ",")}
+                          </span>
                         </div>
                       </div>
-                      <p className="text-zinc-500 text-xs leading-relaxed">{item.desc}</p>
+                      <p className="text-zinc-500 text-xs leading-relaxed">
+                        {item.desc}
+                      </p>
                     </div>
                   </motion.div>
                 ))}
@@ -3811,16 +5478,31 @@ function App() {
 
         {cart.length > 0 && (
           <div className="fixed bottom-24 left-0 w-full px-5 z-50 pointer-events-none">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              className="max-w-md mx-auto bg-zinc-950/95 backdrop-blur-2xl border border-white/5 rounded-3xl px-5 py-4 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.8)] pointer-events-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-md mx-auto bg-zinc-950/95 backdrop-blur-2xl border border-white/5 rounded-3xl px-5 py-4 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.8)] pointer-events-auto"
+            >
               <div className="flex flex-col">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black">Sacola</span>
-                <span className="text-white font-black text-sm">{cart.length} {cart.length === 1 ? "item" : "itens"}</span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black">
+                  Sacola
+                </span>
+                <span className="text-white font-black text-sm">
+                  {cart.length} {cart.length === 1 ? "item" : "itens"}
+                </span>
               </div>
-              <button onClick={() => navigateSubView("cart")}
-                className="flex items-center gap-3 bg-yellow-400 text-black px-5 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-[0_0_20px_rgba(255,215,9,0.2)] active:scale-95 transition-all">
+              <button
+                onClick={() => navigateSubView("cart")}
+                className="flex items-center gap-3 bg-yellow-400 text-black px-5 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-[0_0_20px_rgba(255,215,9,0.2)] active:scale-95 transition-all"
+              >
                 <span>Ver Sacola</span>
-                <span>R$ {cart.reduce((a: number, b: any) => a + (b.price || 0), 0).toFixed(2).replace(".", ",")}</span>
+                <span>
+                  R${" "}
+                  {cart
+                    .reduce((a: number, b: any) => a + (b.price || 0), 0)
+                    .toFixed(2)
+                    .replace(".", ",")}
+                </span>
               </button>
             </motion.div>
           </div>
@@ -3830,69 +5512,131 @@ function App() {
   };
 
   const renderLightningPayment = () => {
-    const invoice = selectedItem?.lightningInvoice || lightningData?.payment_request || "";
+    const invoice =
+      selectedItem?.lightningInvoice || lightningData?.payment_request || "";
     const satoshis = selectedItem?.satoshis || lightningData?.satoshis || 0;
-    const btcPrice = selectedItem?.btcPrice || selectedItem?.btc_price_brl || lightningData?.btc_price_brl || 0;
+    const btcPrice =
+      selectedItem?.btcPrice ||
+      selectedItem?.btc_price_brl ||
+      lightningData?.btc_price_brl ||
+      0;
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
         <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
-          <button onClick={() => setSubView("checkout")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          <button
+            onClick={() => setSubView("checkout")}
+            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+          >
+            <span className="material-symbols-outlined text-zinc-100">
+              arrow_back
+            </span>
           </button>
-          <h1 className="text-lg font-black text-white uppercase tracking-tight">Bitcoin Lightning</h1>
+          <h1 className="text-lg font-black text-white uppercase tracking-tight">
+            Bitcoin Lightning
+          </h1>
         </header>
         <main className="px-5 pt-8 flex flex-col items-center gap-6 max-w-sm mx-auto w-full">
           <div className="text-center space-y-1">
             <div className="size-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-3">
-              <span className="material-symbols-outlined text-3xl text-orange-400" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
+              <span
+                className="material-symbols-outlined text-3xl text-orange-400"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                bolt
+              </span>
             </div>
-            <p className="text-zinc-500 text-xs font-black uppercase tracking-widest">Total em Satoshis</p>
-            <p className="text-3xl font-black text-white">{satoshis.toLocaleString("pt-BR")} sats</p>
-            {btcPrice > 0 && <p className="text-zinc-500 text-xs">1 BTC = R$ {btcPrice.toLocaleString("pt-BR")}</p>}
+            <p className="text-zinc-500 text-xs font-black uppercase tracking-widest">
+              Total em Satoshis
+            </p>
+            <p className="text-3xl font-black text-white">
+              {satoshis.toLocaleString("pt-BR")} sats
+            </p>
+            {btcPrice > 0 && (
+              <p className="text-zinc-500 text-xs">
+                1 BTC = R$ {btcPrice.toLocaleString("pt-BR")}
+              </p>
+            )}
           </div>
 
           {invoice && !selectedItem?.lightningError ? (
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full flex flex-col items-center gap-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full flex flex-col items-center gap-4"
+            >
               <div className="w-52 h-52 bg-white rounded-3xl flex items-center justify-center p-3 shadow-[0_0_30px_rgba(249,115,22,0.2)]">
                 <img
-                  src={"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(invoice)}
+                  src={
+                    "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" +
+                    encodeURIComponent(invoice)
+                  }
                   alt="Lightning QR"
                   className="w-full h-full rounded-2xl"
                 />
               </div>
               <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between gap-3">
-                <p className="text-zinc-400 text-xs font-mono truncate flex-1">{invoice.slice(0, 40)}...</p>
-                <button onClick={() => { navigator.clipboard.writeText(invoice); toastSuccess("Invoice copiada!"); }}
-                  className="text-orange-400 active:scale-90 transition-all shrink-0">
-                  <span className="material-symbols-outlined text-lg">content_copy</span>
+                <p className="text-zinc-400 text-xs font-mono truncate flex-1">
+                  {invoice.slice(0, 40)}...
+                </p>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(invoice);
+                    toastSuccess("Invoice copiada!");
+                  }}
+                  className="text-orange-400 active:scale-90 transition-all shrink-0"
+                >
+                  <span className="material-symbols-outlined text-lg">
+                    content_copy
+                  </span>
                 </button>
               </div>
               <div className="flex items-center gap-2">
                 <div className="size-2 bg-orange-400 rounded-full animate-pulse" />
-                <p className="text-zinc-500 text-xs font-black uppercase tracking-wider">Aguardando pagamento Lightning...</p>
+                <p className="text-zinc-500 text-xs font-black uppercase tracking-wider">
+                  Aguardando pagamento Lightning...
+                </p>
               </div>
-              <button onClick={() => { setTab("orders"); setSubView("none"); }}
-                className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-zinc-800 text-zinc-400 hover:border-orange-400/30 hover:text-orange-400 transition-all active:scale-95">
+              <button
+                onClick={() => {
+                  setTab("orders");
+                  setSubView("none");
+                }}
+                className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-zinc-800 text-zinc-400 hover:border-orange-400/30 hover:text-orange-400 transition-all active:scale-95"
+              >
                 Ver Meus Pedidos
               </button>
             </motion.div>
           ) : selectedItem?.lightningError ? (
             <div className="w-full flex flex-col items-center gap-6 text-center py-6">
-               <div className="size-20 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-2">
-                  <span className="material-symbols-outlined text-4xl text-orange-500">bolt_slash</span>
-               </div>
-               <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Falha na Conexão Lightning</h3>
-               <p className="text-zinc-500 text-sm px-4">Não foi possível gerar sua fatura agora. O pedido foi registrado mas o pagamento via Bitcoin está indisponível.</p>
-               <button onClick={() => { setTab("orders"); setSubView("none"); }}
-                  className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-sm uppercase tracking-widest">
-                  Ver Meus Pedidos
-               </button>
+              <div className="size-20 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-2">
+                <span className="material-symbols-outlined text-4xl text-orange-500">
+                  bolt_slash
+                </span>
+              </div>
+              <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">
+                Falha na Conexão Lightning
+              </h3>
+              <p className="text-zinc-500 text-sm px-4">
+                Não foi possível gerar sua fatura agora. O pedido foi registrado
+                mas o pagamento via Bitcoin está indisponível.
+              </p>
+              <button
+                onClick={() => {
+                  setTab("orders");
+                  setSubView("none");
+                }}
+                className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-sm uppercase tracking-widest"
+              >
+                Ver Meus Pedidos
+              </button>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 py-8">
               <div className="size-10 border-2 border-orange-400/20 border-t-orange-400 rounded-full animate-spin" />
-              <p className="text-zinc-500 text-sm">Gerando invoice Lightning...</p>
+              <p className="text-zinc-500 text-sm">
+                Gerando invoice Lightning...
+              </p>
             </div>
           )}
         </main>
@@ -3900,21 +5644,32 @@ function App() {
     );
   };
 
-
-
   const renderPixPayment = () => {
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const discount = appliedCoupon ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100) : 0;
+    const discount = appliedCoupon
+      ? appliedCoupon.discount_type === "fixed"
+        ? appliedCoupon.discount_value
+        : (subtotal * appliedCoupon.discount_value) / 100
+      : 0;
     const cartTotal = Math.max(0, subtotal - discount);
-    const total = (pixConfirmed && selectedItem?.total_price) ? Number(selectedItem.total_price) : cartTotal;
+    const total =
+      pixConfirmed && selectedItem?.total_price
+        ? Number(selectedItem.total_price)
+        : cartTotal;
 
-    const formatCpf = (v: string) => v.replace(/\D/g,"").slice(0,11)
-      .replace(/(\d{3})(\d)/,"$1.$2")
-      .replace(/(\d{3})(\d)/,"$1.$2")
-      .replace(/(\d{3})(\d{1,2})$/,"$1-$2");
+    const formatCpf = (v: string) =>
+      v
+        .replace(/\D/g, "")
+        .slice(0, 11)
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 
     const handlePixConfirm = async () => {
-      if (pixCpf.replace(/\D/g,"").length < 11) { alert("CPF inválido."); return; }
+      if (pixCpf.replace(/\D/g, "").length < 11) {
+        alert("CPF inválido.");
+        return;
+      }
       console.log("Iniciando fluxo PIX para total:", total);
       setPixConfirmed(true);
       try {
@@ -3923,11 +5678,11 @@ function App() {
 
         // Se o pedido já existe (fluxo mobilidade), não criar outro
         if (!orderId) {
-          if (!selectedShop?.id) { 
+          if (!selectedShop?.id) {
             console.error("Estabelecimento não selecionado");
-            alert("Erro: Estabelecimento não selecionado."); 
-            setPixConfirmed(false); 
-            return; 
+            alert("Erro: Estabelecimento não selecionado.");
+            setPixConfirmed(false);
+            return;
           }
 
           console.log("Criando pedido inicial 'pendente_pagamento'...");
@@ -3938,8 +5693,9 @@ function App() {
               merchant_id: selectedShop.id,
               status: "pendente_pagamento",
               total_price: Number(total.toFixed(2)),
-              pickup_address: selectedShop.name || "Endereço do Estabelecimento",
-              delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map((i: any) => formatCartItemSummary(i)).join(', ')}`,
+              pickup_address:
+                selectedShop.name || "Endereço do Estabelecimento",
+              delivery_address: `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map((i: any) => formatCartItemSummary(i)).join(", ")}`,
               payment_method: "pix",
               service_type: selectedShop.type || "restaurant",
             })
@@ -3948,7 +5704,10 @@ function App() {
 
           if (orderErr || !order) {
             console.error("Erro ao criar pedido:", orderErr);
-            alert("Não foi possível registrar o pedido. Detalhe: " + (orderErr?.message || "Erro desconhecido"));
+            alert(
+              "Não foi possível registrar o pedido. Detalhe: " +
+                (orderErr?.message || "Erro desconhecido"),
+            );
             setPixConfirmed(false);
             return;
           }
@@ -3956,33 +5715,50 @@ function App() {
           orderRef = order;
           console.log("Pedido criado com sucesso ID:", orderId);
         } else {
-          console.log("Atualizando pedido existente para 'pendente_pagamento' ID:", orderId);
-          await supabase.from("orders_delivery").update({ 
-            status: "pendente_pagamento", 
-            payment_method: "pix" 
-          }).eq("id", orderId);
+          console.log(
+            "Atualizando pedido existente para 'pendente_pagamento' ID:",
+            orderId,
+          );
+          await supabase
+            .from("orders_delivery")
+            .update({
+              status: "pendente_pagamento",
+              payment_method: "pix",
+            })
+            .eq("id", orderId);
         }
 
         // 2. Chamar Edge Function do Mercado Pago
         console.log("Chamando edge function process-mp-payment...");
-        const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
-          body: {
-            amount: Number(total.toFixed(2)),
-            orderId: orderId,
-            payment_method_id: 'pix',
-            email: user?.email || loginEmail || "cliente@izidelivery.com",
-            customer: {
-              cpf: pixCpf.replace(/\D/g,""),
-              name: userName || "Cliente IziDelivery",
+        const { data: fnData, error: fnErr } = await supabase.functions.invoke(
+          "process-mp-payment",
+          {
+            body: {
+              amount: Number(total.toFixed(2)),
+              orderId: orderId,
+              payment_method_id: "pix",
+              email: user?.email || loginEmail || "cliente@izidelivery.com",
+              customer: {
+                cpf: pixCpf.replace(/\D/g, ""),
+                name: userName || "Cliente IziDelivery",
+              },
             },
           },
-        });
+        );
 
         if (fnErr || !(fnData?.qrCode || fnData?.qr_code)) {
           console.error("Erro MP PIX ou dados ausentes:", fnErr, fnData);
-          const detail = fnData?.details || fnData?.error || fnErr?.message || "Erro ao gerar os dados do QR Code no Mercado Pago.";
-          
-          setSelectedItem({ ...orderRef, pixError: true, pixErrorMessage: detail });
+          const detail =
+            fnData?.details ||
+            fnData?.error ||
+            fnErr?.message ||
+            "Erro ao gerar os dados do QR Code no Mercado Pago.";
+
+          setSelectedItem({
+            ...orderRef,
+            pixError: true,
+            pixErrorMessage: detail,
+          });
           setPixConfirmed(true);
           return;
         }
@@ -3993,18 +5769,26 @@ function App() {
         const qrBase64 = fnData.qrCodeBase64 || fnData.qr_code_base64;
         const copyPaste = fnData.copyPaste || fnData.copy_paste;
 
-        setSelectedItem({ ...orderRef, pixQrCode: qr, pixQrBase64: qrBase64, pixCopyPaste: copyPaste });
-        
+        setSelectedItem({
+          ...orderRef,
+          pixQrCode: qr,
+          pixQrBase64: qrBase64,
+          pixCopyPaste: copyPaste,
+        });
+
         // Limpar sacola após sucesso na geração do PIX
         if (cart.length > 0) {
-            console.log("Limpando sacola...");
-            await clearCart(orderId);
+          console.log("Limpando sacola...");
+          await clearCart(orderId);
         }
-
       } catch (e: any) {
         console.error("Exceção crítica no fluxo PIX:", e);
         const errDetail = e.message || "Erro de conexão. Tente novamente.";
-        setSelectedItem((prev: any) => ({ ...prev, pixError: true, pixErrorMessage: errDetail }));
+        setSelectedItem((prev: any) => ({
+          ...prev,
+          pixError: true,
+          pixErrorMessage: errDetail,
+        }));
         setPixConfirmed(true);
       }
     };
@@ -4014,19 +5798,33 @@ function App() {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
         <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
-          <button onClick={() => { setSubView("checkout"); setPixConfirmed(false); setPixCpf(""); }}
-            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          <button
+            onClick={() => {
+              setSubView("checkout");
+              setPixConfirmed(false);
+              setPixCpf("");
+            }}
+            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+          >
+            <span className="material-symbols-outlined text-zinc-100">
+              arrow_back
+            </span>
           </button>
-          <h1 className="text-lg font-black text-white uppercase tracking-tight">Pagamento PIX</h1>
+          <h1 className="text-lg font-black text-white uppercase tracking-tight">
+            Pagamento PIX
+          </h1>
         </header>
 
         <main className="px-5 pt-8 flex flex-col items-center gap-6 max-w-sm mx-auto w-full">
-
           {/* Valor */}
           <div className="text-center">
-            <p className="text-zinc-500 text-xs font-black uppercase tracking-widest mb-1">Total a pagar</p>
-            <p className="text-4xl font-black text-white" style={{ textShadow: "0 0 20px rgba(255,215,9,0.3)" }}>
+            <p className="text-zinc-500 text-xs font-black uppercase tracking-widest mb-1">
+              Total a pagar
+            </p>
+            <p
+              className="text-4xl font-black text-white"
+              style={{ textShadow: "0 0 20px rgba(255,215,9,0.3)" }}
+            >
               R$ {total.toFixed(2).replace(".", ",")}
             </p>
           </div>
@@ -4034,7 +5832,9 @@ function App() {
           {/* CPF */}
           {!pixConfirmed && (
             <div className="w-full space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">CPF do Pagador</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                CPF do Pagador
+              </label>
               <input
                 type="text"
                 inputMode="numeric"
@@ -4047,83 +5847,148 @@ function App() {
           )}
 
           {/* Botão confirmar */}
-          {pixCpf.replace(/\D/g,"").length === 11 && !pixConfirmed && (
-            <button onClick={handlePixConfirm}
+          {pixCpf.replace(/\D/g, "").length === 11 && !pixConfirmed && (
+            <button
+              onClick={handlePixConfirm}
               className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
-              style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
+              style={{
+                background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)",
+                color: "#000",
+                boxShadow: "0 0 30px rgba(255,215,9,0.15)",
+              }}
+            >
               Gerar QR Code PIX
             </button>
           )}
 
           {/* Loading */}
           {pixConfirmed && !pixReady && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-4 py-8">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center gap-4 py-8"
+            >
               <div className="size-12 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin" />
-              <p className="text-zinc-500 text-sm font-black uppercase tracking-wider">Gerando PIX...</p>
+              <p className="text-zinc-500 text-sm font-black uppercase tracking-wider">
+                Gerando PIX...
+              </p>
             </motion.div>
           )}
 
           {/* QR Code real ou Erro */}
           {pixReady && !selectedItem?.pixError && (
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full flex flex-col items-center gap-5">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full flex flex-col items-center gap-5"
+            >
               <div className="w-52 h-52 bg-white rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(255,215,9,0.2)] p-3">
                 {selectedItem?.pixQrBase64 ? (
-                  <img src={`data:image/png;base64,${selectedItem.pixQrBase64}`} className="w-full h-full" alt="QR PIX" />
+                  <img
+                    src={`data:image/png;base64,${selectedItem.pixQrBase64}`}
+                    className="w-full h-full"
+                    alt="QR PIX"
+                  />
                 ) : (
-                  <span className="material-symbols-outlined text-[120px] text-zinc-800">qr_code_2</span>
+                  <span className="material-symbols-outlined text-[120px] text-zinc-800">
+                    qr_code_2
+                  </span>
                 )}
               </div>
               <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between gap-3">
-                <p className="text-zinc-400 text-xs font-mono truncate flex-1">{selectedItem?.pixCopyPaste?.slice(0, 40)}...</p>
+                <p className="text-zinc-400 text-xs font-mono truncate flex-1">
+                  {selectedItem?.pixCopyPaste?.slice(0, 40)}...
+                </p>
                 <button
-                  onClick={() => { navigator.clipboard.writeText(selectedItem?.pixCopyPaste || ""); toastSuccess("PIX copiado!"); }}
-                  className="text-yellow-400 active:scale-90 transition-all shrink-0">
-                  <span className="material-symbols-outlined text-lg">content_copy</span>
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      selectedItem?.pixCopyPaste || "",
+                    );
+                    toastSuccess("PIX copiado!");
+                  }}
+                  className="text-yellow-400 active:scale-90 transition-all shrink-0"
+                >
+                  <span className="material-symbols-outlined text-lg">
+                    content_copy
+                  </span>
                 </button>
               </div>
               <div className="flex items-center gap-2">
                 <div className="size-2 bg-yellow-400 rounded-full animate-pulse" />
-                <p className="text-zinc-500 text-xs font-black uppercase tracking-wider">Aguardando pagamento...</p>
+                <p className="text-zinc-500 text-xs font-black uppercase tracking-wider">
+                  Aguardando pagamento...
+                </p>
               </div>
               <button
-                onClick={() => { setTab("orders"); setSubView("none"); setPixConfirmed(false); setPixCpf(""); setSelectedItem(null); }}
-                className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-zinc-800 text-zinc-400 hover:border-yellow-400/30 hover:text-yellow-400 transition-all active:scale-95">
+                onClick={() => {
+                  setTab("orders");
+                  setSubView("none");
+                  setPixConfirmed(false);
+                  setPixCpf("");
+                  setSelectedItem(null);
+                }}
+                className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-zinc-800 text-zinc-400 hover:border-yellow-400/30 hover:text-yellow-400 transition-all active:scale-95"
+              >
                 Ver Meus Pedidos
               </button>
             </motion.div>
           )}
 
           {pixConfirmed && selectedItem?.pixError && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full flex flex-col items-center gap-6 py-6 text-center">
-               <div className="size-20 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-2">
-                  <span className="material-symbols-outlined text-4xl text-rose-500">error</span>
-               </div>
-               <div>
-                  <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-2">Ops! Falha no QR Code</h3>
-                  <p className="text-zinc-400 text-sm font-medium leading-relaxed px-4">
-                     O pedido foi enviado ao lojista, mas não conseguimos gerar o QR Code Pix agora. 
-                     {selectedItem.pixErrorMessage ? ` Detalhe: ${selectedItem.pixErrorMessage}` : " Você pode tentar pagar através de outro método ou falar com o suporte."}
-                  </p>
-               </div>
-               <div className="w-full space-y-3">
-                  <button onClick={() => { setTab("orders"); setSubView("none"); setSelectedItem(null); }}
-                    className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-sm uppercase tracking-widest">
-                    Acompanhar Pedido
-                  </button>
-                  <button onClick={() => { setSubView("checkout"); setPixConfirmed(false); }}
-                    className="w-full py-4 rounded-2xl text-zinc-500 font-black text-[10px] uppercase tracking-widest">
-                    Tentar outro método
-                  </button>
-               </div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="w-full flex flex-col items-center gap-6 py-6 text-center"
+            >
+              <div className="size-20 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-2">
+                <span className="material-symbols-outlined text-4xl text-rose-500">
+                  error
+                </span>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-2">
+                  Ops! Falha no QR Code
+                </h3>
+                <p className="text-zinc-400 text-sm font-medium leading-relaxed px-4">
+                  O pedido foi enviado ao lojista, mas não conseguimos gerar o
+                  QR Code Pix agora.
+                  {selectedItem.pixErrorMessage
+                    ? ` Detalhe: ${selectedItem.pixErrorMessage}`
+                    : " Você pode tentar pagar através de outro método ou falar com o suporte."}
+                </p>
+              </div>
+              <div className="w-full space-y-3">
+                <button
+                  onClick={() => {
+                    setTab("orders");
+                    setSubView("none");
+                    setSelectedItem(null);
+                  }}
+                  className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-sm uppercase tracking-widest"
+                >
+                  Acompanhar Pedido
+                </button>
+                <button
+                  onClick={() => {
+                    setSubView("checkout");
+                    setPixConfirmed(false);
+                  }}
+                  className="w-full py-4 rounded-2xl text-zinc-500 font-black text-[10px] uppercase tracking-widest"
+                >
+                  Tentar outro método
+                </button>
+              </div>
             </motion.div>
           )}
 
           {!pixConfirmed && (
-            <button onClick={() => setSubView("checkout")} className="text-zinc-600 text-sm font-black uppercase tracking-widest hover:text-zinc-400 transition-colors">
+            <button
+              onClick={() => setSubView("checkout")}
+              className="text-zinc-600 text-sm font-black uppercase tracking-widest hover:text-zinc-400 transition-colors"
+            >
               Cancelar
             </button>
           )}
-
         </main>
       </div>
     );
@@ -4131,98 +5996,153 @@ function App() {
 
   const renderCardPayment = () => {
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const discount = appliedCoupon ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100) : 0;
+    const discount = appliedCoupon
+      ? appliedCoupon.discount_type === "fixed"
+        ? appliedCoupon.discount_value
+        : (subtotal * appliedCoupon.discount_value) / 100
+      : 0;
     const total = Math.max(0, subtotal - discount);
 
-    const handleConfirmCard = async (token: string, _issuer: string, _installments: number, brand: string, _last4: string) => {
-        setIsLoading(true);
-        try {
-            const isSubscription = paymentsOrigin === "izi_black";
-            const orderBase = {
-                user_id: userId,
-                merchant_id: isSubscription ? null : (selectedShop?.id || null),
-                total_price: total,
-                status: "pendente_pagamento",
-                pickup_address: isSubscription ? "Assinatura Izi Black" : (selectedShop?.name || "Estabelecimento"),
-                delivery_address: isSubscription ? "Serviço Digital" : (userLocation.address || "Endereço não informado"),
-                payment_method: "cartao",
-                service_type: isSubscription ? "subscription" : "restaurant",
-            };
+    const handleConfirmCard = async (
+      token: string,
+      _issuer: string,
+      _installments: number,
+      brand: string,
+      _last4: string,
+    ) => {
+      setIsLoading(true);
+      try {
+        const isSubscription = paymentsOrigin === "izi_black";
+        const orderBase = {
+          user_id: userId,
+          merchant_id: isSubscription ? null : selectedShop?.id || null,
+          total_price: total,
+          status: "pendente_pagamento",
+          pickup_address: isSubscription
+            ? "Assinatura Izi Black"
+            : selectedShop?.name || "Estabelecimento",
+          delivery_address: isSubscription
+            ? "Serviço Digital"
+            : userLocation.address || "Endereço não informado",
+          payment_method: "cartao",
+          service_type: isSubscription ? "subscription" : "restaurant",
+        };
 
-            const { data: order } = await supabase.from("orders_delivery").insert(orderBase).select().single();
-            if (!order) { toastError("Erro ao criar pedido."); return; }
-
-            const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
-                body: {
-                    amount: total,
-                    orderId: order.id,
-                    payment_method_id: brand.toLowerCase().includes('visa') ? 'visa' : 'master',
-                    token: token,
-                    email: user?.email || loginEmail || "cliente@izidelivery.com",
-                    installments: 1
-                },
-            });
-
-            if (fnErr || (fnData && fnData.status !== 'approved')) {
-                const msg = fnData?.details || fnErr?.message || "O cartão foi recusado pela operadora.";
-                toastError(`Pagamento não aprovado: ${msg}`);
-                setSubView(isSubscription ? "izi_black_purchase" : "checkout");
-                return;
-            }
-
-            if (isSubscription) {
-                await supabase.from('users_delivery').update({ is_izi_black: true }).eq('id', userId);
-                setIsIziBlackMembership(true);
-                setIziBlackStep('success');
-                setSubView("izi_black_purchase");
-            } else {
-                setSelectedItem(order);
-                await clearCart(order.id);
-                setTab("orders");
-                setSubView("none");
-            }
-            toastSuccess(isSubscription ? "Assinatura IZI Black ativada!" : "Pedido aprovado!");
-
-        } catch (err: any) {
-            console.error("Card processing error:", err);
-            toastError("Instabilidade na rede. Tente novamente.");
-            setSubView(paymentsOrigin === "izi_black" ? "izi_black_purchase" : "checkout");
-        } finally {
-            setIsLoading(false);
+        const { data: order } = await supabase
+          .from("orders_delivery")
+          .insert(orderBase)
+          .select()
+          .single();
+        if (!order) {
+          toastError("Erro ao criar pedido.");
+          return;
         }
+
+        const { data: fnData, error: fnErr } = await supabase.functions.invoke(
+          "process-mp-payment",
+          {
+            body: {
+              amount: total,
+              orderId: order.id,
+              payment_method_id: brand.toLowerCase().includes("visa")
+                ? "visa"
+                : "master",
+              token: token,
+              email: user?.email || loginEmail || "cliente@izidelivery.com",
+              installments: 1,
+            },
+          },
+        );
+
+        if (fnErr || (fnData && fnData.status !== "approved")) {
+          const msg =
+            fnData?.details ||
+            fnErr?.message ||
+            "O cartão foi recusado pela operadora.";
+          toastError(`Pagamento não aprovado: ${msg}`);
+          setSubView(isSubscription ? "izi_black_purchase" : "checkout");
+          return;
+        }
+
+        if (isSubscription) {
+          await supabase
+            .from("users_delivery")
+            .update({ is_izi_black: true })
+            .eq("id", userId);
+          setIsIziBlackMembership(true);
+          setIziBlackStep("success");
+          setSubView("izi_black_purchase");
+        } else {
+          setSelectedItem(order);
+          await clearCart(order.id);
+          setTab("orders");
+          setSubView("none");
+        }
+        toastSuccess(
+          isSubscription ? "Assinatura IZI Black ativada!" : "Pedido aprovado!",
+        );
+      } catch (err: any) {
+        console.error("Card processing error:", err);
+        toastError("Instabilidade na rede. Tente novamente.");
+        setSubView(
+          paymentsOrigin === "izi_black" ? "izi_black_purchase" : "checkout",
+        );
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-white flex flex-col overflow-y-auto no-scrollbar pb-10">
         <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-6 border-b border-zinc-900 text-white">
-          <button onClick={() => setSubView("checkout")}
-            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          <button
+            onClick={() => setSubView("checkout")}
+            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center"
+          >
+            <span className="material-symbols-outlined text-zinc-100">
+              arrow_back
+            </span>
           </button>
           <div className="flex flex-col text-left">
-              <h1 className="text-lg font-black text-white uppercase tracking-tight leading-none">Cartão de Crédito</h1>
-              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">{selectedShop?.name || 'Venda Digital'}</p>
+            <h1 className="text-lg font-black text-white uppercase tracking-tight leading-none">
+              Cartão de Crédito
+            </h1>
+            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">
+              {selectedShop?.name || "Venda Digital"}
+            </p>
           </div>
         </header>
 
         <main className="px-5 pt-10 max-w-sm mx-auto w-full space-y-10">
           <div className="text-center">
-            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1">Valor Final</p>
-            <p className="text-5xl font-black text-white" style={{ textShadow: "0 0 20px rgba(255,215,9,0.2)" }}>R$ {total.toFixed(2).replace(".", ",")}</p>
+            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1">
+              Valor Final
+            </p>
+            <p
+              className="text-5xl font-black text-white"
+              style={{ textShadow: "0 0 20px rgba(255,215,9,0.2)" }}
+            >
+              R$ {total.toFixed(2).replace(".", ",")}
+            </p>
           </div>
 
           <div className="bg-zinc-900/10 border border-zinc-900/50 p-6 rounded-[40px] shadow-2xl">
-              <MercadoPagoCardForm onConfirm={handleConfirmCard} />
+            <MercadoPagoCardForm onConfirm={handleConfirmCard} />
           </div>
-          
+
           <div className="flex flex-col items-center gap-4 py-4">
-             <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-zinc-700 text-sm">enhanced_encryption</span>
-                <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-black">Certificado pela PCI DSS</p>
-             </div>
-             <p className="text-[10px] text-center text-zinc-700 uppercase tracking-widest font-bold max-w-[200px] leading-relaxed">
-               Seus dados são encriptados de ponta a ponta e nunca armazenados em nossos servidores.
-             </p>
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-zinc-700 text-sm">
+                enhanced_encryption
+              </span>
+              <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-black">
+                Certificado pela PCI DSS
+              </p>
+            </div>
+            <p className="text-[10px] text-center text-zinc-700 uppercase tracking-widest font-bold max-w-[200px] leading-relaxed">
+              Seus dados são encriptados de ponta a ponta e nunca armazenados em
+              nossos servidores.
+            </p>
           </div>
         </main>
       </div>
@@ -4230,184 +6150,306 @@ function App() {
   };
 
   const renderOrders = () => {
-    const activeOrders    = myOrders.filter(o => o && !["concluido", "cancelado"].includes(o.status));
-    const scheduledOrders = myOrders.filter(o => o && o.scheduled_at && !["concluido", "cancelado"].includes(o.status));
-    const pastOrders      = myOrders.filter(o => o && ["concluido", "cancelado"].includes(o.status));
+    const activeOrders = myOrders.filter(
+      (o) => o && !["concluido", "cancelado"].includes(o.status),
+    );
+    const scheduledOrders = myOrders.filter(
+      (o) =>
+        o && o.scheduled_at && !["concluido", "cancelado"].includes(o.status),
+    );
+    const pastOrders = myOrders.filter(
+      (o) => o && ["concluido", "cancelado"].includes(o.status),
+    );
 
     const statusLabel: Record<string, string> = {
-      pending: "Aguardando", pendente: "Aguardando", novo: "Processando",
+      pending: "Aguardando",
+      pendente: "Aguardando",
+      novo: "Processando",
       waiting_driver: "Buscando Condutor",
-      aceito: "Confirmado", confirmado: "Confirmado", preparando: "Em Preparação", pronto: "Pronto para Coleta",
-      a_caminho: "Em Rota de Coleta", at_pickup: "No Local",
-      picked_up: "Coletado / Em Viagem", 
-      em_rota: "A Caminho do Destino", saiu_para_entrega: "Saindo para Entrega",
-      concluido: "Concluído", cancelado: "Cancelado",
+      aceito: "Confirmado",
+      confirmado: "Confirmado",
+      preparando: "Em Preparação",
+      pronto: "Pronto para Coleta",
+      a_caminho: "Em Rota de Coleta",
+      at_pickup: "No Local",
+      picked_up: "Coletado / Em Viagem",
+      em_rota: "A Caminho do Destino",
+      saiu_para_entrega: "Saindo para Entrega",
+      concluido: "Concluído",
+      cancelado: "Cancelado",
     };
 
-    const isMobility = (o: any) => ["mototaxi", "carro", "van", "utilitario"].includes(o.service_type);
+    const isMobility = (o: any) =>
+      ["mototaxi", "carro", "van", "utilitario"].includes(o.service_type);
 
     return (
       <div className="flex flex-col h-full bg-black text-zinc-100 pb-32 overflow-y-auto no-scrollbar">
-
         <main className="px-5 pt-8 pb-10 max-w-2xl mx-auto w-full">
-
           {/* TABS */}
           <nav className="flex items-center gap-8 mb-10 overflow-x-auto no-scrollbar">
             {[
-              { id: "ativos",     label: "Ativos",     count: activeOrders.length },
-              { id: "agendados",  label: "Agendados",  count: scheduledOrders.length },
-              { id: "historico",  label: "Histórico",  count: 0 },
+              { id: "ativos", label: "Ativos", count: activeOrders.length },
+              {
+                id: "agendados",
+                label: "Agendados",
+                count: scheduledOrders.length,
+              },
+              { id: "historico", label: "Histórico", count: 0 },
             ].map((t) => (
               <button
                 key={t.id}
                 onClick={() => setFilterTab(t.id)}
                 className="relative pb-2 group shrink-0"
               >
-                <span className={`font-extrabold text-lg transition-colors ${filterTab === t.id ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"}`}>
+                <span
+                  className={`font-extrabold text-lg transition-colors ${filterTab === t.id ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"}`}
+                >
                   {t.label}
                   {t.count > 0 && (
-                    <span className="ml-2 text-[10px] bg-yellow-400 text-black font-black px-1.5 py-0.5 rounded-full">{t.count}</span>
+                    <span className="ml-2 text-[10px] bg-yellow-400 text-black font-black px-1.5 py-0.5 rounded-full">
+                      {t.count}
+                    </span>
                   )}
                 </span>
-                <div className={`absolute bottom-0 left-0 h-[2px] rounded-full transition-all duration-300 ${filterTab === t.id ? "w-full bg-yellow-400" : "w-0 bg-zinc-700"}`} />
+                <div
+                  className={`absolute bottom-0 left-0 h-[2px] rounded-full transition-all duration-300 ${filterTab === t.id ? "w-full bg-yellow-400" : "w-0 bg-zinc-700"}`}
+                />
               </button>
             ))}
           </nav>
 
           <AnimatePresence mode="wait">
-
             {/* ATIVOS */}
             {filterTab === "ativos" && (
-              <motion.div key="ativos" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-14">
+              <motion.div
+                key="ativos"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                className="space-y-14"
+              >
                 {activeOrders.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4">
-                    <span className="material-symbols-outlined text-5xl text-zinc-800">shopping_bag</span>
-                    <p className="text-zinc-600 text-sm font-medium">Nenhum pedido ativo no momento</p>
+                    <span className="material-symbols-outlined text-5xl text-zinc-800">
+                      shopping_bag
+                    </span>
+                    <p className="text-zinc-600 text-sm font-medium">
+                      Nenhum pedido ativo no momento
+                    </p>
                   </div>
-                ) : activeOrders.map((order) => (
-                  <motion.article
-                    key={order.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="relative flex flex-col md:flex-row items-start md:items-center gap-5"
-                  >
-                    <div className="relative w-28 h-28 shrink-0 bg-zinc-900/50 rounded-3xl flex items-center justify-center border border-zinc-800 overflow-hidden">
-                      <div className="absolute inset-0 bg-zinc-900/60" />
+                ) : (
+                  activeOrders.map((order) => (
+                    <motion.article
+                      key={order.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="relative flex flex-col md:flex-row items-start md:items-center gap-5"
+                    >
+                      <div className="relative w-28 h-28 shrink-0 bg-zinc-900/50 rounded-3xl flex items-center justify-center border border-zinc-800 overflow-hidden">
+                        <div className="absolute inset-0 bg-zinc-900/60" />
                         <span
-                        className="material-symbols-outlined absolute text-5xl text-yellow-400"
-                        style={{ filter: "drop-shadow(0 0 15px rgba(255,215,9,0.5))", fontVariationSettings: "'FILL' 1" }}
-                      >
-                        {isMobility(order) ? (order.service_type === 'mototaxi' ? "two_wheeler" : "directions_car") : "restaurant"}
-                      </span>
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black mb-1 block">
-                            {statusLabel[order.status] || order.status}
-                          </span>
-                          <h3 className="font-extrabold text-xl text-white tracking-tight">
-                            {order.merchant_name || (isMobility(order) ? (order.service_type === 'mototaxi' ? "Izi Moto" : "Izi Car") : "Pedido")}
-                          </h3>
-                        </div>
-                        <span className="text-yellow-400 text-[10px] font-black bg-yellow-400/10 px-3 py-1 rounded-full uppercase tracking-widest whitespace-nowrap">
-                          {statusLabel[order.status] || order.status}
+                          className="material-symbols-outlined absolute text-5xl text-yellow-400"
+                          style={{
+                            filter: "drop-shadow(0 0 15px rgba(255,215,9,0.5))",
+                            fontVariationSettings: "'FILL' 1",
+                          }}
+                        >
+                          {isMobility(order)
+                            ? order.service_type === "mototaxi"
+                              ? "two_wheeler"
+                              : "directions_car"
+                            : "restaurant"}
                         </span>
                       </div>
-                      <p className="text-zinc-400 text-sm max-w-xs">
-                        {order.delivery_address || "Endereço de entrega"}
-                      </p>
-                      <div className="pt-3 flex items-center gap-3">
-                        <button
-                          onClick={() => { setSelectedItem(order); setSubView("active_order"); }}
-                          className="bg-yellow-400 text-black font-black px-6 py-3 rounded-xl shadow-[0_0_20px_rgba(255,215,9,0.25)] hover:opacity-90 active:scale-95 transition-all text-xs uppercase tracking-wider"
-                        >
-                          Rastrear
-                        </button>
-                        <button
-                          onClick={() => { setSelectedItem(order); setSubView("order_chat"); }}
-                          className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors active:scale-95"
-                        >
-                          <span className="material-symbols-outlined">chat_bubble</span>
-                        </button>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black mb-1 block">
+                              {statusLabel[order.status] || order.status}
+                            </span>
+                            <h3 className="font-extrabold text-xl text-white tracking-tight">
+                              {order.merchant_name ||
+                                (isMobility(order)
+                                  ? order.service_type === "mototaxi"
+                                    ? "Izi Moto"
+                                    : "Izi Car"
+                                  : "Pedido")}
+                            </h3>
+                          </div>
+                          <span className="text-yellow-400 text-[10px] font-black bg-yellow-400/10 px-3 py-1 rounded-full uppercase tracking-widest whitespace-nowrap">
+                            {statusLabel[order.status] || order.status}
+                          </span>
+                        </div>
+                        <p className="text-zinc-400 text-sm max-w-xs">
+                          {order.delivery_address || "Endereço de entrega"}
+                        </p>
+                        <div className="pt-3 flex items-center gap-3">
+                          <button
+                            onClick={() => {
+                              setSelectedItem(order);
+                              setSubView("active_order");
+                            }}
+                            className="bg-yellow-400 text-black font-black px-6 py-3 rounded-xl shadow-[0_0_20px_rgba(255,215,9,0.25)] hover:opacity-90 active:scale-95 transition-all text-xs uppercase tracking-wider"
+                          >
+                            Rastrear
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedItem(order);
+                              setSubView("order_chat");
+                            }}
+                            className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors active:scale-95"
+                          >
+                            <span className="material-symbols-outlined">
+                              chat_bubble
+                            </span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </motion.article>
-                ))}
+                    </motion.article>
+                  ))
+                )}
               </motion.div>
             )}
 
             {/* AGENDADOS */}
             {filterTab === "agendados" && (
-              <motion.div key="agendados" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-14">
+              <motion.div
+                key="agendados"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                className="space-y-14"
+              >
                 {scheduledOrders.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4">
-                    <span className="material-symbols-outlined text-5xl text-zinc-800">event</span>
-                    <p className="text-zinc-600 text-sm font-medium">Nenhum pedido agendado</p>
+                    <span className="material-symbols-outlined text-5xl text-zinc-800">
+                      event
+                    </span>
+                    <p className="text-zinc-600 text-sm font-medium">
+                      Nenhum pedido agendado
+                    </p>
                   </div>
-                ) : scheduledOrders.map((order) => (
-                  <motion.article key={order.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                    className="relative flex flex-col md:flex-row items-start md:items-center gap-5"
-                  >
-                    <div className="relative w-28 h-28 shrink-0 bg-zinc-900/50 rounded-3xl flex items-center justify-center border border-zinc-800">
-                      <span className="material-symbols-outlined text-5xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>event</span>
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black block">Agendado</span>
-                      <h3 className="font-extrabold text-xl text-white">{order.merchant_name || "Pedido Agendado"}</h3>
-                      <p className="text-zinc-400 text-sm">{order.scheduled_at ? new Date(order.scheduled_at).toLocaleString("pt-BR") : ""}</p>
-                    </div>
-                  </motion.article>
-                ))}
+                ) : (
+                  scheduledOrders.map((order) => (
+                    <motion.article
+                      key={order.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="relative flex flex-col md:flex-row items-start md:items-center gap-5"
+                    >
+                      <div className="relative w-28 h-28 shrink-0 bg-zinc-900/50 rounded-3xl flex items-center justify-center border border-zinc-800">
+                        <span
+                          className="material-symbols-outlined text-5xl text-yellow-400"
+                          style={{ fontVariationSettings: "'FILL' 1" }}
+                        >
+                          event
+                        </span>
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black block">
+                          Agendado
+                        </span>
+                        <h3 className="font-extrabold text-xl text-white">
+                          {order.merchant_name || "Pedido Agendado"}
+                        </h3>
+                        <p className="text-zinc-400 text-sm">
+                          {order.scheduled_at
+                            ? new Date(order.scheduled_at).toLocaleString(
+                                "pt-BR",
+                              )
+                            : ""}
+                        </p>
+                      </div>
+                    </motion.article>
+                  ))
+                )}
               </motion.div>
             )}
 
             {/* HISTÃƒâ€œRICO */}
             {filterTab === "historico" && (
-              <motion.div key="historico" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+              <motion.div
+                key="historico"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                className="space-y-6"
+              >
                 {pastOrders.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4">
-                    <span className="material-symbols-outlined text-5xl text-zinc-800">history</span>
-                    <p className="text-zinc-600 text-sm font-medium">Nenhum pedido no histórico</p>
-                  </div>
-                ) : pastOrders.map((order) => (
-                  <motion.div
-                    key={order.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    onClick={() => { setSelectedItem(order); setSubView("order_detail"); }}
-                    className="flex items-center gap-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-all hover:border-yellow-400/20 group"
-                  >
-                    <div className="w-14 h-14 rounded-2xl bg-zinc-800 flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-2xl text-zinc-500 group-hover:text-yellow-400 transition-colors" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        {isMobility(order) ? (order.service_type === 'mototaxi' ? "two_wheeler" : "directions_car") : "restaurant"}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-black text-sm text-white truncate">{order.merchant_name || "Pedido"}</h4>
-                      <p className="text-zinc-500 text-xs mt-0.5">{new Date(order.created_at).toLocaleDateString("pt-BR")} Ã¢â‚¬¢ R$ {Number(order.total_price || 0).toFixed(2).replace(".", ",")}</p>
-                    </div>
-                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${order.status === "concluido" ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
-                      {statusLabel[order.status] || order.status}
+                    <span className="material-symbols-outlined text-5xl text-zinc-800">
+                      history
                     </span>
-                  </motion.div>
-                ))}
+                    <p className="text-zinc-600 text-sm font-medium">
+                      Nenhum pedido no histórico
+                    </p>
+                  </div>
+                ) : (
+                  pastOrders.map((order) => (
+                    <motion.div
+                      key={order.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      onClick={() => {
+                        setSelectedItem(order);
+                        setSubView("order_detail");
+                      }}
+                      className="flex items-center gap-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-all hover:border-yellow-400/20 group"
+                    >
+                      <div className="w-14 h-14 rounded-2xl bg-zinc-800 flex items-center justify-center shrink-0">
+                        <span
+                          className="material-symbols-outlined text-2xl text-zinc-500 group-hover:text-yellow-400 transition-colors"
+                          style={{ fontVariationSettings: "'FILL' 1" }}
+                        >
+                          {isMobility(order)
+                            ? order.service_type === "mototaxi"
+                              ? "two_wheeler"
+                              : "directions_car"
+                            : "restaurant"}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-black text-sm text-white truncate">
+                          {order.merchant_name || "Pedido"}
+                        </h4>
+                        <p className="text-zinc-500 text-xs mt-0.5">
+                          {new Date(order.created_at).toLocaleDateString(
+                            "pt-BR",
+                          )}{" "}
+                          Ã¢â‚¬¢ R${" "}
+                          {Number(order.total_price || 0)
+                            .toFixed(2)
+                            .replace(".", ",")}
+                        </p>
+                      </div>
+                      <span
+                        className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${order.status === "concluido" ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}
+                      >
+                        {statusLabel[order.status] || order.status}
+                      </span>
+                    </motion.div>
+                  ))
+                )}
               </motion.div>
             )}
-
           </AnimatePresence>
 
           {/* BOTTOM HINT */}
           <div className="mt-20 pt-8 border-t border-zinc-900 flex flex-col items-center text-center">
-            <span className="material-symbols-outlined text-zinc-800 text-4xl mb-3">shopping_bag</span>
+            <span className="material-symbols-outlined text-zinc-800 text-4xl mb-3">
+              shopping_bag
+            </span>
             <p className="text-zinc-600 text-sm font-medium">
               Não vê um pedido?{" "}
-              <button onClick={() => userId && fetchMyOrders(userId)} className="text-yellow-400/60 hover:text-yellow-400 transition-colors">
+              <button
+                onClick={() => userId && fetchMyOrders(userId)}
+                className="text-yellow-400/60 hover:text-yellow-400 transition-colors"
+              >
                 Atualizar lista
               </button>
             </p>
           </div>
-
         </main>
       </div>
     );
@@ -4416,30 +6458,61 @@ function App() {
   const renderPaymentProcessing = () => (
     <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center">
       <div className="size-20 border-4 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin mb-6" />
-      <h2 className="text-2xl font-black text-white uppercase tracking-tight">Processando Pagamento</h2>
-      <p className="text-zinc-400 mt-2 font-medium">Aguarde um instante, estamos confirmando tudo... ⚡</p>
+      <h2 className="text-2xl font-black text-white uppercase tracking-tight">
+        Processando Pagamento
+      </h2>
+      <p className="text-zinc-400 mt-2 font-medium">
+        Aguarde um instante, estamos confirmando tudo... ⚡
+      </p>
     </div>
   );
 
   const renderPaymentError = () => (
     <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-center">
       <div className="size-20 rounded-full bg-red-500/10 flex items-center justify-center mb-6 border border-red-500/20">
-        <span className="material-symbols-outlined text-4xl text-red-500">error</span>
+        <span className="material-symbols-outlined text-4xl text-red-500">
+          error
+        </span>
       </div>
-      <h2 className="text-2xl font-black text-white uppercase tracking-tight">Ops! Algo deu errado</h2>
-      <p className="text-zinc-400 mt-2 mb-8 font-medium">Não conseguimos processar seu pagamento. Verifique os dados e tente novamente. ⚠️</p>
-      <button onClick={() => setSubView("checkout")} className="w-full max-w-xs py-4 bg-white text-black font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all">Tentar Novamente</button>
+      <h2 className="text-2xl font-black text-white uppercase tracking-tight">
+        Ops! Algo deu errado
+      </h2>
+      <p className="text-zinc-400 mt-2 mb-8 font-medium">
+        Não conseguimos processar seu pagamento. Verifique os dados e tente
+        novamente. ⚠️
+      </p>
+      <button
+        onClick={() => setSubView("checkout")}
+        className="w-full max-w-xs py-4 bg-white text-black font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all"
+      >
+        Tentar Novamente
+      </button>
     </div>
   );
 
   const renderPaymentSuccess = () => (
     <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-center">
       <div className="size-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 border border-emerald-500/20">
-        <span className="material-symbols-outlined text-4xl text-emerald-500">check_circle</span>
+        <span className="material-symbols-outlined text-4xl text-emerald-500">
+          check_circle
+        </span>
       </div>
-      <h2 className="text-2xl font-black text-white uppercase tracking-tight">Pagamento Aprovado!</h2>
-      <p className="text-zinc-400 mt-2 mb-8 font-medium">Sucesso! Seu pedido já foi enviado para o estabelecimento. Prepare-se para uma experiência incrível. ✨</p>
-      <button onClick={() => { setTab("orders"); setSubView("none"); }} className="w-full max-w-xs py-4 bg-emerald-500 text-white font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_30px_rgba(16,185,129,0.3)]">Acompanhar Pedido</button>
+      <h2 className="text-2xl font-black text-white uppercase tracking-tight">
+        Pagamento Aprovado!
+      </h2>
+      <p className="text-zinc-400 mt-2 mb-8 font-medium">
+        Sucesso! Seu pedido já foi enviado para o estabelecimento. Prepare-se
+        para uma experiência incrível. ✨
+      </p>
+      <button
+        onClick={() => {
+          setTab("orders");
+          setSubView("none");
+        }}
+        className="w-full max-w-xs py-4 bg-emerald-500 text-white font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_30px_rgba(16,185,129,0.3)]"
+      >
+        Acompanhar Pedido
+      </button>
     </div>
   );
 
@@ -4447,13 +6520,23 @@ function App() {
     <div className="absolute inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center">
       <div className="size-24 rounded-full bg-blue-500/10 flex items-center justify-center mb-8 relative">
         <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-ping" />
-        <span className="material-symbols-outlined text-5xl text-blue-500 relative z-10">storefront</span>
+        <span className="material-symbols-outlined text-5xl text-blue-500 relative z-10">
+          storefront
+        </span>
       </div>
-      <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-3">Aguardando Loja</h2>
+      <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-3">
+        Aguardando Loja
+      </h2>
       <p className="text-zinc-400 font-medium max-w-[240px] leading-relaxed">
-        O estabelecimento está analisando seu pedido agora mesmo. Fique de olho! ⏱️
+        O estabelecimento está analisando seu pedido agora mesmo. Fique de olho!
+        ⏱️
       </p>
-      <button onClick={() => setSubView(null)} className="mt-12 px-8 py-3 bg-zinc-900 border border-zinc-800 rounded-2xl text-zinc-500 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">Voltar ao Início</button>
+      <button
+        onClick={() => setSubView(null)}
+        className="mt-12 px-8 py-3 bg-zinc-900 border border-zinc-800 rounded-2xl text-zinc-500 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+      >
+        Voltar ao Início
+      </button>
     </div>
   );
 
@@ -4461,184 +6544,189 @@ function App() {
     <div className="absolute inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center">
       <div className="size-24 rounded-full bg-yellow-400/10 flex items-center justify-center mb-8 relative">
         <div className="absolute inset-0 rounded-full bg-yellow-400/20 animate-ping" />
-        <span className="material-symbols-outlined text-5xl text-yellow-400 relative z-10">two_wheeler</span>
+        <span className="material-symbols-outlined text-5xl text-yellow-400 relative z-10">
+          two_wheeler
+        </span>
       </div>
-      <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-3">Buscando Entregador</h2>
+      <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-3">
+        Buscando Entregador
+      </h2>
       <p className="text-zinc-400 font-medium max-w-[240px] leading-relaxed">
-        Seu pedido está pronto! Estamos localizando o condutor Izi mais próximo de você. 🛵
+        Seu pedido está pronto! Estamos localizando o condutor Izi mais próximo
+        de você. 🛵
       </p>
     </div>
   );
 
   const renderOrderChat = () => (
-     <div className="absolute inset-0 z-50 bg-black flex flex-col">
-        <header className="px-5 py-6 border-b border-zinc-900 flex items-center gap-4">
-           <button onClick={() => setSubView("active_order")} className="size-10 rounded-full bg-zinc-900 flex items-center justify-center">
-              <span className="material-symbols-outlined text-white">close</span>
-           </button>
-           <div>
-              <h2 className="text-lg font-black text-white uppercase tracking-tight leading-none">Chat com Suporte</h2>
-              <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-1">Online</p>
-           </div>
-        </header>
-        <div className="flex-1 p-5 overflow-y-auto space-y-4 no-scrollbar">
-           <div className="flex justify-start">
-              <div className="bg-zinc-900 p-4 rounded-3xl rounded-tl-lg max-w-[85%] border border-zinc-800">
-                 <p className="text-sm text-zinc-300">Olá! Como podemos ajudar com seu pedido?</p>
-              </div>
-           </div>
+    <div className="absolute inset-0 z-50 bg-black flex flex-col">
+      <header className="px-5 py-6 border-b border-zinc-900 flex items-center gap-4">
+        <button
+          onClick={() => setSubView("active_order")}
+          className="size-10 rounded-full bg-zinc-900 flex items-center justify-center"
+        >
+          <span className="material-symbols-outlined text-white">close</span>
+        </button>
+        <div>
+          <h2 className="text-lg font-black text-white uppercase tracking-tight leading-none">
+            Chat com Suporte
+          </h2>
+          <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-1">
+            Online
+          </p>
         </div>
-        <div className="p-5 border-t border-zinc-900 flex gap-3">
-           <input type="text" placeholder="Escreva sua mensagem..." className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 text-white text-sm focus:outline-none focus:border-yellow-400/50" />
-           <button className="size-14 rounded-2xl bg-yellow-400 text-black flex items-center justify-center shadow-lg shadow-yellow-400/20">
-              <span className="material-symbols-outlined font-black">send</span>
-           </button>
+      </header>
+      <div className="flex-1 p-5 overflow-y-auto space-y-4 no-scrollbar">
+        <div className="flex justify-start">
+          <div className="bg-zinc-900 p-4 rounded-3xl rounded-tl-lg max-w-[85%] border border-zinc-800">
+            <p className="text-sm text-zinc-300">
+              Olá! Como podemos ajudar com seu pedido?
+            </p>
+          </div>
         </div>
-     </div>
+      </div>
+      <div className="p-5 border-t border-zinc-900 flex gap-3">
+        <input
+          type="text"
+          placeholder="Escreva sua mensagem..."
+          className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 text-white text-sm focus:outline-none focus:border-yellow-400/50"
+        />
+        <button className="size-14 rounded-2xl bg-yellow-400 text-black flex items-center justify-center shadow-lg shadow-yellow-400/20">
+          <span className="material-symbols-outlined font-black">send</span>
+        </button>
+      </div>
+    </div>
   );
 
   const renderOrderSupport = () => (
-     <div className="absolute inset-0 z-50 bg-black flex flex-col p-8 items-center justify-center text-center space-y-8">
-        <div className="size-20 rounded-3xl bg-blue-500/10 flex items-center justify-center">
-           <span className="material-symbols-outlined text-4xl text-blue-500">help</span>
-        </div>
-        <div>
-           <h2 className="text-2xl font-black text-white uppercase tracking-tight">Central de Ajuda</h2>
-           <p className="text-zinc-500 mt-2">Precisa de ajuda com o seu pedido? Nossa equipe de suporte está à disposição 24/7.</p>
-        </div>
-        <div className="w-full space-y-4">
-           <button onClick={() => setSubView("order_chat")} className="w-full py-4 bg-white text-black font-black rounded-2xl uppercase tracking-widest">Falar com Consultor</button>
-           <button onClick={() => setSubView("none")} className="w-full py-4 bg-zinc-900 text-zinc-400 font-black rounded-2xl uppercase tracking-widest">Voltar</button>
-        </div>
-     </div>
+    <div className="absolute inset-0 z-50 bg-black flex flex-col p-8 items-center justify-center text-center space-y-8">
+      <div className="size-20 rounded-3xl bg-blue-500/10 flex items-center justify-center">
+        <span className="material-symbols-outlined text-4xl text-blue-500">
+          help
+        </span>
+      </div>
+      <div>
+        <h2 className="text-2xl font-black text-white uppercase tracking-tight">
+          Central de Ajuda
+        </h2>
+        <p className="text-zinc-500 mt-2">
+          Precisa de ajuda com o seu pedido? Nossa equipe de suporte está à
+          disposição 24/7.
+        </p>
+      </div>
+      <div className="w-full space-y-4">
+        <button
+          onClick={() => setSubView("order_chat")}
+          className="w-full py-4 bg-white text-black font-black rounded-2xl uppercase tracking-widest"
+        >
+          Falar com Consultor
+        </button>
+        <button
+          onClick={() => setSubView("none")}
+          className="w-full py-4 bg-zinc-900 text-zinc-400 font-black rounded-2xl uppercase tracking-widest"
+        >
+          Voltar
+        </button>
+      </div>
+    </div>
   );
 
   const renderOrderFeedback = () => (
-     <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-center">
-        <div className="size-20 rounded-full bg-yellow-400/10 flex items-center justify-center mb-8">
-           <span className="material-symbols-outlined text-4xl text-yellow-400">rate_review</span>
-        </div>
-        <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-4">Como foi sua experiência?</h2>
-        <div className="flex gap-2 mb-10">
-           {[1,2,3,4,5].map(s => (
-              <button key={s} className="size-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-yellow-400 hover:border-yellow-400/40 transition-all">
-                 <span className="material-symbols-outlined font-black">star</span>
-              </button>
-           ))}
-        </div>
-        <button onClick={() => setSubView("none")} className="w-full py-4 bg-yellow-400 text-black font-black rounded-2xl uppercase tracking-widest shadow-xl shadow-yellow-400/20">Enviar Avaliação</button>
-     </div>
+    <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-center">
+      <div className="size-20 rounded-full bg-yellow-400/10 flex items-center justify-center mb-8">
+        <span className="material-symbols-outlined text-4xl text-yellow-400">
+          rate_review
+        </span>
+      </div>
+      <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-4">
+        Como foi sua experiência?
+      </h2>
+      <div className="flex gap-2 mb-10">
+        {[1, 2, 3, 4, 5].map((s) => (
+          <button
+            key={s}
+            className="size-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-yellow-400 hover:border-yellow-400/40 transition-all"
+          >
+            <span className="material-symbols-outlined font-black">star</span>
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={() => setSubView("none")}
+        className="w-full py-4 bg-yellow-400 text-black font-black rounded-2xl uppercase tracking-widest shadow-xl shadow-yellow-400/20"
+      >
+        Enviar Avaliação
+      </button>
+    </div>
   );
 
   const renderQuestCenter = () => (
     <div className="absolute inset-0 z-50 bg-black flex flex-col">
-       <header className="header p-8 border-b border-zinc-900 flex items-center gap-4">
-          <button onClick={() => setSubView("none")} className="p-3 bg-zinc-900 rounded-2xl text-white">
-             <span className="material-symbols-outlined">arrow_back</span>
-          </button>
-          <h2 className="text-xl font-black text-white uppercase italic">Izi Quests</h2>
-       </header>
-       <div className="flex-1 p-8 overflow-y-auto no-scrollbar space-y-6">
-          <div className="p-6 bg-gradient-to-br from-yellow-400/10 to-orange-400/5 border border-yellow-400/20 rounded-[32px] relative overflow-hidden">
-             <div className="relative z-10">
-                <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Missão Semanal</span>
-                <h3 className="text-lg font-black text-white mt-1">Explorador Izi</h3>
-                <p className="text-xs text-zinc-500 mt-2">Faça 3 pedidos em estabelecimentos diferentes esta semana para ganhar 500 IziCoins!</p>
-             </div>
+      <header className="header p-8 border-b border-zinc-900 flex items-center gap-4">
+        <button
+          onClick={() => setSubView("none")}
+          className="p-3 bg-zinc-900 rounded-2xl text-white"
+        >
+          <span className="material-symbols-outlined">arrow_back</span>
+        </button>
+        <h2 className="text-xl font-black text-white uppercase italic">
+          Izi Quests
+        </h2>
+      </header>
+      <div className="flex-1 p-8 overflow-y-auto no-scrollbar space-y-6">
+        <div className="p-6 bg-gradient-to-br from-yellow-400/10 to-orange-400/5 border border-yellow-400/20 rounded-[32px] relative overflow-hidden">
+          <div className="relative z-10">
+            <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">
+              Missão Semanal
+            </span>
+            <h3 className="text-lg font-black text-white mt-1">
+              Explorador Izi
+            </h3>
+            <p className="text-xs text-zinc-500 mt-2">
+              Faça 3 pedidos em estabelecimentos diferentes esta semana para
+              ganhar 500 IziCoins!
+            </p>
           </div>
-       </div>
+        </div>
+      </div>
     </div>
   );
-    const menuItems = [
-      { icon: "location_on",            label: "Endereços",        desc: "Seus endereços salvos",          action: () => setSubView("addresses") },
-      { icon: "account_balance_wallet", label: "Carteira",         desc: "Saldo e extrato",                action: () => setTab("wallet") },
-      { icon: "workspace_premium",      label: "IZI Black",        desc: "Benefícios do plano premium",    action: () => { setIziBlackStep("info"); setSubView("izi_black_purchase"); } },
-      { icon: "military_tech",          label: "Quests & Ranking", desc: "MissÃƒµes e conquistas",           action: () => setSubView("quest_center") },
-      { icon: "support_agent",          label: "Suporte",          desc: "Central de ajuda",               action: () => setSubView("order_support") },
-      { icon: "settings",               label: "ConfiguraçÃƒµes",    desc: "Preferências da conta",          action: () => {} },
-    ];
-
-    return (
-      <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32">
-
-        {/* HERO DO PERFIL */}
-        <div className="px-5 pt-14 pb-8 border-b border-zinc-900">
-          <div className="flex items-center gap-5">
-            <div className="relative">
-              <div className="size-20 rounded-3xl overflow-hidden border border-zinc-800">
-                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" className="size-full bg-zinc-900" />
-              </div>
-              {isIziBlackMembership && (
-                <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black size-6 rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(255,215,9,0.5)] border-2 border-black z-20">
-                  <span className="material-symbols-outlined text-[10px] font-black" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-black text-white tracking-tight truncate">{userName || "Usuário"}</h1>
-              <p className="text-zinc-600 text-xs mt-0.5">{userId ? `ID: ${userId.slice(0,8)}...` : "Visitante"}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-[10px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Nível {userLevel}</span>
-                <span className="text-[10px] font-black text-zinc-600 uppercase">{userXP} XP</span>
-              </div>
-            </div>
-          </div>
-
-          {/* XP Bar */}
-          <div className="mt-6 space-y-1.5">
-            <div className="flex justify-between">
-              <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">Progresso</span>
-              <span className="text-[9px] font-black text-yellow-400">{userXP} / {nextLevelXP} XP</span>
-            </div>
-            <div className="h-px w-full bg-zinc-900 rounded-full overflow-hidden">
-              <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((userXP/nextLevelXP)*100,100)}%` }}
-                className="h-full bg-gradient-to-r from-yellow-400 to-orange-400" />
-            </div>
-          </div>
-        </div>
-
-        {/* MENU */}
-        <div className="px-5 py-4 flex flex-col">
-          {menuItems.map((item, i) => (
-            <motion.button key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
-              onClick={item.action}
-              className="flex items-center gap-4 px-0 py-4 border-b border-zinc-900/60 active:opacity-60 transition-all text-left group last:border-0">
-              <span className="material-symbols-outlined text-zinc-600 group-hover:text-yellow-400 transition-colors text-xl">{item.icon}</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-black text-sm text-white">{item.label}</p>
-                <p className="text-zinc-600 text-xs mt-0.5">{item.desc}</p>
-              </div>
-              <span className="material-symbols-outlined text-zinc-800 group-hover:text-yellow-400/50 transition-colors text-lg">chevron_right</span>
-            </motion.button>
-          ))}
-        </div>
-
-        {/* LOGOUT */}
-        <div className="px-5 mt-2 pb-4">
-          <button onClick={async () => { await signOut(auth); setView("login"); setTab("home"); setSubView("none"); }}
-            className="w-full flex items-center justify-center gap-3 py-4 text-red-400/60 hover:text-red-400 transition-all active:scale-[0.98] group">
-            <span className="material-symbols-outlined text-lg">logout</span>
-            <span className="font-black text-sm uppercase tracking-wider">Sair da Conta</span>
-          </button>
-        </div>
-
-        <p className="text-center text-zinc-900 text-[10px] font-bold uppercase tracking-widest pb-6">IZI Delivery Ã¢â‚¬¢ Stealth Luxury</p>
-      </div>
-    );
-  };
 
   const renderAddresses = () => {
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
         <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
           <div className="flex items-center gap-4">
-            <button onClick={() => { if (isAddingAddress) { resetAddressForm(); } else { setSubView("none"); } }} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+            <button
+              onClick={() => {
+                if (isAddingAddress) {
+                  resetAddressForm();
+                } else {
+                  setSubView("none");
+                }
+              }}
+              className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+            >
+              <span className="material-symbols-outlined text-zinc-100">
+                arrow_back
+              </span>
             </button>
-            <h1 className="font-extrabold text-base text-white uppercase tracking-tight">{isAddingAddress ? (editingAddress ? 'Editar Endereço' : 'Novo Endereço') : 'Endereços'}</h1>
+            <h1 className="font-extrabold text-base text-white uppercase tracking-tight">
+              {isAddingAddress
+                ? editingAddress
+                  ? "Editar Endereço"
+                  : "Novo Endereço"
+                : "Endereços"}
+            </h1>
           </div>
           {!isAddingAddress && (
-            <button onClick={() => { resetAddressForm(); setIsAddingAddress(true); }} className="text-yellow-400 active:scale-90 transition-all">
+            <button
+              onClick={() => {
+                resetAddressForm();
+                setIsAddingAddress(true);
+              }}
+              className="text-yellow-400 active:scale-90 transition-all"
+            >
               <span className="material-symbols-outlined">add</span>
             </button>
           )}
@@ -4647,27 +6735,46 @@ function App() {
         <main className="px-5 pt-2 flex flex-col flex-1">
           <AnimatePresence mode="wait">
             {isAddingAddress ? (
-              <motion.div key="address-form" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-5 py-4">
+              <motion.div
+                key="address-form"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-5 py-4"
+              >
                 {/* Seleção rápida de rótulo */}
                 <div>
-                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">Tipo de endereço</p>
+                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">
+                    Tipo de endereço
+                  </p>
                   <div className="flex gap-3">
                     {[
-                      { label: 'Casa', icon: 'home' },
-                      { label: 'Trabalho', icon: 'work' },
-                      { label: 'Outro', icon: 'location_on' },
+                      { label: "Casa", icon: "home" },
+                      { label: "Trabalho", icon: "work" },
+                      { label: "Outro", icon: "location_on" },
                     ].map((opt) => (
                       <button
                         key={opt.label}
-                        onClick={() => setNewAddrLabel(opt.label === 'Outro' ? '' : opt.label)}
+                        onClick={() =>
+                          setNewAddrLabel(
+                            opt.label === "Outro" ? "" : opt.label,
+                          )
+                        }
                         className={`flex-1 flex flex-col items-center gap-2 py-4 rounded-2xl border transition-all active:scale-95 ${
                           newAddrLabel === opt.label
-                            ? 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400'
-                            : 'bg-zinc-900/50 border-zinc-800 text-zinc-500'
+                            ? "bg-yellow-400/10 border-yellow-400/30 text-yellow-400"
+                            : "bg-zinc-900/50 border-zinc-800 text-zinc-500"
                         }`}
                       >
-                        <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>{opt.icon}</span>
-                        <span className="text-[10px] font-black uppercase tracking-widest">{opt.label}</span>
+                        <span
+                          className="material-symbols-outlined text-xl"
+                          style={{ fontVariationSettings: "'FILL' 1" }}
+                        >
+                          {opt.icon}
+                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">
+                          {opt.label}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -4675,7 +6782,9 @@ function App() {
 
                 {/* Campo Rótulo (personalizado) */}
                 <div>
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">Rótulo</label>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">
+                    Rótulo
+                  </label>
                   <input
                     type="text"
                     value={newAddrLabel}
@@ -4687,16 +6796,25 @@ function App() {
 
                 {/* Campo Rua/Endereço com Autocomplete */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Endereço Completo</label>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">
+                    Endereço Completo
+                  </label>
                   <AddressSearchInput
                     placeholder="Busque rua, nÃƒºmero, bairro..."
                     initialValue={newAddrStreet}
-                    userCoords={userLocation?.lat && userLocation?.lng ? { lat: userLocation.lat, lng: userLocation.lng } : null}
+                    userCoords={
+                      userLocation?.lat && userLocation?.lng
+                        ? { lat: userLocation.lat, lng: userLocation.lng }
+                        : null
+                    }
                     onSelect={(place: any) => {
                       setNewAddrStreet(place.formatted_address || "");
                       // Tenta extrair cidade se disponível
                       if (place.address_components) {
-                        const cityComp = place.address_components.find((c: any) => c.types.includes("administrative_area_level_2"));
+                        const cityComp = place.address_components.find(
+                          (c: any) =>
+                            c.types.includes("administrative_area_level_2"),
+                        );
                         if (cityComp) setNewAddrCity(cityComp.long_name);
                       }
                     }}
@@ -4707,7 +6825,9 @@ function App() {
 
                 {/* Campo Complemento */}
                 <div>
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">Complemento (opcional)</label>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">
+                    Complemento (opcional)
+                  </label>
                   <input
                     type="text"
                     value={newAddrDetails}
@@ -4719,7 +6839,9 @@ function App() {
 
                 {/* Campo Cidade */}
                 <div>
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">Cidade (opcional)</label>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">
+                    Cidade (opcional)
+                  </label>
                   <input
                     type="text"
                     value={newAddrCity}
@@ -4732,79 +6854,135 @@ function App() {
                 {/* Botão Salvar */}
                 <button
                   onClick={handleSaveAddress}
-                  disabled={isSavingAddress || !newAddrLabel.trim() || !newAddrStreet.trim()}
+                  disabled={
+                    isSavingAddress ||
+                    !newAddrLabel.trim() ||
+                    !newAddrStreet.trim()
+                  }
                   className="w-full bg-yellow-400 text-black font-black text-sm uppercase tracking-widest py-4 rounded-2xl shadow-xl shadow-yellow-400/20 active:scale-[0.97] transition-all disabled:opacity-40 disabled:grayscale flex items-center justify-center gap-3 mt-2"
                 >
                   {isSavingAddress ? (
                     <div className="size-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span className="material-symbols-outlined text-lg">save</span>
-                      {editingAddress ? 'Atualizar Endereço' : 'Salvar Endereço'}
+                      <span className="material-symbols-outlined text-lg">
+                        save
+                      </span>
+                      {editingAddress
+                        ? "Atualizar Endereço"
+                        : "Salvar Endereço"}
                     </>
                   )}
                 </button>
               </motion.div>
             ) : (
-              <motion.div key="address-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <motion.div
+                key="address-list"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
                 {savedAddresses.length === 0 ? (
                   <div className="flex flex-col items-center py-24 gap-5">
                     <div className="size-20 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-4xl text-zinc-700">location_off</span>
+                      <span className="material-symbols-outlined text-4xl text-zinc-700">
+                        location_off
+                      </span>
                     </div>
-                    <p className="text-zinc-600 text-sm font-bold uppercase tracking-widest">Nenhum endereço salvo</p>
+                    <p className="text-zinc-600 text-sm font-bold uppercase tracking-widest">
+                      Nenhum endereço salvo
+                    </p>
                     <button
-                      onClick={() => { resetAddressForm(); setIsAddingAddress(true); }}
+                      onClick={() => {
+                        resetAddressForm();
+                        setIsAddingAddress(true);
+                      }}
                       className="bg-yellow-400 text-black font-black text-xs uppercase tracking-widest px-6 py-3 rounded-2xl active:scale-95 transition-all shadow-lg shadow-yellow-400/20"
                     >
                       Adicionar primeiro endereço
                     </button>
                   </div>
-                ) : savedAddresses.map((addr: any, i: number) => (
-                  <motion.div key={addr.id || i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                    className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0 w-full group">
-                    {/* Ãƒ cone + Info */}
-                    <button
-                      onClick={() => handleSetActiveAddress(addr.id)}
-                      className="flex items-center gap-4 flex-1 min-w-0 text-left active:opacity-60 transition-all"
+                ) : (
+                  savedAddresses.map((addr: any, i: number) => (
+                    <motion.div
+                      key={addr.id || i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0 w-full group"
                     >
-                      <div className={`size-11 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${addr.active ? 'bg-yellow-400/15 text-yellow-400' : 'bg-zinc-900 text-zinc-600'}`}>
-                        <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-                          {addr.label?.toLowerCase().includes("casa") ? "home" : addr.label?.toLowerCase().includes("trabalho") ? "work" : "location_on"}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-black text-sm text-white">{addr.label || "Endereço"}</p>
-                          {addr.active && <span className="text-[8px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Padrão</span>}
+                      {/* Ãƒ cone + Info */}
+                      <button
+                        onClick={() => handleSetActiveAddress(addr.id)}
+                        className="flex items-center gap-4 flex-1 min-w-0 text-left active:opacity-60 transition-all"
+                      >
+                        <div
+                          className={`size-11 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${addr.active ? "bg-yellow-400/15 text-yellow-400" : "bg-zinc-900 text-zinc-600"}`}
+                        >
+                          <span
+                            className="material-symbols-outlined text-xl"
+                            style={{ fontVariationSettings: "'FILL' 1" }}
+                          >
+                            {addr.label?.toLowerCase().includes("casa")
+                              ? "home"
+                              : addr.label?.toLowerCase().includes("trabalho")
+                                ? "work"
+                                : "location_on"}
+                          </span>
                         </div>
-                        <p className="text-zinc-600 text-xs mt-0.5 truncate">{addr.street}{addr.details ? `, ${addr.details}` : ""}</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-black text-sm text-white">
+                              {addr.label || "Endereço"}
+                            </p>
+                            {addr.active && (
+                              <span className="text-[8px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                Padrão
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-zinc-600 text-xs mt-0.5 truncate">
+                            {addr.street}
+                            {addr.details ? `, ${addr.details}` : ""}
+                          </p>
+                        </div>
+                      </button>
+                      {/* AçÃƒµes */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => openEditAddress(addr)}
+                          className="size-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-blue-400 active:scale-90 transition-all"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">
+                            edit
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAddress(addr.id)}
+                          className="size-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-red-400 active:scale-90 transition-all"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">
+                            delete
+                          </span>
+                        </button>
                       </div>
-                    </button>
-                    {/* AçÃƒµes */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => openEditAddress(addr)}
-                        className="size-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-blue-400 active:scale-90 transition-all"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">edit</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteAddress(addr.id)}
-                        className="size-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-red-400 active:scale-90 transition-all"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">delete</span>
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  ))
+                )}
                 {savedAddresses.length > 0 && (
                   <button
-                    onClick={() => { resetAddressForm(); setIsAddingAddress(true); }}
+                    onClick={() => {
+                      resetAddressForm();
+                      setIsAddingAddress(true);
+                    }}
                     className="flex items-center gap-3 py-5 text-zinc-700 hover:text-yellow-400 transition-all active:scale-[0.98] mt-2"
                   >
-                    <span className="material-symbols-outlined text-xl">add_location</span>
-                    <span className="text-sm font-black uppercase tracking-wider">Adicionar novo endereço</span>
+                    <span className="material-symbols-outlined text-xl">
+                      add_location
+                    </span>
+                    <span className="text-sm font-black uppercase tracking-wider">
+                      Adicionar novo endereço
+                    </span>
                   </button>
                 )}
               </motion.div>
@@ -4824,7 +7002,7 @@ function App() {
 
     return (
       <>
-        <PaymentMethodsView 
+        <PaymentMethodsView
           savedCards={savedCards}
           onBack={handleBack}
           onAddCard={() => setIsAddingCard(true)}
@@ -4836,50 +7014,78 @@ function App() {
         {/* MODAL: ADD CARD */}
         <AnimatePresence>
           {isAddingCard && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-end justify-center p-4">
-              <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-                className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[40px] p-8 shadow-2xl">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-end justify-center p-4"
+            >
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[40px] p-8 shadow-2xl"
+              >
                 <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-xl font-black text-white tracking-tight">Novo Cartão</h3>
-                  <button onClick={() => setIsAddingCard(false)} className="size-10 rounded-full bg-zinc-800 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-zinc-400">close</span>
+                  <h3 className="text-xl font-black text-white tracking-tight">
+                    Novo Cartão
+                  </h3>
+                  <button
+                    onClick={() => setIsAddingCard(false)}
+                    className="size-10 rounded-full bg-zinc-800 flex items-center justify-center"
+                  >
+                    <span className="material-symbols-outlined text-zinc-400">
+                      close
+                    </span>
                   </button>
                 </div>
-                
-                <MercadoPagoCardForm onConfirm={async (token, issuer, _installments, brand, last4) => {
-                   setIsLoadingCards(true);
-                   try {
-                     const { data: inserted, error } = await supabase.from("payment_methods").insert({
-                       user_id: userId,
-                       brand: brand,
-                       last_four: last4,
-                       active: savedCards.length === 0,
-                       token: token
-                     }).select().single();
 
-                     if (error) throw error;
+                <MercadoPagoCardForm
+                  onConfirm={async (
+                    token,
+                    issuer,
+                    _installments,
+                    brand,
+                    last4,
+                  ) => {
+                    setIsLoadingCards(true);
+                    try {
+                      const { data: inserted, error } = await supabase
+                        .from("payment_methods")
+                        .insert({
+                          user_id: userId,
+                          brand: brand,
+                          last_four: last4,
+                          active: savedCards.length === 0,
+                          token: token,
+                        })
+                        .select()
+                        .single();
 
-                     if (userId) await fetchSavedCards(userId);
-                     setIsAddingCard(false);
-                     toastSuccess("Cartão adicionado!");
-                     
-                     if (paymentsOrigin === "checkout") {
+                      if (error) throw error;
+
+                      if (userId) await fetchSavedCards(userId);
+                      setIsAddingCard(false);
+                      toastSuccess("Cartão adicionado!");
+
+                      if (paymentsOrigin === "checkout") {
                         setSubView("checkout");
                         setPaymentMethod("cartao");
-                        if (inserted) setSelectedCard({
-                          id: inserted.id,
-                          brand: inserted.brand,
-                          last4: inserted.last_four,
-                          mp_token: inserted.token
-                        });
-                     }
-                   } catch (err: any) {
-                     toastError("Erro ao salvar: " + err.message);
-                   } finally {
-                     setIsLoadingCards(false);
-                   }
-                }} />
+                        if (inserted)
+                          setSelectedCard({
+                            id: inserted.id,
+                            brand: inserted.brand,
+                            last4: inserted.last_four,
+                            mp_token: inserted.token,
+                          });
+                      }
+                    } catch (err: any) {
+                      toastError("Erro ao salvar: " + err.message);
+                    } finally {
+                      setIsLoadingCards(false);
+                    }
+                  }}
+                />
               </motion.div>
             </motion.div>
           )}
@@ -4888,41 +7094,63 @@ function App() {
     );
   };
 
-
-  
   const renderMyQRModal = () => (
     <AnimatePresence>
       {isShowingMyQR && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-6">
-          <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-            className="w-full max-w-sm bg-zinc-900 border border-white/5 rounded-[45px] p-10 flex flex-col items-center text-center shadow-2xl relative overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-6"
+        >
+          <motion.div
+            initial={{ scale: 0.9, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.9, y: 20 }}
+            className="w-full max-w-sm bg-zinc-900 border border-white/5 rounded-[45px] p-10 flex flex-col items-center text-center shadow-2xl relative overflow-hidden"
+          >
             <div className="absolute -top-24 -right-24 size-48 bg-yellow-400/10 rounded-full blur-[80px]" />
             <div className="absolute -bottom-24 -left-24 size-48 bg-yellow-400/5 rounded-full blur-[80px]" />
-            
-            <button onClick={() => setIsShowingMyQR(false)} className="absolute top-6 right-6 size-10 rounded-full bg-white/5 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-500">close</span>
+
+            <button
+              onClick={() => setIsShowingMyQR(false)}
+              className="absolute top-6 right-6 size-10 rounded-full bg-white/5 flex items-center justify-center active:scale-90 transition-all"
+            >
+              <span className="material-symbols-outlined text-zinc-500">
+                close
+              </span>
             </button>
 
             <div className="size-20 rounded-[28px] bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center mb-8">
-              <span className="material-symbols-outlined text-4xl text-yellow-400">qr_code_2</span>
+              <span className="material-symbols-outlined text-4xl text-yellow-400">
+                qr_code_2
+              </span>
             </div>
-            
-            <h3 className="text-2xl font-black text-white tracking-tight mb-2 uppercase">Meu IZI Code</h3>
-            <p className="text-zinc-500 text-xs font-medium mb-10 leading-relaxed px-4">Compartilhe para receber transferências instantÃ¢neas de IZI Coins.</p>
+
+            <h3 className="text-2xl font-black text-white tracking-tight mb-2 uppercase">
+              Meu IZI Code
+            </h3>
+            <p className="text-zinc-500 text-xs font-medium mb-10 leading-relaxed px-4">
+              Compartilhe para receber transferências instantÃ¢neas de IZI
+              Coins.
+            </p>
 
             <div className="p-6 bg-white rounded-[40px] shadow-inner mb-10 relative group">
-              <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=izi:transfer:${userId}:${loginEmail}:${phone}`} 
-                alt="QR Code" 
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=izi:transfer:${userId}:${loginEmail}:${phone}`}
+                alt="QR Code"
                 className="size-56 object-contain"
               />
               <div className="absolute inset-0 border-[12px] border-white rounded-[40px] pointer-events-none" />
             </div>
 
             <div className="space-y-1">
-              <p className="font-black text-white text-base tracking-tight">{userName}</p>
-              <p className="text-zinc-600 font-bold text-[10px] uppercase tracking-widest">{loginEmail}</p>
+              <p className="font-black text-white text-base tracking-tight">
+                {userName}
+              </p>
+              <p className="text-zinc-600 font-bold text-[10px] uppercase tracking-widest">
+                {loginEmail}
+              </p>
             </div>
           </motion.div>
         </motion.div>
@@ -4930,35 +7158,59 @@ function App() {
     </AnimatePresence>
   );
 
-  
   const renderTransferModal = () => (
     <AnimatePresence>
       {transferTarget && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
-          <motion.div initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 30 }}
-            className="w-full max-w-sm bg-zinc-900 border border-white/5 rounded-[50px] p-8 text-center space-y-8 relative">
-            
-            <button onClick={() => setTransferTarget(null)} className="absolute top-6 right-6 size-10 rounded-full bg-white/5 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-500">close</span>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6"
+        >
+          <motion.div
+            initial={{ scale: 0.9, y: 30 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.9, y: 30 }}
+            className="w-full max-w-sm bg-zinc-900 border border-white/5 rounded-[50px] p-8 text-center space-y-8 relative"
+          >
+            <button
+              onClick={() => setTransferTarget(null)}
+              className="absolute top-6 right-6 size-10 rounded-full bg-white/5 flex items-center justify-center active:scale-90 transition-all"
+            >
+              <span className="material-symbols-outlined text-zinc-500">
+                close
+              </span>
             </button>
 
             <div className="size-24 rounded-full bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mx-auto mb-2">
-              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${transferTarget.email}`} className="size-full rounded-full" />
+              <img
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${transferTarget.email}`}
+                className="size-full rounded-full"
+              />
             </div>
 
             <div className="space-y-1">
-              <p className="font-black text-2xl text-white tracking-tight">Transferir IZI Coins</p>
-              <p className="text-emerald-400 font-bold text-xs uppercase tracking-widest leading-none mb-1">Para: {transferTarget.email}</p>
-              <p className="text-zinc-600 font-bold text-[9px] uppercase tracking-widest">{transferTarget.phone || "Sem telefone"}</p>
+              <p className="font-black text-2xl text-white tracking-tight">
+                Transferir IZI Coins
+              </p>
+              <p className="text-emerald-400 font-bold text-xs uppercase tracking-widest leading-none mb-1">
+                Para: {transferTarget.email}
+              </p>
+              <p className="text-zinc-600 font-bold text-[9px] uppercase tracking-widest">
+                {transferTarget.phone || "Sem telefone"}
+              </p>
             </div>
 
             <div className="bg-zinc-950 p-6 rounded-[35px] border border-white/5">
-              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">Valor da Transferência</p>
+              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">
+                Valor da Transferência
+              </p>
               <div className="flex items-center justify-center gap-3">
-                <span className="text-2xl font-black text-yellow-400 opacity-40 italic">IZI</span>
-                <input 
-                  type="number" 
+                <span className="text-2xl font-black text-yellow-400 opacity-40 italic">
+                  IZI
+                </span>
+                <input
+                  type="number"
                   placeholder="0,00"
                   className="bg-transparent border-none text-4xl font-black text-white text-center w-full focus:ring-0 placeholder:text-zinc-800"
                 />
@@ -4977,37 +7229,55 @@ function App() {
   const renderScanQRModal = () => (
     <AnimatePresence>
       {isScanningQR && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center">
-          
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center"
+        >
           <div className="absolute top-10 left-6 right-6 flex items-center justify-between z-10">
-            <button onClick={() => setIsScanningQR(false)} className="size-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white">
+            <button
+              onClick={() => setIsScanningQR(false)}
+              className="size-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white"
+            >
               <span className="material-symbols-outlined">close</span>
             </button>
-            <h3 className="text-white font-black uppercase tracking-widest text-[10px]">Escanear IZI Code</h3>
+            <h3 className="text-white font-black uppercase tracking-widest text-[10px]">
+              Escanear IZI Code
+            </h3>
             <div className="size-12" />
           </div>
 
-          <div id="reader" className="w-[85vw] h-[85vw] max-w-sm max-h-[400px] border-4 border-yellow-400/30 rounded-[40px] overflow-hidden relative shadow-[0_0_80px_rgba(255,184,0,0.1)]">
+          <div
+            id="reader"
+            className="w-[85vw] h-[85vw] max-w-sm max-h-[400px] border-4 border-yellow-400/30 rounded-[40px] overflow-hidden relative shadow-[0_0_80px_rgba(255,184,0,0.1)]"
+          >
             <div className="absolute inset-0 border-2 border-yellow-400/10 rounded-[40px] pointer-events-none" />
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-48 border-2 border-white/20 border-dashed rounded-3xl animate-pulse" />
           </div>
 
-          <p className="mt-12 text-zinc-500 font-bold text-xs animate-pulse">Aponte para o QR Code de um amigo</p>
+          <p className="mt-12 text-zinc-500 font-bold text-xs animate-pulse">
+            Aponte para o QR Code de um amigo
+          </p>
         </motion.div>
       )}
     </AnimatePresence>
   );
 
   const renderWallet = () => {
-    const walletBalance = walletTransactions.reduce((acc: number, t: any) =>
-      ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
+    const walletBalance = walletTransactions.reduce(
+      (acc: number, t: any) =>
+        ["deposito", "reembolso"].includes(t.type)
+          ? acc + Number(t.amount)
+          : acc - Number(t.amount),
+      0,
+    );
 
     const txIcon: Record<string, { icon: string; color: string }> = {
-      deposito:  { icon: "add_circle",           color: "text-emerald-400" },
-      reembolso: { icon: "refresh",              color: "text-blue-400" },
-      pagamento: { icon: "shopping_bag",         color: "text-zinc-400" },
-      saque:     { icon: "arrow_outward",        color: "text-red-400" },
+      deposito: { icon: "add_circle", color: "text-emerald-400" },
+      reembolso: { icon: "refresh", color: "text-blue-400" },
+      pagamento: { icon: "shopping_bag", color: "text-zinc-400" },
+      saque: { icon: "arrow_outward", color: "text-red-400" },
     };
 
     const totalGasto = walletTransactions
@@ -5015,29 +7285,38 @@ function App() {
       .reduce((a: number, t: any) => a + Number(t.amount), 0);
 
     const totalRecebido = walletTransactions
-      .filter((t: any) => ["deposito","reembolso"].includes(t.type))
+      .filter((t: any) => ["deposito", "reembolso"].includes(t.type))
       .reduce((a: number, t: any) => a + Number(t.amount), 0);
 
     const pedidosMes = myOrders.filter((o: any) => {
       const d = new Date(o.created_at);
       const now = new Date();
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      return (
+        d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+      );
     }).length;
 
     return (
       <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32">
-
         {/* HERO SALDO */}
         <div className="px-5 pt-14 pb-8 border-b border-zinc-900">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-yellow-400 font-extrabold italic tracking-widest text-xs">IZI PAY</span>
+            <span className="text-yellow-400 font-extrabold italic tracking-widest text-xs">
+              IZI PAY
+            </span>
             <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
           </div>
-          <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-1">Saldo Disponível</p>
+          <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-1">
+            Saldo Disponível
+          </p>
           <div className="flex items-baseline gap-2 mb-6">
-            <span className="font-extrabold text-2xl text-yellow-400 opacity-60">R$</span>
-            <span className="font-extrabold text-5xl tracking-tighter text-white"
-              style={{ textShadow: "0 0 20px rgba(255,215,9,0.3)" }}>
+            <span className="font-extrabold text-2xl text-yellow-400 opacity-60">
+              R$
+            </span>
+            <span
+              className="font-extrabold text-5xl tracking-tighter text-white"
+              style={{ textShadow: "0 0 20px rgba(255,215,9,0.3)" }}
+            >
               {Math.abs(walletBalance).toFixed(2).replace(".", ",")}
             </span>
           </div>
@@ -5045,34 +7324,68 @@ function App() {
           {/* AÃƒâ€¡Ãƒâ€¢ES RÃƒPIDAS */}
           <div className="grid grid-cols-4 gap-2">
             {[
-              { icon: "add",           label: "Adicionar" },
-              { icon: "arrow_outward", label: "Transferir", action: () => setIsScanningQR(true) },
-              { icon: "history",       label: "Extrato" },
-              { icon: "qr_code_2", label: "Meu QR", action: () => setIsShowingMyQR(true) },
+              { icon: "add", label: "Adicionar" },
+              {
+                icon: "arrow_outward",
+                label: "Transferir",
+                action: () => setIsScanningQR(true),
+              },
+              { icon: "history", label: "Extrato" },
+              {
+                icon: "qr_code_2",
+                label: "Meu QR",
+                action: () => setIsShowingMyQR(true),
+              },
             ].map((a) => (
-              <button key={a.icon} onClick={(a as any).action} className="flex flex-col items-center gap-2 py-4 active:scale-95 transition-all group">
+              <button
+                key={a.icon}
+                onClick={(a as any).action}
+                className="flex flex-col items-center gap-2 py-4 active:scale-95 transition-all group"
+              >
                 <div className="size-12 rounded-2xl bg-zinc-900/60 border border-zinc-900 flex items-center justify-center group-hover:border-yellow-400/20 transition-all">
-                  <span className="material-symbols-outlined text-zinc-500 group-hover:text-yellow-400 transition-colors text-xl">{a.icon}</span>
+                  <span className="material-symbols-outlined text-zinc-500 group-hover:text-yellow-400 transition-colors text-xl">
+                    {a.icon}
+                  </span>
                 </div>
-                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-400 transition-colors">{a.label}</span>
+                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-400 transition-colors">
+                  {a.label}
+                </span>
               </button>
             ))}
           </div>
         </div>
 
         <main className="px-5 py-8 space-y-10">
-
           {/* STATS */}
           <div className="grid grid-cols-3 gap-0 border border-zinc-900 rounded-2xl overflow-hidden">
             {[
-              { label: "Gasto total",  value: `R$ ${totalGasto.toFixed(0)}`,    icon: "shopping_bag" },
-              { label: "Recebido",     value: `R$ ${totalRecebido.toFixed(0)}`, icon: "add_circle" },
-              { label: "Pedidos/mês",  value: `${pedidosMes}`,                  icon: "receipt_long" },
+              {
+                label: "Gasto total",
+                value: `R$ ${totalGasto.toFixed(0)}`,
+                icon: "shopping_bag",
+              },
+              {
+                label: "Recebido",
+                value: `R$ ${totalRecebido.toFixed(0)}`,
+                icon: "add_circle",
+              },
+              {
+                label: "Pedidos/mês",
+                value: `${pedidosMes}`,
+                icon: "receipt_long",
+              },
             ].map((s, i) => (
-              <div key={i} className={`flex flex-col items-center py-5 gap-1 ${i < 2 ? "border-r border-zinc-900" : ""}`}>
-                <span className="material-symbols-outlined text-zinc-700 text-lg">{s.icon}</span>
+              <div
+                key={i}
+                className={`flex flex-col items-center py-5 gap-1 ${i < 2 ? "border-r border-zinc-900" : ""}`}
+              >
+                <span className="material-symbols-outlined text-zinc-700 text-lg">
+                  {s.icon}
+                </span>
                 <p className="font-extrabold text-sm text-white">{s.value}</p>
-                <p className="text-[9px] text-zinc-700 uppercase tracking-widest">{s.label}</p>
+                <p className="text-[9px] text-zinc-700 uppercase tracking-widest">
+                  {s.label}
+                </p>
               </div>
             ))}
           </div>
@@ -5080,52 +7393,104 @@ function App() {
           {/* CARTÃƒâ€¢ES */}
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Meus CartÃƒµes</h2>
-              <button onClick={() => { setPaymentsOrigin("profile"); setSubView("mobility_payment"); }}
-                className="text-yellow-400 text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity">
+              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">
+                Meus CartÃƒµes
+              </h2>
+              <button
+                onClick={() => {
+                  setPaymentsOrigin("profile");
+                  setSubView("mobility_payment");
+                }}
+                className="text-yellow-400 text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity"
+              >
                 Gerenciar
               </button>
             </div>
             <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-5 px-5 pb-2">
               {/* Card IZI Digital */}
-              <div className="min-w-[260px] h-40 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between border border-zinc-900/80 shrink-0"
-                style={{ background: "linear-gradient(135deg, rgba(255,215,9,0.04) 0%, rgba(0,0,0,0) 100%)" }}>
+              <div
+                className="min-w-[260px] h-40 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between border border-zinc-900/80 shrink-0"
+                style={{
+                  background:
+                    "linear-gradient(135deg, rgba(255,215,9,0.04) 0%, rgba(0,0,0,0) 100%)",
+                }}
+              >
                 <div className="absolute -top-8 -right-8 w-28 h-28 bg-yellow-400/5 rounded-full blur-2xl" />
                 <div className="flex justify-between items-start">
-                  <span className="font-extrabold italic text-yellow-400/40 tracking-tighter">IZI</span>
-                  <span className="material-symbols-outlined text-zinc-800 text-base">contactless</span>
+                  <span className="font-extrabold italic text-yellow-400/40 tracking-tighter">
+                    IZI
+                  </span>
+                  <span className="material-symbols-outlined text-zinc-800 text-base">
+                    contactless
+                  </span>
                 </div>
                 <div>
-                  <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Digital</p>
-                  <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">Ã¢â‚¬¢Ã¢â‚¬¢Ã¢â‚¬¢Ã¢â‚¬¢ Ã¢â‚¬¢Ã¢â‚¬¢Ã¢â‚¬¢Ã¢â‚¬¢ Ã¢â‚¬¢Ã¢â‚¬¢Ã¢â‚¬¢Ã¢â‚¬¢ 8820</p>
+                  <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">
+                    Cartão Digital
+                  </p>
+                  <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">
+                    Ã¢â‚¬¢Ã¢â‚¬¢Ã¢â‚¬¢Ã¢â‚¬¢ Ã¢â‚¬¢Ã¢â‚¬¢Ã¢â‚¬¢Ã¢â‚¬¢
+                    Ã¢â‚¬¢Ã¢â‚¬¢Ã¢â‚¬¢Ã¢â‚¬¢ 8820
+                  </p>
                   <div className="flex justify-between items-center">
-                    <p className="text-[8px] text-zinc-700 uppercase tracking-widest">Val. 12/28</p>
+                    <p className="text-[8px] text-zinc-700 uppercase tracking-widest">
+                      Val. 12/28
+                    </p>
                     <div className="size-7 rounded-full bg-yellow-400/10 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-yellow-400 text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
+                      <span
+                        className="material-symbols-outlined text-yellow-400 text-xs"
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                      >
+                        bolt
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
               {savedCards.map((card: any) => (
-                <div key={card.id} className="min-w-[260px] h-40 border border-zinc-900/80 rounded-2xl p-5 flex flex-col justify-between shrink-0">
+                <div
+                  key={card.id}
+                  className="min-w-[260px] h-40 border border-zinc-900/80 rounded-2xl p-5 flex flex-col justify-between shrink-0"
+                >
                   <div className="flex justify-between items-start">
-                    <span className="font-extrabold italic text-zinc-700 tracking-tighter">{card.brand}</span>
-                    <span className="material-symbols-outlined text-zinc-800 text-base">contactless</span>
+                    <span className="font-extrabold italic text-zinc-700 tracking-tighter">
+                      {card.brand}
+                    </span>
+                    <span className="material-symbols-outlined text-zinc-800 text-base">
+                      contactless
+                    </span>
                   </div>
                   <div>
-                    <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Físico</p>
-                    <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">•••• •••• •••• {card.last4}</p>
+                    <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">
+                      Cartão Físico
+                    </p>
+                    <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">
+                      •••• •••• •••• {card.last4}
+                    </p>
                     <div className="flex justify-between items-center">
-                      <p className="text-[8px] text-zinc-700 uppercase">{card.brand}</p>
-                      <p className="text-[9px] text-zinc-600">Val. {card.expiry}</p>
+                      <p className="text-[8px] text-zinc-700 uppercase">
+                        {card.brand}
+                      </p>
+                      <p className="text-[9px] text-zinc-600">
+                        Val. {card.expiry}
+                      </p>
                     </div>
                   </div>
                 </div>
               ))}
-              <button onClick={() => { setPaymentsOrigin("profile"); setSubView("mobility_payment"); }}
-                className="min-w-[120px] h-40 border border-dashed border-zinc-900 rounded-2xl flex flex-col items-center justify-center gap-2 shrink-0 active:scale-95 transition-all hover:border-yellow-400/20 group">
-                <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors text-2xl">add</span>
-                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-500 transition-colors">Novo Cartão</span>
+              <button
+                onClick={() => {
+                  setPaymentsOrigin("profile");
+                  setSubView("mobility_payment");
+                }}
+                className="min-w-[120px] h-40 border border-dashed border-zinc-900 rounded-2xl flex flex-col items-center justify-center gap-2 shrink-0 active:scale-95 transition-all hover:border-yellow-400/20 group"
+              >
+                <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors text-2xl">
+                  add
+                </span>
+                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-500 transition-colors">
+                  Novo Cartão
+                </span>
               </button>
             </div>
           </section>
@@ -5134,16 +7499,35 @@ function App() {
           <div className="grid grid-cols-2 gap-0 border border-zinc-900 rounded-2xl overflow-hidden">
             <div className="flex flex-col gap-1 p-5 border-r border-zinc-900">
               <div className="flex items-center gap-1.5 mb-2">
-                <span className="material-symbols-outlined text-yellow-400 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
-                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">IZI Points</span>
+                <span
+                  className="material-symbols-outlined text-yellow-400 text-base"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  stars
+                </span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">
+                  IZI Points
+                </span>
               </div>
-              <p className="text-2xl font-extrabold text-white">{(userXP * 10).toLocaleString("pt-BR")}</p>
-              <p className="text-[9px] text-yellow-400/50">Ã¢â€°Ë† R$ {(userXP * 0.1).toFixed(2).replace(".",",")} em descontos</p>
+              <p className="text-2xl font-extrabold text-white">
+                {(userXP * 10).toLocaleString("pt-BR")}
+              </p>
+              <p className="text-[9px] text-yellow-400/50">
+                Ã¢â€°Ë† R$ {(userXP * 0.1).toFixed(2).replace(".", ",")} em
+                descontos
+              </p>
             </div>
             <div className="flex flex-col gap-1 p-5">
               <div className="flex items-center gap-1.5 mb-2">
-                <span className="material-symbols-outlined text-emerald-400 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
-                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Cashback</span>
+                <span
+                  className="material-symbols-outlined text-emerald-400 text-base"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  account_balance_wallet
+                </span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">
+                  Cashback
+                </span>
               </div>
               <p className="text-2xl font-extrabold text-white">R$ 42,10</p>
               <p className="text-[9px] text-zinc-700">Disponível para usar</p>
@@ -5152,21 +7536,50 @@ function App() {
 
           {/* MÃƒâ€°TODOS DE PAGAMENTO */}
           <section>
-            <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-2">Formas de Pagamento</h2>
+            <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-2">
+              Formas de Pagamento
+            </h2>
             <div className="flex flex-col">
               {[
-                { icon: "pix",                    label: "PIX",             desc: "Mercado Pago Ã¢â‚¬¢ InstantÃ¢neo",    id: "pix" },
-                { icon: "bolt",                   label: "Bitcoin Lightning", desc: "LNbits Ã¢â‚¬¢ Satoshis",           id: "bitcoin_lightning" },
-                { icon: "payments",               label: "Dinheiro",        desc: "Pague na entrega",              id: "dinheiro" },
-                { icon: "account_balance_wallet", label: "Saldo IZI",       desc: `R$ ${Math.abs(walletBalance).toFixed(2).replace(".",",")} disponível`, id: "saldo" },
+                {
+                  icon: "pix",
+                  label: "PIX",
+                  desc: "Mercado Pago Ã¢â‚¬¢ InstantÃ¢neo",
+                  id: "pix",
+                },
+                {
+                  icon: "bolt",
+                  label: "Bitcoin Lightning",
+                  desc: "LNbits Ã¢â‚¬¢ Satoshis",
+                  id: "bitcoin_lightning",
+                },
+                {
+                  icon: "payments",
+                  label: "Dinheiro",
+                  desc: "Pague na entrega",
+                  id: "dinheiro",
+                },
+                {
+                  icon: "account_balance_wallet",
+                  label: "Saldo IZI",
+                  desc: `R$ ${Math.abs(walletBalance).toFixed(2).replace(".", ",")} disponível`,
+                  id: "saldo",
+                },
               ].map((m) => (
-                <div key={m.id} className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0">
-                  <span className="material-symbols-outlined text-zinc-600 text-xl">{m.icon}</span>
+                <div
+                  key={m.id}
+                  className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0"
+                >
+                  <span className="material-symbols-outlined text-zinc-600 text-xl">
+                    {m.icon}
+                  </span>
                   <div className="flex-1">
                     <p className="font-black text-sm text-white">{m.label}</p>
                     <p className="text-zinc-600 text-xs mt-0.5">{m.desc}</p>
                   </div>
-                  <div className={`size-2 rounded-full ${paymentMethod === m.id ? "bg-yellow-400" : "bg-zinc-800"}`} />
+                  <div
+                    className={`size-2 rounded-full ${paymentMethod === m.id ? "bg-yellow-400" : "bg-zinc-800"}`}
+                  />
                 </div>
               ))}
             </div>
@@ -5175,40 +7588,75 @@ function App() {
           {/* HISTÃƒâ€œRICO */}
           <section>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Histórico</h2>
-              <button className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Ver Tudo</button>
+              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">
+                Histórico
+              </h2>
+              <button className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">
+                Ver Tudo
+              </button>
             </div>
             <div className="flex flex-col">
               {walletTransactions.length === 0 ? (
                 <div className="py-10 flex flex-col items-center gap-3">
-                  <span className="material-symbols-outlined text-4xl text-zinc-900">receipt_long</span>
-                  <p className="text-zinc-700 text-sm">Nenhuma transação ainda</p>
+                  <span className="material-symbols-outlined text-4xl text-zinc-900">
+                    receipt_long
+                  </span>
+                  <p className="text-zinc-700 text-sm">
+                    Nenhuma transação ainda
+                  </p>
                 </div>
-              ) : walletTransactions.slice(0, 20).map((t: any, i: number) => {
-                const tx = txIcon[t.type] || { icon: "payments", color: "text-zinc-400" };
-                return (
-                  <div key={t.id || i} className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0">
-                    <span className={`material-symbols-outlined text-xl ${tx.color}`} style={{ fontVariationSettings: "'FILL' 1" }}>
-                      {tx.icon}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-white truncate">{t.description || t.type}</p>
-                      <p className="text-[10px] text-zinc-600 uppercase tracking-widest mt-0.5">
-                        {new Date(t.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} Ã¢â‚¬¢ {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                      </p>
+              ) : (
+                walletTransactions.slice(0, 20).map((t: any, i: number) => {
+                  const tx = txIcon[t.type] || {
+                    icon: "payments",
+                    color: "text-zinc-400",
+                  };
+                  return (
+                    <div
+                      key={t.id || i}
+                      className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0"
+                    >
+                      <span
+                        className={`material-symbols-outlined text-xl ${tx.color}`}
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                      >
+                        {tx.icon}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-white truncate">
+                          {t.description || t.type}
+                        </p>
+                        <p className="text-[10px] text-zinc-600 uppercase tracking-widest mt-0.5">
+                          {new Date(t.created_at).toLocaleDateString("pt-BR", {
+                            day: "2-digit",
+                            month: "short",
+                          })}{" "}
+                          Ã¢â‚¬¢{" "}
+                          {new Date(t.created_at).toLocaleTimeString("pt-BR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p
+                          className={`font-extrabold text-sm ${["deposito", "reembolso"].includes(t.type) ? "text-emerald-400" : "text-zinc-300"}`}
+                        >
+                          {["deposito", "reembolso"].includes(t.type)
+                            ? "+"
+                            : "-"}{" "}
+                          R$ {Number(t.amount).toFixed(2).replace(".", ",")}
+                        </p>
+                        <p className="text-[9px] text-zinc-700 capitalize">
+                          {t.type}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className={`font-extrabold text-sm ${["deposito","reembolso"].includes(t.type) ? "text-emerald-400" : "text-zinc-300"}`}>
-                        {["deposito","reembolso"].includes(t.type) ? "+" : "-"} R$ {Number(t.amount).toFixed(2).replace(".",",")}
-                      </p>
-                      <p className="text-[9px] text-zinc-700 capitalize">{t.type}</p>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </section>
-
         </main>
       </div>
     );
@@ -5216,26 +7664,32 @@ function App() {
 
   const renderOrderFeedback = () => {
     const handleSubmit = async () => {
-      if (shopRating === 0 || driverRating === 0) { 
-        showToast("Por favor, avalie o estabelecimento e o entregador.", "warning");
-        return; 
+      if (shopRating === 0 || driverRating === 0) {
+        showToast(
+          "Por favor, avalie o estabelecimento e o entregador.",
+          "warning",
+        );
+        return;
       }
-      
+
       setFbIsSubmitting(true);
       try {
         if (selectedItem?.id) {
-          await supabase.from("orders_delivery").update({ 
-            rating: shopRating, 
-            feedback: fbComment,
-            driver_rating: driverRating
-          }).eq("id", selectedItem.id);
+          await supabase
+            .from("orders_delivery")
+            .update({
+              rating: shopRating,
+              feedback: fbComment,
+              driver_rating: driverRating,
+            })
+            .eq("id", selectedItem.id);
         }
-        
+
         setUserXP((prev: number) => prev + 50);
         showToast("Obrigado pelo seu feedback! +50 XP", "success");
         setSubView("none");
-      } catch (e) { 
-        console.error(e); 
+      } catch (e) {
+        console.error(e);
         showToast("Erro ao enviar avaliação.", "warning");
       } finally {
         setFbIsSubmitting(false);
@@ -5247,11 +7701,22 @@ function App() {
       return (
         <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-10 text-center">
           <div className="size-20 bg-yellow-400/10 rounded-full flex items-center justify-center mb-6 animate-pulse">
-            <span className="material-symbols-outlined text-yellow-500 text-4xl">inventory_2</span>
+            <span className="material-symbols-outlined text-yellow-500 text-4xl">
+              inventory_2
+            </span>
           </div>
-          <h2 className="text-white font-black uppercase text-lg tracking-widest mb-2">Carregando Pedido...</h2>
-          <p className="text-zinc-600 text-xs">Sintonizando com a central Izi Delivery</p>
-          <button onClick={() => setSubView("none")} className="mt-8 text-yellow-500 text-[10px] font-black uppercase tracking-widest">Fechar</button>
+          <h2 className="text-white font-black uppercase text-lg tracking-widest mb-2">
+            Carregando Pedido...
+          </h2>
+          <p className="text-zinc-600 text-xs">
+            Sintonizando com a central Izi Delivery
+          </p>
+          <button
+            onClick={() => setSubView("none")}
+            className="mt-8 text-yellow-500 text-[10px] font-black uppercase tracking-widest"
+          >
+            Fechar
+          </button>
         </div>
       );
     }
@@ -5259,41 +7724,70 @@ function App() {
     const orderId = selectedItem?.id || activeOrderId || "000000";
 
     return (
-      <motion.div 
-        initial={{ opacity: 0 }} 
-        animate={{ opacity: 1 }} 
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         className="fixed inset-0 z-[100] bg-black flex flex-col pt-12"
       >
         <div className="px-6 flex justify-between items-center mb-8">
-          <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 flex items-center justify-center text-white">
+          <button
+            onClick={() => setSubView("none")}
+            className="size-10 rounded-full bg-zinc-900 flex items-center justify-center text-white"
+          >
             <span className="material-symbols-outlined">close</span>
           </button>
           <div className="text-right">
-            <p className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.2em]">Feedback Izi</p>
-            <p className="text-xs text-zinc-500 font-bold">Pedido #DT-{String(orderId).slice(0,6).toUpperCase()}</p>
+            <p className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.2em]">
+              Feedback Izi
+            </p>
+            <p className="text-xs text-zinc-500 font-bold">
+              Pedido #DT-{String(orderId).slice(0, 6).toUpperCase()}
+            </p>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 space-y-10 pb-10">
           <header className="text-center space-y-2">
-            <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">Sua Experiência</h2>
-            <p className="text-zinc-500 text-sm font-medium">Como foi o serviço hoje?</p>
+            <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">
+              Sua Experiência
+            </h2>
+            <p className="text-zinc-500 text-sm font-medium">
+              Como foi o serviço hoje?
+            </p>
           </header>
 
           <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-[32px] space-y-5">
             <div className="flex items-center gap-4">
               <div className="size-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-yellow-500">storefront</span>
+                <span className="material-symbols-outlined text-yellow-500">
+                  storefront
+                </span>
               </div>
               <div className="flex-1">
-                <h4 className="text-white font-black text-sm uppercase tracking-wider">{selectedItem?.merchant_name || 'Estabelecimento'}</h4>
-                <p className="text-[10px] text-zinc-500 font-bold uppercase">Avalie os produtos e preparo</p>
+                <h4 className="text-white font-black text-sm uppercase tracking-wider">
+                  {selectedItem?.merchant_name || "Estabelecimento"}
+                </h4>
+                <p className="text-[10px] text-zinc-500 font-bold uppercase">
+                  Avalie os produtos e preparo
+                </p>
               </div>
             </div>
             <div className="flex justify-center gap-2">
-              {[1,2,3,4,5].map(s => (
-                <button key={s} onClick={() => setShopRating(s)} className="p-1">
-                  <span className={`material-symbols-outlined text-4xl transition-all duration-300 ${s <= shopRating ? 'text-yellow-500 scale-110 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]' : 'text-zinc-800'}`} style={{ fontVariationSettings: s <= shopRating ? "'FILL' 1" : "'FILL' 0" }}>star</span>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setShopRating(s)}
+                  className="p-1"
+                >
+                  <span
+                    className={`material-symbols-outlined text-4xl transition-all duration-300 ${s <= shopRating ? "text-yellow-500 scale-110 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]" : "text-zinc-800"}`}
+                    style={{
+                      fontVariationSettings:
+                        s <= shopRating ? "'FILL' 1" : "'FILL' 0",
+                    }}
+                  >
+                    star
+                  </span>
                 </button>
               ))}
             </div>
@@ -5302,25 +7796,45 @@ function App() {
           <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-[32px] space-y-5">
             <div className="flex items-center gap-4">
               <div className="size-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-yellow-500">delivery_dining</span>
+                <span className="material-symbols-outlined text-yellow-500">
+                  delivery_dining
+                </span>
               </div>
               <div className="flex-1">
-                <h4 className="text-white font-black text-sm uppercase tracking-wider">O Entregador</h4>
-                <p className="text-[10px] text-zinc-500 font-bold uppercase">Avalie a agilidade e educação</p>
+                <h4 className="text-white font-black text-sm uppercase tracking-wider">
+                  O Entregador
+                </h4>
+                <p className="text-[10px] text-zinc-500 font-bold uppercase">
+                  Avalie a agilidade e educação
+                </p>
               </div>
             </div>
             <div className="flex justify-center gap-2">
-              {[1,2,3,4,5].map(s => (
-                <button key={s} onClick={() => setDriverRating(s)} className="p-1">
-                  <span className={`material-symbols-outlined text-4xl transition-all duration-300 ${s <= driverRating ? 'text-yellow-500 scale-110 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]' : 'text-zinc-800'}`} style={{ fontVariationSettings: s <= driverRating ? "'FILL' 1" : "'FILL' 0" }}>star</span>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setDriverRating(s)}
+                  className="p-1"
+                >
+                  <span
+                    className={`material-symbols-outlined text-4xl transition-all duration-300 ${s <= driverRating ? "text-yellow-500 scale-110 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]" : "text-zinc-800"}`}
+                    style={{
+                      fontVariationSettings:
+                        s <= driverRating ? "'FILL' 1" : "'FILL' 0",
+                    }}
+                  >
+                    star
+                  </span>
                 </button>
               ))}
             </div>
           </section>
 
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">ObservaçÃƒµes adicionais</label>
-            <textarea 
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">
+              ObservaçÃƒµes adicionais
+            </label>
+            <textarea
               value={fbComment}
               onChange={(e) => setFbComment(e.target.value)}
               placeholder="Escreva algo sobre sua experiência..."
@@ -5330,13 +7844,17 @@ function App() {
         </div>
 
         <div className="p-6 bg-black border-t border-zinc-900">
-          <button 
+          <button
             onClick={handleSubmit}
             disabled={fbIsSubmitting}
-            className={`w-full py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${fbIsSubmitting ? 'bg-zinc-800 text-zinc-500' : 'bg-yellow-500 text-black hover:shadow-[0_0_30px_rgba(234,179,8,0.3)] active:scale-95'}`}
+            className={`w-full py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${fbIsSubmitting ? "bg-zinc-800 text-zinc-500" : "bg-yellow-500 text-black hover:shadow-[0_0_30px_rgba(234,179,8,0.3)] active:scale-95"}`}
           >
-            {fbIsSubmitting ? 'Enviando...' : 'Confirmar Avaliação'}
-            {!fbIsSubmitting && <span className="material-symbols-outlined text-sm">arrow_forward</span>}
+            {fbIsSubmitting ? "Enviando..." : "Confirmar Avaliação"}
+            {!fbIsSubmitting && (
+              <span className="material-symbols-outlined text-sm">
+                arrow_forward
+              </span>
+            )}
           </button>
         </div>
       </motion.div>
@@ -5346,33 +7864,58 @@ function App() {
   const renderOrderChat = () => {
     const [msg, setMsg] = (useState as any)<string>("");
     const [messages, setMessages] = (useState as any)<any[]>([
-      { from: "driver", text: "Olá! Estou a caminho do seu endereço.", time: "agora" },
+      {
+        from: "driver",
+        text: "Olá! Estou a caminho do seu endereço.",
+        time: "agora",
+      },
     ]);
 
     const sendMsg = () => {
       if (!msg.trim()) return;
-      setMessages((prev: any[]) => [...prev, { from: "user", text: msg, time: "agora" }]);
+      setMessages((prev: any[]) => [
+        ...prev,
+        { from: "user", text: msg, time: "agora" },
+      ]);
       setMsg("");
     };
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col">
         <header className="bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
-          <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          <button
+            onClick={() => setSubView("none")}
+            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+          >
+            <span className="material-symbols-outlined text-zinc-100">
+              arrow_back
+            </span>
           </button>
           <div>
-            <h1 className="font-extrabold text-base text-white uppercase tracking-tight">Chat</h1>
-            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-widest">Entregador Online</p>
+            <h1 className="font-extrabold text-base text-white uppercase tracking-tight">
+              Chat
+            </h1>
+            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-widest">
+              Entregador Online
+            </p>
           </div>
         </header>
 
         <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-6 space-y-4">
           {messages.map((m: any, i: number) => (
-            <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm font-medium ${m.from === "user" ? "bg-yellow-400 text-black" : "bg-zinc-900 text-zinc-300"}`}>
+            <div
+              key={i}
+              className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm font-medium ${m.from === "user" ? "bg-yellow-400 text-black" : "bg-zinc-900 text-zinc-300"}`}
+              >
                 <p>{m.text}</p>
-                <p className={`text-[9px] mt-1 ${m.from === "user" ? "text-black/50" : "text-zinc-600"} text-right`}>{m.time}</p>
+                <p
+                  className={`text-[9px] mt-1 ${m.from === "user" ? "text-black/50" : "text-zinc-600"} text-right`}
+                >
+                  {m.time}
+                </p>
               </div>
             </div>
           ))}
@@ -5386,8 +7929,16 @@ function App() {
             placeholder="Digite uma mensagem..."
             className="flex-1 bg-zinc-900/50 border-b border-zinc-900 rounded-2xl py-3 px-4 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-yellow-400/20 transition-all"
           />
-          <button onClick={sendMsg} className="size-11 rounded-full bg-yellow-400 flex items-center justify-center active:scale-90 transition-all shrink-0">
-            <span className="material-symbols-outlined text-black" style={{ fontVariationSettings: "'FILL' 1" }}>send</span>
+          <button
+            onClick={sendMsg}
+            className="size-11 rounded-full bg-yellow-400 flex items-center justify-center active:scale-90 transition-all shrink-0"
+          >
+            <span
+              className="material-symbols-outlined text-black"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              send
+            </span>
           </button>
         </div>
       </div>
@@ -5397,42 +7948,70 @@ function App() {
   const renderOrderSupport = () => {
     const topics = [
       { icon: "local_shipping", label: "Meu pedido está atrasado" },
-      { icon: "cancel",         label: "Quero cancelar meu pedido" },
-      { icon: "swap_horiz",     label: "Item errado ou faltando" },
-      { icon: "payments",       label: "Problema com pagamento" },
-      { icon: "help",           label: "Outro problema" },
+      { icon: "cancel", label: "Quero cancelar meu pedido" },
+      { icon: "swap_horiz", label: "Item errado ou faltando" },
+      { icon: "payments", label: "Problema com pagamento" },
+      { icon: "help", label: "Outro problema" },
     ];
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
         <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
-          <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          <button
+            onClick={() => setSubView("none")}
+            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+          >
+            <span className="material-symbols-outlined text-zinc-100">
+              arrow_back
+            </span>
           </button>
-          <h1 className="font-extrabold text-base text-white uppercase tracking-tight">Suporte</h1>
+          <h1 className="font-extrabold text-base text-white uppercase tracking-tight">
+            Suporte
+          </h1>
         </header>
 
         <main className="px-5 py-8 space-y-10">
           <div>
-            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-2">Central de Ajuda</p>
-            <h2 className="text-2xl font-extrabold text-white tracking-tighter">Como podemos<br/>te ajudar?</h2>
+            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-2">
+              Central de Ajuda
+            </p>
+            <h2 className="text-2xl font-extrabold text-white tracking-tighter">
+              Como podemos
+              <br />
+              te ajudar?
+            </h2>
           </div>
 
           <div className="flex flex-col">
             {topics.map((t, i) => (
-              <motion.button key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0 active:opacity-60 transition-all text-left group w-full">
-                <span className="material-symbols-outlined text-zinc-600 group-hover:text-yellow-400 transition-colors text-xl">{t.icon}</span>
-                <p className="font-black text-sm text-white flex-1">{t.label}</p>
-                <span className="material-symbols-outlined text-zinc-800 group-hover:text-yellow-400/50 transition-colors text-lg">chevron_right</span>
+              <motion.button
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0 active:opacity-60 transition-all text-left group w-full"
+              >
+                <span className="material-symbols-outlined text-zinc-600 group-hover:text-yellow-400 transition-colors text-xl">
+                  {t.icon}
+                </span>
+                <p className="font-black text-sm text-white flex-1">
+                  {t.label}
+                </p>
+                <span className="material-symbols-outlined text-zinc-800 group-hover:text-yellow-400/50 transition-colors text-lg">
+                  chevron_right
+                </span>
               </motion.button>
             ))}
           </div>
 
           <div className="pt-4">
-            <p className="text-zinc-700 text-xs text-center mb-4">Ou fale diretamente com nosso time</p>
+            <p className="text-zinc-700 text-xs text-center mb-4">
+              Ou fale diretamente com nosso time
+            </p>
             <button className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-3 border border-zinc-900 text-zinc-400 hover:border-yellow-400/20 hover:text-yellow-400 transition-all">
-              <span className="material-symbols-outlined text-xl">chat_bubble</span>
+              <span className="material-symbols-outlined text-xl">
+                chat_bubble
+              </span>
               Iniciar Chat com Suporte
             </button>
           </div>
@@ -5442,93 +8021,166 @@ function App() {
   };
 
   const renderAIConcierge = () => {
-    return <AIConciergePanel
-      isOpen={isAIOpen}
-      onClose={() => setIsAIOpen(false)}
-      userName={userName}
-      walletBalance={walletBalance}
-      userLocation={userLocation}
-      myOrders={myOrders}
-      ESTABLISHMENTS={ESTABLISHMENTS}
-    />;
+    return (
+      <AIConciergePanel
+        isOpen={isAIOpen}
+        onClose={() => setIsAIOpen(false)}
+        userName={userName}
+        walletBalance={walletBalance}
+        userLocation={userLocation}
+        myOrders={myOrders}
+        ESTABLISHMENTS={ESTABLISHMENTS}
+      />
+    );
   };
 
   const renderQuestCenter = () => {
     const quests = [
-      { id: 1, title: "Explorador Urbano", desc: "Faça 3 pedidos em categorias diferentes", xp: 150, progress: 33, icon: "explore" },
-      { id: 2, title: "Cliente Fiel",      desc: "Peça do mesmo restaurante 3 vezes",        xp: 100, progress: 66, icon: "favorite" },
-      { id: 3, title: "Madrugador",        desc: "Faça um pedido antes das 9h",              xp: 80,  progress: 0,  icon: "wb_sunny" },
-      { id: 4, title: "Gourmet",           desc: "Experimente 5 restaurantes diferentes",    xp: 200, progress: 20, icon: "restaurant" },
+      {
+        id: 1,
+        title: "Explorador Urbano",
+        desc: "Faça 3 pedidos em categorias diferentes",
+        xp: 150,
+        progress: 33,
+        icon: "explore",
+      },
+      {
+        id: 2,
+        title: "Cliente Fiel",
+        desc: "Peça do mesmo restaurante 3 vezes",
+        xp: 100,
+        progress: 66,
+        icon: "favorite",
+      },
+      {
+        id: 3,
+        title: "Madrugador",
+        desc: "Faça um pedido antes das 9h",
+        xp: 80,
+        progress: 0,
+        icon: "wb_sunny",
+      },
+      {
+        id: 4,
+        title: "Gourmet",
+        desc: "Experimente 5 restaurantes diferentes",
+        xp: 200,
+        progress: 20,
+        icon: "restaurant",
+      },
     ];
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
         <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+            <button
+              onClick={() => setSubView("none")}
+              className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+            >
+              <span className="material-symbols-outlined text-zinc-100">
+                arrow_back
+              </span>
             </button>
             <div>
-              <h1 className="font-extrabold text-base text-white uppercase tracking-tight">Quests & Ranking</h1>
-              <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">Nível {userLevel} Ã¢â‚¬¢ {userXP} XP</p>
+              <h1 className="font-extrabold text-base text-white uppercase tracking-tight">
+                Quests & Ranking
+              </h1>
+              <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">
+                Nível {userLevel} Ã¢â‚¬¢ {userXP} XP
+              </p>
             </div>
           </div>
         </header>
 
         <main className="px-5 py-8 space-y-10">
-
           {/* XP PROGRESS */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Infinity Tier</p>
-                <p className="font-black text-white text-lg">Nível {userLevel}</p>
+                <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">
+                  Infinity Tier
+                </p>
+                <p className="font-black text-white text-lg">
+                  Nível {userLevel}
+                </p>
               </div>
               <div className="size-14 rounded-2xl bg-yellow-400/10 border border-yellow-400/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-2xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>diamond</span>
+                <span
+                  className="material-symbols-outlined text-2xl text-yellow-400"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  diamond
+                </span>
               </div>
             </div>
             <div className="space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">XP Progress</span>
-                <span className="text-[9px] font-black text-yellow-400">{userXP} / {nextLevelXP}</span>
+                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">
+                  XP Progress
+                </span>
+                <span className="text-[9px] font-black text-yellow-400">
+                  {userXP} / {nextLevelXP}
+                </span>
               </div>
               <div className="h-px w-full bg-zinc-900 rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((userXP/nextLevelXP)*100,100)}%` }}
-                  className="h-full bg-gradient-to-r from-yellow-400 to-orange-400" />
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{
+                    width: `${Math.min((userXP / nextLevelXP) * 100, 100)}%`,
+                  }}
+                  className="h-full bg-gradient-to-r from-yellow-400 to-orange-400"
+                />
               </div>
             </div>
           </div>
 
           {/* QUESTS */}
           <div>
-            <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-4">MissÃƒµes Ativas</h2>
+            <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-4">
+              MissÃƒµes Ativas
+            </h2>
             <div className="flex flex-col">
               {quests.map((q, i) => (
-                <motion.div key={q.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                  className="flex items-start gap-4 py-5 border-b border-zinc-900/60 last:border-0">
-                  <span className="material-symbols-outlined text-zinc-600 text-xl mt-0.5">{q.icon}</span>
+                <motion.div
+                  key={q.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="flex items-start gap-4 py-5 border-b border-zinc-900/60 last:border-0"
+                >
+                  <span className="material-symbols-outlined text-zinc-600 text-xl mt-0.5">
+                    {q.icon}
+                  </span>
                   <div className="flex-1 min-w-0 space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-black text-sm text-white">{q.title}</p>
+                        <p className="font-black text-sm text-white">
+                          {q.title}
+                        </p>
                         <p className="text-zinc-600 text-xs mt-0.5">{q.desc}</p>
                       </div>
-                      <span className="text-yellow-400 text-[10px] font-black shrink-0">+{q.xp} XP</span>
+                      <span className="text-yellow-400 text-[10px] font-black shrink-0">
+                        +{q.xp} XP
+                      </span>
                     </div>
                     <div className="space-y-1">
                       <div className="h-px w-full bg-zinc-900 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${q.progress}%` }}
-                          className="h-full bg-gradient-to-r from-yellow-400 to-orange-400" />
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${q.progress}%` }}
+                          className="h-full bg-gradient-to-r from-yellow-400 to-orange-400"
+                        />
                       </div>
-                      <p className="text-[9px] font-bold text-zinc-700 text-right">{q.progress}%</p>
+                      <p className="text-[9px] font-bold text-zinc-700 text-right">
+                        {q.progress}%
+                      </p>
                     </div>
                   </div>
                 </motion.div>
               ))}
             </div>
           </div>
-
         </main>
       </div>
     );
@@ -5536,22 +8188,26 @@ function App() {
 
   const renderIziBlackPurchase = () => {
     const handleClose = () => {
-      setSubView(iziBlackOrigin === 'checkout' ? 'checkout' : 'none');
+      setSubView(iziBlackOrigin === "checkout" ? "checkout" : "none");
     };
 
     const handleSubscribeReal = async () => {
       if (!userId) return;
       setIsLoading(true);
-      
-      const total = 29.90;
-      
+
+      const total = 29.9;
+
       try {
         // 1. Criar um "pedido" de assinatura em orders_delivery
         const { data: orderData, error: orderError } = await supabase
           .from("orders_delivery")
           .insert({
             user_id: userId,
-            status: (paymentMethod === "cartao" || paymentMethod === "bitcoin_lightning") ? "pendente_pagamento" : "novo",
+            status:
+              paymentMethod === "cartao" ||
+              paymentMethod === "bitcoin_lightning"
+                ? "pendente_pagamento"
+                : "novo",
             total_price: total,
             pickup_address: "Assinatura Izi Black",
             delivery_address: "Serviço Digital",
@@ -5572,28 +8228,43 @@ function App() {
           return;
         } else if (paymentMethod === "pix") {
           setSubView("payment_processing");
-          const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
-            body: {
-              amount: total,
-              orderId: orderData.id,
-              payment_method_id: 'pix',
-              email: user?.email || loginEmail || "cliente@izidelivery.com",
-              customer: { name: userName, cpf: cpf }
-            },
+          const { data: fnData, error: fnErr } =
+            await supabase.functions.invoke("process-mp-payment", {
+              body: {
+                amount: total,
+                orderId: orderData.id,
+                payment_method_id: "pix",
+                email: user?.email || loginEmail || "cliente@izidelivery.com",
+                customer: { name: userName, cpf: cpf },
+              },
+            });
+
+          if (fnErr || !fnData?.qrCode)
+            throw new Error("Erro ao gerar PIX Mercado Pago.");
+
+          setSelectedItem({
+            ...orderData,
+            pixQrCode: fnData.qrCode,
+            pixQrBase64: fnData.qrCodeBase64,
+            pixCopyPaste: fnData.copyPaste,
           });
-
-          if (fnErr || !fnData?.qrCode) throw new Error("Erro ao gerar PIX Mercado Pago.");
-
-          setSelectedItem({ ...orderData, pixQrCode: fnData.qrCode, pixQrBase64: fnData.qrCodeBase64, pixCopyPaste: fnData.copyPaste });
           setPaymentsOrigin("izi_black");
           setSubView("pix_payment");
         } else if (paymentMethod === "bitcoin_lightning") {
           setSubView("payment_processing");
-          const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
-            body: { amount: total, orderId: orderData.id, memo: "Assinatura Izi Black" },
-          });
+          const { data: lnData, error: lnErr } =
+            await supabase.functions.invoke("create-lightning-invoice", {
+              body: {
+                amount: total,
+                orderId: orderData.id,
+                memo: "Assinatura Izi Black",
+              },
+            });
           if (lnErr) throw lnErr;
-          setSelectedItem({ ...orderData, lightningInvoice: lnData.payment_request });
+          setSelectedItem({
+            ...orderData,
+            lightningInvoice: lnData.payment_request,
+          });
           setPaymentsOrigin("izi_black");
           setSubView("lightning_payment");
         } else if (paymentMethod === "saldo") {
@@ -5604,17 +8275,23 @@ function App() {
               user_id: userId,
               amount: total,
               type: "pagamento",
-              description: "Assinatura Izi Black"
+              description: "Assinatura Izi Black",
             });
           if (walletErr) throw walletErr;
-          
+
           // Marca pedido como concluído
-          await supabase.from("orders_delivery").update({ status: "concluido" }).eq("id", orderData.id);
-          
+          await supabase
+            .from("orders_delivery")
+            .update({ status: "concluido" })
+            .eq("id", orderData.id);
+
           // Ativa Izi Black no perfil
-          await supabase.from('users_delivery').update({ is_izi_black: true }).eq('id', userId);
+          await supabase
+            .from("users_delivery")
+            .update({ is_izi_black: true })
+            .eq("id", userId);
           setIsIziBlackMembership(true);
-          setIziBlackStep('success');
+          setIziBlackStep("success");
         }
       } catch (err: any) {
         toastError(err.message || "Erro ao processar assinatura.");
@@ -5624,23 +8301,28 @@ function App() {
     };
 
     // Ã¢â€â‚¬Ã¢â€â‚¬ SUCESSO Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    if (iziBlackStep === 'success') {
+    if (iziBlackStep === "success") {
       return (
         <div className="absolute inset-0 z-50 bg-[#000000] flex flex-col items-center justify-center px-6 gap-12 overflow-hidden">
-          <motion.div 
-            initial={{ scale: 0, rotate: -20, opacity: 0 }} 
-            animate={{ scale: 1, rotate: 0, opacity: 1 }} 
+          <motion.div
+            initial={{ scale: 0, rotate: -20, opacity: 0 }}
+            animate={{ scale: 1, rotate: 0, opacity: 1 }}
             transition={{ type: "spring", stiffness: 200, damping: 15 }}
             className="relative"
           >
             <div className="absolute inset-0 bg-yellow-400/10 blur-[100px] rounded-full" />
             <div className="size-32 rounded-full flex items-center justify-center relative overflow-hidden group">
-              <span className="material-symbols-outlined text-7xl text-yellow-500" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+              <span
+                className="material-symbols-outlined text-7xl text-yellow-500"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                workspace_premium
+              </span>
             </div>
           </motion.div>
 
           <div className="text-center space-y-4">
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
@@ -5648,7 +8330,7 @@ function App() {
             >
               Protocolo Ativado
             </motion.p>
-            <motion.h2 
+            <motion.h2
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
@@ -5656,21 +8338,25 @@ function App() {
             >
               IZI <span className="text-yellow-500">BLACK</span>
             </motion.h2>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
               className="text-zinc-500 text-sm max-w-xs mx-auto leading-relaxed font-medium"
             >
-              Bem-vindo à elite. Seus privilégios exclusivos já estão vinculados à sua conta com sucesso.
+              Bem-vindo à elite. Seus privilégios exclusivos já estão vinculados
+              à sua conta com sucesso.
             </motion.p>
           </div>
 
-          <motion.button 
+          <motion.button
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8 }}
-            onClick={() => { setSubView("none"); setIziBlackStep("info"); }}
+            onClick={() => {
+              setSubView("none");
+              setIziBlackStep("info");
+            }}
             className="w-full max-w-xs py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all text-zinc-900"
             style={{ backgroundColor: "#FBBF24" }}
           >
@@ -5680,51 +8366,93 @@ function App() {
       );
     }
 
-    if (iziBlackStep === 'payment') {
-      const walletBal = walletTransactions.reduce((acc: number, t: any) =>
-        ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
+    if (iziBlackStep === "payment") {
+      const walletBal = walletTransactions.reduce(
+        (acc: number, t: any) =>
+          ["deposito", "reembolso"].includes(t.type)
+            ? acc + Number(t.amount)
+            : acc - Number(t.amount),
+        0,
+      );
 
       const subOptions = [
-        { id: "cartao",            icon: "credit_card",            label: "Cartão de Crédito" },
-        { id: "pix",               icon: "pix",                    label: "PIX" },
-        { id: "saldo",             icon: "account_balance_wallet", label: `Saldo IZI (R$ ${walletBal.toFixed(2)})`, disabled: walletBal < 29.90 },
-        { id: "bitcoin_lightning", icon: "bolt",                   label: "Bitcoin Lightning" },
+        { id: "cartao", icon: "credit_card", label: "Cartão de Crédito" },
+        { id: "pix", icon: "pix", label: "PIX" },
+        {
+          id: "saldo",
+          icon: "account_balance_wallet",
+          label: `Saldo IZI (R$ ${walletBal.toFixed(2)})`,
+          disabled: walletBal < 29.9,
+        },
+        { id: "bitcoin_lightning", icon: "bolt", label: "Bitcoin Lightning" },
       ];
 
       return (
         <div className="absolute inset-0 z-50 bg-[#000000] text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
           <header className="bg-transparent sticky top-0 z-50 flex items-center gap-4 px-5 py-6">
-            <button onClick={() => setIziBlackStep("info")} className="size-10 flex items-center justify-center active:scale-90 transition-all text-white">
-              <span className="material-symbols-outlined text-zinc-400">arrow_back</span>
+            <button
+              onClick={() => setIziBlackStep("info")}
+              className="size-10 flex items-center justify-center active:scale-90 transition-all text-white"
+            >
+              <span className="material-symbols-outlined text-zinc-400">
+                arrow_back
+              </span>
             </button>
-            <h1 className="font-black text-base text-white uppercase tracking-tight">Checkout IZI Black</h1>
+            <h1 className="font-black text-base text-white uppercase tracking-tight">
+              Checkout IZI Black
+            </h1>
           </header>
           <main className="px-5 py-6 max-w-sm mx-auto w-full space-y-12">
             <div className="text-center space-y-1">
-              <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Plano de Elite</p>
+              <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">
+                Plano de Elite
+              </p>
               <div className="flex items-center justify-center gap-1">
                 <span className="text-2xl font-black text-white mt-2">R$</span>
-                <p className="font-black text-white leading-none tracking-tighter" style={{ fontSize: "72px" }}>
-                  29<span className="text-3xl text-zinc-500 font-black">,90</span>
+                <p
+                  className="font-black text-white leading-none tracking-tighter"
+                  style={{ fontSize: "72px" }}
+                >
+                  29
+                  <span className="text-3xl text-zinc-500 font-black">,90</span>
                 </p>
               </div>
-              <p className="text-zinc-600 text-[10px] font-bold mt-2 uppercase text-center">Mensal, cancele quando quiser</p>
+              <p className="text-zinc-600 text-[10px] font-bold mt-2 uppercase text-center">
+                Mensal, cancele quando quiser
+              </p>
             </div>
 
             <div className="space-y-4">
-              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Pagamento</p>
+              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">
+                Pagamento
+              </p>
               <div className="flex flex-col">
                 {subOptions.map((m) => (
-                  <button key={m.id} 
+                  <button
+                    key={m.id}
                     onClick={() => !m.disabled && setPaymentMethod(m.id as any)}
                     disabled={m.disabled}
-                    className={`w-full flex items-center gap-4 py-6 transition-all border-b border-zinc-900 last:border-0 ${m.disabled ? "opacity-30 cursor-not-allowed" : "active:opacity-75"}`}>
-                    <div className={`flex items-center justify-center ${paymentMethod === m.id ? "text-yellow-500" : "text-zinc-600"}`}>
-                      <span className="material-symbols-outlined text-xl">{m.icon}</span>
+                    className={`w-full flex items-center gap-4 py-6 transition-all border-b border-zinc-900 last:border-0 ${m.disabled ? "opacity-30 cursor-not-allowed" : "active:opacity-75"}`}
+                  >
+                    <div
+                      className={`flex items-center justify-center ${paymentMethod === m.id ? "text-yellow-500" : "text-zinc-600"}`}
+                    >
+                      <span className="material-symbols-outlined text-xl">
+                        {m.icon}
+                      </span>
                     </div>
-                    <span className={`font-black text-sm flex-1 text-left ${paymentMethod === m.id ? "text-white" : "text-zinc-500"}`}>{m.label}</span>
+                    <span
+                      className={`font-black text-sm flex-1 text-left ${paymentMethod === m.id ? "text-white" : "text-zinc-500"}`}
+                    >
+                      {m.label}
+                    </span>
                     <div className="flex items-center justify-center">
-                      <span className={`material-symbols-outlined text-lg ${paymentMethod === m.id ? "text-yellow-500" : "text-transparent"}`} style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                      <span
+                        className={`material-symbols-outlined text-lg ${paymentMethod === m.id ? "text-yellow-500" : "text-transparent"}`}
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                      >
+                        check_circle
+                      </span>
                     </div>
                   </button>
                 ))}
@@ -5732,15 +8460,25 @@ function App() {
             </div>
 
             <div className="space-y-4">
-              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Documento (CPF)</p>
-              <input type="text" inputMode="numeric" value={cpf} onChange={(e) => setCpf(e.target.value)}
+              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">
+                Documento (CPF)
+              </p>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={cpf}
+                onChange={(e) => setCpf(e.target.value)}
                 placeholder="000.000.000-00"
-                className="w-full bg-transparent border-b border-zinc-900 py-4 text-white placeholder:text-zinc-800 focus:outline-none focus:border-yellow-500 focus:border-b-2 text-sm font-black tracking-widest transition-all" />
+                className="w-full bg-transparent border-b border-zinc-900 py-4 text-white placeholder:text-zinc-800 focus:outline-none focus:border-yellow-500 focus:border-b-2 text-sm font-black tracking-widest transition-all"
+              />
             </div>
 
-            <button onClick={handleSubscribeReal} disabled={isLoading}
+            <button
+              onClick={handleSubscribeReal}
+              disabled={isLoading}
               className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-30 text-zinc-900"
-              style={{ backgroundColor: "#FBBF24" }}>
+              style={{ backgroundColor: "#FBBF24" }}
+            >
               {isLoading ? "Processando..." : "Ativar Assinatura Elite"}
             </button>
           </main>
@@ -5749,55 +8487,110 @@ function App() {
     }
 
     const perks = [
-      { icon: "delivery_dining",    title: "Taxa Zero",        desc: "Entrega grátis em toda a cidade, sem limite.",    highlight: true },
-      { icon: "bolt",               title: "Prioridade IZI",   desc: "Seus pedidos sempre primeiro na fila.",           highlight: false },
-      { icon: "stars",              title: "Cashback 5%",      desc: "Pontos dobrados em todos os pedidos.",            highlight: false },
-      { icon: "support_agent",      title: "Suporte VIP",      desc: "Canal exclusivo 24 horas via App.",               highlight: false },
-      { icon: "confirmation_number",title: "Cupons Black",     desc: "Ofertas exclusivas só para membros.",             highlight: false },
-      { icon: "qr_code_scanner",    title: "Early Access",     desc: "Lançamentos e novidades antecipadas.",         highlight: false },
+      {
+        icon: "delivery_dining",
+        title: "Taxa Zero",
+        desc: "Entrega grátis em toda a cidade, sem limite.",
+        highlight: true,
+      },
+      {
+        icon: "bolt",
+        title: "Prioridade IZI",
+        desc: "Seus pedidos sempre primeiro na fila.",
+        highlight: false,
+      },
+      {
+        icon: "stars",
+        title: "Cashback 5%",
+        desc: "Pontos dobrados em todos os pedidos.",
+        highlight: false,
+      },
+      {
+        icon: "support_agent",
+        title: "Suporte VIP",
+        desc: "Canal exclusivo 24 horas via App.",
+        highlight: false,
+      },
+      {
+        icon: "confirmation_number",
+        title: "Cupons Black",
+        desc: "Ofertas exclusivas só para membros.",
+        highlight: false,
+      },
+      {
+        icon: "qr_code_scanner",
+        title: "Early Access",
+        desc: "Lançamentos e novidades antecipadas.",
+        highlight: false,
+      },
     ];
 
     return (
       <div className="absolute inset-0 z-50 bg-[#000000] text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
         <header className="px-6 pt-10 pb-4 flex items-center justify-between sticky top-0 z-[60] bg-transparent">
-          <button onClick={handleClose}
-            className="size-10 flex items-center justify-center active:scale-90 transition-all text-white drop-shadow-md">
-            <span className="material-symbols-outlined text-zinc-100">close</span>
+          <button
+            onClick={handleClose}
+            className="size-10 flex items-center justify-center active:scale-90 transition-all text-white drop-shadow-md"
+          >
+            <span className="material-symbols-outlined text-zinc-100">
+              close
+            </span>
           </button>
           <div className="text-center drop-shadow-md">
-            <h2 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none mb-0.5">Izi <span className="text-yellow-500">Black</span></h2>
-            <p className="text-[8px] text-yellow-500 font-black uppercase tracking-[0.4em]">Elite</p>
+            <h2 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none mb-0.5">
+              Izi <span className="text-yellow-500">Black</span>
+            </h2>
+            <p className="text-[8px] text-yellow-500 font-black uppercase tracking-[0.4em]">
+              Elite
+            </p>
           </div>
           <div className="size-10" />
         </header>
 
         <main className="relative z-10 flex flex-col">
           <section className="mb-12 mt-[-88px]">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8 }}
               className="relative h-[480px] overflow-hidden group"
-              style={{ backgroundImage: 'url("/izi_black_allblack.png")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#000' }}
+              style={{
+                backgroundImage: 'url("/izi_black_allblack.png")',
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundColor: "#000",
+              }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black/90" />
-              
+
               <div className="absolute inset-x-8 bottom-10 space-y-4">
                 <div className="flex flex-col">
-                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.4em] mb-2 animate-pulse">Status: Aberto</span>
+                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.4em] mb-2 animate-pulse">
+                    Status: Aberto
+                  </span>
                   <h3 className="text-5xl font-black text-white leading-[0.9] uppercase tracking-tighter italic">
-                    All<br/>Black.
+                    All
+                    <br />
+                    Black.
                   </h3>
                 </div>
 
                 <div className="flex items-end gap-3 pt-4">
                   <div className="flex items-start gap-1">
-                    <span className="text-zinc-600 font-black text-xl mt-1 italic">R$</span>
-                    <span className="text-6xl font-black text-white tracking-tighter leading-none italic">29</span>
-                    <span className="text-2xl font-black text-zinc-600 mt-1">,90</span>
+                    <span className="text-zinc-600 font-black text-xl mt-1 italic">
+                      R$
+                    </span>
+                    <span className="text-6xl font-black text-white tracking-tighter leading-none italic">
+                      29
+                    </span>
+                    <span className="text-2xl font-black text-zinc-600 mt-1">
+                      ,90
+                    </span>
                   </div>
                   <div className="mb-1">
-                    <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest italic">Por mês</p>
+                    <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest italic">
+                      Por mês
+                    </p>
                   </div>
                 </div>
               </div>
@@ -5805,23 +8598,36 @@ function App() {
           </section>
 
           <section className="px-8 space-y-2">
-            <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-6">Seus Privilégios</h3>
+            <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-6">
+              Seus Privilégios
+            </h3>
 
             <div className="flex flex-col">
               {perks.map((p, i) => (
-                <motion.div 
-                  key={i} 
-                  initial={{ opacity: 0, y: 10 }} 
-                  animate={{ opacity: 1, y: 0 }} 
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + i * 0.08 }}
                   className="flex items-start gap-6 py-6 border-b border-zinc-900 last:border-0 group"
                 >
-                  <div className={`mt-0.5 ${p.highlight ? 'text-yellow-500' : 'text-zinc-600'} transition-all duration-300`}>
-                    <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>{p.icon}</span>
+                  <div
+                    className={`mt-0.5 ${p.highlight ? "text-yellow-500" : "text-zinc-600"} transition-all duration-300`}
+                  >
+                    <span
+                      className="material-symbols-outlined text-2xl"
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                      {p.icon}
+                    </span>
                   </div>
                   <div className="flex-1">
-                    <p className="font-black text-sm text-white tracking-tight uppercase mb-0.5">{p.title}</p>
-                    <p className="text-zinc-500 text-xs font-medium leading-relaxed">{p.desc}</p>
+                    <p className="font-black text-sm text-white tracking-tight uppercase mb-0.5">
+                      {p.title}
+                    </p>
+                    <p className="text-zinc-500 text-xs font-medium leading-relaxed">
+                      {p.desc}
+                    </p>
                   </div>
                 </motion.div>
               ))}
@@ -5831,30 +8637,44 @@ function App() {
           <section className="px-8 mt-16 pb-12">
             {!isIziBlackMembership ? (
               <div className="space-y-6">
-                <button onClick={() => setIziBlackStep("payment")}
+                <button
+                  onClick={() => setIziBlackStep("payment")}
                   className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all text-zinc-900 shadow-[0_0_20px_rgba(251,191,36,0.15)]"
-                  style={{ backgroundColor: "#FBBF24" }}>
+                  style={{ backgroundColor: "#FBBF24" }}
+                >
                   Quero ser IZI Black Agora
                 </button>
                 <div className="flex flex-col items-center gap-2 text-center">
-                  <p className="text-zinc-700 text-[9px] font-black uppercase tracking-[0.3em]">Ambiente Seguro 256-bit</p>
+                  <p className="text-zinc-700 text-[9px] font-black uppercase tracking-[0.3em]">
+                    Ambiente Seguro 256-bit
+                  </p>
                 </div>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-6 py-10 border-t border-b border-zinc-900">
                 <div className="text-yellow-500 animate-pulse">
-                  <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                  <span
+                    className="material-symbols-outlined text-4xl"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    verified
+                  </span>
                 </div>
                 <div className="text-center">
-                  <h4 className="text-white font-black text-lg uppercase tracking-tight italic">Assinatura Ativa</h4>
-                  <p className="text-zinc-500 text-xs mt-1">Sua jornada de elite já começou.</p>
+                  <h4 className="text-white font-black text-lg uppercase tracking-tight italic">
+                    Assinatura Ativa
+                  </h4>
+                  <p className="text-zinc-500 text-xs mt-1">
+                    Sua jornada de elite já começou.
+                  </p>
                 </div>
               </div>
             )}
-            
-            <p className="text-zinc-800 text-[10px] text-center mt-8 font-bold uppercase tracking-widest">Cancele quando quiser • Sem fidelidade</p>
-          </section>
 
+            <p className="text-zinc-800 text-[10px] text-center mt-8 font-bold uppercase tracking-widest">
+              Cancele quando quiser • Sem fidelidade
+            </p>
+          </section>
         </main>
       </div>
     );
@@ -5862,18 +8682,23 @@ function App() {
   const renderIziBlackWelcome = () => {
     return (
       <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 sm:p-12">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="absolute inset-0 bg-black/95 backdrop-blur-3xl"
         />
-        
+
         <motion.div
           initial={{ scale: 0.8, opacity: 0, y: 50 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: -20 }}
-          transition={{ type: "spring", damping: 25, stiffness: 200, delay: 0.2 }}
+          transition={{
+            type: "spring",
+            damping: 25,
+            stiffness: 200,
+            delay: 0.2,
+          }}
           className="relative w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-[56px] p-12 overflow-hidden shadow-[0_0_100px_rgba(234,179,8,0.07)]"
         >
           {/* Decorative Elements */}
@@ -5897,30 +8722,37 @@ function App() {
               transition={{ delay: 0.8 }}
             >
               <h1 className="text-4xl font-black text-white mb-4 tracking-tight">
-                VOCÃƒÅ  ESTÃƒÆ’Ã‚ <span className="text-yellow-500">DENTRO</span>.
+                VOCÃƒÅ  ESTÃƒÆ’Ã‚{" "}
+                <span className="text-yellow-500">DENTRO</span>.
               </h1>
               <p className="text-zinc-400 font-medium text-lg leading-relaxed mb-12">
-                Seja bem-vindo ao <span className="text-white font-bold">Izi Black</span>. 
-                Seus privilégios exclusivos foram ativados com sucesso.
+                Seja bem-vindo ao{" "}
+                <span className="text-white font-bold">Izi Black</span>. Seus
+                privilégios exclusivos foram ativados com sucesso.
               </p>
             </motion.div>
 
             {/* Perks Preview */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 1.2 }}
               className="grid grid-cols-2 gap-4 w-full mb-12"
             >
               {[
-                { icon: 'bolt', label: 'Cashback 5%' },
-                { icon: 'local_shipping', label: 'Frete Grátis' },
-                { icon: 'star', label: 'VIP Perks' },
-                { icon: 'support_agent', label: 'Suporte Elite' }
+                { icon: "bolt", label: "Cashback 5%" },
+                { icon: "local_shipping", label: "Frete Grátis" },
+                { icon: "star", label: "VIP Perks" },
+                { icon: "support_agent", label: "Suporte Elite" },
               ].map((perk, i) => (
-                <div key={i} className="bg-white/5 border border-white/10 rounded-3xl p-4 flex items-center gap-3">
+                <div
+                  key={i}
+                  className="bg-white/5 border border-white/10 rounded-3xl p-4 flex items-center gap-3"
+                >
                   <Icon name={perk.icon} />
-                  <span className="text-[10px] font-black text-white uppercase tracking-widest">{perk.label}</span>
+                  <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                    {perk.label}
+                  </span>
                 </div>
               ))}
             </motion.div>
@@ -5949,141 +8781,312 @@ function App() {
     const iziCoins = Math.floor(userXP * 2.5);
     const nextTierCoins = Math.floor(nextLevelXP * 2.5);
     const progressPercent = Math.min(100, (iziCoins / nextTierCoins) * 100);
-    
-    const tierNames = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master'];
-    const currentTierName = tierNames[Math.min(userLevel - 1, tierNames.length - 1)] || 'Bronze';
-    const nextTierName = tierNames[Math.min(userLevel, tierNames.length - 1)] || 'Master';
+
+    const tierNames = [
+      "Bronze",
+      "Silver",
+      "Gold",
+      "Platinum",
+      "Diamond",
+      "Master",
+    ];
+    const currentTierName =
+      tierNames[Math.min(userLevel - 1, tierNames.length - 1)] || "Bronze";
+    const nextTierName =
+      tierNames[Math.min(userLevel, tierNames.length - 1)] || "Master";
     const circumference = 2 * Math.PI * 54;
     const dashOffset = circumference - (progressPercent / 100) * circumference;
 
     const perks = [
-      { id: 'frete', icon: 'local_shipping', label: 'Frete Grátis', active: true },
-      { id: 'cashback', icon: 'monetization_on', label: 'Cashback 5%', active: true },
-      { id: 'priority', icon: 'support_agent', label: 'Priority', active: true },
-      { id: 'seguro', icon: 'shield', label: 'Seguro', active: userLevel >= 2 },
-      { id: 'surprise', icon: 'card_giftcard', label: 'Surprise', active: userLevel >= 3 },
-      { id: 'fastmatch', icon: 'bolt', label: 'Fast Match', active: userLevel >= 4 },
+      {
+        id: "frete",
+        icon: "local_shipping",
+        label: "Frete Grátis",
+        active: true,
+      },
+      {
+        id: "cashback",
+        icon: "monetization_on",
+        label: "Cashback 5%",
+        active: true,
+      },
+      {
+        id: "priority",
+        icon: "support_agent",
+        label: "Priority",
+        active: true,
+      },
+      { id: "seguro", icon: "shield", label: "Seguro", active: userLevel >= 2 },
+      {
+        id: "surprise",
+        icon: "card_giftcard",
+        label: "Surprise",
+        active: userLevel >= 3,
+      },
+      {
+        id: "fastmatch",
+        icon: "bolt",
+        label: "Fast Match",
+        active: userLevel >= 4,
+      },
     ];
 
     return (
       <div className="bg-black absolute inset-0 z-[170] bg-[#020617] flex flex-col hide-scrollbar overflow-y-auto pb-32 text-zinc-100">
-        <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.05]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }} />
+        <div
+          className="fixed inset-0 pointer-events-none z-0 opacity-[0.05]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          }}
+        />
         <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] -mt-96 pointer-events-none z-0">
           <div className="absolute inset-0 rounded-full bg-yellow-400/[0.1] blur-[180px] animate-pulse" />
         </div>
 
         <header className="px-8 pt-12 pb-6 flex items-center justify-between sticky top-0 z-40 bg-[#020617]/80 backdrop-blur-3xl border-b border-white/5">
           <div>
-            <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">Izi <span className="text-yellow-400">Black</span></h2>
-            <p className="text-[9px] text-yellow-400/40 font-black uppercase tracking-[0.4em]">Protocolo VIP</p>
+            <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">
+              Izi <span className="text-yellow-400">Black</span>
+            </h2>
+            <p className="text-[9px] text-yellow-400/40 font-black uppercase tracking-[0.4em]">
+              Protocolo VIP
+            </p>
           </div>
-          <button onClick={() => setShowIziBlackCard(false)} className="size-12 rounded-[20px] bg-white/5 border border-white/10 flex items-center justify-center text-white/40 active:scale-90 transition-all shadow-2xl">
+          <button
+            onClick={() => setShowIziBlackCard(false)}
+            className="size-12 rounded-[20px] bg-white/5 border border-white/10 flex items-center justify-center text-white/40 active:scale-90 transition-all shadow-2xl"
+          >
             <Icon name="close" size={24} />
           </button>
         </header>
 
         <main className="relative z-10 px-8 py-10 space-y-16">
           {/* Progress Section */}
-          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="flex flex-col items-center text-center">
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="flex flex-col items-center text-center"
+          >
             <div className="relative mb-10 group cursor-pointer">
               <div className="absolute inset-0 bg-yellow-400/20 blur-[40px] rounded-full scale-75 group-hover:scale-100 transition-all duration-700 opacity-0 group-hover:opacity-100" />
-              <svg width="200" height="200" viewBox="0 0 120 120" className="-rotate-90 relative z-10 drop-shadow-[0_0_15px_rgba(255,217,0,0.2)]">
-                <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="3" />
-                <motion.circle cx="60" cy="60" r="54" fill="none" stroke="url(#cardProgressGrad)" strokeWidth="3" strokeLinecap="round" strokeDasharray={circumference} initial={{ strokeDashoffset: circumference }} animate={{ strokeDashoffset: dashOffset }} transition={{ duration: 3, ease: "easeOut" }} />
-                <defs><linearGradient id="cardProgressGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#FBBF24" /><stop offset="100%" stopColor="#B45309" /></linearGradient></defs>
+              <svg
+                width="200"
+                height="200"
+                viewBox="0 0 120 120"
+                className="-rotate-90 relative z-10 drop-shadow-[0_0_15px_rgba(255,217,0,0.2)]"
+              >
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="54"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.03)"
+                  strokeWidth="3"
+                />
+                <motion.circle
+                  cx="60"
+                  cy="60"
+                  r="54"
+                  fill="none"
+                  stroke="url(#cardProgressGrad)"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeDasharray={circumference}
+                  initial={{ strokeDashoffset: circumference }}
+                  animate={{ strokeDashoffset: dashOffset }}
+                  transition={{ duration: 3, ease: "easeOut" }}
+                />
+                <defs>
+                  <linearGradient
+                    id="cardProgressGrad"
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="100%"
+                  >
+                    <stop offset="0%" stopColor="#FBBF24" />
+                    <stop offset="100%" stopColor="#B45309" />
+                  </linearGradient>
+                </defs>
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3, type: "spring" }} className="text-6xl font-black text-white leading-none tracking-tighter italic">{userLevel}</motion.span>
-                <span className="text-[8px] font-black text-yellow-400 uppercase tracking-[0.4em] mt-1 italic">Nível</span>
+                <motion.span
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.3, type: "spring" }}
+                  className="text-6xl font-black text-white leading-none tracking-tighter italic"
+                >
+                  {userLevel}
+                </motion.span>
+                <span className="text-[8px] font-black text-yellow-400 uppercase tracking-[0.4em] mt-1 italic">
+                  Nível
+                </span>
               </div>
             </div>
-            
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="space-y-4">
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="space-y-4"
+            >
               <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/5 border border-white/10 shadow-xl">
-                 <div className="size-2 bg-yellow-400 rounded-full animate-pulse shadow-[0_0_8px_white]" />
-                 <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">{currentTierName} Member</span>
+                <div className="size-2 bg-yellow-400 rounded-full animate-pulse shadow-[0_0_8px_white]" />
+                <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">
+                  {currentTierName} Member
+                </span>
               </div>
-              <h1 className="text-4xl font-black text-white tracking-tighter italic uppercase leading-tight">Membro <span className="text-yellow-400 italic">Fundador</span></h1>
+              <h1 className="text-4xl font-black text-white tracking-tighter italic uppercase leading-tight">
+                Membro <span className="text-yellow-400 italic">Fundador</span>
+              </h1>
               <div className="flex items-center justify-center gap-3">
-                 <div className="h-1 w-20 bg-white/5 rounded-full overflow-hidden">
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${progressPercent}%` }} className="h-full bg-yellow-400" />
-                 </div>
-                 <p className="text-[10px] text-white/20 font-black uppercase tracking-widest">{progressPercent.toFixed(0)}% para {nextTierName}</p>
+                <div className="h-1 w-20 bg-white/5 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercent}%` }}
+                    className="h-full bg-yellow-400"
+                  />
+                </div>
+                <p className="text-[10px] text-white/20 font-black uppercase tracking-widest">
+                  {progressPercent.toFixed(0)}% para {nextTierName}
+                </p>
               </div>
             </motion.div>
           </motion.section>
 
           {/* Wallet Balance Hero */}
-          <motion.section initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.6 }} className="bg-gradient-to-br from-slate-900 to-black p-10 rounded-[50px] border border-white/10 relative overflow-hidden shadow-2xl text-center">
+          <motion.section
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.6 }}
+            className="bg-gradient-to-br from-slate-900 to-black p-10 rounded-[50px] border border-white/10 relative overflow-hidden shadow-2xl text-center"
+          >
             <div className="absolute top-0 left-0 p-8 opacity-5">
               <Icon name="monetization_on" size={100} />
             </div>
             <div className="relative z-10 space-y-4">
               <div className="flex items-center justify-center gap-2">
                 <div className="size-1.5 rounded-full bg-yellow-400 shadow-[0_0_8px_white]" />
-                <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.4em]">IziCoin Balance</p>
+                <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.4em]">
+                  IziCoin Balance
+                </p>
               </div>
-              <h2 className="text-7xl font-black text-white tabular-nums tracking-tighter leading-none mb-4 italic">{iziCoins.toLocaleString('pt-BR')}</h2>
+              <h2 className="text-7xl font-black text-white tabular-nums tracking-tighter leading-none mb-4 italic">
+                {iziCoins.toLocaleString("pt-BR")}
+              </h2>
               <div className="inline-block px-6 py-2 rounded-full bg-white/5 border border-white/5 text-[9px] font-black text-white/20 uppercase tracking-[0.3em]">
-                Acumule {globalSettings?.izi_coin_rate || 1} coins a cada R$ 1,00 gasto
+                Acumule {globalSettings?.izi_coin_rate || 1} coins a cada R$
+                1,00 gasto
               </div>
             </div>
           </motion.section>
 
           {/* Global Stats */}
-          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="grid grid-cols-3 gap-6 bg-white/5 rounded-[40px] p-8 border border-white/5 shadow-2xl">
+          <motion.section
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            className="grid grid-cols-3 gap-6 bg-white/5 rounded-[40px] p-8 border border-white/5 shadow-2xl"
+          >
             {[
-              { value: myOrders.length, label: 'Pedidos', icon: 'package' },
-              { value: `R$${iziCashbackEarned.toFixed(0)}`, label: 'Cashback', icon: 'monetization_on' },
-              { value: `R$${(myOrders.length * 5).toFixed(0)}`, label: 'Economia', icon: 'shield' },
+              { value: myOrders.length, label: "Pedidos", icon: "package" },
+              {
+                value: `R$${iziCashbackEarned.toFixed(0)}`,
+                label: "Cashback",
+                icon: "monetization_on",
+              },
+              {
+                value: `R$${(myOrders.length * 5).toFixed(0)}`,
+                label: "Economia",
+                icon: "shield",
+              },
             ].map((stat, i) => (
               <div key={i} className="text-center space-y-2 group">
                 <div className="size-10 rounded-2xl bg-white/5 flex items-center justify-center mx-auto text-yellow-400 group-hover:scale-110 transition-all border border-white/5">
-                   <Icon name={stat.icon} size={18} />
+                  <Icon name={stat.icon} size={18} />
                 </div>
                 <div>
-                   <p className="text-lg font-black text-white tracking-tight leading-none italic">{stat.value}</p>
-                   <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mt-1">{stat.label}</p>
+                  <p className="text-lg font-black text-white tracking-tight leading-none italic">
+                    {stat.value}
+                  </p>
+                  <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mt-1">
+                    {stat.label}
+                  </p>
                 </div>
               </div>
             ))}
           </motion.section>
 
           {/* Perks Section */}
-          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="space-y-8">
+          <motion.section
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="space-y-8"
+          >
             <div className="flex items-center justify-between px-2">
-               <h3 className="text-[11px] font-black text-white/20 uppercase tracking-[0.4em] italic leading-none">Vantagens de Membro</h3>
-               <span className="text-[9px] font-black text-yellow-400/40 uppercase tracking-widest">Protocolo Ativado</span>
+              <h3 className="text-[11px] font-black text-white/20 uppercase tracking-[0.4em] italic leading-none">
+                Vantagens de Membro
+              </h3>
+              <span className="text-[9px] font-black text-yellow-400/40 uppercase tracking-widest">
+                Protocolo Ativado
+              </span>
             </div>
-            
+
             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 pr-10">
               {perks.map((perk, i) => (
-                <motion.div 
-                   key={i} 
-                   initial={{ opacity: 0, x: 20 }} 
-                   animate={{ opacity: perk.active ? 1 : 0.2, x: 0 }} 
-                   transition={{ delay: 0.9 + i * 0.05 }} 
-                   whileTap={{ scale: 0.95 }} 
-                   onClick={() => perk.active && perk.id ? setActivePerkDetail(activePerkDetail === perk.id ? null : perk.id) : null}
-                   className={`shrink-0 flex items-center gap-4 py-4 px-8 rounded-[30px] border transition-all cursor-pointer ${
-                     activePerkDetail === perk.id 
-                       ? 'bg-yellow-400/10 border-yellow-400/30 shadow-lg shadow-primary/10' 
-                       : perk.active ? 'bg-white/5 border-white/10' : 'bg-transparent border-white/5'
-                   }`}
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: perk.active ? 1 : 0.2, x: 0 }}
+                  transition={{ delay: 0.9 + i * 0.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() =>
+                    perk.active && perk.id
+                      ? setActivePerkDetail(
+                          activePerkDetail === perk.id ? null : perk.id,
+                        )
+                      : null
+                  }
+                  className={`shrink-0 flex items-center gap-4 py-4 px-8 rounded-[30px] border transition-all cursor-pointer ${
+                    activePerkDetail === perk.id
+                      ? "bg-yellow-400/10 border-yellow-400/30 shadow-lg shadow-primary/10"
+                      : perk.active
+                        ? "bg-white/5 border-white/10"
+                        : "bg-transparent border-white/5"
+                  }`}
                 >
-                   <div className={`${perk.active ? 'text-yellow-400' : 'text-white/10'}`}>
-                      <Icon name={perk.icon} size={22} />
-                   </div>
-                   <div className="text-left">
-                      <p className={`text-[11px] font-black uppercase tracking-tight whitespace-nowrap ${perk.active ? 'text-white' : 'text-white/10'}`}>{perk.label}</p>
-                      {perk.active && perk.id && (
-                        <div className="flex items-center gap-1 mt-0.5 opacity-20 group-hover:opacity-100 transition-opacity">
-                           <p className="text-[8px] font-black uppercase tracking-widest text-white/80">Detalhes</p>
-                           <Icon name={activePerkDetail === perk.id ? 'expand_less' : 'expand_more'} size={10} />
-                        </div>
-                      )}
-                   </div>
-                   {!perk.active && <Icon name="shield" size={14} className="text-white/10" />}
+                  <div
+                    className={`${perk.active ? "text-yellow-400" : "text-white/10"}`}
+                  >
+                    <Icon name={perk.icon} size={22} />
+                  </div>
+                  <div className="text-left">
+                    <p
+                      className={`text-[11px] font-black uppercase tracking-tight whitespace-nowrap ${perk.active ? "text-white" : "text-white/10"}`}
+                    >
+                      {perk.label}
+                    </p>
+                    {perk.active && perk.id && (
+                      <div className="flex items-center gap-1 mt-0.5 opacity-20 group-hover:opacity-100 transition-opacity">
+                        <p className="text-[8px] font-black uppercase tracking-widest text-white/80">
+                          Detalhes
+                        </p>
+                        <Icon
+                          name={
+                            activePerkDetail === perk.id
+                              ? "expand_less"
+                              : "expand_more"
+                          }
+                          size={10}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {!perk.active && (
+                    <Icon name="shield" size={14} className="text-white/10" />
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -6094,53 +9097,74 @@ function App() {
                 <motion.div
                   key={activePerkDetail}
                   initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
+                  animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden bg-white/5 rounded-[40px] border border-white/10 mx-2"
                 >
                   <div className="p-8">
-                    {activePerkDetail === 'frete' && (
+                    {activePerkDetail === "frete" && (
                       <div className="space-y-6">
                         <div className="flex items-center gap-4 mb-2">
-                           <div className="size-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                             <Icon name="local_shipping" size={20} />
-                           </div>
-                           <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Frete Grátis Ativado</h4>
+                          <div className="size-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                            <Icon name="local_shipping" size={20} />
+                          </div>
+                          <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">
+                            Frete Grátis Ativado
+                          </h4>
                         </div>
-                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Você possui frete grátis ilimitado em todos os pedidos acima de R$ 50,00. O benefício é aplicado automaticamente no seu checkout.</p>
+                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">
+                          Você possui frete grátis ilimitado em todos os pedidos
+                          acima de R$ 50,00. O benefício é aplicado
+                          automaticamente no seu checkout.
+                        </p>
                       </div>
                     )}
 
-                    {activePerkDetail === 'cashback' && (
+                    {activePerkDetail === "cashback" && (
                       <div className="space-y-6">
                         <div className="flex items-center gap-4 mb-2">
-                           <div className="size-10 rounded-2xl bg-yellow-400/10 flex items-center justify-center text-yellow-400">
-                             <Icon name="monetization_on" size={20} />
-                           </div>
-                           <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Cashback Elite</h4>
+                          <div className="size-10 rounded-2xl bg-yellow-400/10 flex items-center justify-center text-yellow-400">
+                            <Icon name="monetization_on" size={20} />
+                          </div>
+                          <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">
+                            Cashback Elite
+                          </h4>
                         </div>
                         <div className="bg-black/40 rounded-3xl p-6 border border-white/5 flex items-center justify-between">
-                           <div>
-                              <p className="text-[10px] text-white/20 font-black uppercase tracking-widest mb-1">Acumulado</p>
-                              <p className="text-3xl font-black text-white italic tracking-tighter">R$ {iziCashbackEarned.toFixed(2)}</p>
-                           </div>
-                           <div className="text-right">
-                              <p className="text-[10px] text-yellow-400 font-black uppercase tracking-widest leading-none">5% OFF</p>
-                              <p className="text-[8px] text-white/10 font-bold uppercase tracking-widest mt-1">Sempre ativo</p>
-                           </div>
+                          <div>
+                            <p className="text-[10px] text-white/20 font-black uppercase tracking-widest mb-1">
+                              Acumulado
+                            </p>
+                            <p className="text-3xl font-black text-white italic tracking-tighter">
+                              R$ {iziCashbackEarned.toFixed(2)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-widest leading-none">
+                              5% OFF
+                            </p>
+                            <p className="text-[8px] text-white/10 font-bold uppercase tracking-widest mt-1">
+                              Sempre ativo
+                            </p>
+                          </div>
                         </div>
                       </div>
                     )}
 
-                    {activePerkDetail === 'surprise' && (
+                    {activePerkDetail === "surprise" && (
                       <div className="space-y-6">
                         <div className="flex items-center gap-4 mb-2">
-                           <div className="size-10 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-400">
-                             <Icon name="card_giftcard" size={20} />
-                           </div>
-                           <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Izi Surprise</h4>
+                          <div className="size-10 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-400">
+                            <Icon name="card_giftcard" size={20} />
+                          </div>
+                          <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">
+                            Izi Surprise
+                          </h4>
                         </div>
-                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Como membro nível 3, você recebe mimos exclusivos todos os meses. Fique atento às suas notificações!</p>
+                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">
+                          Como membro nível 3, você recebe mimos exclusivos
+                          todos os meses. Fique atento às suas notificações!
+                        </p>
                       </div>
                     )}
                   </div>
@@ -6152,24 +9176,52 @@ function App() {
           <div className="mx-7 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
 
           {/* Integration Links */}
-          <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="py-10 px-7 space-y-2">
+          <motion.section
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1 }}
+            className="py-10 px-7 space-y-2"
+          >
             {[
-              { icon: 'military_tech', title: 'Izi Battle Pass', sub: 'Missões e Ranking Global', action: () => { setShowIziBlackCard(false); setSubView("quest_center"); }, active: true },
-              { icon: 'workspace_premium', title: 'Próximas Recompensas', sub: 'O que vem por aí', action: () => setShowMasterPerks(true), active: true },
+              {
+                icon: "military_tech",
+                title: "Izi Battle Pass",
+                sub: "Missões e Ranking Global",
+                action: () => {
+                  setShowIziBlackCard(false);
+                  setSubView("quest_center");
+                },
+                active: true,
+              },
+              {
+                icon: "workspace_premium",
+                title: "Próximas Recompensas",
+                sub: "O que vem por aí",
+                action: () => setShowMasterPerks(true),
+                active: true,
+              },
             ].map((item, i) => (
               <Fragment key={i}>
-                <motion.div whileTap={{ scale: 0.98 }} onClick={item.action} className="flex items-center justify-between py-6 px-6 rounded-[32px] bg-white/[0.03] border border-white/5 cursor-pointer group hover:bg-white/[0.05] transition-all">
+                <motion.div
+                  whileTap={{ scale: 0.98 }}
+                  onClick={item.action}
+                  className="flex items-center justify-between py-6 px-6 rounded-[32px] bg-white/[0.03] border border-white/5 cursor-pointer group hover:bg-white/[0.05] transition-all"
+                >
                   <div className="flex items-center gap-5">
                     <div className="size-12 rounded-2xl bg-yellow-400/[0.08] flex items-center justify-center text-yellow-400 group-hover:scale-110 transition-all shadow-lg border border-primary/10">
                       <Icon name={item.icon} size={24} />
                     </div>
                     <div>
-                      <h4 className="text-[14px] font-black text-white tracking-tight leading-none mb-1.5">{item.title}</h4>
-                      <p className="text-[9px] text-white/20 font-black uppercase tracking-[0.2em]">{item.sub}</p>
+                      <h4 className="text-[14px] font-black text-white tracking-tight leading-none mb-1.5">
+                        {item.title}
+                      </h4>
+                      <p className="text-[9px] text-white/20 font-black uppercase tracking-[0.2em]">
+                        {item.sub}
+                      </p>
                     </div>
                   </div>
                   <div className="size-10 rounded-full flex items-center justify-center text-white/20 group-hover:text-yellow-400 transition-colors">
-                     <Icon name="arrow_forward" size={16} />
+                    <Icon name="arrow_forward" size={16} />
                   </div>
                 </motion.div>
               </Fragment>
@@ -6177,7 +9229,9 @@ function App() {
           </motion.section>
 
           <div className="text-center pt-8 pb-4">
-            <p className="text-[8px] font-black text-white/[0.06] uppercase tracking-[0.5em] italic">Izi Black · Membro Fundador desde 2024</p>
+            <p className="text-[8px] font-black text-white/[0.06] uppercase tracking-[0.5em] italic">
+              Izi Black · Membro Fundador desde 2024
+            </p>
           </div>
         </main>
       </div>
@@ -6186,48 +9240,104 @@ function App() {
 
   const renderMasterPerks = () => {
     const perks = [
-      { icon: "delivery_dining",    title: "Taxa Zero",          desc: "Entrega grátis em toda a cidade, sem limite de pedidos" },
-      { icon: "bolt",              title: "Prioridade Máxima",  desc: "Seus pedidos são processados primeiro, sempre" },
-      { icon: "workspace_premium", title: "Suporte VIP 24/7",   desc: "Atendimento exclusivo via canal prioritário" },
-      { icon: "confirmation_number","title": "Cupons Exclusivos", desc: "Ofertas e descontos só para membros Black" },
-      { icon: "stars",             title: "Cashback Duplo",     desc: "2x mais pontos em todos os pedidos" },
-      { icon: "qr_code_scanner",   title: "Acesso Antecipado",  desc: "Novidades e lançamentos antes de todos" },
+      {
+        icon: "delivery_dining",
+        title: "Taxa Zero",
+        desc: "Entrega grátis em toda a cidade, sem limite de pedidos",
+      },
+      {
+        icon: "bolt",
+        title: "Prioridade Máxima",
+        desc: "Seus pedidos são processados primeiro, sempre",
+      },
+      {
+        icon: "workspace_premium",
+        title: "Suporte VIP 24/7",
+        desc: "Atendimento exclusivo via canal prioritário",
+      },
+      {
+        icon: "confirmation_number",
+        title: "Cupons Exclusivos",
+        desc: "Ofertas e descontos só para membros Black",
+      },
+      {
+        icon: "stars",
+        title: "Cashback Duplo",
+        desc: "2x mais pontos em todos os pedidos",
+      },
+      {
+        icon: "qr_code_scanner",
+        title: "Acesso Antecipado",
+        desc: "Novidades e lançamentos antes de todos",
+      },
     ];
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
         <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
-          <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          <button
+            onClick={() => setSubView("none")}
+            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+          >
+            <span className="material-symbols-outlined text-zinc-100">
+              arrow_back
+            </span>
           </button>
-          <h1 className="font-extrabold text-base text-white uppercase tracking-tight">IZI Black</h1>
+          <h1 className="font-extrabold text-base text-white uppercase tracking-tight">
+            IZI Black
+          </h1>
           <div className="size-10" />
         </header>
 
         <main className="px-5 py-8 space-y-10">
-
           {/* HERO */}
           <div className="space-y-2">
-            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em]">Privilégio Elite</p>
-            <h2 className="text-3xl font-extrabold text-white leading-tight tracking-tighter">O melhor do<br/>ecossistema IZI.</h2>
-            <p className="text-zinc-600 text-sm">Acesso completo a todos os benefícios premium da plataforma.</p>
+            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em]">
+              Privilégio Elite
+            </p>
+            <h2 className="text-3xl font-extrabold text-white leading-tight tracking-tighter">
+              O melhor do
+              <br />
+              ecossistema IZI.
+            </h2>
+            <p className="text-zinc-600 text-sm">
+              Acesso completo a todos os benefícios premium da plataforma.
+            </p>
           </div>
 
           {/* CTA */}
-          <button onClick={() => setSubView("izi_black_purchase")}
+          <button
+            onClick={() => setSubView("izi_black_purchase")}
             className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
-            style={{ background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)", color: "#000", boxShadow: "0 0 30px rgba(255,215,9,0.15)" }}>
+            style={{
+              background: "linear-gradient(135deg, #ffd709 0%, #efc900 100%)",
+              color: "#000",
+              boxShadow: "0 0 30px rgba(255,215,9,0.15)",
+            }}
+          >
             Assinar IZI Black
           </button>
 
           {/* BENEFÃƒCIOS */}
           <div>
-            <h3 className="font-extrabold text-base text-white uppercase tracking-tight mb-2">O que está incluso</h3>
+            <h3 className="font-extrabold text-base text-white uppercase tracking-tight mb-2">
+              O que está incluso
+            </h3>
             <div className="flex flex-col">
               {perks.map((p, i) => (
-                <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                  className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0">
-                  <span className="material-symbols-outlined text-yellow-400 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>{p.icon}</span>
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0"
+                >
+                  <span
+                    className="material-symbols-outlined text-yellow-400 text-xl"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    {p.icon}
+                  </span>
                   <div>
                     <p className="font-black text-sm text-white">{p.title}</p>
                     <p className="text-zinc-600 text-xs mt-0.5">{p.desc}</p>
@@ -6236,7 +9346,6 @@ function App() {
               ))}
             </div>
           </div>
-
         </main>
       </div>
     );
@@ -6246,11 +9355,16 @@ function App() {
   const [selectedOptions, setSelectedOptions] = useState<any>({});
   const [addonsLoading, setAddonsLoading] = useState(false);
 
-  const getGroupSelections = (groupId: string) => selectedOptions[groupId] || [];
+  const getGroupSelections = (groupId: string) =>
+    selectedOptions[groupId] || [];
   const getGroupSelectedCount = (groupId: string) =>
-    getGroupSelections(groupId).reduce((acc: number, item: any) => acc + (Number(item.quantity) || 0), 0);
+    getGroupSelections(groupId).reduce(
+      (acc: number, item: any) => acc + (Number(item.quantity) || 0),
+      0,
+    );
   const getOptionQuantity = (groupId: string, itemId: string) =>
-    getGroupSelections(groupId).find((item: any) => item.id === itemId)?.quantity || 0;
+    getGroupSelections(groupId).find((item: any) => item.id === itemId)
+      ?.quantity || 0;
   const getSelectedOptionEntries = (optionsState: any = selectedOptions) =>
     Object.entries(optionsState).flatMap(([groupId, items]: [string, any]) =>
       (Array.isArray(items) ? items : []).map((item: any) => ({
@@ -6259,15 +9373,20 @@ function App() {
         quantity: Number(item.quantity) || 0,
         unit_price: Number(item.price) || 0,
         total_price: (Number(item.price) || 0) * (Number(item.quantity) || 0),
-      }))
+      })),
     );
   const calculateAddonsPrice = (optionsState: any = selectedOptions) =>
-    getSelectedOptionEntries(optionsState).reduce((acc: number, item: any) => acc + item.total_price, 0);
+    getSelectedOptionEntries(optionsState).reduce(
+      (acc: number, item: any) => acc + item.total_price,
+      0,
+    );
   const buildCartItemDetails = (product: any, optionsState: any) => {
     const detailedOptions = getSelectedOptionEntries(optionsState)
       .filter((item: any) => item.quantity > 0)
       .map((item: any) => {
-        const group = productAddonGroups.find((addonGroup: any) => addonGroup.id === item.group_id);
+        const group = productAddonGroups.find(
+          (addonGroup: any) => addonGroup.id === item.group_id,
+        );
         return {
           ...item,
           group_name: group?.name || item.group_name || "Complemento",
@@ -6276,9 +9395,15 @@ function App() {
 
     return {
       addonDetails: detailedOptions,
-      addonSummaryText: detailedOptions.length > 0
-        ? detailedOptions.map((item: any) => `${item.group_name}: ${item.name} x${item.quantity} (R$ ${item.total_price.toFixed(2).replace(".", ",")})`).join("; ")
-        : "",
+      addonSummaryText:
+        detailedOptions.length > 0
+          ? detailedOptions
+              .map(
+                (item: any) =>
+                  `${item.group_name}: ${item.name} x${item.quantity} (R$ ${item.total_price.toFixed(2).replace(".", ",")})`,
+              )
+              .join("; ")
+          : "",
     };
   };
   const formatCartItemSummary = (item: any) =>
@@ -6290,9 +9415,16 @@ function App() {
     setSelectedOptions((prev: any) => {
       const current = Array.isArray(prev[group.id]) ? prev[group.id] : [];
       const maxAllowed = Math.max(Number(group.max_select) || 1, 1);
-      const currentCount = current.reduce((acc: number, currentItem: any) => acc + (Number(currentItem.quantity) || 0), 0);
-      const existingIndex = current.findIndex((currentItem: any) => currentItem.id === item.id);
-      const existingQuantity = existingIndex >= 0 ? Number(current[existingIndex].quantity) || 0 : 0;
+      const currentCount = current.reduce(
+        (acc: number, currentItem: any) =>
+          acc + (Number(currentItem.quantity) || 0),
+        0,
+      );
+      const existingIndex = current.findIndex(
+        (currentItem: any) => currentItem.id === item.id,
+      );
+      const existingQuantity =
+        existingIndex >= 0 ? Number(current[existingIndex].quantity) || 0 : 0;
       let nextGroup = [...current];
 
       if (delta > 0) {
@@ -6305,7 +9437,10 @@ function App() {
           }
 
           if (existingIndex >= 0) {
-            nextGroup[existingIndex] = { ...nextGroup[existingIndex], quantity: existingQuantity + 1 };
+            nextGroup[existingIndex] = {
+              ...nextGroup[existingIndex],
+              quantity: existingQuantity + 1,
+            };
           } else {
             nextGroup.push({ ...item, quantity: 1 });
           }
@@ -6317,7 +9452,10 @@ function App() {
         if (nextQuantity <= 0) {
           nextGroup.splice(existingIndex, 1);
         } else {
-          nextGroup[existingIndex] = { ...nextGroup[existingIndex], quantity: nextQuantity };
+          nextGroup[existingIndex] = {
+            ...nextGroup[existingIndex],
+            quantity: nextQuantity,
+          };
         }
       } else {
         return prev;
@@ -6334,7 +9472,10 @@ function App() {
     });
 
     if (didHitLimit) {
-      showToast(`Limite de ${group.max_select} seleções em ${group.name}`, "error");
+      showToast(
+        `Limite de ${group.max_select} seleções em ${group.name}`,
+        "error",
+      );
     }
   };
 
@@ -6342,46 +9483,49 @@ function App() {
     setAddonsLoading(true);
     try {
       const { data: groups, error: gErr } = await supabase
-        .from('product_options_groups_delivery')
-        .select('*')
-        .eq('product_id', productId)
-        .order('sort_order', { ascending: true });
-        
+        .from("product_options_groups_delivery")
+        .select("*")
+        .eq("product_id", productId)
+        .order("sort_order", { ascending: true });
+
       if (gErr) throw gErr;
       if (!groups || groups.length === 0) {
         setProductAddonGroups([]);
         return;
       }
 
-      const gIds = groups.map(g => g.id);
+      const gIds = groups.map((g) => g.id);
       const { data: items, error: iErr } = await supabase
-        .from('product_options_items_delivery')
-        .select('*')
-        .in('group_id', gIds)
-        .order('sort_order', { ascending: true });
-        
+        .from("product_options_items_delivery")
+        .select("*")
+        .in("group_id", gIds)
+        .order("sort_order", { ascending: true });
+
       if (iErr) throw iErr;
-      
-      const assembled = groups.map(g => ({
+
+      const assembled = groups.map((g) => ({
         ...g,
-        items: items?.filter(i => i.group_id === g.id) || []
+        items: items?.filter((i) => i.group_id === g.id) || [],
       }));
       setProductAddonGroups(assembled);
     } catch (err) {
-      console.error('Error fetching addons:', err);
+      console.error("Error fetching addons:", err);
     } finally {
       setAddonsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (subView === "product_detail" && (selectedItem?.id || selectedItem?.uid)) {
-       fetchProductAddons(selectedItem.id || selectedItem.uid);
-       setTempQuantity(1);
+    if (
+      subView === "product_detail" &&
+      (selectedItem?.id || selectedItem?.uid)
+    ) {
+      fetchProductAddons(selectedItem.id || selectedItem.uid);
+      setTempQuantity(1);
     } else if (subView !== "product_detail") {
-       setProductAddonGroups([]);
-       setSelectedOptions({});
-       setTempQuantity(1);
+      setProductAddonGroups([]);
+      setSelectedOptions({});
+      setTempQuantity(1);
     }
   }, [subView, selectedItem?.id, selectedItem?.uid]);
 
@@ -6400,16 +9544,24 @@ function App() {
       }
     };
 
-    const itemImage = selectedItem.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop";
+    const itemImage =
+      selectedItem.img ||
+      "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop";
     const addonsPrice = calculateAddonsPrice();
     const totalProductPrice = selectedItem.price + addonsPrice;
 
     return (
       <div className="absolute inset-0 z-[70] bg-zinc-950 flex flex-col hide-scrollbar overflow-y-auto">
-        <div className="relative w-full h-[40vh] bg-cover bg-center shrink-0" style={{ backgroundImage: "url('" + itemImage + "')" }}>
+        <div
+          className="relative w-full h-[40vh] bg-cover bg-center shrink-0"
+          style={{ backgroundImage: "url('" + itemImage + "')" }}
+        >
           <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-black/20"></div>
           <header className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between">
-            <button onClick={handleBack} className="flex items-center justify-center w-12 h-12 bg-black/40 backdrop-blur-md rounded-full text-white border border-white/20">
+            <button
+              onClick={handleBack}
+              className="flex items-center justify-center w-12 h-12 bg-black/40 backdrop-blur-md rounded-full text-white border border-white/20"
+            >
               <Icon name="arrow_back" />
             </button>
             <button className="w-12 h-12 bg-black/40 backdrop-blur-md rounded-full text-white border border-white/20">
@@ -6421,40 +9573,77 @@ function App() {
         <div className="relative z-10 -mt-12 bg-zinc-950 rounded-t-[40px] px-8 pt-10 pb-32 space-y-8 flex-1">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <h2 className="text-3xl font-black text-white tracking-tighter">{selectedItem.name}</h2>
+              <h2 className="text-3xl font-black text-white tracking-tighter">
+                {selectedItem.name}
+              </h2>
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-yellow-400 font-black text-2xl">R$ {selectedItem.price.toFixed(2).replace(".", ",")}</span>
+                <span className="text-yellow-400 font-black text-2xl">
+                  R$ {selectedItem.price.toFixed(2).replace(".", ",")}
+                </span>
               </div>
             </div>
             {selectedShop && (
-               <div className="bg-zinc-900 p-2 rounded-2xl border border-zinc-800 flex flex-col items-center min-w-[64px]">
-                  <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Loja</span>
-                  <div className="size-8 rounded-lg bg-cover bg-center" style={{ backgroundImage: "url('" + selectedShop.img + "')" }}></div>
-               </div>
+              <div className="bg-zinc-900 p-2 rounded-2xl border border-zinc-800 flex flex-col items-center min-w-[64px]">
+                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">
+                  Loja
+                </span>
+                <div
+                  className="size-8 rounded-lg bg-cover bg-center"
+                  style={{ backgroundImage: "url('" + selectedShop.img + "')" }}
+                ></div>
+              </div>
             )}
           </div>
 
           <div className="space-y-6">
             <section>
-              <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4">Descricao</h3>
-              <p className="text-zinc-400 text-base leading-relaxed">{selectedItem.desc || "Produto premium selecionado."}</p>
+              <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4">
+                Descricao
+              </h3>
+              <p className="text-zinc-400 text-base leading-relaxed">
+                {selectedItem.desc || "Produto premium selecionado."}
+              </p>
             </section>
 
             <div className="space-y-8">
               {productAddonGroups.map((group) => (
                 <section key={group.id} className="space-y-4">
-                  <h3 className="text-lg font-black text-white tracking-tight">{group.name}</h3>
+                  <h3 className="text-lg font-black text-white tracking-tight">
+                    {group.name}
+                  </h3>
                   <div className="space-y-3">
                     {group.items.map((item) => {
                       const qty = getOptionQuantity(group.id, item.id);
                       const isSelected = qty > 0;
                       return (
-                        <div key={item.id} onClick={() => updateOptionQuantity(group, item, 1)}
-                           className={"p-4 rounded-3xl border transition-all flex items-center justify-between cursor-pointer " + (isSelected ? 'bg-yellow-400 border-yellow-400' : 'bg-white/5 border-white/10')}>
+                        <div
+                          key={item.id}
+                          onClick={() => updateOptionQuantity(group, item, 1)}
+                          className={
+                            "p-4 rounded-3xl border transition-all flex items-center justify-between cursor-pointer " +
+                            (isSelected
+                              ? "bg-yellow-400 border-yellow-400"
+                              : "bg-white/5 border-white/10")
+                          }
+                        >
                           <div className="flex items-center gap-4">
-                            <span className={"font-bold " + (isSelected ? 'text-black' : 'text-white')}>{item.name}</span>
+                            <span
+                              className={
+                                "font-bold " +
+                                (isSelected ? "text-black" : "text-white")
+                              }
+                            >
+                              {item.name}
+                            </span>
                           </div>
-                          <span className={"font-black text-xs " + (isSelected ? 'text-black' : 'text-yellow-400')}>+ R$ {item.price.toFixed(2)}</span>
+                          <span
+                            className={
+                              "font-black text-xs " +
+                              (isSelected ? "text-black" : "text-yellow-400")
+                            }
+                          >
+                            + R$ {item.price.toFixed(2)}
+                          </span>
                         </div>
                       );
                     })}
@@ -6466,14 +9655,22 @@ function App() {
         </div>
 
         <div className="fixed bottom-10 left-8 right-8 z-[80]">
-          <button onClick={() => {
-            const items = Array.from({ length: tempQuantity }, (_, i) => ({ ...selectedItem, cartId: selectedItem.id + "-" + Date.now() + "-" + i }));
-            setCart([...cart, ...items]);
-            handleBack();
-            showToast("Item adicionado!", "success");
-          }} className="w-full bg-slate-900 text-white p-5 rounded-[28px] flex items-center justify-between">
+          <button
+            onClick={() => {
+              const items = Array.from({ length: tempQuantity }, (_, i) => ({
+                ...selectedItem,
+                cartId: selectedItem.id + "-" + Date.now() + "-" + i,
+              }));
+              setCart([...cart, ...items]);
+              handleBack();
+              showToast("Item adicionado!", "success");
+            }}
+            className="w-full bg-slate-900 text-white p-5 rounded-[28px] flex items-center justify-between"
+          >
             <span className="font-bold text-lg">Adicionar</span>
-            <span className="font-black text-xl bg-white/10 px-4 py-1.5 rounded-2xl">R$ {(totalProductPrice * tempQuantity).toFixed(2)}</span>
+            <span className="font-black text-xl bg-white/10 px-4 py-1.5 rounded-2xl">
+              R$ {(totalProductPrice * tempQuantity).toFixed(2)}
+            </span>
           </button>
         </div>
       </div>
@@ -6482,93 +9679,194 @@ function App() {
 
   const renderFreightWizard = () => {
     const categories = [
-      { id: 'fiorino', name: 'Fiorino/Furgão', desc: 'Cargas pequenas', icon: 'local_shipping' },
-      { id: 'caminhonete', name: 'Caminhonete', desc: 'Cargas médias', icon: 'terminal' },
-      { id: 'caminhao', name: 'Caminhão Baú', desc: 'Mudanças grandes', icon: 'truck_front' }
+      {
+        id: "fiorino",
+        name: "Fiorino/Furgão",
+        desc: "Cargas pequenas",
+        icon: "local_shipping",
+      },
+      {
+        id: "caminhonete",
+        name: "Caminhonete",
+        desc: "Cargas médias",
+        icon: "terminal",
+      },
+      {
+        id: "caminhao",
+        name: "Caminhão Baú",
+        desc: "Mudanças grandes",
+        icon: "truck_front",
+      },
     ];
 
     return (
       <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
         <div className="absolute inset-0 z-0 h-[35vh]">
-           <IziTrackingMap routePolyline={routePolyline} driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
-           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
+          <IziTrackingMap
+            routePolyline={routePolyline}
+            driverLoc={driverLocation}
+            userLoc={
+              userLocation?.lat
+                ? { lat: userLocation.lat, lng: userLocation.lng }
+                : null
+            }
+            onMyLocationClick={updateLocation}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
         </div>
 
         <header className="relative z-50 flex items-center justify-between px-6 pt-10">
-          <button onClick={() => setSubView("none")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
+          <button
+            onClick={() => setSubView("none")}
+            className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400"
+          >
             <Icon name="arrow_back" />
           </button>
           <div className="text-right">
-             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Frete & Mudança</h2>
-             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Logística Profissional</p>
+            <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
+              Frete & Mudança
+            </h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
+              Logística Profissional
+            </p>
           </div>
         </header>
 
         <main className="relative z-40 mt-auto bg-zinc-950 border-t border-white/5 flex flex-col h-[70vh] rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
-           <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
-              {mobilityStep === 1 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Roteiro do Frete</h3>
-                   </div>
-                   <div className="space-y-4">
-                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2">Origem</p>
-                         <AddressSearchInput 
-                           userCoords={userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                           initialValue={transitData.origin}
-                           placeholder="Origem..."
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white"
-                           onSelect={(p) => setTransitData({...transitData, origin: p.formatted_address || ""})}
-                         />
-                      </div>
-                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2">Destino</p>
-                         <AddressSearchInput 
-                           userCoords={userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                           initialValue={transitData.destination}
-                           placeholder="Destino..."
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white"
-                           onSelect={(p) => setTransitData({...transitData, destination: p.formatted_address || ""})}
-                         />
-                      </div>
-                   </div>
-                </motion.section>
-              )}
-
-              {mobilityStep === 2 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                   <div className="space-y-4">
-                      {categories.map((cat) => (
-                        <div key={cat.id} onClick={() => setTransitData({...transitData, vehicleCategory: cat.name})}
-                           className={'p-6 rounded-[35px] border-2 transition-all flex items-center gap-6 cursor-pointer'} style={{ borderColor: transitData.vehicleCategory === cat.name ? '#facc15' : 'transparent', background: transitData.vehicleCategory === cat.name ? 'rgba(250, 204, 21, 0.05)' : 'rgba(24, 24, 27, 0.4)' }}>
-                           <div className={'size-16 rounded-2xl flex items-center justify-center'} style={{ background: transitData.vehicleCategory === cat.name ? '#facc15' : '#27272a', color: transitData.vehicleCategory === cat.name ? '#000' : '#fff' }}>
-                              <span className="material-symbols-outlined text-4xl">{cat.icon}</span>
-                           </div>
-                           <div className="flex-1">
-                              <h4 className="font-black text-lg text-white">{cat.name}</h4>
-                              <p className="text-zinc-500 text-xs">{cat.desc}</p>
-                           </div>
-                        </div>
-                      ))}
-                   </div>
-                </motion.section>
-              )}
-           </div>
-           <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-zinc-950">
-              <button 
-                onClick={() => {
-                  if (mobilityStep < 2) setMobilityStep(2);
-                  else {
-                    setTransitData({...transitData, type: 'frete'});
-                    navigateSubView("mobility_payment");
-                  }
-                }}
-                className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px]"
+          <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
+            {mobilityStep === 1 && (
+              <motion.section
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-8"
               >
-                CONTINUAR
-              </button>
-           </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-white tracking-tight">
+                    Roteiro do Frete
+                  </h3>
+                </div>
+                <div className="space-y-4">
+                  <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2">
+                      Origem
+                    </p>
+                    <AddressSearchInput
+                      userCoords={
+                        userLocation
+                          ? { lat: userLocation.lat, lng: userLocation.lng }
+                          : null
+                      }
+                      initialValue={transitData.origin}
+                      placeholder="Origem..."
+                      className="w-full bg-transparent border-none p-0 text-base font-bold text-white"
+                      onSelect={(p) =>
+                        setTransitData({
+                          ...transitData,
+                          origin: p.formatted_address || "",
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2">
+                      Destino
+                    </p>
+                    <AddressSearchInput
+                      userCoords={
+                        userLocation
+                          ? { lat: userLocation.lat, lng: userLocation.lng }
+                          : null
+                      }
+                      initialValue={transitData.destination}
+                      placeholder="Destino..."
+                      className="w-full bg-transparent border-none p-0 text-base font-bold text-white"
+                      onSelect={(p) =>
+                        setTransitData({
+                          ...transitData,
+                          destination: p.formatted_address || "",
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </motion.section>
+            )}
+
+            {mobilityStep === 2 && (
+              <motion.section
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-8"
+              >
+                <div className="space-y-4">
+                  {categories.map((cat) => (
+                    <div
+                      key={cat.id}
+                      onClick={() =>
+                        setTransitData({
+                          ...transitData,
+                          vehicleCategory: cat.name,
+                        })
+                      }
+                      className={
+                        "p-6 rounded-[35px] border-2 transition-all flex items-center gap-6 cursor-pointer"
+                      }
+                      style={{
+                        borderColor:
+                          transitData.vehicleCategory === cat.name
+                            ? "#facc15"
+                            : "transparent",
+                        background:
+                          transitData.vehicleCategory === cat.name
+                            ? "rgba(250, 204, 21, 0.05)"
+                            : "rgba(24, 24, 27, 0.4)",
+                      }}
+                    >
+                      <div
+                        className={
+                          "size-16 rounded-2xl flex items-center justify-center"
+                        }
+                        style={{
+                          background:
+                            transitData.vehicleCategory === cat.name
+                              ? "#facc15"
+                              : "#27272a",
+                          color:
+                            transitData.vehicleCategory === cat.name
+                              ? "#000"
+                              : "#fff",
+                        }}
+                      >
+                        <span className="material-symbols-outlined text-4xl">
+                          {cat.icon}
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-black text-lg text-white">
+                          {cat.name}
+                        </h4>
+                        <p className="text-zinc-500 text-xs">{cat.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.section>
+            )}
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-zinc-950">
+            <button
+              onClick={() => {
+                if (mobilityStep < 2) setMobilityStep(2);
+                else {
+                  setTransitData({ ...transitData, type: "frete" });
+                  navigateSubView("mobility_payment");
+                }
+              }}
+              className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px]"
+            >
+              CONTINUAR
+            </button>
+          </div>
         </main>
       </div>
     );
@@ -6579,208 +9877,360 @@ function App() {
       <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
         {/* MAPA NO FUNDO */}
         <div className="absolute inset-0 z-0 h-[35vh]">
-           <IziTrackingMap routePolyline={routePolyline} driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
-           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
+          <IziTrackingMap
+            routePolyline={routePolyline}
+            driverLoc={driverLocation}
+            userLoc={
+              userLocation?.lat
+                ? { lat: userLocation.lat, lng: userLocation.lng }
+                : null
+            }
+            onMyLocationClick={updateLocation}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
         </div>
 
         <header className="relative z-50 flex items-center justify-between px-6 pt-10">
-          <button onClick={() => setSubView("none")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
+          <button
+            onClick={() => setSubView("none")}
+            className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400"
+          >
             <Icon name="arrow_back" />
           </button>
           <div className="text-right">
-             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Van & Grupos</h2>
-             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Capacidade & Conforto</p>
+            <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
+              Van & Grupos
+            </h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
+              Capacidade & Conforto
+            </p>
           </div>
         </header>
 
         <main className="relative z-40 mt-auto bg-zinc-950 border-t border-white/5 flex flex-col h-[70vh] rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
-           <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
-              {/* STEP 1: ROTEIRO E PARADAS */}
-              {mobilityStep === 1 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Roteiro da Viagem</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Vans podem fazer várias paradas para pegar passageiros.</p>
-                   </div>
-                   
-                   <div className="space-y-4">
-                      {/* ORIGEM */}
-                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Início da Rota</p>
-                         <AddressSearchInput 
-                           initialValue={transitData.origin}
-                           placeholder="Partida..."
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
-                           onSelect={(p) => setTransitData({...transitData, origin: p.formatted_address || ""})}
-                         />
+          <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
+            {/* STEP 1: ROTEIRO E PARADAS */}
+            {mobilityStep === 1 && (
+              <motion.section
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-8"
+              >
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-white tracking-tight">
+                    Roteiro da Viagem
+                  </h3>
+                  <p className="text-zinc-500 text-xs font-medium">
+                    Vans podem fazer várias paradas para pegar passageiros.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  {/* ORIGEM */}
+                  <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">
+                      Início da Rota
+                    </p>
+                    <AddressSearchInput
+                      initialValue={transitData.origin}
+                      placeholder="Partida..."
+                      className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                      onSelect={(p) =>
+                        setTransitData({
+                          ...transitData,
+                          origin: p.formatted_address || "",
+                        })
+                      }
+                    />
+                  </div>
+
+                  {/* STOPS */}
+                  {transitData.stops.map((stop, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5 flex items-center gap-3"
+                    >
+                      <div className="flex-1">
+                        <p className="text-[9px] font-black uppercase text-yellow-400/60 tracking-widest mb-2 ml-1">
+                          Parada Adicional
+                        </p>
+                        <AddressSearchInput
+                          initialValue={stop}
+                          placeholder="Recolher passageiro em..."
+                          className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                          onSelect={(p) => {
+                            const newStops = [...transitData.stops];
+                            newStops[idx] = p.formatted_address || "";
+                            setTransitData({ ...transitData, stops: newStops });
+                          }}
+                        />
                       </div>
-
-                      {/* STOPS */}
-                      {transitData.stops.map((stop, idx) => (
-                         <div key={idx} className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5 flex items-center gap-3">
-                             <div className="flex-1">
-                                <p className="text-[9px] font-black uppercase text-yellow-400/60 tracking-widest mb-2 ml-1">Parada Adicional</p>
-                                <AddressSearchInput 
-                                  initialValue={stop}
-                                  placeholder="Recolher passageiro em..."
-                                  className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
-                                  onSelect={(p) => {
-                                    const newStops = [...transitData.stops];
-                                    newStops[idx] = p.formatted_address || "";
-                                    setTransitData({...transitData, stops: newStops});
-                                  }}
-                                />
-                             </div>
-                             <button onClick={() => setTransitData({...transitData, stops: transitData.stops.filter((_, i) => i !== idx)})} className="p-2 text-zinc-600 hover:text-red-400">
-                                <span className="material-symbols-outlined">close</span>
-                             </button>
-                         </div>
-                      ))}
-
-                      <button onClick={() => setTransitData({...transitData, stops: [...transitData.stops, ""]})} className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-zinc-800 rounded-[30px] text-zinc-500 hover:text-yellow-400 transition-all">
-                         <span className="material-symbols-outlined text-lg">add</span>
-                         <span className="text-[10px] font-black uppercase tracking-widest">+ Adicionar Parada</span>
+                      <button
+                        onClick={() =>
+                          setTransitData({
+                            ...transitData,
+                            stops: transitData.stops.filter(
+                              (_, i) => i !== idx,
+                            ),
+                          })
+                        }
+                        className="p-2 text-zinc-600 hover:text-red-400"
+                      >
+                        <span className="material-symbols-outlined">close</span>
                       </button>
+                    </div>
+                  ))}
 
-                      {/* DESTINO */}
-                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Destino Final</p>
-                         <AddressSearchInput 
-                           initialValue={transitData.destination}
-                           placeholder="Onde termina a rota?"
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
-                           onSelect={(p) => setTransitData({...transitData, destination: p.formatted_address || ""})}
-                         />
-                      </div>
-                   </div>
-                </motion.section>
-              )}
-
-              {/* STEP 2: TIPO E PASSAGEIROS */}
-              {mobilityStep === 2 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-10">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Tipo de Viagem</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Defina a modalidade e a quantidade de pessoas.</p>
-                   </div>
-
-                   <div className="space-y-8">
-                      <div className="grid grid-cols-3 gap-3">
-                         {[
-                            { id: 'only_one_way', label: 'Ida', icon: 'trending_flat' },
-                            { id: 'round_trip', label: 'Ida e Volta', icon: 'sync' },
-                            { id: 'hourly', label: 'Diária', icon: 'schedule' }
-                         ].map((t) => (
-                           <div key={t.id} onClick={() => setTransitData({...transitData, tripType: t.id as any})}
-                             className={`p-4 rounded-3xl border-2 flex flex-col items-center gap-2 transition-all cursor-pointer ${transitData.tripType === t.id ? 'border-yellow-400 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}>
-                              <span className="material-symbols-outlined">{t.icon}</span>
-                              <span className="text-[10px] font-black uppercase">{t.label}</span>
-                           </div>
-                         ))}
-                      </div>
-
-                      <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
-                         <div className="flex items-center justify-between mb-4">
-                            <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">NÃ‚º de Passageiros</p>
-                            <span className="text-yellow-400 font-black text-lg">{transitData.passengers}</span>
-                         </div>
-                         <input 
-                           type="range" min="1" max="20" step="1"
-                           value={transitData.passengers}
-                           onChange={(e) => setTransitData({...transitData, passengers: parseInt(e.target.value)})}
-                           className="w-full accent-yellow-400 h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                         />
-                         <div className="flex justify-between mt-2 px-1">
-                            <span className="text-[9px] font-bold text-zinc-600">1 Pessoa</span>
-                            <span className="text-[9px] font-bold text-zinc-600">Até 20 Pessoas</span>
-                         </div>
-                      </div>
-                   </div>
-                </motion.section>
-              )}
-
-              {/* STEP 3: BAGAGEM E FINALIDADE */}
-              {mobilityStep === 3 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-10">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Bagagem & Finalidade</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Garanta que a Van tenha o bagageiro correto.</p>
-                   </div>
-
-                   <div className="space-y-8">
-                      <div className="space-y-4">
-                         <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Volume de Bagagem</p>
-                         <div className="grid grid-cols-3 gap-3">
-                            {[
-                               { id: 'none', label: 'Nenhuma', icon: 'check' },
-                               { id: 'medium', label: 'Bordo', icon: 'luggage' },
-                               { id: 'large', label: 'Grandes', icon: 'travel_luggage' }
-                            ].map((l) => (
-                              <div key={l.id} onClick={() => setTransitData({...transitData, luggage: l.id as any})}
-                                className={`p-4 rounded-3xl border-2 flex flex-col items-center gap-2 transition-all cursor-pointer ${transitData.luggage === l.id ? 'border-yellow-400 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}>
-                                 <span className="material-symbols-outlined">{l.icon}</span>
-                                 <span className="text-[10px] font-black uppercase">{l.label}</span>
-                              </div>
-                            ))}
-                         </div>
-                      </div>
-
-                      <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-3 ml-1">Finalidade / ObservaçÃƒµes</p>
-                         <textarea 
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 resize-none"
-                           rows={3}
-                           placeholder="Ex: Transfer para aeroporto, Evento corporativo..."
-                           value={transitData.purpose}
-                           onChange={(e) => setTransitData({...transitData, purpose: e.target.value})}
-                         />
-                      </div>
-                   </div>
-                </motion.section>
-              )}
-           </div>
-
-            {/* PREVIEW & PRICE */}
-            <div className="px-8 mt-2">
-              <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5 space-y-4">
-                 <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Estimativa do Fretamento</p>
-                    <span className="text-xl font-black text-white">
-                      R$ {(() => {
-                        const res = calculateVanPrice({
-                          baseFare: 80,
-                          distanceInKm: distanceValueKm || 1, // Usando distÃ¢ncia real da Routes API
-                          distanceRate: 3.5,
-                          stopCount: transitData.stops.length,
-                          stopRate: 15,
-                          isDaily: transitData.tripType === 'hourly',
-                          hours: 4,
-                          hourlyRate: 45
-                        });
-                        return res.totalPrice.toFixed(2).replace(".", ",");
-                      })()}
+                  <button
+                    onClick={() =>
+                      setTransitData({
+                        ...transitData,
+                        stops: [...transitData.stops, ""],
+                      })
+                    }
+                    className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-zinc-800 rounded-[30px] text-zinc-500 hover:text-yellow-400 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-lg">
+                      add
                     </span>
-                 </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest">
+                      + Adicionar Parada
+                    </span>
+                  </button>
+
+                  {/* DESTINO */}
+                  <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">
+                      Destino Final
+                    </p>
+                    <AddressSearchInput
+                      initialValue={transitData.destination}
+                      placeholder="Onde termina a rota?"
+                      className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                      onSelect={(p) =>
+                        setTransitData({
+                          ...transitData,
+                          destination: p.formatted_address || "",
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </motion.section>
+            )}
+
+            {/* STEP 2: TIPO E PASSAGEIROS */}
+            {mobilityStep === 2 && (
+              <motion.section
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-10"
+              >
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-white tracking-tight">
+                    Tipo de Viagem
+                  </h3>
+                  <p className="text-zinc-500 text-xs font-medium">
+                    Defina a modalidade e a quantidade de pessoas.
+                  </p>
+                </div>
+
+                <div className="space-y-8">
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      {
+                        id: "only_one_way",
+                        label: "Ida",
+                        icon: "trending_flat",
+                      },
+                      { id: "round_trip", label: "Ida e Volta", icon: "sync" },
+                      { id: "hourly", label: "Diária", icon: "schedule" },
+                    ].map((t) => (
+                      <div
+                        key={t.id}
+                        onClick={() =>
+                          setTransitData({
+                            ...transitData,
+                            tripType: t.id as any,
+                          })
+                        }
+                        className={`p-4 rounded-3xl border-2 flex flex-col items-center gap-2 transition-all cursor-pointer ${transitData.tripType === t.id ? "border-yellow-400 bg-yellow-400/5" : "border-zinc-800 bg-zinc-900/40 opacity-60"}`}
+                      >
+                        <span className="material-symbols-outlined">
+                          {t.icon}
+                        </span>
+                        <span className="text-[10px] font-black uppercase">
+                          {t.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">
+                        NÃ‚º de Passageiros
+                      </p>
+                      <span className="text-yellow-400 font-black text-lg">
+                        {transitData.passengers}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="20"
+                      step="1"
+                      value={transitData.passengers}
+                      onChange={(e) =>
+                        setTransitData({
+                          ...transitData,
+                          passengers: parseInt(e.target.value),
+                        })
+                      }
+                      className="w-full accent-yellow-400 h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <div className="flex justify-between mt-2 px-1">
+                      <span className="text-[9px] font-bold text-zinc-600">
+                        1 Pessoa
+                      </span>
+                      <span className="text-[9px] font-bold text-zinc-600">
+                        Até 20 Pessoas
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </motion.section>
+            )}
+
+            {/* STEP 3: BAGAGEM E FINALIDADE */}
+            {mobilityStep === 3 && (
+              <motion.section
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-10"
+              >
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-white tracking-tight">
+                    Bagagem & Finalidade
+                  </h3>
+                  <p className="text-zinc-500 text-xs font-medium">
+                    Garanta que a Van tenha o bagageiro correto.
+                  </p>
+                </div>
+
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">
+                      Volume de Bagagem
+                    </p>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { id: "none", label: "Nenhuma", icon: "check" },
+                        { id: "medium", label: "Bordo", icon: "luggage" },
+                        {
+                          id: "large",
+                          label: "Grandes",
+                          icon: "travel_luggage",
+                        },
+                      ].map((l) => (
+                        <div
+                          key={l.id}
+                          onClick={() =>
+                            setTransitData({
+                              ...transitData,
+                              luggage: l.id as any,
+                            })
+                          }
+                          className={`p-4 rounded-3xl border-2 flex flex-col items-center gap-2 transition-all cursor-pointer ${transitData.luggage === l.id ? "border-yellow-400 bg-yellow-400/5" : "border-zinc-800 bg-zinc-900/40 opacity-60"}`}
+                        >
+                          <span className="material-symbols-outlined">
+                            {l.icon}
+                          </span>
+                          <span className="text-[10px] font-black uppercase">
+                            {l.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
+                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-3 ml-1">
+                      Finalidade / ObservaçÃƒµes
+                    </p>
+                    <textarea
+                      className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 resize-none"
+                      rows={3}
+                      placeholder="Ex: Transfer para aeroporto, Evento corporativo..."
+                      value={transitData.purpose}
+                      onChange={(e) =>
+                        setTransitData({
+                          ...transitData,
+                          purpose: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </motion.section>
+            )}
+          </div>
+
+          {/* PREVIEW & PRICE */}
+          <div className="px-8 mt-2">
+            <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5 space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">
+                  Estimativa do Fretamento
+                </p>
+                <span className="text-xl font-black text-white">
+                  R${" "}
+                  {(() => {
+                    const res = calculateVanPrice({
+                      baseFare: 80,
+                      distanceInKm: distanceValueKm || 1, // Usando distÃ¢ncia real da Routes API
+                      distanceRate: 3.5,
+                      stopCount: transitData.stops.length,
+                      stopRate: 15,
+                      isDaily: transitData.tripType === "hourly",
+                      hours: 4,
+                      hourlyRate: 45,
+                    });
+                    return res.totalPrice.toFixed(2).replace(".", ",");
+                  })()}
+                </span>
               </div>
             </div>
+          </div>
 
-           {/* ACTIONS FOOTER */}
-           <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent">
-              <div className="flex gap-4">
-                 {mobilityStep > 1 && (
-                   <button onClick={() => setMobilityStep(prev => prev - 1)} className="size-16 rounded-[28px] bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-95 transition-all">
-                      <Icon name="chevron_left" />
-                   </button>
-                 )}
-                 <button 
-                   onClick={() => mobilityStep < 3 ? setMobilityStep(prev => prev + 1) : navigateSubView("mobility_payment")}
-                   className="flex-1 bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
-                 >
-                    <span className="uppercase tracking-widest">{mobilityStep < 3 ? "Próximo Passo" : "Ver Preço & Pedir"}</span>
-                    <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">{mobilityStep < 3 ? 'arrow_forward' : 'bolt'}</span>
-                 </button>
-              </div>
-           </div>
+          {/* ACTIONS FOOTER */}
+          <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent">
+            <div className="flex gap-4">
+              {mobilityStep > 1 && (
+                <button
+                  onClick={() => setMobilityStep((prev) => prev - 1)}
+                  className="size-16 rounded-[28px] bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-95 transition-all"
+                >
+                  <Icon name="chevron_left" />
+                </button>
+              )}
+              <button
+                onClick={() =>
+                  mobilityStep < 3
+                    ? setMobilityStep((prev) => prev + 1)
+                    : navigateSubView("mobility_payment")
+                }
+                className="flex-1 bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
+              >
+                <span className="uppercase tracking-widest">
+                  {mobilityStep < 3 ? "Próximo Passo" : "Ver Preço & Pedir"}
+                </span>
+                <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
+                  {mobilityStep < 3 ? "arrow_forward" : "bolt"}
+                </span>
+              </button>
+            </div>
+          </div>
         </main>
       </div>
     );
@@ -6788,35 +10238,82 @@ function App() {
 
   const renderExploreEnvios = () => {
     const services = [
-      { id: "express", name: "Izi Express", desc: "Documentos e pequenos volumes", icon: "bolt", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "express" }); navigateSubView("shipping_priority"); } },
-      { id: "coleta",  name: "Click e Retire Izi", desc: "Retirada rápida em lojas parceiras", icon: "inventory_2", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "coleta" }); navigateSubView("shipping_details"); } },
+      {
+        id: "express",
+        name: "Izi Express",
+        desc: "Documentos e pequenos volumes",
+        icon: "bolt",
+        action: () => {
+          setTransitData({
+            ...transitData,
+            type: "utilitario",
+            subService: "express",
+          });
+          navigateSubView("shipping_priority");
+        },
+      },
+      {
+        id: "coleta",
+        name: "Click e Retire Izi",
+        desc: "Retirada rápida em lojas parceiras",
+        icon: "inventory_2",
+        action: () => {
+          setTransitData({
+            ...transitData,
+            type: "utilitario",
+            subService: "coleta",
+          });
+          navigateSubView("shipping_details");
+        },
+      },
     ];
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
         <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+            <button
+              onClick={() => setSubView("none")}
+              className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+            >
+              <span className="material-symbols-outlined text-zinc-100">
+                arrow_back
+              </span>
             </button>
             <div>
-              <h1 className="text-lg font-black tracking-tight text-white">Envios</h1>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Entregamos qualquer coisa</p>
+              <h1 className="text-lg font-black tracking-tight text-white">
+                Envios
+              </h1>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">
+                Entregamos qualquer coisa
+              </p>
             </div>
           </div>
         </header>
         <main className="px-5 pt-8 flex flex-col gap-5 pb-10">
           {services.map((svc, i) => (
-            <motion.div key={svc.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-              onClick={svc.action} className="relative group bg-transparent border border-zinc-800 rounded-2xl p-6 cursor-pointer active:scale-[0.98] transition-all hover:border-yellow-400/20">
+            <motion.div
+              key={svc.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08 }}
+              onClick={svc.action}
+              className="relative group bg-transparent border border-zinc-800 rounded-2xl p-6 cursor-pointer active:scale-[0.98] transition-all hover:border-yellow-400/20"
+            >
               <div className="flex items-center gap-5">
                 <div className="size-14 rounded-2xl bg-yellow-400/10 border border-yellow-400/10 flex items-center justify-center shrink-0 group-hover:bg-yellow-400/20 transition-colors">
-                  <span className="material-symbols-outlined text-2xl text-yellow-400">{svc.icon}</span>
+                  <span className="material-symbols-outlined text-2xl text-yellow-400">
+                    {svc.icon}
+                  </span>
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-black text-base text-white group-hover:text-yellow-400 transition-colors">{svc.name}</h3>
+                  <h3 className="font-black text-base text-white group-hover:text-yellow-400 transition-colors">
+                    {svc.name}
+                  </h3>
                   <p className="text-zinc-500 text-xs mt-0.5">{svc.desc}</p>
                 </div>
-                <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors">chevron_right</span>
+                <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors">
+                  chevron_right
+                </span>
               </div>
             </motion.div>
           ))}
@@ -6827,31 +10324,76 @@ function App() {
 
   const renderIziExpressPriority = () => {
     const priorities = [
-      { id: "turbo", name: "Izi Turbo Flash", desc: "Entrega ultra-rápida até 15 min", time: "15 min", icon: "bolt", color: "text-amber-400", bg: "bg-amber-400/10" },
-      { id: "light", name: "Izi Light Flash", desc: "Entrega agilizada até 30 min", time: "30 min", icon: "electric_bolt", color: "text-yellow-400", bg: "bg-yellow-400/10" },
-      { id: "normal", name: "Izi Express", desc: "Categoria normal", time: "1 hr", icon: "moped", color: "text-zinc-400", bg: "bg-zinc-800" },
-      { id: "scheduled", name: "Izi Agendado", desc: "Você escolhe data e horário", time: "Agendar", icon: "event", color: "text-blue-400", bg: "bg-blue-400/10" },
+      {
+        id: "turbo",
+        name: "Izi Turbo Flash",
+        desc: "Entrega ultra-rápida até 15 min",
+        time: "15 min",
+        icon: "bolt",
+        color: "text-amber-400",
+        bg: "bg-amber-400/10",
+      },
+      {
+        id: "light",
+        name: "Izi Light Flash",
+        desc: "Entrega agilizada até 30 min",
+        time: "30 min",
+        icon: "electric_bolt",
+        color: "text-yellow-400",
+        bg: "bg-yellow-400/10",
+      },
+      {
+        id: "normal",
+        name: "Izi Express",
+        desc: "Categoria normal",
+        time: "1 hr",
+        icon: "moped",
+        color: "text-zinc-400",
+        bg: "bg-zinc-800",
+      },
+      {
+        id: "scheduled",
+        name: "Izi Agendado",
+        desc: "Você escolhe data e horário",
+        time: "Agendar",
+        icon: "event",
+        color: "text-blue-400",
+        bg: "bg-blue-400/10",
+      },
     ];
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-white flex flex-col hide-scrollbar overflow-y-auto pb-40">
         <header className="px-6 py-8 flex items-center justify-between gap-4 sticky top-0 bg-black/80 backdrop-blur-xl z-50">
-          <button onClick={() => navigateSubView("explore_envios")} className="size-12 rounded-2xl bg-zinc-900 shadow-xl flex items-center justify-center text-white active:scale-90 transition-all border border-zinc-800">
+          <button
+            onClick={() => navigateSubView("explore_envios")}
+            className="size-12 rounded-2xl bg-zinc-900 shadow-xl flex items-center justify-center text-white active:scale-90 transition-all border border-zinc-800"
+          >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
           <div className="text-right">
-            <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Prioridade</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 font-jakarta">Escolha a velocidade</p>
+            <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
+              Prioridade
+            </h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 font-jakarta">
+              Escolha a velocidade
+            </p>
           </div>
         </header>
 
         <main className="px-6 space-y-6 mt-4">
           <div className="text-center mb-8">
             <div className="size-20 rounded-[30px] bg-yellow-400/10 flex items-center justify-center mx-auto mb-4 border border-yellow-400/20 shadow-[0_0_40px_-10px_rgba(255,215,9,0.3)]">
-              <span className="material-symbols-outlined text-4xl text-yellow-400">speed</span>
+              <span className="material-symbols-outlined text-4xl text-yellow-400">
+                speed
+              </span>
             </div>
-            <h3 className="text-lg font-black text-white tracking-tight">Qual a sua urgência?</h3>
-            <p className="text-zinc-500 text-xs font-medium mt-1">Selecione o nível de prioridade para sua entrega</p>
+            <h3 className="text-lg font-black text-white tracking-tight">
+              Qual a sua urgência?
+            </h3>
+            <p className="text-zinc-500 text-xs font-medium mt-1">
+              Selecione o nível de prioridade para sua entrega
+            </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4">
@@ -6862,28 +10404,42 @@ function App() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.1 }}
                 onClick={() => {
-                  setTransitData({ 
-                    ...transitData, 
+                  setTransitData({
+                    ...transitData,
                     priority: p.id as any,
-                    scheduled: p.id === "scheduled"
+                    scheduled: p.id === "scheduled",
                   });
                   navigateSubView("shipping_details");
                 }}
                 className={`p-6 rounded-[35px] border cursor-pointer active:scale-[0.98] transition-all flex items-center gap-5 ${
-                  transitData.priority === p.id 
-                    ? "bg-transparent border-yellow-400/50 shadow-2xl shadow-yellow-400/5" 
+                  transitData.priority === p.id
+                    ? "bg-transparent border-yellow-400/50 shadow-2xl shadow-yellow-400/5"
                     : "bg-transparent border-zinc-800 hover:border-zinc-700"
                 }`}
               >
-                <div className={`size-14 rounded-2xl ${p.bg} flex items-center justify-center`}>
-                  <span className={`material-symbols-outlined text-2xl ${p.color}`}>{p.icon}</span>
+                <div
+                  className={`size-14 rounded-2xl ${p.bg} flex items-center justify-center`}
+                >
+                  <span
+                    className={`material-symbols-outlined text-2xl ${p.color}`}
+                  >
+                    {p.icon}
+                  </span>
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-0.5">
-                    <h4 className="font-black text-white text-base tracking-tight">{p.name}</h4>
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${p.color}`}>{p.time}</span>
+                    <h4 className="font-black text-white text-base tracking-tight">
+                      {p.name}
+                    </h4>
+                    <span
+                      className={`text-[10px] font-black uppercase tracking-widest ${p.color}`}
+                    >
+                      {p.time}
+                    </span>
                   </div>
-                  <p className="text-zinc-500 text-[11px] font-medium leading-tight">{p.desc}</p>
+                  <p className="text-zinc-500 text-[11px] font-medium leading-tight">
+                    {p.desc}
+                  </p>
                 </div>
               </motion.div>
             ))}
@@ -6891,10 +10447,13 @@ function App() {
 
           <div className="bg-yellow-400/5 border border-yellow-400/10 p-6 rounded-[35px] flex items-center gap-4 mt-8">
             <div className="size-10 rounded-full bg-yellow-400/20 flex items-center justify-center shrink-0">
-               <span className="material-symbols-outlined text-yellow-400 text-sm">info</span>
+              <span className="material-symbols-outlined text-yellow-400 text-sm">
+                info
+              </span>
             </div>
             <p className="text-[10px] text-yellow-400/80 font-medium leading-relaxed">
-              Os tempos de entrega são estimativas baseadas na disponibilidade de entregadores próximos no momento da confirmação.
+              Os tempos de entrega são estimativas baseadas na disponibilidade
+              de entregadores próximos no momento da confirmação.
             </p>
           </div>
         </main>
@@ -6916,7 +10475,9 @@ function App() {
             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
               Detalhes
             </h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Informacoes de Entrega</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
+              Informacoes de Entrega
+            </p>
           </div>
         </header>
 
@@ -6925,53 +10486,103 @@ function App() {
             <section className="space-y-6">
               <div className="flex items-center gap-4 px-2">
                 <Icon name="location_on" />
-                <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Roteiro de Entrega</h3>
+                <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+                  Roteiro de Entrega
+                </h3>
               </div>
-              
+
               <div className="space-y-4">
                 {/* ORIGEM (COLETA) */}
                 <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl flex flex-col gap-2">
                   <div className="flex justify-between items-center mb-1 ml-1">
-                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em]">Origem (Onde Coletar?)</p>
-                     <button 
-                       onClick={() => updateLocation()}
-                       disabled={userLocation.loading}
-                       className="flex items-center gap-1.5 text-yellow-400 hover:text-yellow-300 transition-colors active:scale-95 px-2 py-1 rounded-full bg-yellow-400/5 disabled:opacity-50"
-                     >
+                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em]">
+                      Origem (Onde Coletar?)
+                    </p>
+                    <button
+                      onClick={() => updateLocation()}
+                      disabled={userLocation.loading}
+                      className="flex items-center gap-1.5 text-yellow-400 hover:text-yellow-300 transition-colors active:scale-95 px-2 py-1 rounded-full bg-yellow-400/5 disabled:opacity-50"
+                    >
+                      {userLocation.loading ? (
+                        <svg
+                          className="animate-spin"
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            strokeOpacity="0.2"
+                          />
+                          <path
+                            d="M22 12A10 10 0 0 0 12 2"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      ) : (
+                        <span className="material-symbols-outlined text-xs">
+                          my_location
+                        </span>
+                      )}
+                      <span className="text-[8px] font-black uppercase tracking-widest">
                         {userLocation.loading
-                          ? <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.2" /><path d="M22 12A10 10 0 0 0 12 2" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
-                          : <span className="material-symbols-outlined text-xs">my_location</span>
-                        }
-                        <span className="text-[8px] font-black uppercase tracking-widest">{userLocation.loading ? 'Buscando...' : 'Localização Atual'}</span>
-                     </button>
+                          ? "Buscando..."
+                          : "Localização Atual"}
+                      </span>
+                    </button>
                   </div>
-                  <AddressSearchInput 
+                  <AddressSearchInput
                     initialValue={transitData.origin}
                     placeholder="Endereço de partida..."
                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white placeholder:text-zinc-600"
-                    userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                    onSelect={(place) => setTransitData(prev => ({ ...prev, origin: place.formatted_address || "" }))}
+                    userCoords={
+                      userLocation.lat
+                        ? { lat: userLocation.lat, lng: userLocation.lng }
+                        : null
+                    }
+                    onSelect={(place) =>
+                      setTransitData((prev) => ({
+                        ...prev,
+                        origin: place.formatted_address || "",
+                      }))
+                    }
                   />
                 </div>
 
                 {/* DESTINO */}
                 <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Para onde levar?</p>
-                   <AddressSearchInput 
-                     initialValue={transitData.destination}
-                     placeholder="Digite o endereço de destino..."
-                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white placeholder:text-zinc-600"
-                     userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                     onSelect={(place) => {
-                       const dest = place.formatted_address || "";
-                       setTransitData(prev => ({ ...prev, destination: dest }));
-                       if (dest && transitData.origin) {
-                         setDistancePrices({});
-                         setRouteDistance("");
-                         calculateDistancePrices(transitData.origin, dest);
-                       }
-                     }}
-                   />
+                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">
+                    Para onde levar?
+                  </p>
+                  <AddressSearchInput
+                    initialValue={transitData.destination}
+                    placeholder="Digite o endereço de destino..."
+                    className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white placeholder:text-zinc-600"
+                    userCoords={
+                      userLocation.lat
+                        ? { lat: userLocation.lat, lng: userLocation.lng }
+                        : null
+                    }
+                    onSelect={(place) => {
+                      const dest = place.formatted_address || "";
+                      setTransitData((prev) => ({
+                        ...prev,
+                        destination: dest,
+                      }));
+                      if (dest && transitData.origin) {
+                        setDistancePrices({});
+                        setRouteDistance("");
+                        calculateDistancePrices(transitData.origin, dest);
+                      }
+                    }}
+                  />
                 </div>
               </div>
             </section>
@@ -6980,39 +10591,65 @@ function App() {
           <section className="space-y-6">
             <div className="flex items-center gap-4 px-2">
               <Icon name="swap_horiz" />
-              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Enviar ou Receber?</h3>
+              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+                Enviar ou Receber?
+              </h3>
             </div>
-            
+
             <div className="space-y-4">
               <div className="flex flex-col gap-3 mb-4">
                 {transitData.subService === "express" ? (
                   <div className="grid grid-cols-2 gap-3">
-                    <button 
-                      onClick={() => setTransitData({...transitData, operationType: "enviar"})}
+                    <button
+                      onClick={() =>
+                        setTransitData({
+                          ...transitData,
+                          operationType: "enviar",
+                        })
+                      }
                       className={`py-6 rounded-[30px] border-2 transition-all flex flex-col items-center gap-2 ${transitData.operationType === "enviar" ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700"}`}
                     >
-                      <span className="material-symbols-outlined text-2xl">outbox</span>
-                      <span className="text-[9px] font-black uppercase tracking-widest text-center">Vou Enviar Algo</span>
+                      <span className="material-symbols-outlined text-2xl">
+                        outbox
+                      </span>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-center">
+                        Vou Enviar Algo
+                      </span>
                     </button>
-                    <button 
-                      onClick={() => setTransitData({...transitData, operationType: "retirar"})}
+                    <button
+                      onClick={() =>
+                        setTransitData({
+                          ...transitData,
+                          operationType: "retirar",
+                        })
+                      }
                       className={`py-6 rounded-[30px] border-2 transition-all flex flex-col items-center gap-2 ${transitData.operationType === "retirar" ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700"}`}
                     >
-                      <span className="material-symbols-outlined text-2xl">store</span>
-                      <span className="text-[9px] font-black uppercase tracking-widest text-center px-2">Retirar em Loja/Casa</span>
+                      <span className="material-symbols-outlined text-2xl">
+                        store
+                      </span>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-center px-2">
+                        Retirar em Loja/Casa
+                      </span>
                     </button>
                   </div>
                 ) : (
-                  <button 
+                  <button
                     onClick={() => setShowLojistasModal(true)}
                     className="w-full py-8 rounded-[35px] border-2 bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20 flex flex-col items-center gap-2 active:scale-[0.98] transition-all group"
                   >
-                    <span className="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform">storefront</span>
+                    <span className="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform">
+                      storefront
+                    </span>
                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-center">
-                      {transitData.receiverName ? `Loja: ${transitData.receiverName}` : "Selecionar Loja Parceira"}
+                      {transitData.receiverName
+                        ? `Loja: ${transitData.receiverName}`
+                        : "Selecionar Loja Parceira"}
                     </span>
                     {transitData.receiverName && (
-                      <p className="text-[8px] font-bold opacity-70 uppercase tracking-widest">{transitData.origin}</p>
+                      <p className="text-[8px] font-bold opacity-70 uppercase tracking-widest">
+                        {transitData.origin}
+                      </p>
                     )}
                   </button>
                 )}
@@ -7021,110 +10658,174 @@ function App() {
               {transitData.subService === "express" && (
                 <>
                   <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nome de quem recebe</p>
-                     <input 
-                       type="text" 
-                       value={transitData.receiverName}
-                       onChange={(e) => setTransitData({...transitData, receiverName: e.target.value})}
-                       placeholder="Ex: João Silva"
-                       className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-white"
-                     />
+                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">
+                      Nome de quem recebe
+                    </p>
+                    <input
+                      type="text"
+                      value={transitData.receiverName}
+                      onChange={(e) =>
+                        setTransitData({
+                          ...transitData,
+                          receiverName: e.target.value,
+                        })
+                      }
+                      placeholder="Ex: João Silva"
+                      className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-white"
+                    />
                   </div>
 
                   <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Telefone de Contato</p>
-                     <input 
-                       type="tel" 
-                       value={transitData.receiverPhone}
-                       onChange={(e) => setTransitData({...transitData, receiverPhone: e.target.value})}
-                       placeholder="(11) 99999-9999"
-                       className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-white"
-                     />
+                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">
+                      Telefone de Contato
+                    </p>
+                    <input
+                      type="tel"
+                      value={transitData.receiverPhone}
+                      onChange={(e) =>
+                        setTransitData({
+                          ...transitData,
+                          receiverPhone: e.target.value,
+                        })
+                      }
+                      placeholder="(11) 99999-9999"
+                      className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-white"
+                    />
                   </div>
                 </>
               )}
 
               {transitData.subService === "coleta" && (
                 <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl ring-1 ring-yellow-400/10">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Endereço de Entrega (Destino)</p>
-                   <AddressSearchInput 
-                     initialValue={transitData.destination}
-                     placeholder="Onde devemos entregar?"
-                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white placeholder:text-zinc-600"
-                     userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                     onSelect={(place) => {
-                       const dest = place.formatted_address || "";
-                       setTransitData(prev => ({ ...prev, destination: dest }));
-                       if (dest && transitData.origin) {
-                         calculateDistancePrices(transitData.origin, dest);
-                       }
-                     }}
-                   />
+                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">
+                    Endereço de Entrega (Destino)
+                  </p>
+                  <AddressSearchInput
+                    initialValue={transitData.destination}
+                    placeholder="Onde devemos entregar?"
+                    className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white placeholder:text-zinc-600"
+                    userCoords={
+                      userLocation.lat
+                        ? { lat: userLocation.lat, lng: userLocation.lng }
+                        : null
+                    }
+                    onSelect={(place) => {
+                      const dest = place.formatted_address || "";
+                      setTransitData((prev) => ({
+                        ...prev,
+                        destination: dest,
+                      }));
+                      if (dest && transitData.origin) {
+                        calculateDistancePrices(transitData.origin, dest);
+                      }
+                    }}
+                  />
                 </div>
               )}
             </div>
           </section>
 
           {transitData.subService === "coleta" && (
-            <motion.section initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+            <motion.section
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="space-y-6"
+            >
               <div className="flex items-center gap-4 px-2">
                 <Icon name="business" />
-                <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Detalhes do Parceiro Izi</h3>
+                <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+                  Detalhes do Parceiro Izi
+                </h3>
               </div>
               <div className="space-y-4">
                 <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nome do Parceiro / Loja</p>
-                   <input 
-                     type="text" 
-                     value={transitData.receiverName}
-                     onChange={(e) => setTransitData({...transitData, receiverName: e.target.value})}
-                     placeholder="Ex: Hub Logístico Izi"
-                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
-                   />
+                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">
+                    Nome do Parceiro / Loja
+                  </p>
+                  <input
+                    type="text"
+                    value={transitData.receiverName}
+                    onChange={(e) =>
+                      setTransitData({
+                        ...transitData,
+                        receiverName: e.target.value,
+                      })
+                    }
+                    placeholder="Ex: Hub Logístico Izi"
+                    className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                  />
                 </div>
 
                 <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Telefone do Parceiro</p>
-                   <input 
-                     type="tel" 
-                     value={transitData.receiverPhone}
-                     onChange={(e) => setTransitData({...transitData, receiverPhone: e.target.value})}
-                     placeholder="(11) 99999-9999"
-                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
-                   />
+                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">
+                    Telefone do Parceiro
+                  </p>
+                  <input
+                    type="tel"
+                    value={transitData.receiverPhone}
+                    onChange={(e) =>
+                      setTransitData({
+                        ...transitData,
+                        receiverPhone: e.target.value,
+                      })
+                    }
+                    placeholder="(11) 99999-9999"
+                    className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                  />
                 </div>
 
                 <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Cód. do Pedido / Retirada</p>
-                   <input 
-                     type="text" 
-                     value={transitData.pickupCode}
-                     onChange={(e) => setTransitData({...transitData, pickupCode: e.target.value})}
-                     placeholder="Ex: ABC123456"
-                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
-                   />
+                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">
+                    Cód. do Pedido / Retirada
+                  </p>
+                  <input
+                    type="text"
+                    value={transitData.pickupCode}
+                    onChange={(e) =>
+                      setTransitData({
+                        ...transitData,
+                        pickupCode: e.target.value,
+                      })
+                    }
+                    placeholder="Ex: ABC123456"
+                    className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nota Fiscal (NF)</p>
-                     <input 
-                       type="text" 
-                       value={transitData.invoiceNumber}
-                       onChange={(e) => setTransitData({...transitData, invoiceNumber: e.target.value})}
-                       placeholder="Opcional"
-                       className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
-                     />
+                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">
+                      Nota Fiscal (NF)
+                    </p>
+                    <input
+                      type="text"
+                      value={transitData.invoiceNumber}
+                      onChange={(e) =>
+                        setTransitData({
+                          ...transitData,
+                          invoiceNumber: e.target.value,
+                        })
+                      }
+                      placeholder="Opcional"
+                      className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                    />
                   </div>
                   <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Setor / Guichê</p>
-                     <input 
-                       type="text" 
-                       value={transitData.pickupSector}
-                       onChange={(e) => setTransitData({...transitData, pickupSector: e.target.value})}
-                       placeholder="Piso / Corredor"
-                       className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
-                     />
+                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">
+                      Setor / Guichê
+                    </p>
+                    <input
+                      type="text"
+                      value={transitData.pickupSector}
+                      onChange={(e) =>
+                        setTransitData({
+                          ...transitData,
+                          pickupSector: e.target.value,
+                        })
+                      }
+                      placeholder="Piso / Corredor"
+                      className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                    />
                   </div>
                 </div>
               </div>
@@ -7134,55 +10835,95 @@ function App() {
           <section className="space-y-6">
             <div className="flex items-center gap-4 px-2">
               <Icon name="inventory_2" />
-              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Detalhes da Retirada</h3>
+              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+                Detalhes da Retirada
+              </h3>
             </div>
 
             <div className="space-y-4">
-               <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Descrição do Item</p>
-                  <textarea 
-                    value={transitData.packageDesc}
-                    onChange={(e) => setTransitData({...transitData, packageDesc: e.target.value})}
-                    placeholder="Ex: 2 Camisetas, 1 Par de Tênis..."
-                    rows={3}
-                    className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white resize-none"
-                  />
-               </div>
+              <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">
+                  Descrição do Item
+                </p>
+                <textarea
+                  value={transitData.packageDesc}
+                  onChange={(e) =>
+                    setTransitData({
+                      ...transitData,
+                      packageDesc: e.target.value,
+                    })
+                  }
+                  placeholder="Ex: 2 Camisetas, 1 Par de Tênis..."
+                  rows={3}
+                  className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white resize-none"
+                />
+              </div>
 
-               <div className="grid grid-cols-2 gap-4">
-                  {['Pequeno (até 5kg)', 'Médio (até 15kg)', 'Grande (até 30kg)', 'Pesado (+30kg)'].map((weight) => (
-                    <button
-                      key={weight}
-                      onClick={() => setTransitData({...transitData, weightClass: weight})}
-                      className={`py-4 rounded-[25px] text-[10px] font-black uppercase tracking-widest border-2 transition-all ${transitData.weightClass === weight ? 'bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20' : 'bg-transparent border-zinc-800 text-zinc-500'}`}
-                    >
-                      {weight}
-                    </button>
-                  ))}
-               </div>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  "Pequeno (até 5kg)",
+                  "Médio (até 15kg)",
+                  "Grande (até 30kg)",
+                  "Pesado (+30kg)",
+                ].map((weight) => (
+                  <button
+                    key={weight}
+                    onClick={() =>
+                      setTransitData({ ...transitData, weightClass: weight })
+                    }
+                    className={`py-4 rounded-[25px] text-[10px] font-black uppercase tracking-widest border-2 transition-all ${transitData.weightClass === weight ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-800 text-zinc-500"}`}
+                  >
+                    {weight}
+                  </button>
+                ))}
+              </div>
             </div>
           </section>
 
           {transitData.scheduled && (
-            <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <motion.section
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
               <div className="flex items-center gap-4 px-2">
                 <Icon name="event_upcoming" />
-                <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Agendamento da Coleta</h3>
+                <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+                  Agendamento da Coleta
+                </h3>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div onClick={() => setShowDatePicker(true)} className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl cursor-pointer active:scale-95 transition-all">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Data</p>
-                   <div className="flex items-center justify-between">
-                     <span className="text-base font-bold text-white">{transitData.scheduledDate || "Selecionar data"}</span>
-                     <span className="material-symbols-outlined text-yellow-400 text-sm">calendar_month</span>
-                   </div>
+                <div
+                  onClick={() => setShowDatePicker(true)}
+                  className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl cursor-pointer active:scale-95 transition-all"
+                >
+                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">
+                    Data
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-base font-bold text-white">
+                      {transitData.scheduledDate || "Selecionar data"}
+                    </span>
+                    <span className="material-symbols-outlined text-yellow-400 text-sm">
+                      calendar_month
+                    </span>
+                  </div>
                 </div>
-                <div onClick={() => setShowTimePicker(true)} className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl cursor-pointer active:scale-95 transition-all">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Horário</p>
-                   <div className="flex items-center justify-between">
-                     <span className="text-base font-bold text-white">{transitData.scheduledTime || "Selecionar hora"}</span>
-                     <span className="material-symbols-outlined text-yellow-400 text-sm">schedule</span>
-                   </div>
+                <div
+                  onClick={() => setShowTimePicker(true)}
+                  className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl cursor-pointer active:scale-95 transition-all"
+                >
+                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">
+                    Horário
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-base font-bold text-white">
+                      {transitData.scheduledTime || "Selecionar hora"}
+                    </span>
+                    <span className="material-symbols-outlined text-yellow-400 text-sm">
+                      schedule
+                    </span>
+                  </div>
                 </div>
               </div>
             </motion.section>
@@ -7191,41 +10932,65 @@ function App() {
           {/* LOJISTAS MODAL */}
           <AnimatePresence>
             {showLojistasModal && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[250] bg-black/98 backdrop-blur-2xl flex flex-col p-6">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[250] bg-black/98 backdrop-blur-2xl flex flex-col p-6"
+              >
                 <header className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-black text-white">Lojas Parceiras</h3>
-                  <button onClick={() => setShowLojistasModal(false)} className="size-10 rounded-xl bg-zinc-900 flex items-center justify-center text-zinc-400">
+                  <h3 className="text-xl font-black text-white">
+                    Lojas Parceiras
+                  </h3>
+                  <button
+                    onClick={() => setShowLojistasModal(false)}
+                    className="size-10 rounded-xl bg-zinc-900 flex items-center justify-center text-zinc-400"
+                  >
                     <span className="material-symbols-outlined">close</span>
                   </button>
                 </header>
                 <div className="relative mb-6">
-                   <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">search</span>
-                   <input type="text" placeholder="Buscar por nome ou região..." className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl py-4 pl-12 pr-6 text-sm font-bold focus:ring-1 focus:ring-yellow-400/50 outline-none text-white placeholder-zinc-600" />
+                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Buscar por nome ou região..."
+                    className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl py-4 pl-12 pr-6 text-sm font-bold focus:ring-1 focus:ring-yellow-400/50 outline-none text-white placeholder-zinc-600"
+                  />
                 </div>
                 <div className="flex-1 overflow-y-auto no-scrollbar space-y-4">
-                   {partnerStores.map((store) => (
-                      <motion.div 
-                        whileTap={{ scale: 0.98 }}
-                        key={store.id} 
-                        onClick={() => { 
-                          setTransitData({
-                            ...transitData, 
-                            receiverName: store.name, 
-                            receiverPhone: store.phone, 
-                            origin: store.address
-                          }); 
-                          setShowLojistasModal(false); 
-                        }}
-                        className="p-6 rounded-[30px] border border-zinc-800 hover:border-yellow-400/30 transition-all group cursor-pointer"
-                      >
-                         <div className="flex justify-between items-start mb-2">
-                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded bg-yellow-400/10 text-yellow-400">{store.type}</span>
-                            <span className="text-[10px] font-bold text-zinc-500">{store.hours}</span>
-                         </div>
-                         <h4 className="font-black text-white text-base group-hover:text-yellow-400 transition-colors">{store.name}</h4>
-                         <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">{store.address}</p>
-                      </motion.div>
-                   ))}
+                  {partnerStores.map((store) => (
+                    <motion.div
+                      whileTap={{ scale: 0.98 }}
+                      key={store.id}
+                      onClick={() => {
+                        setTransitData({
+                          ...transitData,
+                          receiverName: store.name,
+                          receiverPhone: store.phone,
+                          origin: store.address,
+                        });
+                        setShowLojistasModal(false);
+                      }}
+                      className="p-6 rounded-[30px] border border-zinc-800 hover:border-yellow-400/30 transition-all group cursor-pointer"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded bg-yellow-400/10 text-yellow-400">
+                          {store.type}
+                        </span>
+                        <span className="text-[10px] font-bold text-zinc-500">
+                          {store.hours}
+                        </span>
+                      </div>
+                      <h4 className="font-black text-white text-base group-hover:text-yellow-400 transition-colors">
+                        {store.name}
+                      </h4>
+                      <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">
+                        {store.address}
+                      </p>
+                    </motion.div>
+                  ))}
                 </div>
               </motion.div>
             )}
@@ -7234,26 +10999,58 @@ function App() {
           {/* DATE PICKER MODAL */}
           <AnimatePresence>
             {showDatePicker && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
-                <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6"
+              >
+                <motion.div
+                  initial={{ scale: 0.9, y: 20 }}
+                  animate={{ scale: 1, y: 0 }}
+                  className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden"
+                >
                   <div className="text-center mb-8">
-                    <h3 className="text-xl font-black text-white">Próximos 7 dias</h3>
-                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Selecione uma data</p>
+                    <h3 className="text-xl font-black text-white">
+                      Próximos 7 dias
+                    </h3>
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">
+                      Selecione uma data
+                    </p>
                   </div>
                   <div className="grid grid-cols-1 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
                     {[...Array(7)].map((_, i) => {
                       const d = new Date();
                       d.setDate(d.getDate() + i);
-                      const label = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' });
-                      const iso = d.toISOString().split('T')[0];
+                      const label = d.toLocaleDateString("pt-BR", {
+                        weekday: "long",
+                        day: "2-digit",
+                        month: "short",
+                      });
+                      const iso = d.toISOString().split("T")[0];
                       return (
-                        <button key={i} onClick={() => { setTransitData({...transitData, scheduledDate: iso}); setShowDatePicker(false); }} className={`w-full py-5 rounded-[25px] border-2 transition-all font-bold text-sm capitalize ${transitData.scheduledDate === iso ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-900 text-zinc-400 hover:border-zinc-800"}`}>
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setTransitData({
+                              ...transitData,
+                              scheduledDate: iso,
+                            });
+                            setShowDatePicker(false);
+                          }}
+                          className={`w-full py-5 rounded-[25px] border-2 transition-all font-bold text-sm capitalize ${transitData.scheduledDate === iso ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-900 text-zinc-400 hover:border-zinc-800"}`}
+                        >
                           {label}
                         </button>
                       );
                     })}
                   </div>
-                  <button onClick={() => setShowDatePicker(false)} className="mt-8 w-full py-4 text-zinc-500 font-black uppercase text-[10px] tracking-widest ring-1 ring-zinc-800 rounded-[20px]">Fechar</button>
+                  <button
+                    onClick={() => setShowDatePicker(false)}
+                    className="mt-8 w-full py-4 text-zinc-500 font-black uppercase text-[10px] tracking-widest ring-1 ring-zinc-800 rounded-[20px]"
+                  >
+                    Fechar
+                  </button>
                 </motion.div>
               </motion.div>
             )}
@@ -7262,38 +11059,86 @@ function App() {
           {/* TIME PICKER MODAL */}
           <AnimatePresence>
             {showTimePicker && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
-                <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6"
+              >
+                <motion.div
+                  initial={{ scale: 0.9, y: 20 }}
+                  animate={{ scale: 1, y: 0 }}
+                  className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden"
+                >
                   <div className="text-center mb-8">
                     <h3 className="text-xl font-black text-white">Horário</h3>
-                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Das 08:00 Ãƒ s 22:00</p>
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">
+                      Das 08:00 Ãƒ s 22:00
+                    </p>
                   </div>
                   <div className="grid grid-cols-3 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
-                    {["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"].map((h) => (
-                      <button key={h} onClick={() => { setTransitData({...transitData, scheduledTime: h}); setShowTimePicker(false); }} className={`py-4 rounded-[20px] border-2 transition-all font-black text-xs ${transitData.scheduledTime === h ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-900 text-zinc-400 hover:border-zinc-800"}`}>
+                    {[
+                      "08:00",
+                      "09:00",
+                      "10:00",
+                      "11:00",
+                      "12:00",
+                      "13:00",
+                      "14:00",
+                      "15:00",
+                      "16:00",
+                      "17:00",
+                      "18:00",
+                      "19:00",
+                      "20:00",
+                      "21:00",
+                      "22:00",
+                    ].map((h) => (
+                      <button
+                        key={h}
+                        onClick={() => {
+                          setTransitData({ ...transitData, scheduledTime: h });
+                          setShowTimePicker(false);
+                        }}
+                        className={`py-4 rounded-[20px] border-2 transition-all font-black text-xs ${transitData.scheduledTime === h ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-900 text-zinc-400 hover:border-zinc-800"}`}
+                      >
                         {h}
                       </button>
                     ))}
                   </div>
-                  <button onClick={() => setShowTimePicker(false)} className="mt-8 w-full py-4 text-zinc-500 font-black uppercase text-[10px] tracking-widest ring-1 ring-zinc-800 rounded-[20px]">Fechar</button>
+                  <button
+                    onClick={() => setShowTimePicker(false)}
+                    className="mt-8 w-full py-4 text-zinc-500 font-black uppercase text-[10px] tracking-widest ring-1 ring-zinc-800 rounded-[20px]"
+                  >
+                    Fechar
+                  </button>
                 </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
 
           <div className="bg-amber-400/5  p-6 rounded-[35px] border border-amber-400/10  flex items-start gap-4">
-             <div className="size-10 rounded-full bg-amber-400/20 flex items-center justify-center shrink-0">
-               <span className="material-symbols-outlined text-amber-400 text-sm">warning</span>
-             </div>
-             <p className="text-[10px] font-bold text-amber-400/80 leading-relaxed uppercase tracking-wider">
-                Certifique-se de que o objeto esteja bem embalado. Não transportamos itens proibidos por lei ou inflamáveis.
-             </p>
+            <div className="size-10 rounded-full bg-amber-400/20 flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-amber-400 text-sm">
+                warning
+              </span>
+            </div>
+            <p className="text-[10px] font-bold text-amber-400/80 leading-relaxed uppercase tracking-wider">
+              Certifique-se de que o objeto esteja bem embalado. Não
+              transportamos itens proibidos por lei ou inflamáveis.
+            </p>
           </div>
         </main>
 
         <div className="fixed bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-black via-black/90 to-transparent z-50">
           <button
-            disabled={!transitData.origin || !transitData.destination || !transitData.receiverName || !transitData.receiverPhone || isLoading}
+            disabled={
+              !transitData.origin ||
+              !transitData.destination ||
+              !transitData.receiverName ||
+              !transitData.receiverPhone ||
+              isLoading
+            }
             onClick={handleRequestTransit}
             className="w-full bg-yellow-400 text-black font-black text-xl py-6 rounded-[32px] shadow-[0_20px_40px_rgba(255,215,9,0.2)] active:scale-[0.98] transition-all disabled:opacity-30 flex justify-center items-center gap-4 group"
           >
@@ -7316,214 +11161,358 @@ function App() {
       <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
         {/* MAPA NO FUNDO */}
         <div className="absolute inset-0 z-0 h-[45vh]">
-           <IziTrackingMap routePolyline={routePolyline} driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
-           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
+          <IziTrackingMap
+            routePolyline={routePolyline}
+            driverLoc={driverLocation}
+            userLoc={
+              userLocation?.lat
+                ? { lat: userLocation.lat, lng: userLocation.lng }
+                : null
+            }
+            onMyLocationClick={updateLocation}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
         </div>
 
         <header className="relative z-50 flex items-center justify-between px-6 pt-10">
-          <button onClick={() => setSubView("none")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
+          <button
+            onClick={() => setSubView("none")}
+            className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400"
+          >
             <Icon name="arrow_back" />
           </button>
           <div className="text-right">
-             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
-                {transitData.type === 'mototaxi' ? "MotoTáxi" : "Motorista Particular"}
-             </h2>
-             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Viagem Rápida & Segura</p>
+            <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
+              {transitData.type === "mototaxi"
+                ? "MotoTáxi"
+                : "Motorista Particular"}
+            </h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">
+              Viagem Rápida & Segura
+            </p>
           </div>
         </header>
 
         <main className="relative z-40 mt-auto bg-zinc-950 border-t border-white/5 flex flex-col h-[60vh] rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
-           <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
-              {mobilityStep === 1 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Qual o seu destino?</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Confirme os pontos de partida e chegada.</p>
-                   </div>
-                   
-                   <div className="space-y-6">
-                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
-                         <div className="flex justify-between items-center mb-2">
-                            <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">Origem</p>
-                            <button onClick={() => updateLocation()} disabled={userLocation.loading} className="text-[8px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/5 px-2 py-1 rounded-lg disabled:opacity-50">
-                               {userLocation.loading ? 'Buscando...' : 'Meu Local'}
-                            </button>
-                          </div>
-                         <AddressSearchInput 
-                           initialValue={transitData.origin}
-                           placeholder="De onde você está saindo?"
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
-                           userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                           onSelect={(p) => {
-                             const ori = p.formatted_address || "";
-                             setTransitData(prev => ({...prev, origin: ori}));
-                           }}
-                         />
-                      </div>
-
-                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Destino</p>
-                         <AddressSearchInput 
-                           initialValue={transitData.destination}
-                           placeholder="Para onde vamos?"
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
-                           userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                          onSelect={(p) => {
-                            const dest = p.formatted_address || "";
-                            setTransitData(prev => ({...prev, destination: dest}));
-                          }}
-                         />
-                      </div>
-
-                      {/* VEÍCULO E PREÇO IMEDIATO */}
-                       <AnimatePresence>
-                         {transitData.destination && transitData.origin && (
-                           <motion.div 
-                             initial={{ opacity: 0, height: 0 }}
-                             animate={{ opacity: 1, height: 'auto' }}
-                             exit={{ opacity: 0, height: 0 }}
-                             className="space-y-4 pt-2 overflow-hidden"
-                           >
-                              <div className="flex items-center gap-3 px-2">
-                                 <h4 className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.3em]">Tipo de Transporte</h4>
-                                 <div className="h-px flex-1 bg-white/5" />
-                              </div>
-                              
-                              <div className="grid grid-cols-2 gap-3 pb-2">
-                                 {[
-                                   { id: 'mototaxi', label: 'MotoTáxi', icon: 'motorcycle', color: 'text-yellow-400', sub: 'Rápido & Ágil' },
-                                   { id: 'carro', label: 'Carro', icon: 'directions_car', color: 'text-white', sub: 'Executivo Premium' }
-                                 ].map((v) => {
-                                   const isSelected = transitData.type === v.id;
-                                   const price = distancePrices[v.id] || 0;
-                                   
-                                   return (
-                                     <button
-                                       key={v.id}
-                                       onClick={() => setTransitData(prev => ({ ...prev, type: v.id as any, estPrice: price }))}
-                                       className={`p-5 rounded-[35px] transition-all duration-300 flex flex-col items-center gap-2 border relative group overflow-hidden
-                                         ${isSelected ? 'bg-yellow-400 border-yellow-400 shadow-[0_20px_40px_rgba(255,217,9,0.15)]' : 'bg-zinc-900 border-white/5 hover:border-white/10'}
-                                       `}
-                                     >
-                                        <div className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-300
-                                          ${isSelected ? 'bg-black/10 scale-110' : 'bg-white/5 group-hover:bg-white/10'}
-                                        `}>
-                                           <span className={`material-symbols-outlined text-2xl ${isSelected ? 'text-black' : v.color}`}>{v.icon}</span>
-                                        </div>
-                                        <div className="text-center z-10">
-                                           <p className={`text-[11px] font-black uppercase tracking-tighter ${isSelected ? 'text-black' : 'text-white'}`}>{v.label}</p>
-                                           <p className={`text-[8px] font-black uppercase tracking-widest mt-1 opacity-50 ${isSelected ? 'text-black' : 'text-zinc-600'}`}>{v.sub}</p>
-                                           <div className="mt-3">
-                                              <p className={`text-sm font-black italic ${isSelected ? 'text-black' : 'text-yellow-400'} ${isCalculatingPrice ? 'animate-pulse' : ''}`}>
-                                                {isCalculatingPrice ? 'Calculando...' : price > 0 ? `R$ ${price.toFixed(2).replace(".", ",")}` : '---'}
-                                              </p>
-                                           </div>
-                                        </div>
-                                     </button>
-                                   );
-                                 })}
-                              </div>
-                           </motion.div>
-                         )}
-                       </AnimatePresence>
-                   </div>
-                </motion.section>
-              )}
-
-              {mobilityStep === 2 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Resumo da Viagem</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Confirme os detalhes e o preço antes de pedir.</p>
-                   </div>
-
-                   <div className="bg-zinc-900/40 border border-white/5 p-7 rounded-[40px] space-y-8 shadow-2xl">
-                      {/* PAGAMENTO */}
-                      <div className="flex items-center gap-5 cursor-pointer group" onClick={() => { setPaymentsOrigin("checkout"); setSubView("mobility_payment"); }}>
-                         <div className="size-14 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-500/20 transition-all">
-                            <span className="material-symbols-outlined text-blue-400 text-2xl">credit_card</span>
-                         </div>
-                         <div className="flex-1">
-                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">Pagamento</p>
-                            <div className="flex items-center justify-between">
-                               <p className="text-sm font-black text-white italic">
-                                 {paymentMethod === 'dinheiro' ? 'Dinheiro' : paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'bitcoin_lightning' ? 'BTC Lightning' : paymentMethod === 'saldo' ? 'Saldo IZI' : 'Escolher Método'}
-                               </p>
-                               <span className="material-symbols-outlined text-zinc-700 text-sm group-hover:text-yellow-400 transition-colors">expand_more</span>
-                            </div>
-                         </div>
-                      </div>
-
-                      <div className="h-px bg-white/5" />
-
-                      {/* PREÇO E INFO */}
-                      <div className="flex items-center gap-5">
-                         <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
-                            <span className="material-symbols-outlined text-yellow-400 text-2xl italic">local_atm</span>
-                         </div>
-                         <div className="flex-1">
-                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">Preço Estimado</p>
-                            <div className="flex items-center gap-3">
-                               <p className="text-3xl font-black text-yellow-400 tracking-tighter">
-                                 {distancePrices[transitData.type] > 0 
-                                   ? `R$ ${distancePrices[transitData.type].toFixed(2).replace(".", ",")}` 
-                                   : isCalculatingPrice ? "..." : "---"}
-                               </p>
-                               {marketConditions.surgeMultiplier > 1 && (
-                                 <div className="px-2 py-0.5 rounded flex items-center gap-1 bg-yellow-400/10 border border-yellow-400/20">
-                                   <span className="material-symbols-outlined text-[10px] text-yellow-400 font-black italic">bolt</span>
-                                   <span className="text-[9px] font-black text-yellow-400 tracking-tighter">{marketConditions.surgeMultiplier}x</span>
-                                 </div>
-                               )}
-                            </div>
-                            <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
-                               <span className="material-symbols-outlined text-[12px]">schedule</span>
-                               Tempo Est: {routeDistance ? `${Math.round(parseInt(routeDistance)/1000 * 2.2)} min` : '-- min'}
-                            </p>
-                         </div>
-                      </div>
-
-                      <div className="h-px bg-white/5" />
-
-                      {/* CLIENTE LEVEL */}
-                      <div className="flex items-center gap-5">
-                         <div className="size-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                            <span className="material-symbols-outlined text-emerald-400 text-2xl">verified_user</span>
-                         </div>
-                         <div className="flex-1">
-                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">Perfil do Passageiro</p>
-                            <div className="flex items-center gap-3">
-                               <span className="text-[10px] font-black text-white tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 uppercase">Tier {userLevel >= 10 ? 'Master' : 'Classic'}</span>
-                               {userLevel >= 10 && <span className="material-symbols-outlined text-yellow-400 text-sm">workspace_premium</span>}
-                            </div>
-                         </div>
-                      </div>
-                   </div>
-                </motion.section>
-              )}
-           </div>
-
-           <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent">
-              <button 
-                onClick={() => {
-                  if (mobilityStep === 1) {
-                    if (!transitData.origin || !transitData.destination) {
-                      showToast("Preencha todos os endereços", "warning");
-                      return;
-                    }
-                    setMobilityStep(2);
-                  } else {
-                    setPaymentsOrigin("checkout");
-                    navigateSubView("mobility_payment");
-                  }
-                }}
-                disabled={mobilityStep === 1 ? (!transitData.origin || !transitData.destination) : (!distancePrices[transitData.type] || isCalculatingPrice)}
-                className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[30px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:grayscale"
+          <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
+            {mobilityStep === 1 && (
+              <motion.section
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-8"
               >
-                 <span className="uppercase tracking-[0.2em] text-sm">{mobilityStep === 1 ? "Próximo" : "Confirmar Viagem"}</span>
-                 <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">{mobilityStep === 1 ? 'arrow_forward' : 'bolt'}</span>
-              </button>
-           </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-white tracking-tight">
+                    Qual o seu destino?
+                  </h3>
+                  <p className="text-zinc-500 text-xs font-medium">
+                    Confirme os pontos de partida e chegada.
+                  </p>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">
+                        Origem
+                      </p>
+                      <button
+                        onClick={() => updateLocation()}
+                        disabled={userLocation.loading}
+                        className="text-[8px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/5 px-2 py-1 rounded-lg disabled:opacity-50"
+                      >
+                        {userLocation.loading ? "Buscando..." : "Meu Local"}
+                      </button>
+                    </div>
+                    <AddressSearchInput
+                      initialValue={transitData.origin}
+                      placeholder="De onde você está saindo?"
+                      className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                      userCoords={
+                        userLocation.lat
+                          ? { lat: userLocation.lat, lng: userLocation.lng }
+                          : null
+                      }
+                      onSelect={(p) => {
+                        const ori = p.formatted_address || "";
+                        setTransitData((prev) => ({ ...prev, origin: ori }));
+                      }}
+                    />
+                  </div>
+
+                  <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">
+                      Destino
+                    </p>
+                    <AddressSearchInput
+                      initialValue={transitData.destination}
+                      placeholder="Para onde vamos?"
+                      className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                      userCoords={
+                        userLocation.lat
+                          ? { lat: userLocation.lat, lng: userLocation.lng }
+                          : null
+                      }
+                      onSelect={(p) => {
+                        const dest = p.formatted_address || "";
+                        setTransitData((prev) => ({
+                          ...prev,
+                          destination: dest,
+                        }));
+                      }}
+                    />
+                  </div>
+
+                  {/* VEÍCULO E PREÇO IMEDIATO */}
+                  <AnimatePresence>
+                    {transitData.destination && transitData.origin && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="space-y-4 pt-2 overflow-hidden"
+                      >
+                        <div className="flex items-center gap-3 px-2">
+                          <h4 className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.3em]">
+                            Tipo de Transporte
+                          </h4>
+                          <div className="h-px flex-1 bg-white/5" />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 pb-2">
+                          {[
+                            {
+                              id: "mototaxi",
+                              label: "MotoTáxi",
+                              icon: "motorcycle",
+                              color: "text-yellow-400",
+                              sub: "Rápido & Ágil",
+                            },
+                            {
+                              id: "carro",
+                              label: "Carro",
+                              icon: "directions_car",
+                              color: "text-white",
+                              sub: "Executivo Premium",
+                            },
+                          ].map((v) => {
+                            const isSelected = transitData.type === v.id;
+                            const price = distancePrices[v.id] || 0;
+
+                            return (
+                              <button
+                                key={v.id}
+                                onClick={() =>
+                                  setTransitData((prev) => ({
+                                    ...prev,
+                                    type: v.id as any,
+                                    estPrice: price,
+                                  }))
+                                }
+                                className={`p-5 rounded-[35px] transition-all duration-300 flex flex-col items-center gap-2 border relative group overflow-hidden
+                                         ${isSelected ? "bg-yellow-400 border-yellow-400 shadow-[0_20px_40px_rgba(255,217,9,0.15)]" : "bg-zinc-900 border-white/5 hover:border-white/10"}
+                                       `}
+                              >
+                                <div
+                                  className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-300
+                                          ${isSelected ? "bg-black/10 scale-110" : "bg-white/5 group-hover:bg-white/10"}
+                                        `}
+                                >
+                                  <span
+                                    className={`material-symbols-outlined text-2xl ${isSelected ? "text-black" : v.color}`}
+                                  >
+                                    {v.icon}
+                                  </span>
+                                </div>
+                                <div className="text-center z-10">
+                                  <p
+                                    className={`text-[11px] font-black uppercase tracking-tighter ${isSelected ? "text-black" : "text-white"}`}
+                                  >
+                                    {v.label}
+                                  </p>
+                                  <p
+                                    className={`text-[8px] font-black uppercase tracking-widest mt-1 opacity-50 ${isSelected ? "text-black" : "text-zinc-600"}`}
+                                  >
+                                    {v.sub}
+                                  </p>
+                                  <div className="mt-3">
+                                    <p
+                                      className={`text-sm font-black italic ${isSelected ? "text-black" : "text-yellow-400"} ${isCalculatingPrice ? "animate-pulse" : ""}`}
+                                    >
+                                      {isCalculatingPrice
+                                        ? "Calculando..."
+                                        : price > 0
+                                          ? `R$ ${price.toFixed(2).replace(".", ",")}`
+                                          : "---"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </motion.section>
+            )}
+
+            {mobilityStep === 2 && (
+              <motion.section
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-8"
+              >
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-white tracking-tight">
+                    Resumo da Viagem
+                  </h3>
+                  <p className="text-zinc-500 text-xs font-medium">
+                    Confirme os detalhes e o preço antes de pedir.
+                  </p>
+                </div>
+
+                <div className="bg-zinc-900/40 border border-white/5 p-7 rounded-[40px] space-y-8 shadow-2xl">
+                  {/* PAGAMENTO */}
+                  <div
+                    className="flex items-center gap-5 cursor-pointer group"
+                    onClick={() => {
+                      setPaymentsOrigin("checkout");
+                      setSubView("mobility_payment");
+                    }}
+                  >
+                    <div className="size-14 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-500/20 transition-all">
+                      <span className="material-symbols-outlined text-blue-400 text-2xl">
+                        credit_card
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">
+                        Pagamento
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-black text-white italic">
+                          {paymentMethod === "dinheiro"
+                            ? "Dinheiro"
+                            : paymentMethod === "pix"
+                              ? "PIX"
+                              : paymentMethod === "bitcoin_lightning"
+                                ? "BTC Lightning"
+                                : paymentMethod === "saldo"
+                                  ? "Saldo IZI"
+                                  : "Escolher Método"}
+                        </p>
+                        <span className="material-symbols-outlined text-zinc-700 text-sm group-hover:text-yellow-400 transition-colors">
+                          expand_more
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-white/5" />
+
+                  {/* PREÇO E INFO */}
+                  <div className="flex items-center gap-5">
+                    <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
+                      <span className="material-symbols-outlined text-yellow-400 text-2xl italic">
+                        local_atm
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">
+                        Preço Estimado
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <p className="text-3xl font-black text-yellow-400 tracking-tighter">
+                          {distancePrices[transitData.type] > 0
+                            ? `R$ ${distancePrices[transitData.type].toFixed(2).replace(".", ",")}`
+                            : isCalculatingPrice
+                              ? "..."
+                              : "---"}
+                        </p>
+                        {marketConditions.surgeMultiplier > 1 && (
+                          <div className="px-2 py-0.5 rounded flex items-center gap-1 bg-yellow-400/10 border border-yellow-400/20">
+                            <span className="material-symbols-outlined text-[10px] text-yellow-400 font-black italic">
+                              bolt
+                            </span>
+                            <span className="text-[9px] font-black text-yellow-400 tracking-tighter">
+                              {marketConditions.surgeMultiplier}x
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[12px]">
+                          schedule
+                        </span>
+                        Tempo Est:{" "}
+                        {routeDistance
+                          ? `${Math.round((parseInt(routeDistance) / 1000) * 2.2)} min`
+                          : "-- min"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-white/5" />
+
+                  {/* CLIENTE LEVEL */}
+                  <div className="flex items-center gap-5">
+                    <div className="size-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                      <span className="material-symbols-outlined text-emerald-400 text-2xl">
+                        verified_user
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">
+                        Perfil do Passageiro
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-black text-white tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 uppercase">
+                          Tier {userLevel >= 10 ? "Master" : "Classic"}
+                        </span>
+                        {userLevel >= 10 && (
+                          <span className="material-symbols-outlined text-yellow-400 text-sm">
+                            workspace_premium
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.section>
+            )}
+          </div>
+
+          <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent">
+            <button
+              onClick={() => {
+                if (mobilityStep === 1) {
+                  if (!transitData.origin || !transitData.destination) {
+                    showToast("Preencha todos os endereços", "warning");
+                    return;
+                  }
+                  setMobilityStep(2);
+                } else {
+                  setPaymentsOrigin("checkout");
+                  navigateSubView("mobility_payment");
+                }
+              }}
+              disabled={
+                mobilityStep === 1
+                  ? !transitData.origin || !transitData.destination
+                  : !distancePrices[transitData.type] || isCalculatingPrice
+              }
+              className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[30px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:grayscale"
+            >
+              <span className="uppercase tracking-[0.2em] text-sm">
+                {mobilityStep === 1 ? "Próximo" : "Confirmar Viagem"}
+              </span>
+              <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
+                {mobilityStep === 1 ? "arrow_forward" : "bolt"}
+              </span>
+            </button>
+          </div>
         </main>
       </div>
     );
@@ -7531,34 +11520,71 @@ function App() {
 
   const renderMobilityPayment = () => {
     const bv = marketConditions.settings.baseValues;
-    const basePrices: Record<string, number> = { mototaxi: bv.mototaxi_min, carro: bv.carro_min, van: bv.van_min, utilitario: bv.utilitario_min };
-    const price = (transitData.estPrice > 0 ? transitData.estPrice : calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min)) ?? 0;
+    const basePrices: Record<string, number> = {
+      mototaxi: bv.mototaxi_min,
+      carro: bv.carro_min,
+      van: bv.van_min,
+      utilitario: bv.utilitario_min,
+    };
+    const price =
+      (transitData.estPrice > 0
+        ? transitData.estPrice
+        : calculateDynamicPrice(
+            basePrices[transitData.type] || bv.mototaxi_min,
+          )) ?? 0;
 
-    const PaymentMethodButton = ({ id, icon, label, sub, colorClass, disabled = false }: any) => {
+    const PaymentMethodButton = ({
+      id,
+      icon,
+      label,
+      sub,
+      colorClass,
+      disabled = false,
+    }: any) => {
       const isSelected = paymentMethod === id;
       return (
-        <motion.button 
+        <motion.button
           whileTap={{ scale: disabled ? 1 : 0.98 }}
           disabled={disabled}
           onClick={() => setPaymentMethod(id)}
           className={`w-full group relative overflow-hidden flex items-center gap-4 p-5 rounded-[32px] transition-all duration-500 border
-            ${disabled ? 'opacity-30 grayscale cursor-not-allowed' : 'active:scale-[0.98]'}
-            ${isSelected ? 'bg-yellow-400 font-bold border-yellow-400 shadow-[0_20px_40px_rgba(255,217,9,0.15)]' : 'bg-zinc-900/40 backdrop-blur-xl border-white/5 hover:border-white/10 shadow-2xl shadow-black/50'}
+            ${disabled ? "opacity-30 grayscale cursor-not-allowed" : "active:scale-[0.98]"}
+            ${isSelected ? "bg-yellow-400 font-bold border-yellow-400 shadow-[0_20px_40px_rgba(255,217,9,0.15)]" : "bg-zinc-900/40 backdrop-blur-xl border-white/5 hover:border-white/10 shadow-2xl shadow-black/50"}
           `}
         >
-          <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors duration-500
-            ${isSelected ? 'bg-black/10' : `bg-white/5 ${colorClass}`}
-          `}>
-             <span className={`material-symbols-outlined text-2xl ${isSelected ? 'text-black' : ''}`}>{icon}</span>
+          <div
+            className={`size-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors duration-500
+            ${isSelected ? "bg-black/10" : `bg-white/5 ${colorClass}`}
+          `}
+          >
+            <span
+              className={`material-symbols-outlined text-2xl ${isSelected ? "text-black" : ""}`}
+            >
+              {icon}
+            </span>
           </div>
           <div className="flex-1 text-left">
-             <p className={`text-[11px] font-black uppercase tracking-widest mb-1 leading-none ${isSelected ? 'text-black' : 'text-zinc-500'}`}>{label}</p>
-             <p className={`text-[10px] font-bold tracking-tight ${isSelected ? 'text-black/60' : 'text-zinc-600'}`}>{sub}</p>
+            <p
+              className={`text-[11px] font-black uppercase tracking-widest mb-1 leading-none ${isSelected ? "text-black" : "text-zinc-500"}`}
+            >
+              {label}
+            </p>
+            <p
+              className={`text-[10px] font-bold tracking-tight ${isSelected ? "text-black/60" : "text-zinc-600"}`}
+            >
+              {sub}
+            </p>
           </div>
           {disabled ? (
-              <span className="text-[8px] font-black text-red-500/60 bg-red-500/10 px-3 py-1 rounded-lg uppercase tracking-widest">Bloqueado</span>
+            <span className="text-[8px] font-black text-red-500/60 bg-red-500/10 px-3 py-1 rounded-lg uppercase tracking-widest">
+              Bloqueado
+            </span>
           ) : (
-              <span className={`material-symbols-outlined text-sm ${isSelected ? 'text-black/40' : 'text-zinc-800'}`}>chevron_right</span>
+            <span
+              className={`material-symbols-outlined text-sm ${isSelected ? "text-black/40" : "text-zinc-800"}`}
+            >
+              chevron_right
+            </span>
           )}
         </motion.button>
       );
@@ -7567,89 +11593,152 @@ function App() {
     return (
       <div className="absolute inset-0 z-[115] bg-black flex flex-col hide-scrollbar overflow-y-auto">
         <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md px-6 py-8 flex items-center gap-4 border-b border-white/5">
-          <button onClick={() => {
-            if (transitData.type === 'van') navigateSubView("van_wizard");
-            else if (transitData.type === 'utilitario') navigateSubView("shipping_details");
-            else if (transitData.type === 'frete') navigateSubView("freight_wizard");
-            else navigateSubView("taxi_wizard");
-          }} className="size-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-90 transition-all shadow-xl">
-            <span className="material-symbols-outlined text-lg">arrow_back_ios_new</span>
+          <button
+            onClick={() => {
+              if (transitData.type === "van") navigateSubView("van_wizard");
+              else if (transitData.type === "utilitario")
+                navigateSubView("shipping_details");
+              else if (transitData.type === "frete")
+                navigateSubView("freight_wizard");
+              else navigateSubView("taxi_wizard");
+            }}
+            className="size-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-90 transition-all shadow-xl"
+          >
+            <span className="material-symbols-outlined text-lg">
+              arrow_back_ios_new
+            </span>
           </button>
           <div className="flex flex-col text-left">
-            <h2 className="text-2xl font-black text-white tracking-tighter leading-none italic uppercase">Confirmar</h2>
-            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mt-1.5 opacity-80">Check-out Premium</p>
+            <h2 className="text-2xl font-black text-white tracking-tighter leading-none italic uppercase">
+              Confirmar
+            </h2>
+            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mt-1.5 opacity-80">
+              Check-out Premium
+            </p>
           </div>
         </header>
 
         <div className="flex-1 px-5 py-6 space-y-10 pb-48">
           <div className="space-y-4">
             <div className="flex items-center justify-between px-2">
-              <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Resumo do Serviço</h3>
+              <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">
+                Resumo do Serviço
+              </h3>
               <div className="px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/20">
-                <span className="text-xs font-black text-yellow-400 italic">R$ {price.toFixed(2).replace(".", ",")}</span>
+                <span className="text-xs font-black text-yellow-400 italic">
+                  R$ {price.toFixed(2).replace(".", ",")}
+                </span>
               </div>
             </div>
-            
+
             <div className="bg-zinc-900/30 backdrop-blur-xl rounded-[40px] p-8 border border-white/5 shadow-2xl relative overflow-hidden group">
-               <div className="absolute top-0 right-0 size-32 bg-yellow-400/5 blur-[60px] rounded-full -mr-16 -mt-16 pointer-events-none" />
-               <div className="flex items-center gap-4 mb-8">
-                  <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
-                    <span className="material-symbols-outlined text-yellow-400 text-2xl">
-                      {transitData.type === 'mototaxi' ? 'motorcycle' : transitData.type === 'carro' ? 'directions_car' : transitData.type === 'van' ? 'airport_shuttle' : 'local_shipping'}
-                    </span>
-                  </div>
+              <div className="absolute top-0 right-0 size-32 bg-yellow-400/5 blur-[60px] rounded-full -mr-16 -mt-16 pointer-events-none" />
+              <div className="flex items-center gap-4 mb-8">
+                <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
+                  <span className="material-symbols-outlined text-yellow-400 text-2xl">
+                    {transitData.type === "mototaxi"
+                      ? "motorcycle"
+                      : transitData.type === "carro"
+                        ? "directions_car"
+                        : transitData.type === "van"
+                          ? "airport_shuttle"
+                          : "local_shipping"}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-white italic uppercase tracking-tighter leading-none">
+                    {transitData.type === "mototaxi"
+                      ? "MotoTáxi"
+                      : transitData.type === "carro"
+                        ? "Particular"
+                        : transitData.type === "van"
+                          ? "Van & Grupos"
+                          : "Frete & Mudança"}
+                  </h4>
+                  <p className="text-[9px] font-black text-yellow-400/60 uppercase tracking-[0.2em] mt-1">
+                    {transitData.vehicleCategory || "Serviço sob demanda"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6 mb-8">
+                {transitData.type === "van" && (
+                  <>
+                    <div>
+                      <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">
+                        Passageiros
+                      </p>
+                      <p className="text-xs font-bold text-white">
+                        {transitData.passengers} pessoas
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">
+                        Tipo
+                      </p>
+                      <p className="text-xs font-bold text-white uppercase">
+                        {transitData.tripType === "round_trip"
+                          ? "Ida e Volta"
+                          : transitData.tripType === "hourly"
+                            ? "Diária"
+                            : "Ida"}
+                      </p>
+                    </div>
+                  </>
+                )}
+                {(transitData.type === "frete" ||
+                  transitData.type === "utilitario") && (
+                  <>
+                    <div>
+                      <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">
+                        Ajudantes
+                      </p>
+                      <p className="text-xs font-bold text-white">
+                        {transitData.helpers === 0
+                          ? "Sem ajudante"
+                          : `${transitData.helpers} ${transitData.helpers === 1 ? "ajudante" : "ajudantes"}`}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">
+                        Escadas
+                      </p>
+                      <p className="text-xs font-bold text-white">
+                        {transitData.accessibility.stairsAtOrigin ||
+                        transitData.accessibility.stairsAtDestination
+                          ? "Sim"
+                          : "Não"}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-start gap-5 text-left">
+                  <div className="size-2 rounded-full bg-yellow-400 shrink-0 mt-1.5 shadow-[0_0_10px_rgba(255,217,9,1)]" />
                   <div>
-                    <h4 className="text-lg font-black text-white italic uppercase tracking-tighter leading-none">
-                      {transitData.type === 'mototaxi' ? 'MotoTáxi' : transitData.type === 'carro' ? 'Particular' : transitData.type === 'van' ? 'Van & Grupos' : 'Frete & Mudança'}
-                    </h4>
-                    <p className="text-[9px] font-black text-yellow-400/60 uppercase tracking-[0.2em] mt-1">{transitData.vehicleCategory || 'Serviço sob demanda'}</p>
+                    <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1 leading-none">
+                      Origem
+                    </p>
+                    <p className="text-sm font-bold text-zinc-300 leading-relaxed line-clamp-2">
+                      {transitData.origin}
+                    </p>
                   </div>
-               </div>
-
-               <div className="grid grid-cols-2 gap-6 mb-8">
-                  {transitData.type === 'van' && (
-                    <>
-                      <div>
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Passageiros</p>
-                        <p className="text-xs font-bold text-white">{transitData.passengers} pessoas</p>
-                      </div>
-                      <div>
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Tipo</p>
-                        <p className="text-xs font-bold text-white uppercase">{transitData.tripType === 'round_trip' ? 'Ida e Volta' : transitData.tripType === 'hourly' ? 'Diária' : 'Ida'}</p>
-                      </div>
-                    </>
-                  )}
-                  {(transitData.type === 'frete' || transitData.type === 'utilitario') && (
-                    <>
-                      <div>
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Ajudantes</p>
-                        <p className="text-xs font-bold text-white">{transitData.helpers === 0 ? 'Sem ajudante' : `${transitData.helpers} ${transitData.helpers === 1 ? 'ajudante' : 'ajudantes'}`}</p>
-                      </div>
-                      <div>
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Escadas</p>
-                        <p className="text-xs font-bold text-white">{(transitData.accessibility.stairsAtOrigin || transitData.accessibility.stairsAtDestination) ? 'Sim' : 'Não'}</p>
-                      </div>
-                    </>
-                  )}
-               </div>
-
-               <div className="space-y-6">
-                  <div className="flex items-start gap-5 text-left">
-                     <div className="size-2 rounded-full bg-yellow-400 shrink-0 mt-1.5 shadow-[0_0_10px_rgba(255,217,9,1)]" />
-                     <div>
-                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1 leading-none">Origem</p>
-                        <p className="text-sm font-bold text-zinc-300 leading-relaxed line-clamp-2">{transitData.origin}</p>
-                     </div>
+                </div>
+                <div className="h-4 w-px bg-zinc-800 ml-1" />
+                <div className="flex items-start gap-5 text-left">
+                  <div className="size-2 rounded-full bg-zinc-700 shrink-0 mt-1.5" />
+                  <div>
+                    <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1 leading-none">
+                      Destino
+                    </p>
+                    <p className="text-sm font-bold text-zinc-400 leading-relaxed line-clamp-2">
+                      {transitData.destination || "Aguardando destino..."}
+                    </p>
                   </div>
-                  <div className="h-4 w-px bg-zinc-800 ml-1" />
-                  <div className="flex items-start gap-5 text-left">
-                     <div className="size-2 rounded-full bg-zinc-700 shrink-0 mt-1.5" />
-                     <div>
-                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1 leading-none">Destino</p>
-                        <p className="text-sm font-bold text-zinc-400 leading-relaxed line-clamp-2">{transitData.destination || "Aguardando destino..."}</p>
-                     </div>
-                  </div>
-               </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -7658,59 +11747,63 @@ function App() {
               <span>Selecione o Pagamento</span>
               <div className="h-px flex-1 bg-white/5" />
             </h3>
-            
+
             <div className="grid grid-cols-1 gap-3">
               {/* Cartão via App (Destaque se houver) */}
-              <PaymentMethodButton 
-                id="cartao" 
-                icon="credit_card" 
-                label="Cartão via App" 
-                sub={activeCard ? `${activeCard.brand} •••• ${activeCard.last4}` : "Pague com segurança pelo App"}
+              <PaymentMethodButton
+                id="cartao"
+                icon="credit_card"
+                label="Cartão via App"
+                sub={
+                  activeCard
+                    ? `${activeCard.brand} •••• ${activeCard.last4}`
+                    : "Pague com segurança pelo App"
+                }
                 colorClass="text-blue-400"
               />
 
               {/* PIX (Popular) */}
-              <PaymentMethodButton 
-                id="pix" 
-                icon="pix" 
-                label="PIX Instantâneo" 
+              <PaymentMethodButton
+                id="pix"
+                icon="pix"
+                label="PIX Instantâneo"
                 sub="Aprovação imediata via QR Code"
                 colorClass="text-emerald-400"
               />
 
               {/* Bitcoin Lightning (Premium/Stealth) */}
-              <PaymentMethodButton 
-                id="bitcoin_lightning" 
-                icon="bolt" 
-                label="Bitcoin Lightning" 
+              <PaymentMethodButton
+                id="bitcoin_lightning"
+                icon="bolt"
+                label="Bitcoin Lightning"
                 sub="Pagamento instantâneo em Satoshis"
                 colorClass="text-orange-400"
               />
 
               {/* Saldo IZI */}
-              <PaymentMethodButton 
-                id="saldo" 
-                icon="account_balance_wallet" 
-                label="Saldo IZI Wallet" 
+              <PaymentMethodButton
+                id="saldo"
+                icon="account_balance_wallet"
+                label="Saldo IZI Wallet"
                 sub={`R$ ${walletBalance.toFixed(2).replace(".", ",")} disponível`}
                 colorClass="text-cyan-400"
                 disabled={walletBalance < price}
               />
 
               {/* Cartão na Entrega */}
-              <PaymentMethodButton 
-                id="cartao_entrega" 
-                icon="contactless" 
-                label="Cartão na Entrega" 
+              <PaymentMethodButton
+                id="cartao_entrega"
+                icon="contactless"
+                label="Cartão na Entrega"
                 sub="Pague com maquininha ao motoboy"
                 colorClass="text-zinc-500"
               />
 
               {/* Dinheiro (Espécie) */}
-              <PaymentMethodButton 
-                id="dinheiro" 
-                icon="payments" 
-                label="Dinheiro em Espécie" 
+              <PaymentMethodButton
+                id="dinheiro"
+                icon="payments"
+                label="Dinheiro em Espécie"
                 sub="Pague diretamente ao prestador"
                 colorClass="text-zinc-600"
               />
@@ -7719,29 +11812,37 @@ function App() {
 
           {/* Footer ultra-minimalista */}
           <div className="flex flex-col items-center gap-6 pt-10 pb-10">
-             <div className="flex items-center gap-4 group cursor-help">
-               <div className="size-8 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-700 group-hover:text-yellow-400 group-hover:border-yellow-400/20 transition-all">
-                  <span className="material-symbols-outlined text-sm">enhanced_encryption</span>
-               </div>
-               <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.4em]">Proteção Izi Security • RSA 4096-bit</p>
-             </div>
-             
-             <button className="text-[9px] font-black text-zinc-800 uppercase tracking-widest hover:text-zinc-500 transition-colors">
-               Termos de Uso e Política de Privacidade
-             </button>
+            <div className="flex items-center gap-4 group cursor-help">
+              <div className="size-8 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-700 group-hover:text-yellow-400 group-hover:border-yellow-400/20 transition-all">
+                <span className="material-symbols-outlined text-sm">
+                  enhanced_encryption
+                </span>
+              </div>
+              <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.4em]">
+                Proteção Izi Security • RSA 4096-bit
+              </p>
+            </div>
+
+            <button className="text-[9px] font-black text-zinc-800 uppercase tracking-widest hover:text-zinc-500 transition-colors">
+              Termos de Uso e Política de Privacidade
+            </button>
           </div>
         </div>
 
         {/* BOTÃO DE CONFIRMAÇÃO FINAL */}
         <div className="fixed bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black via-black to-transparent z-50 pointer-events-none">
           <div className="pointer-events-auto">
-            <button 
+            <button
               onClick={() => handleConfirmMobility(paymentMethod)}
               disabled={!paymentMethod}
               className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[30px] shadow-2xl active:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale group"
             >
-              <span className="uppercase tracking-[0.2em] text-sm">Solicitar Viagem</span>
-              <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">bolt</span>
+              <span className="uppercase tracking-[0.2em] text-sm">
+                Solicitar Viagem
+              </span>
+              <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
+                bolt
+              </span>
             </button>
           </div>
         </div>
@@ -7749,18 +11850,40 @@ function App() {
     );
   };
 
-
   // Comentario limpo
   const renderWaitingDriver = () => {
     if (!selectedItem) return null;
 
-    const serviceLabels: Record<string, { label: string; icon: string; color: string }> = {
-      mototaxi: { label: "MotoTáxi", icon: "motorcycle", color: "text-yellow-400" },
-      carro: { label: "Carro Executivo", icon: "directions_car", color: "text-zinc-500" },
-      van: { label: "Van de Carga", icon: "airport_shuttle", color: "text-blue-500" },
-      utilitario: { label: "Izi Express", icon: "bolt", color: "text-purple-500" },
+    const serviceLabels: Record<
+      string,
+      { label: string; icon: string; color: string }
+    > = {
+      mototaxi: {
+        label: "MotoTáxi",
+        icon: "motorcycle",
+        color: "text-yellow-400",
+      },
+      carro: {
+        label: "Carro Executivo",
+        icon: "directions_car",
+        color: "text-zinc-500",
+      },
+      van: {
+        label: "Van de Carga",
+        icon: "airport_shuttle",
+        color: "text-blue-500",
+      },
+      utilitario: {
+        label: "Izi Express",
+        icon: "bolt",
+        color: "text-purple-500",
+      },
     };
-    const service = serviceLabels[selectedItem.service_type] || { label: "Serviço", icon: "local_shipping", color: "text-yellow-400" };
+    const service = serviceLabels[selectedItem.service_type] || {
+      label: "Serviço",
+      icon: "local_shipping",
+      color: "text-yellow-400",
+    };
 
     return (
       <div className="bg-black absolute inset-0 z-[115] bg-[#020617] flex flex-col items-center justify-center p-8 text-white overflow-hidden">
@@ -7769,37 +11892,70 @@ function App() {
 
         {/* Radar */}
         <div className="relative mb-10">
-          <motion.div animate={{ scale: [1, 2.5], opacity: [0.4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }} className="absolute inset-0 bg-yellow-400/20 rounded-full" />
-          <motion.div animate={{ scale: [1, 2], opacity: [0.3, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeOut", delay: 0.6 }} className="absolute inset-0 bg-yellow-400/20 rounded-full" />
+          <motion.div
+            animate={{ scale: [1, 2.5], opacity: [0.4, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+            className="absolute inset-0 bg-yellow-400/20 rounded-full"
+          />
+          <motion.div
+            animate={{ scale: [1, 2], opacity: [0.3, 0] }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeOut",
+              delay: 0.6,
+            }}
+            className="absolute inset-0 bg-yellow-400/20 rounded-full"
+          />
           <div className="relative size-24 bg-yellow-400/10 border border-yellow-400/30 rounded-full flex items-center justify-center">
-            <span className={`material-symbols-outlined text-4xl ${service.color}`}>{service.icon}</span>
+            <span
+              className={`material-symbols-outlined text-4xl ${service.color}`}
+            >
+              {service.icon}
+            </span>
           </div>
         </div>
 
-        <h2 className="text-2xl font-black text-white tracking-tight text-center mb-2">Buscando Prestador</h2>
-        <p className="text-white/40 text-sm text-center mb-8 max-w-xs">Estamos encontrando o melhor prestador disponível para você</p>
+        <h2 className="text-2xl font-black text-white tracking-tight text-center mb-2">
+          Buscando Prestador
+        </h2>
+        <p className="text-white/40 text-sm text-center mb-8 max-w-xs">
+          Estamos encontrando o melhor prestador disponível para você
+        </p>
 
         {/* Info do pedido */}
         <div className="w-full max-w-sm bg-white/5 border border-white/10 rounded-[32px] p-6 space-y-4 mb-8">
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Serviço</span>
-            <span className="text-sm font-black text-white">{service.label}</span>
+            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">
+              Serviço
+            </span>
+            <span className="text-sm font-black text-white">
+              {service.label}
+            </span>
           </div>
           <div className="h-px bg-white/5" />
           <div className="space-y-3">
             <div className="flex items-start gap-3">
               <div className="mt-1.5 size-2 rounded-full bg-yellow-400 shrink-0" />
-              <p className="text-xs text-white/60 leading-tight">{selectedItem.pickup_address}</p>
+              <p className="text-xs text-white/60 leading-tight">
+                {selectedItem.pickup_address}
+              </p>
             </div>
             <div className="flex items-start gap-3">
               <div className="mt-1.5 size-2 rounded-full bg-orange-500 shrink-0" />
-              <p className="text-xs text-white/80 font-bold leading-tight">{selectedItem.delivery_address}</p>
+              <p className="text-xs text-white/80 font-bold leading-tight">
+                {selectedItem.delivery_address}
+              </p>
             </div>
           </div>
           <div className="h-px bg-white/5" />
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Valor</span>
-            <span className="text-xl font-black text-yellow-400">R$ {Number(selectedItem.total_price).toFixed(2).replace(".", ",")}</span>
+            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">
+              Valor
+            </span>
+            <span className="text-xl font-black text-yellow-400">
+              R$ {Number(selectedItem.total_price).toFixed(2).replace(".", ",")}
+            </span>
           </div>
         </div>
 
@@ -7807,8 +11963,12 @@ function App() {
         <button
           onClick={async () => {
             if (!selectedItem?.id || !userId) return;
-            if (!await showConfirm({ message: "Cancelar a solicitação?" })) return;
-            await supabase.from("orders_delivery").update({ status: "cancelado" }).eq("id", selectedItem.id);
+            if (!(await showConfirm({ message: "Cancelar a solicitação?" })))
+              return;
+            await supabase
+              .from("orders_delivery")
+              .update({ status: "cancelado" })
+              .eq("id", selectedItem.id);
             setSubView("none");
             fetchMyOrders(userId);
             toastSuccess("Solicitação cancelada.");
@@ -7819,81 +11979,149 @@ function App() {
         </button>
 
         {/* Auto-redireciona para active_order quando driver aceita */}
-        {selectedItem?.status && ["a_caminho", "aceito", "confirmado", "em_rota", "no_local"].includes(selectedItem.status) && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute bottom-10 left-6 right-6"
-          >
-            <button
-              onClick={() => setSubView("active_order")}
-              className="w-full bg-yellow-400 text-white font-black py-5 rounded-[24px] shadow-2xl shadow-primary/30 flex items-center justify-center gap-3 text-sm uppercase tracking-widest"
+        {selectedItem?.status &&
+          ["a_caminho", "aceito", "confirmado", "em_rota", "no_local"].includes(
+            selectedItem.status,
+          ) && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="absolute bottom-10 left-6 right-6"
             >
-              <Icon name="navigation" />
-              Motorista Encontrado! Acompanhar
-            </button>
-          </motion.div>
-        )}
+              <button
+                onClick={() => setSubView("active_order")}
+                className="w-full bg-yellow-400 text-white font-black py-5 rounded-[24px] shadow-2xl shadow-primary/30 flex items-center justify-center gap-3 text-sm uppercase tracking-widest"
+              >
+                <Icon name="navigation" />
+                Motorista Encontrado! Acompanhar
+              </button>
+            </motion.div>
+          )}
       </div>
     );
   };
 
   const renderScheduledOrder = () => {
     if (!selectedItem) return null;
-    const svcIcons: Record<string,string> = { mototaxi:'motorcycle', carro:'directions_car', van:'airport_shuttle', utilitario:'bolt' };
-    const svcLabels: Record<string,string> = { mototaxi:'MotoTáxi', carro:'Carro Executivo', van:'Van de Carga', utilitario:'Izi Express' };
-    const icon = svcIcons[selectedItem.service_type] || 'event';
-    const label = svcLabels[selectedItem.service_type] || 'Serviço';
-    const scheduledAt = selectedItem.scheduled_date && selectedItem.scheduled_time
-      ? new Date(`${selectedItem.scheduled_date}T${selectedItem.scheduled_time}`).toLocaleString('pt-BR', { weekday:'long', day:'2-digit', month:'long', hour:'2-digit', minute:'2-digit' })
-      : null;
+    const svcIcons: Record<string, string> = {
+      mototaxi: "motorcycle",
+      carro: "directions_car",
+      van: "airport_shuttle",
+      utilitario: "bolt",
+    };
+    const svcLabels: Record<string, string> = {
+      mototaxi: "MotoTáxi",
+      carro: "Carro Executivo",
+      van: "Van de Carga",
+      utilitario: "Izi Express",
+    };
+    const icon = svcIcons[selectedItem.service_type] || "event";
+    const label = svcLabels[selectedItem.service_type] || "Serviço";
+    const scheduledAt =
+      selectedItem.scheduled_date && selectedItem.scheduled_time
+        ? new Date(
+            `${selectedItem.scheduled_date}T${selectedItem.scheduled_time}`,
+          ).toLocaleString("pt-BR", {
+            weekday: "long",
+            day: "2-digit",
+            month: "long",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : null;
     const hasDriver = !!selectedItem.driver_id;
 
     const saveObservation = async () => {
       if (!selectedItem?.id || !schedObsState.trim()) return;
       setIsSavingObsState(true);
-      await supabase.from('orders_delivery').update({ order_notes: schedObsState }).eq('id', selectedItem.id);
+      await supabase
+        .from("orders_delivery")
+        .update({ order_notes: schedObsState })
+        .eq("id", selectedItem.id);
       setIsSavingObsState(false);
-      toastSuccess('Observação salva!');
+      toastSuccess("Observação salva!");
     };
 
     const sendScheduledMessage = () => {
       if (!schedChatInputState.trim()) return;
-      const msg = { id: Date.now().toString(), text: schedChatInputState.trim(), from: 'user' as const, time: new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) };
-      setSchedMessagesState(prev => [...prev, msg]);
-      setSchedChatInputState('');
+      const msg = {
+        id: Date.now().toString(),
+        text: schedChatInputState.trim(),
+        from: "user" as const,
+        time: new Date().toLocaleTimeString("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setSchedMessagesState((prev) => [...prev, msg]);
+      setSchedChatInputState("");
     };
 
     return (
       <div className="absolute inset-0 z-[120] bg-black flex flex-col overflow-hidden">
         <header className="px-6 py-5 bg-zinc-900 border-b border-zinc-800 flex items-center gap-4 shrink-0">
-          <button onClick={() => { setSubView('none'); setFilterTab('agendados' as any); }} className="size-11 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center active:scale-90 transition-all">
+          <button
+            onClick={() => {
+              setSubView("none");
+              setFilterTab("agendados" as any);
+            }}
+            className="size-11 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center active:scale-90 transition-all"
+          >
             <Icon name="arrow_back" />
           </button>
           <div className="flex-1">
-            <h2 className="text-base font-black text-white tracking-tight">Agendamento</h2>
-            <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest">{label}</p>
+            <h2 className="text-base font-black text-white tracking-tight">
+              Agendamento
+            </h2>
+            <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest">
+              {label}
+            </p>
           </div>
-          <button onClick={async () => {
-            if (!selectedItem?.id || !userId) return;
-            if (!await showConfirm({ message: 'Cancelar este agendamento?' })) return;
-            await supabase.from('orders_delivery').update({ status: 'cancelado' }).eq('id', selectedItem.id);
-            setSubView('none'); 
-            fetchMyOrders(userId); 
-            toastSuccess('Agendamento cancelado.');
-          }} className="px-4 py-2 border border-red-900 text-red-500 rounded-2xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">
+          <button
+            onClick={async () => {
+              if (!selectedItem?.id || !userId) return;
+              if (
+                !(await showConfirm({ message: "Cancelar este agendamento?" }))
+              )
+                return;
+              await supabase
+                .from("orders_delivery")
+                .update({ status: "cancelado" })
+                .eq("id", selectedItem.id);
+              setSubView("none");
+              fetchMyOrders(userId);
+              toastSuccess("Agendamento cancelado.");
+            }}
+            className="px-4 py-2 border border-red-900 text-red-500 rounded-2xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all"
+          >
             Cancelar
           </button>
         </header>
 
         <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-5 space-y-4">
-          <div className={`rounded-[28px] p-5 flex items-center gap-4 ${hasDriver ? 'bg-emerald-900/20 border border-emerald-900' : 'bg-blue-900/20 border border-blue-900'}`}>
-            <div className={`size-12 rounded-[18px] flex items-center justify-center ${hasDriver ? 'bg-emerald-500/20' : 'bg-blue-500/20'}`}>
-              <span className={`material-symbols-outlined text-2xl ${hasDriver ? 'text-emerald-500' : 'text-blue-500'}`}>{hasDriver ? 'verified' : 'pending'}</span>
+          <div
+            className={`rounded-[28px] p-5 flex items-center gap-4 ${hasDriver ? "bg-emerald-900/20 border border-emerald-900" : "bg-blue-900/20 border border-blue-900"}`}
+          >
+            <div
+              className={`size-12 rounded-[18px] flex items-center justify-center ${hasDriver ? "bg-emerald-500/20" : "bg-blue-500/20"}`}
+            >
+              <span
+                className={`material-symbols-outlined text-2xl ${hasDriver ? "text-emerald-500" : "text-blue-500"}`}
+              >
+                {hasDriver ? "verified" : "pending"}
+              </span>
             </div>
             <div>
-              <p className={`text-[9px] font-black uppercase tracking-widest ${hasDriver ? 'text-emerald-500' : 'text-blue-400'}`}>{hasDriver ? 'Motorista Confirmado' : 'Aguardando Confirmação'}</p>
-              <h3 className="text-base font-black text-white">{hasDriver ? 'Seu motorista está confirmado!' : 'Buscando motorista disponível...'}</h3>
+              <p
+                className={`text-[9px] font-black uppercase tracking-widest ${hasDriver ? "text-emerald-500" : "text-blue-400"}`}
+              >
+                {hasDriver ? "Motorista Confirmado" : "Aguardando Confirmação"}
+              </p>
+              <h3 className="text-base font-black text-white">
+                {hasDriver
+                  ? "Seu motorista está confirmado!"
+                  : "Buscando motorista disponível..."}
+              </h3>
             </div>
           </div>
 
@@ -7901,7 +12129,9 @@ function App() {
             <div className="flex items-center gap-3">
               <Icon name={icon} />
               <div>
-                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Serviço</p>
+                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">
+                  Serviço
+                </p>
                 <p className="text-sm font-black text-white">{label}</p>
               </div>
             </div>
@@ -7909,33 +12139,52 @@ function App() {
               <div className="flex items-center gap-3">
                 <Icon name="event" />
                 <div>
-                  <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Agendado para</p>
-                  <p className="text-sm font-black text-white capitalize">{scheduledAt}</p>
+                  <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">
+                    Agendado para
+                  </p>
+                  <p className="text-sm font-black text-white capitalize">
+                    {scheduledAt}
+                  </p>
                 </div>
               </div>
             )}
             <div className="flex items-start gap-3">
               <Icon name="trip_origin" />
               <div>
-                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Origem</p>
-                <p className="text-sm font-bold text-zinc-300">{selectedItem.pickup_address}</p>
+                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">
+                  Origem
+                </p>
+                <p className="text-sm font-bold text-zinc-300">
+                  {selectedItem.pickup_address}
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <Icon name="location_on" />
               <div>
-                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Destino</p>
-                <p className="text-sm font-bold text-white">{selectedItem.delivery_address}</p>
+                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">
+                  Destino
+                </p>
+                <p className="text-sm font-bold text-white">
+                  {selectedItem.delivery_address}
+                </p>
               </div>
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
-              <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Valor Total</span>
-              <span className="text-lg font-black text-white">R$ {(selectedItem.total_price || 0).toFixed(2).replace('.', ',')}</span>
+              <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">
+                Valor Total
+              </span>
+              <span className="text-lg font-black text-white">
+                R${" "}
+                {(selectedItem.total_price || 0).toFixed(2).replace(".", ",")}
+              </span>
             </div>
           </div>
 
           <div className="bg-zinc-900 rounded-[28px] border border-zinc-800 p-5 shadow-sm space-y-3">
-            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Observações para o Motorista</p>
+            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">
+              Observações para o Motorista
+            </p>
             <textarea
               value={schedObsState}
               onChange={(e) => setSchedObsState(e.target.value)}
@@ -7948,7 +12197,7 @@ function App() {
               disabled={isSavingObsState}
               className="w-full py-3 bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-md active:scale-95 transition-all disabled:opacity-50"
             >
-              {isSavingObsState ? 'Salvando...' : 'Salvar Observação'}
+              {isSavingObsState ? "Salvando..." : "Salvar Observação"}
             </button>
           </div>
 
@@ -7960,12 +12209,19 @@ function App() {
             <div className="p-4 min-h-[100px] space-y-3">
               {schedMessagesState.length === 0 && (
                 <p className="text-center text-[10px] font-black text-zinc-600 uppercase tracking-widest py-4">
-                  {hasDriver ? 'Inicie a conversa com seu motorista' : 'Disponível após confirmação do motorista'}
+                  {hasDriver
+                    ? "Inicie a conversa com seu motorista"
+                    : "Disponível após confirmação do motorista"}
                 </p>
               )}
               {schedMessagesState.map((msg: any) => (
-                <div key={msg.id} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] px-4 py-2.5 rounded-[18px] ${msg.from === 'user' ? 'bg-blue-500 text-white rounded-tr-[6px]' : 'bg-zinc-800 text-white rounded-tl-[6px]'}`}>
+                <div
+                  key={msg.id}
+                  className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[80%] px-4 py-2.5 rounded-[18px] ${msg.from === "user" ? "bg-blue-500 text-white rounded-tr-[6px]" : "bg-zinc-800 text-white rounded-tl-[6px]"}`}
+                  >
                     <p className="text-sm font-medium">{msg.text}</p>
                   </div>
                 </div>
@@ -7978,7 +12234,10 @@ function App() {
                 placeholder="Digite sua mensagem..."
                 className="flex-1 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none"
               />
-              <button onClick={sendScheduledMessage} className="size-12 rounded-2xl bg-blue-500 flex items-center justify-center text-white active:scale-95 transition-all">
+              <button
+                onClick={sendScheduledMessage}
+                className="size-12 rounded-2xl bg-blue-500 flex items-center justify-center text-white active:scale-95 transition-all"
+              >
                 <Icon name="send" />
               </button>
             </div>
@@ -7988,209 +12247,759 @@ function App() {
     );
   };
 
+  const BottomNav = () => {
+    const navItems = [
+      { id: "home", icon: "explore", label: "Início" },
+      { id: "wallet", icon: "account_balance_wallet", label: "IZI Pay" },
+      { id: "orders", icon: "receipt_long", label: "Pedidos" },
+      { id: "profile", icon: "person", label: "Perfil" },
+    ];
+
+    return (
+      <nav
+        className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-safe pt-4 bg-black/80 backdrop-blur-2xl rounded-t-3xl border-t border-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+        style={{
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)",
+          height: "80px",
+        }}
+      >
+        {navItems.map((item) => {
+          const isActive = tab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                setTab(item.id as any);
+                setSubView("none");
+                window.history.replaceState(
+                  { view: "app", tab: item.id, subView: "none" },
+                  "",
+                );
+              }}
+              className={`flex flex-col items-center justify-center transition-all duration-300 active:scale-90 ease-out ${isActive ? "text-yellow-400 scale-110 drop-shadow-[0_0_8px_rgba(255,215,0,0.6)]" : "text-zinc-500 hover:text-zinc-300"}`}
+            >
+              <span
+                className="material-symbols-outlined text-2xl"
+                style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
+              >
+                {item.icon}
+              </span>
+              <span
+                className={`text-[9px] font-black uppercase tracking-widest mt-1 ${isActive ? "text-yellow-400" : "text-zinc-500"}`}
+              >
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+        {/* Cart Quick Access */}
+        <button
+          onClick={() => navigateSubView("cart")}
+          className="flex flex-col items-center justify-center transition-all active:scale-90 ease-out text-zinc-500 hover:text-zinc-300 relative"
+        >
+          <div className="relative flex items-center justify-center size-9 rounded-2xl bg-yellow-400 shadow-[0_0_15px_rgba(255,215,9,0.3)]">
+            <span
+              className="material-symbols-outlined text-black text-[20px]"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              shopping_cart
+            </span>
+            {cart.length > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 ring-2 ring-black">
+                {cart.length > 99 ? "99+" : cart.length}
+              </span>
+            )}
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-widest mt-1 text-yellow-400">
+            {cart.length > 0
+              ? `R$${cart.reduce((s: number, i: any) => s + (i.price || 0), 0).toFixed(0)}`
+              : "Cart"}
+          </span>
+        </button>
+      </nav>
+    );
+  };
+
+  // Temporário: Placeholders para funções ausentes
+  const renderProductDetail = () => null;
+  const renderOrderDetail = () => null;
+  const renderSearch = () => null;
+  const renderReferralSystem = () => null;
+  const renderOrderSupport = () => null;
+  const renderOrderFeedback = () => null;
+  const renderOrderChat = () => null;
+  const renderQuestCenter = () => null;
+  const renderExploreCategory = () => null;
+  const renderPaymentProcessing = () => null;
+  const renderPaymentError = () => null;
+  const renderPaymentSuccess = () => null;
+  const renderWaitingMerchant = () => null;
+  const renderWaitingDriver = () => null;
+  const renderIziBlackPurchase = () => null;
+  const renderAIConcierge = () => null;
+  const renderIziBlackWelcome = () => null;
+  const renderIziBlackCard = () => null;
+  const renderMasterPerks = () => null;
+  const renderMyQRModal = () => null;
+  const renderTransferModal = () => null;
+  const renderScanQRModal = () => null;
+
   return (
     <div className="h-full bg-black selection:bg-yellow-400/30">
       <AnimatePresence mode="wait">
         {view === "loading" && (
-          <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[1000] bg-black flex flex-col items-center justify-center">
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[1000] bg-black flex flex-col items-center justify-center"
+          >
             <div className="relative">
-              <motion.div animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }} transition={{ duration: 3, repeat: Infinity }} className="size-24 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full" />
+              <motion.div
+                animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }}
+                transition={{ duration: 3, repeat: Infinity }}
+                className="size-24 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full"
+              />
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-black text-yellow-400 italic tracking-tighter">IZI</span>
+                <span className="text-2xl font-black text-yellow-400 italic tracking-tighter">
+                  IZI
+                </span>
               </div>
             </div>
-            <p className="mt-8 text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] animate-pulse">Carregando Experiência</p>
+            <p className="mt-8 text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] animate-pulse">
+              Carregando Experiência
+            </p>
           </motion.div>
         )}
 
         {view === "login" && (
-          <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-            <LoginView loginEmail={loginEmail} setLoginEmail={setLoginEmail} loginPassword={loginPassword} setLoginPassword={setLoginPassword} authMode={authMode} setAuthMode={setAuthMode} handleLogin={handleLogin} handleSignUp={handleSignUp} isLoading={isLoading} loginError={loginError} phone={phone} setPhone={setPhone} userName={userName} setUserName={setUserName} />
+          <motion.div
+            key="login"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="h-full"
+          >
+            <LoginView
+              loginEmail={loginEmail}
+              setLoginEmail={setLoginEmail}
+              loginPassword={loginPassword}
+              setLoginPassword={setLoginPassword}
+              authMode={authMode}
+              setAuthMode={setAuthMode}
+              handleLogin={handleLogin}
+              handleSignUp={handleSignUp}
+              isLoading={isLoading}
+              loginError={loginError}
+              phone={phone}
+              setPhone={setPhone}
+              userName={userName}
+              setUserName={setUserName}
+            />
           </motion.div>
         )}
 
         {view === "app" && (
-          <motion.div key="app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full relative overflow-hidden">
+          <motion.div
+            key="app"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="h-full relative overflow-hidden"
+          >
             <AnimatePresence mode="wait">
               {tab === "home" && (
-                <motion.div key="home-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                  <HomeView userLevel={userLevel} userId={userId} userLocation={userLocation} isIziBlackMembership={isIziBlackMembership} cart={cart} myOrders={myOrders} navigateSubView={navigateSubView} setSubView={setSubView} subView={subView} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSelectedItem={setSelectedItem} availableCoupons={availableCoupons.filter((c: any) => c.coupon_code)} banners={availableCoupons.filter((c: any) => !c.coupon_code)} copiedCoupon={copiedCoupon} setCopiedCoupon={setCopiedCoupon} showToast={showToast} setShowMasterPerks={setShowMasterPerks} ESTABLISHMENTS={ESTABLISHMENTS} handleShopClick={handleShopClick} flashOffers={flashOffers} setActiveService={setActiveService} transitData={transitData} setTransitData={setTransitData} setExploreCategoryState={setExploreCategoryState} setRestaurantInitialCategory={setRestaurantInitialCategory} setTab={setTab} />
+                <motion.div
+                  key="home-tab"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="h-full"
+                >
+                  <HomeView
+                    userLevel={userLevel}
+                    userId={userId}
+                    userLocation={userLocation}
+                    isIziBlackMembership={isIziBlackMembership}
+                    cart={cart}
+                    myOrders={myOrders}
+                    navigateSubView={navigateSubView}
+                    setSubView={setSubView}
+                    subView={subView}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    setSelectedItem={setSelectedItem}
+                    availableCoupons={availableCoupons.filter(
+                      (c: any) => c.coupon_code,
+                    )}
+                    banners={availableCoupons.filter(
+                      (c: any) => !c.coupon_code,
+                    )}
+                    copiedCoupon={copiedCoupon}
+                    setCopiedCoupon={setCopiedCoupon}
+                    showToast={showToast}
+                    setShowMasterPerks={setShowMasterPerks}
+                    ESTABLISHMENTS={ESTABLISHMENTS}
+                    handleShopClick={handleShopClick}
+                    flashOffers={flashOffers}
+                    setActiveService={setActiveService}
+                    transitData={transitData}
+                    setTransitData={setTransitData}
+                    setExploreCategoryState={setExploreCategoryState}
+                    setRestaurantInitialCategory={setRestaurantInitialCategory}
+                    setTab={setTab}
+                  />
                 </motion.div>
               )}
               {tab === "orders" && (
-                <motion.div key="orders-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                   <OrderListView myOrders={myOrders} userId={userId} setSubView={setSubView} setSelectedItem={setSelectedItem} navigateSubView={navigateSubView} fetchMyOrders={fetchMyOrders} tab={tab} />
+                <motion.div
+                  key="orders-tab"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="h-full"
+                >
+                  <OrderListView
+                    myOrders={myOrders}
+                    userId={userId}
+                    setSubView={setSubView}
+                    setSelectedItem={setSelectedItem}
+                    navigateSubView={navigateSubView}
+                    fetchMyOrders={fetchMyOrders}
+                    tab={tab}
+                  />
                 </motion.div>
               )}
               {tab === "wallet" && (
-                <motion.div key="wallet-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                   <WalletView walletTransactions={walletTransactions} myOrders={myOrders} userXP={userXP} savedCards={savedCards} paymentMethod={paymentMethod} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} showToast={showToast} userId={userId} userName={userName} iziCoins={iziCoins} iziCashback={iziCashbackEarned} setShowDepositModal={setShowDepositModal} iziCoinValue={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0} iziCoinRate={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0} />
+                <motion.div
+                  key="wallet-tab"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="h-full"
+                >
+                  <WalletView
+                    walletTransactions={walletTransactions}
+                    myOrders={myOrders}
+                    userXP={userXP}
+                    savedCards={savedCards}
+                    paymentMethod={paymentMethod}
+                    setPaymentsOrigin={setPaymentsOrigin}
+                    setSubView={setSubView}
+                    showToast={showToast}
+                    userId={userId}
+                    userName={userName}
+                    iziCoins={iziCoins}
+                    iziCashback={iziCashbackEarned}
+                    setShowDepositModal={setShowDepositModal}
+                    iziCoinValue={
+                      globalSettings?.iziCoinRate ||
+                      globalSettings?.izi_coin_rate ||
+                      1.0
+                    }
+                    iziCoinRate={
+                      globalSettings?.iziCoinRate ||
+                      globalSettings?.izi_coin_rate ||
+                      1.0
+                    }
+                  />
                 </motion.div>
               )}
               {tab === "profile" && (
-                <motion.div key="profile-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                   <ProfileView userId={userId} userName={userName} userLevel={userLevel} userXP={userXP} walletBalance={walletBalance} setSubView={setSubView} logout={logout} setTab={setTab} isIziBlackMembership={isIziBlackMembership} />
+                <motion.div
+                  key="profile-tab"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="h-full"
+                >
+                  <ProfileView
+                    userId={userId}
+                    userName={userName}
+                    userLevel={userLevel}
+                    userXP={userXP}
+                    walletBalance={walletBalance}
+                    setSubView={setSubView}
+                    logout={logout}
+                    setTab={setTab}
+                    isIziBlackMembership={isIziBlackMembership}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
 
             <AnimatePresence>
               {subView === "cart" && (
-                <motion.div key="cartv" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  <CartView cart={cart} removeFromCart={removeFromCart} updateQuantity={updateQuantity} setSubView={setSubView} calculateDeliveryFee={calculateDeliveryFee} isIziBlack={isIziBlackMembership} deliveryFee={calculateDeliveryFee()} onCheckout={() => setSubView("checkout")} />
+                <motion.div
+                  key="cartv"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[120]"
+                >
+                  <CartView
+                    cart={cart}
+                    removeFromCart={removeFromCart}
+                    updateQuantity={updateQuantity}
+                    setSubView={setSubView}
+                    calculateDeliveryFee={calculateDeliveryFee}
+                    isIziBlack={isIziBlackMembership}
+                    deliveryFee={calculateDeliveryFee()}
+                    onCheckout={() => setSubView("checkout")}
+                  />
                 </motion.div>
               )}
               {subView === "checkout" && (
-                <motion.div key="check" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[130]">
-                  <CheckoutView cart={cart} appliedCoupon={appliedCoupon} walletTransactions={walletTransactions} savedCards={savedCards} userId={userId} userLocation={userLocation} paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} changeFor={changeFor} setChangeFor={setChangeFor} selectedCard={selectedCard} setSelectedCard={setSelectedCard} couponInput={couponInput} setCouponInput={setCouponInput} handleApplyCoupon={handleApplyCoupon} setAppliedCoupon={setAppliedCoupon} handlePlaceOrder={handlePlaceOrder} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} iziCoins={iziCoins} iziCoinValue={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0} deliveryFee={calculateDeliveryFee()} />
+                <motion.div
+                  key="check"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[130]"
+                >
+                  <CheckoutView
+                    cart={cart}
+                    appliedCoupon={appliedCoupon}
+                    walletTransactions={walletTransactions}
+                    savedCards={savedCards}
+                    userId={userId}
+                    userLocation={userLocation}
+                    paymentMethod={paymentMethod}
+                    setPaymentMethod={setPaymentMethod}
+                    changeFor={changeFor}
+                    setChangeFor={setChangeFor}
+                    selectedCard={selectedCard}
+                    setSelectedCard={setSelectedCard}
+                    couponInput={couponInput}
+                    setCouponInput={setCouponInput}
+                    handleApplyCoupon={handleApplyCoupon}
+                    setAppliedCoupon={setAppliedCoupon}
+                    handlePlaceOrder={handlePlaceOrder}
+                    setPaymentsOrigin={setPaymentsOrigin}
+                    setSubView={setSubView}
+                    iziCoins={iziCoins}
+                    iziCoinValue={
+                      globalSettings?.iziCoinRate ||
+                      globalSettings?.izi_coin_rate ||
+                      1.0
+                    }
+                    deliveryFee={calculateDeliveryFee()}
+                  />
                 </motion.div>
               )}
               {subView === "shop" && (
-                <motion.div key="shopv" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }} className="absolute inset-0 z-[60]">
+                <motion.div
+                  key="shopv"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                  className="absolute inset-0 z-[60]"
+                >
                   <div className="h-full bg-black overflow-y-auto no-scrollbar">
-                     {renderShop()}
+                    <RestaurantMenuView
+                      selectedShop={selectedShop}
+                      setSubView={setSubView}
+                      activeCategory={activeCategory}
+                      setActiveCategory={setActiveCategory}
+                      handleAddToCart={handleAddToCart}
+                      navigateSubView={navigateSubView}
+                      cart={cart}
+                    />
                   </div>
                 </motion.div>
               )}
               {subView === "product" && (
-                <motion.div key="prodv" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[130]">
+                <motion.div
+                  key="prodv"
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[130]"
+                >
                   {renderProductDetail()}
                 </motion.div>
               )}
               {subView === "order_detail" && (
-                <motion.div key="odetail" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[140]">
-                   {renderOrderDetail()}
+                <motion.div
+                  key="odetail"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[140]"
+                >
+                  {renderOrderDetail()}
                 </motion.div>
               )}
               {subView === "search" && (
-                <motion.div key="searchv" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[100]">
+                <motion.div
+                  key="searchv"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[100]"
+                >
                   {renderSearch()}
                 </motion.div>
               )}
               {subView === "addresses" && (
-                <motion.div key="addres" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
+                <motion.div
+                  key="addres"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[110]"
+                >
                   {renderAddresses()}
                 </motion.div>
               )}
               {subView === "wallet_internal" && (
-                <motion.div key="wallet" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
+                <motion.div
+                  key="wallet"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[110]"
+                >
                   {renderWallet()}
                 </motion.div>
               )}
               {subView === "referral" && (
-                <motion.div key="ref" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
+                <motion.div
+                  key="ref"
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[110]"
+                >
                   {renderReferralSystem()}
                 </motion.div>
               )}
               {subView === "shipping_details" && (
-                <motion.div key="ship_det" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                <motion.div
+                  key="ship_det"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[120]"
+                >
                   {renderShippingDetails()}
                 </motion.div>
               )}
               {subView === "order_support" && (
-                <motion.div key="osupport" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
+                <motion.div
+                  key="osupport"
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[110]"
+                >
                   {renderOrderSupport()}
                 </motion.div>
               )}
               {subView === "order_feedback" && (
-                <motion.div key="ofeedback" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[160]">
+                <motion.div
+                  key="ofeedback"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[160]"
+                >
                   {renderOrderFeedback()}
                 </motion.div>
               )}
               {subView === "order_chat" && (
-                <motion.div key="ochat" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                <motion.div
+                  key="ochat"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[120]"
+                >
                   {renderOrderChat()}
                 </motion.div>
               )}
               {subView === "quest_center" && (
-                <motion.div key="quests" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[190]">
+                <motion.div
+                  key="quests"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[190]"
+                >
                   {renderQuestCenter()}
                 </motion.div>
               )}
               {subView === "pix_payment" && (
-                <motion.div key="pixpay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                <motion.div
+                  key="pixpay"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[150]"
+                >
                   {renderPixPayment()}
                 </motion.div>
               )}
               {subView === "lightning_payment" && (
-                <motion.div key="lnpay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                <motion.div
+                  key="lnpay"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[150]"
+                >
                   {renderLightningPayment()}
                 </motion.div>
               )}
               {subView === "card_payment" && (
-                <motion.div key="cardpay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                <motion.div
+                  key="cardpay"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[150]"
+                >
                   {renderCardPayment()}
                 </motion.div>
               )}
               {subView === "explore_category" && (
-                <motion.div key="expcat" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-40">
+                <motion.div
+                  key="expcat"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-40"
+                >
                   {renderExploreCategory()}
                 </motion.div>
               )}
               {subView === "taxi_wizard" && (
-                <motion.div key="taxi_wiz" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
-                  {renderTaxiWizard()}
+                <motion.div
+                  key="taxi_wiz"
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[110]"
+                >
+                  <MobilityWizard
+                    transitData={transitData}
+                    setTransitData={setTransitData}
+                    mobilityStep={mobilityStep}
+                    setMobilityStep={setMobilityStep}
+                    routePolyline={routePolyline}
+                    driverLocation={driverLocation}
+                    userLocation={userLocation}
+                    updateLocation={updateLocation}
+                    setSubView={setSubView}
+                    distancePrices={distancePrices}
+                    activeCard={selectedCard}
+                    walletBalance={walletBalance}
+                    handleConfirmMobility={handleConfirmMobility}
+                    Icon={Icon}
+                    IziTrackingMap={IziTrackingMap}
+                  />
                 </motion.div>
               )}
               {subView === "freight_wizard" && (
-                <motion.div key="freight" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderFreightWizard()}
+                <motion.div
+                  key="freight"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[120]"
+                >
+                  <MobilityWizard
+                    transitData={transitData}
+                    setTransitData={setTransitData}
+                    mobilityStep={mobilityStep}
+                    setMobilityStep={setMobilityStep}
+                    routePolyline={routePolyline}
+                    driverLocation={driverLocation}
+                    userLocation={userLocation}
+                    updateLocation={updateLocation}
+                    setSubView={setSubView}
+                    distancePrices={distancePrices}
+                    activeCard={selectedCard}
+                    walletBalance={walletBalance}
+                    handleConfirmMobility={handleConfirmMobility}
+                    Icon={Icon}
+                    IziTrackingMap={IziTrackingMap}
+                  />
                 </motion.div>
               )}
               {subView === "van_wizard" && (
-                <motion.div key="vanv" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderVanWizard()}
+                <motion.div
+                  key="vanv"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[120]"
+                >
+                  <MobilityWizard
+                    transitData={transitData}
+                    setTransitData={setTransitData}
+                    mobilityStep={mobilityStep}
+                    setMobilityStep={setMobilityStep}
+                    routePolyline={routePolyline}
+                    driverLocation={driverLocation}
+                    userLocation={userLocation}
+                    updateLocation={updateLocation}
+                    setSubView={setSubView}
+                    distancePrices={distancePrices}
+                    activeCard={selectedCard}
+                    walletBalance={walletBalance}
+                    handleConfirmMobility={handleConfirmMobility}
+                    Icon={Icon}
+                    IziTrackingMap={IziTrackingMap}
+                  />
                 </motion.div>
               )}
               {subView === "mobility_payment" && (
-                <motion.div key="mob_pay" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[115]">
-                  {renderMobilityPayment()}
+                <motion.div
+                  key="mob_pay"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[115]"
+                >
+                  <MobilityWizard
+                    transitData={transitData}
+                    setTransitData={setTransitData}
+                    mobilityStep={2}
+                    setMobilityStep={setMobilityStep}
+                    routePolyline={routePolyline}
+                    driverLocation={driverLocation}
+                    userLocation={userLocation}
+                    updateLocation={updateLocation}
+                    setSubView={setSubView}
+                    distancePrices={distancePrices}
+                    activeCard={selectedCard}
+                    walletBalance={walletBalance}
+                    handleConfirmMobility={handleConfirmMobility}
+                    Icon={Icon}
+                    IziTrackingMap={IziTrackingMap}
+                  />
                 </motion.div>
               )}
               {subView === "active_order" && (
-                <motion.div key="aorder" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[100]">
-                  <ActiveOrderView selectedItem={selectedItem} driverLocation={driverLocation} userLocation={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} routePolyline={routePolyline} onMyLocationClick={updateLocation} setSubView={setSubView} />
+                <motion.div
+                  key="aorder"
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-[100]"
+                >
+                  <ActiveOrderView
+                    selectedItem={selectedItem}
+                    driverLocation={driverLocation}
+                    userLocation={
+                      userLocation?.lat
+                        ? { lat: userLocation.lat, lng: userLocation.lng }
+                        : null
+                    }
+                    routePolyline={routePolyline}
+                    onMyLocationClick={updateLocation}
+                    setSubView={setSubView}
+                  />
                 </motion.div>
               )}
               {subView === "payment_processing" && (
-                <motion.div key="pproc" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                <motion.div
+                  key="pproc"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[150]"
+                >
                   {renderPaymentProcessing()}
                 </motion.div>
               )}
               {subView === "payment_error" && (
-                <motion.div key="perr" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                <motion.div
+                  key="perr"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[150]"
+                >
                   {renderPaymentError()}
                 </motion.div>
               )}
               {subView === "payment_success" && (
-                <motion.div key="psuccess" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                <motion.div
+                  key="psuccess"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[150]"
+                >
                   {renderPaymentSuccess()}
                 </motion.div>
               )}
               {subView === "waiting_merchant" && (
-                <motion.div key="wmerchant" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                <motion.div
+                  key="wmerchant"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[150]"
+                >
                   {renderWaitingMerchant()}
                 </motion.div>
               )}
               {subView === "waiting_driver" && (
-                <motion.div key="wdriver" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                <motion.div
+                  key="wdriver"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[150]"
+                >
                   {renderWaitingDriver()}
                 </motion.div>
               )}
               {subView === "scheduled_order" && (
-                <motion.div key="wsched" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                <motion.div
+                  key="wsched"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[150]"
+                >
                   {renderScheduledOrder()}
                 </motion.div>
               )}
               {subView === "izi_black_purchase" && (
-                <motion.div key="iziblackp" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.5 }} className="absolute inset-0 z-[180]">
+                <motion.div
+                  key="iziblackp"
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.5 }}
+                  className="absolute inset-0 z-[180]"
+                >
                   {renderIziBlackPurchase()}
                 </motion.div>
               )}
-                    </p>
-                  </motion.div>
-                </motion.div>
-              )}
+
               {isAIOpen && (
                 <motion.div
                   initial={{ y: "100%" }}
@@ -8243,21 +13052,24 @@ function App() {
 
       {/* Floating Cart Animations */}
       <AnimatePresence>
-        {cartAnimations.map(anim => (
+        {cartAnimations.map((anim) => (
           <motion.img
             key={anim.id}
-            src={anim.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=200"}
+            src={
+              anim.img ||
+              "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=200"
+            }
             initial={{ x: anim.x - 30, y: anim.y - 30, scale: 0.8, opacity: 1 }}
-            animate={{ 
+            animate={{
               x: window.innerWidth / 2 - 30,
               y: window.innerHeight - 80,
               scale: 0.1,
               opacity: 0,
-              rotate: 360
+              rotate: 360,
             }}
             transition={{
               duration: 0.8,
-              ease: [0.175, 0.885, 0.32, 1.275] // nice curved path feel
+              ease: [0.175, 0.885, 0.32, 1.275], // nice curved path feel
             }}
             className="fixed z-[9999] size-16 object-cover rounded-full shadow-2xl border-2 border-primary pointer-events-none"
           />
@@ -8276,19 +13088,31 @@ function App() {
           exit={{ y: -100, opacity: 0 }}
           className="fixed top-8 left-1/2 -translate-x-1/2 z-[200] w-[90%] max-w-[400px]"
         >
-          <div className={`p-5 rounded-[32px] shadow-2xl backdrop-blur-3xl border flex items-center gap-4 ${
-            toast.type === 'success' ? 'bg-emerald-500/90 border-emerald-400 text-white' : 
-            toast.type === 'warning' ? 'bg-amber-500/90 border-amber-400 text-white' :
-            'bg-slate-900/90 border-slate-700 text-white'
-          }`}>
-            <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 ${
-              toast.type === 'success' ? 'bg-white/20' : 'bg-black/20'
-            }`}>
+          <div
+            className={`p-5 rounded-[32px] shadow-2xl backdrop-blur-3xl border flex items-center gap-4 ${
+              toast.type === "success"
+                ? "bg-emerald-500/90 border-emerald-400 text-white"
+                : toast.type === "warning"
+                  ? "bg-amber-500/90 border-amber-400 text-white"
+                  : "bg-slate-900/90 border-slate-700 text-white"
+            }`}
+          >
+            <div
+              className={`size-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                toast.type === "success" ? "bg-white/20" : "bg-black/20"
+              }`}
+            >
               <span className="material-symbols-outlined font-black">
-                {toast.type === 'success' ? 'check_circle' : toast.type === 'warning' ? 'warning' : 'notifications_active'}
+                {toast.type === "success"
+                  ? "check_circle"
+                  : toast.type === "warning"
+                    ? "warning"
+                    : "notifications_active"}
               </span>
             </div>
-            <p className="text-xs font-black uppercase tracking-tight leading-tight flex-1">{toast.message}</p>
+            <p className="text-xs font-black uppercase tracking-tight leading-tight flex-1">
+              {toast.message}
+            </p>
           </div>
         </motion.div>
       )}
@@ -8296,7 +13120,4 @@ function App() {
   );
 }
 
-
 export default App;
-
-
