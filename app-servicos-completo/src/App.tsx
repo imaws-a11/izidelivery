@@ -520,7 +520,7 @@ function App() {
       .channel("orders_tracking")
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "orders_delivery" },
+        { event: "*", schema: "public", table: "orders_delivery" },
         (payload) => {
           const newOrder = payload.new as any;
           const oldOrder = payload.old as any;
@@ -528,7 +528,12 @@ function App() {
           if (newOrder.user_id !== userIdRef.current) return;
 
           // Se o status mudou, mostrar notificação personalizada
-          if (newOrder.status !== oldOrder.status) {
+          if (!oldOrder || (oldOrder && newOrder.status !== oldOrder.status)) {
+             fetchMyOrders(userIdRef.current!);
+          }
+
+          // Se o status mudou, mostrar notificação personalizada
+          if (oldOrder && newOrder.status !== oldOrder.status) {
             const statusMessages: Record<string, string> = {
               'novo': 'Pagamento aprovado! O lojista já recebeu seu pedido. ⚡',
               'pendente_pagamento': 'Aguardando confirmação do pagamento... 💳',
@@ -1014,11 +1019,21 @@ function App() {
       shop = ESTABLISHMENTS.find(e => e.id === merchantId);
     }
     if (!shop) return 0;
+    
+    // 1. Respeitar a configuração do lojista no banco
     if (shop.freeDelivery === true || shop.free_delivery === true) return 0;
+    
+    // 2. Benefício IZI Black (se aplicável)
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const minOrderIziBlack = globalSettings?.izi_black_min_order_free_shipping || 50;
-    if (isIziBlackMembership && subtotal >= minOrderIziBlack) return 0;
-    return Number(globalSettings?.base_fee || 5.0);
+    const minOrderIziBlack = Number(globalSettings?.izi_black_min_order_free_shipping || 50);
+    
+    // Se o valor mínimo para frete grátis for maior que 0 e o usuário for IZI Black
+    if (isIziBlackMembership && subtotal >= minOrderIziBlack && minOrderIziBlack > 0) return 0;
+    
+    // Se for IZI Black mas não atingiu o mínimo, aplica a taxa base
+    // OU se o mínimo for 0, o benefício de frete grátis é desabilitado por padrão (opcional dependendo da regra de negócio)
+    
+    return Number(globalSettings?.base_fee || 5.90);
   };
 
   const handlePlaceOrder = async (useCoins: boolean = false) => {
@@ -3500,7 +3515,7 @@ function App() {
       rating: "4.9",
       tag: "Artesanal Ã¢â‚¬¢ Premium",
       time: "20-30 min",
-      freeDelivery: true,
+      freeDelivery: false,
       img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1000",
       banner: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1200",
       categories: [
@@ -3692,7 +3707,7 @@ function App() {
   };
 
   const renderStoreCatalog = () => {
-    const shop = selectedShop || { name: "Loja", rating: "5.0", time: "30 min", freeDelivery: true, img: "", banner: "", categories: [] };
+    const shop = selectedShop || { name: "Loja", rating: "5.0", time: "30 min", freeDelivery: false, img: "", banner: "", categories: [] };
     const allCategoryNames = ["Destaques", ...(shop.categories || []).map((c: any) => c.name)];
     const displayCategories = activeCategory === "Destaques"
       ? shop.categories || []
@@ -8423,6 +8438,7 @@ function App() {
                 setSubView={setSubView}
                 setSelectedItem={setSelectedItem}
                 navigateSubView={navigateSubView}
+                fetchMyOrders={fetchMyOrders}
                 tab={tab}
               />
             )}

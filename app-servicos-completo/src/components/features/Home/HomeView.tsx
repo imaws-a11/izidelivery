@@ -345,22 +345,64 @@ export const HomeView: React.FC<HomeViewProps> = ({
             />
           </div>
 
-          {/* PEDIDO ATIVO */}
+          {/* ACOMPANHAMENTO EM TEMPO REAL - LIVE ACTIVITY STYLE */}
           {activeOrder && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => { setSelectedItem(activeOrder); setSubView("active_order"); }}
-              className="bg-yellow-400 text-black p-4 rounded-3xl flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all relative overflow-hidden group border border-white/20"
+              className="relative overflow-hidden bg-zinc-900 border border-yellow-400/30 rounded-[32px] p-6 shadow-[0_20px_50px_rgba(255,215,9,0.15)] group cursor-pointer"
             >
-              <div className="size-10 rounded-2xl bg-black/10 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-xl">moped</span>
+              {/* Background Glow */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 blur-[60px] -mr-16 -mt-16 group-hover:bg-yellow-400/20 transition-all duration-700" />
+              
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-lg shadow-yellow-400/20">
+                    <span className="material-symbols-outlined text-black text-2xl font-black animate-pulse">
+                      {["mototaxi", "carro", "van", "utilitario"].includes(activeOrder.service_type) ? (activeOrder.service_type === 'mototaxi' ? "two_wheeler" : "directions_car") : "moped"}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-black text-sm uppercase tracking-tight italic">Acompanhe seu pedido</h4>
+                    <p className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">Live Tracking Ativo</p>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                   <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-3 py-1.5 rounded-full border border-yellow-400/20">
+                     {activeOrder.status === 'novo' ? "Aprovado" : activeOrder.status === 'waiting_merchant' ? "Aguardando Loja" : activeOrder.status === 'preparando' ? "No Preparo" : activeOrder.status === 'saiu_para_entrega' ? "À Caminho" : activeOrder.status}
+                   </span>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-black/60 leading-none mb-1">Status do Izi</p>
-                <h4 className="font-black text-xs leading-none uppercase tracking-tight">O seu pedido está {activeOrder.status}</h4>
+
+              <div className="space-y-4">
+                 <div className="flex flex-col gap-2">
+                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                      <span className="truncate max-w-[150px]">{activeOrder.merchant_name || "Seu pedido"}</span>
+                      <span className="text-white italic">
+                        {["saiu_para_entrega", "em_rota", "a_caminho", "picked_up"].includes(activeOrder.status) ? "Em Trânsito" : "Processando"}
+                      </span>
+                    </div>
+                    {/* Progress Bar Dinâmica */}
+                    <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden flex gap-1">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: ["novo", "preparando", "confirmado", "aceito", "no_preparo"].includes(activeOrder.status) ? "35%" : ["saiu_para_entrega", "a_caminho", "em_rota", "picked_up"].includes(activeOrder.status) ? "75%" : "100%" }}
+                        className="h-full bg-yellow-400 rounded-full shadow-[0_0_10px_rgba(251,191,36,0.4)]"
+                      />
+                    </div>
+                 </div>
+                 
+                 <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                    <p className="text-zinc-500 text-[9px] font-medium max-w-[200px] truncate">
+                      Destino: {activeOrder.delivery_address || "Seu endereço"}
+                    </p>
+                    <div className="text-white text-[10px] font-black flex items-center gap-1 group-hover:gap-2 transition-all">
+                       VER MAPA <span className="material-symbols-outlined text-sm text-yellow-400">arrow_forward</span>
+                    </div>
+                 </div>
               </div>
-              <span className="material-symbols-outlined text-black animate-bounce">arrow_forward</span>
             </motion.div>
           )}
 
