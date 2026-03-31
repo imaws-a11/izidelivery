@@ -179,14 +179,26 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
         <Marker 
           position={validDriverCoords} 
           icon={{
-            url: 'https://cdn-icons-png.flaticon.com/128/3448/3448339.png',
-            scaledSize: new google.maps.Size(42, 42),
-            anchor: new google.maps.Point(21, 21)
+            url: 'https://cdn-icons-png.flaticon.com/512/2965/2965319.png', // Motociclista Premium Amarelo
+            scaledSize: new google.maps.Size(48, 48),
+            anchor: new google.maps.Point(24, 24)
           }}
-          zIndex={100}
+          zIndex={1000} // Sempre no topo
         />
         
-        {directions ? (
+        {validDestCoords && (
+          <Marker 
+            position={validDestCoords}
+            icon={{
+              url: 'https://cdn-icons-png.flaticon.com/512/9131/9131546.png', // Pin de Destino Premium
+              scaledSize: new google.maps.Size(42, 42),
+              anchor: new google.maps.Point(21, 42)
+            }}
+            zIndex={500}
+          />
+        )}
+
+        {directions && (
           <DirectionsRenderer
             directions={directions}
             options={{
@@ -195,11 +207,9 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
                 strokeWeight: 6,
                 strokeOpacity: 0.8
               },
-              suppressMarkers: false
+              suppressMarkers: true // Usamos nossos próprios marcadores customizados
             }}
           />
-        ) : (
-          validDestCoords && <Marker position={validDestCoords} />
         )}
       </GoogleMap>
 
@@ -670,22 +680,30 @@ function App() {
             setActiveMission(updatedMission);
             localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
             
-            if (newStatus === 'concluido') {
-                setHistory(prev => [{ ...activeMission, id: activeMission.id.slice(0, 8).toUpperCase() }, ...prev]);
-                setStats(prev => {
-                    const bonusXp = 25 + (prev.level * 5); const newXp = prev.xp + bonusXp; const levelUp = newXp >= prev.nextXp;
-                    if (levelUp) setTimeout(() => toast(`🎉 Nível ${prev.level + 1} desbloqueado!`), 500);
-                    return { ...prev, balance: prev.balance + activeMission.price, today: prev.today + activeMission.price, count: prev.count + 1, xp: levelUp ? newXp - prev.nextXp : newXp, level: levelUp ? prev.level + 1 : prev.level, nextXp: levelUp ? prev.nextXp + 50 : prev.nextXp };
-                });
+            if (newStatus === 'concluido' || newStatus === 'cancelado') {
+                if (newStatus === 'concluido') {
+                    setHistory(prev => [{ ...activeMission, id: activeMission.id.slice(0, 8).toUpperCase() }, ...prev]);
+                    setStats(prev => {
+                        const bonusXp = 25 + (prev.level * 5); const newXp = prev.xp + bonusXp; const levelUp = newXp >= prev.nextXp;
+                        if (levelUp) setTimeout(() => toast(`🎉 Nível ${prev.level + 1} desbloqueado!`), 500);
+                        return { ...prev, balance: prev.balance + activeMission.price, today: prev.today + (activeMission.price || 0), count: prev.count + 1, xp: levelUp ? newXp - prev.nextXp : newXp, level: levelUp ? prev.level + 1 : prev.level, nextXp: levelUp ? prev.nextXp + 50 : prev.nextXp };
+                    });
+                }
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
                 setActiveTab('dashboard');
-                toastSuccess('Entrega concluída! 🎉');
+                toastSuccess(newStatus === 'concluido' ? 'Entrega concluída! 🎉' : 'Missão cancelada.');
             } else {
                 toastSuccess('Status atualizado!');
             }
         } catch (e: any) {
             toastError('Erro ao atualizar status: ' + e.message);
+            // Se o erro for de registro não encontrado, podemos oferecer limpar o estado local
+            if (e.message?.includes('not found')) {
+                setActiveMission(null);
+                localStorage.removeItem('Izi_active_mission');
+                setActiveTab('dashboard');
+            }
         } finally {
             setIsAccepting(false);
         }
@@ -1231,11 +1249,34 @@ function App() {
                 <div className="size-24 rounded-[32px] bg-gradient-to-br from-primary/30 to-primary/5 border border-primary/20 flex items-center justify-center mb-4"><Icon name="person" className="text-primary text-5xl" /></div>
                 <h2 className="text-2xl font-black text-white tracking-tight">{driverName}</h2>
                 <div className="flex items-center gap-2 mt-1.5"><Icon name="verified" className="text-primary text-sm" /><span className="text-[10px] font-black text-primary uppercase tracking-widest">Piloto Izi • Nível {stats.level}</span></div>
-                <div className="flex gap-4 mt-4">
+                <div className="flex items-center gap-4 py-2 mt-4">
                     <div className="flex items-center gap-1.5 bg-white/5 px-4 py-2 rounded-2xl border border-white/5"><Icon name="star" className="text-primary text-sm" /><span className="text-sm font-black text-white">4.98</span></div>
                     <div className="flex items-center gap-1.5 bg-white/5 px-4 py-2 rounded-2xl border border-white/5"><Icon name="route" className="text-emerald-400 text-sm" /><span className="text-sm font-black text-white">{stats.count} corridas</span></div>
                 </div>
             </div>
+
+            {activeMission && (
+                <div className="bg-red-500/5 border border-red-500/10 rounded-[32px] p-6 space-y-4">
+                    <div>
+                        <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">Zona de Recuperação</p>
+                        <p className="text-[11px] text-white/40 leading-relaxed">Se o app estiver travado em uma missão que já terminou no sistema, use o botão abaixo para limpar seu estado local.</p>
+                    </div>
+                    <button 
+                        onClick={() => {
+                            if (confirm('Deseja forçar a limpeza da missão atual do seu celular?')) {
+                                setActiveMission(null);
+                                localStorage.removeItem('Izi_active_mission');
+                                setActiveTab('dashboard');
+                                toastSuccess('Sincronizado com sucesso!');
+                            }
+                        }}
+                        className="w-full h-12 bg-red-500/10 border border-red-500/20 text-red-500 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
+                    >
+                        Limpar Missão Local (Forçar)
+                    </button>
+                </div>
+            )}
+
             <div className="space-y-3">
                 {[{ label: 'Dados do Veículo', icon: 'directions_car', color: 'text-primary' }, { label: 'Documentos e CNH', icon: 'badge', color: 'text-blue-400' }, { label: 'Suporte Izi', icon: 'support_agent', color: 'text-emerald-400' }, { label: 'Configurações', icon: 'settings', color: 'text-white/40' }].map((item, i) => (
                     <button key={i} className="w-full bg-white/[0.03] border border-white/5 rounded-[24px] p-5 flex items-center justify-between group hover:bg-white/[0.06] transition-all active:scale-[0.98]">
@@ -1286,19 +1327,32 @@ function App() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-[#020617] flex flex-col overflow-hidden">
                 {/* Header Compacto */}
                 {!isMapOnly && (
-                    <div className="px-6 py-4 bg-black/40 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between shrink-0">
-                        <div className="flex items-center gap-3">
-                            <div className={`size-10 rounded-xl ${statusDisplay.bg} ${statusDisplay.color} flex items-center justify-center border border-current/10`}>
-                                <Icon name={statusDisplay.icon} size={20} className="animate-pulse" />
+                    <div className="px-6 py-5 bg-[#020617]/90 backdrop-blur-3xl border-b border-white/10 flex items-center justify-between shrink-0 z-[110]">
+                        <div className="flex items-center gap-4">
+                            <button 
+                                onClick={() => setActiveTab('dashboard')}
+                                className="size-11 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-white/40 active:scale-90 transition-all mr-1"
+                                title="Minimizar para o Dashboard"
+                            >
+                                <span className="material-symbols-outlined text-xl">arrow_back</span>
+                            </button>
+                            <div className={`size-12 rounded-2xl ${statusDisplay.bg} ${statusDisplay.color} flex items-center justify-center border border-current/20 shadow-lg shadow-black/20`}>
+                                <Icon name={statusDisplay.icon} size={24} className="animate-pulse" />
                             </div>
                             <div>
-                                <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em]">ID #{activeMission.realId?.slice(0,8).toUpperCase()}</p>
-                                <h2 className="text-sm font-black text-white tracking-tight uppercase">{statusDisplay.label}</h2>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.4em]">Missão Ativa</span>
+                                    <div className="size-1 rounded-full bg-white/20" />
+                                    <span className="text-[8px] font-black text-primary uppercase tracking-[0.2em]">#{activeMission.realId?.slice(0,8).toUpperCase()}</span>
+                                </div>
+                                <h2 className="text-base font-black text-white tracking-tight uppercase mt-0.5">{statusDisplay.label}</h2>
                             </div>
                         </div>
-                        <button onClick={() => setIsSOSActive(true)} className="size-10 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center text-red-500 active:scale-90 transition-all">
-                            <Icon name="emergency" size={18} />
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => setIsSOSActive(true)} className="size-11 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center text-red-500 active:scale-90 transition-all shadow-lg shadow-red-500/5">
+                                <Icon name="emergency" size={20} />
+                            </button>
+                        </div>
                     </div>
                 )}
 
@@ -1414,16 +1468,32 @@ function App() {
                         </div>
 
                         {/* Seção 4: Botões de Ação */}
-                        <div className="pt-2">
+                        <div className="pt-4 space-y-4">
                             {/* Aceite -> No Local */}
                             {(activeMission.status === 'saiu_para_coleta' || ['confirmado', 'preparando'].includes(activeMission.status || '')) && (
-                                <button 
-                                    onClick={() => handleUpdateStatus('no_local')} 
-                                    disabled={isAccepting}
-                                    className="w-full h-16 bg-gradient-to-r from-blue-600 to-blue-400 text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-2xl shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                                >
-                                    <Icon name="location_on" size={24} />Cheguei no Local
-                                </button>
+                                <div className="space-y-4">
+                                    <button 
+                                        onClick={() => handleUpdateStatus('no_local')} 
+                                        disabled={isAccepting}
+                                        className="w-full h-18 bg-gradient-to-r from-blue-700 via-blue-600 to-blue-500 text-white font-black text-base uppercase tracking-widest rounded-3xl shadow-2xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-50 border border-white/10"
+                                    >
+                                        <div className="size-10 bg-white/20 rounded-xl flex items-center justify-center shadow-inner">
+                                            <Icon name="location_on" size={24} />
+                                        </div>
+                                        <span className="flex-1 text-center pr-10">Cheguei no Local</span>
+                                    </button>
+
+                                    <button 
+                                        onClick={async () => {
+                                            if (await showConfirm({ message: 'Deseja realmente cancelar esta missão?' })) {
+                                                await handleUpdateStatus('cancelado');
+                                            }
+                                        }}
+                                        className="w-full py-4 text-red-500/50 text-[10px] font-black uppercase tracking-[0.3em] hover:text-red-500 transition-all"
+                                    >
+                                        Cancelar Missão
+                                    </button>
+                                </div>
                             )}
 
                             {/* No Local -> Coletado */}
@@ -1431,9 +1501,12 @@ function App() {
                                 <button 
                                     onClick={() => handleUpdateStatus('picked_up')} 
                                     disabled={isAccepting}
-                                    className={`w-full h-16 font-black text-sm uppercase tracking-widest rounded-2xl shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 ${activeMission.status === 'pronto' ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-emerald-500/20 animate-pulse' : 'bg-gradient-to-r from-emerald-600 to-emerald-400 text-white shadow-emerald-500/10'}`}
+                                    className={`w-full h-18 font-black text-base uppercase tracking-widest rounded-3xl shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-50 border border-white/10 ${activeMission.status === 'pronto' ? 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-400 text-white shadow-emerald-500/30 animate-pulse' : 'bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-500 text-white shadow-emerald-500/20'}`}
                                 >
-                                    <Icon name="package_2" size={24} />Confirmar Coleta
+                                    <div className="size-10 bg-white/20 rounded-xl flex items-center justify-center shadow-inner">
+                                        <Icon name="package_2" size={24} />
+                                    </div>
+                                    <span className="flex-1 text-center pr-10">Confirmar Coleta</span>
                                 </button>
                             )}
 
@@ -1442,9 +1515,12 @@ function App() {
                                 <button 
                                     onClick={() => handleUpdateStatus('a_caminho')} 
                                     disabled={isAccepting}
-                                    className="w-full h-16 bg-gradient-to-r from-yellow-500 to-yellow-400 text-black font-black text-sm uppercase tracking-widest rounded-2xl shadow-2xl shadow-yellow-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                    className="w-full h-18 bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-300 text-slate-950 font-black text-base uppercase tracking-widest rounded-3xl shadow-2xl shadow-yellow-500/40 active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-50 border border-white/20"
                                 >
-                                    <Icon name="moped" size={24} />Iniciar Entrega
+                                    <div className="size-10 bg-black/10 rounded-xl flex items-center justify-center shadow-inner">
+                                        <Icon name="moped" size={24} />
+                                    </div>
+                                    <span className="flex-1 text-center pr-10">Iniciar Entrega</span>
                                 </button>
                             )}
 
@@ -1453,9 +1529,12 @@ function App() {
                                 <button 
                                     onClick={() => handleUpdateStatus('concluido')} 
                                     disabled={isAccepting}
-                                    className="w-full h-16 bg-gradient-to-r from-primary to-yellow-400 text-slate-900 font-black text-sm uppercase tracking-widest rounded-2xl shadow-2xl shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                    className="w-full h-20 bg-gradient-to-r from-primary via-yellow-400 to-yellow-300 text-slate-900 font-black text-lg uppercase tracking-tight rounded-3xl shadow-[0_20px_50px_rgba(255,215,0,0.3)] active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-50 border-t border-white/30"
                                 >
-                                    <Icon name="check_circle" size={24} />{isMobility ? 'Concluir Corrida' : 'Finalizar Entrega'}
+                                    <div className="size-12 bg-white/30 rounded-2xl flex items-center justify-center shadow-md">
+                                        <Icon name="check_circle" size={28} />
+                                    </div>
+                                    <span className="flex-1 text-center pr-12">{isMobility ? 'Encerrar Corrida' : 'Finalizar Entrega'}</span>
                                 </button>
                             )}
                         </div>
@@ -1532,7 +1611,7 @@ function App() {
                 {isAuthenticated && (
                     <div key="app" className="flex flex-col h-full overflow-hidden">
                         <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
-                        <AnimatePresence>{activeMission && renderActiveMissionView()}</AnimatePresence>
+                        <AnimatePresence>{activeMission && activeTab === 'active_mission' && renderActiveMissionView()}</AnimatePresence>
                         {renderNavigationDrawer()}
                         <div className="flex flex-col h-full overflow-hidden">
                             {renderHeader()}
