@@ -22,11 +22,23 @@ export default function OrdersAdminTab() {
   const [localProcessingId, setLocalProcessingId] = React.useState<string | null>(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = React.useState<any>(null);
   const [statusFilter, setStatusFilter] = React.useState('todos');
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   const filteredOrders = React.useMemo(() => {
-    if (statusFilter === 'todos') return allOrders;
-    return allOrders.filter(o => o.status === statusFilter);
-  }, [allOrders, statusFilter]);
+    let result = allOrders;
+    if (statusFilter !== 'todos') {
+      result = result.filter(o => o.status === statusFilter);
+    }
+    if (searchQuery) {
+      const lowSearch = searchQuery.toLowerCase();
+      result = result.filter(o => 
+        (o.user?.name || o.user_name || '').toLowerCase().includes(lowSearch) ||
+        (o.user?.email || '').toLowerCase().includes(lowSearch) ||
+        o.id.toLowerCase().includes(lowSearch)
+      );
+    }
+    return result;
+  }, [allOrders, statusFilter, searchQuery]);
 
   const handleAction = async (id: string, newStatus: string, reason?: string) => {
     setLocalProcessingId(id);
@@ -66,9 +78,16 @@ export default function OrdersAdminTab() {
 
   const parseOrderAddress = (fullAddress: string) => {
     const parts = (fullAddress || '').split('| ITENS:');
+    const rawItems = parts[1] ? parts[1].split(',').map(i => i.trim()).filter(Boolean) : [];
+    
+    // Tenta limpar preços da string para exibição na lista legada
+    const cleanItems = rawItems.map(item => {
+        return item.replace(/\(R\$.*?\)/g, '').trim();
+    });
+
     return {
       address: parts[0]?.trim(),
-      items: parts[1] ? parts[1].split(',').map(i => i.trim()).filter(Boolean) : []
+      items: cleanItems
     };
   };
 
@@ -80,13 +99,25 @@ export default function OrdersAdminTab() {
         </div>
       )}
       
-      <div className="p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 flex items-center justify-between">
-        <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
-          <span className="material-symbols-outlined text-primary">analytics</span>
-          Monitoramento Global de Pedidos
-        </h3>
+      <div className="p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-4">
+          <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+            <span className="material-symbols-outlined text-primary">analytics</span>
+            Monitoramento Global de Pedidos
+          </h3>
+          <div className="relative group max-w-md">
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+            <input 
+              type="text"
+              placeholder="Buscar por cliente, e-mail ou ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-slate-400"
+            />
+          </div>
+        </div>
         <div className="flex items-center gap-4">
-          <div className="flex bg-white dark:bg-slate-800 rounded-2xl p-1 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="flex bg-white dark:bg-slate-800 rounded-2xl p-1 border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto">
             {['todos', 'pendente_pagamento', 'novo', 'cancelado'].map((s) => (
               <button
                 key={s}
@@ -275,17 +306,107 @@ export default function OrdersAdminTab() {
                           <div>
                               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 ml-1">Itens do Pedido</h4>
                               <div className="space-y-3">
-                                  {parseOrderAddress(selectedOrderDetails.delivery_address).items.length > 0 ? (
-                                      parseOrderAddress(selectedOrderDetails.delivery_address).items.map((item: string, idx: number) => (
-                                          <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                                              <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                                  <span className="material-symbols-outlined text-primary text-xl">fastfood</span>
+                                  {selectedOrderDetails.items && Array.isArray(selectedOrderDetails.items) && selectedOrderDetails.items.length > 0 ? (
+                                      <>
+                                          {selectedOrderDetails.items.map((it: any, idx: number) => (
+                                              <div key={idx} className="flex justify-between items-start p-4 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-slate-100 dark:border-slate-800 group hover:border-primary/20 transition-all">
+                                                  <div className="flex items-start gap-4">
+                                                       <div className="size-8 rounded-lg bg-white dark:bg-slate-900 flex items-center justify-center text-[10px] font-black text-primary border border-slate-100 dark:border-slate-800 group-hover:scale-110 transition-transform">
+                                                           {it.quantity || 1}x
+                                                       </div>
+                                                       <div>
+                                                           <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{it.name || it.product_name || 'Produto'}</p>
+                                                           {it.options && it.options.length > 0 && (
+                                                               <p className="text-[10px] text-slate-400 font-medium italic">
+                                                                   + {it.options.map((opt: any) => opt.name).join(', ')}
+                                                               </p>
+                                                           )}
+                                                       </div>
+                                                  </div>
+                                                  <div className="text-right">
+                                                      <p className="text-sm font-black text-slate-900 dark:text-white">
+                                                          R$ {Number((it.price || 0) * (it.quantity || 1)).toFixed(2).replace('.', ',')}
+                                                      </p>
+                                                      {it.quantity > 1 && (
+                                                          <p className="text-[9px] font-bold text-slate-400 uppercase">
+                                                              Un: R$ {Number(it.price || 0).toFixed(2).replace('.', ',')}
+                                                          </p>
+                                                      )}
+                                                  </div>
                                               </div>
-                                              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{item}</p>
+                                          ))}
+
+                                          {/* Financial Summary */}
+                                          <div className="mt-6 p-6 rounded-3xl bg-slate-100/50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-700/50 space-y-3">
+                                               <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                   <span>Subtotal</span>
+                                                   <span>R$ {Number(selectedOrderDetails.total_price - (selectedOrderDetails.delivery_fee || 0) + (selectedOrderDetails.discount || 0)).toFixed(2).replace('.', ',')}</span>
+                                               </div>
+                                               {selectedOrderDetails.delivery_fee > 0 && (
+                                                   <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                       <span>Entrega</span>
+                                                       <span className="text-blue-500 font-black">+ R$ {Number(selectedOrderDetails.delivery_fee).toFixed(2).replace('.', ',')}</span>
+                                                   </div>
+                                               )}
+                                               {selectedOrderDetails.discount > 0 && (
+                                                   <div className="flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                       <div className="flex items-center gap-1">
+                                                           <span>Desconto</span>
+                                                           {selectedOrderDetails.coupon_code && (
+                                                               <span className="px-1.5 py-0.5 bg-rose-50 text-rose-500 rounded border border-rose-100 text-[8px] font-black">{selectedOrderDetails.coupon_code}</span>
+                                                           )}
+                                                       </div>
+                                                       <span className="text-rose-500 font-black">- R$ {Number(selectedOrderDetails.discount).toFixed(2).replace('.', ',')}</span>
+                                                   </div>
+                                               )}
+                                               <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                                                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-display">Resumo Total</span>
+                                                   <span className="text-xl font-black text-primary italic">R$ {Number(selectedOrderDetails.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                               </div>
                                           </div>
-                                      ))
+                                      </>
+                                  ) : parseOrderAddress(selectedOrderDetails.delivery_address).items.length > 0 ? (
+                                      <div className="space-y-3">
+                                          {parseOrderAddress(selectedOrderDetails.delivery_address).items.map((item: string, idx: number) => (
+                                              <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                                                  <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                      <span className="material-symbols-outlined text-primary text-xl">fastfood</span>
+                                                  </div>
+                                                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{item}</p>
+                                              </div>
+                                          ))}
+                                          
+                                          {/* Resumo Financeiro para Legado */}
+                                          <div className="mt-6 p-6 rounded-3xl bg-slate-100/50 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-700/50 space-y-3">
+                                               <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                   <span>Subtotal Estimado</span>
+                                                   <span>R$ {Number(selectedOrderDetails.total_price - (selectedOrderDetails.delivery_fee || 0) + (selectedOrderDetails.discount || 0)).toFixed(2).replace('.', ',')}</span>
+                                               </div>
+                                               {selectedOrderDetails.delivery_fee > 0 && (
+                                                   <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                       <span>Entrega</span>
+                                                       <span className="text-blue-500 font-black">+ R$ {Number(selectedOrderDetails.delivery_fee).toFixed(2).replace('.', ',')}</span>
+                                                   </div>
+                                               )}
+                                               {selectedOrderDetails.discount > 0 && (
+                                                   <div className="flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                                        <div className="flex items-center gap-1">
+                                                            <span>Desconto</span>
+                                                            {selectedOrderDetails.coupon_code && (
+                                                                <span className="px-1.5 py-0.5 bg-rose-50 text-rose-500 rounded border border-rose-100 text-[8px] font-black">{selectedOrderDetails.coupon_code}</span>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-rose-500 font-black">- R$ {Number(selectedOrderDetails.discount).toFixed(2).replace('.', ',')}</span>
+                                                   </div>
+                                               )}
+                                               <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                                                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-display">Valor Total</span>
+                                                   <span className="text-xl font-black text-primary italic">R$ {Number(selectedOrderDetails.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                               </div>
+                                          </div>
+                                      </div>
                                   ) : (
-                                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 border-dashed text-center">
+                                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 border-dashed text-center opacity-60">
                                           <p className="text-xs font-bold text-slate-400">Sem itens registrados para este pedido</p>
                                       </div>
                                   )}
@@ -349,7 +470,7 @@ export default function OrdersAdminTab() {
                       </div>
 
                       {/* Footer Actions */}
-                      <div className="p-8 border-t border-slate-100 dark:border-slate-800 flex gap-4 bg-slate-50/50 dark:bg-slate-800/20">
+                      <div className="p-8 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row gap-4 bg-slate-50/50 dark:bg-slate-800/20">
                           <button
                               disabled={localProcessingId === selectedOrderDetails.id}
                               onClick={() => {
@@ -361,20 +482,36 @@ export default function OrdersAdminTab() {
                           >
                               {localProcessingId === selectedOrderDetails.id ? '...' : 'Forçar Cancelamento'}
                           </button>
-                          {selectedOrderDetails.status !== 'concluido' && selectedOrderDetails.status !== 'cancelado' && (
-                            <button
-                                disabled={localProcessingId === selectedOrderDetails.id}
-                                onClick={() => handleAction(selectedOrderDetails.id, 'concluido')}
-                                className="flex-[2] py-4 rounded-3xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
-                            >
-                                {localProcessingId === selectedOrderDetails.id ? '...' : (
-                                  <>
-                                    <span className="material-symbols-outlined text-sm">check_circle</span>
-                                    Forçar Conclusão
-                                  </>
-                                )}
-                            </button>
-                          )}
+
+                          {selectedOrderDetails.status === 'pendente_pagamento' && (
+                             <button
+                                 disabled={localProcessingId === selectedOrderDetails.id}
+                                 onClick={() => {
+                                   if(confirm('Confirmar recebimento manual do PIX para este pedido?')) {
+                                     handleAction(selectedOrderDetails.id, 'novo');
+                                   }
+                                 }}
+                                 className="flex-[2] py-4 rounded-3xl bg-blue-500 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                             >
+                                 <span className="material-symbols-outlined text-sm">payments</span>
+                                 Confirmar Pagamento e Liberar
+                             </button>
+                           )}
+
+                           {selectedOrderDetails.status !== 'concluido' && selectedOrderDetails.status !== 'cancelado' && selectedOrderDetails.status !== 'pendente_pagamento' && (
+                             <button
+                                 disabled={localProcessingId === selectedOrderDetails.id}
+                                 onClick={() => handleAction(selectedOrderDetails.id, 'concluido')}
+                                 className="flex-[2] py-4 rounded-3xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                             >
+                                 {localProcessingId === selectedOrderDetails.id ? '...' : (
+                                   <>
+                                     <span className="material-symbols-outlined text-sm">check_circle</span>
+                                     Forçar Conclusão
+                                   </>
+                                 )}
+                             </button>
+                           )}
                       </div>
                   </motion.div>
               </div>
