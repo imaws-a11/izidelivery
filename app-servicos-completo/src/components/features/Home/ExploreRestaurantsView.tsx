@@ -326,8 +326,8 @@ export const ExploreRestaurantsView = ({
                       <h4 className="font-black text-white text-base tracking-tight group-hover:text-yellow-400 transition-colors">{shop.name}</h4>
                       <div className="flex items-center gap-3 mt-1 text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
                         <span className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[13px]">local_fire_department</span>
-                          {shop.tag}
+                          <span className="material-symbols-outlined text-[13px]">local_shipping</span>
+                          {shop.freeDelivery ? "Grátis" : `R$ ${Number(shop.service_fee || 5.9).toFixed(2).replace('.', ',')}`}
                         </span>
                         <span className="flex items-center gap-1">
                           <span className="material-symbols-outlined text-[13px]">schedule</span>

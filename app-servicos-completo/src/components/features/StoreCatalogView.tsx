@@ -20,7 +20,7 @@ export const StoreCatalogView: React.FC<StoreCatalogViewProps> = ({
   cart,
   handleAddToCart
 }) => {
-  const shop = selectedShop || { name: "Loja", rating: "5.0", time: "30 min", freeDelivery: true, img: "", banner: "", categories: [] };
+  const shop = selectedShop || { name: "Loja", rating: "5.0", time: "30 min", freeDelivery: false, img: "", banner: "", categories: [] };
   const allCategoryNames = ["Destaques", ...(shop.categories || []).map((c: any) => c.name)];
   const displayCategories = activeCategory === "Destaques"
     ? shop.categories || []

@@ -1,39 +1,69 @@
 import React, { useState, useRef, useEffect } from "react";
 import { supabase } from "../../../lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 
-// Wrapper Component para o Leitor de QR Code usando Html5QrcodeScanner
+// Componente para o Leitor de QR Code usando a câmera nativa (Html5Qrcode)
 const ScannerWrapper = ({ onResult }: { onResult: (text: string) => void }) => {
+  const qrRef = useRef<Html5Qrcode | null>(null);
+
   useEffect(() => {
-    const html5QrcodeScanner = new Html5QrcodeScanner(
-      "reader",
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      false
-    );
+    qrRef.current = new Html5Qrcode("reader");
     
-    html5QrcodeScanner.render(
+    qrRef.current.start(
+      { facingMode: "environment" }, // Usa a câmera traseira
+      {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+      },
       (decodedText: string) => {
         onResult(decodedText);
-        html5QrcodeScanner.clear().catch(() => {});
+        qrRef.current?.stop().catch(() => {});
       },
-      (error: any) => { /* ignore logs freq. */ }
-    );
+      () => { /* logs freq - ignorar */ }
+    ).catch(err => {
+      console.error("Erro ao iniciar câmera:", err);
+    });
 
     return () => {
-      html5QrcodeScanner.clear().catch(() => {}); // cleanup no unmount
+      if (qrRef.current?.isScanning) {
+        qrRef.current.stop().catch(() => {});
+      }
     };
   }, [onResult]);
 
   return (
-    <div className="w-full flex flex-col items-center">
-      <div id="reader" className="w-full max-w-[300px] rounded-3xl overflow-hidden bg-black" style={{ border: "none" }} />
-      <style>{`
-        #reader__scan_region { background: #18181b; }
-        #reader__dashboard_section_csr button { background: #facc15; color: #000; border-radius: 999px; font-weight: 900; padding: 10px 20px; text-transform: uppercase; font-size: 10px; margin-top: 10px; }
-        #reader { border: none !important; }
-      `}</style>
-      <p className="text-zinc-500 text-xs font-bold w-3/4 max-w-sm mx-auto uppercase tracking-widest text-center mt-6">Aproxime a câmera do QR Code</p>
+    <div className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center">
+      {/* Camada da Câmera */}
+      <div id="reader" className="absolute inset-0 w-full h-full object-cover" />
+      
+      {/* Overlay de Target */}
+      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
+        <div className="w-64 h-64 border-2 border-yellow-400 rounded-[40px] relative">
+          <div className="absolute -top-1 -left-1 w-12 h-12 border-t-4 border-l-4 border-yellow-400 rounded-tl-2xl animate-pulse" />
+          <div className="absolute -top-1 -right-1 w-12 h-12 border-t-4 border-r-4 border-yellow-400 rounded-tr-2xl animate-pulse" />
+          <div className="absolute -bottom-1 -left-1 w-12 h-12 border-b-4 border-l-4 border-yellow-400 rounded-bl-2xl animate-pulse" />
+          <div className="absolute -bottom-1 -right-1 w-12 h-12 border-b-4 border-r-4 border-yellow-400 rounded-br-2xl animate-pulse" />
+        </div>
+        
+        <div className="mt-12 text-center space-y-4 px-10">
+          <div className="inline-flex items-center gap-2 px-6 py-2 bg-yellow-400 rounded-full shadow-lg">
+            <span className="material-symbols-outlined text-black text-lg animate-pulse">qr_code_scanner</span>
+            <span className="text-[10px] font-black text-black uppercase tracking-widest">Escaneando IZI Pay</span>
+          </div>
+          <p className="text-white/60 text-xs font-bold uppercase tracking-widest leading-relaxed">
+            Centralize o QR Code no quadro acima para autenticação instantânea
+          </p>
+        </div>
+      </div>
+      
+      {/* Botão de Fechar no Overlay */}
+      <button 
+        onClick={() => window.location.reload()} // Forçar reset do fluxo se necessário ou usar state
+        className="absolute top-12 right-6 size-12 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white z-20"
+      >
+        <span className="material-symbols-outlined">close</span>
+      </button>
     </div>
   );
 };
