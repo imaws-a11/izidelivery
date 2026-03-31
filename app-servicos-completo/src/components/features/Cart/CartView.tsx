@@ -9,11 +9,16 @@ interface CartViewProps {
   merchantProducts: any[];
   merchantName?: string;
   handleAddToCart: (item: any) => void;
+  isIziBlack?: boolean;
+  deliveryFee?: number;
 }
 
-export const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, navigateSubView, merchantProducts, merchantName, handleAddToCart }) => {
+export const CartView: React.FC<CartViewProps> = ({ 
+  cart, setCart, setSubView, navigateSubView, merchantProducts, merchantName, handleAddToCart,
+  isIziBlack = false, deliveryFee = 0
+}) => {
   const subtotal: number = cart.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0);
-  const taxa: number = 0; // Grátis no Izi
+  const taxa: number = deliveryFee; 
   const total: number = subtotal + taxa;
   const getAddonDetails = (item: any) => Array.isArray(item.addonDetails) ? item.addonDetails : [];
   const cartProductIds = new Set(cart.map((item: any) => item.id));
@@ -162,8 +167,16 @@ export const CartView: React.FC<CartViewProps> = ({ cart, setCart, setSubView, n
           <div className="flex items-center justify-between">
             <span className="text-zinc-500 text-sm font-medium uppercase tracking-widest">Taxa de entrega</span>
             <div className="flex flex-col items-end">
-               <span className="text-emerald-400 font-bold text-sm tracking-widest uppercase italic">Grátis</span>
-               <span className="text-[8px] text-zinc-600 font-bold tracking-[0.2em] uppercase mt-1">Benefício Izi Black</span>
+               {taxa === 0 ? (
+                 <>
+                   <span className="text-emerald-400 font-bold text-sm tracking-widest uppercase italic">Grátis</span>
+                   {isIziBlack && (
+                     <span className="text-[8px] text-zinc-600 font-bold tracking-[0.2em] uppercase mt-1">Benefício Izi Black</span>
+                   )}
+                 </>
+               ) : (
+                 <span className="text-white font-black text-sm tracking-tight italic">R$ {taxa.toFixed(2).replace(".", ",")}</span>
+               )}
             </div>
           </div>
           

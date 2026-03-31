@@ -61,6 +61,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [usersList, setUsersList] = useState<User[]>([]);
   const [driversList, setDriversList] = useState<Driver[]>([]);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [dashboardOrders, setDashboardOrders] = useState<Order[]>([]);
   const [myDriversList, setMyDriversList] = useState<Driver[]>([]);
   const [merchantsList, setMerchantsList] = useState<Merchant[]>([]);
   const [productsList, setProductsList] = useState<Product[]>([]);
@@ -302,20 +303,28 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const { data: userData } = await supabase.from('users_delivery').select('id');
       const { data: driverData } = await supabase.from('drivers_delivery').select('id');
-      const { data: orderData } = await supabase.from('orders_delivery').select('total_price, status');
+      const { data: orderData } = await supabase.from('orders_delivery').select('total_price, status, merchant_id, created_at, service_type');
       const { data: onlineData } = await supabase.from('drivers_delivery').select('id').eq('is_online', true);
       const { data: merchantData } = await supabase.from('admin_users').select('id').eq('role', 'merchant');
       const { data: promoData } = await supabase.from('promotions_delivery').select('*');
 
       const completedOrders = orderData?.filter(o => o.status === 'concluido') || [];
       const canceledOrders = orderData?.filter(o => o.status === 'cancelado') || [];
-      
-      const totalRevenue = completedOrders.reduce((acc, curr) => acc + (curr.total_price || 0), 0);
-      const cancelationImpact = canceledOrders.reduce((acc, curr) => acc + (curr.total_price || 0), 0);
-
       const coupons = promoData?.filter(p => p.type === 'coupon') || [];
-      const totalCouponsValue = coupons.reduce((acc, curr) => acc + (curr.discount_value || 0), 0);
-      const activeOffers = promoData?.filter(p => p.is_active).length || 0;
+
+      if (orderData) {
+        // Filtra ordens para o dashboard
+        let filtered = orderData as Order[];
+        if (userRole === 'merchant' && merchantProfile?.merchant_id) {
+          filtered = filtered.filter(o => o.merchant_id === merchantProfile.merchant_id);
+        }
+        setDashboardOrders(filtered);
+      }
+
+      const totalRevenue = completedOrders.reduce((acc: number, curr: any) => acc + (curr.total_price || 0), 0);
+      const cancelationImpact = canceledOrders.reduce((acc: number, curr: any) => acc + (curr.total_price || 0), 0);
+      const totalCouponsValue = coupons.reduce((acc: number, curr: any) => acc + (curr.discount_value || 0), 0);
+      const activeOffers = promoData?.filter((p: any) => p.is_active).length || 0;
 
       setStats({
         users: userData?.length || 0,
@@ -334,7 +343,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (err) {
       console.error('Erro ao buscar estatísticas:', err);
     }
-  }, []);
+  }, [userRole, merchantProfile]);
 
   const fetchUsers = useCallback(async () => {
     setIsLoadingList(true);
@@ -447,19 +456,20 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       .on(
         'postgres_changes',
         { 
-          event: 'INSERT', 
+          event: '*', 
           schema: 'public', 
           table: 'orders_delivery',
           filter: `merchant_id=eq.${merchantProfile.merchant_id}`
         },
         (payload) => {
-          console.log('Novo pedido recebido em tempo real:', payload);
-          // Tocar o som "triiiiimmmm!"
-          playIziSound('merchant');
-          // Mostrar notificação visual
-          setNewOrderNotification({ show: true, orderId: payload.new.id });
-          // Atualizar lista
+          console.log('Evento de pedido em tempo real:', payload.eventType, payload);
+          if (payload.eventType === 'INSERT') {
+            playIziSound('merchant');
+            setNewOrderNotification({ show: true, orderId: payload.new.id });
+          }
+          // Atualizar lista e estatísticas
           fetchAllOrders(merchantOrdersPage);
+          fetchStats();
         }
       )
       .subscribe();
@@ -627,6 +637,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       fetchAllOrders();
       fetchSubscriptionOrders();
     } else if (userRole === 'merchant') {
+      fetchStats();
       fetchMyDrivers();
       fetchProducts();
       fetchMenuCategories();
@@ -1221,21 +1232,108 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setPromoForm(updatedPromo);
   };
 
-  const dashboardData = useMemo(() => ({
-    totalRevenue: 28450.90,
-    totalOrders: 1240,
-    completedOrdersCount: 1180,
-    avgTicket: 24.11,
-    netProfit: 3414.10,
-    totalCommission: 3414.10,
-    deliverySuccessRate: 95.16,
-    dailyRevenue: [1200, 1500, 1100, 1800, 2200, 2800, 3100],
-    revenuePath: 'M0,120 L400,120',
-    dayLabels: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
-    totalOrdersToday: 42,
-    categories: [],
-    topMerchants: []
-  }), []);
+  const dashboardData = useMemo(() => {
+    // Se não há pedidos, retorna zerado
+    if (!dashboardOrders || dashboardOrders.length === 0) {
+      return {
+        totalRevenue: 0,
+        totalOrders: 0,
+        completedOrdersCount: 0,
+        avgTicket: 0,
+        netProfit: 0,
+        totalCommission: 0,
+        deliverySuccessRate: 0,
+        dailyRevenue: [0, 0, 0, 0, 0, 0, 0],
+        revenuePath: 'M0,120 L400,120',
+        dayLabels: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
+        totalOrdersToday: 0,
+        categories: [],
+        topMerchants: []
+      };
+    }
+
+    const completed = dashboardOrders.filter(o => o.status === 'concluido');
+    const totalRevenue = completed.reduce((acc, curr) => acc + (curr.total_price || 0), 0);
+    const totalOrders = dashboardOrders.length;
+    const completedOrdersCount = completed.length;
+    const avgTicket = completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0;
+    const deliverySuccessRate = totalOrders > 0 ? (completedOrdersCount / totalOrders) * 100 : 0;
+
+    // Cálculo de Lucro / Comissão
+    // Se for Lojista, o "Lucro Líquido" é o que sobra após a comissão da IZI
+    // Se for Admin, o Lucro Líquido é a soma das comissões
+    let netProfit = 0;
+    let totalCommission = 0;
+
+    // Receita diária dos últimos 7 dias baseada no Lucro Líquido / Receita
+    const dailyRev = [0, 0, 0, 0, 0, 0, 0];
+    const today = new Date();
+
+    completed.forEach(order => {
+      // Tenta achar o merchant específico pra pegar a taxa dele
+      const m = merchantsList.find(ml => ml.id === order.merchant_id);
+      const commissionRate = m?.commission_percent ?? appSettings.appCommission ?? 12;
+      const commission = (order.total_price || 0) * (commissionRate / 100);
+      
+      totalCommission += commission;
+      
+      let orderNetProfit = 0;
+      if (userRole === 'merchant') {
+        orderNetProfit = (order.total_price || 0) - commission;
+        netProfit += orderNetProfit;
+      } else {
+        orderNetProfit = commission; // Lucro do Admin é a comissão
+        netProfit += orderNetProfit;
+      }
+
+      const orderDate = new Date(order.created_at);
+      const diffDays = Math.floor((today.getTime() - orderDate.getTime()) / (1000 * 3600 * 24));
+      if (diffDays >= 0 && diffDays < 7) {
+        // Daily revenue chart shows the 'net profit' (revenue for admin, profit for merchant)
+        // or we can show total gross revenue. As it's "Receita" usually Admin wants to see his commission daily.
+        // E lojista sua receita liquida ou bruta. Vamos colocar o orderNetProfit para ser mais condizente com o "Lucro" no chart.
+        // Wait, for merchant, let's keep it as total_price (faturamento bruto) because usually daily revenue is gross.
+        // And for Admin, maybe also gross? Let's use order.total_price for Merchant, and commission for Admin.
+        dailyRev[6 - diffDays] += userRole === 'merchant' ? (order.total_price || 0) : commission;
+      }
+    });
+
+    // Pedidos de hoje
+    const totalOrdersToday = dashboardOrders.filter(o => {
+      const d = new Date(o.created_at);
+      return d.toDateString() === today.toDateString();
+    }).length;
+
+    // Categorias (Desempenho)
+    const categoryMap: Record<string, { label: string, val: number, revenue: number }> = {};
+    completed.forEach(o => {
+      const cat = o.service_type || 'Geral';
+      if (!categoryMap[cat]) categoryMap[cat] = { label: cat, val: 0, revenue: 0 };
+      categoryMap[cat].val++;
+      categoryMap[cat].revenue += (o.total_price || 0);
+    });
+
+    const categories = Object.values(categoryMap).map(c => ({
+      ...c,
+      percent: totalRevenue > 0 ? (c.revenue / totalRevenue) * 100 : 0
+    })).sort((a, b) => b.revenue - a.revenue);
+
+    return {
+      totalRevenue,
+      totalOrders,
+      completedOrdersCount,
+      avgTicket,
+      netProfit,
+      totalCommission,
+      deliverySuccessRate,
+      dailyRevenue: dailyRev,
+      revenuePath: 'M0,120 L400,120',
+      dayLabels: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
+      totalOrdersToday,
+      categories,
+      topMerchants: []
+    };
+  }, [dashboardOrders, merchantsList, appSettings, userRole]);
 
   const value: AdminContextType = {
     session,
@@ -1246,7 +1344,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setMerchantProfile,
     handleLogout,
     isLoadingList, isInitialLoading, stats, recentOrders, usersList, driversList, 
-    allOrders, myDriversList, merchantsList, productsList, menuCategoriesList, 
+    allOrders, dashboardOrders, setDashboardOrders, myDriversList, merchantsList, productsList, menuCategoriesList, 
     categoriesState, setCategoriesState, promotionsList, auditLogsList, myDedicatedSlots, 
     subscriptionOrders, dynamicRatesState, setDynamicRatesState, ordersPage, setOrdersPage, 
     ordersTotalCount, merchantOrdersPage, setMerchantOrdersPage, merchantOrdersTotalCount, 
@@ -1257,7 +1355,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     categoryGroupFilter, setCategoryGroupFilter, appSettings, setAppSettings, autoSaveStatus, 
     selectedUser, setSelectedUser, selectedMerchantPreview, setSelectedMerchantPreview, 
     selectedDriverStudio, setSelectedDriverStudio, selectedUserStudio, setSelectedUserStudio, 
-    selectedCategoryStudio, setSelectedCategoryStudio, selectedZoneForMap, setSelectedZoneForMap, 
+    selectedCategoryStudio, setSelectedCategoryStudio, selectedHexagons, setSelectedHexagons, 
+    selectedZoneForMap, setSelectedZoneForMap, 
     selectedTrackingItem, setSelectedTrackingItem, selectedMenuCategory, setSelectedMenuCategory, 
     editingItem, setEditingItem, editType, setEditType, editingSlotId, setEditingSlotId, 
     isSaving, setIsSaving, activePreviewTab, setActivePreviewTab, activeStudioTab, 
@@ -1271,7 +1370,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setShowWalletStatementModal, isAddingPeakRule, setIsAddingPeakRule, newPeakRule, 
     setNewPeakRule, newZoneData, setNewZoneData, mapSearch, setMapSearch, isGeolocating, 
     setIsGeolocating, mapCenterView, setMapCenterView, fixedGridCenter, setFixedGridCenter, 
-    selectedHexagons, setSelectedHexagons, hexGrid, getHexPath: () => [], 
+    hexGrid, getHexPath: () => [], 
     previewProducts, setPreviewProducts, previewCategories, setPreviewCategories, 
     dashboardData: dashboardData as DashboardData,
     mapsLoadError: mapsLoadError ? mapsLoadError.message : null,
