@@ -91,13 +91,6 @@ export default function IziBlackTab() {
 
       if (error) throw error;
 
-      // Se alterou o valor do plano no benefício, atualiza a configuração global
-      if (benefitData.min_order_value !== appSettings.iziBlackFee) {
-        const newSettings = { ...appSettings, iziBlackFee: benefitData.min_order_value };
-        setAppSettings(newSettings);
-        await supabase.from('app_settings_delivery').upsert(newSettings);
-      }
-
       toastSuccess(`Benefício Izi Black ${benefitData.id ? 'atualizado' : 'publicado'}!`);
       setShowBenefitModal(false);
       fetchPromotions();

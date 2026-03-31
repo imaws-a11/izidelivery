@@ -16,6 +16,7 @@ export interface Order {
   updated_at?: string;
   user_name?: string;
   scheduled_at?: string;
+  user?: User;
 }
 
 export interface Driver {

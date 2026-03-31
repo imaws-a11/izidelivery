@@ -1,11 +1,13 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
+import { supabase } from '../lib/supabase';
+import { toastSuccess, toastError } from '../lib/useToast';
 
 export default function OrdersAdminTab() {
   const {
     allOrders, 
     ordersPage, 
-    setOrdersPage, 
     ordersTotalCount, 
     fetchAllOrders,
     isLoadingList
@@ -16,6 +18,59 @@ export default function OrdersAdminTab() {
   }, [fetchAllOrders]);
 
   const ORDERS_PER_PAGE = 50;
+
+  const [localProcessingId, setLocalProcessingId] = React.useState<string | null>(null);
+  const [selectedOrderDetails, setSelectedOrderDetails] = React.useState<any>(null);
+  const [statusFilter, setStatusFilter] = React.useState('todos');
+
+  const filteredOrders = React.useMemo(() => {
+    if (statusFilter === 'todos') return allOrders;
+    return allOrders.filter(o => o.status === statusFilter);
+  }, [allOrders, statusFilter]);
+
+  const handleAction = async (id: string, newStatus: string, reason?: string) => {
+    setLocalProcessingId(id);
+    try {
+      let updateData: any = { status: newStatus };
+      if (reason) updateData.cancel_reason = reason;
+      
+      if (newStatus === 'novo') {
+        updateData.payment_status = 'approved';
+        updateData.paid_at = new Date().toISOString();
+      }
+      
+      const { data, error } = await supabase.from('orders_delivery').update(updateData).eq('id', id).select();
+      
+      if (error) {
+        toastError('Erro ao processar pedido: ' + error.message);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        toastError('O pedido foi atualizado, mas as alterações não refletiram.');
+      } else {
+        if (newStatus === 'cancelado') toastSuccess('Pedido cancelado com sucesso.');
+        else toastSuccess('Status do pedido atualizado.');
+      }
+
+      await fetchAllOrders(ordersPage);
+      if (selectedOrderDetails?.id === id) {
+          setSelectedOrderDetails(data?.[0]);
+      }
+    } catch (err: any) {
+      console.error('Erro na ação do admin:', err);
+    } finally {
+      setLocalProcessingId(null);
+    }
+  };
+
+  const parseOrderAddress = (fullAddress: string) => {
+    const parts = (fullAddress || '').split('| ITENS:');
+    return {
+      address: parts[0]?.trim(),
+      items: parts[1] ? parts[1].split(',').map(i => i.trim()).filter(Boolean) : []
+    };
+  };
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative">
@@ -30,12 +85,25 @@ export default function OrdersAdminTab() {
           <span className="material-symbols-outlined text-primary">analytics</span>
           Monitoramento Global de Pedidos
         </h3>
-        <button 
-          onClick={() => fetchAllOrders(ordersPage)}
-          className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-all shadow-sm"
-        >
-          <span className="material-symbols-outlined">refresh</span>
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="flex bg-white dark:bg-slate-800 rounded-2xl p-1 border border-slate-200 dark:border-slate-700 shadow-sm">
+            {['todos', 'pendente_pagamento', 'novo', 'cancelado'].map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s ? 'bg-primary text-slate-900 shadow-lg shadow-primary/20 scale-105' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                {s.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
+          <button 
+            onClick={() => fetchAllOrders(ordersPage)}
+            className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-primary transition-all shadow-sm"
+          >
+            <span className="material-symbols-outlined">refresh</span>
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -43,6 +111,7 @@ export default function OrdersAdminTab() {
           <thead className="bg-slate-50/80 dark:bg-slate-800/80">
             <tr>
               <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">ID Pedido</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Cliente</th>
               <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Tipo</th>
               <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Destino</th>
               <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Valor Total</th>
@@ -51,15 +120,38 @@ export default function OrdersAdminTab() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {allOrders.map((o) => (
-              <tr key={o.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                <td className="px-8 py-5 font-bold text-slate-400 text-xs">#DT-{o.id.slice(0, 8).toUpperCase()}</td>
+            {filteredOrders.length === 0 ? (
+               <tr>
+                  <td colSpan={6} className="py-20 text-center">
+                    <div className="flex flex-col items-center">
+                      <span className="material-symbols-outlined text-4xl text-slate-200 mb-4 scale-150">sentiment_dissatisfied</span>
+                      <p className="text-xs font-black text-slate-300 uppercase tracking-widest">Nenhum pedido encontrado com este filtro</p>
+                    </div>
+                  </td>
+               </tr>
+            ) : filteredOrders.map((o) => (
+               <tr 
+                 key={o.id} 
+                 onClick={() => setSelectedOrderDetails(o)}
+                 className="group hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer"
+               >
+                <td className="px-8 py-5 font-bold text-slate-400 text-xs group-hover:text-primary transition-colors">#DT-{o.id.slice(0, 8).toUpperCase()}</td>
+                <td className="px-8 py-5">
+                   <div className="flex flex-col">
+                     <span className="text-sm font-black text-slate-700 dark:text-slate-200 truncate max-w-[150px]">
+                       {o.user?.name || o.user_name || 'Usuário Izi'}
+                     </span>
+                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter truncate max-w-[150px]">
+                       ID: {o.user_id?.slice(0, 8)}...
+                     </span>
+                   </div>
+                </td>
                 <td className="px-8 py-5">
                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[9px] font-black uppercase tracking-widest text-slate-500">
                      {o.service_type || 'Geral'}
                    </span>
                 </td>
-                <td className="px-8 py-5 font-bold text-slate-600 dark:text-slate-300 truncate max-w-[250px] text-sm">{o.delivery_address}</td>
+                <td className="px-8 py-5 font-bold text-slate-600 dark:text-slate-300 truncate max-w-[250px] text-sm">{parseOrderAddress(o.delivery_address).address || o.delivery_address}</td>
                 <td className="px-8 py-5 font-black text-primary">R$ {Number(o.total_price || 0).toFixed(2).replace('.', ',')}</td>
                 <td className="px-8 py-5">
                   <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
@@ -116,6 +208,178 @@ export default function OrdersAdminTab() {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+          {selectedOrderDetails && (
+              <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 md:p-8">
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setSelectedOrderDetails(null)}
+                    className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+                  />
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                    className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[48px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                  >
+                      {/* Header */}
+                      <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
+                          <div>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Detalhes do Pedido (Admin)</p>
+                              <h2 className="text-2xl font-black text-slate-900 dark:text-white">#DT-{selectedOrderDetails.id.slice(0, 8).toUpperCase()}</h2>
+                          </div>
+                          <button 
+                            onClick={() => setSelectedOrderDetails(null)}
+                            className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-500 transition-all flex items-center justify-center shadow-sm"
+                          >
+                            <span className="material-symbols-outlined">close</span>
+                          </button>
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-8 overflow-y-auto flex-1 custom-scrollbar space-y-8">
+                          {/* Status Banner */}
+                          <div className={`p-6 rounded-[32px] border flex items-center justify-between ${
+                              selectedOrderDetails.status === 'pendente_pagamento' ? 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-500/5' :
+                              selectedOrderDetails.status === 'waiting_merchant' ? 'bg-orange-50 border-orange-100 text-orange-600 dark:bg-orange-500/5' :
+                              selectedOrderDetails.status === 'preparando' ? 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-500/5' :
+                              selectedOrderDetails.status === 'concluido' ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-500/5' :
+                              'bg-blue-50 border-blue-100 text-blue-600 dark:bg-blue-500/5'
+                          }`}>
+                              <div className="flex items-center gap-4">
+                                  <div className="size-12 rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center">
+                                      <span className="material-symbols-outlined text-2xl">
+                                          {selectedOrderDetails.status === 'pendente_pagamento' ? 'payments' :
+                                           selectedOrderDetails.status === 'waiting_merchant' ? 'pending' : 
+                                           selectedOrderDetails.status === 'preparando' ? 'restaurant' : 
+                                           selectedOrderDetails.status === 'concluido' ? 'check_circle' : 'local_shipping'}
+                                      </span>
+                                  </div>
+                                  <div>
+                                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Status Atual</p>
+                                      <p className="text-base font-black uppercase tracking-widest">
+                                          {selectedOrderDetails.status === 'pendente_pagamento' ? 'Aguardando Confirmação do Pagamento' :
+                                           selectedOrderDetails.status === 'waiting_merchant' ? 'Aguardando Aprovação' : 
+                                           selectedOrderDetails.status === 'preparando' ? 'Em Preparação' : 
+                                           selectedOrderDetails.status === 'waiting_driver' ? 'Aguardando Entregador' : 
+                                           selectedOrderDetails.status === 'concluido' ? 'Pedido Finalizado' : selectedOrderDetails.status}
+                                      </p>
+                                  </div>
+                              </div>
+                          </div>
+
+                          {/* Items Section */}
+                          <div>
+                              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 ml-1">Itens do Pedido</h4>
+                              <div className="space-y-3">
+                                  {parseOrderAddress(selectedOrderDetails.delivery_address).items.length > 0 ? (
+                                      parseOrderAddress(selectedOrderDetails.delivery_address).items.map((item: string, idx: number) => (
+                                          <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                                              <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                  <span className="material-symbols-outlined text-primary text-xl">fastfood</span>
+                                              </div>
+                                              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{item}</p>
+                                          </div>
+                                      ))
+                                  ) : (
+                                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 border-dashed text-center">
+                                          <p className="text-xs font-bold text-slate-400">Sem itens registrados para este pedido</p>
+                                      </div>
+                                  )}
+                              </div>
+                          </div>
+
+                          {/* Info Grid */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800">
+                                  <div className="flex items-center justify-between mb-4">
+                                      <div className="flex items-center gap-3">
+                                          <span className="material-symbols-outlined text-indigo-500">person</span>
+                                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</h4>
+                                      </div>
+                                      <button 
+                                          onClick={() => {
+                                              navigator.clipboard.writeText(selectedOrderDetails.user_id || '');
+                                              toastSuccess('ID do usuário copiado!');
+                                          }}
+                                          className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
+                                      >
+                                          Copiar ID
+                                      </button>
+                                  </div>
+                                  <p className="text-sm font-black text-slate-700 dark:text-slate-200 leading-relaxed mb-1">
+                                      {selectedOrderDetails.user?.name || selectedOrderDetails.user_name || 'Usuário Izi'}
+                                  </p>
+                                  {selectedOrderDetails.user?.name && selectedOrderDetails.user_name && selectedOrderDetails.user?.name !== selectedOrderDetails.user_name && (
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 italic">
+                                      Nome no pedido: {selectedOrderDetails.user_name}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
+                                        UID: {selectedOrderDetails.user_id || 'Não informado'}
+                                    </p>
+                                  </div>
+                              </div>
+                              <div className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800">
+                                  <div className="flex items-center gap-3 mb-4">
+                                      <span className="material-symbols-outlined text-rose-500">pin_drop</span>
+                                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço de Entrega</h4>
+                                  </div>
+                                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 leading-relaxed">
+                                      {parseOrderAddress(selectedOrderDetails.delivery_address).address}
+                                  </p>
+                              </div>
+                              <div className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800">
+                                  <div className="flex items-center gap-3 mb-4">
+                                      <span className="material-symbols-outlined text-blue-500">payments</span>
+                                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pagamento ({selectedOrderDetails.payment_method})</h4>
+                                  </div>
+                                  <div className="flex items-end justify-between">
+                                      <p className="text-2xl font-black text-primary">R$ {selectedOrderDetails.total_price?.toFixed(2).replace('.', ',')}</p>
+                                      {selectedOrderDetails.payment_method === 'dinheiro' && (
+                                          <span className="px-2 py-1 bg-rose-100 text-rose-600 rounded-lg text-[8px] font-black uppercase mb-1">Receber no local</span>
+                                      )}
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+
+                      {/* Footer Actions */}
+                      <div className="p-8 border-t border-slate-100 dark:border-slate-800 flex gap-4 bg-slate-50/50 dark:bg-slate-800/20">
+                          <button
+                              disabled={localProcessingId === selectedOrderDetails.id}
+                              onClick={() => {
+                                if(confirm('Como ADMIN, deseja forçar o cancelamento deste pedido?')) {
+                                  handleAction(selectedOrderDetails.id, 'cancelado', 'Cancelado forçadamente pelo ADMIN');
+                                }
+                              }}
+                              className="flex-1 py-4 rounded-3xl bg-white dark:bg-slate-800 text-slate-500 font-black text-[10px] uppercase tracking-[0.2em] border border-slate-200 dark:border-slate-700 hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm disabled:opacity-50"
+                          >
+                              {localProcessingId === selectedOrderDetails.id ? '...' : 'Forçar Cancelamento'}
+                          </button>
+                          {selectedOrderDetails.status !== 'concluido' && selectedOrderDetails.status !== 'cancelado' && (
+                            <button
+                                disabled={localProcessingId === selectedOrderDetails.id}
+                                onClick={() => handleAction(selectedOrderDetails.id, 'concluido')}
+                                className="flex-[2] py-4 rounded-3xl bg-emerald-500 text-white font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {localProcessingId === selectedOrderDetails.id ? '...' : (
+                                  <>
+                                    <span className="material-symbols-outlined text-sm">check_circle</span>
+                                    Forçar Conclusão
+                                  </>
+                                )}
+                            </button>
+                          )}
+                      </div>
+                  </motion.div>
+              </div>
+          )}
+      </AnimatePresence>
     </div>
   );
 }
