@@ -6253,7 +6253,6 @@ function App() {
   const renderProductDetail = () => {
     if (!selectedItem) return null;
 
-    // Determine where to go back
     const handleBack = () => {
       if (selectedShop) {
         setSubView("restaurant_menu");
@@ -6266,159 +6265,61 @@ function App() {
       }
     };
 
-    const itemImage =
-      selectedItem.img ||
-      "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop";
-    const selectedAddonEntries = getSelectedOptionEntries().filter((item: any) => item.quantity > 0).map((item: any) => ({
-      ...item,
-      group_name: productAddonGroups.find((group: any) => group.id === item.group_id)?.name || "Complemento",
-    }));
+    const itemImage = selectedItem.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop";
     const addonsPrice = calculateAddonsPrice();
     const totalProductPrice = selectedItem.price + addonsPrice;
 
     return (
-      <div className="absolute inset-0 z-[70] bg-[#f8f9fc] bg-zinc-900 flex flex-col hide-scrollbar overflow-y-auto">
-        <div
-          className="relative w-full h-[40vh] bg-cover bg-center shrink-0"
-          style={{ backgroundImage: `url('${itemImage}')` }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-[#f8f9fc] dark:from-slate-900 via-transparent to-black/20"></div>
-
+      <div className="absolute inset-0 z-[70] bg-zinc-950 flex flex-col hide-scrollbar overflow-y-auto">
+        <div className="relative w-full h-[40vh] bg-cover bg-center shrink-0" style={{ backgroundImage: "url('" + itemImage + "')" }}>
+          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-black/20"></div>
           <header className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between">
-            <button
-              onClick={handleBack}
-              className="flex items-center justify-center w-12 h-12 bg-white/90 bg-zinc-900/90 backdrop-blur-md rounded-full shadow-lg active:scale-95 transition-transform text-white border border-white/20"
-            >
-              <span className="material-symbols-rounded text-xl">
-                arrow_back
-              </span>
+            <button onClick={handleBack} className="flex items-center justify-center w-12 h-12 bg-black/40 backdrop-blur-md rounded-full text-white border border-white/20">
+              <Icon name="arrow_back" />
             </button>
-            <button className="w-12 h-12 bg-white/90 bg-zinc-900/90 backdrop-blur-md rounded-full shadow-lg flex items-center justify-center text-white border border-white/20">
+            <button className="w-12 h-12 bg-black/40 backdrop-blur-md rounded-full text-white border border-white/20">
               <Icon name="favorite" />
             </button>
           </header>
         </div>
 
-        <div className="flex-1 bg-[#f8f9fc] bg-zinc-900 -mt-10 rounded-t-[40px] px-8 pt-10 pb-40 relative z-20">
-          <div className="w-12 h-1.5 bg-slate-200  rounded-full mx-auto mb-8 opacity-50"></div>
-
-          <div className="flex justify-between items-start gap-4">
+        <div className="relative z-10 -mt-12 bg-zinc-950 rounded-t-[40px] px-8 pt-10 pb-32 space-y-8 flex-1">
+          <div className="flex justify-between items-start">
             <div className="flex-1">
-              <h2 className="text-3xl font-black text-white tracking-tighter leading-tight">
-                {selectedItem.name}
-              </h2>
+              <h2 className="text-3xl font-black text-white tracking-tighter">{selectedItem.name}</h2>
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-yellow-400 font-black text-2xl tracking-tighter">
-                  R$ {selectedItem.price.toFixed(2).replace(".", ",")}
-                </span>
-                {selectedItem.oldPrice && (
-                  <span className="text-zinc-500 text-sm line-through font-bold">
-                    R$ {selectedItem.oldPrice.toFixed(2).replace(".", ",")}
-                  </span>
-                )}
+                <span className="text-yellow-400 font-black text-2xl">R$ {selectedItem.price.toFixed(2).replace(".", ",")}</span>
               </div>
             </div>
             {selectedShop && (
-              <div className="bg-white bg-zinc-900 p-2 rounded-2xl shadow-sm border border-zinc-800 border-zinc-700 flex flex-col items-center min-w-[64px]">
-                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">
-                  Loja
-                </span>
-                <div
-                  className="size-8 rounded-lg bg-cover bg-center"
-                  style={{ backgroundImage: `url('${selectedShop.img}')` }}
-                ></div>
-              </div>
+               <div className="bg-zinc-900 p-2 rounded-2xl border border-zinc-800 flex flex-col items-center min-w-[64px]">
+                  <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1">Loja</span>
+                  <div className="size-8 rounded-lg bg-cover bg-center" style={{ backgroundImage: "url('" + selectedShop.img + "')" }}></div>
+               </div>
             )}
           </div>
 
-          <div className="mt-8 space-y-6">
+          <div className="space-y-6">
             <section>
-              <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-4">
-                Descrição
-              </h3>
-              <p className="text-zinc-500 text-zinc-400 font-medium text-base leading-relaxed">
-                {selectedItem.desc ||
-                  "Um produto premium selecionado especialmente para você. Qualidade garantida e entrega rápida diretamente na sua porta."}
-              </p>
+              <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4">Descricao</h3>
+              <p className="text-zinc-400 text-base leading-relaxed">{selectedItem.desc || "Produto premium selecionado."}</p>
             </section>
 
-            {/* Opcionais Section */}
             <div className="space-y-8">
-              {addonsLoading ? (
-                <div className="flex flex-col items-center py-10 gap-3">
-                   <div className="size-8 border-4 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin"></div>
-                   <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Carregando Adicionais...</p>
-                </div>
-              ) : productAddonGroups.map((group) => (
-                <section key={group.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="flex justify-between items-end mb-4 px-2">
-                    <div>
-                      <h3 className="text-lg font-black text-white tracking-tight">{group.name}</h3>
-                      <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mt-0.5">
-                        {group.min_select > 0 ? `Obrigatório • ` : ''} 
-                        {group.max_select === 1 ? 'Escolha 1 opção' : `Escolha até ${group.max_select} opções`}
-                      </p>
-                    </div>
-                    {group.is_required && (
-                      <span className="bg-white/5 border border-white/10 px-3 py-1 rounded-full text-[8px] font-black text-yellow-500 uppercase tracking-widest">Obrigatório</span>
-                    )}
-                  </div>
-
+              {productAddonGroups.map((group) => (
+                <section key={group.id} className="space-y-4">
+                  <h3 className="text-lg font-black text-white tracking-tight">{group.name}</h3>
                   <div className="space-y-3">
-                    {group.items.map((item: any) => {
-                      const optionQuantity = getOptionQuantity(group.id, item.id);
-                      const isSelected = optionQuantity > 0;
-                      const groupSelectedCount = getGroupSelectedCount(group.id);
-                      const maxAllowed = Math.max(Number(group.max_select) || 1, 1);
+                    {group.items.map((item) => {
+                      const qty = getOptionQuantity(group.id, item.id);
+                      const isSelected = qty > 0;
                       return (
-                        <div 
-                          key={item.id}
-                          onClick={() => updateOptionQuantity(group, item, 1)}
-                          className={`group p-4 rounded-3xl border transition-all flex items-center justify-between cursor-pointer active:scale-[0.98] ${isSelected ? 'bg-yellow-400 border-yellow-400' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
-                        >
-                          <div className="flex items-center gap-4 min-w-0">
-                             <div className={`size-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-black border-black' : 'border-zinc-700'}`}>
-                                 {isSelected && <span className="material-symbols-rounded text-yellow-400 text-sm font-black">check</span>}
-                              </div>
-                             <div className="min-w-0">
-                               <span className={`font-bold transition-colors block ${isSelected ? 'text-black' : 'text-zinc-300 group-hover:text-white'}`}>{item.name}</span>
-                               {isSelected && (
-                                 <span className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-black/70' : 'text-zinc-500'}`}>
-                                   {optionQuantity} un. selecionada{optionQuantity > 1 ? 's' : ''}
-                                 </span>
-                               )}
-                             </div>
+                        <div key={item.id} onClick={() => updateOptionQuantity(group, item, 1)}
+                           className={"p-4 rounded-3xl border transition-all flex items-center justify-between cursor-pointer " + (isSelected ? 'bg-yellow-400 border-yellow-400' : 'bg-white/5 border-white/10')}>
+                          <div className="flex items-center gap-4">
+                            <span className={"font-bold " + (isSelected ? 'text-black' : 'text-white')}>{item.name}</span>
                           </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            <div className="text-right">
-                              <span className={`font-black text-xs block ${isSelected ? 'text-black' : 'text-yellow-400'}`}>
-                                {item.price > 0 ? `+ R$ ${item.price.toFixed(2).replace('.', ',')}` : 'Grátis'}
-                              </span>
-                              <span className={`text-[10px] font-bold uppercase tracking-widest ${isSelected ? 'text-black/70' : 'text-zinc-600'}`}>
-                                {groupSelectedCount}/{maxAllowed}
-                              </span>
-                            </div>
-                            <div
-                              className={`flex items-center gap-2 rounded-2xl border px-2 py-1.5 ${isSelected ? 'bg-black/10 border-black/10' : 'bg-black/20 border-white/10'}`}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <button
-                                onClick={() => updateOptionQuantity(group, item, -1)}
-                                className={`size-8 rounded-xl flex items-center justify-center transition-all ${isSelected ? 'bg-black text-yellow-400' : 'bg-white/5 text-zinc-500'}`}
-                              >
-                                <span className="material-symbols-rounded text-lg">remove</span>
-                              </button>
-                              <span className={`min-w-6 text-center font-black text-sm ${isSelected ? 'text-black' : 'text-white'}`}>
-                                {optionQuantity}
-                              </span>
-                              <button
-                                onClick={() => updateOptionQuantity(group, item, 1)}
-                                className={`size-8 rounded-xl flex items-center justify-center transition-all ${isSelected ? 'bg-black text-yellow-400' : 'bg-yellow-400 text-black'}`}
-                              >
-                                <span className="material-symbols-rounded text-lg font-black">add</span>
-                              </button>
-                            </div>
-                          </div>
+                          <span className={"font-black text-xs " + (isSelected ? 'text-black' : 'text-yellow-400')}>+ R$ {item.price.toFixed(2)}</span>
                         </div>
                       );
                     })}
@@ -6426,123 +6327,33 @@ function App() {
                 </section>
               ))}
             </div>
-
-            {selectedAddonEntries.length > 0 && (
-              <section className="bg-white/5 border border-white/10 rounded-[32px] p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Resumo dos complementos</h3>
-                  <span className="text-yellow-400 font-black text-sm">+ R$ {addonsPrice.toFixed(2).replace(".", ",")}</span>
-                </div>
-                <div className="space-y-3">
-                  {selectedAddonEntries.map((item: any) => (
-                    <div key={`${item.group_id}-${item.id}`} className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-white font-bold text-sm">{item.name}</p>
-                        <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">
-                          {item.group_name} - {item.quantity} un. x R$ {item.unit_price.toFixed(2).replace(".", ",")}
-                        </p>
-                      </div>
-                      <span className="text-yellow-400 font-black text-sm whitespace-nowrap">
-                        R$ {item.total_price.toFixed(2).replace(".", ",")}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
-                Quantidade
-              </h3>
-              <div className="flex items-center gap-6 bg-slate-50 bg-zinc-900 p-2 rounded-2xl border border-zinc-800">
-                <button
-                  onClick={() => setTempQuantity((q) => Math.max(1, q - 1))}
-                  className="w-10 h-10 rounded-xl bg-white bg-zinc-900 text-zinc-500 flex items-center justify-center active:scale-90 transition-transform shadow-sm"
-                >
-                  <span className="material-symbols-rounded text-2xl">
-                    remove
-                  </span>
-                </button>
-                <span className="text-xl font-black text-white min-w-4 text-center">
-                  {tempQuantity}
-                </span>
-                <button
-                  onClick={() => setTempQuantity((q) => q + 1)}
-                  className="w-10 h-10 rounded-xl bg-yellow-400 text-white flex items-center justify-center active:scale-90 transition-transform shadow-lg shadow-primary/20"
-                >
-                  <span className="material-symbols-rounded text-2xl font-black">
-                    add
-                  </span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
         <div className="fixed bottom-10 left-8 right-8 z-[80]">
-          <motion.button
-            whileTap={{ scale: 0.96 }}
-            onClick={() => {
-              // Validar obrigatoriedade
-              const missingRequired = productAddonGroups.filter(g => g.is_required && getGroupSelectedCount(g.id) < g.min_select);
-              if (missingRequired.length > 0) {
-                 return showToast(`Escolha pelo menos ${missingRequired[0].min_select} em: ${missingRequired[0].name}`, "error");
-              }
-
-              const cartItemDetails = buildCartItemDetails(selectedItem, selectedOptions);
-              const addonsPrice = calculateAddonsPrice();
-               
-              const itemWithAddons = {
-                ...selectedItem,
-                selectedOptions: selectedOptions,
-                addonDetails: cartItemDetails.addonDetails,
-                addonSummaryText: cartItemDetails.addonSummaryText,
-                price: selectedItem.price + addonsPrice,
-                originalPrice: selectedItem.price,
-                addonsTotal: addonsPrice
-              };
-               
-              const itemsToAdd = Array.from({ length: tempQuantity }, (_, index) => ({
-                ...itemWithAddons,
-                cartId: `${selectedItem.id}-${Date.now()}-${index}`,
-              }));
-              setCart([...cart, ...itemsToAdd]);
-              handleBack();
-              showToast("Item adicionado!", "success");
-            }}
-            className="w-full bg-slate-900  text-white  p-5 rounded-[28px] shadow-[0_20px_40px_rgba(0,0,0,0.2)] flex items-center justify-between transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-2xl bg-white/20 bg-black/10 flex items-center justify-center">
-                <span className="material-symbols-rounded font-black text-xl">
-                  shopping_bag
-                </span>
-              </div>
-              <span className="font-bold text-lg">Adicionar</span>
-            </div>
-            <span className="font-black text-xl bg-white/20 bg-black/10 px-4 py-1.5 rounded-2xl tracking-tighter">
-              R${" "}
-              {(totalProductPrice * tempQuantity).toFixed(2).replace(".", ",")}
-            </span>
-          </motion.button>
+          <button onClick={() => {
+            const items = Array.from({ length: tempQuantity }, (_, i) => ({ ...selectedItem, cartId: selectedItem.id + "-" + Date.now() + "-" + i }));
+            setCart([...cart, ...items]);
+            handleBack();
+            showToast("Item adicionado!", "success");
+          }} className="w-full bg-slate-900 text-white p-5 rounded-[28px] flex items-center justify-between">
+            <span className="font-bold text-lg">Adicionar</span>
+            <span className="font-black text-xl bg-white/10 px-4 py-1.5 rounded-2xl">R$ {(totalProductPrice * tempQuantity).toFixed(2)}</span>
+          </button>
         </div>
       </div>
     );
   };
 
-
-
   const renderFreightWizard = () => {
     const categories = [
-      { id: 'fiorino', name: 'Fiorino/Furgão', desc: 'Cargas pequenas (ex: móvel pequeno, caixas)', icon: 'local_shipping' },
-      { id: 'caminhonete', name: 'Caminhonete', desc: 'Cargas médias / abertas (ex: geladeira, sofá)', icon: 'terminal' },
-      { id: 'caminhao', name: 'Caminhão BaÃƒº', desc: 'Mudanças completas / grandes volumes', icon: 'truck_front' }
+      { id: 'fiorino', name: 'Fiorino/Furgão', desc: 'Cargas pequenas', icon: 'local_shipping' },
+      { id: 'caminhonete', name: 'Caminhonete', desc: 'Cargas médias', icon: 'terminal' },
+      { id: 'caminhao', name: 'Caminhão Baú', desc: 'Mudanças grandes', icon: 'truck_front' }
     ];
 
     return (
       <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
-        {/* MAPA NO FUNDO */}
         <div className="absolute inset-0 z-0 h-[35vh]">
            <IziTrackingMap routePolyline={routePolyline} driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
@@ -6560,62 +6371,29 @@ function App() {
 
         <main className="relative z-40 mt-auto bg-zinc-950 border-t border-white/5 flex flex-col h-[70vh] rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
            <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
-              {/* STEP 1: ENDEREÃƒâ€¡OS E PARADAS */}
               {mobilityStep === 1 && (
                 <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
                    <div className="space-y-2">
                       <h3 className="text-xl font-bold text-white tracking-tight">Roteiro do Frete</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Defina origem, destino e até 2 paradas intermediárias.</p>
                    </div>
-                   
                    <div className="space-y-4">
-                      {/* ORIGEM */}
-                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5 focus-within:border-yellow-400/30 transition-all">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Origem (Onde coletar?)</p>
+                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2">Origem</p>
                          <AddressSearchInput 
+                           userCoords={userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                            initialValue={transitData.origin}
-                           placeholder="Rua da Origem..."
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                           placeholder="Origem..."
+                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white"
                            onSelect={(p) => setTransitData({...transitData, origin: p.formatted_address || ""})}
                          />
                       </div>
-
-                      {/* STOPS */}
-                      {transitData.stops.map((stop, idx) => (
-                         <div key={idx} className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5 flex items-center gap-3">
-                             <div className="flex-1">
-                                <p className="text-[9px] font-black uppercase text-yellow-400/60 tracking-widest mb-2 ml-1">Parada {idx + 1}</p>
-                                <AddressSearchInput 
-                                  initialValue={stop}
-                                  placeholder="Rua da Parada..."
-                                  className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
-                                  onSelect={(p) => {
-                                    const newStops = [...transitData.stops];
-                                    newStops[idx] = p.formatted_address || "";
-                                    setTransitData({...transitData, stops: newStops});
-                                  }}
-                                />
-                             </div>
-                             <button onClick={() => setTransitData({...transitData, stops: transitData.stops.filter((_, i) => i !== idx)})} className="p-2 text-zinc-600 hover:text-red-400">
-                                <span className="material-symbols-outlined">delete</span>
-                             </button>
-                         </div>
-                      ))}
-
-                      {transitData.stops.length < 2 && (
-                        <button onClick={() => setTransitData({...transitData, stops: [...transitData.stops, ""]})} className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-zinc-800 rounded-[30px] text-zinc-500 hover:border-yellow-400/30 hover:text-yellow-400 transition-all">
-                           <span className="material-symbols-outlined text-lg">add_location_alt</span>
-                           <span className="text-[10px] font-black uppercase tracking-widest">+ Adicionar Parada</span>
-                        </button>
-                      )}
-
-                      {/* DESTINO */}
-                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5 focus-within:border-yellow-400/30 transition-all">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Destino Final</p>
+                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2">Destino</p>
                          <AddressSearchInput 
+                           userCoords={userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                            initialValue={transitData.destination}
-                           placeholder="Para onde levar?"
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                           placeholder="Destino..."
+                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white"
                            onSelect={(p) => setTransitData({...transitData, destination: p.formatted_address || ""})}
                          />
                       </div>
@@ -6623,164 +6401,38 @@ function App() {
                 </motion.section>
               )}
 
-              {/* STEP 2: CATEGORIA DO VEÃƒCULO */}
               {mobilityStep === 2 && (
                 <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Tipo de Veículo</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Selecione o veículo ideal baseado na sua carga.</p>
-                   </div>
-
                    <div className="space-y-4">
                       {categories.map((cat) => (
-                        <div 
-                          key={cat.id}
-                          onClick={() => setTransitData({...transitData, vehicleCategory: cat.name})}
-                          className={`p-6 rounded-[35px] border-2 transition-all flex items-center gap-6 cursor-pointer ${transitData.vehicleCategory === cat.name ? 'border-yellow-400 bg-yellow-400/5 shadow-xl shadow-yellow-400/10' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}
-                        >
-                           <div className={`size-16 rounded-2xl flex items-center justify-center ${transitData.vehicleCategory === cat.name ? 'bg-yellow-400 text-black' : 'bg-zinc-800 text-white'}`}>
+                        <div key={cat.id} onClick={() => setTransitData({...transitData, vehicleCategory: cat.name})}
+                           className={'p-6 rounded-[35px] border-2 transition-all flex items-center gap-6 cursor-pointer'} style={{ borderColor: transitData.vehicleCategory === cat.name ? '#facc15' : 'transparent', background: transitData.vehicleCategory === cat.name ? 'rgba(250, 204, 21, 0.05)' : 'rgba(24, 24, 27, 0.4)' }}>
+                           <div className={'size-16 rounded-2xl flex items-center justify-center'} style={{ background: transitData.vehicleCategory === cat.name ? '#facc15' : '#27272a', color: transitData.vehicleCategory === cat.name ? '#000' : '#fff' }}>
                               <span className="material-symbols-outlined text-4xl">{cat.icon}</span>
                            </div>
                            <div className="flex-1">
                               <h4 className="font-black text-lg text-white">{cat.name}</h4>
-                              <p className="text-zinc-500 text-xs font-medium">{cat.desc}</p>
+                              <p className="text-zinc-500 text-xs">{cat.desc}</p>
                            </div>
-                           {transitData.vehicleCategory === cat.name && <span className="material-symbols-outlined text-yellow-400">check_circle</span>}
                         </div>
                       ))}
                    </div>
                 </motion.section>
               )}
-
-              {/* STEP 3: DETALHES DA CARGA E FOTOS */}
-              {mobilityStep === 3 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-10">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">O que vamos transportar?</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Descreva os itens e envie fotos para facilitar o orçamento.</p>
-                   </div>
-
-                   <div className="space-y-8">
-                      <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-3 ml-1">Descrição Breve</p>
-                         <textarea 
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 resize-none"
-                           rows={4}
-                           placeholder="Ex: 1 Geladeira, 1 Sofá de 3 lugares, 5 caixas de roupas..."
-                           value={transitData.packageDesc}
-                           onChange={(e) => setTransitData({...transitData, packageDesc: e.target.value})}
-                         />
-                      </div>
-
-                      <div className="space-y-4">
-                        <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Fotos da Carga (Opcional - Máx 3)</p>
-                        <div className="grid grid-cols-3 gap-4">
-                           {[1,2,3].map((_, i) => (
-                             <div key={i} className="aspect-square bg-zinc-900 rounded-[25px] border-2 border-dashed border-zinc-800 flex flex-col items-center justify-center gap-2 text-zinc-600 hover:border-yellow-400/30 hover:text-yellow-400 transition-all cursor-pointer">
-                                <span className="material-symbols-outlined">add_a_photo</span>
-                                <span className="text-[8px] font-black uppercase">Foto {i+1}</span>
-                             </div>
-                           ))}
-                        </div>
-                      </div>
-                   </div>
-                </motion.section>
-              )}
-
-              {/* STEP 4: AJUDANTES E AGENDAMENTO */}
-              {mobilityStep === 4 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-10">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Ajuda & Acessibilidade</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Defina se precisa de ajudantes e as condiçÃƒµes do local.</p>
-                   </div>
-
-                   <div className="space-y-8">
-                      {/* AJUDANTES */}
-                      <div className="space-y-4">
-                         <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Ajudantes Adicionais</p>
-                         <div className="grid grid-cols-3 gap-3">
-                            {[
-                               { val: 0, label: "Apenas Motorista", desc: "Cliente carrega" },
-                               { val: 1, label: "Motorista +1", desc: "1 Ajudante" },
-                               { val: 2, label: "Motorista +2", desc: "2 Ajudantes" }
-                            ].map((h) => (
-                              <button key={h.val} onClick={() => setTransitData({...transitData, helpers: h.val})}
-                                className={`p-4 rounded-[28px] border-2 flex flex-col items-center gap-1 transition-all ${transitData.helpers === h.val ? 'border-yellow-400 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}>
-                                <span className="text-xs font-black text-white">{h.label}</span>
-                                <span className="text-[8px] text-zinc-500 font-bold uppercase">{h.desc}</span>
-                              </button>
-                            ))}
-                         </div>
-                      </div>
-
-                      {/* ACESSIBILIDADE */}
-                      <div className="space-y-4">
-                         <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">CondiçÃƒµes do Local</p>
-                         <div className="space-y-3">
-                            {[
-                               { key: 'stairsAtOrigin', label: "Possui escadas na origem?", icon: "stairs" },
-                               { key: 'stairsAtDestination', label: "Possui escadas no destino?", icon: "apartment" },
-                               { key: 'serviceElevator', label: "Tem elevador de serviço?", icon: "elevators" }
-                            ].map((item) => (
-                               <div key={item.key} onClick={() => setTransitData({...transitData, accessibility: {...transitData.accessibility, [item.key]: !((transitData.accessibility as any)[item.key]) } as any})}
-                                 className={`flex items-center justify-between p-5 rounded-[28px] border-2 transition-all cursor-pointer ${(transitData.accessibility as any)[item.key] ? 'border-yellow-400 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}>
-                                  <div className="flex items-center gap-4">
-                                     <span className="material-symbols-outlined text-zinc-500">{item.icon}</span>
-                                     <span className="text-sm font-bold text-white">{item.label}</span>
-                                  </div>
-                                  <div className={`size-6 rounded-full border-2 flex items-center justify-center ${(transitData.accessibility as any)[item.key] ? 'border-yellow-400 bg-yellow-400 text-black' : 'border-zinc-700'}`}>
-                                     {(transitData.accessibility as any)[item.key] && <span className="material-symbols-outlined text-base">check</span>}
-                                  </div>
-                               </div>
-                            ))}
-                         </div>
-                      </div>
-                   </div>
-                </motion.section>
-              )}
-            </div>
-
-            {/* PREVIEW & PRICE */}
-            <div className="px-8 mt-2">
-              <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5 space-y-4">
-                 <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Estimativa Izi</p>
-                    <span className="text-xl font-black text-white">
-                      R$ {(() => {
-                        const res = calculateFreightPrice({
-                          baseFare: 45,
-                          distanceInKm: distanceValueKm || 1,
-                           distanceRate: 2.8,
-                          helperCount: transitData.helpers,
-                          helperRate: 35,
-                          hasStairs: transitData.accessibility.stairsAtOrigin || transitData.accessibility.stairsAtDestination
-                        });
-                        return res.totalPrice.toFixed(2).replace(".", ",");
-                      })()}
-                    </span>
-                 </div>
-                 <div className="h-px bg-white/5" />
-                 <p className="text-[9px] font-medium text-zinc-500 italic">* Valor sujeito a alteraçÃƒµes por distÃ¢ncia real ou tempo de carga excedente.</p>
-              </div>
-            </div>
-
-           {/* ACTIONS FOOTER */}
-           <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent">
-              <div className="flex gap-4">
-                 {mobilityStep > 1 && (
-                   <button onClick={() => setMobilityStep(prev => prev - 1)} className="size-16 rounded-[28px] bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-95 transition-all">
-                      <Icon name="chevron_left" />
-                   </button>
-                 )}
-                 <button 
-                   onClick={() => mobilityStep < 4 ? setMobilityStep(prev => prev + 1) : navigateSubView("mobility_payment")}
-                   className="flex-1 bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px] shadow-2xl shadow-yellow-400/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
-                 >
-                    <span className="uppercase tracking-widest">{mobilityStep < 4 ? "Próximo Passo" : "Ver Preço & Pedir"}</span>
-                    <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">{mobilityStep < 4 ? 'arrow_forward' : 'bolt'}</span>
-                 </button>
-              </div>
+           </div>
+           <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-zinc-950">
+              <button 
+                onClick={() => {
+                  if (mobilityStep < 2) setMobilityStep(2);
+                  else {
+                    setTransitData({...transitData, type: 'frete'});
+                    navigateSubView("mobility_payment");
+                  }
+                }}
+                className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px]"
+              >
+                CONTINUAR
+              </button>
            </div>
         </main>
       </div>
@@ -7129,7 +6781,7 @@ function App() {
             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
               Detalhes
             </h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">InformaçÃƒµes de Entrega</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Informacoes de Entrega</p>
           </div>
         </header>
 
@@ -7660,7 +7312,7 @@ function App() {
                             <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">Pagamento</p>
                             <div className="flex items-center justify-between">
                                <p className="text-sm font-black text-white italic">
-                                 {paymentMethod === 'dinheiro' ? 'Dinheiro' : selectedItem?.last4 ? `Cartão • ${selectedItem.last4}` : 'Escolher Método'}
+                                 {paymentMethod === 'dinheiro' ? 'Dinheiro' : paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'bitcoin_lightning' ? 'BTC Lightning' : paymentMethod === 'saldo' ? 'Saldo IZI' : 'Escolher Método'}
                                </p>
                                <span className="material-symbols-outlined text-zinc-700 text-sm group-hover:text-yellow-400 transition-colors">expand_more</span>
                             </div>
@@ -7726,6 +7378,7 @@ function App() {
                     }
                     setMobilityStep(2);
                   } else {
+                    setPaymentsOrigin("checkout");
                     navigateSubView("mobility_payment");
                   }
                 }}
@@ -7741,15 +7394,10 @@ function App() {
     );
   };
 
-
-  // →Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬ Tela de Pagamento da Mobilidade →Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬
-  // --- Tela de Pagamento da Mobilidade (Stealth Luxury Design) ---
   const renderMobilityPayment = () => {
     const bv = marketConditions.settings.baseValues;
     const basePrices: Record<string, number> = { mototaxi: bv.mototaxi_min, carro: bv.carro_min, van: bv.van_min, utilitario: bv.utilitario_min };
     const price = (transitData.estPrice > 0 ? transitData.estPrice : calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min)) ?? 0;
-
-    const activeCard = savedCards.find((c: any) => c.active);
 
     const PaymentMethodButton = ({ id, icon, label, sub, colorClass, disabled = false }: any) => {
       const isSelected = paymentMethod === id;
@@ -7773,7 +7421,7 @@ function App() {
              <p className={`text-[10px] font-bold tracking-tight ${isSelected ? 'text-black/60' : 'text-zinc-600'}`}>{sub}</p>
           </div>
           {disabled ? (
-              <span className="text-[8px] font-black text-red-500/60 bg-red-500/10 px-2 py-1 rounded-lg uppercase tracking-widest">Bloqueado</span>
+              <span className="text-[8px] font-black text-red-500/60 bg-red-500/10 px-3 py-1 rounded-lg uppercase tracking-widest">Bloqueado</span>
           ) : (
               <span className={`material-symbols-outlined text-sm ${isSelected ? 'text-black/40' : 'text-zinc-800'}`}>chevron_right</span>
           )}
@@ -7783,12 +7431,11 @@ function App() {
 
     return (
       <div className="absolute inset-0 z-[115] bg-black flex flex-col hide-scrollbar overflow-y-auto">
-        {/* Header imersivo */}
-        <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md px-6 py-8 flex items-center gap-5 border-b border-white/5">
+        <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md px-6 py-8 flex items-center gap-4 border-b border-white/5">
           <button onClick={() => {
             if (transitData.type === 'van') navigateSubView("van_wizard");
             else if (transitData.type === 'utilitario') navigateSubView("shipping_details");
-            else if (transitData.vehicleCategory?.includes('Fiorino') || transitData.vehicleCategory?.includes('Caminhão')) navigateSubView("freight_wizard");
+            else if (transitData.type === 'frete') navigateSubView("freight_wizard");
             else navigateSubView("taxi_wizard");
           }} className="size-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-90 transition-all shadow-xl">
             <span className="material-symbols-outlined text-lg">arrow_back_ios_new</span>
@@ -7800,38 +7447,77 @@ function App() {
         </header>
 
         <div className="flex-1 px-5 py-6 space-y-10 pb-48">
-          {/* Resumo Imersivo e Minimalista */}
           <div className="space-y-4">
             <div className="flex items-center justify-between px-2">
               <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Resumo do Serviço</h3>
               <div className="px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/20">
-                <span className="text-xs font-black text-yellow-400">R$ {price.toFixed(2).replace(".", ",")}</span>
+                <span className="text-xs font-black text-yellow-400 italic">R$ {price.toFixed(2).replace(".", ",")}</span>
               </div>
             </div>
             
             <div className="bg-zinc-900/30 backdrop-blur-xl rounded-[40px] p-8 border border-white/5 shadow-2xl relative overflow-hidden group">
                <div className="absolute top-0 right-0 size-32 bg-yellow-400/5 blur-[60px] rounded-full -mr-16 -mt-16 pointer-events-none" />
-               <div className="flex-1 space-y-6">
+               <div className="flex items-center gap-4 mb-8">
+                  <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
+                    <span className="material-symbols-outlined text-yellow-400 text-2xl">
+                      {transitData.type === 'mototaxi' ? 'motorcycle' : transitData.type === 'carro' ? 'directions_car' : transitData.type === 'van' ? 'airport_shuttle' : 'local_shipping'}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-white italic uppercase tracking-tighter leading-none">
+                      {transitData.type === 'mototaxi' ? 'MotoTáxi' : transitData.type === 'carro' ? 'Particular' : transitData.type === 'van' ? 'Van & Grupos' : 'Frete & Mudança'}
+                    </h4>
+                    <p className="text-[9px] font-black text-yellow-400/60 uppercase tracking-[0.2em] mt-1">{transitData.vehicleCategory || 'Serviço sob demanda'}</p>
+                  </div>
+               </div>
+
+               <div className="grid grid-cols-2 gap-6 mb-8">
+                  {transitData.type === 'van' && (
+                    <>
+                      <div>
+                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Passageiros</p>
+                        <p className="text-xs font-bold text-white">{transitData.passengers} pessoas</p>
+                      </div>
+                      <div>
+                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Tipo</p>
+                        <p className="text-xs font-bold text-white uppercase">{transitData.tripType === 'round_trip' ? 'Ida e Volta' : transitData.tripType === 'hourly' ? 'Diária' : 'Ida'}</p>
+                      </div>
+                    </>
+                  )}
+                  {(transitData.type === 'frete' || transitData.type === 'utilitario') && (
+                    <>
+                      <div>
+                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Ajudantes</p>
+                        <p className="text-xs font-bold text-white">{transitData.helpers === 0 ? 'Sem ajudante' : `${transitData.helpers} ${transitData.helpers === 1 ? 'ajudante' : 'ajudantes'}`}</p>
+                      </div>
+                      <div>
+                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Escadas</p>
+                        <p className="text-xs font-bold text-white">{(transitData.accessibility.stairsAtOrigin || transitData.accessibility.stairsAtDestination) ? 'Sim' : 'Não'}</p>
+                      </div>
+                    </>
+                  )}
+               </div>
+
+               <div className="space-y-6">
                   <div className="flex items-start gap-5 text-left">
                      <div className="size-2 rounded-full bg-yellow-400 shrink-0 mt-1.5 shadow-[0_0_10px_rgba(255,217,9,1)]" />
                      <div>
-                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">Partida</p>
-                        <p className="text-sm font-bold text-zinc-300 leading-relaxed">{transitData.origin}</p>
+                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1 leading-none">Origem</p>
+                        <p className="text-sm font-bold text-zinc-300 leading-relaxed line-clamp-2">{transitData.origin}</p>
                      </div>
                   </div>
                   <div className="h-4 w-px bg-zinc-800 ml-1" />
                   <div className="flex items-start gap-5 text-left">
                      <div className="size-2 rounded-full bg-zinc-700 shrink-0 mt-1.5" />
                      <div>
-                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">Destino</p>
-                        <p className="text-sm font-bold text-zinc-400 leading-relaxed">{transitData.destination || "Aguardando destino..."}</p>
+                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1 leading-none">Destino</p>
+                        <p className="text-sm font-bold text-zinc-400 leading-relaxed line-clamp-2">{transitData.destination || "Aguardando destino..."}</p>
                      </div>
                   </div>
                </div>
             </div>
           </div>
 
-          {/* Formas de Pagamento Stealth */}
           <div className="space-y-6">
             <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] px-2 flex items-center gap-3">
               <span>Selecione o Pagamento</span>
@@ -7929,7 +7615,7 @@ function App() {
   };
 
 
-  // →Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬ Tela de Aguardando Motorista →Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬→Ã¢â€š¬
+  // Comentario limpo
   const renderWaitingDriver = () => {
     if (!selectedItem) return null;
 
