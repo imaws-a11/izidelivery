@@ -408,7 +408,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (userRole === 'merchant' && merchantProfile?.merchant_id) {
         const { data, error, count } = await supabase
           .from('orders_delivery')
-          .select('*', { count: 'exact' })
+          .select('*, user:users_delivery(*)', { count: 'exact' })
           .eq('merchant_id', merchantProfile.merchant_id)
           .order('created_at', { ascending: false })
           .range(from, to);
@@ -420,7 +420,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else {
         const { data, error, count } = await supabase
           .from('orders_delivery')
-          .select('*', { count: 'exact' })
+          .select('*, user:users_delivery(*)', { count: 'exact' })
           .neq('service_type', 'subscription')
           .order('created_at', { ascending: false })
           .range(from, to);
@@ -1163,13 +1163,27 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const handleSaveAppSettings = useCallback(async () => {
     setIsSaving(true);
     try {
+      const cleanSettings = {
+         ...appSettings,
+         iziBlackFee: Number(appSettings.iziBlackFee || 0),
+         iziBlackCashback: Number(appSettings.iziBlackCashback || 0),
+         iziBlackMinOrderFreeShipping: Number(appSettings.iziBlackMinOrderFreeShipping || 0),
+         radius: Number(appSettings.radius || 0),
+         baseFee: Number(appSettings.baseFee || 0),
+         appCommission: Number(appSettings.appCommission || 0),
+         serviceFee: Number(appSettings.serviceFee || 0),
+         flashOfferDiscount: Number(appSettings.flashOfferDiscount || 0),
+         iziCoinRate: Number(appSettings.iziCoinRate || 0)
+      };
+
       const { error } = await supabase
         .from('app_settings_delivery')
-        .upsert(appSettings);
+        .upsert(cleanSettings);
       
       if (error) throw error;
+      setAppSettings(cleanSettings as AppSettings);
       toastSuccess('Configurações salvas com sucesso!');
-      logAction('Update Settings', 'System', appSettings);
+      logAction('Update Settings', 'System', cleanSettings);
     } catch (err: any) {
       toastError(err.message);
     } finally {

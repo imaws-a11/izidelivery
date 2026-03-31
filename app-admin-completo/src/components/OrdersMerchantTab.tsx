@@ -10,10 +10,8 @@ export default function OrdersMerchantTab() {
   const {
     allOrders, 
     merchantOrdersPage, 
-    setMerchantOrdersPage, 
     merchantOrdersTotalCount, 
     fetchAllOrders, 
-    userRole,
     merchantProfile,
     isLoadingList
   } = useAdmin();
@@ -49,7 +47,7 @@ export default function OrdersMerchantTab() {
         updateData.paid_at = new Date().toISOString();
       }
       
-      const { data, error, status } = await supabase.from('orders_delivery').update(updateData).eq('id', id).select();
+      const { data, error } = await supabase.from('orders_delivery').update(updateData).eq('id', id).select();
       
       if (error) {
         console.error('Erro detalhado Supabase:', error);
@@ -156,7 +154,16 @@ export default function OrdersMerchantTab() {
                       </div>
                       <div className="text-right">
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Cliente</p>
-                        <p className="text-sm font-black text-slate-700 dark:text-slate-200">{o.user_name || 'Usuário Izi'}</p>
+                        <div className="flex flex-col items-end">
+                           <p className="text-sm font-black text-slate-700 dark:text-slate-200 truncate max-w-[120px]">
+                              {o.user?.name || o.user_name || 'Usuário Izi'}
+                           </p>
+                           {o.user?.name && o.user_name && o.user?.name !== o.user_name && (
+                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter truncate max-w-[120px] italic">
+                                 Obs: {o.user_name}
+                              </p>
+                           )}
+                        </div>
                       </div>
                     </div>
 
@@ -300,7 +307,11 @@ export default function OrdersMerchantTab() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {myOrders.filter((o: any) => o.status !== 'pendente_pagamento').map((o: any) => (
-                <tr key={o.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                <tr 
+                  key={o.id} 
+                  onClick={() => setSelectedOrderDetails(o)}
+                  className="group hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer"
+                >
                   <td className="px-8 py-6 font-bold text-slate-400 text-sm group-hover:text-primary transition-colors">#DT-{o.id.slice(0, 8).toUpperCase()}</td>
                   <td className="px-8 py-6">
                     <p className="font-black text-slate-900 dark:text-white text-sm truncate max-w-[300px]">{parseOrderAddress(o.delivery_address).address}</p>
@@ -478,6 +489,15 @@ export default function OrdersMerchantTab() {
 
                           {/* Info Grid */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800">
+                                  <div className="flex items-center gap-3 mb-4">
+                                      <span className="material-symbols-outlined text-indigo-500">person</span>
+                                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</h4>
+                                  </div>
+                                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 leading-relaxed">
+                                      {selectedOrderDetails.user_name || 'Usuário Izi'}
+                                  </p>
+                              </div>
                               <div className="p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800">
                                   <div className="flex items-center gap-3 mb-4">
                                       <span className="material-symbols-outlined text-rose-500">pin_drop</span>

@@ -164,6 +164,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       image_url: activeTab === 'banner' ? formData.image_url : null,
       target_merchants: activeTab === 'coupon' ? formData.merchant_ids : null,
       target_products: activeTab === 'coupon' ? formData.selected_product_ids : null,
+      type: activeTab, // Adicionando o tipo para consistência no banco
     };
 
     const { error } = formData.id 
