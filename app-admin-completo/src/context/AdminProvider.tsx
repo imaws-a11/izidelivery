@@ -244,6 +244,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             scheduling_priority: data.scheduling_priority || 'global',
             is_open: data.is_open ?? true,
             free_delivery: data.free_delivery ?? false,
+            estimated_time: data.estimated_time || '30-45 min',
             store_type: data.store_type || 'restaurant'
           };
           setMerchantProfile(profile);
