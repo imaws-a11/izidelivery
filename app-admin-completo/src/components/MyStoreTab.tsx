@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { supabase } from '../lib/supabase';
@@ -25,7 +25,6 @@ export default function MyStoreTab() {
   const {
     merchantProfile, 
     setMerchantProfile, 
-    allOrders,
     isSaving,
     setIsSaving
   } = useAdmin();
@@ -113,7 +112,7 @@ export default function MyStoreTab() {
                   {merchantProfile.is_open ? 'Aberta agora' : 'Fechada'}
                 </p>
               </div>
-              <PremiumToggle active={merchantProfile.is_open} onClick={() => updateProfileField('is_open', !merchantProfile.is_open)} />
+              <PremiumToggle active={!!merchantProfile.is_open} onClick={() => updateProfileField('is_open', !merchantProfile.is_open)} />
             </div>
 
             {/* FRETE GRÁTIS */}
@@ -146,8 +145,9 @@ export default function MyStoreTab() {
                        <div className="relative flex items-center">
                           <input 
                             type="number" 
+                            step="0.1"
                             value={localRadius}
-                            onChange={(e) => setLocalRadius(Number(e.target.value))}
+                            onChange={(e) => setLocalRadius(parseFloat(e.target.value) || 0)}
                             className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-[32px] px-8 h-20 text-3xl font-black text-slate-900 dark:text-white focus:border-primary transition-all pr-32"
                             placeholder="0"
                           />
