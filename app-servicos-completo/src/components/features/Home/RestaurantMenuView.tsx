@@ -43,7 +43,7 @@ export const RestaurantMenuView = ({
       {/* FLOATING NAV */}
       <nav className="fixed top-0 w-full z-50 flex items-center justify-between px-5 py-4 pointer-events-none">
         <button
-          onClick={() => setSubView("restaurant_list")}
+          onClick={() => setSubView("explore_restaurants")}
           className="pointer-events-auto flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/10 active:scale-95 transition-all"
         >
           <span className="material-symbols-outlined">arrow_back</span>
