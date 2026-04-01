@@ -806,25 +806,45 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="relative w-full overflow-hidden">
             <div className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-0">
               {/* PÁGINA 1: Principais (8 itens) */}
-              <div className="min-w-full snap-center grid grid-cols-4 grid-rows-2 gap-1.5 px-1 py-1">
+              <div className="min-w-full snap-center grid grid-cols-4 grid-rows-2 gap-3 px-5 py-4">
                 {deliveryServices.slice(0, 8).map((svc, i) => (
                   <motion.div
                     key={i}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    whileHover={{ y: -4, scale: 1.02 }}
+                    whileTap={{ scale: 0.96 }}
                     viewport={{ once: true }}
-                    transition={{ delay: i * 0.03 }}
+                    transition={{ 
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 17,
+                      delay: i * 0.04 
+                    }}
                     onClick={() => handleServiceSelection(svc)}
-                    className={`relative flex flex-col items-center justify-center cursor-pointer transition-all aspect-square bg-[#1a1b1e] border rounded-[18px] p-2 shadow-lg overflow-hidden group 
-                      ${svc.highlight === "gold" ? "border-yellow-500/10 shadow-[0_0_15px_rgba(251,191,36,0.03)]" : ""}
-                      ${svc.highlight === "cyan" ? "border-cyan-500/10 shadow-[0_0_15px_rgba(34,211,238,0.03)]" : ""}
-                      ${svc.highlight === "none" ? "border-white/5" : ""}
-                      active:scale-95`}
+                    className={`relative flex flex-col items-center justify-center cursor-pointer aspect-square rounded-[28px] overflow-hidden group transition-all
+                      bg-zinc-900/40 backdrop-blur-xl border border-white/5
+                      ${svc.highlight === "gold" ? "hover:border-yellow-400/40 hover:shadow-[0_0_25px_rgba(251,191,36,0.15)]" : "hover:border-white/20 hover:shadow-2xl"}
+                      ${svc.highlight === "cyan" ? "hover:border-cyan-400/40 hover:shadow-[0_0_25px_rgba(34,211,238,0.15)]" : ""}
+                    `}
                   >
-                    <div className="relative z-10 w-9 h-9 flex items-center justify-center mb-1">
+                    {/* Background Glow/Image */}
+                    <div className={`absolute inset-x-0 bottom-0 h-1/2 opacity-20 blur-2xl transition-all duration-700 group-hover:opacity-40
+                      ${svc.highlight === "gold" ? "bg-yellow-400" : svc.highlight === "cyan" ? "bg-cyan-400" : "bg-white/20"}
+                    `} />
+                    
+                    {svc.img && (
+                      <img 
+                        src={svc.img} 
+                        alt="bg" 
+                        className="absolute inset-0 size-full object-cover opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-700" 
+                      />
+                    )}
+
+                    <div className="relative z-10 w-10 h-10 flex items-center justify-center mb-1.5 rounded-2xl bg-white/[0.03] border border-white/5 group-hover:bg-white/10 transition-colors">
                        <span 
-                        className={`material-symbols-outlined text-[20px] transition-transform group-hover:scale-110 duration-300
-                          ${svc.highlight === "gold" ? "text-yellow-400" : svc.highlight === "cyan" ? "text-cyan-400" : "text-white"}`} 
+                        className={`material-symbols-outlined text-[24px] transition-transform duration-500 group-hover:scale-110
+                          ${svc.highlight === "gold" ? "text-yellow-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" : svc.highlight === "cyan" ? "text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" : "text-white"}`} 
                         style={{ fontVariationSettings: "'FILL' 1" }}
                        >
                          {svc.icon}
@@ -832,7 +852,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     </div>
 
                     <div className="text-center relative z-10 flex flex-col items-center px-1">
-                      <h3 className="font-black text-[7px] text-white tracking-tight uppercase truncate w-full leading-none drop-shadow-md">
+                      <h3 className="font-black text-[9px] text-white tracking-widest uppercase truncate w-full leading-none group-hover:text-yellow-400/90 transition-colors">
                         {svc.label.split(' ')[0]}
                       </h3>
                     </div>
@@ -841,23 +861,44 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </div>
 
               {/* PÁGINA 2: Especializados (Restante) */}
-              <div className="min-w-full snap-center grid grid-cols-4 grid-rows-2 gap-1.5 px-1 py-1">
+              <div className="min-w-full snap-center grid grid-cols-4 grid-rows-2 gap-3 px-5 py-4">
                 {deliveryServices.slice(8).map((svc, i) => (
                   <motion.div
                     key={i}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    whileHover={{ y: -4, scale: 1.02 }}
+                    whileTap={{ scale: 0.96 }}
+                    transition={{ 
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 17,
+                      delay: i * 0.04 
+                    }}
                     onClick={() => handleServiceSelection(svc)}
-                    className={`relative flex flex-col items-center justify-center cursor-pointer transition-all aspect-square bg-[#1a1b1e] border rounded-[18px] p-2 shadow-lg overflow-hidden group 
-                       ${svc.highlight === "gold" ? "border-yellow-500/10 shadow-[0_0_15px_rgba(251,191,36,0.03)]" : ""}
-                       ${svc.highlight === "cyan" ? "border-cyan-500/20 shadow-[0_0_15px_rgba(34,211,238,0.03)]" : ""}
-                       ${svc.highlight === "none" ? "border-white/5" : ""}
-                       active:scale-95`}
+                    className={`relative flex flex-col items-center justify-center cursor-pointer aspect-square rounded-[28px] overflow-hidden group transition-all
+                      bg-zinc-900/40 backdrop-blur-xl border border-white/5
+                      ${svc.highlight === "gold" ? "hover:border-yellow-400/40 hover:shadow-[0_0_25px_rgba(251,191,36,0.15)]" : "hover:border-white/20 hover:shadow-2xl"}
+                      ${svc.highlight === "cyan" ? "hover:border-cyan-400/40 hover:shadow-[0_0_25px_rgba(34,211,238,0.15)]" : ""}
+                    `}
                   >
-                    <div className="relative z-10 w-9 h-9 flex items-center justify-center mb-1">
+                    {/* Background Glow/Image */}
+                    <div className={`absolute inset-x-0 bottom-0 h-1/2 opacity-20 blur-2xl transition-all duration-700 group-hover:opacity-40
+                      ${svc.highlight === "gold" ? "bg-yellow-400" : svc.highlight === "cyan" ? "bg-cyan-400" : "bg-white/20"}
+                    `} />
+                    
+                    {svc.img && (
+                      <img 
+                        src={svc.img} 
+                        alt="bg" 
+                        className="absolute inset-0 size-full object-cover opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-700" 
+                      />
+                    )}
+
+                    <div className="relative z-10 w-10 h-10 flex items-center justify-center mb-1.5 rounded-2xl bg-white/[0.03] border border-white/5 group-hover:bg-white/10 transition-colors">
                        <span 
-                        className={`material-symbols-outlined text-[20px] transition-transform group-hover:scale-110 duration-300
-                          ${svc.highlight === "gold" ? "text-yellow-400" : svc.highlight === "cyan" ? "text-cyan-400" : "text-white"}`} 
+                        className={`material-symbols-outlined text-[24px] transition-transform duration-500 group-hover:scale-110
+                          ${svc.highlight === "gold" ? "text-yellow-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" : svc.highlight === "cyan" ? "text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" : "text-white"}`} 
                         style={{ fontVariationSettings: "'FILL' 1" }}
                        >
                          {svc.icon}
@@ -865,7 +906,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     </div>
 
                     <div className="text-center relative z-10 flex flex-col items-center px-1">
-                      <h3 className="font-black text-[7px] text-white tracking-tight uppercase truncate w-full leading-none drop-shadow-md">
+                      <h3 className="font-black text-[9px] text-white tracking-widest uppercase truncate w-full leading-none group-hover:text-yellow-400/90 transition-colors">
                         {svc.label.split(' ')[0]}
                       </h3>
                     </div>
@@ -882,26 +923,33 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
 
           {/* MOBILIDADE */}
-          <section className="bg-gradient-to-br from-zinc-900 via-zinc-900 to-black rounded-[40px] p-8 border border-white/5 relative overflow-hidden group shadow-2xl">
-            <div className="absolute top-0 right-0 size-60 bg-yellow-400 opacity-[0.03] blur-[100px] rounded-full -mr-20 -mt-20 pointer-events-none group-hover:opacity-[0.07] transition-opacity duration-1000" />
-            <div className="flex flex-col items-center mb-10 text-center relative z-10">
-              <span className="bg-yellow-400/10 text-yellow-400 text-[8px] font-black px-3 py-1 rounded-full tracking-[0.4em] uppercase mb-3 border border-yellow-400/20">Izi Connect</span>
-              <h2 className="text-3xl font-black tracking-tighter text-white italic uppercase leading-none">Vá de Izi.</h2>
+          <section className="bg-zinc-950/40 backdrop-blur-2xl rounded-[40px] p-8 border border-white/5 relative overflow-hidden group shadow-2xl">
+            <div className="absolute top-0 right-0 size-60 bg-yellow-400 opacity-[0.05] blur-[110px] rounded-full -mr-20 -mt-20 pointer-events-none group-hover:opacity-[0.1] transition-opacity duration-1000" />
+            <div className="flex flex-col items-center mb-8 text-center relative z-10">
+              <span className="bg-white/5 text-white/40 text-[7px] font-black px-4 py-1.5 rounded-full tracking-[0.4em] uppercase mb-4 border border-white/10">Izi Connect</span>
+              <h2 className="text-4xl font-black tracking-tighter text-white italic uppercase leading-none drop-shadow-2xl">Vá de Izi.</h2>
             </div>
-            <div className="grid grid-cols-4 gap-2 relative z-10 p-2">
+            <div className="grid grid-cols-4 gap-3 relative z-10 px-1">
               {[
                 { icon: "two_wheeler", label: "Mototáxi", action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("taxi_wizard"); } },
                 { icon: "airport_shuttle", label: "Vans Izi", action: () => { setTransitData({ ...transitData, type: "van", scheduled: false }); navigateSubView("van_wizard"); } },
                 { icon: "directions_car", label: "Carros", action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("taxi_wizard"); } },
                 { icon: "local_shipping", label: "Logística", action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("freight_wizard"); } },
               ].map((svc, i) => (
-                <motion.div key={i} whileTap={{ scale: 0.95 }} onClick={svc.action} className="flex flex-col items-center gap-2 group cursor-pointer transition-all">
-                  <div className="relative w-12 h-12 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-3xl text-white group-hover:text-yellow-400 transition-all duration-300">
+                <motion.div 
+                  key={i} 
+                  whileHover={{ y: -4, scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }} 
+                  onClick={svc.action} 
+                  className="flex flex-col items-center justify-center gap-3 py-5 rounded-[24px] bg-white/[0.03] border border-white/5 hover:border-yellow-400/30 hover:bg-white/[0.06] transition-all cursor-pointer group/card"
+                >
+                  <div className="relative w-10 h-10 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-yellow-400/20 blur-xl opacity-0 group-hover/card:opacity-100 transition-opacity" />
+                    <span className="material-symbols-outlined text-3xl text-zinc-400 group-hover/card:text-yellow-400 transition-all duration-300 relative z-10">
                       {svc.icon}
                     </span>
                   </div>
-                  <span className="text-[8px] font-black text-zinc-500 group-hover:text-white tracking-tight uppercase transition-colors text-center leading-none">
+                  <span className="text-[8px] font-black text-zinc-500 group-hover/card:text-white tracking-widest uppercase transition-colors text-center leading-none">
                     {svc.label}
                   </span>
                 </motion.div>
