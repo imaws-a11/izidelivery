@@ -82,24 +82,24 @@ export const StoreCatalogView = ({
         {displayCategories.map((category: any) => (
           <section key={category.name}>
             <h2 className="font-black text-base uppercase tracking-widest text-zinc-500 mb-6 border-l-4 border-yellow-400 pl-4">{category.name}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-2 gap-4">
               {(category.items || []).map((item: any, idx: number) => (
-                <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
-                  className={`group relative flex flex-col gap-3 ${idx % 2 === 1 ? "md:mt-10" : ""}`}>
-                  <div className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-[1.02]">
+                <motion.div key={item.id} initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
+                  className="group relative flex flex-col gap-2.5">
+                  <div className="relative aspect-square rounded-xl overflow-hidden shadow-lg transition-transform duration-500 group-hover:scale-[1.02] bg-zinc-900">
                     <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                     <button onClick={() => handleAddToCart(item)}
-                      className="absolute bottom-4 right-4 w-12 h-12 rounded-2xl bg-yellow-400 text-black shadow-[0_0_20px_rgba(255,215,9,0.4)] flex items-center justify-center active:scale-90 transition-all">
-                      <span className="material-symbols-outlined font-bold">add</span>
+                      className="absolute bottom-2.5 right-2.5 w-9 h-9 rounded-lg bg-yellow-400 text-black shadow-lg flex items-center justify-center active:scale-90 transition-all">
+                      <span className="material-symbols-outlined font-bold text-lg">add</span>
                     </button>
                   </div>
                   <div className="px-1">
-                    <div className="flex justify-between items-start mb-1 gap-3">
-                      <h3 className="font-black text-base uppercase tracking-tight text-white group-hover:text-yellow-400 transition-colors leading-tight flex-1">{item.name}</h3>
-                      <span className="text-yellow-400 font-black text-sm whitespace-nowrap">R$ {Number(item.price).toFixed(2).replace(".", ",")}</span>
+                    <div className="flex flex-col mb-1 gap-1">
+                      <h3 className="font-black text-[11px] uppercase tracking-tight text-white group-hover:text-yellow-400 transition-colors leading-tight line-clamp-2 min-h-[2rem]">{item.name}</h3>
+                      <span className="text-yellow-400 font-extrabold text-[12px]">R$ {Number(item.price).toFixed(2).replace(".", ",")}</span>
                     </div>
-                    <p className="text-zinc-500 text-xs leading-relaxed">{item.desc}</p>
+                    <p className="text-zinc-500 text-[10px] leading-tight line-clamp-2">{item.desc}</p>
                   </div>
                 </motion.div>
               ))}

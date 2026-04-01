@@ -117,36 +117,33 @@ export const RestaurantMenuView = ({
             <h2 className="font-black text-lg uppercase tracking-widest text-zinc-500 mb-8 border-l-4 border-yellow-400 pl-4">
               {category.name}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="grid grid-cols-2 gap-4">
               {(category.items || []).map((item: any, idx: number) => (
                 <motion.div
                   key={item.id}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 15 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
-                  className={`group relative flex flex-col gap-4 ${idx % 2 === 1 ? "md:mt-12" : ""}`}
+                  className="bg-zinc-900 rounded-2xl p-3 shadow-lg border border-zinc-800 flex flex-col gap-3 group relative active:scale-95 transition-all overflow-hidden"
                 >
-                  <div className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-[1.02]">
-                    <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-                    <button
-                      onClick={() => handleAddToCart(item)}
-                      className="absolute bottom-5 right-5 w-14 h-14 rounded-2xl bg-yellow-400 text-black shadow-[0_0_20px_rgba(255,215,9,0.4)] flex items-center justify-center active:scale-90 transition-all"
-                    >
-                      <span className="material-symbols-outlined font-bold">add</span>
-                    </button>
-                  </div>
-                  <div className="px-2">
-                    <div className="flex justify-between items-start mb-1 gap-3">
-                      <h3 className="font-black text-base uppercase tracking-tight text-white group-hover:text-yellow-400 transition-colors leading-tight flex-1">
-                        {item.name}
-                      </h3>
-                      <span className="text-yellow-400 font-black text-sm whitespace-nowrap" style={{ textShadow: "0 0 10px rgba(255,215,9,0.5)" }}>
-                        R$ {Number(item.price).toFixed(2).replace(".", ",")}
-                      </span>
-                    </div>
-                    <p className="text-zinc-500 text-sm leading-relaxed max-w-[85%]">{item.desc}</p>
-                  </div>
+                   <div className="relative aspect-square rounded-xl overflow-hidden shrink-0 shadow-md">
+                      <img src={item.img} alt={item.name} className="size-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
+                        className="absolute bottom-2 right-2 size-8 rounded-lg bg-yellow-400 text-black flex items-center justify-center transition-all shadow-md active:scale-90"
+                      >
+                        <span className="material-symbols-outlined text-base">add</span>
+                      </button>
+                   </div>
+                   <div className="flex-1 min-w-0 flex flex-col justify-between">
+                      <div>
+                        <h3 className="text-[11px] font-black text-white leading-tight mb-1 truncate group-hover:text-yellow-400 transition-colors uppercase">{item.name}</h3>
+                        <p className="text-[9px] text-zinc-500 font-medium line-clamp-1 mb-2">{item.desc}</p>
+                      </div>
+                      <div className="flex items-center justify-between">
+                         <span className="text-sm font-black text-yellow-400">R$ {Number(item.price).toFixed(2).replace('.', ',')}</span>
+                      </div>
+                   </div>
                 </motion.div>
               ))}
             </div>

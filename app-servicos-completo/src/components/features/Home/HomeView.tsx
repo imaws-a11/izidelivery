@@ -640,7 +640,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         navigateSubView("exclusive_offer");
                       }
                     }}
-                    className={`relative flex-shrink-0 w-[280px] h-[130px] snap-center rounded-[32px] overflow-hidden group cursor-pointer transition-all ${story.isMaster ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-black" : "border border-white/5 shadow-2xl"} shadow-black/50`}
+                    className={`relative flex-shrink-0 w-[240px] h-[110px] snap-center rounded-[28px] overflow-hidden group cursor-pointer transition-all ${story.isMaster ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-black" : "border border-white/5 shadow-2xl"} shadow-black/50`}
                   >
                     <img 
                       src={story.img} 
@@ -933,9 +933,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   key={shop.id || i}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => handleShopClick(shop)}
-                  className="relative flex-shrink-0 w-[200px] group cursor-pointer"
+                  className="relative flex-shrink-0 w-[160px] group cursor-pointer"
                 >
-                  <div className="relative aspect-[3/4] rounded-[40px] overflow-hidden bg-zinc-900 border border-white/5 transition-all duration-700 group-hover:border-white/20 group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.8)] shadow-2xl">
+                  <div className="relative aspect-[3/4] rounded-[32px] overflow-hidden bg-zinc-900 border border-white/5 transition-all duration-700 group-hover:border-white/20 group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.8)] shadow-2xl">
                     <img src={shop.img} className="size-full object-cover brightness-[0.7] group-hover:scale-110 transition-transform duration-1000" alt={shop.name} />
                     <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/40 to-transparent p-6 flex flex-col justify-end">
                       <div className="flex items-center gap-2 mb-3">
