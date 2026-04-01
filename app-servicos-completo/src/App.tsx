@@ -28,6 +28,7 @@ import { ExploreRestaurantsView } from "./components/features/Home/ExploreRestau
 import { BeverageOffersView } from "./components/features/Home/BeverageOffersView";
 import { RestaurantMenuView } from "./components/features/Home/RestaurantMenuView";
 import { StoreCatalogView } from "./components/features/Home/StoreCatalogView";
+import { MarketExploreView } from "./components/features/Home/MarketExploreView";
 import { PaymentMethodsView } from "./components/features/Profile/PaymentMethodsView";
 
 import { useAuth } from "./hooks/useAuth";
@@ -2652,19 +2653,15 @@ function App() {
 
 
   const renderMarketList = () => (
-    <EstablishmentListView
-      title="Mercados"
-      subtitle="Compras do dia a dia"
-      icon="local_mall"
+    <MarketExploreView 
+      setSubView={setSubView}
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
-      setSubView={setSubView}
-      establishments={ESTABLISHMENTS}
-      filterFn={(shop: any) => shop.type === 'market' || shop.type === 'mercado'}
-      onShopClick={(shop) => handleShopClick({ ...shop, type: "generic" })}
-      cartLength={cart.length}
+      cart={cart}
       navigateSubView={navigateSubView}
-      backView="none"
+      establishments={ESTABLISHMENTS}
+      onShopClick={handleShopClick}
+      availableCoupons={availableCoupons}
     />
   );
 
