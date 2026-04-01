@@ -6,7 +6,7 @@ import type { DashboardData } from '../lib/types';
 // Relatórios Financeiros
 export default function FinancialTab() {
   const {
-    allOrders, appSettings, dashboardData
+    allOrders, appSettings, dashboardData, userRole, merchantProfile
   } = useAdmin();
 
   return (
