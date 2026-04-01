@@ -620,6 +620,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       if (story.isMaster && userLevel < 10) showToast("Esta oferta é exclusiva para membros Tier MASTER.", "info");
                       else if (story.isMaster) setShowMasterPerks(true);
                       else {
+                        const fakeItem = {
+                          id: story.offer.product_id || story.offer.id,
+                          name: story.offer.product_name || "Oferta Izi Flash",
+                          desc: (story.offer.description || "Oferta imperdível por tempo limitado!") + `\n\n📌 Vendido por: ${story.merchant}`,
+                          price: Number(story.offer.discounted_price),
+                          oldPrice: Number(story.offer.original_price),
+                          img: story.img,
+                          merchant_id: story.offer.merchant_id,
+                          merchant_name: story.merchant,
+                          is_flash_offer: true,
+                          flash_offer_id: story.offer.id,
+                          expires_at: story.offer.expires_at,
+                          off: story.offer.original_price && story.offer.discounted_price
+                            ? `- R$ ${(Number(story.offer.original_price) - Number(story.offer.discounted_price)).toFixed(2).replace('.', ',')} OFF`
+                            : `- R$ ${(Number(story.offer.original_price) * (Number(story.offer.discount_percent) / 100)).toFixed(2).replace('.', ',')} OFF`
+                        };
+                        setSelectedItem(fakeItem);
                         navigateSubView("exclusive_offer");
                       }
                     }}
