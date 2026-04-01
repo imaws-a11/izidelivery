@@ -21,6 +21,7 @@ const marketCategories = [
   { id: "higiene", name: "Higiene", icon: "clean_hands", color: "rose-400", img: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=600" },
   { id: "limpeza", name: "Limpeza", icon: "cleaning_services", color: "cyan-400", img: "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?q=80&w=600" },
   { id: "pet", name: "Pet Shop", icon: "pets", color: "emerald-400", img: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=600" },
+  { id: "sorvetes", name: "Sorvete", icon: "icecream", color: "sky-300", img: "https://images.unsplash.com/photo-1501443762994-82bd5dace89a?q=80&w=600" },
   { id: "bebidas", name: "Bebidas", icon: "local_bar", color: "purple-400", img: "https://images.unsplash.com/photo-1527661591475-527312dd65f5?q=80&w=600" },
 ];
 
@@ -41,7 +42,7 @@ export const MarketExploreView: React.FC<MarketExploreViewProps> = ({
     
     return establishments.filter(shop => {
       const type = normalize(shop.type);
-      const isMarketRelated = type.includes('mercado') || type.includes('market') || type.includes('mercearia') || type.includes('higiene') || type.includes('limpeza');
+      const isMarketRelated = type.includes('mercado') || type.includes('market') || type.includes('mercearia') || type.includes('higiene') || type.includes('limpeza') || type.includes('sorvete');
       
       const matchesSearch = shop.name.toLowerCase().includes(searchQuery.toLowerCase());
       
