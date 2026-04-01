@@ -12,7 +12,7 @@ interface HomeViewProps {
   setSubView: (view: string) => void;
   subView: 
     | "none"
-    | "restaurant_list"
+    | "explore_restaurants"
     | "market_list"
     | "pharmacy_list"
     | "restaurant_menu"
@@ -168,8 +168,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
   };
 
   const deliveryServices = [
-    { icon: "restaurant",     img: "/images/comida.png", tagline: "GASTRONOMIA",      highlight: "gold", label: "Comida e Lanche", type: "restaurant", action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("restaurant_list"); } },
-    { icon: "rice_bowl",      img: "/images/almoco.png",   tagline: "ALMOÇO EXPRESS",   highlight: "none", label: "Almoço",       type: "restaurant", action: () => { setRestaurantInitialCategory("Almoço"); navigateSubView("restaurant_list"); } },
+    { icon: "restaurant",     img: "/images/comida.png", tagline: "GASTRONOMIA",      highlight: "gold", label: "Comida e Lanche", type: "restaurant", action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
+    { icon: "rice_bowl",      img: "/images/almoco.png",   tagline: "ALMOÇO EXPRESS",   highlight: "none", label: "Almoço",       type: "restaurant", action: () => { setRestaurantInitialCategory("Almoço"); navigateSubView("explore_restaurants"); } },
     { icon: "local_mall",     img: "/images/mercados.png", tagline: "MERCAIDT",         highlight: "cyan", label: "Mercados",     type: "market",     action: null },
     { icon: "local_bar",      img: "/images/bebidas.png",  tagline: "BEBIDAS FINAIS",   highlight: "none", label: "Bebidas",      type: "beverages",  action: null },
     { icon: "local_pharmacy", img: "/images/saude.png",    tagline: "SAÚDE INTEGRAL",   highlight: "cyan", label: "Saúde",        type: "pharmacy",   action: null },
@@ -187,7 +187,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     
     if (cat.type === "restaurant") {
        setRestaurantInitialCategory("Todos");
-       navigateSubView("restaurant_list");
+       navigateSubView("explore_restaurants");
     }
     else if (cat.type === "market") navigateSubView("market_list");
     else if (cat.type === "pharmacy") navigateSubView("pharmacy_list");
@@ -916,7 +916,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </div>
               </div>
               <button
-                onClick={() => { setRestaurantInitialCategory("Todos"); navigateSubView("restaurant_list"); }}
+                onClick={() => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); }}
                 className="text-[10px] font-black text-yellow-400 uppercase tracking-widest px-4 py-2 bg-yellow-400/10 rounded-2xl border border-yellow-400/20 active:scale-95 transition-all"
               >
                 Ver todos
