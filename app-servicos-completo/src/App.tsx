@@ -1323,11 +1323,173 @@ function App() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const selectedItemRef = useRef(selectedItem);
 
+  const orderStatusLabels: Record<string, string> = {
+    pending: "Aguardando",
+    pendente: "Aguardando",
+    pendente_pagamento: "Aguardando Pagamento",
+    novo: "Processando",
+    waiting_merchant: "Aguardando Loja",
+    waiting_driver: "Aguardando Entregador",
+    aceito: "Confirmado",
+    confirmado: "Confirmado",
+    preparando: "Em Preparação",
+    no_preparo: "Em Preparação",
+    pronto: "Pronto",
+    a_caminho_coleta: "Indo para Coleta",
+    chegou_coleta: "No Local da Coleta",
+    a_caminho: "Em Rota",
+    at_pickup: "No Local",
+    picked_up: "Coletado",
+    em_rota: "Em Rota",
+    saiu_para_entrega: "Saiu para Entrega",
+    no_local: "Chegando",
+    concluido: "Concluído",
+    cancelado: "Cancelado",
+  };
+
+  const getOrderStatusLabel = (status?: string) =>
+    orderStatusLabels[status || ""] || (status ? status.replace(/_/g, " ") : "Em processamento");
+
+  const getOrderStatusTone = (status?: string) => {
+    if (status === "concluido") return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+    if (status === "cancelado") return "bg-red-500/10 text-red-400 border-red-500/20";
+    if (["waiting_driver", "a_caminho", "em_rota", "saiu_para_entrega", "no_local"].includes(status || "")) {
+      return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+    }
+    return "bg-yellow-400/10 text-yellow-400 border-yellow-400/20";
+  };
+
+  const isOrderTrackable = (status?: string) =>
+    [
+      "novo",
+      "waiting_merchant",
+      "waiting_driver",
+      "aceito",
+      "confirmado",
+      "preparando",
+      "no_preparo",
+      "pronto",
+      "a_caminho_coleta",
+      "chegou_coleta",
+      "a_caminho",
+      "at_pickup",
+      "picked_up",
+      "em_rota",
+      "saiu_para_entrega",
+      "no_local",
+    ].includes(status || "");
+
+  const getOrderAddress = (order: any) =>
+    String(order?.delivery_address || "Endereço não informado")
+      .split("| ITENS:")[0]
+      .split("| OBS:")[0]
+      .trim();
+
+  const getOrderItems = (order: any) => {
+    if (Array.isArray(order?.items) && order.items.length > 0) return order.items;
+
+    const match = String(order?.delivery_address || "").match(/\|\s*ITENS:\s*(.+)$/i);
+    if (!match?.[1]) return [];
+
+    return match[1]
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((name, index) => ({
+        id: `${order?.id || "order"}-${index}`,
+        name,
+        quantity: 1,
+        price: null,
+      }));
+  };
+
+  const buildOrderChatWelcome = () => {
+    const contactName =
+      selectedItem?.driver_name ||
+      selectedItem?.merchant_name ||
+      "time Izi";
+
+    return `Olá! Aqui é ${contactName}. Como posso ajudar com seu pedido?`;
+  };
+
+  const openOrderChat = (topic?: string) => {
+    const welcomeMessage = {
+      id: `chat-welcome-${Date.now()}`,
+      sender: "driver",
+      text: buildOrderChatWelcome(),
+      time: "agora",
+    };
+
+    setChatMessages((prev) => {
+      const base = prev.length > 0 ? prev : [welcomeMessage];
+      if (!topic) return base;
+
+      return [
+        ...base,
+        {
+          id: `chat-topic-${Date.now()}`,
+          sender: "driver",
+          text: `Perfeito. Vou te ajudar com: ${topic}. Me conte mais detalhes para eu agilizar o atendimento.`,
+          time: "agora",
+        },
+      ];
+    });
+    setSubView("order_chat");
+  };
+
+  const handleShareAction = async (title: string, text: string) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text });
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(`${title}\n${text}`);
+        showToast("Informações copiadas para compartilhar.", "success");
+        return;
+      }
+    } catch (error: any) {
+      if (error?.name !== "AbortError") {
+        showToast("Não foi possível compartilhar agora.", "warning");
+      }
+      return;
+    }
+
+    showToast("Compartilhamento não disponível neste dispositivo.", "warning");
+  };
+
+  const handleFavoriteAction = (label: string) => {
+    showToast(`${label} salvo nos favoritos.`, "success");
+  };
+
+  const handleCallOrderContact = () => {
+    const rawPhone = selectedItem?.driver_phone || selectedItem?.merchant_phone || selectedItem?.phone;
+    if (!rawPhone) {
+      openOrderChat("Preciso falar com alguém sobre este pedido");
+      return;
+    }
+
+    const phone = String(rawPhone).replace(/[^\d+]/g, "");
+    window.location.href = `tel:${phone}`;
+  };
+
   useEffect(() => { viewRef.current = view; }, [view]);
   useEffect(() => { tabRef.current = tab; }, [tab]);
   useEffect(() => { subViewRef.current = subView; }, [subView]);
   useEffect(() => { userIdRef.current = userId; }, [userId]);
   useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
+  useEffect(() => {
+    if (subView !== "order_chat" || chatMessages.length > 0) return;
+    setChatMessages([
+      {
+        id: "chat-initial",
+        sender: "driver",
+        text: buildOrderChatWelcome(),
+        time: "agora",
+      },
+    ]);
+  }, [subView, chatMessages.length, selectedItem?.driver_name, selectedItem?.merchant_name]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showLojistasModal, setShowLojistasModal] = useState(false);
@@ -1373,10 +1535,34 @@ function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  const navigateSubView = (newSubView: typeof subView) => {
-    setSubView(newSubView);
+  const appTabs = ["home", "orders", "wallet", "profile"] as const;
+  type AppTab = (typeof appTabs)[number];
+
+  const isAppTab = (value: string): value is AppTab =>
+    (appTabs as readonly string[]).includes(value);
+
+  const normalizeSubViewTarget = (target: string) => {
+    if (target === "product") return "product_detail";
+    return target;
+  };
+
+  const navigateSubView = (target: string) => {
+    const normalizedTarget = normalizeSubViewTarget(target);
+
+    if (isAppTab(normalizedTarget)) {
+      setTab(normalizedTarget);
+      setSubView("none");
+      window.history.pushState(
+        { view: viewRef.current, tab: normalizedTarget, subView: "none" },
+        "",
+      );
+      return;
+    }
+
+    const nextSubView = normalizedTarget as typeof subView;
+    setSubView(nextSubView);
     window.history.pushState(
-      { view: viewRef.current, tab: tabRef.current, subView: newSubView },
+      { view: viewRef.current, tab: tabRef.current, subView: nextSubView },
       "",
     );
   };
@@ -3071,7 +3257,7 @@ function App() {
                 <h3 className="font-extrabold text-base tracking-tight text-white uppercase">Mais Próximos</h3>
                 <div className="w-8 h-1 bg-yellow-400 rounded-full mt-1" />
               </div>
-              <button className="text-[10px] font-black uppercase tracking-widest text-yellow-400 flex items-center gap-1">
+              <button onClick={() => navigateSubView("explore_restaurants")} className="text-[10px] font-black uppercase tracking-widest text-yellow-400 flex items-center gap-1">
                 Filtrar <span className="material-symbols-outlined text-sm">filter_list</span>
               </button>
             </div>
@@ -3584,10 +3770,10 @@ function App() {
           </div>
 
           <div className="flex gap-2">
-            <button className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-900/40 border border-white/10 active:scale-95 transition-all text-white">
+            <button onClick={() => handleShareAction(shop.name, `${shop.name} disponível no Izi Delivery`)} className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-900/40 border border-white/10 active:scale-95 transition-all text-white">
               <span className="material-symbols-outlined text-xl">share</span>
             </button>
-            <button className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-900/40 border border-white/10 active:scale-95 transition-all text-white">
+            <button onClick={() => handleFavoriteAction(shop.name)} className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-900/40 border border-white/10 active:scale-95 transition-all text-white">
               <span className="material-symbols-outlined text-xl">favorite_border</span>
             </button>
           </div>
@@ -4437,6 +4623,168 @@ function App() {
     </div>
   );
 
+  const renderOrderDetail = () => {
+    if (!selectedItem) return null;
+
+    const items = getOrderItems(selectedItem);
+    const statusLabel = getOrderStatusLabel(selectedItem.status);
+    const statusTone = getOrderStatusTone(selectedItem.status);
+    const address = getOrderAddress(selectedItem);
+    const orderDate = selectedItem.created_at
+      ? new Date(selectedItem.created_at).toLocaleString("pt-BR")
+      : "Agora";
+    const isTrackable = isOrderTrackable(selectedItem.status);
+    const isCompleted = selectedItem.status === "concluido";
+    const serviceIcon = ["mototaxi", "carro", "van", "utilitario"].includes(selectedItem.service_type)
+      ? selectedItem.service_type === "mototaxi"
+        ? "two_wheeler"
+        : "directions_car"
+      : "restaurant";
+
+    return (
+      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
+        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-2xl border-b border-zinc-900 px-5 py-4 flex items-center gap-4">
+          <button
+            onClick={() => setSubView("none")}
+            className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all"
+          >
+            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Detalhes do Pedido</p>
+            <h1 className="text-base font-extrabold text-white truncate">
+              {selectedItem.merchant_name || "Pedido Izi"}
+            </h1>
+          </div>
+          <div className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest ${statusTone}`}>
+            {statusLabel}
+          </div>
+        </header>
+
+        <main className="px-5 py-8 space-y-6">
+          <section className="bg-zinc-900/40 border border-zinc-800 rounded-[32px] p-6 flex items-start gap-4">
+            <div className="size-14 rounded-3xl bg-yellow-400/10 border border-yellow-400/10 flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-3xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>
+                {serviceIcon}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Pedido #{String(selectedItem.id).slice(-8).toUpperCase()}</p>
+              <h2 className="text-xl font-black text-white tracking-tight mt-1">
+                {selectedItem.merchant_name || "Pedido Izi"}
+              </h2>
+              <p className="text-zinc-500 text-xs mt-2">{orderDate}</p>
+              <p className="text-zinc-400 text-sm mt-4 leading-relaxed">
+                {address}
+              </p>
+            </div>
+          </section>
+
+          <section className="bg-zinc-900/30 border border-zinc-800 rounded-[32px] p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Itens</h3>
+              <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">
+                {items.length} {items.length === 1 ? "item" : "itens"}
+              </span>
+            </div>
+
+            {items.length > 0 ? (
+              <div className="space-y-3">
+                {items.map((item: any, index: number) => (
+                  <div key={item.id || `${item.name}-${index}`} className="flex items-start justify-between gap-4 border-b border-zinc-800/80 pb-3 last:border-0 last:pb-0">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="size-8 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-center text-[10px] font-black text-yellow-400 shrink-0">
+                        {item.quantity || 1}x
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-white truncate">{item.name || item.product_name || "Produto"}</p>
+                        {item.options && item.options.length > 0 && (
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">
+                            {item.options.map((option: any) => option.name).join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {typeof item.price === "number" ? (
+                        <p className="text-sm font-black text-white">
+                          R$ {Number((item.price || 0) * (item.quantity || 1)).toFixed(2).replace(".", ",")}
+                        </p>
+                      ) : (
+                        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Incluído</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 flex flex-col items-center gap-3">
+                <span className="material-symbols-outlined text-4xl text-zinc-800">receipt_long</span>
+                <p className="text-zinc-600 text-xs font-black uppercase tracking-widest">Itens não disponíveis neste pedido</p>
+              </div>
+            )}
+          </section>
+
+          <section className="bg-zinc-900/30 border border-zinc-800 rounded-[32px] p-6 space-y-4">
+            <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Resumo Financeiro</h3>
+            <div className="flex items-center justify-between text-xs font-black uppercase tracking-widest text-zinc-500">
+              <span>Subtotal</span>
+              <span className="text-zinc-300">
+                R$ {Number((selectedItem.total_price || 0) - (selectedItem.delivery_fee || 0) + (selectedItem.discount || 0)).toFixed(2).replace(".", ",")}
+              </span>
+            </div>
+            {(selectedItem.delivery_fee || 0) > 0 && (
+              <div className="flex items-center justify-between text-xs font-black uppercase tracking-widest text-zinc-500">
+                <span>Entrega</span>
+                <span className="text-yellow-400">+ R$ {Number(selectedItem.delivery_fee || 0).toFixed(2).replace(".", ",")}</span>
+              </div>
+            )}
+            {(selectedItem.discount || 0) > 0 && (
+              <div className="flex items-center justify-between text-xs font-black uppercase tracking-widest text-zinc-500">
+                <span>Desconto</span>
+                <span className="text-rose-400">- R$ {Number(selectedItem.discount || 0).toFixed(2).replace(".", ",")}</span>
+              </div>
+            )}
+            <div className="pt-4 border-t border-zinc-800 flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Total</span>
+              <span className="text-2xl font-black text-white italic tracking-tight">
+                R$ {Number(selectedItem.total_price || 0).toFixed(2).replace(".", ",")}
+              </span>
+            </div>
+            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+              Pago via {String(selectedItem.payment_method || "pix").toUpperCase()}
+            </p>
+          </section>
+
+          <section className="grid grid-cols-1 gap-3">
+            {isTrackable && (
+              <button
+                onClick={() => setSubView("active_order")}
+                className="w-full py-4 rounded-2xl bg-yellow-400 text-black font-black text-[11px] uppercase tracking-widest shadow-[0_0_24px_rgba(255,215,9,0.2)] active:scale-95 transition-all"
+              >
+                Acompanhar Pedido
+              </button>
+            )}
+            {isCompleted && (
+              <button
+                onClick={() => setSubView("order_feedback")}
+                className="w-full py-4 rounded-2xl bg-zinc-900 border border-zinc-800 text-white font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all"
+              >
+                Avaliar Experiência
+              </button>
+            )}
+            <button
+              onClick={() => setSubView("order_support")}
+              className="w-full py-4 rounded-2xl border border-zinc-800 text-zinc-300 font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all"
+            >
+              Preciso de Ajuda
+            </button>
+          </section>
+        </main>
+      </div>
+    );
+  };
+
   const renderPaymentError = () => (
     <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-center">
       <div className="size-20 rounded-full bg-red-500/10 flex items-center justify-center mb-6 border border-red-500/20">
@@ -4469,7 +4817,7 @@ function App() {
       <p className="text-zinc-400 font-medium max-w-[240px] leading-relaxed">
         O estabelecimento está analisando seu pedido agora mesmo. Fique de olho! ⏱️
       </p>
-      <button onClick={() => setSubView(null)} className="mt-12 px-8 py-3 bg-zinc-900 border border-zinc-800 rounded-2xl text-zinc-500 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">Voltar ao Início</button>
+      <button onClick={() => setSubView("none")} className="mt-12 px-8 py-3 bg-zinc-900 border border-zinc-800 rounded-2xl text-zinc-500 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">Voltar ao Início</button>
     </div>
   );
 
@@ -5361,15 +5709,13 @@ function App() {
   };
 
   const renderOrderChat = () => {
-    const [msg, setMsg] = (useState as any)<string>("");
-    const [messages, setMessages] = (useState as any)<any[]>([
+    const backView = isOrderTrackable(selectedItem?.status) ? "active_order" : "order_support";
+    const _legacyMessages = null; /*
       { from: "driver", text: "Olá! Estou a caminho do seu endereço.", time: "agora" },
-    ]);
+    */
 
     const sendMsg = () => {
-      if (!msg.trim()) return;
-      setMessages((prev: any[]) => [...prev, { from: "user", text: msg, time: "agora" }]);
-      setMsg("");
+      if (!_legacyMessages) return;
     };
 
     return (
@@ -5449,6 +5795,121 @@ function App() {
           <div className="pt-4">
             <p className="text-zinc-700 text-xs text-center mb-4">Ou fale diretamente com nosso time</p>
             <button className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-3 border border-zinc-900 text-zinc-400 hover:border-yellow-400/20 hover:text-yellow-400 transition-all">
+              <span className="material-symbols-outlined text-xl">chat_bubble</span>
+              Iniciar Chat com Suporte
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  };
+
+  const renderOrderChatFlow = () => {
+    const backView = isOrderTrackable(selectedItem?.status) ? "active_order" : "order_support";
+
+    const sendMsg = () => {
+      if (!chatInput.trim()) return;
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: `chat-user-${Date.now()}`,
+          sender: "user",
+          text: chatInput,
+          time: "agora",
+        },
+      ]);
+      setChatInput("");
+    };
+
+    return (
+      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col">
+        <header className="bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
+          <button onClick={() => setSubView(backView)} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          </button>
+          <div>
+            <h1 className="font-extrabold text-base text-white uppercase tracking-tight">Chat</h1>
+            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-widest">
+              {selectedItem?.driver_name || selectedItem?.merchant_name || "Suporte Izi"} Online
+            </p>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-6 space-y-4">
+          {chatMessages.map((message, index) => (
+            <div key={message.id || index} className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm font-medium ${message.sender === "user" ? "bg-yellow-400 text-black" : "bg-zinc-900 text-zinc-300"}`}>
+                <p>{message.text}</p>
+                <p className={`text-[9px] mt-1 ${message.sender === "user" ? "text-black/50" : "text-zinc-600"} text-right`}>{message.time}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="px-5 py-4 border-t border-zinc-900 flex items-center gap-3">
+          <input
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMsg()}
+            placeholder="Digite uma mensagem..."
+            className="flex-1 bg-zinc-900/50 border-b border-zinc-900 rounded-2xl py-3 px-4 text-sm text-white placeholder:text-zinc-700 focus:outline-none focus:border-yellow-400/20 transition-all"
+          />
+          <button onClick={sendMsg} className="size-11 rounded-full bg-yellow-400 flex items-center justify-center active:scale-90 transition-all shrink-0">
+            <span className="material-symbols-outlined text-black" style={{ fontVariationSettings: "'FILL' 1" }}>send</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderOrderSupportFlow = () => {
+    const topics = [
+      { icon: "local_shipping", label: "Meu pedido está atrasado" },
+      { icon: "cancel", label: "Quero cancelar meu pedido" },
+      { icon: "swap_horiz", label: "Item errado ou faltando" },
+      { icon: "payments", label: "Problema com pagamento" },
+      { icon: "help", label: "Outro problema" },
+    ];
+
+    return (
+      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
+        <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
+          <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+            <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
+          </button>
+          <h1 className="font-extrabold text-base text-white uppercase tracking-tight">Suporte</h1>
+        </header>
+
+        <main className="px-5 py-8 space-y-10">
+          <div>
+            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-2">Central de Ajuda</p>
+            <h2 className="text-2xl font-extrabold text-white tracking-tighter">Como podemos<br/>te ajudar?</h2>
+          </div>
+
+          <div className="flex flex-col">
+            {topics.map((topic, index) => (
+              <motion.button
+                key={topic.label}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.04 }}
+                onClick={() => openOrderChat(topic.label)}
+                className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0 active:opacity-60 transition-all text-left group w-full"
+              >
+                <span className="material-symbols-outlined text-zinc-600 group-hover:text-yellow-400 transition-colors text-xl">{topic.icon}</span>
+                <p className="font-black text-sm text-white flex-1">{topic.label}</p>
+                <span className="material-symbols-outlined text-zinc-800 group-hover:text-yellow-400/50 transition-colors text-lg">chevron_right</span>
+              </motion.button>
+            ))}
+          </div>
+
+          <div className="pt-4">
+            <p className="text-zinc-700 text-xs text-center mb-4">Ou fale diretamente com nosso time</p>
+            <button
+              onClick={() => openOrderChat()}
+              className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-3 border border-zinc-900 text-zinc-400 hover:border-yellow-400/20 hover:text-yellow-400"
+            >
               <span className="material-symbols-outlined text-xl">chat_bubble</span>
               Iniciar Chat com Suporte
             </button>
@@ -6429,7 +6890,7 @@ function App() {
             <button onClick={handleBack} className="flex items-center justify-center w-12 h-12 bg-black/40 backdrop-blur-md rounded-full text-white border border-white/20">
               <Icon name="arrow_back" />
             </button>
-            <button className="w-12 h-12 bg-black/40 backdrop-blur-md rounded-full text-white border border-white/20">
+            <button onClick={() => handleFavoriteAction(selectedItem.name)} className="w-12 h-12 bg-black/40 backdrop-blur-md rounded-full text-white border border-white/20">
               <Icon name="favorite" />
             </button>
           </header>
@@ -8152,15 +8613,73 @@ function App() {
                   <CheckoutView cart={cart} appliedCoupon={appliedCoupon} walletTransactions={walletTransactions} savedCards={savedCards} userId={userId} userLocation={userLocation} paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} changeFor={changeFor} setChangeFor={setChangeFor} selectedCard={selectedCard} setSelectedCard={setSelectedCard} couponInput={couponInput} setCouponInput={setCouponInput} handleApplyCoupon={handleApplyCoupon} setAppliedCoupon={setAppliedCoupon} handlePlaceOrder={handlePlaceOrder} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} iziCoins={iziCoins} iziCoinValue={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0} deliveryFee={calculateDeliveryFee()} />
                 </motion.div>
               )}
-              {subView === "shop" && (
-                <motion.div key="shopv" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }} className="absolute inset-0 z-[60]">
-                  <div className="h-full bg-black overflow-y-auto no-scrollbar">
-                     {renderShop()}
-                  </div>
+              {subView === "restaurant_list" && (
+                <motion.div key="restaurant_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  {renderRestaurantList()}
                 </motion.div>
               )}
-              {subView === "product" && (
-                <motion.div key="prodv" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[130]">
+              {subView === "explore_restaurants" && (
+                <motion.div key="explore_restaurants" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  {renderExploreRestaurants()}
+                </motion.div>
+              )}
+              {subView === "daily_menus" && (
+                <motion.div key="daily_menus" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  {renderDailyMenus()}
+                </motion.div>
+              )}
+              {subView === "exclusive_offer" && (
+                <motion.div key="exclusive_offer" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[125]">
+                  {renderExclusiveOffer()}
+                </motion.div>
+              )}
+              {subView === "market_list" && (
+                <motion.div key="market_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  {renderMarketList()}
+                </motion.div>
+              )}
+              {subView === "beverages_list" && (
+                <motion.div key="beverages_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  {renderBeveragesList()}
+                </motion.div>
+              )}
+              {subView === "beverage_offers" && (
+                <motion.div key="beverage_offers" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  {renderBeverageOffers()}
+                </motion.div>
+              )}
+              {subView === "pharmacy_list" && (
+                <motion.div key="pharmacy_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  {renderPharmacyList()}
+                </motion.div>
+              )}
+              {subView === "all_pharmacies" && (
+                <motion.div key="all_pharmacies" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  {renderAllPharmacies()}
+                </motion.div>
+              )}
+              {subView === "health_plantao" && (
+                <motion.div key="health_plantao" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  {renderHealthPlantao()}
+                </motion.div>
+              )}
+              {subView === "generic_list" && (
+                <motion.div key="generic_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  {renderGenericList()}
+                </motion.div>
+              )}
+              {(subView === "restaurant_menu" || (subView === "shop" && selectedShop?.type === "restaurant")) && (
+                <motion.div key="restaurant_menu" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[125]">
+                  {renderRestaurantMenu()}
+                </motion.div>
+              )}
+              {(subView === "store_catalog" || (subView === "shop" && selectedShop?.type !== "restaurant")) && (
+                <motion.div key="store_catalog" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[125]">
+                  {renderStoreCatalog()}
+                </motion.div>
+              )}
+              {(subView === "product" || subView === "product_detail") && (
+                <motion.div key="product_detail" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[130]">
                   {renderProductDetail()}
                 </motion.div>
               )}
@@ -8169,24 +8688,19 @@ function App() {
                    {renderOrderDetail()}
                 </motion.div>
               )}
-              {subView === "search" && (
-                <motion.div key="searchv" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[100]">
-                  {renderSearch()}
-                </motion.div>
-              )}
               {subView === "addresses" && (
                 <motion.div key="addres" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
                   {renderAddresses()}
                 </motion.div>
               )}
+              {subView === "payments" && (
+                <motion.div key="payments" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
+                  {renderPayments()}
+                </motion.div>
+              )}
               {subView === "wallet_internal" && (
                 <motion.div key="wallet" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
                   {renderWallet()}
-                </motion.div>
-              )}
-              {subView === "referral" && (
-                <motion.div key="ref" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
-                  {renderReferralSystem()}
                 </motion.div>
               )}
               {subView === "explore_envios" && (
@@ -8206,7 +8720,7 @@ function App() {
               )}
               {subView === "order_support" && (
                 <motion.div key="osupport" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[110]">
-                  {renderOrderSupport()}
+                  {renderOrderSupportFlow()}
                 </motion.div>
               )}
               {subView === "order_feedback" && (
@@ -8216,7 +8730,7 @@ function App() {
               )}
               {subView === "order_chat" && (
                 <motion.div key="ochat" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderOrderChat()}
+                  {renderOrderChatFlow()}
                 </motion.div>
               )}
               {subView === "quest_center" && (

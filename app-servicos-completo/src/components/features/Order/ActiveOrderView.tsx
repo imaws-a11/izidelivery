@@ -22,6 +22,17 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
 }) => {
   if (!selectedItem) return null;
 
+  const handleCall = () => {
+    const rawPhone = selectedItem.driver_phone || selectedItem.merchant_phone || selectedItem.phone;
+    if (!rawPhone) {
+      setSubView("order_support");
+      return;
+    }
+
+    const phone = String(rawPhone).replace(/[^\d+]/g, "");
+    window.location.href = `tel:${phone}`;
+  };
+
   const isMobility = ["mototaxi", "carro", "van", "utilitario"].includes(selectedItem.service_type);
 
   const steps = isMobility
@@ -262,7 +273,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                   </p>
                 </div>
               </div>
-              <button className="size-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 active:scale-90 transition-all">
+              <button onClick={() => setSubView("order_support")} className="size-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 active:scale-90 transition-all">
                 <Icon name="support_agent" size={18} className="text-zinc-500" />
               </button>
             </div>
@@ -293,7 +304,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                 <Icon name="chat" size={16} className="text-yellow-400" />
                 Chat
               </button>
-              <button className="bg-zinc-900 border border-zinc-800 py-4 rounded-2xl flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-400 active:scale-[0.98] transition-all hover:bg-zinc-800 hover:text-white">
+              <button onClick={handleCall} className="bg-zinc-900 border border-zinc-800 py-4 rounded-2xl flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-400 active:scale-[0.98] transition-all hover:bg-zinc-800 hover:text-white">
                 <span className="material-symbols-outlined text-yellow-400 text-lg">call</span>
                 Ligar
               </button>
@@ -415,5 +426,4 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
     </div>
   );
 };
-
 

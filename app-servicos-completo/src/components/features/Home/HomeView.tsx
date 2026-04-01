@@ -597,16 +597,21 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
           {/* IZI FLASH HIGHLIGHTS */}
           {activeStories.length > 0 && (
-            <section className="space-y-4">
+            <section className="space-y-6">
               <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-2">
-                  <div className="size-1.5 rounded-full bg-yellow-400 animate-ping" />
-                  <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] italic">Izi Flash</h3>
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col">
+                    <h3 className="text-xl font-black text-white uppercase tracking-tighter italic leading-none">Izi Flash</h3>
+                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mt-1">Ofertas Instantâneas</p>
+                  </div>
                 </div>
-                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">AO VIVO</span>
+                <div className="flex items-center gap-2 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
+                  <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">LIVE</span>
+                </div>
               </div>
               
-              <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2 -mx-5 px-5 h-[134px]">
+              <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-4 -mx-5 px-5 h-[154px]">
                 {activeStories.map(story => (
                   <motion.div 
                     key={story.id} 
@@ -631,51 +636,49 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         setSubView("product_detail");
                       }
                     }}
-                    className={`relative flex-shrink-0 w-[28rem] h-[118px] snap-center rounded-[20px] p-[1px] ${story.isMaster ? "bg-gradient-to-tr from-yellow-400 via-zinc-800 to-amber-600 shadow-[0_4px_10px_rgba(255,215,9,0.2)]" : "bg-white/10 shadow-[0_5px_15px_rgba(0,0,0,0.35)]"} cursor-pointer transition-all group`}
+                    className={`relative flex-shrink-0 w-[280px] h-[130px] snap-center rounded-[32px] overflow-hidden group cursor-pointer transition-all ${story.isMaster ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-black" : "border border-white/5 shadow-2xl"} shadow-black/50`}
                   >
-                    <div className={`size-full rounded-[19px] overflow-hidden bg-zinc-900 relative ${story.isMaster ? "border-[1.5px] border-zinc-950" : "border border-white/10"}`}>
-                      <img src={story.img} className="size-full object-cover brightness-75 group-hover:scale-110 transition-transform duration-1000" />
-                      <div className="absolute top-2 left-2 right-2 z-20 flex items-start justify-between gap-1.5">
-                        <div className="min-w-0 flex-1 bg-black/58 backdrop-blur-xl px-2 py-1.5 rounded-[12px] border border-white/10 shadow-[0_4px_10px_rgba(0,0,0,0.28)]">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="material-symbols-outlined text-[10px] text-white/75 shrink-0">storefront</span>
-                            <div className="min-w-0">
-                              <span className="text-[9px] font-black text-white tracking-tight leading-tight whitespace-normal break-words block truncate">
-                                {story.merchant}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="bg-zinc-950/86 backdrop-blur-xl px-2 py-1.5 rounded-[12px] border border-white/10 shadow-[0_5px_12px_rgba(0,0,0,0.35)] shrink-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="material-symbols-outlined text-[10px] text-yellow-400 shrink-0">timer</span>
-                            <div className="flex flex-col items-end">
-                              <span className="text-[5px] font-black text-white/45 uppercase tracking-[0.18em] leading-none">Termina em</span>
-                              <span className="text-[10px] font-black text-yellow-400 leading-none tracking-tight mt-0.5">
-                                {story.timeLeft}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                    <img 
+                      src={story.img} 
+                      className="absolute inset-0 size-full object-cover group-hover:scale-110 transition-transform duration-1000 brightness-[0.8] saturate-[1.2]" 
+                      alt={story.name}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                    
+                    {/* Floating Info - Minimalist */}
+                    <div className="absolute top-3 left-3 right-3 flex justify-between items-start pointer-events-none">
+                      <div className="bg-black/40 backdrop-blur-xl px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[12px] text-white/70">storefront</span>
+                        <span className="text-[10px] font-black text-white uppercase tracking-tight truncate max-w-[80px]">
+                          {story.merchant}
+                        </span>
                       </div>
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/75 to-transparent px-3 pt-6 pb-2.5 flex flex-col justify-end">
-                        <h5 className="text-[13px] font-black text-white leading-[1.02] tracking-tight drop-shadow-2xl line-clamp-1">
-                          {story.name}
-                        </h5>
-                        <div className="flex items-end justify-between gap-2 mt-1.5">
-                          <div className="flex items-center gap-2">
-                            {story.originalPrice && (
-                              <p className="text-[10px] text-white/65 line-through leading-none font-black tracking-tight">
-                                R$ {story.originalPrice}
-                              </p>
-                            )}
-                            <h6 className="text-[14px] font-black text-white leading-none tracking-tight italic drop-shadow-2xl">
-                              R$ {story.finalPrice}
-                            </h6>
-                          </div>
-                        </div>
+                      <div className="bg-yellow-400 px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-lg shadow-yellow-400/20">
+                        <span className="material-symbols-outlined text-[12px] font-black text-black">timer</span>
+                        <span className="text-[10px] font-black text-black tracking-tighter">
+                          {story.timeLeft}
+                        </span>
                       </div>
                     </div>
+
+                    <div className="absolute inset-x-0 bottom-0 p-5 flex flex-col justify-end">
+                      <h5 className="text-base font-black text-white leading-none tracking-tight uppercase italic drop-shadow-2xl line-clamp-1">
+                        {story.name}
+                      </h5>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <h6 className="text-xl font-black text-yellow-400 leading-none italic tracking-tight drop-shadow-2xl">
+                          R$ {story.finalPrice}
+                        </h6>
+                        {story.originalPrice && (
+                          <p className="text-[10px] text-white/40 line-through font-black italic tracking-tight">
+                            R$ {story.originalPrice}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Infinite Border Glow Effect */}
+                    <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-yellow-400/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   </motion.div>
                 ))}
               </div>
@@ -912,7 +915,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em]">Os melhores perto de você</p>
                 </div>
               </div>
-              <button className="text-[10px] font-black text-yellow-400 uppercase tracking-widest px-4 py-2 bg-yellow-400/10 rounded-2xl border border-yellow-400/20 active:scale-95 transition-all">Ver todos</button>
+              <button
+                onClick={() => { setRestaurantInitialCategory("Todos"); navigateSubView("restaurant_list"); }}
+                className="text-[10px] font-black text-yellow-400 uppercase tracking-widest px-4 py-2 bg-yellow-400/10 rounded-2xl border border-yellow-400/20 active:scale-95 transition-all"
+              >
+                Ver todos
+              </button>
             </div>
             
             <div className="flex gap-6 overflow-x-auto no-scrollbar pb-6 -mx-5 px-5">
