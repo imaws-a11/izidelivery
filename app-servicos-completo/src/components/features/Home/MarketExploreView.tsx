@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useMemo } from "react";
+import { motion } from "framer-motion";
 import { MerchantCard } from "../Establishment/MerchantCard";
 
 interface MarketExploreViewProps {
@@ -10,20 +10,7 @@ interface MarketExploreViewProps {
   navigateSubView: (view: any) => void;
   establishments: any[];
   onShopClick: (shop: any) => void;
-  availableCoupons: any[];
 }
-
-const marketCategories = [
-  { id: "all", name: "Todos", icon: "storefront", color: "zinc-400", img: "https://images.unsplash.com/photo-1534723452862-4c874018d66d?q=80&w=800" },
-  { id: "mercearia", name: "Mercearia", icon: "shopping_basket", color: "amber-500", img: "https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=600" },
-  { id: "congelados", name: "Congelados", icon: "ac_unit", color: "blue-400", img: "https://images.unsplash.com/photo-1584263343327-447967b33da0?q=80&w=600" },
-  { id: "padaria", name: "Padaria", icon: "bakery_dining", color: "orange-400", img: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=600" },
-  { id: "higiene", name: "Higiene", icon: "clean_hands", color: "rose-400", img: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=600" },
-  { id: "limpeza", name: "Limpeza", icon: "cleaning_services", color: "cyan-400", img: "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?q=80&w=600" },
-  { id: "pet", name: "Pet Shop", icon: "pets", color: "emerald-400", img: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=600" },
-  { id: "sorvetes", name: "Sorvete", icon: "icecream", color: "sky-300", img: "https://images.unsplash.com/photo-1501443762994-82bd5dace89a?q=80&w=600" },
-  { id: "bebidas", name: "Bebidas", icon: "local_bar", color: "purple-400", img: "https://images.unsplash.com/photo-1527661591475-527312dd65f5?q=80&w=600" },
-];
 
 export const MarketExploreView: React.FC<MarketExploreViewProps> = ({
   setSubView,
@@ -33,10 +20,7 @@ export const MarketExploreView: React.FC<MarketExploreViewProps> = ({
   navigateSubView,
   establishments,
   onShopClick,
-  availableCoupons,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState("Todos");
-
   const filteredMarkets = useMemo(() => {
     const normalize = (s: string) => s ? s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_') : "";
     
@@ -46,36 +30,9 @@ export const MarketExploreView: React.FC<MarketExploreViewProps> = ({
       
       const matchesSearch = shop.name.toLowerCase().includes(searchQuery.toLowerCase());
       
-      let matchesCategory = true;
-      if (selectedCategory !== "Todos") {
-        const catNormalized = normalize(selectedCategory);
-        const shopType = normalize(shop.type);
-        const shopTag = normalize(shop.tag);
-        const shopDesc = normalize(shop.description);
-        const shopName = normalize(shop.name);
-        
-        matchesCategory = shopType.includes(catNormalized) ||
-                         shopTag.includes(catNormalized) || 
-                         shopDesc.includes(catNormalized) ||
-                         shopName.includes(catNormalized);
-
-        // Fallback para termos específicos de mercado
-        if (!matchesCategory) {
-           if (catNormalized === 'higiene') {
-              matchesCategory = shopTag.includes('cosmetico') || shopTag.includes('farmacia') || shopName.includes('farma');
-           }
-           if (catNormalized === 'limpeza') {
-              matchesCategory = shopTag.includes('utilidades') || shopTag.includes('casa');
-           }
-           if (catNormalized === 'pet_shop') {
-             matchesCategory = shopTag.includes('pets') || shopName.includes('pet');
-           }
-        }
-      }
-
-      return isMarketRelated && matchesSearch && matchesCategory;
+      return isMarketRelated && matchesSearch;
     });
-  }, [establishments, searchQuery, selectedCategory]);
+  }, [establishments, searchQuery]);
 
   return (
     <div className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
@@ -128,35 +85,11 @@ export const MarketExploreView: React.FC<MarketExploreViewProps> = ({
       </header>
 
       <main className="flex flex-col pt-44 px-4">
-        {/* CARROSSEL DE CATEGORIAS VISUAIS */}
-        <section className="mb-10">
-          <div className="flex items-center justify-between mb-6 px-1">
-            <h2 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Categorias do Mercado</h2>
-          </div>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 h-[120px]">
-             {marketCategories.map((cat) => (
-               <motion.button
-                 key={cat.id}
-                 onClick={() => setSelectedCategory(cat.name)}
-                 whileTap={{ scale: 0.95 }}
-                 className={`relative flex-shrink-0 w-32 h-24 rounded-3xl overflow-hidden group transition-all border-2 ${selectedCategory === cat.name ? "border-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.2)]" : "border-white/5"}`}
-               >
-                  <img src={cat.img} className={`absolute inset-0 size-full object-cover transition-transform duration-700 ${selectedCategory === cat.name ? "scale-110 blur-[1px]" : "brightness-[0.6] group-hover:scale-110"}`} />
-                  <div className={`absolute inset-0 ${selectedCategory === cat.name ? "bg-emerald-400/20" : "bg-gradient-to-t from-black/80 to-transparent"}`} />
-                  <div className="relative h-full flex flex-col items-center justify-center gap-2 p-2">
-                     <span className={`material-symbols-outlined text-2xl ${selectedCategory === cat.name ? "text-emerald-400" : "text-white"}`}>{cat.icon}</span>
-                     <span className={`text-[9px] font-black uppercase tracking-widest text-center ${selectedCategory === cat.name ? "text-white" : "text-zinc-300"}`}>{cat.name}</span>
-                  </div>
-               </motion.button>
-             ))}
-          </div>
-        </section>
-
         {/* LISTA DE MERCADOS */}
         <section className="space-y-6">
            <div className="flex items-center justify-between px-1">
               <div>
-                <h3 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none">{selectedCategory === "Todos" ? "Todos os Mercados" : selectedCategory}</h3>
+                <h3 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none">Todos os Mercados</h3>
                 <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mt-1.5">{filteredMarkets.length} Lojas Encontradas</p>
               </div>
            </div>
@@ -165,7 +98,7 @@ export const MarketExploreView: React.FC<MarketExploreViewProps> = ({
               {filteredMarkets.length > 0 ? (
                 filteredMarkets.map((shop, i) => (
                   <motion.div
-                    key={shop.id}
+                    key={shop.id || i}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
@@ -173,6 +106,7 @@ export const MarketExploreView: React.FC<MarketExploreViewProps> = ({
                     <MerchantCard 
                       shop={shop} 
                       onClick={() => onShopClick(shop)} 
+                      index={i}
                     />
                   </motion.div>
                 ))
