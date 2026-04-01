@@ -141,9 +141,9 @@ function App() {
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; expirationDate: string } | null>(null);
   const [lightningData, setLightningData] = useState<{ payment_request: string; satoshis: number; btc_price_brl: number } | null>(null);
 
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' | 'error' } | null>(null);
   const toastTimeoutRef = useRef<any>(null);
-  const showToast = (message: string, type: 'success' | 'info' | 'warning' = 'info') => {
+  const showToast = (message: string, type: 'success' | 'info' | 'warning' | 'error' = 'info') => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ message, type });
     toastTimeoutRef.current = setTimeout(() => {
@@ -151,7 +151,7 @@ function App() {
       toastTimeoutRef.current = null;
     }, 4000);
   };
-  const toastError = (message: string) => showToast(message, 'warning');
+  const toastError = (message: string) => showToast(message, 'error');
 
   // --- Izi Elite Client Features ---
   const [userXP, setUserXP] = useState(0);
@@ -866,7 +866,7 @@ function App() {
     try {
       const flashOfferError = await validateFlashOfferRules(item);
       if (flashOfferError) {
-        showToast(flashOfferError, "error");
+        showToast(flashOfferError, "error" as any);
         return;
       }
 
@@ -1657,7 +1657,6 @@ function App() {
   });
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [isMobilityExpanded, setIsMobilityExpanded] = useState(false);
   const [editingAddress, setEditingAddress] = useState<SavedAddress | null>(null);
 
   useEffect(() => {
@@ -2403,7 +2402,7 @@ function App() {
              <p className="text-xs font-medium text-zinc-500">Seus pratos favoritos com preços exclusivos para hoje.</p>
            </div>
 
-           <div className="grid grid-cols-1 gap-6">
+           <div className="grid grid-cols-2 gap-4">
                 {specials.map((p, i) => (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -2411,22 +2410,25 @@ function App() {
                   transition={{ delay: i * 0.1 }}
                   key={p.id}
                   onClick={() => { handleAddToCart(p); }}
-                  className="bg-white bg-zinc-900 rounded-[50px] p-6 shadow-2xl border border-zinc-800 border-zinc-800 group relative active:scale-95 transition-all overflow-hidden"
+                  className="bg-zinc-900 rounded-2xl p-3 shadow-lg border border-zinc-800 active:scale-95 transition-all overflow-hidden relative group"
                 >
-                  <div className="flex gap-6">
-                    <div className="size-32 rounded-[35px] overflow-hidden shrink-0 shadow-2xl relative">
+                  <div className="flex flex-col gap-3">
+                    <div className="relative aspect-square rounded-xl overflow-hidden shrink-0 shadow-md">
                        <img src={p.img} className="size-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                       <div className="absolute top-3 left-3 bg-pink-500 text-white text-[9px] font-black px-2 py-1 rounded-lg shadow-lg">HOJE</div>
+                       <div className="absolute top-2 left-2 bg-pink-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md shadow-md">HOJE</div>
                     </div>
                     <div className="flex-1 flex flex-col justify-center min-w-0">
-                       <p className="text-[9px] font-black uppercase tracking-widest text-pink-500 mb-1">{p.store}</p>
-                       <h3 className="text-lg font-black text-white leading-tight mb-2 truncate group-hover:text-pink-500 transition-colors">{p.name}</h3>
-                       <p className="text-[10px] text-zinc-500 font-medium line-clamp-2 leading-relaxed mb-4">{p.desc}</p>
+                       <p className="text-[7px] font-black uppercase tracking-widest text-pink-500 mb-0.5">{p.store}</p>
+                       <h3 className="text-[11px] font-black text-white leading-tight mb-1 truncate group-hover:text-pink-500 transition-colors uppercase">{p.name}</h3>
+                       <p className="text-[9px] text-zinc-500 font-medium line-clamp-1 leading-tight mb-3">{p.desc}</p>
                        <div className="flex items-center justify-between">
-                         <span className="text-xl font-black text-white">R$ {p.price.toFixed(2).replace('.', ',')}</span>
-                         <div className="size-11 rounded-[18px] bg-pink-50  text-pink-500 flex items-center justify-center group-hover:bg-pink-500 group-hover:text-white transition-all shadow-lg">
-                           <Icon name="add" />
-                         </div>
+                         <span className="text-sm font-black text-white">R$ {p.price.toFixed(2).replace('.', ',')}</span>
+                         <button 
+                           onClick={(e) => { e.stopPropagation(); handleAddToCart(p); }}
+                           className="size-8 rounded-lg bg-pink-500 text-white flex items-center justify-center transition-all shadow-md active:scale-90"
+                         >
+                           <span className="material-symbols-outlined text-base">add</span>
+                         </button>
                        </div>
                     </div>
                   </div>
@@ -2616,13 +2618,13 @@ function App() {
             <div className="flex items-center gap-5">
               <button 
                 onClick={() => navigateSubView('pharmacy_list')} 
-                className="size-12 rounded-[22px] bg-white bg-zinc-900 shadow-2xl border border-zinc-800 border-zinc-800 flex items-center justify-center active:scale-90 transition-all group"
+                className="size-12 rounded-[22px] bg-white bg-zinc-900 shadow-2xl border border-zinc-800 flex items-center justify-center active:scale-90 transition-all group"
               >
                 <Icon name="arrow_back" />
               </button>
               <div>
-                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Plantão de SaÃƒºde</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Ofertas RelÃ¢mpago de Hoje</p>
+                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Plantão de Saúde</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Ofertas Relâmpago de Hoje</p>
               </div>
             </div>
           </div>
@@ -2638,33 +2640,34 @@ function App() {
               <div className="absolute -right-10 -bottom-10 size-64 bg-yellow-400/20 rounded-full blur-[100px]" />
            </div>
 
-           <div className="grid grid-cols-1 gap-6">
+           <div className="grid grid-cols-2 gap-4">
               {healthOffers.map((item, i) => (
                 <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
                   key={item.id}
-                  onClick={() => { handleAddToCart(item); }}
-                  className="p-6 bg-white bg-zinc-900 rounded-[50px] shadow-2xl border border-slate-50 border-zinc-800 flex items-center gap-6 group relative active:scale-95 transition-all overflow-hidden"
+                  className="p-3 bg-zinc-900 rounded-2xl shadow-lg border border-zinc-800 flex flex-col gap-3 group relative active:scale-95 transition-all overflow-hidden"
                 >
-                  <div className="size-32 rounded-[35px] overflow-hidden shrink-0 shadow-xl group-hover:scale-105 transition-transform duration-500">
-                     <img src={item.img} className="size-full object-cover" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-yellow-400 mb-1">{item.store} Ã¢â‚¬¢ {item.cat}</p>
-                    <h3 className="text-lg font-black text-white mb-3 leading-tight truncate group-hover:text-yellow-400 transition-colors">{item.name}</h3>
-                    <div className="flex items-center gap-4">
-                       <div className="flex flex-col">
-                          <span className="text-2xl font-black text-white">R$ {item.price.toFixed(2).replace('.', ',')}</span>
-                          <span className="text-sm font-bold text-zinc-500 line-through opacity-60">R$ {item.oldPrice.toFixed(2).replace('.', ',')}</span>
-                       </div>
-                       <div className="bg-red-500 text-white px-3 py-1.5 rounded-2xl text-[10px] font-black shadow-lg">{item.off}</div>
-                    </div>
-                  </div>
-                  <div className="size-12 rounded-[22px] bg-yellow-400 text-white flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
-                    <Icon name="add_shopping_cart" />
-                  </div>
+                   <div className="relative aspect-square rounded-xl overflow-hidden shrink-0 shadow-md">
+                      <img src={item.img} className="size-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                      <div className="absolute top-2 left-2 bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded-md shadow-md">OFERTA</div>
+                   </div>
+                   <div className="flex-1 min-w-0 flex flex-col justify-between">
+                      <div>
+                        <h3 className="text-[11px] font-black text-white leading-tight mb-1 truncate group-hover:text-yellow-400 transition-colors uppercase">{item.name}</h3>
+                        <p className="text-[9px] text-zinc-500 font-medium line-clamp-1 mb-3">{item.desc}</p>
+                      </div>
+                      <div className="flex items-center justify-between">
+                         <span className="text-sm font-black text-yellow-400">R$ {item.price.toFixed(2).replace('.', ',')}</span>
+                         <button 
+                           onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
+                           className="size-8 rounded-lg bg-yellow-400 text-black flex items-center justify-center transition-all shadow-md active:scale-90"
+                         >
+                           <span className="material-symbols-outlined text-base">add</span>
+                         </button>
+                      </div>
+                   </div>
                 </motion.div>
               ))}
            </div>
@@ -3326,45 +3329,45 @@ function App() {
               <h2 className="font-black text-lg uppercase tracking-widest text-zinc-500 mb-8 border-l-4 border-yellow-400 pl-4">
                 {category.name}
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className="grid grid-cols-2 gap-4">
                 {(category.items || []).map((item: any, idx: number) => (
                   <motion.div
                     key={item.id}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    className={`group relative flex flex-col gap-4 ${idx % 2 === 1 ? "md:mt-12" : ""}`}
+                    className="group relative flex flex-col gap-2.5"
                   >
                     <div 
                       onClick={() => { setSelectedItem(item); setSubView("product_detail"); }}
-                      className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-[1.02] cursor-pointer"
+                      className="relative aspect-square rounded-xl overflow-hidden shadow-lg transition-transform duration-500 group-hover:scale-[1.02] cursor-pointer bg-zinc-900"
                     >
                       <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
                       <button
                         onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
-                        className="absolute bottom-5 right-5 w-14 h-14 rounded-2xl bg-yellow-400 text-black shadow-[0_0_20px_rgba(255,215,9,0.4)] flex items-center justify-center active:scale-90 transition-all"
+                        className="absolute bottom-2.5 right-2.5 w-9 h-9 rounded-lg bg-yellow-400 text-black shadow-lg flex items-center justify-center active:scale-90 transition-all"
                       >
-                        <span className="material-symbols-outlined font-bold">add</span>
+                        <span className="material-symbols-outlined font-bold text-lg">add</span>
                       </button>
                     </div>
-                    <div className="px-2">
-                      <div className="flex justify-between items-start mb-1 gap-3">
-                        <h3 className="font-black text-base uppercase tracking-tight text-white group-hover:text-yellow-400 transition-colors leading-tight flex-1">
+                    <div className="px-1">
+                      <div className="flex flex-col mb-1 gap-1">
+                        <h3 className="font-black text-[11px] uppercase tracking-tight text-white group-hover:text-yellow-400 transition-colors leading-tight line-clamp-2 min-h-[2rem]">
                           {item.name}
                         </h3>
-                        <div className="flex flex-col items-end shrink-0">
+                        <div className="flex flex-col">
                           {item.oldPrice && (
-                            <span className="text-[10px] text-zinc-500 line-through font-bold whitespace-nowrap">
+                            <span className="text-[9px] text-zinc-500 line-through font-bold">
                               R$ {item.oldPrice.toFixed(2).replace(".", ",")}
                             </span>
                           )}
-                          <span className="text-yellow-400 font-black text-sm whitespace-nowrap" style={{ textShadow: "0 0 10px rgba(255,215,9,0.5)" }}>
+                          <span className="text-yellow-400 font-extrabold text-[12px]">
                             R$ {item.price.toFixed(2).replace(".", ",")}
                           </span>
                         </div>
                       </div>
-                      <p className="text-zinc-500 text-sm leading-relaxed max-w-[85%]">{item.desc}</p>
+                      <p className="text-zinc-500 text-[10px] leading-tight line-clamp-2">{item.desc}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -7641,7 +7644,7 @@ function App() {
                 id="cartao" 
                 icon="credit_card" 
                 label="Cartão via App" 
-                sub={activeCard ? `${activeCard.brand} •••• ${activeCard.last4}` : "Pague com segurança pelo App"}
+                sub={selectedCard ? `${selectedCard.brand} •••• ${selectedCard.last4}` : "Pague com segurança pelo App"}
                 colorClass="text-blue-400"
               />
 
@@ -8393,13 +8396,14 @@ function App() {
           <div className={`p-5 rounded-[32px] shadow-2xl backdrop-blur-3xl border flex items-center gap-4 ${
             toast.type === 'success' ? 'bg-emerald-500/90 border-emerald-400 text-white' : 
             toast.type === 'warning' ? 'bg-amber-500/90 border-amber-400 text-white' :
+            toast.type === 'error' ? 'bg-rose-500/90 border-rose-400 text-white' :
             'bg-slate-900/90 border-slate-700 text-white'
           }`}>
             <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 ${
               toast.type === 'success' ? 'bg-white/20' : 'bg-black/20'
             }`}>
               <span className="material-symbols-outlined font-black">
-                {toast.type === 'success' ? 'check_circle' : toast.type === 'warning' ? 'warning' : 'notifications_active'}
+                {toast.type === 'success' ? 'check_circle' : toast.type === 'warning' ? 'warning' : toast.type === 'error' ? 'error_outline' : 'notifications_active'}
               </span>
             </div>
             <p className="text-xs font-black uppercase tracking-tight leading-tight flex-1">{toast.message}</p>

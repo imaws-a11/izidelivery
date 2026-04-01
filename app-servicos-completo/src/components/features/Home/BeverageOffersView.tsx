@@ -61,39 +61,38 @@ export const BeverageOffersView = ({
             </div>
           </div>
 
-         <div className="grid grid-cols-1 gap-6 pt-4">
+         <div className="grid grid-cols-1 gap-4 pt-2">
             {deals.map((item, i) => (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.98 }}
                 whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.1 }}
+                transition={{ delay: i * 0.05 }}
                 key={item.id}
-                className="bg-zinc-900/5 border border-white/10 rounded-[45px] p-5 flex items-center gap-6 group hover:bg-zinc-900/10 transition-all cursor-pointer relative overflow-hidden"
+                className="bg-zinc-900/40 border border-white/5 rounded-3xl p-3.5 flex items-center gap-4 group hover:bg-zinc-900/60 transition-all cursor-pointer relative overflow-hidden"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="size-32 rounded-[35px] overflow-hidden shrink-0 shadow-2xl relative z-10">
+                <div className="size-24 rounded-2xl overflow-hidden shrink-0 shadow-xl relative z-10">
                    <img src={item.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" title={item.name} />
-                   <div className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-black px-3 py-1.5 rounded-2xl shadow-xl backdrop-blur-md">-{item.off}</div>
+                   <div className="absolute top-2 left-2 bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded-lg shadow-lg backdrop-blur-md">-{item.off}</div>
                 </div>
                 <div className="flex-1 min-w-0 relative z-10">
-                   <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.2em] mb-1.5">{item.cat}</p>
-                   <h3 className="text-lg font-black tracking-tight mb-4 leading-tight truncate">{item.name}</h3>
+                   <p className="text-[8px] font-black text-yellow-400 uppercase tracking-[0.2em] mb-1">{item.cat}</p>
+                   <h3 className="text-sm font-black tracking-tight mb-2 leading-tight truncate text-white">{item.name}</h3>
                    <div className="flex items-center justify-between">
                       <div className="flex flex-col">
-                         <span className="text-xl font-black text-yellow-400 leading-none mb-1">R$ {item.price.toFixed(2).replace(".", ",")}</span>
-                         <span className="text-xs text-white/40 line-through font-bold">R$ {item.oldPrice.toFixed(2).replace(".", ",")}</span>
+                         <span className="text-base font-black text-yellow-400 leading-none mb-1">R$ {item.price.toFixed(2).replace(".", ",")}</span>
+                         <span className="text-[10px] text-zinc-500 line-through font-bold">R$ {item.oldPrice.toFixed(2).replace(".", ",")}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button 
                           onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
-                          className="size-11 rounded-2xl bg-yellow-400 text-white flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-110 active:scale-90 transition-all"
+                          className="size-9 rounded-xl bg-yellow-400 text-black flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all"
                         >
-                          <span className="material-symbols-outlined font-black">
+                          <span className="material-symbols-outlined font-black text-lg">
                             {getItemCount(item.id) > 0 ? 'add_shopping_cart' : 'add'}
                           </span>
                         </button>
                         {getItemCount(item.id) > 0 && (
-                          <div className="bg-zinc-900 text-white size-9 rounded-[14px] flex items-center justify-center text-xs font-black shadow-xl">
+                          <div className="bg-zinc-800 text-white size-7 rounded-lg flex items-center justify-center text-[10px] font-black border border-white/10 shadow-lg">
                             {getItemCount(item.id)}
                           </div>
                         )}
