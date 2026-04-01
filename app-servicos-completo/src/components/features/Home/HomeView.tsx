@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../../lib/supabase";
-import {
-  formatPromotionBenefit,
-  isFreeShippingPromotion,
-} from "../../../lib/promotionUtils";
 
 interface HomeViewProps {
   userLevel: number;
@@ -776,13 +772,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                                 <p className="text-[10px] font-black text-white/45 uppercase tracking-[0.24em]">Desconto</p>
                                 <div className="flex items-end gap-2 mt-1 justify-end">
                                   <h5 className="text-4xl font-black text-white uppercase italic tracking-tighter drop-shadow-2xl leading-none">
-                                    {formatPromotionBenefit(coupon, {
-                                      includeOffSuffix: false,
-                                    })}
+                                    {coupon.discount_type === "fixed" ? `R$${coupon.discount_value}` : `${coupon.discount_value}%`}
                                   </h5>
-                                  {!isFreeShippingPromotion(coupon) && (
-                                    <span className="text-yellow-400 font-black text-xs uppercase tracking-[0.2em] mb-1">OFF</span>
-                                  )}
+                                  <span className="text-yellow-400 font-black text-xs uppercase tracking-[0.2em] mb-1">OFF</span>
                                 </div>
                               </div>
                             </div>
