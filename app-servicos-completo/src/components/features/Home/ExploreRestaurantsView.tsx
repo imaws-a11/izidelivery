@@ -44,15 +44,31 @@ export const ExploreRestaurantsView = ({
     "Porções": "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?q=80&w=600",
     "Japonês": "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=600",
     "Massas": "https://images.unsplash.com/photo-1473093226795-af9932fe5856?q=80&w=600",
-    "Carnes": "https://images.unsplash.com/photo-1558030006-450675393462?q=80&w=600",
     "Fit": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=600",
     "Açaí": "https://images.unsplash.com/photo-1590301157890-4810ed352733?q=80&w=600",
-    "Sorvetes": "https://images.unsplash.com/photo-1501443762994-82bd5dabb89a?q=80&w=600",
-    "Padaria": "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=600",
+    "Sorvetes": "https://images.unsplash.com/photo-1501443762994-82bd5dace89a?q=80&w=600",
+    "Sorvete": "https://images.unsplash.com/photo-1501443762994-82bd5dace89a?q=80&w=600",
+    "Gelato": "https://images.unsplash.com/photo-1501443762994-82bd5dace89a?q=80&w=600",
     "Promoção do Dia": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=600",
     "Monte o seu": "https://images.unsplash.com/photo-1544333346-63e393789b52?q=80&w=600",
     "Pratos feitos": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=600",
     "Marmitas": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600"
+  };
+
+  const getCategoryImg = (name: string) => {
+    const n = name?.trim();
+    if (!n) return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400";
+    
+    // Tenta correspondência exata, depois busca termos chave
+    if (categoryImages[n]) return categoryImages[n];
+    
+    const lower = n.toLowerCase();
+    if (lower.includes('sorvete') || lower.includes('gelato') || lower.includes('ice cream')) return categoryImages["Sorvetes"];
+    if (lower.includes('açai') || lower.includes('açaí')) return categoryImages["Açaí"];
+    if (lower.includes('burguer') || lower.includes('burger')) return categoryImages["Burgers"];
+    if (lower.includes('pizza')) return categoryImages["Pizza"];
+    
+    return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400";
   };
 
   // Garantir que categorias de comida tenham "Todos" e não incluam redundâncias
@@ -65,7 +81,7 @@ export const ExploreRestaurantsView = ({
     if (!list.find(c => c.name === "Todos")) {
        list.unshift({ id: "all", name: "Todos", icon: "restaurant" } as any);
     }
-    return list.filter(c => c.id !== "daily");
+    return list.filter(c => c.id !== "daily" && c.name !== "Padaria" && c.name !== "Carnes");
   }, [foodCategories]);
 
   const filteredRestaurants = useMemo(() => {
@@ -163,7 +179,7 @@ export const ExploreRestaurantsView = ({
           </div>
           <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 h-[120px]">
              {categories.map((cat, i) => {
-               const catImg = categoryImages[cat.name] || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400";
+               const catImg = getCategoryImg(cat.name);
                const isActive = selectedCategory === cat.name;
                
                return (

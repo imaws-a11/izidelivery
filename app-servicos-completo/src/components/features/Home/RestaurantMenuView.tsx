@@ -127,7 +127,11 @@ export const RestaurantMenuView = ({
                   className="bg-zinc-900 rounded-2xl p-3 shadow-lg border border-zinc-800 flex flex-col gap-3 group relative active:scale-95 transition-all overflow-hidden"
                 >
                    <div className="relative aspect-square rounded-xl overflow-hidden shrink-0 shadow-md">
-                      <img src={item.img} alt={item.name} className="size-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                      <img 
+                        src={item.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400"} 
+                        alt={item.name} 
+                        className="size-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                      />
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
                         className="absolute bottom-2 right-2 size-8 rounded-lg bg-yellow-400 text-black flex items-center justify-center transition-all shadow-md active:scale-90"

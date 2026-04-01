@@ -261,6 +261,16 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
     }
 
     setIsSaving(true);
+    if (!merchantId || merchantId === '') {
+      console.error('Tentativa de salvamento abortada: merchantId ausente.', { 
+        merchantId, 
+        editingItemMerchantId: editingItem.merchant_id 
+      });
+      toastError('Erro: Nenhum lojista identificado. Não é possível salvar o produto.');
+      setIsSaving(false);
+      return;
+    }
+
     try {
       const isNew = !editingItem.id || editingItem.id.startsWith('new-');
       const normalizedGroups = (editingItem.option_groups || []).map((group: any, index: number) => normalizeOptionGroup(group, index));
@@ -276,6 +286,8 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
         featured: editingItem.featured ?? false,
       };
 
+      console.log('Iniciando persistência do produto:', { isNew, productId: editingItem.id, merchantId });
+
       let productId = editingItem.id;
 
       if (isNew) {
@@ -284,14 +296,20 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
           .insert([productData])
           .select()
           .single();
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao inserir novo produto:', error);
+          throw error;
+        }
         productId = data.id;
       } else {
         const { error } = await supabase
           .from('products_delivery')
           .update(productData)
           .eq('id', editingItem.id);
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao atualizar produto:', error);
+          throw error;
+        }
       }
 
       if (!isNew) {

@@ -3560,7 +3560,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
               }}
               menuCategoriesList={userRole === 'merchant' ? menuCategoriesList : previewCategories}
               handleFileUpload={handleFileUpload}
-              merchantId={targetMerchantId || ''}
+              merchantId={targetMerchantId}
               fetchMenuCategories={fetchMenuCategories}
             />
           )}
