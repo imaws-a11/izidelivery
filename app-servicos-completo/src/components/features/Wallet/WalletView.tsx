@@ -103,6 +103,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
   iziCoinValue = 0.01,
 }) => {
   const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr" | "scan" | "add_card">("main");
+  const [showAllHistory, setShowAllHistory] = useState(false);
   const [newCard, setNewCard] = useState({ number: "", holder: "", expiry: "", cvv: "" });
   const [isSavingCard, setIsSavingCard] = useState(false);
   const historyRef = useRef<HTMLElement>(null);
@@ -613,7 +614,12 @@ export const WalletView: React.FC<WalletViewProps> = ({
         <section ref={historyRef}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Histórico</h2>
-            <button className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Ver Tudo</button>
+            <button
+              onClick={() => setShowAllHistory((prev) => !prev)}
+              className="text-[10px] font-black text-yellow-400 uppercase tracking-widest"
+            >
+              {showAllHistory ? "Ver menos" : "Ver tudo"}
+            </button>
           </div>
           <div className="flex flex-col">
             {walletTransactions.length === 0 ? (
@@ -623,7 +629,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
               </div>
             ) : (
               <div className="bg-zinc-900/20 rounded-[24px] p-2">
-              {walletTransactions.slice(0, 20).map((t: any, i: number) => {
+              {(showAllHistory ? walletTransactions : walletTransactions.slice(0, 20)).map((t: any, i: number) => {
                 const tx = txIcon[t.type] || { icon: "payments", color: "text-zinc-400" };
                 return (
                   <div key={t.id || i} className="flex items-center gap-4 py-3 px-3 hover:bg-zinc-900/40 rounded-xl transition-all border-b border-zinc-900/30 last:border-0 cursor-pointer">
