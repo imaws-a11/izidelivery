@@ -2797,6 +2797,34 @@ function App() {
             </div>
           </section>
 
+          <section className="mb-6 -mx-5 px-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Categorias</h3>
+            </div>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+              {[
+                { name: 'Ofertas', icon: 'sell', color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' },
+                { name: 'Mercearia', icon: 'shopping_basket', color: 'text-yellow-400', bg: 'bg-yellow-400/10', border: 'border-yellow-400/20' },
+                { name: 'Mercearia Doce', icon: 'cookie', color: 'text-pink-400', bg: 'bg-pink-400/10', border: 'border-pink-400/20' },
+                { name: 'Hortifruti', icon: 'nutrition', color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20' },
+                { name: 'Açougue', icon: 'kebab_dining', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/20' },
+                { name: 'Congelados', icon: 'ac_unit', color: 'text-blue-300', bg: 'bg-blue-300/10', border: 'border-blue-300/20' },
+                { name: 'Frios', icon: 'kitchen', color: 'text-orange-300', bg: 'bg-orange-300/10', border: 'border-orange-300/20' },
+                { name: 'Padaria', icon: 'bakery_dining', color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
+                { name: 'Bebidas', icon: 'liquor', color: 'text-purple-400', bg: 'bg-purple-400/10', border: 'border-purple-400/20' },
+                { name: 'Limpeza', icon: 'cleaning_services', color: 'text-cyan-400', bg: 'bg-cyan-400/10', border: 'border-cyan-400/20' },
+                { name: 'Higiene', icon: 'wash', color: 'text-teal-400', bg: 'bg-teal-400/10', border: 'border-teal-400/20' },
+              ].map((cat, i) => (
+                <div key={i} className="flex flex-col items-center gap-2 min-w-[76px] cursor-pointer group">
+                  <div className={`size-[76px] rounded-[24px] ${cat.bg} border ${cat.border} flex items-center justify-center group-hover:scale-105 group-active:scale-95 transition-all shadow-lg`}>
+                    <span className={`material-symbols-outlined ${cat.color} text-[32px] group-hover:-translate-y-1 transition-transform`} style={{ fontVariationSettings: "'FILL' 1" }}>{cat.icon}</span>
+                  </div>
+                  <span className="text-[10px] font-black uppercase text-zinc-400 text-center leading-tight tracking-wider group-hover:text-white transition-colors mt-1">{cat.name}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <div className="flex flex-col gap-4 pb-10">
             {ESTABLISHMENTS.filter((shop: any) =>
               (shop.type === 'market' || shop.type === 'mercado' || shop.type === 'mercados') && shop.name.toLowerCase().includes(searchQuery.toLowerCase())

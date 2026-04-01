@@ -220,27 +220,47 @@ export const ExploreRestaurantsView = ({
           </div>
         </section>
 
-        {/* CATEGORIAS (FILTRO INLINE) */}
-        <section>
-          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-5 px-5">
+        {/* CATEGORIAS (BLOCK STYLE) */}
+        <section className="mb-2 -mx-5 px-5">
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
             {categories.map((cat, i) => {
               const isActive = selectedCategory === cat.name;
+              const palette = [
+                { color: 'text-yellow-400', bg: 'bg-yellow-400/10', border: 'border-yellow-400/20' },
+                { color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' },
+                { color: 'text-orange-400', bg: 'bg-orange-400/10', border: 'border-orange-400/20' },
+                { color: 'text-pink-400', bg: 'bg-pink-400/10', border: 'border-pink-400/20' },
+                { color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
+                { color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/20' },
+                { color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20' },
+                { color: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-400/20' },
+                { color: 'text-purple-400', bg: 'bg-purple-400/10', border: 'border-purple-400/20' },
+                { color: 'text-cyan-400', bg: 'bg-cyan-400/10', border: 'border-cyan-400/20' },
+                { color: 'text-teal-400', bg: 'bg-teal-400/10', border: 'border-teal-400/20' },
+              ];
+              const p = palette[i % palette.length];
+
               return (
-                <motion.button
+                <motion.div
                   key={cat.id || i}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.04 }}
                   onClick={() => setSelectedCategory(cat.name)}
-                  className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all active:scale-95 group ${
-                    isActive 
-                      ? "bg-yellow-400 border-yellow-400 text-black" 
-                      : "bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:border-yellow-400/40 hover:text-yellow-400"
-                  }`}
+                  className="flex flex-col items-center gap-2 min-w-[76px] cursor-pointer group"
                 >
-                  <span className={`material-symbols-outlined text-[18px] ${isActive ? "text-black" : "group-hover:text-yellow-400"}`}>{cat.icon}</span>
-                  <span className="text-[11px] font-black uppercase tracking-wider whitespace-nowrap">{cat.name}</span>
-                </motion.button>
+                  <div className={`size-[76px] rounded-[24px] ${isActive ? "bg-yellow-400 border-yellow-400 scale-105" : `${p.bg} border ${p.border}`} flex items-center justify-center group-hover:scale-105 group-active:scale-95 transition-all shadow-lg`}>
+                    <span 
+                      className={`material-symbols-outlined text-[32px] group-hover:-translate-y-1 transition-transform ${isActive ? "text-black" : p.color}`} 
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                      {cat.icon}
+                    </span>
+                  </div>
+                  <span className={`text-[10px] font-black uppercase text-center leading-tight tracking-wider transition-colors mt-1 ${isActive ? "text-yellow-400" : "text-zinc-400 group-hover:text-white"}`}>
+                    {cat.name}
+                  </span>
+                </motion.div>
               );
             })}
           </div>
