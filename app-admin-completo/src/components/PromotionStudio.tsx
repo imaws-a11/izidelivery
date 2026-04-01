@@ -277,18 +277,29 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
 
   const openEdit = (item: any, type: PromoType) => {
     if (type === 'flash') {
+      let fDate = '';
+      if (item.expires_at) {
+        try {
+           const d = new Date(item.expires_at);
+           // datetime-local format: YYYY-MM-DDThh:mm
+           const pad = (n: number) => n < 10 ? '0' + n : n;
+           fDate = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        } catch(e) {}
+      }
+
       setFormData({
         id: item.id,
-        title: item.title,
-        description: item.description,
+        title: item.title || '',
+        description: item.description || '',
         discount_type: item.discount_percent ? 'percent' : 'fixed',
-        discount_value: item.discount_percent || (item.original_price - item.discounted_price),
-        expires_at: item.expires_at,
+        discount_value: item.discount_percent || Number((item.original_price - item.discounted_price).toFixed(2)),
+        expires_at: fDate,
         is_active: item.is_active,
-        merchant_ids: [item.merchant_id],
+        merchant_ids: item.merchant_id ? [item.merchant_id] : [],
         selected_product_ids: item.product_id ? [item.product_id] : [],
         merchant_id: item.merchant_id,
-        is_vip: false
+        is_vip: item.is_vip || false,
+        is_free_shipping: false
       });
     } else {
       setFormData({

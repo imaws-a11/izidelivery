@@ -17,7 +17,11 @@ const EMPTY_FORM = {
   discount_type: 'percent' as 'percent' | 'fixed',
   discount_value: '',
   expires_at: '',
-  description: ''
+  description: '',
+  fallback_original_price: 0,
+  fallback_product_name: '',
+  fallback_product_image: '',
+  fallback_product_id: ''
 };
 
 const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) => {
@@ -110,12 +114,25 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
   }, [form.merchant_ids]);
 
   const selectedProducts = React.useMemo(() => {
-    if (!form.selected_product_ids.length) return [];
+    if (!form.selected_product_ids.length && !form.fallback_product_id) return [];
     const byId = new Map(availableProducts.map((product: any) => [String(product.id), product]));
-    return form.selected_product_ids
+    
+    const products = form.selected_product_ids
       .map(productId => byId.get(String(productId)))
       .filter(Boolean);
-  }, [availableProducts, form.selected_product_ids]);
+
+    if (products.length === 0 && form.id && form.fallback_product_id) {
+       // Se estamos editando mas a lista de disponíveis não carregou (ou o produto foi inativado)
+       return [{
+          id: form.fallback_product_id,
+          name: form.fallback_product_name,
+          image_url: form.fallback_product_image,
+          price: form.fallback_original_price,
+          merchant_id: form.merchant_ids[0]
+       }];
+    }
+    return products;
+  }, [availableProducts, form.selected_product_ids, form.id, form.fallback_product_id, form.fallback_product_name, form.fallback_product_image, form.fallback_original_price, form.merchant_ids]);
 
   const handleEdit = (offer: any) => {
     const originalPrice = Number(offer.original_price || 0);
@@ -131,16 +148,22 @@ const FlashOffersSection = ({ userRole, merchantId }: FlashOffersSectionProps) =
       (product.merchant_id === offer.merchant_id && product.name === offer.product_name)
     ));
 
+    const targetProductId = matchedProduct ? matchedProduct.id : (offer.product_id || '');
+    
     setForm({
       ...EMPTY_FORM,
       id: offer.id,
       title: offer.title || '',
       merchant_ids: offer.merchant_id ? [offer.merchant_id] : defaultMerchantIds,
-      selected_product_ids: matchedProduct ? [matchedProduct.id] : [],
+      selected_product_ids: targetProductId ? [targetProductId] : [],
       discount_type: inferredDiscountType === 'fixed' ? 'fixed' : 'percent',
       discount_value: inferredDiscountValue ? String(inferredDiscountValue) : '',
       expires_at: offer.expires_at || '',
-      description: offer.description || ''
+      description: offer.description || '',
+      fallback_original_price: originalPrice,
+      fallback_product_name: offer.product_name,
+      fallback_product_image: offer.product_image,
+      fallback_product_id: targetProductId
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
