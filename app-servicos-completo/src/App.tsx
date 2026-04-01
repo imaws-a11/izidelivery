@@ -3314,7 +3314,21 @@ function App() {
     );
   };
 
-  const renderExploreRestaurants = () => {
+  const isLunchCategorySelected = (value?: string) =>
+    (value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .includes("Almoco");
+
+  const renderExploreRestaurants = ({
+    initialCategory = restaurantInitialCategory,
+    forceLunchMode = false,
+  }: {
+    initialCategory?: string;
+    forceLunchMode?: boolean;
+  } = {}) => {
+    const shouldUseLunchCategories =
+      forceLunchMode || isLunchCategorySelected(initialCategory);
     const isLunchMode = restaurantInitialCategory === "Almoço";
 
     return (
@@ -3324,13 +3338,16 @@ function App() {
         setSearchQuery={setSearchQuery}
         cart={cart}
         navigateSubView={navigateSubView}
-        foodCategories={isLunchMode ? lunchCategories : foodCategories}
+        foodCategories={
+          shouldUseLunchCategories ? lunchCategories : foodCategories
+        }
         availableCoupons={availableCoupons}
         establishments={ESTABLISHMENTS}
         onShopClick={handleShopClick}
         copiedCoupon={copiedCoupon}
         setCopiedCoupon={setCopiedCoupon}
-        initialCategory={restaurantInitialCategory}
+        initialCategory={initialCategory}
+        isLunchMode={shouldUseLunchCategories}
       />
     );
   };
@@ -12620,7 +12637,7 @@ function App() {
                 </motion.div>
               )}
               {/* ── Listas de Estabelecimentos ── */}
-              {(["restaurant_list","burger_list","pizza_list","acai_list","japonesa_list","brasileira_list","daily_menus"] as const).some(v => subView === v) && (
+              {(["burger_list","pizza_list","acai_list","japonesa_list","brasileira_list"] as const).some(v => subView === v) && (
                 <motion.div
                   key="rest_list"
                   initial={{ x: "100%" }}
@@ -12636,11 +12653,10 @@ function App() {
                       subView === "acai_list" ? "Açaí & Bowls" :
                       subView === "japonesa_list" ? "Culinária Japonesa" :
                       subView === "brasileira_list" ? "Comida Brasileira" :
-                      subView === "daily_menus" ? "Almoço Express" :
                       "Restaurantes"
                     }
                     subtitle={
-                      subView === "daily_menus" ? "Pratos do dia por perto" : "Cardápios disponíveis agora"
+                      "Cardápios disponíveis agora"
                     }
                     icon="restaurant"
                     searchQuery={searchQuery}
@@ -12655,13 +12671,59 @@ function App() {
                       if (subView === "acai_list") return (shop.tag || "").toLowerCase().includes("açaí") && matchName;
                       if (subView === "japonesa_list") return (shop.tag || "").toLowerCase().includes("japon") && matchName;
                       if (subView === "brasileira_list") return (shop.tag || "").toLowerCase().includes("brasile") && matchName;
-                      if (subView === "daily_menus") return (shop.restaurantInitialCategory === "Almoço" || (shop.tag || "").toLowerCase().includes("almoço")) && matchName;
                       return shop.type === "restaurant" && matchName;
                     }}
                     onShopClick={handleShopClick}
                     cartLength={cart.length}
                     navigateSubView={navigateSubView}
                     backView="none"
+                  />
+                </motion.div>
+              )}
+
+              {(["restaurant_list", "daily_menus", "explore_restaurants"] as const).some(
+                (view) => subView === view,
+              ) && (
+                <motion.div
+                  key="exp_rest"
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                  className="absolute inset-0 z-40"
+                >
+                  <ExploreRestaurantsView
+                    setSubView={setSubView}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    cart={cart}
+                    navigateSubView={navigateSubView}
+                    foodCategories={
+                      (subView === "daily_menus" ||
+                      (["restaurant_list", "explore_restaurants"] as const).includes(
+                        subView as any,
+                      ) &&
+                        restaurantInitialCategory === "Almoço")
+                        ? lunchCategories
+                        : foodCategories
+                    }
+                    availableCoupons={availableCoupons}
+                    establishments={ESTABLISHMENTS}
+                    onShopClick={handleShopClick}
+                    copiedCoupon={copiedCoupon}
+                    setCopiedCoupon={setCopiedCoupon}
+                    initialCategory={
+                      subView === "daily_menus"
+                        ? "Todos"
+                        : restaurantInitialCategory
+                    }
+                    isLunchMode={
+                      (subView === "daily_menus" ||
+                      (["restaurant_list", "explore_restaurants"] as const).includes(
+                        subView as any,
+                      ) &&
+                        restaurantInitialCategory === "Almoço")
+                    }
                   />
                 </motion.div>
               )}
@@ -12777,29 +12839,6 @@ function App() {
                     cartLength={cart.length}
                     navigateSubView={navigateSubView}
                     backView="none"
-                  />
-                </motion.div>
-              )}
-
-              {subView === "explore_restaurants" && (
-                <motion.div
-                  key="exp_rest"
-                  initial={{ x: "100%" }}
-                  animate={{ x: 0 }}
-                  exit={{ x: "100%" }}
-                  transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-                  className="absolute inset-0 z-40"
-                >
-                  <ExploreRestaurantsView
-                    ESTABLISHMENTS={ESTABLISHMENTS}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    handleShopClick={handleShopClick}
-                    setSubView={setSubView}
-                    navigateSubView={navigateSubView}
-                    cart={cart}
-                    restaurantInitialCategory={restaurantInitialCategory}
-                    setRestaurantInitialCategory={setRestaurantInitialCategory}
                   />
                 </motion.div>
               )}
