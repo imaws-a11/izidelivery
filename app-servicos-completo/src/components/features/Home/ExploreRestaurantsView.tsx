@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { MerchantCard } from "../Establishment/MerchantCard";
 
 
 interface ExploreRestaurantsViewProps {
@@ -312,56 +313,15 @@ export const ExploreRestaurantsView = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 pb-12">
+          <div className="flex flex-col gap-3 pb-20">
             <AnimatePresence mode="popLayout">
               {filteredRestaurants.map((shop, i) => (
-                <motion.div
+                <MerchantCard 
                   key={shop.id || i}
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: i * 0.05 }}
-                  onClick={() => onShopClick({ ...shop, type: "restaurant" })}
-                  className="group cursor-pointer active:scale-[0.98] transition-all"
-                >
-                  <div className="bg-zinc-900 rounded-2xl p-3 shadow-lg border border-zinc-800 flex flex-col gap-3 group relative active:scale-95 transition-all overflow-hidden h-full">
-                    <div className="relative aspect-square rounded-xl overflow-hidden shrink-0 shadow-md">
-                      <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded-lg flex items-center gap-1 border border-white/10 scale-90">
-                        <span className="material-symbols-outlined text-[10px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                        <span className="text-[9px] font-black text-white">{shop.rating || "5.0"}</span>
-                      </div>
-                      {shop.freeDelivery && (
-                        <div className="absolute bottom-2 left-2 z-10 scale-90 origin-bottom-left">
-                           <span className="bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded-lg shadow-xl flex items-center gap-1 border border-black/10">
-                              <span className="material-symbols-outlined text-[10px]">local_shipping</span>
-                              GRÁTIS
-                           </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col justify-between flex-1 min-w-0">
-                      <div>
-                        <h4 className="font-black text-white text-[11px] tracking-tight group-hover:text-yellow-400 transition-colors uppercase leading-tight line-clamp-1 truncate">{shop.name}</h4>
-                        <div className="flex items-center gap-1 mt-1 text-[8px] font-bold text-zinc-500 uppercase tracking-wider overflow-hidden">
-                          <span className="flex items-center gap-0.5">
-                            <span className="material-symbols-outlined text-[10px]">schedule</span>
-                            {shop.time}
-                          </span>
-                          <span className="size-0.5 rounded-full bg-zinc-800 shrink-0" />
-                          <span className="truncate">{shop.tag || "Restaurante"}</span>
-                        </div>
-                      </div>
-                      <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between">
-                         <span className="text-[9px] font-black text-yellow-400 italic">
-                           {!shop.freeDelivery ? `R$ ${Number(shop.service_fee || 5.9).toFixed(2).replace('.', ',')}` : "Grátis"}
-                         </span>
-                         <span className="material-symbols-outlined text-xs text-zinc-600 group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
+                  shop={{ ...shop, type: "restaurant" }}
+                  onClick={onShopClick}
+                  index={i}
+                />
               ))}
             </AnimatePresence>
 

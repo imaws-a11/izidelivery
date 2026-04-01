@@ -2608,143 +2608,7 @@ function App() {
 
 
 
-  const renderHealthPlantao = () => {
-    const healthOffers: any[] = [];
-
-    return (
-      <div className="absolute inset-0 z-40 bg-black text-white text-zinc-100 flex flex-col hide-scrollbar overflow-y-auto pb-40">
-        <header className="sticky top-0 z-50 bg-black/80  backdrop-blur-3xl border-b border-yellow-400/20 pb-6 shadow-xl">
-          <div className="flex items-center p-6 pb-2 justify-between">
-            <div className="flex items-center gap-5">
-              <button 
-                onClick={() => navigateSubView('pharmacy_list')} 
-                className="size-12 rounded-[22px] bg-white bg-zinc-900 shadow-2xl border border-zinc-800 flex items-center justify-center active:scale-90 transition-all group"
-              >
-                <Icon name="arrow_back" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Plantão de Saúde</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Ofertas Relâmpago de Hoje</p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <main className="p-6 space-y-8 pt-8">
-           <div className="bg-slate-900 text-white p-10 rounded-[60px] relative overflow-hidden shadow-2xl mb-4">
-              <div className="relative z-10">
-                <Icon name="medical_services" />
-                <h2 className="text-4xl font-black tracking-tighter mb-4 leading-none">Cuidado Premium <br />Pela Metade do Preço</h2>
-                <p className="opacity-60 text-sm font-medium max-w-[200px]">Somente nas próximas 12 horas ou enquanto durarem os estoques.</p>
-              </div>
-              <div className="absolute -right-10 -bottom-10 size-64 bg-yellow-400/20 rounded-full blur-[100px]" />
-           </div>
-
-           <div className="grid grid-cols-2 gap-4">
-              {healthOffers.map((item, i) => (
-                <motion.div
-                  initial={{ opacity: 0, y: 15 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  key={item.id}
-                  className="p-3 bg-zinc-900 rounded-2xl shadow-lg border border-zinc-800 flex flex-col gap-3 group relative active:scale-95 transition-all overflow-hidden"
-                >
-                   <div className="relative aspect-square rounded-xl overflow-hidden shrink-0 shadow-md">
-                      <img src={item.img} className="size-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                      <div className="absolute top-2 left-2 bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded-md shadow-md">OFERTA</div>
-                   </div>
-                   <div className="flex-1 min-w-0 flex flex-col justify-between">
-                      <div>
-                        <h3 className="text-[11px] font-black text-white leading-tight mb-1 truncate group-hover:text-yellow-400 transition-colors uppercase">{item.name}</h3>
-                        <p className="text-[9px] text-zinc-500 font-medium line-clamp-1 mb-3">{item.desc}</p>
-                      </div>
-                      <div className="flex items-center justify-between">
-                         <span className="text-sm font-black text-yellow-400">R$ {item.price.toFixed(2).replace('.', ',')}</span>
-                         <button 
-                           onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
-                           className="size-8 rounded-lg bg-yellow-400 text-black flex items-center justify-center transition-all shadow-md active:scale-90"
-                         >
-                           <span className="material-symbols-outlined text-base">add</span>
-                         </button>
-                      </div>
-                   </div>
-                </motion.div>
-              ))}
-           </div>
-        </main>
-      </div>
-    );
-  };
-
-  const renderAllPharmacies = () => {
-    const list = ESTABLISHMENTS.map((estab: any) => ({
-      id: estab.id,
-      name: estab.name,
-      rating: estab.rating || "5.0",
-      time: estab.time || "10-15 min",
-      dist: estab.dist || "0.5 km",
-      freeDelivery: estab.freeDelivery || true,
-      fee: estab.freeDelivery ? undefined : "R$ 4,90",
-      img: estab.img
-    }));
-
-    return (
-      <div className="absolute inset-0 z-40 bg-black text-white text-zinc-100 flex flex-col hide-scrollbar overflow-y-auto pb-40">
-        <header className="sticky top-0 z-50 bg-white/80 bg-zinc-900/80 backdrop-blur-3xl border-b border-slate-200/50 border-zinc-800 pb-6">
-          <div className="flex items-center p-6 pb-2 justify-between">
-            <div className="flex items-center gap-5">
-              <button onClick={() => setSubView('pharmacy_list')} className="size-12 rounded-[22px] bg-white bg-zinc-900 shadow-2xl border border-zinc-800 border-zinc-800 flex items-center justify-center active:scale-90 transition-all group">
-                <Icon name="arrow_back" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Todas as Farmácias</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Unidades Próximas</p>
-              </div>
-            </div>
-          </div>
-          <div className="px-6 mt-4">
-            <div className="flex items-center bg-white bg-zinc-900/80 rounded-[28px] px-6 h-16 border border-zinc-800 border-zinc-800 focus-within:border-yellow-400/40 transition-all shadow-xl relative group overflow-hidden">
-               <Icon name="search" />
-               <input className="bg-transparent border-none focus:ring-0 w-full text-base placeholder:text-zinc-500 font-bold text-white outline-none relative z-10" placeholder="Buscar farmácia..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-            </div>
-          </div>
-        </header>
-
-        <main className="p-6 space-y-6 pt-8">
-          {list.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())).map((pharm, i) => (
-            <motion.div
-              key={pharm.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => handleShopClick({ ...pharm, type: 'pharmacy' })}
-              className="p-6 bg-white bg-zinc-900 rounded-[50px] shadow-2xl border border-slate-50 border-zinc-800 flex items-center gap-6 group relative active:scale-95 transition-all overflow-hidden"
-            >
-              <div className="size-24 rounded-[30px] overflow-hidden shrink-0 shadow-xl group-hover:scale-110 transition-transform duration-500">
-                 <img src={pharm.img} className="size-full object-cover" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-black text-white mb-2 leading-tight truncate group-hover:text-yellow-400 transition-colors">{pharm.name}</h3>
-                <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                  <div className="flex items-center gap-1.5">
-                    <Icon name="star" />
-                    <span className="text-white">{pharm.rating}</span>
-                  </div>
-                  <span>Ã¢â‚¬¢</span>
-                  <span>{pharm.time}</span>
-                  <span>Ã¢â‚¬¢</span>
-                  <span className={pharm.freeDelivery ? "text-emerald-500" : ""}>{pharm.freeDelivery ? "Grátis" : pharm.fee}</span>
-                </div>
-              </div>
-              <div className="size-12 rounded-[22px] bg-slate-100 bg-zinc-900 flex items-center justify-center group-hover:bg-yellow-400 transition-colors">
-                <Icon name="arrow_forward" />
-              </div>
-            </motion.div>
-          ))}
-        </main>
-      </div>
-    );
-  };
+  const renderHealthPlantao = () => renderAllPharmacies();
 
   const renderGenericList = () => {
     const shop = activeService || { label: "Loja", type: "generic" };
@@ -2787,205 +2651,79 @@ function App() {
 
 
 
-  const renderMarketList = () => {
-    return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-        <header className="sticky top-0 z-50 px-5 pt-5 pb-4"
-          style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-                <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
-              </button>
-              <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">Mercados</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Compras do dia a dia</p>
-              </div>
-            </div>
-            <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-              {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>}
-            </button>
-          </div>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
-            </div>
-            <input
-              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
-              placeholder="Buscar..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </header>
+  const renderMarketList = () => (
+    <EstablishmentListView
+      title="Mercados"
+      subtitle="Compras do dia a dia"
+      icon="local_mall"
+      searchQuery={searchQuery}
+      setSearchQuery={setSearchQuery}
+      setSubView={setSubView}
+      establishments={ESTABLISHMENTS}
+      filterFn={(shop: any) => shop.type === 'market' || shop.type === 'mercado'}
+      onShopClick={(shop) => handleShopClick({ ...shop, type: "generic" })}
+      cartLength={cart.length}
+      navigateSubView={navigateSubView}
+      backView="none"
+    />
+  );
 
-        <main className="px-5 flex flex-col gap-6">
-          <section>
-            <div className="relative h-36 rounded-2xl overflow-hidden mb-6">
-              <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-black flex items-center justify-center">
-                <span className="material-symbols-outlined text-[100px] text-yellow-400/10">local_mall</span>
-              </div>
-              <div className="absolute inset-0 flex flex-col justify-center p-5">
-                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Disponível agora</span>
-                <h2 className="text-lg font-extrabold text-white leading-tight">Mercados premium<br/>na sua porta</h2>
-              </div>
-            </div>
-          </section>
+  const renderPharmacyList = () => (
+    <EstablishmentListView
+      title="Farmácias"
+      subtitle="Saúde e bem-estar"
+      icon="local_pharmacy"
+      searchQuery={searchQuery}
+      setSearchQuery={setSearchQuery}
+      setSubView={setSubView}
+      establishments={ESTABLISHMENTS}
+      filterFn={(shop: any) => shop.type === 'pharmacy' || shop.type === 'farmacia' || shop.type === 'saude'}
+      onShopClick={(shop) => handleShopClick({ ...shop, type: "generic" })}
+      cartLength={cart.length}
+      navigateSubView={navigateSubView}
+      backView="none"
+    />
+  );
 
-          <section className="mb-6 -mx-5 px-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Categorias</h3>
-            </div>
-            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-              {[
-                { name: 'Ofertas', icon: 'sell', color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' },
-                { name: 'Mercearia', icon: 'shopping_basket', color: 'text-yellow-400', bg: 'bg-yellow-400/10', border: 'border-yellow-400/20' },
-                { name: 'Mercearia Doce', icon: 'cookie', color: 'text-pink-400', bg: 'bg-pink-400/10', border: 'border-pink-400/20' },
-                { name: 'Hortifruti', icon: 'nutrition', color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20' },
-                { name: 'Açougue', icon: 'kebab_dining', color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/20' },
-                { name: 'Congelados', icon: 'ac_unit', color: 'text-blue-300', bg: 'bg-blue-300/10', border: 'border-blue-300/20' },
-                { name: 'Frios', icon: 'kitchen', color: 'text-orange-300', bg: 'bg-orange-300/10', border: 'border-orange-300/20' },
-                { name: 'Padaria', icon: 'bakery_dining', color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
-                { name: 'Bebidas', icon: 'liquor', color: 'text-purple-400', bg: 'bg-purple-400/10', border: 'border-purple-400/20' },
-                { name: 'Limpeza', icon: 'cleaning_services', color: 'text-cyan-400', bg: 'bg-cyan-400/10', border: 'border-cyan-400/20' },
-                { name: 'Higiene', icon: 'wash', color: 'text-teal-400', bg: 'bg-teal-400/10', border: 'border-teal-400/20' },
-              ].map((cat, i) => (
-                <div key={i} className="flex flex-col items-center gap-2 min-w-[76px] cursor-pointer group">
-                  <div className={`size-[76px] rounded-[24px] ${cat.bg} border ${cat.border} flex items-center justify-center group-hover:scale-105 group-active:scale-95 transition-all shadow-lg`}>
-                    <span className={`material-symbols-outlined ${cat.color} text-[32px] group-hover:-translate-y-1 transition-transform`} style={{ fontVariationSettings: "'FILL' 1" }}>{cat.icon}</span>
-                  </div>
-                  <span className="text-[10px] font-black uppercase text-zinc-400 text-center leading-tight tracking-wider group-hover:text-white transition-colors mt-1">{cat.name}</span>
-                </div>
-              ))}
-            </div>
-          </section>
+  const renderAllPharmacies = () => (
+    <EstablishmentListView
+      title="Todas as Farmácias"
+      subtitle="Unidades Próximas"
+      icon="local_pharmacy"
+      searchQuery={searchQuery}
+      setSearchQuery={setSearchQuery}
+      setSubView={setSubView}
+      establishments={ESTABLISHMENTS}
+      filterFn={(shop: any) => shop.type === 'pharmacy' || shop.type === 'farmacia' || shop.type === 'saude'}
+      onShopClick={(shop) => handleShopClick({ ...shop, type: "generic" })}
+      cartLength={cart.length}
+      navigateSubView={navigateSubView}
+      backView="pharmacy_list"
+    />
+  );
 
-          <div className="flex flex-col gap-4 pb-10">
-            {ESTABLISHMENTS.filter((shop: any) =>
-              (shop.type === 'market' || shop.type === 'mercado' || shop.type === 'mercados') && shop.name.toLowerCase().includes(searchQuery.toLowerCase())
-            ).map((shop: any, i: number) => (
-              <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                onClick={() => handleShopClick({ ...shop, type: "generic" })}
-                className="group cursor-pointer active:scale-[0.98] transition-all">
-                <div className="relative h-32 rounded-xl overflow-hidden mb-3">
-                  <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1 border border-white/10">
-                    <span className="material-symbols-outlined text-[12px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                    <span className="text-[10px] font-black text-white">{shop.rating}</span>
-                  </div>
-                  {shop.freeDelivery && <div className="absolute bottom-2.5 left-2.5 bg-emerald-500/90 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Entrega Grátis</div>}
-                </div>
-                <div className="flex items-center justify-between px-1">
-                  <div>
-                    <h4 className="font-black text-white text-sm tracking-tight group-hover:text-yellow-400 transition-colors uppercase">{shop.name}</h4>
-                    <div className="flex items-center gap-2 mt-0.5 text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[11px]">schedule</span>{shop.time}</span>
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[11px]">local_fire_department</span>{shop.tag}</span>
-                    </div>
-                  </div>
-                  <div className="size-8 rounded-full bg-zinc-900 border border-zinc-800 group-hover:bg-yellow-400 group-hover:border-yellow-400 flex items-center justify-center transition-all duration-300">
-                    <span className="material-symbols-outlined text-base text-zinc-400 group-hover:text-black transition-colors">arrow_forward</span>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </main>
-      </div>
-    );
-  };
-
-  const renderBeveragesList = () => {
-    return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-        <header className="sticky top-0 z-50 px-5 pt-5 pb-4"
-          style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-                <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
-              </button>
-              <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">Bebidas</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Distribuidoras e adegas</p>
-              </div>
-            </div>
-            <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-              {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>}
-            </button>
-          </div>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
-            </div>
-            <input
-              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
-              placeholder="Buscar..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </header>
-
-        <main className="px-5 flex flex-col gap-6">
-          <section>
-            <div className="relative h-36 rounded-2xl overflow-hidden mb-6">
-              <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-black flex items-center justify-center">
-                <span className="material-symbols-outlined text-[100px] text-yellow-400/10">local_bar</span>
-              </div>
-              <div className="absolute inset-0 flex flex-col justify-center p-5">
-                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Disponível agora</span>
-                <h2 className="text-lg font-extrabold text-white leading-tight">Bebidas premium<br/>na sua porta</h2>
-              </div>
-            </div>
-          </section>
-
-          <div className="flex flex-col gap-4 pb-10">
-            {ESTABLISHMENTS.filter((shop: any) =>
-              (shop.type === "beverages" || shop.type === "bebidas") &&
-              shop.name.toLowerCase().includes(searchQuery.toLowerCase())
-            ).map((shop: any, i: number) => (
-              <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                onClick={() => handleShopClick({ ...shop, type: "generic" })}
-                className="group cursor-pointer active:scale-[0.98] transition-all">
-                <div className="relative h-32 rounded-xl overflow-hidden mb-3">
-                  <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1 border border-white/10">
-                    <span className="material-symbols-outlined text-[12px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                    <span className="text-[10px] font-black text-white">{shop.rating}</span>
-                  </div>
-                  {shop.freeDelivery && <div className="absolute bottom-2.5 left-2.5 bg-emerald-500/90 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Entrega Grátis</div>}
-                </div>
-                <div className="flex items-center justify-between px-1">
-                  <div>
-                    <h4 className="font-black text-white text-sm tracking-tight group-hover:text-yellow-400 transition-colors uppercase">{shop.name}</h4>
-                    <div className="flex items-center gap-2 mt-0.5 text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[11px]">schedule</span>{shop.time}</span>
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[11px]">local_fire_department</span>{shop.tag}</span>
-                    </div>
-                  </div>
-                  <div className="size-8 rounded-full bg-zinc-900 border border-zinc-800 group-hover:bg-yellow-400 group-hover:border-yellow-400 flex items-center justify-center transition-all duration-300">
-                    <span className="material-symbols-outlined text-base text-zinc-400 group-hover:text-black transition-colors">arrow_forward</span>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </main>
-      </div>
-    );
-  };
+  const renderBeveragesList = () => (
+    <EstablishmentListView
+      title="Bebidas"
+      subtitle="Distribuidoras e adegas"
+      icon="local_bar"
+      searchQuery={searchQuery}
+      setSearchQuery={setSearchQuery}
+      setSubView={setSubView}
+      establishments={ESTABLISHMENTS}
+      filterFn={(shop: any) => shop.type === "beverages" || shop.type === "bebidas"}
+      onShopClick={(shop) => handleShopClick({ ...shop, type: "generic" })}
+      cartLength={cart.length}
+      navigateSubView={navigateSubView}
+      backView="none"
+    />
+  );
 
   const renderBeverageOffers = () => {
     const deals = beverageOffers;
-
     return (
-      <div className="bg-black text-zinc-100 absolute inset-0 z-50 bg-slate-950 text-white flex flex-col hide-scrollbar overflow-y-auto pb-32">
-        <header className="sticky top-0 z-[60] bg-slate-950/80 backdrop-blur-2xl border-b border-white/10 p-6 flex items-center gap-6">
+      <div className="bg-black text-zinc-100 absolute inset-0 z-50 bg-zinc-950 text-white flex flex-col hide-scrollbar overflow-y-auto pb-32">
+        <header className="sticky top-0 z-[60] bg-zinc-950/80 backdrop-blur-2xl border-b border-white/10 p-6 flex items-center gap-6">
            <button 
             onClick={() => setSubView("beverages_list")}
             className="size-12 rounded-2xl bg-zinc-900/5 flex items-center justify-center text-white border border-white/10 active:scale-90 transition-all"
@@ -3003,7 +2741,7 @@ function App() {
         </header>
 
         <main className="p-6 space-y-8">
-            <div className="relative h-64 rounded-[50px] overflow-hidden group border border-white/10 bg-zinc-900">
+            <div className="relative h-64 rounded-[50px] overflow-hidden group border border-white/10 bg-zinc-900 shadow-2xl">
                <AnimatePresence mode="wait">
                  <motion.div
                    key={bevBannerIndex}
@@ -3052,157 +2790,28 @@ function App() {
                   whileInView={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.1 }}
                   key={item.id}
-                  className="bg-zinc-900/5 border border-white/10 rounded-[45px] p-5 flex items-center gap-6 group hover:bg-zinc-900/10 transition-all cursor-pointer relative overflow-hidden"
+                  className="bg-zinc-900/40 border border-white/5 rounded-[45px] p-5 flex items-center gap-6 group hover:bg-zinc-900/60 transition-all cursor-pointer relative overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="size-32 rounded-[35px] overflow-hidden shrink-0 shadow-2xl relative z-10">
-                     <img src={item.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" title={item.name} />
+                  <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="size-32 rounded-[35px] overflow-hidden shrink-0 shadow-2xl relative z-10 border border-white/5">
+                     <img src={item.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={item.name} />
                      <div className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-black px-3 py-1.5 rounded-2xl shadow-xl backdrop-blur-md">-{item.off}</div>
                   </div>
                   <div className="flex-1 min-w-0 relative z-10">
                      <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.2em] mb-1.5">{item.cat}</p>
-                     <h3 className="text-lg font-black tracking-tight mb-4 leading-tight truncate">{item.name}</h3>
+                     <h3 className="text-lg font-black tracking-tight mb-4 leading-tight truncate text-white">{item.name}</h3>
                      <div className="flex items-center justify-between">
                         <div className="flex flex-col">
                            <span className="text-xl font-black text-yellow-400 leading-none mb-1">R$ {item.price.toFixed(2).replace(".", ",")}</span>
-                           <span className="text-xs text-white/40 line-through font-bold">R$ {item.oldPrice.toFixed(2).replace(".", ",")}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
-                            className="size-11 rounded-2xl bg-yellow-400 text-white flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-110 active:scale-90 transition-all"
-                          >
-                            <span className="material-symbols-outlined font-black">
-                              {getItemCount(item.id) > 0 ? 'add_shopping_cart' : 'add'}
-                            </span>
-                          </button>
-                          {getItemCount(item.id) > 0 && (
-                            <div className="bg-zinc-900 text-white size-9 rounded-[14px] flex items-center justify-center text-xs font-black shadow-xl">
-                              {getItemCount(item.id)}
-                            </div>
-                          )}
+                        <div className="size-10 rounded-2xl bg-zinc-800 flex items-center justify-center group-hover:bg-yellow-400 group-hover:text-black transition-all">
+                           <Icon name="add" />
                         </div>
                      </div>
                   </div>
                 </motion.div>
               ))}
            </div>
-        </main>
-
-        {/* MASTER CART CTA */}
-        {cart.length > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 p-8 pb-24 z-[70]">
-            <motion.div
-              initial={{ y: 100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className="max-w-[500px] mx-auto"
-            >
-              <button
-                onClick={() => navigateSubView("cart")}
-                className="w-full bg-yellow-400 h-[80px] rounded-[35px] px-2 flex items-center justify-between shadow-[0_30px_60px_-15px_rgba(255,193,7,0.4)] transition-all active:scale-[0.98] group overflow-hidden relative"
-              >
-                <div className="absolute inset-0 bg-zinc-900/20 transform -skew-x-12 -translate-x-full group-hover:animate-[shimmer_2s_infinite]" />
-                
-                <div className="flex items-center gap-4 ml-2">
-                  <div className="bg-black/10 text-white size-14 rounded-[24px] flex items-center justify-center font-black text-xl backdrop-blur-md">
-                    {cart.length}
-                  </div>
-                  <div className="flex flex-col items-start">
-                    <span className="font-black text-white text-sm tracking-[0.2em] uppercase leading-none mb-1">CARRINHO</span>
-                    <span className="text-[10px] font-bold text-black/50 uppercase tracking-widest">Finalizar Pedido</span>
-                  </div>
-                </div>
-
-                <div className="bg-black text-white h-14 px-8 rounded-[24px] flex items-center justify-center mr-2 shadow-2xl">
-                  <span className="font-black text-lg tracking-tight">
-                    R$ {cart.reduce((a, b) => a + (b.price || 0), 0).toFixed(2).replace(".", ",")}
-                  </span>
-                </div>
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderPharmacyList = () => {
-    return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-        <header className="sticky top-0 z-50 px-5 pt-5 pb-4"
-          style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-                <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
-              </button>
-              <div>
-                <h1 className="text-xl font-black tracking-tight text-white leading-none">Farmácias</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">SaÃƒºde e bem-estar</p>
-              </div>
-            </div>
-            <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">shopping_bag</span>
-              {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cart.length}</span>}
-            </button>
-          </div>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-zinc-500 text-xl">search</span>
-            </div>
-            <input
-              className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 text-sm font-medium"
-              placeholder="Buscar..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </header>
-
-        <main className="px-5 flex flex-col gap-6">
-          <section>
-            <div className="relative h-36 rounded-2xl overflow-hidden mb-6">
-              <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-black flex items-center justify-center">
-                <span className="material-symbols-outlined text-[100px] text-yellow-400/10">local_pharmacy</span>
-              </div>
-              <div className="absolute inset-0 flex flex-col justify-center p-5">
-                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Disponível agora</span>
-                <h2 className="text-lg font-extrabold text-white leading-tight">Farmácias premium<br/>na sua porta</h2>
-              </div>
-            </div>
-          </section>
-
-          <div className="flex flex-col gap-4 pb-10">
-            {ESTABLISHMENTS.filter((shop: any) =>
-              (shop.type === 'pharmacy' || shop.type === 'farmacia' || shop.type === 'saude') && shop.name.toLowerCase().includes(searchQuery.toLowerCase())
-            ).map((shop: any, i: number) => (
-              <motion.div key={shop.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                onClick={() => handleShopClick({ ...shop, type: "generic" })}
-                className="group cursor-pointer active:scale-[0.98] transition-all">
-                <div className="relative h-32 rounded-xl overflow-hidden mb-3">
-                  <img src={shop.img} alt={shop.name} className="size-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1 border border-white/10">
-                    <span className="material-symbols-outlined text-[12px] text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                    <span className="text-[10px] font-black text-white">{shop.rating}</span>
-                  </div>
-                  {shop.freeDelivery && <div className="absolute bottom-3 left-3 bg-emerald-500/90 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">Entrega Grátis</div>}
-                </div>
-                <div className="flex items-center justify-between px-1">
-                  <div>
-                    <h4 className="font-black text-white text-sm tracking-tight group-hover:text-yellow-400 transition-colors uppercase">{shop.name}</h4>
-                    <div className="flex items-center gap-2 mt-0.5 text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[11px]">schedule</span>{shop.time}</span>
-                      <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[11px]">local_fire_department</span>{shop.tag}</span>
-                    </div>
-                  </div>
-                  <div className="size-8 rounded-full bg-zinc-900 border border-zinc-800 group-hover:bg-yellow-400 group-hover:border-yellow-400 flex items-center justify-center transition-all duration-300">
-                    <span className="material-symbols-outlined text-base text-zinc-400 group-hover:text-black transition-colors">arrow_forward</span>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
         </main>
       </div>
     );
@@ -8100,12 +7709,45 @@ function App() {
             <AnimatePresence>
               {subView === "cart" && (
                 <motion.div key="cartv" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  <CartView cart={cart} removeFromCart={removeFromCart} updateQuantity={updateQuantity} setSubView={setSubView} calculateDeliveryFee={calculateDeliveryFee} isIziBlack={isIziBlackMembership} deliveryFee={calculateDeliveryFee()} onCheckout={() => setSubView("checkout")} />
+                  <CartView 
+                    cart={cart} 
+                    setCart={setCart}
+                    setSubView={(v: any) => setSubView(v)} 
+                    navigateSubView={navigateSubView}
+                    merchantProducts={selectedShop?.products || []}
+                    merchantName={selectedShop?.name || ""}
+                    handleAddToCart={handleAddToCart}
+                    isIziBlack={isIziBlackMembership} 
+                    deliveryFee={calculateDeliveryFee()} 
+                  />
                 </motion.div>
               )}
               {subView === "checkout" && (
                 <motion.div key="check" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[130]">
-                  <CheckoutView cart={cart} appliedCoupon={appliedCoupon} walletTransactions={walletTransactions} savedCards={savedCards} userId={userId} userLocation={userLocation} paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} changeFor={changeFor} setChangeFor={setChangeFor} selectedCard={selectedCard} setSelectedCard={setSelectedCard} couponInput={couponInput} setCouponInput={setCouponInput} handleApplyCoupon={handleApplyCoupon} setAppliedCoupon={setAppliedCoupon} handlePlaceOrder={handlePlaceOrder} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} iziCoins={iziCoins} iziCoinValue={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0} deliveryFee={calculateDeliveryFee()} />
+                  <CheckoutView 
+                    cart={cart} 
+                    appliedCoupon={appliedCoupon} 
+                    walletTransactions={walletTransactions} 
+                    savedCards={savedCards} 
+                    userId={userId} 
+                    userLocation={userLocation} 
+                    paymentMethod={paymentMethod} 
+                    setPaymentMethod={(m: any) => setPaymentMethod(m)} 
+                    changeFor={changeFor} 
+                    setChangeFor={setChangeFor} 
+                    selectedCard={selectedCard} 
+                    setSelectedCard={setSelectedCard} 
+                    couponInput={couponInput} 
+                    setCouponInput={setCouponInput} 
+                    handleApplyCoupon={handleApplyCoupon} 
+                    setAppliedCoupon={setAppliedCoupon} 
+                    handlePlaceOrder={handlePlaceOrder} 
+                    setPaymentsOrigin={setPaymentsOrigin} 
+                    setSubView={(v: any) => setSubView(v)} 
+                    iziCoins={iziCoins} 
+                    iziCoinValue={globalSettings?.izi_coin_value || globalSettings?.iziCoinRate || 0.01} 
+                    deliveryFee={calculateDeliveryFee()} 
+                  />
                 </motion.div>
               )}
 
