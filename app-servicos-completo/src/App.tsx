@@ -191,41 +191,12 @@ function App() {
     } catch (e) {}
   }, []);
 
-  const [timeLeft, setTimeLeft] = useState<{h: string, m: string, s: string}>({h: '00', m: '00', s: '00'});
+  const [nowTick, setNowTick] = useState<number>(Date.now());
 
   useEffect(() => {
-    if (!flashOffers || flashOffers.length === 0) return;
-
-    const interval = setInterval(() => {
-      const now = new Date().getTime();
-      // Encontrar a oferta que vai expirar mais cedo, que ainda está ativa
-      const validOffers = flashOffers.filter(f => f.expires_at && new Date(f.expires_at).getTime() > now);
-      
-      if (validOffers.length === 0) {
-        setTimeLeft({ h: '00', m: '00', s: '00' });
-        return;
-      }
-
-      const soonest = Math.min(...validOffers.map(f => new Date(f.expires_at).getTime()));
-      const diffMs = soonest - now;
-
-      if (diffMs > 0) {
-        const h = Math.floor(diffMs / (1000 * 60 * 60));
-        const m = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        const s = Math.floor((diffMs % (1000 * 60)) / 1000);
-        
-        setTimeLeft({ 
-          h: h.toString().padStart(2, '0'), 
-          m: m.toString().padStart(2, '0'), 
-          s: s.toString().padStart(2, '0') 
-        });
-      } else {
-        setTimeLeft({ h: '00', m: '00', s: '00' });
-      }
-    }, 1000);
-
+    const interval = setInterval(() => setNowTick(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [flashOffers]);
+  }, []);
 
 
 
@@ -2468,49 +2439,67 @@ function App() {
   };
 
   const renderExclusiveOffer = () => {
-    const displayDeals = flashOffers.length > 0 ? flashOffers.map(f => ({
-      id: f.product_id || f.id,
-      name: f.product_name,
-      store: f.admin_users?.store_name || 'Loja Parceira',
-      img: f.product_image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600',
-      oldPrice: Number(f.original_price),
-      price: Number(f.discounted_price),
-      merchant_id: f.merchant_id,
-      merchant_name: f.admin_users?.store_name || 'Loja Parceira',
-      is_flash_offer: true,
-      flash_offer_id: f.id,
-      off: f.original_price && f.discounted_price 
-        ? `- R$ ${(Number(f.original_price) - Number(f.discounted_price)).toFixed(2).replace('.', ',')} OFF` 
-        : `- R$ ${(Number(f.original_price) * (Number(f.discount_percent) / 100)).toFixed(2).replace('.', ',')} OFF`,
-      desc: (f.description || 'Oferta imperdível por tempo limitado!') + `\n\n📌 Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
-    })) : [
-      {
-        id: 'vip-burger-1',
-        name: 'The Ultimate Izi Black Burger',
-        store: 'Burger Gourmet Lab',
-        img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600',
-        oldPrice: 59.90,
-        price: 29.95,
-        merchant_id: null,
-        merchant_name: 'Burger Gourmet Lab',
+    let displayDeals: any[] = [];
+    if (selectedItem) {
+      displayDeals = [selectedItem];
+    } else {
+      displayDeals = flashOffers.length > 0 ? flashOffers.map(f => ({
+        id: f.product_id || f.id,
+        name: f.product_name,
+        store: f.admin_users?.store_name || 'Loja Parceira',
+        img: f.product_image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600',
+        oldPrice: Number(f.original_price),
+        price: Number(f.discounted_price),
+        merchant_id: f.merchant_id,
+        merchant_name: f.admin_users?.store_name || 'Loja Parceira',
         is_flash_offer: true,
-        off: '50% OFF',
-        desc: 'Blend de carne Angus 180g, queijo brie maçaricado, cebola caramelizada no Jack Daniels e pão brioche artesanal.\n\n📌 Vendido por: Burger Gourmet Lab'
-      },
-      {
-        id: 'vip-pizza-1',
-        name: 'Pizza Trufada Individual',
-        store: 'Forneria d\'Oro',
-        img: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600',
-        oldPrice: 72.00,
-        price: 36.00,
-        merchant_id: null,
-        merchant_name: 'Forneria d\'Oro',
-        is_flash_offer: true,
-        off: '50% OFF',
-        desc: 'Massa de fermentação natural, mozzarella fior di latte, azeite de trufas brancas e manjericão fresco.\n\n📌 Vendido por: Forneria d\'Oro'
+        flash_offer_id: f.id,
+        expires_at: f.expires_at,
+        off: f.original_price && f.discounted_price 
+          ? `- R$ ${(Number(f.original_price) - Number(f.discounted_price)).toFixed(2).replace('.', ',')} OFF` 
+          : `- R$ ${(Number(f.original_price) * (Number(f.discount_percent) / 100)).toFixed(2).replace('.', ',')} OFF`,
+        desc: (f.description || 'Oferta imperdível por tempo limitado!') + `\n\n📌 Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
+      })) : [
+        {
+          id: 'vip-burger-1',
+          name: 'The Ultimate Izi Black Burger',
+          store: 'Burger Gourmet Lab',
+          img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600',
+          oldPrice: 59.90,
+          price: 29.95,
+          merchant_id: null,
+          merchant_name: 'Burger Gourmet Lab',
+          is_flash_offer: true,
+          expires_at: new Date(Date.now() + 3600000 * 2).toISOString(),
+          off: '50% OFF',
+          desc: 'Blend de carne Angus 180g, queijo brie maçaricado, cebola caramelizada no Jack Daniels e pão brioche artesanal.\n\n📌 Vendido por: Burger Gourmet Lab'
+        },
+        {
+          id: 'vip-pizza-1',
+          name: 'Pizza Trufada Individual',
+          store: 'Forneria d\'Oro',
+          img: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600',
+          oldPrice: 72.00,
+          price: 36.00,
+          merchant_id: null,
+          merchant_name: 'Forneria d\'Oro',
+          is_flash_offer: true,
+          expires_at: new Date(Date.now() + 1800000).toISOString(),
+          off: '50% OFF',
+          desc: 'Massa de fermentação natural, mozzarella fior di latte, azeite de trufas brancas e manjericão fresco.\n\n📌 Vendido por: Forneria d\'Oro'
+        }
+      ];
+    }
+
+    let h = "00", m = "00", s = "00";
+    if (displayDeals.length > 0 && displayDeals[0].expires_at) {
+      const diffMs = new Date(displayDeals[0].expires_at).getTime() - nowTick;
+      if (diffMs > 0) {
+        h = Math.floor(diffMs / (1000 * 60 * 60)).toString().padStart(2, '0');
+        m = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+        s = Math.floor((diffMs % (1000 * 60)) / 1000).toString().padStart(2, '0');
       }
-    ];
+    }
 
     return (
       <div className="absolute inset-0 z-[100] bg-zinc-950 text-white flex flex-col hide-scrollbar overflow-y-auto pb-40">
@@ -2522,7 +2511,10 @@ function App() {
         <header className="relative z-10 p-8 flex flex-col items-center gap-8 pt-12">
           <div className="w-full flex items-center justify-between">
             <button 
-              onClick={() => setSubView("none")} 
+              onClick={() => {
+                setSubView("none");
+                setSelectedItem(null);
+              }} 
               className="size-12 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center active:scale-90 transition-all group"
             >
               <Icon name="arrow_back" />
@@ -2544,20 +2536,20 @@ function App() {
           {/* Luxury Timer Panel */}
           <div className="relative w-full max-w-[340px] rounded-[40px] bg-white/[0.02] border border-white/[0.05] p-8 flex flex-col items-center justify-center gap-2 overflow-hidden shadow-none">
              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent" />
-             <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-2">As ofertas terminam em:</p>
+             <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-2">A oferta termina em:</p>
              <div className="flex items-center gap-4">
                 <div className="flex flex-col items-center">
-                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{timeLeft.h}</span>
+                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{h}</span>
                   <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">Horas</span>
                 </div>
                 <span className="text-4xl font-black text-yellow-400 -mt-2">:</span>
                 <div className="flex flex-col items-center">
-                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{timeLeft.m}</span>
+                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{m}</span>
                   <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">Minutos</span>
                 </div>
                 <span className="text-4xl font-black text-yellow-400 -mt-2">:</span>
                 <div className="flex flex-col items-center">
-                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{timeLeft.s}</span>
+                  <span className="text-4xl font-black text-white tabular-nums tracking-tighter">{s}</span>
                   <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest opacity-60">Segundos</span>
                 </div>
              </div>
