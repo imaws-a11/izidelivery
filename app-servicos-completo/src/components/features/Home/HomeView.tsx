@@ -620,20 +620,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       if (story.isMaster && userLevel < 10) showToast("Esta oferta é exclusiva para membros Tier MASTER.", "info");
                       else if (story.isMaster) setShowMasterPerks(true);
                       else {
-                        const fakeItem = {
-                          id: story.offer.product_id || story.offer.id,
-                          name: story.offer.product_name || "Oferta Izi Flash",
-                          desc: (story.offer.description || "Oferta imperdível por tempo limitado!") + `\n\n📌 Vendido por: ${story.merchant}`,
-                          price: Number(story.offer.discounted_price),
-                          oldPrice: Number(story.offer.original_price),
-                          img: story.img,
-                          merchant_id: story.offer.merchant_id,
-                          merchant_name: story.merchant,
-                          is_flash_offer: true,
-                          flash_offer_id: story.offer.id
-                        };
-                        setSelectedItem(fakeItem);
-                        setSubView("product_detail");
+                        navigateSubView("exclusive_offer");
                       }
                     }}
                     className={`relative flex-shrink-0 w-[280px] h-[130px] snap-center rounded-[32px] overflow-hidden group cursor-pointer transition-all ${story.isMaster ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-black" : "border border-white/5 shadow-2xl"} shadow-black/50`}

@@ -172,6 +172,7 @@ function App() {
   const [activePerkDetail, setActivePerkDetail] = useState<string | null>(null);
   const [flashOffers, setFlashOffers] = useState<any[]>([]);
   const [globalSettings, setGlobalSettings] = useState<any>(null);
+  const [appSettings, setAppSettings] = useState<any>(null);
 
   const fetchGlobalSettings = useCallback(async () => {
     try {
@@ -181,10 +182,50 @@ function App() {
         .eq('id', '00000000-0000-0000-0000-000000000000')
         .single();
       if (data) setGlobalSettings(data);
+
+      const { data: appData } = await supabase
+        .from('app_settings_delivery')
+        .select('*')
+        .single();
+      if (appData) setAppSettings(appData);
     } catch (e) {}
   }, []);
 
   const [timeLeft, setTimeLeft] = useState<{h: string, m: string, s: string}>({h: '00', m: '00', s: '00'});
+
+  useEffect(() => {
+    if (!flashOffers || flashOffers.length === 0) return;
+
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      // Encontrar a oferta que vai expirar mais cedo, que ainda está ativa
+      const validOffers = flashOffers.filter(f => f.expires_at && new Date(f.expires_at).getTime() > now);
+      
+      if (validOffers.length === 0) {
+        setTimeLeft({ h: '00', m: '00', s: '00' });
+        return;
+      }
+
+      const soonest = Math.min(...validOffers.map(f => new Date(f.expires_at).getTime()));
+      const diffMs = soonest - now;
+
+      if (diffMs > 0) {
+        const h = Math.floor(diffMs / (1000 * 60 * 60));
+        const m = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diffMs % (1000 * 60)) / 1000);
+        
+        setTimeLeft({ 
+          h: h.toString().padStart(2, '0'), 
+          m: m.toString().padStart(2, '0'), 
+          s: s.toString().padStart(2, '0') 
+        });
+      } else {
+        setTimeLeft({ h: '00', m: '00', s: '00' });
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [flashOffers]);
 
 
 
@@ -2441,7 +2482,7 @@ function App() {
       off: f.original_price && f.discounted_price 
         ? `- R$ ${(Number(f.original_price) - Number(f.discounted_price)).toFixed(2).replace('.', ',')} OFF` 
         : `- R$ ${(Number(f.original_price) * (Number(f.discount_percent) / 100)).toFixed(2).replace('.', ',')} OFF`,
-      desc: (f.description || 'Oferta exclusiva e por tempo limitado para membros Izi Black.') + `\n\n📌 Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
+      desc: (f.description || 'Oferta imperdível por tempo limitado!') + `\n\n📌 Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
     })) : [
       {
         id: 'vip-burger-1',
@@ -2492,11 +2533,11 @@ function App() {
                 <Icon name="bolt" />
                 <span className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.4em]">Ofertas Flash</span>
               </div>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">Exclusivo Membros Izi Black</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">Por tempo limitado</p>
             </div>
 
             <div className="size-12 rounded-full bg-yellow-400/5 border border-yellow-400/10 flex items-center justify-center">
-              <Icon name="stars" />
+              <Icon name="timer" />
             </div>
           </div>
 
@@ -5469,6 +5510,8 @@ function App() {
   };
 
   const renderIziBlackPurchase = () => {
+    const iziBlackPrice = appSettings?.iziBlackFee || 29.90;
+    
     const handleClose = () => {
       setSubView(iziBlackOrigin === 'checkout' ? 'checkout' : 'none');
     };
@@ -5477,7 +5520,7 @@ function App() {
       if (!userId) return;
       setIsLoading(true);
       
-      const total = 29.90;
+      const total = iziBlackPrice;
       
       try {
         // 1. Criar um "pedido" de assinatura em orders_delivery
@@ -5621,7 +5664,7 @@ function App() {
       const subOptions = [
         { id: "cartao",            icon: "credit_card",            label: "Cartão de Crédito" },
         { id: "pix",               icon: "pix",                    label: "PIX" },
-        { id: "saldo",             icon: "account_balance_wallet", label: `Saldo IZI (R$ ${walletBal.toFixed(2)})`, disabled: walletBal < 29.90 },
+        { id: "saldo",             icon: "account_balance_wallet", label: `Saldo IZI (R$ ${walletBal.toFixed(2)})`, disabled: walletBal < iziBlackPrice },
         { id: "bitcoin_lightning", icon: "bolt",                   label: "Bitcoin Lightning" },
       ];
 
@@ -5639,7 +5682,8 @@ function App() {
               <div className="flex items-center justify-center gap-1">
                 <span className="text-2xl font-black text-white mt-2">R$</span>
                 <p className="font-black text-white leading-none tracking-tighter" style={{ fontSize: "72px" }}>
-                  29<span className="text-3xl text-zinc-500 font-black">,90</span>
+                  {Math.floor(iziBlackPrice)}
+                  <span className="text-3xl text-zinc-500 font-black">,{((iziBlackPrice % 1) * 100).toFixed(0).padStart(2, '0')}</span>
                 </p>
               </div>
               <p className="text-zinc-600 text-[10px] font-bold mt-2 uppercase text-center">Mensal, cancele quando quiser</p>
@@ -5718,17 +5762,17 @@ function App() {
               
               <div className="absolute inset-x-8 bottom-10 space-y-4">
                 <div className="flex flex-col">
-                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.4em] mb-2 animate-pulse">Status: Aberto</span>
+                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.4em] mb-2 animate-pulse">Status: Elite</span>
                   <h3 className="text-5xl font-black text-white leading-[0.9] uppercase tracking-tighter italic">
-                    All<br/>Black.
+                    Izi<br/>Black.
                   </h3>
                 </div>
 
                 <div className="flex items-end gap-3 pt-4">
                   <div className="flex items-start gap-1">
                     <span className="text-zinc-600 font-black text-xl mt-1 italic">R$</span>
-                    <span className="text-6xl font-black text-white tracking-tighter leading-none italic">29</span>
-                    <span className="text-2xl font-black text-zinc-600 mt-1">,90</span>
+                    <span className="text-6xl font-black text-white tracking-tighter leading-none italic">{Math.floor(iziBlackPrice)}</span>
+                    <span className="text-2xl font-black text-zinc-600 mt-1">,{((iziBlackPrice % 1) * 100).toFixed(0).padStart(2, '0')}</span>
                   </div>
                   <div className="mb-1">
                     <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest italic">Por mês</p>
