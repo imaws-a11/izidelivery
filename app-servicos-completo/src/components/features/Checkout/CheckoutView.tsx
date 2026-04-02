@@ -421,7 +421,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         >
           <div className="flex flex-col items-start">
              <span className="text-[8px] font-black uppercase tracking-[0.3em] text-black/40 leading-none mb-1.5">Confirmar meu</span>
-             <span className="text-black font-black text-base uppercase tracking-widest italic leading-none">Pedido Agora</span>
+             <span className="text-black font-black text-base uppercase tracking-widest italic leading-none">Concluir Pedido</span>
           </div>
           <div className="flex items-center gap-4">
              <div className="h-6 w-px bg-black/10" />
