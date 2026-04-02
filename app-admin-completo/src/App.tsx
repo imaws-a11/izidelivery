@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from './lib/supabase';
 import { useAdmin } from './context/AdminContext';
@@ -25,6 +25,7 @@ import FinancialTab from './components/FinancialTab';
 import IziBlackTab from './components/IziBlackTab';
 import SupportTab from './components/SupportTab';
 import MerchantDashboardTab from './components/MerchantDashboardTab';
+import CategoriesTab from './components/CategoriesTab';
 
 
 function App() {
@@ -148,6 +149,7 @@ function App() {
                   <NavTab id="dashboard" icon="dashboard" label="Home" />
                    <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
                   <NavTab id="merchants" icon="storefront" label="Lojistas" />
+                  <NavTab id="categories" icon="category" label="Taxonomia" />
                   <NavTab id="my_studio" icon="inventory_2" label="Estúdios" />
                   <NavTab id="drivers" icon="person_pin_circle" label="Entregadores" />
                   <NavTab id="users" icon="group" label="Usuários" />
@@ -200,6 +202,7 @@ function App() {
               {activeTab === 'settings' && userRole === 'merchant' && <MyStoreTab />}
               {activeTab === 'my_drivers' && userRole === 'merchant' && <MyDriversTab />}
               {(activeTab === 'my_studio' || (activeTab === 'financial' && userRole === 'merchant')) && <MyStudioTab />}
+              {activeTab === 'categories' && userRole === 'admin' && <CategoriesTab />}
               {activeTab === 'financial' && userRole === 'admin' && <FinancialTab />}
               {activeTab === 'izi_black' && <IziBlackTab />}
               {activeTab === 'support' && <SupportTab />}
