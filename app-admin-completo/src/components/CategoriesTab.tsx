@@ -10,6 +10,8 @@ export default function CategoriesTab() {
     handleDeleteEstablishmentType,
     handleUpdateMerchant,
     setEditingItem,
+    setSelectedMerchantPreview,
+    setActivePreviewTab,
     isSaving,
     fetchMerchants,
     fetchEstablishmentTypes,
@@ -177,8 +179,9 @@ export default function CategoriesTab() {
                              <div className="flex flex-wrap gap-4 mt-6 justify-center md:justify-start">
                                 <button 
                                   onClick={() => {
+                                    setSelectedMerchantPreview(selectedMerchant);
+                                    setActivePreviewTab('info');
                                     setActiveTab('my_studio');
-                                    setEditingItem(selectedMerchant);
                                   }}
                                   className="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:translate-y-[-2px] transition-all"
                                 >

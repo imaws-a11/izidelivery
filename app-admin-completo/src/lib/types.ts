@@ -95,6 +95,7 @@ export interface Merchant {
   opening_hours?: Record<string, { active: boolean; open: string; close: string }>;
   free_delivery?: boolean;
   estimated_time?: string;
+  food_category?: string;
   created_at: string;
   updated_at?: string;
 }
@@ -116,6 +117,7 @@ export interface MerchantProfile {
   free_delivery?: boolean;
   estimated_time?: string;
   password?: string;
+  food_category?: string;
 }
 
 export interface Product {
