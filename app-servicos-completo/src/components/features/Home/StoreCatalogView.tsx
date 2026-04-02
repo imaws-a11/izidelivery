@@ -6,7 +6,7 @@ interface StoreCatalogViewProps {
   setSubView: (view: any) => void;
   activeCategory: string;
   setActiveCategory: (cat: string) => void;
-  handleAddToCart: (item: any) => void;
+  handleAddToCart: (item: any, e?: any) => void;
   navigateSubView: (view: any) => void;
   cart: any[];
 }
@@ -186,9 +186,18 @@ export const StoreCatalogView = ({
                   <div className="relative aspect-square rounded-[22px] overflow-hidden shadow-2xl bg-zinc-800">
                     <img src={item.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400"} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                     <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
-                    <button onClick={() => handleAddToCart(item)}
-                      className="absolute bottom-2 right-2 w-10 h-10 rounded-2xl bg-emerald-400 text-black shadow-[0_0_20px_rgba(52,211,153,0.4)] flex items-center justify-center active:scale-90 transition-all">
-                      <span className="material-symbols-outlined font-black">add</span>
+                    <button 
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        const btn = e.currentTarget;
+                        btn.classList.add('scale-75', 'bg-emerald-500');
+                        setTimeout(() => btn.classList.remove('scale-75', 'bg-emerald-500'), 200);
+                        handleAddToCart(item, e);
+                      }}
+                      className="absolute bottom-2 right-2 w-10 h-10 rounded-2xl bg-emerald-400 text-black shadow-[0_4px_12px_rgba(52,211,153,0.4)] flex items-center justify-center active:scale-90 transition-all group/btn overflow-hidden"
+                    >
+                      <span className="material-symbols-outlined font-black text-[18px] z-10 transition-transform group-active/btn:rotate-12">shopping_cart</span>
+                      <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
                     </button>
                   </div>
                   <div className="px-1 flex flex-col h-full justify-between">

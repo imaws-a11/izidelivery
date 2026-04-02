@@ -6,7 +6,7 @@ interface RestaurantMenuViewProps {
   setSubView: (view: any) => void;
   activeCategory: string;
   setActiveCategory: (cat: string) => void;
-  handleAddToCart: (item: any) => void;
+  handleAddToCart: (item: any, e?: any) => void;
   navigateSubView: (view: any) => void;
   cart: any[];
 }
@@ -124,28 +124,40 @@ export const RestaurantMenuView = ({
                   initial={{ opacity: 0, y: 15 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
-                  className="bg-zinc-900 rounded-2xl p-3 shadow-lg border border-zinc-800 flex flex-col gap-3 group relative active:scale-95 transition-all overflow-hidden"
+                  className="bg-zinc-800 rounded-[28px] p-4 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-4px_-4px_12px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] flex flex-col gap-4 group relative active:scale-95 transition-all overflow-hidden"
                 >
-                   <div className="relative aspect-square rounded-xl overflow-hidden shrink-0 shadow-md">
+                   <div className="relative aspect-square rounded-[22px] overflow-hidden shrink-0 shadow-[4px_4px_10px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.1)]">
                       <img 
                         src={item.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400"} 
                         alt={item.name} 
                         className="size-full object-cover group-hover:scale-110 transition-transform duration-700" 
                       />
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
-                        className="absolute bottom-2 right-2 size-8 rounded-lg bg-yellow-400 text-black flex items-center justify-center transition-all shadow-md active:scale-90"
+                      {/* Carrinho Clay Button */}
+                      <motion.button 
+                        whileTap={{ scale: 0.8 }}
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          handleAddToCart(item, e); 
+                        }}
+                        className="absolute bottom-2 right-2 size-11 rounded-[18px] bg-yellow-400 text-black flex items-center justify-center transition-all shadow-[4px_4px_8px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] group/btn overflow-hidden"
                       >
-                        <span className="material-symbols-outlined text-base">add</span>
-                      </button>
+                        <motion.span 
+                          initial={false}
+                          className="material-symbols-outlined text-[20px] z-10 font-black"
+                        >
+                          shopping_cart
+                        </motion.span>
+                      </motion.button>
                    </div>
                    <div className="flex-1 min-w-0 flex flex-col justify-between">
                       <div>
-                        <h3 className="text-[11px] font-black text-white leading-tight mb-1 truncate group-hover:text-yellow-400 transition-colors uppercase">{item.name}</h3>
-                        <p className="text-[9px] text-zinc-500 font-medium line-clamp-1 mb-2">{item.desc}</p>
+                        <h3 className="text-[12px] font-black text-white leading-tight mb-1 truncate group-hover:text-yellow-400 transition-colors uppercase tracking-tight">{item.name}</h3>
+                        <p className="text-[9px] text-zinc-500 font-bold line-clamp-1 mb-2 uppercase tracking-tighter">{item.desc}</p>
                       </div>
-                      <div className="flex items-center justify-between">
-                         <span className="text-sm font-black text-yellow-400">R$ {Number(item.price).toFixed(2).replace('.', ',')}</span>
+                      <div className="flex items-center justify-between mt-auto">
+                         <div className="bg-zinc-900/50 px-3 py-1.5 rounded-xl shadow-[inset_1px_1px_2px_rgba(255,255,255,0.05),inset_-1px_-1px_2px_rgba(0,0,0,0.3)]">
+                            <span className="text-[13px] font-black text-yellow-400 tracking-tighter">R$ {Number(item.price).toFixed(2).replace('.', ',')}</span>
+                         </div>
                       </div>
                    </div>
                 </motion.div>

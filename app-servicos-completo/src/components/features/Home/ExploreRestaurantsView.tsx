@@ -203,16 +203,25 @@ export const ExploreRestaurantsView = ({
                    initial={{ opacity: 0, scale: 0.8 }}
                    animate={{ opacity: 1, scale: 1 }}
                    transition={{ delay: i * 0.03 }}
-                   className={`relative flex-shrink-0 w-32 h-24 rounded-3xl overflow-hidden group transition-all border-2 ${isActive ? "border-yellow-400 shadow-[0_0_20px_rgba(251,191,36,0.2)]" : "border-white/5"}`}
+                   className={`relative flex-shrink-0 w-32 h-26 rounded-[32px] overflow-hidden group transition-all duration-500
+                     ${isActive 
+                       ? "bg-yellow-400 shadow-[10px_10px_20px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.5),inset_-4px_-4px_8px_rgba(0,0,0,0.2)]" 
+                       : "bg-zinc-800 shadow-[6px_6px_12px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.02),inset_-2px_-2px_4px_rgba(0,0,0,0.4)] hover:bg-zinc-750"}
+                   `}
                  >
-                    <img 
-                      src={catImg} 
-                      className={`absolute inset-0 size-full object-cover transition-transform duration-700 ${isActive ? "scale-110 blur-[1px]" : "brightness-[0.6] group-hover:scale-110"}`} 
-                    />
-                    <div className={`absolute inset-0 ${isActive ? "bg-yellow-400/20" : "bg-gradient-to-t from-black/80 to-transparent"}`} />
-                    <div className="relative h-full flex flex-col items-center justify-center gap-2 p-2">
-                       <span className={`material-symbols-outlined text-2xl ${isActive ? "text-yellow-400" : "text-white"}`}>{cat.icon}</span>
-                       <span className={`text-[9px] font-black uppercase tracking-widest text-center ${isActive ? "text-white" : "text-zinc-300"}`}>{cat.name}</span>
+                    {catImg && !isActive && (
+                      <img 
+                        src={catImg} 
+                        className="absolute inset-0 size-full object-cover opacity-10 blur-[1px] group-hover:scale-110 transition-transform duration-700" 
+                      />
+                    )}
+                    <div className="relative h-full flex flex-col items-center justify-center gap-2 p-2 z-10">
+                       <div className={`size-10 rounded-2xl flex items-center justify-center mb-1 transition-all duration-500
+                         ${isActive ? "bg-black/10 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)]" : "bg-zinc-900 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)]"}
+                       `}>
+                          <span className={`material-symbols-outlined text-2xl ${isActive ? "text-black" : "text-zinc-500"}`}>{cat.icon}</span>
+                       </div>
+                       <span className={`text-[9px] font-black uppercase tracking-widest text-center ${isActive ? "text-black" : "text-zinc-400"}`}>{cat.name}</span>
                     </div>
                  </motion.button>
                );

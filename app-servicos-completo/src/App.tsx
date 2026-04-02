@@ -897,35 +897,48 @@ function App() {
   const getItemCount = (id: number) =>
     cart.filter((item) => item.id === id).length;
 
-  const handleAddToCart = async (item: any) => {
+  const processingItemsRef = useRef<Set<string>>(new Set());
+
+  const handleAddToCart = async (item: any, e?: React.MouseEvent) => {
+    if (processingItemsRef.current.has(item.id)) return;
+
+    // 1. Feedback Visual Imediato (Animação)
+    if (e && triggerCartAnimation) {
+      triggerCartAnimation(e, item.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400");
+    }
+
+    processingItemsRef.current.add(item.id);
+
     try {
+      // 2. Validações básicas rápidas
       const flashOfferError = await validateFlashOfferRules(item);
       if (flashOfferError) {
         showToast(flashOfferError, "error" as any);
+        processingItemsRef.current.delete(item.id);
         return;
       }
 
-      // Verificar se o produto tem adicionais cadastrados no banco
-      const { data: groups, error } = await supabase
+      // 3. Verificação de Opcionais
+      const { data: groups } = await supabase
         .from('product_options_groups_delivery')
         .select('id')
         .eq('product_id', item.id)
         .limit(1);
 
       if (groups && groups.length > 0) {
-        // Se tiver opcionais, abre a tela de detalhes para o usuÃ¡rio escolher
         setSelectedItem(item);
         setSubView("product_detail");
+        processingItemsRef.current.delete(item.id);
         return;
       }
-    } catch (e) {
-      console.error("Erro ao verificar adicionais:", e);
+    } catch (err) {
+      console.error("Erro no fluxo do carrinho:", err);
     }
 
-    // Se NÃƒO tiver adicionais, adiciona direto na sacola
-    setCart((prev: any[]) => [...prev, { ...item }]);
+    // 4. Adição Real ao Carrinho
+    setCart((prev: any[]) => [...prev, { ...item, timestamp: Date.now() }]);
     setUserXP((prev: number) => prev + 10);
-    showToast("Adicionado Ã  sacola!", "success");
+    processingItemsRef.current.delete(item.id);
   };
 
   const handleShopClick = async (shop: any) => {

@@ -104,42 +104,45 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   ];
 
   return (
-    <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
-      {/* HEADER PREMIUM */}
-      <header className="sticky top-0 z-50 bg-black/60 backdrop-blur-2xl flex items-center justify-between px-6 py-5 border-b border-white/5">
+    <div className="absolute inset-0 z-40 bg-zinc-950 text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-48">
+      {/* HEADER CLAY */}
+      <header className="sticky top-0 z-50 bg-zinc-900/80 backdrop-blur-2xl flex items-center justify-between px-6 py-6 border-b border-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
         <div className="flex items-center gap-5">
-          <button
+          <motion.button
+            whileTap={{ scale: 0.9 }}
             onClick={() => setSubView("cart")}
-            className="size-11 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center active:scale-90 transition-all shadow-xl"
+            className="size-11 rounded-2xl bg-zinc-800 flex items-center justify-center shadow-[4px_4px_10px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.3)]"
           >
             <span className="material-symbols-outlined text-white text-xl">arrow_back</span>
-          </button>
+          </motion.button>
           <div className="flex flex-col">
-            <h1 className="text-lg font-black text-white italic uppercase tracking-tight leading-none">Checkout</h1>
-            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.3em] mt-1.5">Finalize sua experiência</p>
+            <h1 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none">Finalizar Pedido</h1>
+            <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.3em] mt-2 italic flex items-center gap-1.5">
+               <span className="size-1 rounded-full bg-yellow-400 animate-pulse" />
+               Checkout Seguro
+            </p>
           </div>
-        </div>
-        <div className="flex items-center gap-2 bg-zinc-900/50 px-3 py-1.5 rounded-full border border-white/5">
-           <span className="material-symbols-outlined text-yellow-400 text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
-           <span className="text-[10px] font-black text-white uppercase tracking-widest italic">Secure Izi</span>
         </div>
       </header>
 
       <div className="max-w-xl mx-auto px-6 py-10 w-full space-y-12">
         
-        {/* ENDEREÇO - BORDERLESS */}
+        {/* ENDEREÇO CLAY */}
         <section className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="font-black text-[11px] tracking-[0.2em] text-zinc-500 uppercase italic">Onde entregamos</h2>
+          <div className="flex items-center justify-between px-1">
+            <h2 className="font-black text-[11px] tracking-[0.2em] text-zinc-500 uppercase italic">Local de Entrega</h2>
             <button
               onClick={() => setSubView("addresses")}
-              className="text-yellow-400 text-[9px] font-black tracking-widest uppercase hover:underline underline-offset-4"
+              className="text-yellow-400 text-[10px] font-black tracking-[0.2em] uppercase italic underline underline-offset-4 decoration-yellow-400/20"
             >
               Alterar
             </button>
           </div>
-          <div className="flex items-center gap-5 group">
-            <div className="size-14 rounded-3xl bg-zinc-900 border border-white/5 flex items-center justify-center shrink-0 shadow-2xl group-hover:border-yellow-400/20 transition-all">
+          <motion.div 
+            whileHover={{ y: -2 }}
+            className="flex items-center gap-5 p-5 rounded-[35px] bg-zinc-800 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] transition-all group"
+          >
+            <div className="size-14 rounded-[22px] bg-zinc-900 flex items-center justify-center shrink-0 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)]">
               <span
                 className="material-symbols-outlined text-yellow-400 text-2xl"
                 style={{ fontVariationSettings: "'FILL' 1" }}
@@ -148,15 +151,16 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-black text-sm leading-snug group-hover:text-yellow-400 transition-colors">
+              <p className="text-white font-black text-[15px] leading-tight group-hover:text-yellow-400 transition-colors uppercase italic truncate">
                 {userLocation.address || "Endereço não definido"}
               </p>
-              <div className="flex items-center gap-3 mt-1.5">
-                 <span className="text-zinc-600 text-[10px] font-bold uppercase tracking-widest">Tempo estimado</span>
-                 <span className="text-emerald-400 text-[10px] font-black uppercase italic tracking-tighter">25 - 40 MIN</span>
+              <div className="flex items-center gap-2 mt-2">
+                 <span className="text-emerald-400 text-[10px] font-black uppercase italic tracking-tighter">Chega em 25-40 MIN</span>
+                 <span className="size-1 rounded-full bg-zinc-700" />
+                 <span className="text-zinc-600 text-[9px] font-black uppercase tracking-widest leading-none">Izi Fast Driver</span>
               </div>
             </div>
-          </div>
+          </motion.div>
         </section>
 
         {/* FORMAS DE PAGAMENTO - GRID DE ICONES */}

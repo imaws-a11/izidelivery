@@ -155,7 +155,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
         </button>
       </div>
 
-      {/* BOTTOM SHEET DESLIZANTE GESTUAL */}
+      {/* BOTTOM SHEET DESLIZANTE GESTUAL COM CLAYMORPHISM */}
       <motion.div
         variants={sheetVariants}
         initial="collapsed"
@@ -164,33 +164,37 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={0.05}
         onDragEnd={handleDragEnd}
-        className="absolute inset-x-0 bottom-0 z-40 bg-zinc-950/95 backdrop-blur-3xl rounded-t-[48px] border-t border-white/10 shadow-[0_-20px_80px_rgba(0,0,0,0.8)] flex flex-col cursor-grab active:cursor-grabbing"
+        className="absolute inset-x-0 bottom-0 z-40 bg-zinc-900 border-t-4 border-white/5 rounded-t-[60px] shadow-[-20px_-20px_60px_rgba(255,255,255,0.02),20px_20px_60px_rgba(0,0,0,0.8),inset_4px_4px_12px_rgba(255,255,255,0.05),inset_-4px_-4px_12px_rgba(0,0,0,0.3)] flex flex-col cursor-grab active:cursor-grabbing"
         style={{ height: "100vh" }}
       >
         {/* Handle de arraste visível e área sensível maior */}
-        <div className="w-full h-12 flex items-center justify-center shrink-0">
-          <div className="w-14 h-1.5 bg-zinc-800 rounded-full" />
+        <div className="w-full h-14 flex items-center justify-center shrink-0">
+          <div className="w-16 h-2 bg-zinc-800 rounded-full shadow-[inset_2px_2px_4px_rgba(0,0,0,0.5),inset_-2px_-2px_4px_rgba(255,255,255,0.05)]" />
         </div>
 
-        {/* CABEÇALHO DO SHEET (STATUS RÁPIDO) */}
-        <div className="px-6 pb-6 border-b border-white/5" onClick={() => setSheetState(sheetState === "collapsed" ? "half" : "expanded")}>
-          <div className="bg-white/5 border border-white/10 p-5 rounded-[32px] flex items-center gap-5 shadow-2xl">
-            <div className="size-14 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-lg shadow-yellow-400/20">
-              <span className="material-symbols-outlined text-black text-2xl animate-bounce">
+        {/* CABEÇALHO DO SHEET (STATUS RÁPIDO - CLAY STYLE) */}
+        <div className="px-6 pb-6" onClick={() => setSheetState(sheetState === "collapsed" ? "half" : "expanded")}>
+          <div className="bg-zinc-800 p-6 rounded-[40px] flex items-center gap-5 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)] border-none relative overflow-hidden group">
+            <div className="absolute top-0 right-0 size-24 bg-yellow-400/5 blur-3xl rounded-full" />
+            
+            <div className="size-16 rounded-[24px] bg-yellow-400 flex items-center justify-center shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)]">
+              <span className="material-symbols-outlined text-black text-3xl animate-bounce">
                 {steps[currentIdx]?.icon || "sync"}
               </span>
             </div>
+            
             <div className="flex-1">
               <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-1">
                 Acompanhando
               </p>
-              <h3 className="text-lg font-black text-white tracking-tighter leading-none">
+              <h3 className="text-xl font-black text-white tracking-tighter leading-none">
                 {steps[currentIdx]?.label || "Sintonizando..."}
               </h3>
             </div>
-            <div className="text-right">
-              <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1">Previsão</p>
-              <p className="text-lg font-black text-white italic">{selectedItem.delivery_time || "15-25"}</p>
+            
+            <div className="px-4 py-2 rounded-2xl bg-zinc-900/50 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_4px_rgba(255,255,255,0.02)]">
+              <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-0.5 text-center">Chega em</p>
+              <p className="text-xl font-black text-yellow-400 italic leading-none">{selectedItem.delivery_time || "15-25"}</p>
             </div>
           </div>
         </div>
@@ -219,10 +223,10 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                     className={`flex items-start gap-6 relative z-10 transition-all duration-500 ${isActive ? "opacity-100" : "opacity-30"}`}
                   >
                     <div
-                      className={`size-10 rounded-xl flex items-center justify-center transition-all duration-500 ${isActive ? "bg-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-zinc-900 text-zinc-700"}`}
+                      className={`size-12 rounded-[18px] flex items-center justify-center transition-all duration-500 ${isActive ? "bg-yellow-400 text-black shadow-[4px_4px_10px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : "bg-zinc-800 text-zinc-700 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.5),inset_-2px_-2px_4px_rgba(255,255,255,0.02)]"}`}
                     >
                       <span
-                        className="material-symbols-outlined text-lg"
+                        className="material-symbols-outlined text-xl"
                         style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
                       >
                         {s.icon}
@@ -284,7 +288,8 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
           </section>
 
           {/* ESTABELECIMENTO / MOTORISTA */}
-          <section className="bg-white/5 border border-white/5 rounded-[32px] p-6 space-y-6">
+          {/* ESTABELECIMENTO / MOTORISTA (CLAY CARD) */}
+          <section className="bg-zinc-800 p-6 rounded-[40px] space-y-6 shadow-[10px_10px_20px_rgba(0,0,0,0.2),inset_6px_6px_12px_rgba(255,255,255,0.02),inset_-6px_-6px_12px_rgba(0,0,0,0.4)]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div
@@ -311,7 +316,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
             </div>
 
             {selectedItem.driver_id && (
-              <div className="flex items-center gap-4 bg-black/40 p-3.5 rounded-2xl border border-white/5">
+              <div className="flex items-center gap-4 bg-zinc-900 p-4 rounded-3xl shadow-[inset_3px_3px_6px_rgba(0,0,0,0.5),inset_-3px_-3px_6px_rgba(255,255,255,0.02)]">
                 <div className="size-9 rounded-xl bg-yellow-400/10 flex items-center justify-center">
                   <Icon name="two_wheeler" className="text-yellow-400" size={18} />
                 </div>
@@ -328,16 +333,19 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => setSubView("order_chat")}
-                className="bg-zinc-900 border border-zinc-800 py-4 rounded-2xl flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-400 active:scale-[0.98] transition-all hover:bg-zinc-800 hover:text-white"
+                className="bg-zinc-800 shadow-[6px_6px_12px_rgba(0,0,0,0.4),-6px_-6px_12px_rgba(255,255,255,0.02),inset_3px_3px_6px_rgba(255,255,255,0.03),inset_-3px_-3px_6px_rgba(0,0,0,0.4)] py-5 rounded-[22px] flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest text-zinc-300 active:scale-[0.96] transition-all hover:text-yellow-400 group/btn"
               >
-                <Icon name="chat" size={16} className="text-yellow-400" />
+                <Icon name="chat" size={16} className="text-yellow-400 group-hover/btn:scale-110 transition-transform" />
                 Chat
               </button>
-              <button onClick={handleCall} className="bg-zinc-900 border border-zinc-800 py-4 rounded-2xl flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-400 active:scale-[0.98] transition-all hover:bg-zinc-800 hover:text-white">
-                <span className="material-symbols-outlined text-yellow-400 text-lg">call</span>
+              <button 
+                onClick={handleCall} 
+                className="bg-zinc-800 shadow-[6px_6px_12px_rgba(0,0,0,0.4),-6px_-6px_12px_rgba(255,255,255,0.02),inset_3px_3px_6px_rgba(255,255,255,0.03),inset_-3px_-3px_6px_rgba(0,0,0,0.4)] py-5 rounded-[22px] flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest text-zinc-300 active:scale-[0.96] transition-all hover:text-yellow-400 group/btn"
+              >
+                <span className="material-symbols-outlined text-yellow-400 text-xl group-hover/btn:scale-110 transition-transform">call</span>
                 Ligar
               </button>
             </div>
@@ -346,7 +354,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
           {/* DESTINO */}
           <section className="px-2 space-y-4">
             <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em]">Destino Final</h2>
-            <div className="flex items-start gap-4 bg-white/5 p-5 rounded-[28px] border border-white/5">
+            <div className="flex items-start gap-4 bg-zinc-800 p-6 rounded-[35px] shadow-[inset_4px_4px_8px_rgba(0,0,0,0.4),inset_-4px_-4px_8px_rgba(255,255,255,0.02)]">
               <div className="size-9 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
                 <Icon name="location_on" className="text-orange-500" size={18} />
               </div>
@@ -360,7 +368,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
           {/* ITENS DO PEDIDO */}
           <section className="px-2 space-y-4">
             <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em]">Itens do Pedido</h2>
-            <div className="bg-white/5 border border-white/5 rounded-[32px] p-6 space-y-4">
+            <div className="bg-zinc-800 p-7 rounded-[40px] space-y-4 shadow-[inset_6px_6px_12px_rgba(0,0,0,0.4),inset_-6px_-6px_12px_rgba(255,255,255,0.02)] border-none">
               {selectedItem.items && Array.isArray(selectedItem.items) && selectedItem.items.length > 0 ? (
                 selectedItem.items.map((it: any, idx: number) => (
                   <div key={idx} className="flex justify-between items-start pb-4 border-b border-white/5 last:pb-0 last:border-0">
@@ -400,7 +408,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
           {/* RESUMO FINANCEIRO */}
           <section className="px-2 space-y-4">
             <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em]">Resumo Financeiro</h2>
-            <div className="bg-white/5 border border-white/5 rounded-[32px] p-6 space-y-4">
+            <div className="bg-zinc-800 p-7 rounded-[45px] space-y-5 shadow-[12px_12px_24px_rgba(0,0,0,0.3),inset_8px_8px_16px_rgba(255,255,255,0.02),inset_-8px_-8px_16px_rgba(0,0,0,0.4)] relative overflow-hidden border-none">
               <div className="flex justify-between text-xs font-bold text-zinc-500 uppercase tracking-widest">
                 <span>Subtotal</span>
                 <span className="text-zinc-300">R$ {Number((selectedItem.total_price || 0) - (selectedItem.delivery_fee || 0) + (selectedItem.discount || 0)).toFixed(2).replace('.', ',')}</span>

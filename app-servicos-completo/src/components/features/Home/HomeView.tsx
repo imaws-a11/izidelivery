@@ -822,10 +822,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       delay: i * 0.04 
                     }}
                     onClick={() => handleServiceSelection(svc)}
-                    className={`relative flex flex-col items-center justify-center cursor-pointer aspect-square rounded-[28px] overflow-hidden group transition-all
-                      bg-zinc-900/40 backdrop-blur-xl border border-white/5
-                      ${svc.highlight === "gold" ? "hover:border-yellow-400/40 hover:shadow-[0_0_25px_rgba(251,191,36,0.15)]" : "hover:border-white/20 hover:shadow-2xl"}
-                      ${svc.highlight === "cyan" ? "hover:border-cyan-400/40 hover:shadow-[0_0_25px_rgba(34,211,238,0.15)]" : ""}
+                    className={`relative flex flex-col items-center justify-center cursor-pointer aspect-square rounded-[35px] overflow-hidden group transition-all duration-500
+                      bg-zinc-800 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]
+                      ${svc.highlight === "gold" ? "hover:bg-zinc-700/80 hover:shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(251,191,36,0.05),inset_6px_6px_12px_rgba(251,191,36,0.1),inset_-6px_-6px_12px_rgba(0,0,0,0.5)]" : "hover:bg-zinc-700/80"}
                     `}
                   >
                     {/* Background Glow/Image */}
@@ -841,10 +840,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       />
                     )}
 
-                    <div className="relative z-10 w-10 h-10 flex items-center justify-center mb-1.5 rounded-2xl bg-white/[0.03] border border-white/5 group-hover:bg-white/10 transition-colors">
+                    <div className={`relative z-10 w-12 h-12 flex items-center justify-center mb-2 rounded-[18px] transition-all duration-500
+                      ${svc.highlight === "gold" ? "bg-yellow-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
+                        svc.highlight === "cyan" ? "bg-cyan-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
+                        "bg-zinc-900 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.02)]"}
+                    `}>
                        <span 
-                        className={`material-symbols-outlined text-[24px] transition-transform duration-500 group-hover:scale-110
-                          ${svc.highlight === "gold" ? "text-yellow-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" : svc.highlight === "cyan" ? "text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" : "text-white"}`} 
+                        className={`material-symbols-outlined text-[26px] transition-transform duration-500 group-hover:scale-110
+                          ${svc.highlight === "gold" ? "text-black" : svc.highlight === "cyan" ? "text-black" : "text-white"}`} 
                         style={{ fontVariationSettings: "'FILL' 1" }}
                        >
                          {svc.icon}
@@ -876,10 +879,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       delay: i * 0.04 
                     }}
                     onClick={() => handleServiceSelection(svc)}
-                    className={`relative flex flex-col items-center justify-center cursor-pointer aspect-square rounded-[28px] overflow-hidden group transition-all
-                      bg-zinc-900/40 backdrop-blur-xl border border-white/5
-                      ${svc.highlight === "gold" ? "hover:border-yellow-400/40 hover:shadow-[0_0_25px_rgba(251,191,36,0.15)]" : "hover:border-white/20 hover:shadow-2xl"}
-                      ${svc.highlight === "cyan" ? "hover:border-cyan-400/40 hover:shadow-[0_0_25px_rgba(34,211,238,0.15)]" : ""}
+                    className={`relative flex flex-col items-center justify-center cursor-pointer aspect-square rounded-[35px] overflow-hidden group transition-all duration-500
+                      bg-zinc-800 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]
+                      ${svc.highlight === "gold" ? "hover:bg-zinc-700/80 hover:shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(251,191,36,0.05),inset_6px_6px_12px_rgba(251,191,36,0.1),inset_-6px_-6px_12px_rgba(0,0,0,0.5)]" : "hover:bg-zinc-700/80"}
                     `}
                   >
                     {/* Background Glow/Image */}
@@ -895,10 +897,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       />
                     )}
 
-                    <div className="relative z-10 w-10 h-10 flex items-center justify-center mb-1.5 rounded-2xl bg-white/[0.03] border border-white/5 group-hover:bg-white/10 transition-colors">
+                    <div className={`relative z-10 w-12 h-12 flex items-center justify-center mb-2 rounded-[18px] transition-all duration-500
+                      ${svc.highlight === "gold" ? "bg-yellow-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
+                        svc.highlight === "cyan" ? "bg-cyan-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : 
+                        "bg-zinc-900 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.02)]"}
+                    `}>
                        <span 
-                        className={`material-symbols-outlined text-[24px] transition-transform duration-500 group-hover:scale-110
-                          ${svc.highlight === "gold" ? "text-yellow-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" : svc.highlight === "cyan" ? "text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" : "text-white"}`} 
+                        className={`material-symbols-outlined text-[26px] transition-transform duration-500 group-hover:scale-110
+                          ${svc.highlight === "gold" ? "text-black" : svc.highlight === "cyan" ? "text-black" : "text-white"}`} 
                         style={{ fontVariationSettings: "'FILL' 1" }}
                        >
                          {svc.icon}
@@ -922,30 +928,29 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
           </div>
 
-          {/* MOBILIDADE */}
-          <section className="bg-zinc-950/40 backdrop-blur-2xl rounded-[40px] p-8 border border-white/5 relative overflow-hidden group shadow-2xl">
-            <div className="absolute top-0 right-0 size-60 bg-yellow-400 opacity-[0.05] blur-[110px] rounded-full -mr-20 -mt-20 pointer-events-none group-hover:opacity-[0.1] transition-opacity duration-1000" />
+          {/* MOBILIDADE (CLAY DESIGN) */}
+          <section className="bg-zinc-800 rounded-[50px] p-8 shadow-[15px_15px_40px_rgba(0,0,0,0.5),inset_10px_10px_20px_rgba(255,255,255,0.02),inset_-10px_-10px_20px_rgba(0,0,0,0.4)] relative overflow-hidden group">
+            <div className="absolute top-0 right-0 size-80 bg-yellow-400 opacity-[0.03] blur-[120px] rounded-full -mr-32 -mt-32 pointer-events-none group-hover:opacity-[0.06] transition-opacity duration-1000" />
             <div className="flex flex-col items-center mb-8 text-center relative z-10">
-              <span className="bg-white/5 text-white/40 text-[7px] font-black px-4 py-1.5 rounded-full tracking-[0.4em] uppercase mb-4 border border-white/10">Izi Connect</span>
+              <span className="bg-zinc-900/50 text-white/30 text-[7px] font-black px-5 py-2 rounded-full tracking-[0.4em] uppercase mb-4 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.05),inset_-1px_-1px_2px_rgba(0,0,0,0.4)]">Izi Connect</span>
               <h2 className="text-4xl font-black tracking-tighter text-white italic uppercase leading-none drop-shadow-2xl">Vá de Izi.</h2>
             </div>
-            <div className="grid grid-cols-4 gap-3 relative z-10 px-1">
+            <div className="grid grid-cols-4 gap-4 relative z-10 px-1">
               {[
-                { icon: "two_wheeler", label: "Mototáxi", action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("taxi_wizard"); } },
-                { icon: "airport_shuttle", label: "Vans Izi", action: () => { setTransitData({ ...transitData, type: "van", scheduled: false }); navigateSubView("van_wizard"); } },
+                { icon: "two_wheeler", label: "Moto", action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("taxi_wizard"); } },
+                { icon: "airport_shuttle", label: "Vans", action: () => { setTransitData({ ...transitData, type: "van", scheduled: false }); navigateSubView("van_wizard"); } },
                 { icon: "directions_car", label: "Carros", action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("taxi_wizard"); } },
                 { icon: "local_shipping", label: "Logística", action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("freight_wizard"); } },
               ].map((svc, i) => (
                 <motion.div 
                   key={i} 
-                  whileHover={{ y: -4, scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }} 
+                  whileHover={{ y: -6, scale: 1.08 }}
+                  whileTap={{ scale: 0.94 }} 
                   onClick={svc.action} 
-                  className="flex flex-col items-center justify-center gap-3 py-5 rounded-[24px] bg-white/[0.03] border border-white/5 hover:border-yellow-400/30 hover:bg-white/[0.06] transition-all cursor-pointer group/card"
+                  className="flex flex-col items-center justify-center gap-3 py-6 rounded-[28px] bg-zinc-900 shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.02),inset_-2px_-2px_4px_rgba(0,0,0,0.5)] hover:bg-zinc-800 transition-all cursor-pointer group/card"
                 >
-                  <div className="relative w-10 h-10 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-yellow-400/20 blur-xl opacity-0 group-hover/card:opacity-100 transition-opacity" />
-                    <span className="material-symbols-outlined text-3xl text-zinc-400 group-hover/card:text-yellow-400 transition-all duration-300 relative z-10">
+                  <div className="relative w-12 h-12 flex items-center justify-center rounded-2xl bg-yellow-400 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]">
+                    <span className="material-symbols-outlined text-2xl text-black font-black transition-all duration-300">
                       {svc.icon}
                     </span>
                   </div>
