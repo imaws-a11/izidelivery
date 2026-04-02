@@ -3,7 +3,7 @@ import { useAdmin } from '../context/AdminContext';
 
 export default function MerchantsTab() {
   const {
-    merchantsList, isLoadingList, setEditingItem, setEditType, handleUpdateMerchantStatus, handleDeleteMerchant, openMerchantPreview, allOrders, appSettings, fetchMerchants, setActiveTab
+    merchantsList, isLoadingList, setEditingItem, setEditType, handleUpdateMerchantStatus, handleDeleteMerchant, openMerchantPreview, allOrders, appSettings, fetchMerchants, setActiveTab, establishmentTypes
   } = useAdmin();
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function MerchantsTab() {
                 store_name: '',
                 email: '',
                 password: '',
-                store_type: 'restaurant',
+                store_type: establishmentTypes[0]?.value || 'restaurant',
                 commission_percent: appSettings.appCommission || 15,
                 service_fee: appSettings.serviceFee || 1.5,
                 is_active: true,
