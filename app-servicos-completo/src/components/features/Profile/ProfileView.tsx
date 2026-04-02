@@ -33,7 +33,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32">
+    <div className="flex flex-col min-h-screen bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-24">
       {/* Header com Voltar */}
       <header className="sticky top-0 z-50 px-5 py-4 bg-black/60 backdrop-blur-xl border-b border-zinc-900 flex items-center gap-4">
         <button 
