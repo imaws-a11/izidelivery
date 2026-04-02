@@ -2958,42 +2958,44 @@ function App() {
         let orderId = selectedItem?.id;
         let orderRef = selectedItem;
 
-        // Se o pedido jÃ¡ existe (fluxo mobilidade), nÃ£o criar outro
+        const isSubscription = paymentsOrigin === "izi_black";
+
+        // Se o pedido ainda não existe, precisamos criá-lo
         if (!orderId) {
-          if (!selectedShop?.id) { 
-            console.error("Estabelecimento nÃ£o selecionado");
-            alert("Erro: Estabelecimento nÃ£o selecionado."); 
+          if (!isSubscription && !selectedShop?.id) { 
+            console.error("Erro: Estabelecimento não selecionado durante criação de pedido PIX.");
+            alert("Erro: Estabelecimento não identificado. Por favor, volte e selecione a loja novamente."); 
             setPixConfirmed(false); 
             return; 
           }
 
-          console.log("Criando pedido inicial 'pendente_pagamento'...");
+          console.log("Criando pedido inicial 'pendente_pagamento' para " + (isSubscription ? "assinatura" : "delivery") + "...");
           const { data: order, error: orderErr } = await supabase
             .from("orders_delivery")
             .insert({
               user_id: userId,
-              merchant_id: selectedShop.id,
+              merchant_id: isSubscription ? null : selectedShop.id,
               status: "pendente_pagamento",
               total_price: Number(total.toFixed(2)),
-              pickup_address: selectedShop.name || "EndereÃ§o do Estabelecimento",
-              delivery_address: `${userLocation.address || "EndereÃ§o nÃ£o informado"} | ITENS: ${cart.map((i: any) => formatCartItemSummary(i)).join(', ')}`,
+              pickup_address: isSubscription ? "Assinatura Izi Black" : (selectedShop.name || "Endereço do Estabelecimento"),
+              delivery_address: isSubscription ? "Serviço Digital" : `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map((i: any) => formatCartItemSummary(i)).join(', ')}`,
               payment_method: "pix",
-              service_type: selectedShop.type || "restaurant",
+              service_type: isSubscription ? "subscription" : (selectedShop.type || "restaurant"),
             })
             .select()
             .single();
 
           if (orderErr || !order) {
             console.error("Erro ao criar pedido:", orderErr);
-            alert("NÃ£o foi possÃ­vel registrar o pedido. Detalhe: " + (orderErr?.message || "Erro desconhecido"));
+            alert("Não foi possível registrar o pedido. Detalhe: " + (orderErr?.message || "Erro desconhecido"));
             setPixConfirmed(false);
             return;
           }
           orderId = order.id;
           orderRef = order;
-          console.log("Pedido criado com sucesso ID:", orderId);
+          console.log("Pedido de checkout delivery criado para PIX:", orderId);
         } else {
-          console.log("Atualizando pedido existente para 'pendente_pagamento' ID:", orderId);
+          console.log("Fluxo PIX em pedido existente ID:", orderId);
           await supabase.from("orders_delivery").update({ 
             status: "pendente_pagamento", 
             payment_method: "pix" 
