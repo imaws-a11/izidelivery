@@ -6,7 +6,7 @@ interface BeverageOffersViewProps {
   cart: any[];
   navigateSubView: (view: any) => void;
   beverageOffers: any[];
-  handleAddToCart: (item: any) => void;
+  handleAddToCart: (item: any, e?: any) => void;
   getItemCount: (id: any) => number;
   beverageBanners: any[];
 }
@@ -68,31 +68,37 @@ export const BeverageOffersView = ({
                 whileInView={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.05 }}
                 key={item.id}
-                className="bg-zinc-900/40 border border-white/5 rounded-3xl p-3.5 flex items-center gap-4 group hover:bg-zinc-900/60 transition-all cursor-pointer relative overflow-hidden"
+                className="bg-zinc-800 shadow-[10px_10px_24px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] rounded-[32px] p-4 flex items-center gap-5 group transition-all duration-500 cursor-pointer relative overflow-hidden"
               >
-                <div className="size-24 rounded-2xl overflow-hidden shrink-0 shadow-xl relative z-10">
+                <div className="size-24 rounded-[22px] overflow-hidden shrink-0 shadow-[4px_4px_10px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.1)] relative z-10">
                    <img src={item.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" title={item.name} />
-                   <div className="absolute top-2 left-2 bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded-lg shadow-lg backdrop-blur-md">-{item.off}</div>
+                   <div className="absolute top-2 left-2 bg-rose-600 text-white text-[9px] font-black px-2.5 py-1 rounded-xl shadow-lg border border-rose-500/30">-{item.off}</div>
                 </div>
                 <div className="flex-1 min-w-0 relative z-10">
-                   <p className="text-[8px] font-black text-yellow-400 uppercase tracking-[0.2em] mb-1">{item.cat}</p>
-                   <h3 className="text-sm font-black tracking-tight mb-2 leading-tight truncate text-white">{item.name}</h3>
+                   <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.2em] mb-1.5">{item.cat}</p>
+                   <h3 className="text-[14px] font-black tracking-tight mb-2.5 leading-tight truncate text-white">{item.name}</h3>
                    <div className="flex items-center justify-between">
                       <div className="flex flex-col">
-                         <span className="text-base font-black text-yellow-400 leading-none mb-1">R$ {item.price.toFixed(2).replace(".", ",")}</span>
-                         <span className="text-[10px] text-zinc-500 line-through font-bold">R$ {item.oldPrice.toFixed(2).replace(".", ",")}</span>
+                         <span className="text-[16px] font-black text-white leading-none mb-1">R$ {item.price.toFixed(2).replace(".", ",")}</span>
+                         <span className="text-[11px] text-zinc-500 line-through font-bold">R$ {item.oldPrice.toFixed(2).replace(".", ",")}</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <button 
-                          onClick={(e) => { e.stopPropagation(); handleAddToCart(item); }}
-                          className="size-9 rounded-xl bg-yellow-400 text-black flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all"
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            const btn = e.currentTarget;
+                            btn.classList.add('scale-75', 'bg-yellow-500');
+                            setTimeout(() => btn.classList.remove('scale-75', 'bg-yellow-500'), 200);
+                            handleAddToCart(item, e);
+                          }}
+                          className="size-11 rounded-[16px] bg-yellow-400 text-black flex items-center justify-center transition-all shadow-[4px_4px_8px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] active:scale-95 group/btn overflow-hidden"
                         >
-                          <span className="material-symbols-outlined font-black text-lg">
-                            {getItemCount(item.id) > 0 ? 'add_shopping_cart' : 'add'}
+                          <span className="material-symbols-outlined font-black text-xl z-10">
+                            shopping_cart
                           </span>
                         </button>
                         {getItemCount(item.id) > 0 && (
-                          <div className="bg-zinc-800 text-white size-7 rounded-lg flex items-center justify-center text-[10px] font-black border border-white/10 shadow-lg">
+                          <div className="bg-zinc-900 text-white size-8 rounded-xl flex items-center justify-center text-[11px] font-black shadow-[inset_1px_1px_4px_rgba(255,255,255,0.05),inset_-1px_-1px_4px_rgba(0,0,0,0.4)]">
                             {getItemCount(item.id)}
                           </div>
                         )}

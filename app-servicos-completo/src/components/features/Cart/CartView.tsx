@@ -137,18 +137,18 @@ export const CartView: React.FC<CartViewProps> = ({
                   key={product.id} 
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleAddToCart(product)}
-                  className="flex-shrink-0 w-44 bg-zinc-900/40 border border-white/5 rounded-[32px] p-4 flex flex-col gap-3 group hover:border-yellow-400/20 transition-all cursor-pointer"
+                  className="flex-shrink-0 w-44 bg-zinc-800 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-4px_-4px_12px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] rounded-[32px] p-4 flex flex-col gap-3 group transition-all cursor-pointer"
                 >
-                   <div className="w-full h-24 rounded-[22px] overflow-hidden bg-zinc-800 shadow-xl group-hover:scale-[1.02] transition-transform">
+                   <div className="w-full h-24 rounded-[22px] overflow-hidden bg-zinc-900 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)] relative">
                       <img src={product.img} className="size-full object-cover brightness-90 group-hover:brightness-110 transition-all" />
                    </div>
                    <div className="px-1">
-                      <p className="text-[8px] font-black text-yellow-400/60 uppercase tracking-widest mb-1">{product.store || merchantName || "Loja"}</p>
-                      <h5 className="text-[13px] font-black text-white leading-tight uppercase italic">{product.name}</h5>
-                      <div className="flex items-center justify-between mt-2">
-                         <span className="text-sm font-black text-white">R$ {Number(product.price || 0).toFixed(2).replace(".", ",")}</span>
-                         <div className="size-8 rounded-full bg-yellow-400 text-black flex items-center justify-center shadow-lg shadow-yellow-400/10">
-                            <span className="material-symbols-outlined text-lg">add</span>
+                      <p className="text-[8px] font-black text-yellow-400/60 uppercase tracking-widest mb-1 truncate">{product.store || merchantName || "Loja"}</p>
+                      <h5 className="text-[13px] font-black text-white leading-tight uppercase italic truncate">{product.name}</h5>
+                      <div className="flex items-center justify-between mt-3">
+                         <span className="text-sm font-black text-white tracking-tighter">R$ {Number(product.price || 0).toFixed(2).replace(".", ",")}</span>
+                         <div className="size-9 rounded-xl bg-yellow-400 text-black flex items-center justify-center shadow-[4px_4px_8px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]">
+                            <span className="material-symbols-outlined text-xl font-black">add</span>
                          </div>
                       </div>
                    </div>
