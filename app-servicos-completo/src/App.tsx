@@ -3080,22 +3080,27 @@ function App() {
         }
 
         // 3. Atualizar UI com QR real
-        const qr = fnData?.qrCode || fnData?.qr_code;
-        const qrBase64 = fnData?.qrCodeBase64 || fnData?.qr_code_base64;
-        const copyPaste = fnData?.copyPaste || fnData?.copy_paste;
+        console.log("[DEBUG] DADOS BRUTOS DA EDGE FUNCTION:", fnData);
         
-        console.log("Mapeando dados do QR Code:", { qr, qrBase64, copyPaste: copyPaste?.slice(0, 10) });
-        
+        const qr = fnData?.qrCode || fnData?.qr_code || fnData?.point_of_interaction?.transaction_data?.qr_code;
+        const qrBase64 = fnData?.qrCodeBase64 || fnData?.qr_code_base64 || fnData?.point_of_interaction?.transaction_data?.qr_code_base64;
+        const copyPaste = fnData?.copyPaste || fnData?.copy_paste || fnData?.point_of_interaction?.transaction_data?.ticket_url;
+
+        if (!qr && !qrBase64) {
+          console.error("[DEBUG] Edge Function retornou sucesso mas sem dados de QR detectÃ¡veis.");
+          toastError("Erro: Dados do QR Code ausentes na resposta.");
+        }
+
+        console.log("[DEBUG] Mapeamento realizado:", { qr: !!qr, qrBase64: !!qrBase64, cp: !!copyPaste });
+
         setSelectedItem((prev: any) => ({ 
-          ...prev, 
-          id: orderId, // Garante que o ID do pedido persista
+          ...(prev || {}), 
+          id: orderId,
           pixQrCode: qr, 
           pixQrBase64: qrBase64, 
           pixCopyPaste: copyPaste,
           pixError: false 
         }));
-        
-        console.log("Estado setSelectedItem chamado com sucesso.");
         
         // Limpar sacola apÃ³s sucesso na geraÃ§Ã£o do PIX
         if (cart.length > 0) {
@@ -3112,7 +3117,13 @@ function App() {
     };
 
     const pixReady = !!(selectedItem?.pixQrCode || selectedItem?.pixQrBase64) && pixConfirmed;
-    console.log("Estado de renderizaÃ§Ã£o PIX:", { pixConfirmed, pixReady, hasQr: !!selectedItem?.pixQrCode, hasError: selectedItem?.pixError });
+    console.log("[DEBUG] Render Check:", { 
+      pixConfirmed, 
+      pixReady, 
+      hasQr: !!selectedItem?.pixQrCode, 
+      hasBase64: !!selectedItem?.pixQrBase64,
+      id: selectedItem?.id
+    });
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
