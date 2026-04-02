@@ -24,6 +24,7 @@ interface CheckoutViewProps {
   iziCoins?: number;
   iziCoinValue?: number;
   deliveryFee: number;
+  isIziBlack?: boolean;
 }
 
 export const CheckoutView: React.FC<CheckoutViewProps> = ({
@@ -49,6 +50,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   iziCoins = 0,
   iziCoinValue = 0.01,
   deliveryFee = 0,
+  isIziBlack = false,
 }) => {
   const [useCoins, setUseCoins] = React.useState(false);
   const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
@@ -358,9 +360,14 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.2em] italic">Taxa Izi</span>
-                <span className={deliveryFee > 0 ? "text-white font-black text-sm" : "text-emerald-400 font-black text-xs uppercase tracking-tighter"}>
-                  {deliveryFee > 0 ? `R$ ${deliveryFee.toFixed(2).replace(".", ",")}` : "Grátis"}
-                </span>
+                <div className="flex flex-col items-end">
+                  <span className={deliveryFee > 0 ? "text-white font-black text-sm" : "text-emerald-400 font-black text-xs uppercase tracking-tighter"}>
+                    {deliveryFee > 0 ? `R$ ${deliveryFee.toFixed(2).replace(".", ",")}` : "Grátis"}
+                  </span>
+                  {deliveryFee === 0 && isIziBlack && (
+                    <span className="text-[8px] text-zinc-600 font-bold tracking-[0.2em] uppercase mt-1 italic">Benefício Izi Black</span>
+                  )}
+                </div>
               </div>
               {couponDiscount > 0 && (
                 <div className="flex justify-between items-center text-emerald-400">
