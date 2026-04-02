@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { BespokeIcons } from "./lib/BespokeIcons";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7189,7 +7189,7 @@ function App() {
   };
 
   return (
-    <div className="h-full bg-black selection:bg-yellow-400/30">
+    <div className="min-h-screen bg-black selection:bg-yellow-400/30">
       <AnimatePresence mode="wait">
         {view === "loading" && (
           <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[1000] bg-black flex flex-col items-center justify-center">
@@ -7210,7 +7210,7 @@ function App() {
         )}
 
         {view === "app" && (
-          <motion.div key="app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full relative overflow-hidden">
+          <motion.div key="app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen relative overflow-hidden bg-black">
             <AnimatePresence mode="wait">
               {tab === "home" && (
                 <motion.div key="home-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
@@ -7228,7 +7228,7 @@ function App() {
                 </motion.div>
               )}
               {tab === "profile" && (
-                <motion.div key="profile-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
+                <motion.div key="profile-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full bg-black">
                    <ProfileView userId={userId} userName={userName} userLevel={userLevel} userXP={userXP} walletBalance={walletBalance} setSubView={setSubView} logout={logout} setTab={setTab} isIziBlackMembership={isIziBlackMembership} />
                 </motion.div>
               )}
