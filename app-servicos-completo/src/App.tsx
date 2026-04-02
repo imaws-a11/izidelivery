@@ -1065,6 +1065,8 @@ function App() {
         izi_coins: finalCoins,
         user_xp: (userXP + 50) 
       }).eq("id", userId);
+      
+      fetchMyOrders(userId);
     }
   };
 
@@ -1370,9 +1372,6 @@ function App() {
   };
 
     const calculateDeliveryFee = () => {
-    const shop = selectedShop || (cart.length > 0 ? { id: cart[0].merchant_id, service_fee: cart[0].service_fee } : null);
-    if (!shop) return Number(globalSettings?.base_fee || 5.90);
-
     const isIziBlack = Boolean(user?.izi_black_active);
     const minOrderIziBlack = Number(globalSettings?.izi_black_min_order || 0);
     const subtotal = cart.reduce((a, b) => a + (b.price || 0), 0);
@@ -1380,9 +1379,21 @@ function App() {
     if (isIziBlack) {
       if (subtotal >= minOrderIziBlack && minOrderIziBlack > 0) return 0;
     }
+
+    // Prioridade 1: Informações da Loja Selecionada
+    if (selectedShop) {
+       if (selectedShop.freeDelivery === true || selectedShop.free_delivery === true) return 0;
+       if (selectedShop.service_fee !== undefined && selectedShop.service_fee !== null) {
+           return Number(selectedShop.service_fee);
+       }
+    }
     
-    if (shop.service_fee !== undefined && shop.service_fee !== null) {
-      return Number(shop.service_fee);
+    // Prioridade 2: Fallback para metadados salvos no primeiro item do carrinho
+    if (cart.length > 0) {
+       const first = cart[0];
+       if (first.merchant_free_delivery === true || first.free_delivery === true || first.freeDelivery === true) return 0;
+       if (first.merchant_service_fee !== undefined) return Number(first.merchant_service_fee);
+       if (first.service_fee !== undefined) return Number(first.service_fee);
     }
     
     return Number(globalSettings?.base_fee || 5.90);
@@ -1434,6 +1445,12 @@ function App() {
         setPixCpf("");
         setSelectedItem({ id: "temp", total_price: total, merchant_id: shopId, merchant_name: shopName });
         navigateSubView("pix_payment");
+        return;
+      }
+
+      if (paymentMethod === "lightning") {
+        setSelectedItem({ id: "temp", total_price: total, merchant_id: shopId, merchant_name: shopName });
+        navigateSubView("lightning_payment");
         return;
       }
 
