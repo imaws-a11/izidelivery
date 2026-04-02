@@ -638,20 +638,33 @@ function App() {
   };
 
   const handleCancelOrder = async (orderId: string) => {
+    console.log("[DEBUG] Iniciando cancelamento do pedido:", orderId);
+    if (!orderId) {
+      toastError("ID do pedido nÃ£o encontrado.");
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("orders_delivery")
         .update({ status: "cancelado" })
         .eq("id", orderId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("[DEBUG] Erro Supabase no cancelamento:", error);
+        throw error;
+      }
+
+      console.log("[DEBUG] Pedido cancelado no banco com sucesso.");
       toastSuccess("Pedido cancelado com sucesso!");
+      
       if (userId) fetchMyOrders(userId);
+      setSelectedItem(null);
       setTab("orders");
       setSubView("none");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao cancelar pedido:", err);
-      toastError("Não foi possível cancelar o pedido.");
+      toastError(`NÃ£o foi possÃ­vel cancelar: ${err.message || 'Erro de rede'}`);
     }
   };
 

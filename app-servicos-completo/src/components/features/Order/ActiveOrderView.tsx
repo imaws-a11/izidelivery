@@ -265,8 +265,9 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                   >
                     <button
                       onClick={() => {
+                        console.log("[DEBUG] Clique no botÃ£o de cancelar. OrderID:", selectedItem?.id);
                         if(window.confirm("Deseja realmente cancelar este pedido?")) {
-                          onCancelOrder(selectedItem.id);
+                          onCancelOrder(selectedItem?.id);
                         }
                       }}
                       className="w-full py-5 rounded-[28px] bg-gradient-to-r from-rose-500/10 to-rose-600/5 border border-rose-500/20 text-rose-500 font-black text-[10px] uppercase tracking-[0.25em] active:scale-95 transition-all flex items-center justify-center gap-3 group hover:border-rose-500/40 hover:from-rose-500 hover:to-rose-600 hover:text-white shadow-xl shadow-rose-500/5"
