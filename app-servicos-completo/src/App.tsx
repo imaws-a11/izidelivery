@@ -3080,25 +3080,44 @@ function App() {
         }
 
         // 3. Atualizar UI com QR real
-        console.log("[DEBUG] DADOS BRUTOS DA EDGE FUNCTION:", fnData);
+        console.log("[DEBUG] DADOS BRUTOS MP (STRING):", JSON.stringify(fnData));
         
-        const qr = fnData?.qrCode || fnData?.qr_code || fnData?.point_of_interaction?.transaction_data?.qr_code;
-        const qrBase64 = fnData?.qrCodeBase64 || fnData?.qr_code_base64 || fnData?.point_of_interaction?.transaction_data?.qr_code_base64;
-        const copyPaste = fnData?.copyPaste || fnData?.copy_paste || fnData?.point_of_interaction?.transaction_data?.ticket_url;
+        // Mapeamento exaustivo (Tenta todas as variaÃ§Ãµes possÃ­veis)
+        const qr = fnData?.qrCode || 
+                   fnData?.qr_code || 
+                   fnData?.emv ||
+                   fnData?.point_of_interaction?.transaction_data?.qr_code ||
+                   fnData?.point_of_interaction?.transaction_data?.emv;
+                   
+        const qrBase64 = fnData?.qrCodeBase64 || 
+                         fnData?.qr_code_base64 || 
+                         fnData?.image ||
+                         fnData?.point_of_interaction?.transaction_data?.qr_code_base64 ||
+                         fnData?.point_of_interaction?.transaction_data?.image_base64;
+                         
+        const copyPaste = fnData?.copyPaste || 
+                          fnData?.copy_paste || 
+                          fnData?.ticket_url ||
+                          fnData?.point_of_interaction?.transaction_data?.ticket_url ||
+                          fnData?.point_of_interaction?.transaction_data?.qr_code;
 
-        if (!qr && !qrBase64) {
-          console.error("[DEBUG] Edge Function retornou sucesso mas sem dados de QR detectÃ¡veis.");
-          toastError("Erro: Dados do QR Code ausentes na resposta.");
+        if (!qr && !qrBase64 && !copyPaste) {
+          console.error("[DEBUG] Erro: Nenhum dado de PIX (QR ou Link) detectado na resposta.");
+          toastError("Erro: Resposta incompleta do servidor de pagamentos.");
         }
 
-        console.log("[DEBUG] Mapeamento realizado:", { qr: !!qr, qrBase64: !!qrBase64, cp: !!copyPaste });
+        console.log("[DEBUG] Mapeamento Cruzado Final:", { 
+          temQr: !!qr, 
+          temBase64: !!qrBase64, 
+          temCopiaeCola: !!copyPaste 
+        });
 
         setSelectedItem((prev: any) => ({ 
           ...(prev || {}), 
           id: orderId,
           pixQrCode: qr, 
           pixQrBase64: qrBase64, 
-          pixCopyPaste: copyPaste,
+          pixCopyPaste: copyPaste || qr, // Fallback do copia e cola para o EMV se necessÃ¡rio
           pixError: false 
         }));
         
@@ -3116,12 +3135,13 @@ function App() {
       }
     };
 
-    const pixReady = !!(selectedItem?.pixQrCode || selectedItem?.pixQrBase64) && pixConfirmed;
-    console.log("[DEBUG] Render Check:", { 
+    const pixReady = !!(selectedItem?.pixQrCode || selectedItem?.pixQrBase64 || selectedItem?.pixCopyPaste) && pixConfirmed;
+    console.log("[DEBUG] Render Check Final:", { 
       pixConfirmed, 
       pixReady, 
       hasQr: !!selectedItem?.pixQrCode, 
       hasBase64: !!selectedItem?.pixQrBase64,
+      hasCP: !!selectedItem?.pixCopyPaste,
       id: selectedItem?.id
     });
 
