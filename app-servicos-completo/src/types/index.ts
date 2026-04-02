@@ -2,6 +2,7 @@ export interface SavedAddress {
   id: string | number;
   label: string;
   street: string;
+  address?: string;
   details: string;
   city: string;
   active: boolean;

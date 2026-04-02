@@ -30,6 +30,12 @@ import { RestaurantMenuView } from "./components/features/Home/RestaurantMenuVie
 import { MarketExploreView } from "./components/features/Home/MarketExploreView";
 import { PaymentMethodsView } from "./components/features/Profile/PaymentMethodsView";
 
+// Mobilidade e Envios
+import { TaxiWizard } from "./components/features/Mobility/TaxiWizard";
+import { VanWizard } from "./components/features/Mobility/VanWizard";
+import { FreightWizard } from "./components/features/Mobility/FreightWizard";
+import { MobilityPaymentView } from "./components/features/Mobility/MobilityPaymentView";
+
 import { useAuth } from "./hooks/useAuth";
 import type { SavedAddress, Order, Quest } from "./types";
 
@@ -330,6 +336,7 @@ function App() {
         const { error } = await supabase.from('saved_addresses').update({
           label: newAddrLabel.trim(),
           street: newAddrStreet.trim(),
+          address: newAddrStreet.trim(),
           details: newAddrDetails.trim() || null,
           city: newAddrCity.trim() || null,
         }).eq('id', editingAddress.id);
@@ -340,6 +347,7 @@ function App() {
           user_id: userId,
           label: newAddrLabel.trim(),
           street: newAddrStreet.trim(),
+          address: newAddrStreet.trim(),
           details: newAddrDetails.trim() || null,
           city: newAddrCity.trim() || null,
           is_active: savedAddresses.length === 0,
@@ -5545,328 +5553,95 @@ const navigateSubView = (target: string) => {
   };
 
   const renderFreightWizard = () => {
-    const categories = [
-      { id: 'fiorino', name: 'Fiorino/Furgão', desc: 'Cargas pequenas', icon: 'local_shipping' },
-      { id: 'caminhonete', name: 'Caminhonete', desc: 'Cargas médias', icon: 'terminal' },
-      { id: 'caminhao', name: 'Caminhão Baú', desc: 'Mudanças grandes', icon: 'truck_front' }
-    ];
-
     return (
-      <div className="absolute inset-0 z-[120] bg-transparent text-zinc-100 flex flex-col overflow-hidden">
-        <div className="absolute inset-0 z-0 h-full">
-           <IziTrackingMap 
-             routePolyline={routePolyline} 
-             driverLoc={driverLocation} 
-             userLoc={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} 
-             onMyLocationClick={updateLocation} 
-           />
-           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
-        </div>
-
-        <header className="relative z-50 flex items-center justify-between px-6 pt-10">
-          <button onClick={() => setSubView("none")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
-            <Icon name="arrow_back" />
-          </button>
-          <div className="text-right">
-             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Frete & Mudança</h2>
-             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Logística Profissional</p>
-          </div>
-        </header>
-
-        <main className="relative z-40 mt-auto bg-zinc-900/60 backdrop-blur-3xl border-t border-white/10 flex flex-col h-[70vh] rounded-t-[40px] shadow-[0_-20px_80px_rgba(0,0,0,0.6)]">
-           <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
-              {mobilityStep === 1 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Roteiro do Frete</h3>
-                   </div>
-                   <div className="space-y-4">
-                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="bg-zinc-900/40 backdrop-blur-3xl p-6 rounded-[35px] border border-white/10 shadow-2xl shadow-black/40 group transition-all">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2">Origem</p>
-                         <AddressSearchInput 
-                           userCoords={userLocation && userLocation.lat !== undefined && userLocation.lng !== undefined ? { lat: Number(userLocation.lat), lng: Number(userLocation.lng) } : null}
-                           initialValue={transitData.origin}
-                           placeholder="Origem..."
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white"
-                           onSelect={(p) => setTransitData({...transitData, origin: p.formatted_address || ""})}
-                         />
-                      </motion.div>
-                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="bg-zinc-900/40 backdrop-blur-3xl p-6 rounded-[35px] border border-white/10 shadow-2xl shadow-black/40 group transition-all">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2">Destino</p>
-                         <AddressSearchInput 
-                           userCoords={userLocation && userLocation.lat !== undefined && userLocation.lng !== undefined ? { lat: Number(userLocation.lat), lng: Number(userLocation.lng) } : null}
-                           initialValue={transitData.destination}
-                           placeholder="Destino..."
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white"
-                           onSelect={(p) => setTransitData({...transitData, destination: p.formatted_address || ""})}
-                         />
-                      </motion.div>
-                   </div>
-                </motion.section>
-              )}
-
-              {mobilityStep === 2 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                   <div className="space-y-4">
-                      {categories.map((cat) => (
-                        <motion.div 
-                          key={cat.id} 
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => setTransitData({...transitData, vehicleCategory: cat.name})}
-                           className={'p-6 rounded-[35px] border transition-all flex items-center gap-6 cursor-pointer backdrop-blur-3xl shadow-xl'} 
-                           style={{ 
-                             borderColor: transitData.vehicleCategory === cat.name ? '#facc15' : 'rgba(255,255,255,0.05)', 
-                             background: transitData.vehicleCategory === cat.name ? '#facc15' : 'rgba(24, 24, 27, 0.4)'
-                           }}>
-                           <div className={'size-16 rounded-2xl flex items-center justify-center transition-all duration-300'} style={{ background: transitData.vehicleCategory === cat.name ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.05)', color: transitData.vehicleCategory === cat.name ? '#000' : '#fff' }}>
-                              <span className="material-symbols-outlined text-4xl">{cat.icon}</span>
-                           </div>
-                           <div className="flex-1">
-                              <h4 className={`font-black text-lg ${transitData.vehicleCategory === cat.name ? 'text-black' : 'text-white'}`}>{cat.name}</h4>
-                              <p className={`text-xs ${transitData.vehicleCategory === cat.name ? 'text-black/60' : 'text-zinc-500'}`}>{cat.desc}</p>
-                           </div>
-                        </motion.div>
-                      ))}
-                   </div>
-                </motion.section>
-              )}
-           </div>
-           <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-zinc-950">
-              <button 
-                onClick={() => {
-                  if (mobilityStep < 2) setMobilityStep(2);
-                  else {
-                    setTransitData({...transitData, type: 'frete'});
-                    navigateSubView("mobility_payment");
-                  }
-                }}
-                className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px]"
-              >
-                CONTINUAR
-              </button>
-           </div>
-        </main>
-      </div>
+      <FreightWizard 
+        transitData={transitData}
+        setTransitData={setTransitData}
+        mobilityStep={mobilityStep}
+        setMobilityStep={setMobilityStep}
+        userLocation={userLocation}
+        updateLocation={updateLocation}
+        routePolyline={routePolyline}
+        driverLocation={driverLocation}
+        distancePrices={distancePrices}
+        isCalculatingPrice={isCalculatingPrice}
+        marketConditions={marketConditions}
+        paymentMethod={paymentMethod}
+        userLevel={userLevel}
+        routeDistance={routeDistance}
+        setPaymentsOrigin={setPaymentsOrigin}
+        setSubView={setSubView}
+        navigateSubView={navigateSubView}
+        showToast={showToast}
+      />
     );
   };
 
   const renderVanWizard = () => {
     return (
-      <div className="absolute inset-0 z-[120] bg-transparent text-zinc-100 flex flex-col overflow-hidden">
-        {/* MAPA NO FUNDO */}
-        <div className="absolute inset-0 z-0 h-full">
-           <IziTrackingMap 
-             routePolyline={routePolyline} 
-             driverLoc={driverLocation} 
-             userLoc={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} 
-             onMyLocationClick={updateLocation} 
-           />
-           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
-        </div>
+      <VanWizard 
+        transitData={transitData}
+        setTransitData={setTransitData}
+        mobilityStep={mobilityStep}
+        setMobilityStep={setMobilityStep}
+        userLocation={userLocation}
+        updateLocation={updateLocation}
+        routePolyline={routePolyline}
+        driverLocation={driverLocation}
+        distancePrices={distancePrices}
+        isCalculatingPrice={isCalculatingPrice}
+        marketConditions={marketConditions}
+        paymentMethod={paymentMethod}
+        userLevel={userLevel}
+        routeDistance={routeDistance}
+        setPaymentsOrigin={setPaymentsOrigin}
+        setSubView={setSubView}
+        navigateSubView={navigateSubView}
+        showToast={showToast}
+        calculateVanPrice={calculateVanPrice}
+      />
+    );
+  };
 
-        <header className="relative z-50 flex items-center justify-between px-6 pt-10">
-          <button onClick={() => setSubView("none")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
-            <Icon name="arrow_back" />
-          </button>
-          <div className="text-right">
-             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Van & Grupos</h2>
-             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Capacidade & Conforto</p>
-          </div>
-        </header>
+  const renderTaxiWizard = () => {
+    return (
+      <TaxiWizard 
+        transitData={transitData}
+        setTransitData={setTransitData}
+        mobilityStep={mobilityStep}
+        setMobilityStep={setMobilityStep}
+        userLocation={userLocation}
+        updateLocation={updateLocation}
+        routePolyline={routePolyline}
+        driverLocation={driverLocation}
+        distancePrices={distancePrices}
+        isCalculatingPrice={isCalculatingPrice}
+        marketConditions={marketConditions}
+        paymentMethod={paymentMethod}
+        userLevel={userLevel}
+        routeDistance={routeDistance}
+        setPaymentsOrigin={setPaymentsOrigin}
+        setSubView={setSubView}
+        navigateSubView={navigateSubView}
+        showToast={showToast}
+      />
+    );
+  };
 
-        <main className="relative z-40 mt-auto bg-zinc-900/60 backdrop-blur-3xl border-t border-white/10 flex flex-col h-[70vh] rounded-t-[40px] shadow-[0_-20px_80px_rgba(0,0,0,0.6)]">
-           <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
-              {/* STEP 1: ROTEIRO E PARADAS */}
-              {mobilityStep === 1 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Roteiro da Viagem</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Vans podem fazer várias paradas para pegar passageiros.</p>
-                   </div>
-                   
-                   <div className="space-y-4">
-                      {/* ORIGEM */}
-                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="bg-zinc-900/40 backdrop-blur-3xl p-6 rounded-[35px] border border-white/10 shadow-2xl shadow-black/40 group transition-all">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Início da Rota</p>
-                         <AddressSearchInput 
-                           userCoords={userLocation && userLocation.lat !== undefined && userLocation.lng !== undefined ? { lat: Number(userLocation.lat), lng: Number(userLocation.lng) } : null}
-                           initialValue={transitData.origin}
-                           placeholder="Partida..."
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
-                           onSelect={(p) => setTransitData({...transitData, origin: p.formatted_address || ""})}
-                         />
-                      </motion.div>
-
-                       {transitData.stops.map((stop, idx) => (
-                          <motion.div key={idx} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="bg-zinc-900/40 backdrop-blur-3xl p-6 rounded-[35px] border border-white/10 shadow-2xl shadow-black/40 flex items-center gap-4 transition-all">
-                              <div className="flex-1">
-                                 <p className="text-[9px] font-black uppercase text-yellow-400/60 tracking-[0.2em] mb-3 ml-1">Parada Adicional</p>
-                                 <AddressSearchInput 
-                                   userCoords={userLocation && userLocation.lat !== undefined && userLocation.lng !== undefined ? { lat: Number(userLocation.lat), lng: Number(userLocation.lng) } : null}
-                                   initialValue={stop}
-                                   placeholder="Recolher passageiro em..."
-                                   className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 placeholder:text-zinc-600"
-                                   onSelect={(p) => {
-                                     const newStops = [...transitData.stops];
-                                     newStops[idx] = p.formatted_address || "";
-                                     setTransitData({...transitData, stops: newStops});
-                                   }}
-                                 />
-                              </div>
-                              <button onClick={() => setTransitData({...transitData, stops: transitData.stops.filter((_, i) => i !== idx)})} className="size-10 rounded-xl bg-red-400/10 text-red-400 flex items-center justify-center hover:bg-red-400/20 transition-all">
-                                 <span className="material-symbols-outlined text-xl">close</span>
-                              </button>
-                          </motion.div>
-                       ))}
-
-                      <button onClick={() => setTransitData({...transitData, stops: [...transitData.stops, ""]})} className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-zinc-800 rounded-[30px] text-zinc-500 hover:text-yellow-400 transition-all">
-                         <span className="material-symbols-outlined text-lg">add</span>
-                         <span className="text-[10px] font-black uppercase tracking-widest">+ Adicionar Parada</span>
-                      </button>
-
-                      {/* DESTINO */}
-                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Destino Final</p>
-                         <AddressSearchInput 
-                           userCoords={userLocation && userLocation.lat !== undefined && userLocation.lng !== undefined ? { lat: Number(userLocation.lat), lng: Number(userLocation.lng) } : null}
-                           initialValue={transitData.destination}
-                           placeholder="Onde termina a rota?"
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
-                           onSelect={(p) => setTransitData({...transitData, destination: p.formatted_address || ""})}
-                         />
-                      </div>
-                   </div>
-                </motion.section>
-              )}
-
-              {/* STEP 2: TIPO E PASSAGEIROS */}
-              {mobilityStep === 2 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-10">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Tipo de Viagem</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Defina a modalidade e a quantidade de pessoas.</p>
-                   </div>
-
-                   <div className="space-y-8">
-                      <div className="grid grid-cols-3 gap-3">
-                         {[
-                            { id: 'only_one_way', label: 'Ida', icon: 'trending_flat' },
-                            { id: 'round_trip', label: 'Ida e Volta', icon: 'sync' },
-                            { id: 'hourly', label: 'Diária', icon: 'schedule' }
-                         ].map((t) => (
-                           <div key={t.id} onClick={() => setTransitData({...transitData, tripType: t.id as any})}
-                             className={`p-4 rounded-3xl border-2 flex flex-col items-center gap-2 transition-all cursor-pointer ${transitData.tripType === t.id ? 'border-yellow-400 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}>
-                              <span className="material-symbols-outlined">{t.icon}</span>
-                              <span className="text-[10px] font-black uppercase">{t.label}</span>
-                           </div>
-                         ))}
-                      </div>
-
-                      <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
-                         <div className="flex items-center justify-between mb-4">
-                            <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">NÃâ€šÂº de Passageiros</p>
-                            <span className="text-yellow-400 font-black text-lg">{transitData.passengers}</span>
-                         </div>
-                         <input 
-                           type="range" min="1" max="20" step="1"
-                           value={transitData.passengers}
-                           onChange={(e) => setTransitData({...transitData, passengers: parseInt(e.target.value)})}
-                           className="w-full accent-yellow-400 h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                         />
-                         <div className="flex justify-between mt-2 px-1">
-                            <span className="text-[9px] font-bold text-zinc-600">1 Pessoa</span>
-                            <span className="text-[9px] font-bold text-zinc-600">Até 20 Pessoas</span>
-                         </div>
-                      </div>
-                   </div>
-                </motion.section>
-              )}
-
-              {/* STEP 3: BAGAGEM E FINALIDADE */}
-              {mobilityStep === 3 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-10">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Bagagem & Finalidade</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Garanta que a Van tenha o bagageiro correto.</p>
-                   </div>
-
-                   <div className="space-y-8">
-                      <div className="space-y-4">
-                         <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Volume de Bagagem</p>
-                         <div className="grid grid-cols-3 gap-3">
-                            {[
-                               { id: 'none', label: 'Nenhuma', icon: 'check' },
-                               { id: 'medium', label: 'Bordo', icon: 'luggage' },
-                               { id: 'large', label: 'Grandes', icon: 'travel_luggage' }
-                            ].map((l) => (
-                              <div key={l.id} onClick={() => setTransitData({...transitData, luggage: l.id as any})}
-                                className={`p-4 rounded-3xl border-2 flex flex-col items-center gap-2 transition-all cursor-pointer ${transitData.luggage === l.id ? 'border-yellow-400 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}>
-                                 <span className="material-symbols-outlined">{l.icon}</span>
-                                 <span className="text-[10px] font-black uppercase">{l.label}</span>
-                              </div>
-                            ))}
-                         </div>
-                      </div>
-
-                      <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-3 ml-1">Finalidade / ObservaçÃÆ’Âµes</p>
-                         <textarea 
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 resize-none"
-                           rows={3}
-                           placeholder="Ex: Transfer para aeroporto, Evento corporativo..."
-                           value={transitData.purpose}
-                           onChange={(e) => setTransitData({...transitData, purpose: e.target.value})}
-                         />
-                      </div>
-                   </div>
-                </motion.section>
-              )}
-           </div>
-
-            {/* PREVIEW & PRICE */}
-            <div className="px-8 mt-2">
-              <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5 space-y-4">
-                 <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Estimativa do Fretamento</p>
-                    <span className="text-xl font-black text-white">
-                      R$ {(() => {
-                        const res = calculateVanPrice({
-                          baseFare: 80,
-                          distanceInKm: distanceValueKm || 1, // Usando distÃÂ¢ncia real da Routes API
-                          distanceRate: 3.5,
-                          stopCount: transitData.stops.length,
-                          stopRate: 15,
-                          isDaily: transitData.tripType === 'hourly',
-                          hours: 4,
-                          hourlyRate: 45
-                        });
-                        return res.totalPrice.toFixed(2).replace(".", ",");
-                      })()}
-                    </span>
-                 </div>
-              </div>
-            </div>
-
-           {/* ACTIONS FOOTER */}
-           <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent">
-              <div className="flex gap-4">
-                 {mobilityStep > 1 && (
-                   <button onClick={() => setMobilityStep(prev => prev - 1)} className="size-16 rounded-[28px] bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-95 transition-all">
-                      <Icon name="chevron_left" />
-                   </button>
-                 )}
-                 <button 
-                   onClick={() => mobilityStep < 3 ? setMobilityStep(prev => prev + 1) : navigateSubView("mobility_payment")}
-                   className="flex-1 bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
-                 >
-                    <span className="uppercase tracking-widest">{mobilityStep < 3 ? "Próximo Passo" : "Ver Preço & Pedir"}</span>
-                    <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">{mobilityStep < 3 ? 'arrow_forward' : 'bolt'}</span>
-                 </button>
-              </div>
-           </div>
-        </main>
-      </div>
+  const renderMobilityPayment = () => {
+    return (
+      <MobilityPaymentView 
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
+        transitData={transitData}
+        isIziBlackMembership={isIziBlackMembership}
+        walletBalance={walletBalance}
+        selectedCard={selectedCard}
+        handleConfirmMobility={handleConfirmMobility}
+        navigateSubView={navigateSubView}
+        marketConditions={marketConditions}
+        calculateDynamicPrice={calculateDynamicPrice}
+      />
     );
   };
 
@@ -6393,7 +6168,7 @@ const navigateSubView = (target: string) => {
                 <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
                   <div className="text-center mb-8">
                     <h3 className="text-xl font-black text-white">Horário</h3>
-                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Das 08:00 ÃÆ’ s 22:00</p>
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Das 08:00 às 22:00</p>
                   </div>
                   <div className="grid grid-cols-3 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
                     {["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"].map((h) => (
@@ -6413,7 +6188,7 @@ const navigateSubView = (target: string) => {
                <span className="material-symbols-outlined text-amber-400 text-sm">warning</span>
              </div>
              <p className="text-[10px] font-bold text-amber-400/80 leading-relaxed uppercase tracking-wider">
-                Certifique-se de que o objeto esteja bem embalado. Não transportamos itens proibidos por lei ou inflamáveis.
+               Certifique-se de que o objeto esteja bem embalado. Não transportamos itens proibidos por lei ou inflamáveis.
              </p>
           </div>
         </main>
@@ -6437,453 +6212,6 @@ const navigateSubView = (target: string) => {
       </div>
     );
   };
-
-  const renderTaxiWizard = () => {
-    return (
-      <div className="absolute inset-0 z-[120] bg-transparent text-zinc-100 flex flex-col overflow-hidden">
-        {/* MAPA NO FUNDO */}
-        <div className="absolute inset-0 z-0 h-full">
-           <IziTrackingMap 
-             routePolyline={routePolyline} 
-             driverLoc={driverLocation} 
-             userLoc={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} 
-             onMyLocationClick={updateLocation} 
-           />
-           <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-zinc-950/90 pointer-events-none" />
-        </div>
-
-        <header className="relative z-50 flex items-center justify-between px-6 pt-10">
-          <button onClick={() => setSubView("none")} className="size-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400">
-            <Icon name="arrow_back" />
-          </button>
-          <div className="text-right">
-             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
-                {transitData.type === 'mototaxi' ? "MotoTáxi" : "Motorista Particular"}
-             </h2>
-             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Viagem Rápida & Segura</p>
-          </div>
-        </header>
-
-        <main className="relative z-40 mt-auto bg-zinc-900/60 backdrop-blur-3xl border-t border-white/10 flex flex-col h-[60vh] rounded-t-[40px] shadow-[0_-20px_80px_rgba(0,0,0,0.6)]">
-           <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
-              {mobilityStep === 1 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Qual o seu destino?</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Confirme os pontos de partida e chegada.</p>
-                   </div>
-                   
-                   <div className="space-y-6">
-                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="bg-zinc-900/40 backdrop-blur-3xl p-6 rounded-[35px] border border-white/10 shadow-2xl shadow-black/40 group transition-all">
-                         <div className="flex justify-between items-center mb-3">
-                            <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] ml-1">Origem</p>
-                            <button onClick={() => updateLocation()} disabled={userLocation.loading} className="text-[8px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/10 px-3 py-1.5 rounded-xl disabled:opacity-50 active:scale-95 transition-all">
-                               {userLocation.loading ? 'Buscando...' : 'Meu Local'}
-                            </button>
-                          </div>
-                         <AddressSearchInput 
-                           initialValue={transitData.origin}
-                           placeholder="De onde você está saindo?"
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 placeholder:text-zinc-600"
-                           userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                           onSelect={(p) => {
-                             const ori = p.formatted_address || "";
-                             setTransitData(prev => ({...prev, origin: ori}));
-                           }}
-                         />
-                      </motion.div>
-
-                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="bg-zinc-900/40 backdrop-blur-3xl p-6 rounded-[35px] border border-white/10 shadow-2xl shadow-black/40 group transition-all">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-3 ml-1">Destino</p>
-                         <AddressSearchInput 
-                           initialValue={transitData.destination}
-                           placeholder="Para onde vamos?"
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 placeholder:text-zinc-600"
-                           userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                          onSelect={(p) => {
-                            const dest = p.formatted_address || "";
-                            setTransitData(prev => ({...prev, destination: dest}));
-                          }}
-                         />
-                      </motion.div>
-
-                      {/* VEÃCULO E PREÇO IMEDIATO */}
-                       <AnimatePresence>
-                         {transitData.destination && transitData.origin && (
-                           <motion.div 
-                             initial={{ opacity: 0, height: 0 }}
-                             animate={{ opacity: 1, height: 'auto' }}
-                             exit={{ opacity: 0, height: 0 }}
-                             className="space-y-4 pt-2 overflow-hidden"
-                           >
-                              <div className="flex items-center gap-3 px-2">
-                                 <h4 className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.3em]">Tipo de Transporte</h4>
-                                 <div className="h-px flex-1 bg-white/5" />
-                              </div>
-                              
-                              <div className="grid grid-cols-2 gap-3 pb-2">
-                                 {[
-                                   { id: 'mototaxi', label: 'MotoTáxi', icon: 'motorcycle', color: 'text-yellow-400', sub: 'Rápido & Ãgil' },
-                                   { id: 'carro', label: 'Carro', icon: 'directions_car', color: 'text-white', sub: 'Executivo Premium' }
-                                 ].map((v) => {
-                                   const isSelected = transitData.type === v.id;
-                                   const price = distancePrices[v.id] || 0;
-                                   
-                                   return (
-                                     <motion.button
-                                       whileHover={{ scale: 1.02, translateY: -2 }}
-                                       whileTap={{ scale: 0.98 }}
-                                       key={v.id}
-                                       onClick={() => setTransitData(prev => ({ ...prev, type: v.id as any, estPrice: price }))}
-                                       className={`p-6 rounded-[35px] transition-all duration-500 flex flex-col items-center gap-2 border relative group overflow-hidden backdrop-blur-3xl
-                                         ${isSelected ? 'bg-yellow-400 border-yellow-400 shadow-[0_25px_50px_rgba(250,204,21,0.2)]' : 'bg-zinc-900/40 border-white/10 hover:border-white/20 shadow-xl shadow-black/20'}
-                                       `}
-                                     >
-                                        <div className={`size-14 rounded-2xl flex items-center justify-center transition-all duration-500
-                                          ${isSelected ? 'bg-black/10 scale-110' : 'bg-white/5 group-hover:bg-white/10'}
-                                        `}>
-                                           <span className={`material-symbols-outlined text-3xl ${isSelected ? 'text-black' : v.color}`}>{v.icon}</span>
-                                        </div>
-                                        <div className="text-center z-10">
-                                           <p className={`text-[11px] font-black uppercase tracking-tight ${isSelected ? 'text-black' : 'text-zinc-100'}`}>{v.label}</p>
-                                           <p className={`text-[8px] font-black uppercase tracking-widest mt-1 opacity-50 ${isSelected ? 'text-black' : 'text-zinc-500'}`}>{v.sub}</p>
-                                           <div className="mt-4">
-                                              <p className={`text-base font-black tracking-tight ${isSelected ? 'text-black' : 'text-yellow-400'} ${isCalculatingPrice ? 'animate-pulse' : ''}`}>
-                                                {isCalculatingPrice ? 'Calculando...' : price > 0 ? `R$ ${price.toFixed(2).replace(".", ",")}` : '---'}
-                                              </p>
-                                           </div>
-                                        </div>
-                                     </motion.button>
-                                   );
-                                 })}
-                              </div>
-                           </motion.div>
-                         )}
-                       </AnimatePresence>
-                   </div>
-                </motion.section>
-              )}
-
-              {mobilityStep === 2 && (
-                <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-                   <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-white tracking-tight">Resumo da Viagem</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Confirme os detalhes e o preço antes de pedir.</p>
-                   </div>
-
-                   <div className="bg-zinc-900/40 border border-white/5 p-7 rounded-[40px] space-y-8 shadow-2xl">
-                      {/* PAGAMENTO */}
-                      <div className="flex items-center gap-5 cursor-pointer group" onClick={() => { setPaymentsOrigin("checkout"); setSubView("mobility_payment"); }}>
-                         <div className="size-14 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-500/20 transition-all">
-                            <span className="material-symbols-outlined text-blue-400 text-2xl">credit_card</span>
-                         </div>
-                         <div className="flex-1">
-                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">Pagamento</p>
-                            <div className="flex items-center justify-between">
-                               <p className="text-sm font-black text-white italic">
-                                 {paymentMethod === 'dinheiro' ? 'Dinheiro' : paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'bitcoin_lightning' ? 'BTC Lightning' : paymentMethod === 'saldo' ? 'Saldo IZI' : 'Escolher Método'}
-                               </p>
-                               <span className="material-symbols-outlined text-zinc-700 text-sm group-hover:text-yellow-400 transition-colors">expand_more</span>
-                            </div>
-                         </div>
-                      </div>
-
-                      <div className="h-px bg-white/5" />
-
-                      {/* PREÇO E INFO */}
-                      <div className="flex items-center gap-5">
-                         <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
-                            <span className="material-symbols-outlined text-yellow-400 text-2xl italic">local_atm</span>
-                         </div>
-                         <div className="flex-1">
-                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">Preço Estimado</p>
-                            <div className="flex items-center gap-3">
-                               <p className="text-3xl font-black text-yellow-400 tracking-tighter">
-                                 {distancePrices[transitData.type] > 0 
-                                   ? `R$ ${distancePrices[transitData.type].toFixed(2).replace(".", ",")}` 
-                                   : isCalculatingPrice ? "..." : "---"}
-                               </p>
-                               {marketConditions.surgeMultiplier > 1 && (
-                                 <div className="px-2 py-0.5 rounded flex items-center gap-1 bg-yellow-400/10 border border-yellow-400/20">
-                                   <span className="material-symbols-outlined text-[10px] text-yellow-400 font-black italic">bolt</span>
-                                   <span className="text-[9px] font-black text-yellow-400 tracking-tighter">{marketConditions.surgeMultiplier}x</span>
-                                 </div>
-                               )}
-                            </div>
-                            <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
-                               <span className="material-symbols-outlined text-[12px]">schedule</span>
-                               Tempo Est: {routeDistance ? `${Math.round(parseInt(routeDistance)/1000 * 2.2)} min` : '-- min'}
-                            </p>
-                         </div>
-                      </div>
-
-                      <div className="h-px bg-white/5" />
-
-                      {/* CLIENTE LEVEL */}
-                      <div className="flex items-center gap-5">
-                         <div className="size-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                            <span className="material-symbols-outlined text-emerald-400 text-2xl">verified_user</span>
-                         </div>
-                         <div className="flex-1">
-                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">Perfil do Passageiro</p>
-                            <div className="flex items-center gap-3">
-                               <span className="text-[10px] font-black text-white tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 uppercase">Tier {userLevel >= 10 ? 'Master' : 'Classic'}</span>
-                               {userLevel >= 10 && <span className="material-symbols-outlined text-yellow-400 text-sm">workspace_premium</span>}
-                            </div>
-                         </div>
-                      </div>
-                   </div>
-                </motion.section>
-              )}
-           </div>
-
-           <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent">
-              <button 
-                onClick={() => {
-                  if (mobilityStep === 1) {
-                    if (!transitData.origin || !transitData.destination) {
-                      showToast("Preencha todos os endereços", "warning");
-                      return;
-                    }
-                    setMobilityStep(2);
-                  } else {
-                    setPaymentsOrigin("checkout");
-                    navigateSubView("mobility_payment");
-                  }
-                }}
-                disabled={mobilityStep === 1 ? (!transitData.origin || !transitData.destination) : (!distancePrices[transitData.type] || isCalculatingPrice)}
-                className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[30px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:grayscale"
-              >
-                 <span className="uppercase tracking-[0.2em] text-sm">{mobilityStep === 1 ? "Próximo" : "Confirmar Viagem"}</span>
-                 <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">{mobilityStep === 1 ? 'arrow_forward' : 'bolt'}</span>
-              </button>
-           </div>
-        </main>
-      </div>
-    );
-  };
-
-  const renderMobilityPayment = () => {
-    const bv = marketConditions.settings.baseValues;
-    const basePrices: Record<string, number> = { mototaxi: bv.mototaxi_min, carro: bv.carro_min, van: bv.van_min, utilitario: bv.utilitario_min };
-    const isShippingService = ['utilitario', 'van', 'frete'].includes(transitData.type);
-    const rawPrice = (transitData.estPrice > 0 ? transitData.estPrice : calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min)) ?? 0;
-    const price = (isIziBlackMembership && isShippingService) ? 0 : rawPrice;
-
-    const PaymentMethodButton = ({ id, icon, label, sub, colorClass, disabled = false }: any) => {
-      const isSelected = paymentMethod === id;
-      return (
-        <motion.button 
-          whileTap={{ scale: disabled ? 1 : 0.98 }}
-          disabled={disabled}
-          onClick={() => setPaymentMethod(id)}
-          className={`w-full group relative overflow-hidden flex items-center gap-4 p-5 rounded-[32px] transition-all duration-500 border
-            ${disabled ? 'opacity-30 grayscale cursor-not-allowed' : 'active:scale-[0.98]'}
-            ${isSelected ? 'bg-yellow-400 font-bold border-yellow-400 shadow-[0_20px_40px_rgba(255,217,9,0.15)]' : 'bg-zinc-900/40 backdrop-blur-xl border-white/5 hover:border-white/10 shadow-2xl shadow-black/50'}
-          `}
-        >
-          <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors duration-500
-            ${isSelected ? 'bg-black/10' : `bg-white/5 ${colorClass}`}
-          `}>
-             <span className={`material-symbols-outlined text-2xl ${isSelected ? 'text-black' : ''}`}>{icon}</span>
-          </div>
-          <div className="flex-1 text-left">
-             <p className={`text-[11px] font-black uppercase tracking-widest mb-1 leading-none ${isSelected ? 'text-black' : 'text-zinc-500'}`}>{label}</p>
-             <p className={`text-[10px] font-bold tracking-tight ${isSelected ? 'text-black/60' : 'text-zinc-600'}`}>{sub}</p>
-          </div>
-          {disabled ? (
-              <span className="text-[8px] font-black text-red-500/60 bg-red-500/10 px-3 py-1 rounded-lg uppercase tracking-widest">Bloqueado</span>
-          ) : (
-              <span className={`material-symbols-outlined text-sm ${isSelected ? 'text-black/40' : 'text-zinc-800'}`}>chevron_right</span>
-          )}
-        </motion.button>
-      );
-    };
-
-    return (
-      <div className="absolute inset-0 z-[115] bg-black flex flex-col hide-scrollbar overflow-y-auto">
-        <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md px-6 py-8 flex items-center gap-4 border-b border-white/5">
-          <button onClick={() => {
-            if (transitData.type === 'van') navigateSubView("van_wizard");
-            else if (transitData.type === 'utilitario') navigateSubView("shipping_details");
-            else if (transitData.type === 'frete') navigateSubView("freight_wizard");
-            else navigateSubView("taxi_wizard");
-          }} className="size-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-white active:scale-90 transition-all shadow-xl">
-            <span className="material-symbols-outlined text-lg">arrow_back_ios_new</span>
-          </button>
-          <div className="flex flex-col text-left">
-            <h2 className="text-2xl font-black text-white tracking-tighter leading-none italic uppercase">Confirmar</h2>
-            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mt-1.5 opacity-80">Check-out Premium</p>
-          </div>
-        </header>
-
-        <div className="flex-1 px-5 py-6 space-y-10 pb-8">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Resumo do Serviço</h3>
-              <div className="px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/20">
-                <span className="text-xs font-black text-yellow-400 italic">R$ {price.toFixed(2).replace(".", ",")}</span>
-              </div>
-            </div>
-            
-            <div className="bg-zinc-900/30 backdrop-blur-xl rounded-[40px] p-8 border border-white/5 shadow-2xl relative overflow-hidden group">
-               <div className="absolute top-0 right-0 size-32 bg-yellow-400/5 blur-[60px] rounded-full -mr-16 -mt-16 pointer-events-none" />
-               <div className="flex items-center gap-4 mb-8">
-                  <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
-                    <span className="material-symbols-outlined text-yellow-400 text-2xl">
-                      {transitData.type === 'mototaxi' ? 'motorcycle' : transitData.type === 'carro' ? 'directions_car' : transitData.type === 'van' ? 'airport_shuttle' : 'local_shipping'}
-                    </span>
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-black text-white italic uppercase tracking-tighter leading-none">
-                      {transitData.type === 'mototaxi' ? 'MotoTáxi' : transitData.type === 'carro' ? 'Particular' : transitData.type === 'van' ? 'Van & Grupos' : 'Frete & Mudança'}
-                    </h4>
-                    <p className="text-[9px] font-black text-yellow-400/60 uppercase tracking-[0.2em] mt-1">{transitData.vehicleCategory || 'Serviço sob demanda'}</p>
-                  </div>
-               </div>
-
-               <div className="grid grid-cols-2 gap-6 mb-8">
-                  {transitData.type === 'van' && (
-                    <>
-                      <div>
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Passageiros</p>
-                        <p className="text-xs font-bold text-white">{transitData.passengers} pessoas</p>
-                      </div>
-                      <div>
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Tipo</p>
-                        <p className="text-xs font-bold text-white uppercase">{transitData.tripType === 'round_trip' ? 'Ida e Volta' : transitData.tripType === 'hourly' ? 'Diária' : 'Ida'}</p>
-                      </div>
-                    </>
-                  )}
-                  {(transitData.type === 'frete' || transitData.type === 'utilitario') && (
-                    <>
-                      <div>
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Ajudantes</p>
-                        <p className="text-xs font-bold text-white">{transitData.helpers === 0 ? 'Sem ajudante' : `${transitData.helpers} ${transitData.helpers === 1 ? 'ajudante' : 'ajudantes'}`}</p>
-                      </div>
-                      <div>
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Escadas</p>
-                        <p className="text-xs font-bold text-white">{(transitData.accessibility.stairsAtOrigin || transitData.accessibility.stairsAtDestination) ? 'Sim' : 'Não'}</p>
-                      </div>
-                    </>
-                  )}
-               </div>
-
-               <div className="space-y-6">
-                  <div className="flex items-start gap-5 text-left">
-                     <div className="size-2 rounded-full bg-yellow-400 shrink-0 mt-1.5 shadow-[0_0_10px_rgba(255,217,9,1)]" />
-                     <div>
-                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1 leading-none">Origem</p>
-                        <p className="text-sm font-bold text-zinc-300 leading-relaxed line-clamp-2">{transitData.origin}</p>
-                     </div>
-                  </div>
-                  <div className="h-4 w-px bg-zinc-800 ml-1" />
-                  <div className="flex items-start gap-5 text-left">
-                     <div className="size-2 rounded-full bg-zinc-700 shrink-0 mt-1.5" />
-                     <div>
-                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1 leading-none">Destino</p>
-                        <p className="text-sm font-bold text-zinc-400 leading-relaxed line-clamp-2">{transitData.destination || "Aguardando destino..."}</p>
-                     </div>
-                  </div>
-               </div>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] px-2 flex items-center gap-3">
-              <span>Selecione o Pagamento</span>
-              <div className="h-px flex-1 bg-white/5" />
-            </h3>
-            
-            <div className="grid grid-cols-1 gap-3">
-              {/* Cartão via App (Destaque se houver) */}
-              <PaymentMethodButton 
-                id="cartao" 
-                icon="credit_card" 
-                label="Cartão via App" 
-                sub={selectedCard ? `${selectedCard.brand} â€¢â€¢â€¢â€¢ ${selectedCard.last4}` : "Pague com segurança pelo App"}
-                colorClass="text-blue-400"
-              />
-
-              {/* PIX (Popular) */}
-              <PaymentMethodButton 
-                id="pix" 
-                icon="pix" 
-                label="PIX Instantâneo" 
-                sub="Aprovação imediata via QR Code"
-                colorClass="text-emerald-400"
-              />
-
-              {/* Bitcoin Lightning (Premium/Stealth) */}
-              <PaymentMethodButton 
-                id="bitcoin_lightning" 
-                icon="bolt" 
-                label="Bitcoin Lightning" 
-                sub="Pagamento instantâneo em Satoshis"
-                colorClass="text-orange-400"
-              />
-
-              {/* Saldo IZI */}
-              <PaymentMethodButton 
-                id="saldo" 
-                icon="account_balance_wallet" 
-                label="Saldo IZI Wallet" 
-                sub={`R$ ${walletBalance.toFixed(2).replace(".", ",")} disponível`}
-                colorClass="text-cyan-400"
-                disabled={walletBalance < price}
-              />
-
-              <PaymentMethodButton 
-                id="cartao_entrega" 
-                icon="contactless" 
-                label="Cartão na Entrega" 
-                sub="Pague com maquininha ao motoboy"
-                colorClass="text-zinc-500"
-              />
-
-              {/* Dinheiro (Espécie) */}
-              <PaymentMethodButton 
-                id="dinheiro" 
-                icon="payments" 
-                label="Dinheiro em Espécie" 
-                sub="Pague diretamente ao prestador"
-                colorClass="text-zinc-600"
-              />
-            </div>
-          </div>
-
-          {/* Footer ultra-minimalista */}
-          <div className="flex flex-col items-center gap-6 pt-10 pb-10">
-             <div className="flex items-center gap-4 group cursor-help">
-               <div className="size-8 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-700 group-hover:text-yellow-400 group-hover:border-yellow-400/20 transition-all">
-                  <span className="material-symbols-outlined text-sm">enhanced_encryption</span>
-               </div>
-               <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.4em]">Proteção Izi Security â€¢ RSA 4096-bit</p>
-             </div>
-             
-             <button className="text-[9px] font-black text-zinc-800 uppercase tracking-widest hover:text-zinc-500 transition-colors">
-               Termos de Uso e Política de Privacidade
-             </button>
-          </div>
-        </div>
-
-        {/* BOTÃO DE CONFIRMAÇÃO FINAL */}
-        <div className="fixed bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black via-black to-transparent z-50 pointer-events-none">
-          <div className="pointer-events-auto">
-            <button 
-              onClick={() => handleConfirmMobility(paymentMethod)}
-              disabled={!paymentMethod}
-              className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[30px] shadow-2xl active:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale group"
-            >
-              <span className="uppercase tracking-[0.2em] text-sm">Solicitar Viagem</span>
-              <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">bolt</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
 
   // Comentario limpo
   const renderWaitingDriver = () => {
