@@ -251,6 +251,35 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                 );
               })}
             </div>
+
+            {/* BOTÃO DE CANCELAMENTO - POSIÇÃO DE DESTAQUE */}
+            {(() => {
+                const canCancel = ['novo', 'pendente', 'pendente_pagamento', 'waiting_merchant', 'waiting_driver'].includes(selectedItem.status);
+                if (!canCancel) return null;
+                
+                return (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-6"
+                  >
+                    <button
+                      onClick={() => {
+                        if(window.confirm("Deseja realmente cancelar este pedido?")) {
+                          onCancelOrder(selectedItem.id);
+                        }
+                      }}
+                      className="w-full py-5 rounded-[28px] bg-gradient-to-r from-rose-500/10 to-rose-600/5 border border-rose-500/20 text-rose-500 font-black text-[10px] uppercase tracking-[0.25em] active:scale-95 transition-all flex items-center justify-center gap-3 group hover:border-rose-500/40 hover:from-rose-500 hover:to-rose-600 hover:text-white shadow-xl shadow-rose-500/5"
+                    >
+                      <span className="material-symbols-outlined text-[18px] group-hover:rotate-90 transition-transform">close</span>
+                      Cancelar este Pedido
+                    </button>
+                    <p className="text-center text-zinc-600 text-[8px] font-black uppercase tracking-widest mt-3 opacity-60">
+                      Disponível enquanto o lojista não aceita
+                    </p>
+                  </motion.div>
+                );
+            })()}
           </section>
 
           {/* ESTABELECIMENTO / MOTORISTA */}
@@ -414,21 +443,6 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
               </div>
             </div>
           </section>
-
-          {/* CANCELAR PEDIDO - Somente se nÃ£o foi aceito/preparando */}
-          {['novo', 'pendente', 'pendente_pagamento', 'pago', 'pending', 'waiting_merchant', 'waiting_driver'].includes(selectedItem.status) && (
-            <button
-              onClick={() => {
-                if(window.confirm("Deseja realmente cancelar este pedido?")) {
-                  onCancelOrder(selectedItem.id);
-                }
-              }}
-              className="w-full py-5 rounded-3xl bg-rose-500/10 border border-rose-500/20 text-rose-500 font-black text-[9px] uppercase tracking-[0.3em] active:scale-95 transition-all flex items-center justify-center gap-2 mb-3 mt-4 hover:bg-rose-500 hover:text-white"
-            >
-              <span className="material-symbols-outlined text-[16px]">close</span>
-              Cancelar Pedido
-            </button>
-          )}
 
           {/* AJUDA */}
           <button
