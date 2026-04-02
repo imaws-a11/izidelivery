@@ -88,7 +88,7 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
         </div>
       </header>
 
-      <div className="flex-1 px-8 py-10 space-y-12 pb-48">
+      <div className="flex-1 px-8 py-10 space-y-12 pb-8">
         <section className="space-y-6">
           <div className="flex items-center justify-between px-2">
             <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em]">Resumo do Valor</h3>
@@ -156,14 +156,6 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
             />
 
             <PaymentMethodButton 
-              id="cartao_entrega" 
-              icon="contactless" 
-              label="Cartão na Entrega" 
-              sub="Maquininha com o prestador"
-              colorClass="text-zinc-500"
-            />
-
-            <PaymentMethodButton 
               id="dinheiro" 
               icon="payments" 
               label="Dinheiro em Espécie" 
@@ -174,7 +166,7 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
         </section>
 
         {/* Footer info */}
-        <div className="flex flex-col items-center gap-6 pt-10 pb-10">
+        <div className="flex flex-col items-center gap-6 pt-6 pb-28">
            <div className="flex items-center gap-4 group">
              <div className="size-10 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-700 shadow-inner group-hover:text-yellow-400 transition-all">
                 <span className="material-symbols-outlined text-base">enhanced_encryption</span>

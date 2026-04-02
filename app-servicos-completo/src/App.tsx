@@ -167,7 +167,7 @@ function App() {
   const [schedChatInputState, setSchedChatInputState] = useState('');
   const [schedMessagesState, setSchedMessagesState] = useState<{id: string; text: string; from: 'user'|'driver'; time: string}[]>([]);
   const [isSavingObsState, setIsSavingObsState] = useState(false);
-  const [aiMessage, setAiMessage] = useState("OlÃ¡! Sou seu assistente Izi. Percebi que vocÃª gosta de culinÃ¡ria japonesa. Que tal conferir as ofertas do Sushi Zen?");
+  const [aiMessage, setAiMessage] = useState("Olá! Sou seu assistente Izi. Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?");
   const [isIziBlackMembership, setIsIziBlackMembership] = useState(false);
   const [iziCashbackEarned, setIziCashbackEarned] = useState(0);
   const [showIziBlackCard, setShowIziBlackCard] = useState(false);
@@ -256,7 +256,7 @@ function App() {
 
   const handleDeleteCard = async (cardId: string) => {
     if (!userId) return;
-    if (await showConfirm({ message: "Remover este cartÃ£o?" })) {
+    if (await showConfirm({ message: "Remover este cartão?" })) {
       await supabase.from("payment_methods").delete().eq("id", cardId).eq("user_id", userId);
       const updated = savedCards.filter((c: any) => c.id !== cardId);
       setSavedCards(updated);
@@ -321,7 +321,7 @@ function App() {
   const handleSaveAddress = async () => {
     if (!userId) return;
     if (!newAddrLabel.trim() || !newAddrStreet.trim()) {
-      toastError('Preencha pelo menos o rÃ³tulo e a rua.');
+      toastError('Preencha pelo menos o rótulo e a rua.');
       return;
     }
     setIsSavingAddress(true);
@@ -334,7 +334,7 @@ function App() {
           city: newAddrCity.trim() || null,
         }).eq('id', editingAddress.id);
         if (error) throw error;
-        toastSuccess('EndereÃ§o atualizado!');
+        toastSuccess('Endereço atualizado!');
       } else {
         const { error } = await supabase.from('saved_addresses').insert({
           user_id: userId,
@@ -345,7 +345,7 @@ function App() {
           is_active: savedAddresses.length === 0,
         });
         if (error) throw error;
-        toastSuccess('EndereÃ§o salvo com sucesso!');
+        toastSuccess('Endereço salvo com sucesso!');
       }
       resetAddressForm();
       fetchSavedAddresses(userId);
@@ -361,7 +361,7 @@ function App() {
     try {
       const { error } = await supabase.from('saved_addresses').delete().eq('id', addrId);
       if (error) throw error;
-      toastSuccess('EndereÃ§o removido.');
+      toastSuccess('Endereço removido.');
       fetchSavedAddresses(userId);
     } catch (e: any) {
       toastError('Erro ao remover: ' + e.message);
@@ -374,10 +374,10 @@ function App() {
       await supabase.from('saved_addresses').update({ is_active: false }).eq('user_id', userId);
       const { error } = await supabase.from('saved_addresses').update({ is_active: true }).eq('id', addrId);
       if (error) throw error;
-      toastSuccess('EndereÃ§o padrÃ£o atualizado!');
+      toastSuccess('Endereço padrão atualizado!');
       fetchSavedAddresses(userId);
     } catch (e: any) {
-      toastError('Erro ao definir endereÃ§o: ' + e.message);
+      toastError('Erro ao definir endereço: ' + e.message);
     }
   };
 
@@ -448,7 +448,7 @@ function App() {
   const updateLocation = (onSuccess?: (address: string) => void) => {
     setUserLocation((prev) => ({ ...prev, loading: true }));
     if (!("geolocation" in navigator)) {
-      setUserLocation({ address: "GeolocalizaÃ§Ã£o nÃ£o disponÃ­vel", loading: false });
+      setUserLocation({ address: "Geolocalização não disponível", loading: false });
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -487,7 +487,7 @@ function App() {
               `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
             );
             const nomData = await nomRes.json();
-            address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "LocalizaÃ§Ã£o atual";
+            address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "Localização atual";
           }
 
           setUserLocation({ address, loading: false, lat: latitude, lng: longitude });
@@ -498,7 +498,7 @@ function App() {
         }
       },
       () => {
-        setUserLocation({ address: "PermissÃ£o de localizaÃ§Ã£o negada", loading: false });
+        setUserLocation({ address: "Permissão de localização negada", loading: false });
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -546,24 +546,24 @@ function App() {
       // [Comentario Limpo pelo Sistema]
           if (oldOrder && newOrder.status !== oldOrder.status) {
             const statusMessages: Record<string, string> = {
-              'novo': 'Pagamento aprovado! O lojista jÃ¡ recebeu seu pedido. âš¡',
-              'pendente_pagamento': 'Aguardando confirmaÃ§Ã£o do pagamento... ðŸ’³',
+              'novo': 'Pagamento aprovado! O lojista já recebeu seu pedido. ⚡',
+              'pendente_pagamento': 'Aguardando confirmação do pagamento... 💳',
               'pendente': 'O lojista recebeu seu pedido! ðŸ¥³',
               'aceito': 'O estabelecimento aceitou seu pedido! ðŸ¥³',
-              'confirmado': 'Pedido confirmado! O preparo comeÃ§ou. âœ…',
-              'preparando': 'Seu pedido estÃ¡ sendo preparado com carinho! ðŸ¥—',
-              'no_preparo': 'Seu pedido jÃ¡ estÃ¡ no preparo! ðŸ¥—',
-              'waiting_driver': 'Pedido aceito! Buscando o melhor entregador para vocÃª. ðŸ›µ',
+              'confirmado': 'Pedido confirmado! O preparo começou. ✅',
+              'preparando': 'Seu pedido está sendo preparado com carinho! 🥗',
+              'no_preparo': 'Seu pedido já está no preparo! 🥗',
+              'waiting_driver': 'Pedido aceito! Buscando o melhor entregador para você. 🛵',
               'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. ðŸ“¦',
-              'saiu_para_coleta': 'O motoboy aceitou e estÃ¡ indo retirar seu pedido! ðŸ›µ',
-              'picked_up': 'Pedido coletado! O motoboy iniciou a entrega para vocÃª. ðŸš€',
-              'a_caminho': 'Motoboy a caminho! Sua entrega estÃ¡ em rota. ðŸ›µ',
-              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! ðŸ›µ',
-              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. ðŸ›µ',
-              'no_local': 'O motoboy chegou ao seu endereÃ§o! ðŸ””',
+              'saiu_para_coleta': 'O motoboy aceitou e está indo retirar seu pedido! 🛵',
+              'picked_up': 'Pedido coletado! O motoboy iniciou a entrega para você. 🚀',
+              'a_caminho': 'Motoboy a caminho! Sua entrega está em rota. 🛵',
+              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! 🛵',
+              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. 🛵',
+              'no_local': 'O motoboy chegou ao seu endereço! 🔔',
               'concluido': 'Pedido entregue com sucesso! Bom apetite. âœ¨',
-              'cancelado': 'Ah nÃ£o! Seu pedido foi cancelado. âš ï¸',
-              'recusado': 'Desculpe, o estabelecimento nÃ£o pÃ´de aceitar o pedido agora. âš ï¸'
+              'cancelado': 'Ah não! Seu pedido foi cancelado. âš ï¸',
+              'recusado': 'Desculpe, o estabelecimento não pôde aceitar o pedido agora. âš ï¸'
             };
 
             const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
@@ -643,7 +643,7 @@ function App() {
   const handleCancelOrder = async (orderId: string) => {
     console.log("[DEBUG] Iniciando cancelamento do pedido:", orderId);
     if (!orderId) {
-      toastError("ID do pedido nÃ£o encontrado.");
+      toastError("ID do pedido não encontrado.");
       return;
     }
 
@@ -667,7 +667,7 @@ function App() {
       setSubView("none");
     } catch (err: any) {
       console.error("Erro ao cancelar pedido:", err);
-      toastError(`NÃ£o foi possÃ­vel cancelar: ${err.message || 'Erro de rede'}`);
+      toastError(`Não foi possível cancelar: ${err.message || 'Erro de rede'}`);
     }
   };
 
@@ -767,23 +767,23 @@ function App() {
 
   const validateCouponRules = async (coupon: any, subtotal: number) => {
     if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
-      return "Este cupom jÃ¡ expirou.";
+      return "Este cupom já expirou.";
     }
 
     if (subtotal < (coupon.min_order_value || 0)) {
-      return `O valor mÃ­nimo para este cupom Ã© R$ ${coupon.min_order_value.toFixed(2)}.`;
+      return `O valor mínimo para este cupom é R$ ${coupon.min_order_value.toFixed(2)}.`;
     }
 
     if (coupon.usage_count >= coupon.max_usage) {
-      return "Este cupom jÃ¡ atingiu o limite de usos.";
+      return "Este cupom já atingiu o limite de usos.";
     }
 
     if (coupon.is_vip && !isIziBlackMembership) {
-      return "Este cupom Ã© exclusivo para membros IZI Black.";
+      return "Este cupom é exclusivo para membros IZI Black.";
     }
 
     if (coupon.id && await hasBenefitBeenUsed("coupon", coupon.id)) {
-      return "Este cupom jÃ¡ foi utilizado por este CPF/usuÃ¡rio.";
+      return "Este cupom já foi utilizado por este CPF/usuário.";
     }
 
     return null;
@@ -793,7 +793,7 @@ function App() {
     const sourceId = getFlashOfferSourceId(item);
     if (!item?.is_flash_offer || !sourceId) return null;
     if (await hasBenefitBeenUsed("flash_offer", sourceId)) {
-      return "Esta oferta jÃ¡ foi utilizada por este CPF/usuÃ¡rio.";
+      return "Esta oferta já foi utilizada por este CPF/usuário.";
     }
     return null;
   };
@@ -869,7 +869,7 @@ function App() {
         .single();
 
       if (error || !data) {
-        setCouponError("Cupom invÃ¡lido ou expirado.");
+        setCouponError("Cupom inválido ou expirado.");
         setAppliedCoupon(null);
         return;
       }
@@ -980,7 +980,7 @@ function App() {
 
         const grouped: Record<string, any[]> = {};
         products.forEach((p: any) => {
-          const cat = p.category || p.subcategory || (isRestaurant ? "CardÃ¡pio" : "Produtos");
+          const cat = p.category || p.subcategory || (isRestaurant ? "Cardápio" : "Produtos");
           if (!grouped[cat]) grouped[cat] = [];
           const linkedOffer =
             offersByProductId.get(String(p.id)) ||
@@ -1135,9 +1135,9 @@ function App() {
   } | null>(null);
 
   const [quests] = useState([
-    { id: 1, title: 'Explorador Urbano', desc: 'PeÃ§a em 3 categorias diferentes hoje', xp: 500, progress: 1, total: 3, icon: 'explore', color: '#fbbf24' },
+    { id: 1, title: 'Explorador Urbano', desc: 'Peça em 3 categorias diferentes hoje', xp: 500, progress: 1, total: 3, icon: 'explore', color: '#fbbf24' },
     { id: 2, title: 'Amigo do Peito', desc: 'Indique um amigo para a Izi', xp: 1000, progress: 0, total: 1, icon: 'group_add', color: '#10b981' },
-    { id: 3, title: 'Madrugador Izi', desc: 'PeÃ§a cafÃ© da manhÃ£ antes das 9h', xp: 300, progress: 0, total: 1, icon: 'wb_sunny', color: '#f59e0b' },
+    { id: 3, title: 'Madrugador Izi', desc: 'Peça café da manhã antes das 9h', xp: 300, progress: 0, total: 1, icon: 'wb_sunny', color: '#f59e0b' },
   ]);
 
       // [Comentario Limpo pelo Sistema]
@@ -1157,8 +1157,8 @@ function App() {
     waiting_driver: "Aguardando Entregador",
     aceito: "Confirmado",
     confirmado: "Confirmado",
-    preparando: "Em PreparaÃ§Ã£o",
-    no_preparo: "Em PreparaÃ§Ã£o",
+    preparando: "Em Preparação",
+    no_preparo: "Em Preparação",
     pronto: "Pronto",
     a_caminho_coleta: "Indo para Coleta",
     chegou_coleta: "No Local da Coleta",
@@ -1168,7 +1168,7 @@ function App() {
     em_rota: "Em Rota",
     saiu_para_entrega: "Saiu para Entrega",
     no_local: "Chegando",
-    concluido: "ConcluÃ­do",
+    concluido: "Concluído",
     cancelado: "Cancelado",
   };
 
@@ -1205,7 +1205,7 @@ function App() {
     ].includes(status || "");
 
   const getOrderAddress = (order: any) =>
-    String(order?.delivery_address || "EndereÃ§o nÃ£o informado")
+    String(order?.delivery_address || "Endereço não informado")
       .split("| ITENS:")[0]
       .split("| OBS:")[0]
       .trim();
@@ -1234,7 +1234,7 @@ function App() {
       selectedItem?.merchant_name ||
       "time Izi";
 
-    return `OlÃ¡! Aqui Ã© ${contactName}. Como posso ajudar com seu pedido?`;
+    return `Olá! Aqui é ${contactName}. Como posso ajudar com seu pedido?`;
   };
 
   const openOrderChat = (topic?: string) => {
@@ -1271,17 +1271,17 @@ function App() {
 
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(`${title}\n${text}`);
-        showToast("InformaÃ§Ãµes copiadas para compartilhar.", "success");
+        showToast("Informações copiadas para compartilhar.", "success");
         return;
       }
     } catch (error: any) {
       if (error?.name !== "AbortError") {
-        showToast("NÃ£o foi possÃ­vel compartilhar agora.", "warning");
+        showToast("Não foi possível compartilhar agora.", "warning");
       }
       return;
     }
 
-    showToast("Compartilhamento nÃ£o disponÃ­vel neste dispositivo.", "warning");
+    showToast("Compartilhamento não disponível neste dispositivo.", "warning");
   };
 
   const handleFavoriteAction = (label: string) => {
@@ -1291,7 +1291,7 @@ function App() {
   const handleCallOrderContact = () => {
     const rawPhone = selectedItem?.driver_phone || selectedItem?.merchant_phone || selectedItem?.phone;
     if (!rawPhone) {
-      openOrderChat("Preciso falar com alguÃ©m sobre este pedido");
+      openOrderChat("Preciso falar com alguém sobre este pedido");
       return;
     }
 
@@ -1319,9 +1319,9 @@ function App() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showLojistasModal, setShowLojistasModal] = useState(false);
   const partnerStores = [
-    { id: 'izi_paulista', name: "Izi Hub Central - Paulista", address: "Av. Paulista, 1000, Bela Vista, SÃ£o Paulo - SP", phone: "(11) 98888-7777", hours: "08h - 22h", type: "Hub LogÃ­stico" },
-    { id: 'posto_augusta', name: "Izi Posto Shell - Augusta", address: "Rua Augusta, 500, ConsolaÃ§Ã£o, SÃ£o Paulo - SP", phone: "(11) 97777-6666", hours: "24h", type: "Ponto de Retirada" },
-    { id: 'loja_oscar', name: "Izi Express - Oscar Freire", address: "Rua Oscar Freire, 300, Jardins, SÃ£o Paulo - SP", phone: "(11) 96666-5555", hours: "07h - 23h", type: "Loja Parceira" }
+    { id: 'izi_paulista', name: "Izi Hub Central - Paulista", address: "Av. Paulista, 1000, Bela Vista, São Paulo - SP", phone: "(11) 98888-7777", hours: "08h - 22h", type: "Hub Logístico" },
+    { id: 'posto_augusta', name: "Izi Posto Shell - Augusta", address: "Rua Augusta, 500, Consolação, São Paulo - SP", phone: "(11) 97777-6666", hours: "24h", type: "Ponto de Retirada" },
+    { id: 'loja_oscar', name: "Izi Express - Oscar Freire", address: "Rua Oscar Freire, 300, Jardins, São Paulo - SP", phone: "(11) 96666-5555", hours: "07h - 23h", type: "Loja Parceira" }
   ];
   useEffect(() => { subViewRef.current = subView; }, [subView]);
 
@@ -1566,9 +1566,9 @@ const navigateSubView = (target: string) => {
     receiverName: "",
     receiverPhone: "",
     packageDesc: "",
-    weightClass: "Pequeno (atÃ© 5kg)",
+    weightClass: "Pequeno (até 5kg)",
     // Novos campos para Frete e Van
-    vehicleCategory: "Fiorino/FurgÃ£o",
+    vehicleCategory: "Fiorino/Furgão",
     helpers: 0,
     accessibility: { stairsAtOrigin: false, stairsAtDestination: false, serviceElevator: false },
     cargoPhotos: [] as string[],
@@ -1703,11 +1703,11 @@ const navigateSubView = (target: string) => {
 
     // AI Dynamic Suggestions Cycle
     const aiTips = [
-      "Percebi que vocÃª gosta de culinÃ¡ria japonesa. Que tal conferir as ofertas do Sushi Zen?",
-      "Hoje Ã© sexta! Temos cupons especiais de 20% em bebidas para membros Izi Black. ÃƒÆ’Â°Ãƒâ€¦Â¸Ãƒâ€šÂÃƒâ€šÂ»",
-      "Baseado no seu histÃ³rico, vocÃª costuma pedir em mercados ÃƒÆ’ s 19h. Deseja agendar suas compras?",
-      "O trÃƒÂ¢nsito estÃ¡ pesado hoje. Sugiro usar o MototÃ¡xi para chegar mais rÃ¡pido ao seu destino.",
-      "VocÃª estÃ¡ a apenas 250 XP de subir para o nÃ­vel 13! Que tal um pedido extra hoje?"
+      "Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?",
+      "Hoje é sexta! Temos cupons especiais de 20% em bebidas para membros Izi Black. ÃÆ’Â°Ãâ€¦Â¸Ãâ€šÂÃâ€šÂ»",
+      "Baseado no seu histórico, você costuma pedir em mercados ÃÆ’ s 19h. Deseja agendar suas compras?",
+      "O trÃÂ¢nsito está pesado hoje. Sugiro usar o Mototáxi para chegar mais rápido ao seu destino.",
+      "Você está a apenas 250 XP de subir para o nível 13! Que tal um pedido extra hoje?"
     ];
     let index = 0;
     const interval = setInterval(() => {
@@ -1823,7 +1823,7 @@ const navigateSubView = (target: string) => {
     lat?: number;
     lng?: number;
   }>({
-    address: "Buscando localizaÃ§Ã£o...",
+    address: "Buscando localização...",
     loading: true,
   });
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro" | "cartao_entrega" | "saldo" | "bitcoin_lightning" | "google_pay">(() => (localStorage.getItem("preferredPaymentMethod") as any) || "cartao");
@@ -1883,17 +1883,17 @@ const navigateSubView = (target: string) => {
 
   const foodCategories = [
     { id: "all",        name: "Todos",         icon: "restaurant",    action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
-    { id: "promocoes",  name: "PromoÃ§Ãµes",     icon: "percent",       action: () => { setRestaurantInitialCategory("PromoÃ§Ãµes"); navigateSubView("explore_restaurants"); } },
+    { id: "promocoes",  name: "Promoções",     icon: "percent",       action: () => { setRestaurantInitialCategory("Promoções"); navigateSubView("explore_restaurants"); } },
     { id: "burguer",    name: "Burguer",       icon: "lunch_dining",  action: () => { setRestaurantInitialCategory("Burguer"); navigateSubView("explore_restaurants"); } },
     { id: "pizza",      name: "Pizza",         icon: "local_pizza",   action: () => { setRestaurantInitialCategory("Pizza"); navigateSubView("explore_restaurants"); } },
     { id: "doces",      name: "Doces e Bolos", icon: "cake",          action: () => { setRestaurantInitialCategory("Doces e Bolos"); navigateSubView("explore_restaurants"); } },
     { id: "salgados",   name: "Salgados",      icon: "bakery_dining", action: () => { setRestaurantInitialCategory("Salgados"); navigateSubView("explore_restaurants"); } },
-    { id: "porcoes",    name: "PorÃ§Ãµes",       icon: "ramen_dining",  action: () => { setRestaurantInitialCategory("PorÃ§Ãµes"); navigateSubView("explore_restaurants"); } },
-    { id: "japones",    name: "JaponÃªs",       icon: "set_meal",      action: () => { setRestaurantInitialCategory("JaponÃªs"); navigateSubView("explore_restaurants"); } },
+    { id: "porcoes",    name: "Porções",       icon: "ramen_dining",  action: () => { setRestaurantInitialCategory("Porções"); navigateSubView("explore_restaurants"); } },
+    { id: "japones",    name: "Japonês",       icon: "set_meal",      action: () => { setRestaurantInitialCategory("Japonês"); navigateSubView("explore_restaurants"); } },
     { id: "massas",     name: "Massas",        icon: "dinner_dining", action: () => { setRestaurantInitialCategory("Massas"); navigateSubView("explore_restaurants"); } },
     { id: "carnes",     name: "Carnes",        icon: "kebab_dining",  action: () => { setRestaurantInitialCategory("Carnes"); navigateSubView("explore_restaurants"); } },
     { id: "fit",        name: "Fit",           icon: "eco",           action: () => { setRestaurantInitialCategory("Fit"); navigateSubView("explore_restaurants"); } },
-    { id: "acai",       name: "AÃ§aÃ­",          icon: "grass",         action: () => { setRestaurantInitialCategory("AÃ§aÃ­"); navigateSubView("explore_restaurants"); } },
+    { id: "acai",       name: "Açaí",          icon: "grass",         action: () => { setRestaurantInitialCategory("Açaí"); navigateSubView("explore_restaurants"); } },
     { id: "sorvetes",   name: "Sorvetes",      icon: "icecream",       action: () => { setRestaurantInitialCategory("Sorvetes"); navigateSubView("explore_restaurants"); } },
     { id: "padaria",    name: "Padaria",       icon: "breakfast_dining", action: () => { setRestaurantInitialCategory("Padaria"); navigateSubView("explore_restaurants"); } },
     { id: "daily",      name: "Do Dia",        icon: "today",         action: () => navigateSubView("daily_menus") },
@@ -1901,7 +1901,7 @@ const navigateSubView = (target: string) => {
 
   const lunchCategories = [
     { id: "all",     name: "Todos",           icon: "restaurant" },
-    { id: "promo",   name: "PromoÃ§Ã£o do Dia", icon: "percent" },
+    { id: "promo",   name: "Promoção do Dia", icon: "percent" },
     { id: "monte",   name: "Monte o seu",     icon: "flatware" },
     { id: "pratos",  name: "Pratos feitos",   icon: "rice_bowl" },
     { id: "marmita", name: "Marmitas",        icon: "lunch_dining" },
@@ -1987,7 +1987,7 @@ const navigateSubView = (target: string) => {
   const calculateDistancePrices = async (origin: string, destination: string) => {
     if (!origin || !destination) return;
     setIsCalculatingPrice(true);
-    setDistancePrices({}); // Limpar preÃ§os antigos para feedback visual
+    setDistancePrices({}); // Limpar preços antigos para feedback visual
     try {
       const apiKey = GMAPS_KEY;
       const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
@@ -2067,7 +2067,7 @@ const navigateSubView = (target: string) => {
 
   const handleConfirmMobility = async (paymentMethod: string) => {
     if (!userId) {
-      toastWarning("FaÃ§a login para continuar");
+      toastWarning("Faça login para continuar");
       setView("login");
       return;
     }
@@ -2124,7 +2124,7 @@ const navigateSubView = (target: string) => {
       pickup_address: transitData.origin,
       delivery_address: `${transitData.destination} | OBS: ${isShipping 
         ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
-        : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTÃ¡xi' : 'Particular'})`}`,
+        : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`}`,
       payment_method: paymentMethod,
       payment_status: (paymentMethod === 'dinheiro' || paymentMethod === 'pix' || paymentMethod === 'bitcoin_lightning') ? 'pending' : 'paid',
       scheduled_at: transitData.scheduled ? `${transitData.scheduledDate}T${transitData.scheduledTime}:00` : null,
@@ -2171,7 +2171,7 @@ const navigateSubView = (target: string) => {
             if (!lnErr && lnData?.payment_request) {
                setLightningData({ 
                  payment_request: lnData.payment_request, 
-                 satoshis: Math.round(finalPrice * 2000), // Exemplo de conversÃ£o
+                 satoshis: Math.round(finalPrice * 2000), // Exemplo de conversão
                  btc_price_brl: 350000 
                });
                setSubView("lightning_payment");
@@ -2187,7 +2187,7 @@ const navigateSubView = (target: string) => {
       setSelectedItem(order);
       
       if (paymentMethod !== 'pix' && paymentMethod !== 'bitcoin_lightning') {
-        toastSuccess(isShipping ? "Pedido de envio criado!" : "Procurando motorista mais prÃ³ximo...");
+        toastSuccess(isShipping ? "Pedido de envio criado!" : "Procurando motorista mais próximo...");
         if (transitData.scheduled) {
           setSubView("payment_success");
         } else {
@@ -2197,7 +2197,7 @@ const navigateSubView = (target: string) => {
 
     } catch (err: any) {
       console.error("Erro no fluxo de mobilidade:", err);
-      toastError("NÃ£o foi possÃ­vel criar seu pedido: " + err.message);
+      toastError("Não foi possível criar seu pedido: " + err.message);
     } finally {
       setIsLoading(false);
     }
@@ -2265,7 +2265,7 @@ const navigateSubView = (target: string) => {
                 setTransferTarget({ id: targetId, email: targetEmail, phone: targetPhone });
                 setIsScanningQR(false);
                 html5QrCode.stop();
-                toastSuccess("UsuÃ¡rio Identificado!");
+                toastSuccess("Usuário Identificado!");
               }
             },
             () => {}
@@ -2313,7 +2313,7 @@ const navigateSubView = (target: string) => {
   };
 
   const renderExploreRestaurants = () => {
-    const isLunchMode = restaurantInitialCategory === "AlmoÃ§o";
+    const isLunchMode = restaurantInitialCategory === "Almoço";
     
     return (
       <ExploreRestaurantsView 
@@ -2346,8 +2346,8 @@ const navigateSubView = (target: string) => {
                 <Icon name="arrow_back" />
               </button>
               <div>
-                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">CardÃ¡pios do Dia</h1>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500">SugestÃµes Especiais</p>
+                <h1 className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Cardápios do Dia</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500">Sugestões Especiais</p>
               </div>
             </div>
           </div>
@@ -2356,7 +2356,7 @@ const navigateSubView = (target: string) => {
         <main className="p-6 space-y-10 pt-8">
            <div className="bg-pink-500/5 p-8 rounded-[45px] border border-pink-500/10 mb-2">
              <h2 className="text-lg font-black text-pink-600  mb-2 leading-none uppercase tracking-tighter">Ofertas de Hoje</h2>
-             <p className="text-xs font-medium text-zinc-500">Seus pratos favoritos com preÃ§os exclusivos para hoje.</p>
+             <p className="text-xs font-medium text-zinc-500">Seus pratos favoritos com preços exclusivos para hoje.</p>
            </div>
 
            <div className="grid grid-cols-2 gap-4">
@@ -2417,7 +2417,7 @@ const navigateSubView = (target: string) => {
         off: f.original_price && f.discounted_price 
           ? `- R$ ${(Number(f.original_price) - Number(f.discounted_price)).toFixed(2).replace('.', ',')} OFF` 
           : `- R$ ${(Number(f.original_price) * (Number(f.discount_percent) / 100)).toFixed(2).replace('.', ',')} OFF`,
-        desc: (f.description || 'Oferta imperdÃ­vel por tempo limitado!') + `\n\nðŸ“Œ Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
+        desc: (f.description || 'Oferta imperdível por tempo limitado!') + `\n\nðŸ“Œ Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
       })) : [
         {
           id: 'vip-burger-1',
@@ -2431,7 +2431,7 @@ const navigateSubView = (target: string) => {
           is_flash_offer: true,
           expires_at: new Date(Date.now() + 3600000 * 2).toISOString(),
           off: '50% OFF',
-          desc: 'Blend de carne Angus 180g, queijo brie maÃ§aricado, cebola caramelizada no Jack Daniels e pÃ£o brioche artesanal.\n\nðŸ“Œ Vendido por: Burger Gourmet Lab'
+          desc: 'Blend de carne Angus 180g, queijo brie maçaricado, cebola caramelizada no Jack Daniels e pão brioche artesanal.\n\nðŸ“Œ Vendido por: Burger Gourmet Lab'
         },
         {
           id: 'vip-pizza-1',
@@ -2445,7 +2445,7 @@ const navigateSubView = (target: string) => {
           is_flash_offer: true,
           expires_at: new Date(Date.now() + 1800000).toISOString(),
           off: '50% OFF',
-          desc: 'Massa de fermentaÃ§Ã£o natural, mozzarella fior di latte, azeite de trufas brancas e manjericÃ£o fresco.\n\nðŸ“Œ Vendido por: Forneria d\'Oro'
+          desc: 'Massa de fermentação natural, mozzarella fior di latte, azeite de trufas brancas e manjericão fresco.\n\nðŸ“Œ Vendido por: Forneria d\'Oro'
         }
       ];
     }
@@ -2573,15 +2573,15 @@ const navigateSubView = (target: string) => {
 
     const categoryIcons: Record<string, string> = {
       "Petshop": "pets", "Flores": "local_florist", "Doces & Bolos": "cake",
-      "FarmÃ¡cia": "local_pharmacy", "Mercado": "local_mall",
-      "GÃ¡s & Ãgua": "propane_tank", "AÃ§ougue": "kebab_dining", "Padaria": "bakery_dining", "Hortifruti": "nutrition"
+      "Farmácia": "local_pharmacy", "Mercado": "local_mall",
+      "Gás & Ãgua": "propane_tank", "Açougue": "kebab_dining", "Padaria": "bakery_dining", "Hortifruti": "nutrition"
     };
     const icon = categoryIcons[title] || "storefront";
 
     return (
       <EstablishmentListView
         title={title}
-        subtitle="DisponÃ­vel agora"
+        subtitle="Disponível agora"
         icon={icon}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -2623,8 +2623,8 @@ const navigateSubView = (target: string) => {
 
   const renderPharmacyList = () => (
     <EstablishmentListView
-      title="FarmÃ¡cias"
-      subtitle="SaÃºde e bem-estar"
+      title="Farmácias"
+      subtitle="Saúde e bem-estar"
       icon="local_pharmacy"
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
@@ -2640,8 +2640,8 @@ const navigateSubView = (target: string) => {
 
   const renderAllPharmacies = () => (
     <EstablishmentListView
-      title="Todas as FarmÃ¡cias"
-      subtitle="Unidades PrÃ³ximas"
+      title="Todas as Farmácias"
+      subtitle="Unidades Próximas"
       icon="local_pharmacy"
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
@@ -2685,7 +2685,7 @@ const navigateSubView = (target: string) => {
           </button>
           <div className="flex-1">
             <h1 className="text-2xl font-black tracking-tighter leading-none mb-1">Ofertas Geladas</h1>
-            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-[0.2em]">SeleÃ§Ã£o Premium de Ofertas</p>
+            <p className="text-[10px] text-yellow-400 font-black uppercase tracking-[0.2em]">Seleção Premium de Ofertas</p>
           </div>
           <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-12 rounded-2xl bg-zinc-900/5 border border-white/10 flex items-center justify-center group active:scale-95 transition-all">
             <Icon name="shopping_bag" />
@@ -2837,8 +2837,8 @@ const navigateSubView = (target: string) => {
                <div className="size-20 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-2">
                   <span className="material-symbols-outlined text-4xl text-orange-500">bolt_slash</span>
                </div>
-               <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Falha na ConexÃ£o Lightning</h3>
-               <p className="text-zinc-500 text-sm px-4">NÃ£o foi possÃ­vel gerar sua fatura agora. O pedido foi registrado mas o pagamento via Bitcoin estÃ¡ indisponÃ­vel.</p>
+               <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Falha na Conexão Lightning</h3>
+               <p className="text-zinc-500 text-sm px-4">Não foi possível gerar sua fatura agora. O pedido foi registrado mas o pagamento via Bitcoin está indisponível.</p>
                <button onClick={() => { setTab("orders"); setSubView("none"); }}
                   className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-sm uppercase tracking-widest">
                   Ver Meus Pedidos
@@ -2869,7 +2869,7 @@ const navigateSubView = (target: string) => {
       .replace(/(\d{3})(\d{1,2})$/,"$1-$2");
 
     const handlePixConfirm = async () => {
-      if (pixCpf.replace(/\D/g,"").length < 11) { alert("CPF invÃ¡lido."); return; }
+      if (pixCpf.replace(/\D/g,"").length < 11) { alert("CPF inválido."); return; }
       console.log("Iniciando fluxo PIX para total:", total);
       setPixConfirmed(true);
       try {
@@ -3008,7 +3008,7 @@ const navigateSubView = (target: string) => {
           id: orderId,
           pixQrCode: qr, 
           pixQrBase64: qrBase64, 
-          pixCopyPaste: copyPaste || qr, // Fallback do copia e cola para o EMV se necessÃ¡rio
+          pixCopyPaste: copyPaste || qr, // Fallback do copia e cola para o EMV se necessário
           pixError: false 
         }));
         
@@ -3019,8 +3019,8 @@ const navigateSubView = (target: string) => {
         }
 
       } catch (e: any) {
-        console.error("ExceÃ§Ã£o crÃ­tica no fluxo PIX:", e);
-        const errDetail = e.message || "Erro de conexÃ£o. Tente novamente.";
+        console.error("Exceção crítica no fluxo PIX:", e);
+        const errDetail = e.message || "Erro de conexão. Tente novamente.";
         setSelectedItem((prev: any) => ({ ...prev, pixError: true, pixErrorMessage: errDetail }));
         setPixConfirmed(true);
       }
@@ -3071,7 +3071,7 @@ const navigateSubView = (target: string) => {
             </div>
           )}
 
-          {/* BotÃ£o confirmar */}
+          {/* Botão confirmar */}
           {pixCpf.replace(/\D/g,"").length === 11 && !pixConfirmed && (
             <button onClick={handlePixConfirm}
               className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
@@ -3126,8 +3126,8 @@ const navigateSubView = (target: string) => {
                <div>
                   <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-2">Ops! Falha no QR Code</h3>
                   <p className="text-zinc-400 text-sm font-medium leading-relaxed px-4">
-                     O pedido foi enviado ao lojista, mas nÃ£o conseguimos gerar o QR Code Pix agora. 
-                     {selectedItem.pixErrorMessage ? ` Detalhe: ${selectedItem.pixErrorMessage}` : " VocÃª pode tentar pagar atravÃ©s de outro mÃ©todo ou falar com o suporte."}
+                     O pedido foi enviado ao lojista, mas não conseguimos gerar o QR Code Pix agora. 
+                     {selectedItem.pixErrorMessage ? ` Detalhe: ${selectedItem.pixErrorMessage}` : " Você pode tentar pagar através de outro método ou falar com o suporte."}
                   </p>
                </div>
                <div className="w-full space-y-3">
@@ -3137,7 +3137,7 @@ const navigateSubView = (target: string) => {
                   </button>
                   <button onClick={() => { setSubView("checkout"); setPixConfirmed(false); }}
                     className="w-full py-4 rounded-2xl text-zinc-500 font-black text-[10px] uppercase tracking-widest">
-                    Tentar outro mÃ©todo
+                    Tentar outro método
                   </button>
                </div>
             </motion.div>
@@ -3169,8 +3169,8 @@ const navigateSubView = (target: string) => {
                 total_price: total,
                 status: "pendente_pagamento",
                 pickup_address: isSubscription ? "Assinatura Izi Black" : (selectedShop?.name || "Estabelecimento"),
-                delivery_address: isSubscription ? "ServiÃ§o Digital" : (userLocation.address || "EndereÃ§o nÃ£o informado"),
-                items: cart, // Adicionado para exibiÃ§Ã£o no ActiveOrderView
+                delivery_address: isSubscription ? "Serviço Digital" : (userLocation.address || "Endereço não informado"),
+                items: cart, // Adicionado para exibição no ActiveOrderView
                 payment_method: "cartao",
                 service_type: isSubscription ? "subscription" : "restaurant",
             };
@@ -3230,7 +3230,7 @@ const navigateSubView = (target: string) => {
             <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
           </button>
           <div className="flex flex-col text-left">
-              <h1 className="text-lg font-black text-white uppercase tracking-tight leading-none">CartÃ£o de CrÃ©dito</h1>
+              <h1 className="text-lg font-black text-white uppercase tracking-tight leading-none">Cartão de Crédito</h1>
               <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">{selectedShop?.name || 'Venda Digital'}</p>
           </div>
         </header>
@@ -3251,7 +3251,7 @@ const navigateSubView = (target: string) => {
                 <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-black">Certificado pela PCI DSS</p>
              </div>
              <p className="text-[10px] text-center text-zinc-700 uppercase tracking-widest font-bold max-w-[200px] leading-relaxed">
-               Seus dados sÃ£o encriptados de ponta a ponta e nunca armazenados em nossos servidores.
+               Seus dados são encriptados de ponta a ponta e nunca armazenados em nossos servidores.
              </p>
           </div>
         </main>
@@ -3267,11 +3267,11 @@ const navigateSubView = (target: string) => {
     const statusLabel: Record<string, string> = {
       pending: "Aguardando", pendente: "Aguardando", novo: "Processando",
       waiting_driver: "Buscando Condutor",
-      aceito: "Confirmado", confirmado: "Confirmado", preparando: "Em PreparaÃ§Ã£o", pronto: "Pronto para Coleta",
+      aceito: "Confirmado", confirmado: "Confirmado", preparando: "Em Preparação", pronto: "Pronto para Coleta",
       a_caminho: "Em Rota de Coleta", at_pickup: "No Local",
       picked_up: "Coletado / Em Viagem", 
       em_rota: "A Caminho do Destino", saiu_para_entrega: "Saindo para Entrega",
-      concluido: "ConcluÃ­do", cancelado: "Cancelado",
+      concluido: "Concluído", cancelado: "Cancelado",
     };
 
     const isMobility = (o: any) => ["mototaxi", "carro", "van", "utilitario"].includes(o.service_type);
@@ -3286,7 +3286,7 @@ const navigateSubView = (target: string) => {
             {[
               { id: "ativos",     label: "Ativos",     count: activeOrders.length },
               { id: "agendados",  label: "Agendados",  count: scheduledOrders.length },
-              { id: "historico",  label: "HistÃ³rico",  count: 0 },
+              { id: "historico",  label: "Histórico",  count: 0 },
             ].map((t) => (
               <button
                 key={t.id}
@@ -3345,7 +3345,7 @@ const navigateSubView = (target: string) => {
                         </span>
                       </div>
                       <p className="text-zinc-400 text-sm max-w-xs">
-                        {order.delivery_address || "EndereÃ§o de entrega"}
+                        {order.delivery_address || "Endereço de entrega"}
                       </p>
                       <div className="pt-3 flex items-center gap-3">
                         <button
@@ -3392,13 +3392,13 @@ const navigateSubView = (target: string) => {
               </motion.div>
             )}
 
-            {/* HISTÃƒÆ’Ã¢â‚¬Å“RICO */}
+            {/* HISTÃÆ’ââ‚¬Å“RICO */}
             {filterTab === "historico" && (
               <motion.div key="historico" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-6">
                 {pastOrders.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4">
                     <span className="material-symbols-outlined text-5xl text-zinc-800">history</span>
-                    <p className="text-zinc-600 text-sm font-medium">Nenhum pedido no histÃ³rico</p>
+                    <p className="text-zinc-600 text-sm font-medium">Nenhum pedido no histórico</p>
                   </div>
                 ) : pastOrders.map((order) => (
                   <motion.div
@@ -3415,7 +3415,7 @@ const navigateSubView = (target: string) => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-black text-sm text-white truncate">{order.merchant_name || "Pedido"}</h4>
-                      <p className="text-zinc-500 text-xs mt-0.5">{new Date(order.created_at).toLocaleDateString("pt-BR")} ÃƒÂ¢Ã¢â€šÂ¬Â¢ R$ {Number(order.total_price || 0).toFixed(2).replace(".", ",")}</p>
+                      <p className="text-zinc-500 text-xs mt-0.5">{new Date(order.created_at).toLocaleDateString("pt-BR")} ÃÂ¢ââ€šÂ¬Â¢ R$ {Number(order.total_price || 0).toFixed(2).replace(".", ",")}</p>
                     </div>
                     <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${order.status === "concluido" ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
                       {statusLabel[order.status] || order.status}
@@ -3431,7 +3431,7 @@ const navigateSubView = (target: string) => {
           <div className="mt-20 pt-8 border-t border-zinc-900 flex flex-col items-center text-center">
             <span className="material-symbols-outlined text-zinc-800 text-4xl mb-3">shopping_bag</span>
             <p className="text-zinc-600 text-sm font-medium">
-              NÃ£o vÃª um pedido?{" "}
+              Não vê um pedido?{" "}
               <button onClick={() => userId && fetchMyOrders(userId)} className="text-yellow-400/60 hover:text-yellow-400 transition-colors">
                 Atualizar lista
               </button>
@@ -3447,7 +3447,7 @@ const navigateSubView = (target: string) => {
     <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center">
       <div className="size-20 border-4 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin mb-6" />
       <h2 className="text-2xl font-black text-white uppercase tracking-tight">Processando Pagamento</h2>
-      <p className="text-zinc-400 mt-2 font-medium">Aguarde um instante, estamos confirmando tudo... âš¡</p>
+      <p className="text-zinc-400 mt-2 font-medium">Aguarde um instante, estamos confirmando tudo... ⚡</p>
     </div>
   );
 
@@ -3539,7 +3539,7 @@ const navigateSubView = (target: string) => {
                           R$ {Number((item.price || 0) * (item.quantity || 1)).toFixed(2).replace(".", ",")}
                         </p>
                       ) : (
-                        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">IncluÃ­do</p>
+                        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Incluído</p>
                       )}
                     </div>
                   </div>
@@ -3548,7 +3548,7 @@ const navigateSubView = (target: string) => {
             ) : (
               <div className="py-8 flex flex-col items-center gap-3">
                 <span className="material-symbols-outlined text-4xl text-zinc-800">receipt_long</span>
-                <p className="text-zinc-600 text-xs font-black uppercase tracking-widest">Itens nÃ£o disponÃ­veis neste pedido</p>
+                <p className="text-zinc-600 text-xs font-black uppercase tracking-widest">Itens não disponíveis neste pedido</p>
               </div>
             )}
           </section>
@@ -3598,7 +3598,7 @@ const navigateSubView = (target: string) => {
                 onClick={() => setSubView("order_feedback")}
                 className="w-full py-4 rounded-2xl bg-zinc-900 border border-zinc-800 text-white font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all"
               >
-                Avaliar ExperiÃªncia
+                Avaliar Experiência
               </button>
             )}
             <button
@@ -3619,7 +3619,7 @@ const navigateSubView = (target: string) => {
         <span className="material-symbols-outlined text-4xl text-red-500">error</span>
       </div>
       <h2 className="text-2xl font-black text-white uppercase tracking-tight">Ops! Algo deu errado</h2>
-      <p className="text-zinc-400 mt-2 mb-8 font-medium">NÃ£o conseguimos processar seu pagamento. Verifique os dados e tente novamente. âš ï¸</p>
+      <p className="text-zinc-400 mt-2 mb-8 font-medium">Não conseguimos processar seu pagamento. Verifique os dados e tente novamente. âš ï¸</p>
       <button onClick={() => setSubView("checkout")} className="w-full max-w-xs py-4 bg-white text-black font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all">Tentar Novamente</button>
     </div>
   );
@@ -3630,7 +3630,7 @@ const navigateSubView = (target: string) => {
         <span className="material-symbols-outlined text-4xl text-emerald-500">check_circle</span>
       </div>
       <h2 className="text-2xl font-black text-white uppercase tracking-tight">Pagamento Aprovado!</h2>
-      <p className="text-zinc-400 mt-2 mb-8 font-medium">Sucesso! Seu pedido jÃ¡ foi enviado para o estabelecimento. Prepare-se para uma experiÃªncia incrÃ­vel. âœ¨</p>
+      <p className="text-zinc-400 mt-2 mb-8 font-medium">Sucesso! Seu pedido já foi enviado para o estabelecimento. Prepare-se para uma experiência incrível. âœ¨</p>
       <button onClick={() => { setTab("orders"); setSubView("none"); }} className="w-full max-w-xs py-4 bg-emerald-500 text-white font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_30px_rgba(16,185,129,0.3)]">Acompanhar Pedido</button>
     </div>
   );
@@ -3643,9 +3643,9 @@ const navigateSubView = (target: string) => {
       </div>
       <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-3">Aguardando Loja</h2>
       <p className="text-zinc-400 font-medium max-w-[240px] leading-relaxed">
-        O estabelecimento estÃ¡ analisando seu pedido agora mesmo. Fique de olho! â±ï¸
+        O estabelecimento está analisando seu pedido agora mesmo. Fique de olho! â±ï¸
       </p>
-      <button onClick={() => setSubView("none")} className="mt-12 px-8 py-3 bg-zinc-900 border border-zinc-800 rounded-2xl text-zinc-500 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">Voltar ao InÃ­cio</button>
+      <button onClick={() => setSubView("none")} className="mt-12 px-8 py-3 bg-zinc-900 border border-zinc-800 rounded-2xl text-zinc-500 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">Voltar ao Início</button>
     </div>
   );
 
@@ -3668,7 +3668,7 @@ const navigateSubView = (target: string) => {
             <button onClick={() => { if (isAddingAddress) { resetAddressForm(); } else { setSubView("none"); } }} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
               <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
             </button>
-            <h1 className="font-extrabold text-base text-white uppercase tracking-tight">{isAddingAddress ? (editingAddress ? 'Editar EndereÃ§o' : 'Novo EndereÃ§o') : 'EndereÃ§os'}</h1>
+            <h1 className="font-extrabold text-base text-white uppercase tracking-tight">{isAddingAddress ? (editingAddress ? 'Editar Endereço' : 'Novo Endereço') : 'Endereços'}</h1>
           </div>
           {!isAddingAddress && (
             <button onClick={() => { resetAddressForm(); setIsAddingAddress(true); }} className="text-yellow-400 active:scale-90 transition-all">
@@ -3681,9 +3681,9 @@ const navigateSubView = (target: string) => {
           <AnimatePresence mode="wait">
             {isAddingAddress ? (
               <motion.div key="address-form" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-5 py-4">
-                {/* SeleÃ§Ã£o rÃ¡pida de rÃ³tulo */}
+                {/* Seleção rápida de rótulo */}
                 <div>
-                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">Tipo de endereÃ§o</p>
+                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">Tipo de endereço</p>
                   <div className="flex gap-3">
                     {[
                       { label: 'Casa', icon: 'home' },
@@ -3706,23 +3706,23 @@ const navigateSubView = (target: string) => {
                   </div>
                 </div>
 
-                {/* Campo RÃ³tulo (personalizado) */}
+                {/* Campo Rótulo (personalizado) */}
                 <div>
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">RÃ³tulo</label>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">Rótulo</label>
                   <input
                     type="text"
                     value={newAddrLabel}
                     onChange={(e) => setNewAddrLabel(e.target.value)}
-                    placeholder="Ex: Casa, Trabalho, MÃ£e..."
+                    placeholder="Ex: Casa, Trabalho, Mãe..."
                     className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3.5 text-sm text-white placeholder:text-zinc-700 outline-none focus:border-yellow-400/50 transition-colors"
                   />
                 </div>
 
-                {/* Campo Rua/EndereÃ§o com Autocomplete */}
+                {/* Campo Rua/Endereço com Autocomplete */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">EndereÃ§o Completo</label>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Endereço Completo</label>
                   <AddressSearchInput
-                    placeholder="Busque rua, nÃƒÆ’Âºmero, bairro..."
+                    placeholder="Busque rua, nÃÆ’Âºmero, bairro..."
                     initialValue={newAddrStreet}
                     userCoords={userLocation?.lat && userLocation?.lng ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                     onSelect={(place: any) => {
@@ -3757,12 +3757,12 @@ const navigateSubView = (target: string) => {
                     type="text"
                     value={newAddrCity}
                     onChange={(e) => setNewAddrCity(e.target.value)}
-                    placeholder="SÃ£o Paulo"
+                    placeholder="São Paulo"
                     className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3.5 text-sm text-white placeholder:text-zinc-700 outline-none focus:border-yellow-400/50 transition-colors"
                   />
                 </div>
 
-                {/* BotÃ£o Salvar */}
+                {/* Botão Salvar */}
                 <button
                   onClick={handleSaveAddress}
                   disabled={isSavingAddress || !newAddrLabel.trim() || !newAddrStreet.trim()}
@@ -3773,7 +3773,7 @@ const navigateSubView = (target: string) => {
                   ) : (
                     <>
                       <span className="material-symbols-outlined text-lg">save</span>
-                      {editingAddress ? 'Atualizar EndereÃ§o' : 'Salvar EndereÃ§o'}
+                      {editingAddress ? 'Atualizar Endereço' : 'Salvar Endereço'}
                     </>
                   )}
                 </button>
@@ -3785,18 +3785,18 @@ const navigateSubView = (target: string) => {
                     <div className="size-20 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
                       <span className="material-symbols-outlined text-4xl text-zinc-700">location_off</span>
                     </div>
-                    <p className="text-zinc-600 text-sm font-bold uppercase tracking-widest">Nenhum endereÃ§o salvo</p>
+                    <p className="text-zinc-600 text-sm font-bold uppercase tracking-widest">Nenhum endereço salvo</p>
                     <button
                       onClick={() => { resetAddressForm(); setIsAddingAddress(true); }}
                       className="bg-yellow-400 text-black font-black text-xs uppercase tracking-widest px-6 py-3 rounded-2xl active:scale-95 transition-all shadow-lg shadow-yellow-400/20"
                     >
-                      Adicionar primeiro endereÃ§o
+                      Adicionar primeiro endereço
                     </button>
                   </div>
                 ) : savedAddresses.map((addr: any, i: number) => (
                   <motion.div key={addr.id || i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                     className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0 w-full group">
-                    {/* ÃƒÆ’ cone + Info */}
+                    {/* ÃÆ’ cone + Info */}
                     <button
                       onClick={() => handleSetActiveAddress(addr.id)}
                       className="flex items-center gap-4 flex-1 min-w-0 text-left active:opacity-60 transition-all"
@@ -3808,13 +3808,13 @@ const navigateSubView = (target: string) => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-black text-sm text-white">{addr.label || "EndereÃ§o"}</p>
-                          {addr.active && <span className="text-[8px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-wider">PadrÃ£o</span>}
+                          <p className="font-black text-sm text-white">{addr.label || "Endereço"}</p>
+                          {addr.active && <span className="text-[8px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Padrão</span>}
                         </div>
                         <p className="text-zinc-600 text-xs mt-0.5 truncate">{addr.street}{addr.details ? `, ${addr.details}` : ""}</p>
                       </div>
                     </button>
-                    {/* AÃ§ÃƒÆ’Âµes */}
+                    {/* AçÃÆ’Âµes */}
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => openEditAddress(addr)}
@@ -3837,7 +3837,7 @@ const navigateSubView = (target: string) => {
                     className="flex items-center gap-3 py-5 text-zinc-700 hover:text-yellow-400 transition-all active:scale-[0.98] mt-2"
                   >
                     <span className="material-symbols-outlined text-xl">add_location</span>
-                    <span className="text-sm font-black uppercase tracking-wider">Adicionar novo endereÃ§o</span>
+                    <span className="text-sm font-black uppercase tracking-wider">Adicionar novo endereço</span>
                   </button>
                 )}
               </motion.div>
@@ -3874,7 +3874,7 @@ const navigateSubView = (target: string) => {
               <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
                 className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[40px] p-8 shadow-2xl">
                 <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-xl font-black text-white tracking-tight">Novo CartÃ£o</h3>
+                  <h3 className="text-xl font-black text-white tracking-tight">Novo Cartão</h3>
                   <button onClick={() => setIsAddingCard(false)} className="size-10 rounded-full bg-zinc-800 flex items-center justify-center">
                     <span className="material-symbols-outlined text-zinc-400">close</span>
                   </button>
@@ -3895,7 +3895,7 @@ const navigateSubView = (target: string) => {
 
                      if (userId) await fetchSavedCards(userId);
                      setIsAddingCard(false);
-                     toastSuccess("CartÃ£o adicionado!");
+                     toastSuccess("Cartão adicionado!");
                      
                      if (paymentsOrigin === "checkout") {
                         setSubView("checkout");
@@ -3942,7 +3942,7 @@ const navigateSubView = (target: string) => {
             </div>
             
             <h3 className="text-2xl font-black text-white tracking-tight mb-2 uppercase">Meu IZI Code</h3>
-            <p className="text-zinc-500 text-xs font-medium mb-10 leading-relaxed px-4">Compartilhe para receber transferÃªncias instantÃƒÂ¢neas de IZI Coins.</p>
+            <p className="text-zinc-500 text-xs font-medium mb-10 leading-relaxed px-4">Compartilhe para receber transferências instantÃÂ¢neas de IZI Coins.</p>
 
             <div className="p-6 bg-white rounded-[40px] shadow-inner mb-10 relative group">
               <img 
@@ -3987,7 +3987,7 @@ const navigateSubView = (target: string) => {
             </div>
 
             <div className="bg-zinc-950 p-6 rounded-[35px] border border-white/5">
-              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">Valor da TransferÃªncia</p>
+              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-4">Valor da Transferência</p>
               <div className="flex items-center justify-center gap-3">
                 <span className="text-2xl font-black text-yellow-400 opacity-40 italic">IZI</span>
                 <input 
@@ -3999,7 +3999,7 @@ const navigateSubView = (target: string) => {
             </div>
 
             <button className="w-full bg-yellow-400 text-black font-black text-sm uppercase tracking-widest py-6 rounded-3xl shadow-xl shadow-yellow-400/20 active:scale-95 transition-all">
-              Confirmar Envio InstantÃƒÂ¢neo
+              Confirmar Envio InstantÃÂ¢neo
             </button>
           </motion.div>
         </motion.div>
@@ -4066,7 +4066,7 @@ const navigateSubView = (target: string) => {
             <span className="text-yellow-400 font-extrabold italic tracking-widest text-xs">IZI PAY</span>
             <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
           </div>
-          <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-1">Saldo DisponÃ­vel</p>
+          <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-1">Saldo Disponível</p>
           <div className="flex items-baseline gap-2 mb-6">
             <span className="font-extrabold text-2xl text-yellow-400 opacity-60">R$</span>
             <span className="font-extrabold text-5xl tracking-tighter text-white"
@@ -4075,7 +4075,7 @@ const navigateSubView = (target: string) => {
             </span>
           </div>
 
-          {/* AÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã¢â‚¬Â¢ES RÃƒÆ’ÂPIDAS */}
+          {/* AÃÆ’ââ‚¬Â¡ÃÆ’ââ‚¬Â¢ES RÃÆ’ÂPIDAS */}
           <div className="grid grid-cols-4 gap-2">
             {[
               { icon: "add",           label: "Adicionar" },
@@ -4100,7 +4100,7 @@ const navigateSubView = (target: string) => {
             {[
               { label: "Gasto total",  value: `R$ ${totalGasto.toFixed(0)}`,    icon: "shopping_bag" },
               { label: "Recebido",     value: `R$ ${totalRecebido.toFixed(0)}`, icon: "add_circle" },
-              { label: "Pedidos/mÃªs",  value: `${pedidosMes}`,                  icon: "receipt_long" },
+              { label: "Pedidos/mês",  value: `${pedidosMes}`,                  icon: "receipt_long" },
             ].map((s, i) => (
               <div key={i} className={`flex flex-col items-center py-5 gap-1 ${i < 2 ? "border-r border-zinc-900" : ""}`}>
                 <span className="material-symbols-outlined text-zinc-700 text-lg">{s.icon}</span>
@@ -4110,10 +4110,10 @@ const navigateSubView = (target: string) => {
             ))}
           </div>
 
-          {/* CARTÃƒÆ’Ã¢â‚¬Â¢ES */}
+          {/* CARTÃÆ’ââ‚¬Â¢ES */}
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Meus CartÃƒÆ’Âµes</h2>
+              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Meus CartÃÆ’Âµes</h2>
               <button onClick={() => { setPaymentsOrigin("profile"); setSubView("mobility_payment"); }}
                 className="text-yellow-400 text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity">
                 Gerenciar
@@ -4129,8 +4129,8 @@ const navigateSubView = (target: string) => {
                   <span className="material-symbols-outlined text-zinc-800 text-base">contactless</span>
                 </div>
                 <div>
-                  <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">CartÃ£o Digital</p>
-                  <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">ÃƒÂ¢Ã¢â€šÂ¬Â¢ÃƒÂ¢Ã¢â€šÂ¬Â¢ÃƒÂ¢Ã¢â€šÂ¬Â¢ÃƒÂ¢Ã¢â€šÂ¬Â¢ ÃƒÂ¢Ã¢â€šÂ¬Â¢ÃƒÂ¢Ã¢â€šÂ¬Â¢ÃƒÂ¢Ã¢â€šÂ¬Â¢ÃƒÂ¢Ã¢â€šÂ¬Â¢ ÃƒÂ¢Ã¢â€šÂ¬Â¢ÃƒÂ¢Ã¢â€šÂ¬Â¢ÃƒÂ¢Ã¢â€šÂ¬Â¢ÃƒÂ¢Ã¢â€šÂ¬Â¢ 8820</p>
+                  <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Digital</p>
+                  <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ 8820</p>
                   <div className="flex justify-between items-center">
                     <p className="text-[8px] text-zinc-700 uppercase tracking-widest">Val. 12/28</p>
                     <div className="size-7 rounded-full bg-yellow-400/10 flex items-center justify-center">
@@ -4146,7 +4146,7 @@ const navigateSubView = (target: string) => {
                     <span className="material-symbols-outlined text-zinc-800 text-base">contactless</span>
                   </div>
                   <div>
-                    <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">CartÃ£o FÃ­sico</p>
+                    <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Físico</p>
                     <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ {card.last4}</p>
                     <div className="flex justify-between items-center">
                       <p className="text-[8px] text-zinc-700 uppercase">{card.brand}</p>
@@ -4158,7 +4158,7 @@ const navigateSubView = (target: string) => {
               <button onClick={() => { setPaymentsOrigin("profile"); setSubView("mobility_payment"); }}
                 className="min-w-[120px] h-40 border border-dashed border-zinc-900 rounded-2xl flex flex-col items-center justify-center gap-2 shrink-0 active:scale-95 transition-all hover:border-yellow-400/20 group">
                 <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors text-2xl">add</span>
-                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-500 transition-colors">Novo CartÃ£o</span>
+                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-500 transition-colors">Novo Cartão</span>
               </button>
             </div>
           </section>
@@ -4171,7 +4171,7 @@ const navigateSubView = (target: string) => {
                 <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">IZI Points</span>
               </div>
               <p className="text-2xl font-extrabold text-white">{(userXP * 10).toLocaleString("pt-BR")}</p>
-              <p className="text-[9px] text-yellow-400/50">ÃƒÂ¢Ã¢â‚¬Â°Ã‹â€  R$ {(userXP * 0.1).toFixed(2).replace(".",",")} em descontos</p>
+              <p className="text-[9px] text-yellow-400/50">ÃÂ¢ââ‚¬Â°Ã‹â€  R$ {(userXP * 0.1).toFixed(2).replace(".",",")} em descontos</p>
             </div>
             <div className="flex flex-col gap-1 p-5">
               <div className="flex items-center gap-1.5 mb-2">
@@ -4179,19 +4179,19 @@ const navigateSubView = (target: string) => {
                 <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Cashback</span>
               </div>
               <p className="text-2xl font-extrabold text-white">R$ 42,10</p>
-              <p className="text-[9px] text-zinc-700">DisponÃ­vel para usar</p>
+              <p className="text-[9px] text-zinc-700">Disponível para usar</p>
             </div>
           </div>
 
-          {/* MÃƒÆ’Ã¢â‚¬Â°TODOS DE PAGAMENTO */}
+          {/* MÃÆ’ââ‚¬Â°TODOS DE PAGAMENTO */}
           <section>
             <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-2">Formas de Pagamento</h2>
             <div className="flex flex-col">
               {[
-                { icon: "pix",                    label: "PIX",             desc: "Mercado Pago ÃƒÂ¢Ã¢â€šÂ¬Â¢ InstantÃƒÂ¢neo",    id: "pix" },
-                { icon: "bolt",                   label: "Bitcoin Lightning", desc: "LNbits ÃƒÂ¢Ã¢â€šÂ¬Â¢ Satoshis",           id: "bitcoin_lightning" },
+                { icon: "pix",                    label: "PIX",             desc: "Mercado Pago ÃÂ¢ââ€šÂ¬Â¢ InstantÃÂ¢neo",    id: "pix" },
+                { icon: "bolt",                   label: "Bitcoin Lightning", desc: "LNbits ÃÂ¢ââ€šÂ¬Â¢ Satoshis",           id: "bitcoin_lightning" },
                 { icon: "payments",               label: "Dinheiro",        desc: "Pague na entrega",              id: "dinheiro" },
-                { icon: "account_balance_wallet", label: "Saldo IZI",       desc: `R$ ${Math.abs(walletBalance).toFixed(2).replace(".",",")} disponÃ­vel`, id: "saldo" },
+                { icon: "account_balance_wallet", label: "Saldo IZI",       desc: `R$ ${Math.abs(walletBalance).toFixed(2).replace(".",",")} disponível`, id: "saldo" },
               ].map((m) => (
                 <div key={m.id} className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0">
                   <span className="material-symbols-outlined text-zinc-600 text-xl">{m.icon}</span>
@@ -4205,17 +4205,17 @@ const navigateSubView = (target: string) => {
             </div>
           </section>
 
-          {/* HISTÃƒÆ’Ã¢â‚¬Å“RICO */}
+          {/* HISTÃÆ’ââ‚¬Å“RICO */}
           <section>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">HistÃ³rico</h2>
+              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Histórico</h2>
               <button className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Ver Tudo</button>
             </div>
             <div className="flex flex-col">
               {walletTransactions.length === 0 ? (
                 <div className="py-10 flex flex-col items-center gap-3">
                   <span className="material-symbols-outlined text-4xl text-zinc-900">receipt_long</span>
-                  <p className="text-zinc-700 text-sm">Nenhuma transaÃ§Ã£o ainda</p>
+                  <p className="text-zinc-700 text-sm">Nenhuma transação ainda</p>
                 </div>
               ) : walletTransactions.slice(0, 20).map((t: any, i: number) => {
                 const tx = txIcon[t.type] || { icon: "payments", color: "text-zinc-400" };
@@ -4227,7 +4227,7 @@ const navigateSubView = (target: string) => {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-black text-white truncate">{t.description || t.type}</p>
                       <p className="text-[10px] text-zinc-600 uppercase tracking-widest mt-0.5">
-                        {new Date(t.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} ÃƒÂ¢Ã¢â€šÂ¬Â¢ {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        {new Date(t.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} ÃÂ¢ââ€šÂ¬Â¢ {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
@@ -4269,7 +4269,7 @@ const navigateSubView = (target: string) => {
         setSubView("none");
       } catch (e) { 
         console.error(e); 
-        showToast("Erro ao enviar avaliaÃ§Ã£o.", "warning");
+        showToast("Erro ao enviar avaliação.", "warning");
       } finally {
         setFbIsSubmitting(false);
       }
@@ -4309,8 +4309,8 @@ const navigateSubView = (target: string) => {
 
         <div className="flex-1 overflow-y-auto px-6 space-y-10 pb-10">
           <header className="text-center space-y-2">
-            <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">Sua ExperiÃªncia</h2>
-            <p className="text-zinc-500 text-sm font-medium">Como foi o serviÃ§o hoje?</p>
+            <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">Sua Experiência</h2>
+            <p className="text-zinc-500 text-sm font-medium">Como foi o serviço hoje?</p>
           </header>
 
           <section className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-[32px] space-y-5">
@@ -4339,7 +4339,7 @@ const navigateSubView = (target: string) => {
               </div>
               <div className="flex-1">
                 <h4 className="text-white font-black text-sm uppercase tracking-wider">O Entregador</h4>
-                <p className="text-[10px] text-zinc-500 font-bold uppercase">Avalie a agilidade e educaÃ§Ã£o</p>
+                <p className="text-[10px] text-zinc-500 font-bold uppercase">Avalie a agilidade e educação</p>
               </div>
             </div>
             <div className="flex justify-center gap-2">
@@ -4352,11 +4352,11 @@ const navigateSubView = (target: string) => {
           </section>
 
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">ObservaÃ§ÃƒÆ’Âµes adicionais</label>
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">ObservaçÃÆ’Âµes adicionais</label>
             <textarea 
               value={fbComment}
               onChange={(e) => setFbComment(e.target.value)}
-              placeholder="Escreva algo sobre sua experiÃªncia..."
+              placeholder="Escreva algo sobre sua experiência..."
               className="w-full bg-zinc-900 border border-zinc-800 rounded-[24px] p-5 text-zinc-100 text-sm focus:border-yellow-500 outline-none transition-all min-h-[120px] resize-none"
             />
           </div>
@@ -4368,7 +4368,7 @@ const navigateSubView = (target: string) => {
             disabled={fbIsSubmitting}
             className={`w-full py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${fbIsSubmitting ? 'bg-zinc-800 text-zinc-500' : 'bg-yellow-500 text-black hover:shadow-[0_0_30px_rgba(234,179,8,0.3)] active:scale-95'}`}
           >
-            {fbIsSubmitting ? 'Enviando...' : 'Confirmar AvaliaÃ§Ã£o'}
+            {fbIsSubmitting ? 'Enviando...' : 'Confirmar Avaliação'}
             {!fbIsSubmitting && <span className="material-symbols-outlined text-sm">arrow_forward</span>}
           </button>
         </div>
@@ -4438,7 +4438,7 @@ const navigateSubView = (target: string) => {
 
   const renderOrderSupportFlow = () => {
     const topics = [
-      { icon: "local_shipping", label: "Meu pedido estÃ¡ atrasado" },
+      { icon: "local_shipping", label: "Meu pedido está atrasado" },
       { icon: "cancel", label: "Quero cancelar meu pedido" },
       { icon: "swap_horiz", label: "Item errado ou faltando" },
       { icon: "payments", label: "Problema com pagamento" },
@@ -4506,9 +4506,9 @@ const navigateSubView = (target: string) => {
 
   const renderQuestCenter = () => {
     const quests = [
-      { id: 1, title: "Explorador Urbano", desc: "FaÃ§a 3 pedidos em categorias diferentes", xp: 150, progress: 33, icon: "explore" },
-      { id: 2, title: "Cliente Fiel",      desc: "PeÃ§a do mesmo restaurante 3 vezes",        xp: 100, progress: 66, icon: "favorite" },
-      { id: 3, title: "Madrugador",        desc: "FaÃ§a um pedido antes das 9h",              xp: 80,  progress: 0,  icon: "wb_sunny" },
+      { id: 1, title: "Explorador Urbano", desc: "Faça 3 pedidos em categorias diferentes", xp: 150, progress: 33, icon: "explore" },
+      { id: 2, title: "Cliente Fiel",      desc: "Peça do mesmo restaurante 3 vezes",        xp: 100, progress: 66, icon: "favorite" },
+      { id: 3, title: "Madrugador",        desc: "Faça um pedido antes das 9h",              xp: 80,  progress: 0,  icon: "wb_sunny" },
       { id: 4, title: "Gourmet",           desc: "Experimente 5 restaurantes diferentes",    xp: 200, progress: 20, icon: "restaurant" },
     ];
 
@@ -4521,7 +4521,7 @@ const navigateSubView = (target: string) => {
             </button>
             <div>
               <h1 className="font-extrabold text-base text-white uppercase tracking-tight">Quests & Ranking</h1>
-              <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">NÃ­vel {userLevel} ÃƒÂ¢Ã¢â€šÂ¬Â¢ {userXP} XP</p>
+              <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">Nível {userLevel} ÃÂ¢ââ€šÂ¬Â¢ {userXP} XP</p>
             </div>
           </div>
         </header>
@@ -4533,7 +4533,7 @@ const navigateSubView = (target: string) => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Infinity Tier</p>
-                <p className="font-black text-white text-lg">NÃ­vel {userLevel}</p>
+                <p className="font-black text-white text-lg">Nível {userLevel}</p>
               </div>
               <div className="size-14 rounded-2xl bg-yellow-400/10 border border-yellow-400/10 flex items-center justify-center">
                 <span className="material-symbols-outlined text-2xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>diamond</span>
@@ -4553,7 +4553,7 @@ const navigateSubView = (target: string) => {
 
           {/* QUESTS */}
           <div>
-            <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-4">MissÃƒÆ’Âµes Ativas</h2>
+            <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-4">MissÃÆ’Âµes Ativas</h2>
             <div className="flex flex-col">
               {quests.map((q, i) => (
                 <motion.div key={q.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
@@ -4607,7 +4607,7 @@ const navigateSubView = (target: string) => {
             status: (paymentMethod === "cartao" || paymentMethod === "bitcoin_lightning") ? "pendente_pagamento" : "novo",
             total_price: total,
             pickup_address: "Assinatura Izi Black",
-            delivery_address: "ServiÃ§o Digital",
+            delivery_address: "Serviço Digital",
             service_type: "subscription",
             payment_method: paymentMethod,
             cpf_invoice: cpf,
@@ -4727,7 +4727,7 @@ const navigateSubView = (target: string) => {
               transition={{ delay: 0.6 }}
               className="text-zinc-500 text-sm max-w-xs mx-auto leading-relaxed font-medium"
             >
-              Bem-vindo Ã  elite. Seus privilÃ©gios exclusivos jÃ¡ estÃ£o vinculados Ã  sua conta com sucesso.
+              Bem-vindo Ã  elite. Seus privilégios exclusivos já estão vinculados Ã  sua conta com sucesso.
             </motion.p>
           </div>
 
@@ -4739,7 +4739,7 @@ const navigateSubView = (target: string) => {
             className="w-full max-w-xs py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all text-zinc-900"
             style={{ backgroundColor: "#FBBF24" }}
           >
-            ComeÃ§ar ExperiÃªncia Elite
+            Começar Experiência Elite
           </motion.button>
         </div>
       );
@@ -4750,7 +4750,7 @@ const navigateSubView = (target: string) => {
         ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
 
       const subOptions = [
-        { id: "cartao",            icon: "credit_card",            label: "CartÃ£o de CrÃ©dito" },
+        { id: "cartao",            icon: "credit_card",            label: "Cartão de Crédito" },
         { id: "pix",               icon: "pix",                    label: "PIX" },
         { id: "saldo",             icon: "account_balance_wallet", label: `Saldo IZI (R$ ${walletBal.toFixed(2)})`, disabled: walletBal < iziBlackPrice },
         { id: "bitcoin_lightning", icon: "bolt",                   label: "Bitcoin Lightning" },
@@ -4815,12 +4815,12 @@ const navigateSubView = (target: string) => {
     }
 
     const perks = [
-      { icon: "delivery_dining",    title: "Taxa Zero",        desc: "Entrega grÃ¡tis em toda a cidade, sem limite.",    highlight: true },
+      { icon: "delivery_dining",    title: "Taxa Zero",        desc: "Entrega grátis em toda a cidade, sem limite.",    highlight: true },
       { icon: "bolt",               title: "Prioridade IZI",   desc: "Seus pedidos sempre primeiro na fila.",           highlight: false },
       { icon: "stars",              title: "Cashback 5%",      desc: "Pontos dobrados em todos os pedidos.",            highlight: false },
       { icon: "support_agent",      title: "Suporte VIP",      desc: "Canal exclusivo 24 horas via App.",               highlight: false },
-      { icon: "confirmation_number",title: "Cupons Black",     desc: "Ofertas exclusivas sÃ³ para membros.",             highlight: false },
-      { icon: "qr_code_scanner",    title: "Early Access",     desc: "LanÃ§amentos e novidades antecipadas.",         highlight: false },
+      { icon: "confirmation_number",title: "Cupons Black",     desc: "Ofertas exclusivas só para membros.",             highlight: false },
+      { icon: "qr_code_scanner",    title: "Early Access",     desc: "Lançamentos e novidades antecipadas.",         highlight: false },
     ];
 
     return (
@@ -4863,7 +4863,7 @@ const navigateSubView = (target: string) => {
                     <span className="text-2xl font-black text-zinc-600 mt-1">,{((iziBlackPrice % 1) * 100).toFixed(0).padStart(2, '0')}</span>
                   </div>
                   <div className="mb-1">
-                    <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest italic">Por mÃªs</p>
+                    <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest italic">Por mês</p>
                   </div>
                 </div>
               </div>
@@ -4871,7 +4871,7 @@ const navigateSubView = (target: string) => {
           </section>
 
           <section className="px-8 space-y-2">
-            <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-6">Seus PrivilÃ©gios</h3>
+            <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-6">Seus Privilégios</h3>
 
             <div className="flex flex-col">
               {perks.map((p, i) => (
@@ -4913,7 +4913,7 @@ const navigateSubView = (target: string) => {
                 </div>
                 <div className="text-center">
                   <h4 className="text-white font-black text-lg uppercase tracking-tight italic">Assinatura Ativa</h4>
-                  <p className="text-zinc-500 text-xs mt-1">Sua jornada de elite jÃ¡ comeÃ§ou.</p>
+                  <p className="text-zinc-500 text-xs mt-1">Sua jornada de elite já começou.</p>
                 </div>
               </div>
             )}
@@ -4963,11 +4963,11 @@ const navigateSubView = (target: string) => {
               transition={{ delay: 0.8 }}
             >
               <h1 className="text-4xl font-black text-white mb-4 tracking-tight">
-                VOCÃƒÆ’Ã…Â  ESTÃƒÆ’Ã†â€™Ãƒâ€šÂ <span className="text-yellow-500">DENTRO</span>.
+                VOCÃÆ’Ã…Â  ESTÃÆ’Ã†â€™Ãâ€šÂ <span className="text-yellow-500">DENTRO</span>.
               </h1>
               <p className="text-zinc-400 font-medium text-lg leading-relaxed mb-12">
                 Seja bem-vindo ao <span className="text-white font-bold">Izi Black</span>. 
-                Seus privilÃ©gios exclusivos foram ativados com sucesso.
+                Seus privilégios exclusivos foram ativados com sucesso.
               </p>
             </motion.div>
 
@@ -4980,7 +4980,7 @@ const navigateSubView = (target: string) => {
             >
               {[
                 { icon: 'bolt', label: 'Cashback 5%' },
-                { icon: 'local_shipping', label: 'Frete GrÃ¡tis' },
+                { icon: 'local_shipping', label: 'Frete Grátis' },
                 { icon: 'star', label: 'VIP Perks' },
                 { icon: 'support_agent', label: 'Suporte Elite' }
               ].map((perk, i) => (
@@ -5003,7 +5003,7 @@ const navigateSubView = (target: string) => {
               }}
               className="w-full bg-white text-black font-black py-7 rounded-[32px] text-xs uppercase tracking-[0.2em] shadow-[0_10px_30px_rgba(255,255,255,0.1)] active:scale-95 transition-all"
             >
-              ComeÃ§ar ExperiÃªncia Elite
+              Começar Experiência Elite
             </motion.button>
           </div>
         </motion.div>
@@ -5023,7 +5023,7 @@ const navigateSubView = (target: string) => {
     const dashOffset = circumference - (progressPercent / 100) * circumference;
 
     const perks = [
-      { id: 'frete', icon: 'local_shipping', label: 'Frete GrÃ¡tis', active: true },
+      { id: 'frete', icon: 'local_shipping', label: 'Frete Grátis', active: true },
       { id: 'cashback', icon: 'monetization_on', label: 'Cashback 5%', active: true },
       { id: 'priority', icon: 'support_agent', label: 'Priority', active: true },
       { id: 'seguro', icon: 'shield', label: 'Seguro', active: userLevel >= 2 },
@@ -5060,7 +5060,7 @@ const navigateSubView = (target: string) => {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <motion.span initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3, type: "spring" }} className="text-6xl font-black text-white leading-none tracking-tighter italic">{userLevel}</motion.span>
-                <span className="text-[8px] font-black text-yellow-400 uppercase tracking-[0.4em] mt-1 italic">NÃ­vel</span>
+                <span className="text-[8px] font-black text-yellow-400 uppercase tracking-[0.4em] mt-1 italic">Nível</span>
               </div>
             </div>
             
@@ -5171,9 +5171,9 @@ const navigateSubView = (target: string) => {
                            <div className="size-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
                              <Icon name="local_shipping" size={20} />
                            </div>
-                           <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Frete GrÃ¡tis Ativado</h4>
+                           <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Frete Grátis Ativado</h4>
                         </div>
-                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">VocÃª possui frete grÃ¡tis ilimitado em todos os pedidos acima de R$ 50,00. O benefÃ­cio Ã© aplicado automaticamente no seu checkout.</p>
+                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Você possui frete grátis ilimitado em todos os pedidos acima de R$ 50,00. O benefício é aplicado automaticamente no seu checkout.</p>
                       </div>
                     )}
 
@@ -5206,7 +5206,7 @@ const navigateSubView = (target: string) => {
                            </div>
                            <h4 className="text-[13px] font-black text-white italic uppercase tracking-tighter">Izi Surprise</h4>
                         </div>
-                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Como membro nÃ­vel 3, vocÃª recebe mimos exclusivos todos os meses. Fique atento Ã s suas notificaÃ§Ãµes!</p>
+                        <p className="text-[11px] text-white/40 font-bold leading-relaxed px-2">Como membro nível 3, você recebe mimos exclusivos todos os meses. Fique atento Ã s suas notificações!</p>
                       </div>
                     )}
                   </div>
@@ -5220,8 +5220,8 @@ const navigateSubView = (target: string) => {
           {/* Integration Links */}
           <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="py-10 px-7 space-y-2">
             {[
-              { icon: 'military_tech', title: 'Izi Battle Pass', sub: 'MissÃµes e Ranking Global', action: () => { setShowIziBlackCard(false); setSubView("quest_center"); }, active: true },
-              { icon: 'workspace_premium', title: 'PrÃ³ximas Recompensas', sub: 'O que vem por aÃ­', action: () => setShowMasterPerks(true), active: true },
+              { icon: 'military_tech', title: 'Izi Battle Pass', sub: 'Missões e Ranking Global', action: () => { setShowIziBlackCard(false); setSubView("quest_center"); }, active: true },
+              { icon: 'workspace_premium', title: 'Próximas Recompensas', sub: 'O que vem por aí', action: () => setShowMasterPerks(true), active: true },
             ].map((item, i) => (
               <Fragment key={i}>
                 <motion.div whileTap={{ scale: 0.98 }} onClick={item.action} className="flex items-center justify-between py-6 px-6 rounded-[32px] bg-white/[0.03] border border-white/5 cursor-pointer group hover:bg-white/[0.05] transition-all">
@@ -5252,12 +5252,12 @@ const navigateSubView = (target: string) => {
 
   const renderMasterPerks = () => {
     const perks = [
-      { icon: "delivery_dining",    title: "Taxa Zero",          desc: "Entrega grÃ¡tis em toda a cidade, sem limite de pedidos" },
-      { icon: "bolt",              title: "Prioridade MÃ¡xima",  desc: "Seus pedidos sÃ£o processados primeiro, sempre" },
-      { icon: "workspace_premium", title: "Suporte VIP 24/7",   desc: "Atendimento exclusivo via canal prioritÃ¡rio" },
-      { icon: "confirmation_number","title": "Cupons Exclusivos", desc: "Ofertas e descontos sÃ³ para membros Black" },
+      { icon: "delivery_dining",    title: "Taxa Zero",          desc: "Entrega grátis em toda a cidade, sem limite de pedidos" },
+      { icon: "bolt",              title: "Prioridade Máxima",  desc: "Seus pedidos são processados primeiro, sempre" },
+      { icon: "workspace_premium", title: "Suporte VIP 24/7",   desc: "Atendimento exclusivo via canal prioritário" },
+      { icon: "confirmation_number","title": "Cupons Exclusivos", desc: "Ofertas e descontos só para membros Black" },
       { icon: "stars",             title: "Cashback Duplo",     desc: "2x mais pontos em todos os pedidos" },
-      { icon: "qr_code_scanner",   title: "Acesso Antecipado",  desc: "Novidades e lanÃ§amentos antes de todos" },
+      { icon: "qr_code_scanner",   title: "Acesso Antecipado",  desc: "Novidades e lançamentos antes de todos" },
     ];
 
     return (
@@ -5274,9 +5274,9 @@ const navigateSubView = (target: string) => {
 
           {/* HERO */}
           <div className="space-y-2">
-            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em]">PrivilÃ©gio Elite</p>
+            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em]">Privilégio Elite</p>
             <h2 className="text-3xl font-extrabold text-white leading-tight tracking-tighter">O melhor do<br/>ecossistema IZI.</h2>
-            <p className="text-zinc-600 text-sm">Acesso completo a todos os benefÃ­cios premium da plataforma.</p>
+            <p className="text-zinc-600 text-sm">Acesso completo a todos os benefícios premium da plataforma.</p>
           </div>
 
           {/* CTA */}
@@ -5286,9 +5286,9 @@ const navigateSubView = (target: string) => {
             Assinar IZI Black
           </button>
 
-          {/* BENEFÃƒÆ’ÂCIOS */}
+          {/* BENEFÃÆ’ÂCIOS */}
           <div>
-            <h3 className="font-extrabold text-base text-white uppercase tracking-tight mb-2">O que estÃ¡ incluso</h3>
+            <h3 className="font-extrabold text-base text-white uppercase tracking-tight mb-2">O que está incluso</h3>
             <div className="flex flex-col">
               {perks.map((p, i) => (
                 <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
@@ -5400,7 +5400,7 @@ const navigateSubView = (target: string) => {
     });
 
     if (didHitLimit) {
-      showToast(`Limite de ${group.max_select} seleÃ§Ãµes em ${group.name}`, "error");
+      showToast(`Limite de ${group.max_select} seleções em ${group.name}`, "error");
     }
   };
 
@@ -5548,9 +5548,9 @@ const navigateSubView = (target: string) => {
 
   const renderFreightWizard = () => {
     const categories = [
-      { id: 'fiorino', name: 'Fiorino/FurgÃ£o', desc: 'Cargas pequenas', icon: 'local_shipping' },
-      { id: 'caminhonete', name: 'Caminhonete', desc: 'Cargas mÃ©dias', icon: 'terminal' },
-      { id: 'caminhao', name: 'CaminhÃ£o BaÃº', desc: 'MudanÃ§as grandes', icon: 'truck_front' }
+      { id: 'fiorino', name: 'Fiorino/Furgão', desc: 'Cargas pequenas', icon: 'local_shipping' },
+      { id: 'caminhonete', name: 'Caminhonete', desc: 'Cargas médias', icon: 'terminal' },
+      { id: 'caminhao', name: 'Caminhão Baú', desc: 'Mudanças grandes', icon: 'truck_front' }
     ];
 
     return (
@@ -5570,8 +5570,8 @@ const navigateSubView = (target: string) => {
             <Icon name="arrow_back" />
           </button>
           <div className="text-right">
-             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Frete & MudanÃ§a</h2>
-             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">LogÃ­stica Profissional</p>
+             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Frete & Mudança</h2>
+             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Logística Profissional</p>
           </div>
         </header>
 
@@ -5684,13 +5684,13 @@ const navigateSubView = (target: string) => {
                 <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
                    <div className="space-y-2">
                       <h3 className="text-xl font-bold text-white tracking-tight">Roteiro da Viagem</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Vans podem fazer vÃ¡rias paradas para pegar passageiros.</p>
+                      <p className="text-zinc-500 text-xs font-medium">Vans podem fazer várias paradas para pegar passageiros.</p>
                    </div>
                    
                    <div className="space-y-4">
                       {/* ORIGEM */}
                       <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="bg-zinc-900/40 backdrop-blur-3xl p-6 rounded-[35px] border border-white/10 shadow-2xl shadow-black/40 group transition-all">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">InÃ­cio da Rota</p>
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Início da Rota</p>
                          <AddressSearchInput 
                            userCoords={userLocation && userLocation.lat !== undefined && userLocation.lng !== undefined ? { lat: Number(userLocation.lat), lng: Number(userLocation.lng) } : null}
                            initialValue={transitData.origin}
@@ -5755,7 +5755,7 @@ const navigateSubView = (target: string) => {
                          {[
                             { id: 'only_one_way', label: 'Ida', icon: 'trending_flat' },
                             { id: 'round_trip', label: 'Ida e Volta', icon: 'sync' },
-                            { id: 'hourly', label: 'DiÃ¡ria', icon: 'schedule' }
+                            { id: 'hourly', label: 'Diária', icon: 'schedule' }
                          ].map((t) => (
                            <div key={t.id} onClick={() => setTransitData({...transitData, tripType: t.id as any})}
                              className={`p-4 rounded-3xl border-2 flex flex-col items-center gap-2 transition-all cursor-pointer ${transitData.tripType === t.id ? 'border-yellow-400 bg-yellow-400/5' : 'border-zinc-800 bg-zinc-900/40 opacity-60'}`}>
@@ -5767,7 +5767,7 @@ const navigateSubView = (target: string) => {
 
                       <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
                          <div className="flex items-center justify-between mb-4">
-                            <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">NÃƒâ€šÂº de Passageiros</p>
+                            <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">NÃâ€šÂº de Passageiros</p>
                             <span className="text-yellow-400 font-black text-lg">{transitData.passengers}</span>
                          </div>
                          <input 
@@ -5778,7 +5778,7 @@ const navigateSubView = (target: string) => {
                          />
                          <div className="flex justify-between mt-2 px-1">
                             <span className="text-[9px] font-bold text-zinc-600">1 Pessoa</span>
-                            <span className="text-[9px] font-bold text-zinc-600">AtÃ© 20 Pessoas</span>
+                            <span className="text-[9px] font-bold text-zinc-600">Até 20 Pessoas</span>
                          </div>
                       </div>
                    </div>
@@ -5812,7 +5812,7 @@ const navigateSubView = (target: string) => {
                       </div>
 
                       <div className="bg-zinc-900/60 p-6 rounded-[35px] border border-white/5">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-3 ml-1">Finalidade / ObservaÃ§ÃƒÆ’Âµes</p>
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-3 ml-1">Finalidade / ObservaçÃÆ’Âµes</p>
                          <textarea 
                            className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 resize-none"
                            rows={3}
@@ -5835,7 +5835,7 @@ const navigateSubView = (target: string) => {
                       R$ {(() => {
                         const res = calculateVanPrice({
                           baseFare: 80,
-                          distanceInKm: distanceValueKm || 1, // Usando distÃƒÂ¢ncia real da Routes API
+                          distanceInKm: distanceValueKm || 1, // Usando distÃÂ¢ncia real da Routes API
                           distanceRate: 3.5,
                           stopCount: transitData.stops.length,
                           stopRate: 15,
@@ -5862,7 +5862,7 @@ const navigateSubView = (target: string) => {
                    onClick={() => mobilityStep < 3 ? setMobilityStep(prev => prev + 1) : navigateSubView("mobility_payment")}
                    className="flex-1 bg-yellow-400 text-black font-black text-lg py-5 rounded-[28px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
                  >
-                    <span className="uppercase tracking-widest">{mobilityStep < 3 ? "PrÃ³ximo Passo" : "Ver PreÃ§o & Pedir"}</span>
+                    <span className="uppercase tracking-widest">{mobilityStep < 3 ? "Próximo Passo" : "Ver Preço & Pedir"}</span>
                     <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">{mobilityStep < 3 ? 'arrow_forward' : 'bolt'}</span>
                  </button>
               </div>
@@ -5875,7 +5875,7 @@ const navigateSubView = (target: string) => {
   const renderExploreEnvios = () => {
     const services = [
       { id: "express", name: "Izi Express", desc: "Documentos e pequenos volumes", icon: "bolt", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "express" }); navigateSubView("shipping_priority"); } },
-      { id: "coleta",  name: "Click e Retire Izi", desc: "Retirada rÃ¡pida em lojas parceiras", icon: "inventory_2", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "coleta" }); navigateSubView("shipping_details"); } },
+      { id: "coleta",  name: "Click e Retire Izi", desc: "Retirada rápida em lojas parceiras", icon: "inventory_2", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "coleta" }); navigateSubView("shipping_details"); } },
     ];
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
@@ -5921,7 +5921,7 @@ const navigateSubView = (target: string) => {
           <div className="mt-8 p-8 rounded-[40px] bg-gradient-to-br from-yellow-400/20 to-amber-500/5 border border-yellow-400/10 relative overflow-hidden group">
              <div className="relative z-10">
                 <h4 className="text-white font-black text-lg tracking-tight mb-2">Transporte Local</h4>
-                <p className="text-zinc-400 text-xs leading-relaxed max-w-[200px]">Precisa de algo maior? Confira nossas vans e caminhÃµes para frete.</p>
+                <p className="text-zinc-400 text-xs leading-relaxed max-w-[200px]">Precisa de algo maior? Confira nossas vans e caminhões para frete.</p>
                 <div className="mt-5 flex gap-3">
                    <button onClick={() => setSubView("van_wizard")} className="px-4 py-2 bg-yellow-400 text-black text-[10px] font-black rounded-xl uppercase tracking-widest shadow-lg shadow-yellow-400/20">Vans</button>
                    <button onClick={() => setSubView("freight_wizard")} className="px-4 py-2 bg-white/10 text-white text-[10px] font-black rounded-xl uppercase tracking-widest border border-white/10">Fretes</button>
@@ -5936,10 +5936,10 @@ const navigateSubView = (target: string) => {
 
   const renderIziExpressPriority = () => {
     const priorities = [
-      { id: "turbo", name: "Izi Turbo Flash", desc: "Entrega ultra-rÃ¡pida atÃ© 15 min", time: "15 min", icon: "bolt", color: "text-amber-400", bg: "bg-amber-400/10" },
-      { id: "light", name: "Izi Light Flash", desc: "Entrega agilizada atÃ© 30 min", time: "30 min", icon: "electric_bolt", color: "text-yellow-400", bg: "bg-yellow-400/10" },
+      { id: "turbo", name: "Izi Turbo Flash", desc: "Entrega ultra-rápida até 15 min", time: "15 min", icon: "bolt", color: "text-amber-400", bg: "bg-amber-400/10" },
+      { id: "light", name: "Izi Light Flash", desc: "Entrega agilizada até 30 min", time: "30 min", icon: "electric_bolt", color: "text-yellow-400", bg: "bg-yellow-400/10" },
       { id: "normal", name: "Izi Express", desc: "Categoria normal de entrega", time: "1 hr", icon: "moped", color: "text-zinc-400", bg: "bg-zinc-800" },
-      { id: "scheduled", name: "Izi Agendado", desc: "VocÃª escolhe data e horÃ¡rio", time: "Agendar", icon: "event", color: "text-blue-400", bg: "bg-blue-400/10" },
+      { id: "scheduled", name: "Izi Agendado", desc: "Você escolhe data e horário", time: "Agendar", icon: "event", color: "text-blue-400", bg: "bg-blue-400/10" },
     ];
 
     return (
@@ -5963,8 +5963,8 @@ const navigateSubView = (target: string) => {
             >
               <span className="material-symbols-outlined text-5xl text-yellow-400 drop-shadow-[0_0_15px_rgba(255,215,9,0.5)]">speed</span>
             </motion.div>
-            <h3 className="text-xl font-black text-white tracking-tight">Qual a sua urgÃªncia?</h3>
-            <p className="text-zinc-500 text-xs font-semibold mt-2 max-w-[240px] mx-auto opacity-80">Oferecemos diferentes nÃ­veis de prioridade de acordo com sua necessidade</p>
+            <h3 className="text-xl font-black text-white tracking-tight">Qual a sua urgência?</h3>
+            <p className="text-zinc-500 text-xs font-semibold mt-2 max-w-[240px] mx-auto opacity-80">Oferecemos diferentes níveis de prioridade de acordo com sua necessidade</p>
           </div>
 
           <div className="grid grid-cols-1 gap-5">
@@ -6017,7 +6017,7 @@ const navigateSubView = (target: string) => {
                <span className="material-symbols-outlined text-yellow-400 text-xl font-bold">info</span>
             </div>
             <p className="text-[11px] text-zinc-400 font-semibold leading-relaxed">
-              Os tempos de entrega sÃ£o estimativas calculadas pelo nosso algoritmo baseado na frota disponÃ­vel em tempo real.
+              Os tempos de entrega são estimativas calculadas pelo nosso algoritmo baseado na frota disponível em tempo real.
             </p>
           </div>
         </main>
@@ -6071,12 +6071,12 @@ const navigateSubView = (target: string) => {
                           ? <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.2" /><path d="M22 12A10 10 0 0 0 12 2" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
                           : <span className="material-symbols-outlined text-xs">my_location</span>
                         }
-                        <span className="text-[8px] font-black uppercase tracking-widest">{userLocation.loading ? 'Buscando...' : 'LocalizaÃ§Ã£o Atual'}</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest">{userLocation.loading ? 'Buscando...' : 'Localização Atual'}</span>
                      </button>
                   </div>
                   <AddressSearchInput 
                     initialValue={transitData.origin}
-                    placeholder="EndereÃ§o de partida..."
+                    placeholder="Endereço de partida..."
                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white placeholder:text-zinc-600"
                     userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                     onSelect={(place) => setTransitData(prev => ({ ...prev, origin: place.formatted_address || "" }))}
@@ -6088,7 +6088,7 @@ const navigateSubView = (target: string) => {
                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Para onde levar?</p>
                    <AddressSearchInput 
                      initialValue={transitData.destination}
-                     placeholder="Digite o endereÃ§o de destino..."
+                     placeholder="Digite o endereço de destino..."
                      className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white placeholder:text-zinc-600"
                      userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                      onSelect={(place) => {
@@ -6155,7 +6155,7 @@ const navigateSubView = (target: string) => {
                        type="text" 
                        value={transitData.receiverName}
                        onChange={(e) => setTransitData({...transitData, receiverName: e.target.value})}
-                       placeholder="Ex: JoÃ£o Silva"
+                       placeholder="Ex: João Silva"
                        className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-white"
                      />
                   </div>
@@ -6175,7 +6175,7 @@ const navigateSubView = (target: string) => {
 
               {transitData.subService === "coleta" && (
                 <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl ring-1 ring-yellow-400/10">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">EndereÃ§o de Entrega (Destino)</p>
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Endereço de Entrega (Destino)</p>
                    <AddressSearchInput 
                      initialValue={transitData.destination}
                      placeholder="Onde devemos entregar?"
@@ -6207,7 +6207,7 @@ const navigateSubView = (target: string) => {
                      type="text" 
                      value={transitData.receiverName}
                      onChange={(e) => setTransitData({...transitData, receiverName: e.target.value})}
-                     placeholder="Ex: Hub LogÃ­stico Izi"
+                     placeholder="Ex: Hub Logístico Izi"
                      className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
                    />
                 </div>
@@ -6224,7 +6224,7 @@ const navigateSubView = (target: string) => {
                 </div>
 
                 <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">CÃ³d. do Pedido / Retirada</p>
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Cód. do Pedido / Retirada</p>
                    <input 
                      type="text" 
                      value={transitData.pickupCode}
@@ -6246,7 +6246,7 @@ const navigateSubView = (target: string) => {
                      />
                   </div>
                   <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Setor / GuichÃª</p>
+                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Setor / Guichê</p>
                      <input 
                        type="text" 
                        value={transitData.pickupSector}
@@ -6268,18 +6268,18 @@ const navigateSubView = (target: string) => {
 
             <div className="space-y-4">
                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">DescriÃ§Ã£o do Item</p>
+                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Descrição do Item</p>
                   <textarea 
                     value={transitData.packageDesc}
                     onChange={(e) => setTransitData({...transitData, packageDesc: e.target.value})}
-                    placeholder="Ex: 2 Camisetas, 1 Par de TÃªnis..."
+                    placeholder="Ex: 2 Camisetas, 1 Par de Tênis..."
                     rows={3}
                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white resize-none"
                   />
                </div>
 
                <div className="grid grid-cols-2 gap-4">
-                  {['Pequeno (atÃ© 5kg)', 'MÃ©dio (atÃ© 15kg)', 'Grande (atÃ© 30kg)', 'Pesado (+30kg)'].map((weight) => (
+                  {['Pequeno (até 5kg)', 'Médio (até 15kg)', 'Grande (até 30kg)', 'Pesado (+30kg)'].map((weight) => (
                     <button
                       key={weight}
                       onClick={() => setTransitData({...transitData, weightClass: weight})}
@@ -6307,7 +6307,7 @@ const navigateSubView = (target: string) => {
                    </div>
                 </div>
                 <div onClick={() => setShowTimePicker(true)} className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl cursor-pointer active:scale-95 transition-all">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">HorÃ¡rio</p>
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Horário</p>
                    <div className="flex items-center justify-between">
                      <span className="text-base font-bold text-white">{transitData.scheduledTime || "Selecionar hora"}</span>
                      <span className="material-symbols-outlined text-yellow-400 text-sm">schedule</span>
@@ -6329,7 +6329,7 @@ const navigateSubView = (target: string) => {
                 </header>
                 <div className="relative mb-6">
                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">search</span>
-                   <input type="text" placeholder="Buscar por nome ou regiÃ£o..." className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl py-4 pl-12 pr-6 text-sm font-bold focus:ring-1 focus:ring-yellow-400/50 outline-none text-white placeholder-zinc-600" />
+                   <input type="text" placeholder="Buscar por nome ou região..." className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl py-4 pl-12 pr-6 text-sm font-bold focus:ring-1 focus:ring-yellow-400/50 outline-none text-white placeholder-zinc-600" />
                 </div>
                 <div className="flex-1 overflow-y-auto no-scrollbar space-y-4">
                    {partnerStores.map((store) => (
@@ -6366,7 +6366,7 @@ const navigateSubView = (target: string) => {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
                 <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
                   <div className="text-center mb-8">
-                    <h3 className="text-xl font-black text-white">PrÃ³ximos 7 dias</h3>
+                    <h3 className="text-xl font-black text-white">Próximos 7 dias</h3>
                     <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Selecione uma data</p>
                   </div>
                   <div className="grid grid-cols-1 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
@@ -6394,8 +6394,8 @@ const navigateSubView = (target: string) => {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
                 <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
                   <div className="text-center mb-8">
-                    <h3 className="text-xl font-black text-white">HorÃ¡rio</h3>
-                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Das 08:00 ÃƒÆ’ s 22:00</p>
+                    <h3 className="text-xl font-black text-white">Horário</h3>
+                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Das 08:00 ÃÆ’ s 22:00</p>
                   </div>
                   <div className="grid grid-cols-3 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
                     {["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"].map((h) => (
@@ -6415,7 +6415,7 @@ const navigateSubView = (target: string) => {
                <span className="material-symbols-outlined text-amber-400 text-sm">warning</span>
              </div>
              <p className="text-[10px] font-bold text-amber-400/80 leading-relaxed uppercase tracking-wider">
-                Certifique-se de que o objeto esteja bem embalado. NÃ£o transportamos itens proibidos por lei ou inflamÃ¡veis.
+                Certifique-se de que o objeto esteja bem embalado. Não transportamos itens proibidos por lei ou inflamáveis.
              </p>
           </div>
         </main>
@@ -6460,9 +6460,9 @@ const navigateSubView = (target: string) => {
           </button>
           <div className="text-right">
              <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
-                {transitData.type === 'mototaxi' ? "MotoTÃ¡xi" : "Motorista Particular"}
+                {transitData.type === 'mototaxi' ? "MotoTáxi" : "Motorista Particular"}
              </h2>
-             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Viagem RÃ¡pida & Segura</p>
+             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Viagem Rápida & Segura</p>
           </div>
         </header>
 
@@ -6485,7 +6485,7 @@ const navigateSubView = (target: string) => {
                           </div>
                          <AddressSearchInput 
                            initialValue={transitData.origin}
-                           placeholder="De onde vocÃª estÃ¡ saindo?"
+                           placeholder="De onde você está saindo?"
                            className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 placeholder:text-zinc-600"
                            userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                            onSelect={(p) => {
@@ -6509,7 +6509,7 @@ const navigateSubView = (target: string) => {
                          />
                       </motion.div>
 
-                      {/* VEÃCULO E PREÃ‡O IMEDIATO */}
+                      {/* VEÃCULO E PREÇO IMEDIATO */}
                        <AnimatePresence>
                          {transitData.destination && transitData.origin && (
                            <motion.div 
@@ -6525,7 +6525,7 @@ const navigateSubView = (target: string) => {
                               
                               <div className="grid grid-cols-2 gap-3 pb-2">
                                  {[
-                                   { id: 'mototaxi', label: 'MotoTÃ¡xi', icon: 'motorcycle', color: 'text-yellow-400', sub: 'RÃ¡pido & Ãgil' },
+                                   { id: 'mototaxi', label: 'MotoTáxi', icon: 'motorcycle', color: 'text-yellow-400', sub: 'Rápido & Ãgil' },
                                    { id: 'carro', label: 'Carro', icon: 'directions_car', color: 'text-white', sub: 'Executivo Premium' }
                                  ].map((v) => {
                                    const isSelected = transitData.type === v.id;
@@ -6570,7 +6570,7 @@ const navigateSubView = (target: string) => {
                 <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
                    <div className="space-y-2">
                       <h3 className="text-xl font-bold text-white tracking-tight">Resumo da Viagem</h3>
-                      <p className="text-zinc-500 text-xs font-medium">Confirme os detalhes e o preÃ§o antes de pedir.</p>
+                      <p className="text-zinc-500 text-xs font-medium">Confirme os detalhes e o preço antes de pedir.</p>
                    </div>
 
                    <div className="bg-zinc-900/40 border border-white/5 p-7 rounded-[40px] space-y-8 shadow-2xl">
@@ -6583,7 +6583,7 @@ const navigateSubView = (target: string) => {
                             <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">Pagamento</p>
                             <div className="flex items-center justify-between">
                                <p className="text-sm font-black text-white italic">
-                                 {paymentMethod === 'dinheiro' ? 'Dinheiro' : paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'bitcoin_lightning' ? 'BTC Lightning' : paymentMethod === 'saldo' ? 'Saldo IZI' : 'Escolher MÃ©todo'}
+                                 {paymentMethod === 'dinheiro' ? 'Dinheiro' : paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'bitcoin_lightning' ? 'BTC Lightning' : paymentMethod === 'saldo' ? 'Saldo IZI' : 'Escolher Método'}
                                </p>
                                <span className="material-symbols-outlined text-zinc-700 text-sm group-hover:text-yellow-400 transition-colors">expand_more</span>
                             </div>
@@ -6592,13 +6592,13 @@ const navigateSubView = (target: string) => {
 
                       <div className="h-px bg-white/5" />
 
-                      {/* PREÃ‡O E INFO */}
+                      {/* PREÇO E INFO */}
                       <div className="flex items-center gap-5">
                          <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
                             <span className="material-symbols-outlined text-yellow-400 text-2xl italic">local_atm</span>
                          </div>
                          <div className="flex-1">
-                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">PreÃ§o Estimado</p>
+                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">Preço Estimado</p>
                             <div className="flex items-center gap-3">
                                <p className="text-3xl font-black text-yellow-400 tracking-tighter">
                                  {distancePrices[transitData.type] > 0 
@@ -6644,7 +6644,7 @@ const navigateSubView = (target: string) => {
                 onClick={() => {
                   if (mobilityStep === 1) {
                     if (!transitData.origin || !transitData.destination) {
-                      showToast("Preencha todos os endereÃ§os", "warning");
+                      showToast("Preencha todos os endereços", "warning");
                       return;
                     }
                     setMobilityStep(2);
@@ -6656,7 +6656,7 @@ const navigateSubView = (target: string) => {
                 disabled={mobilityStep === 1 ? (!transitData.origin || !transitData.destination) : (!distancePrices[transitData.type] || isCalculatingPrice)}
                 className="w-full bg-yellow-400 text-black font-black text-lg py-5 rounded-[30px] shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:grayscale"
               >
-                 <span className="uppercase tracking-[0.2em] text-sm">{mobilityStep === 1 ? "PrÃ³ximo" : "Confirmar Viagem"}</span>
+                 <span className="uppercase tracking-[0.2em] text-sm">{mobilityStep === 1 ? "Próximo" : "Confirmar Viagem"}</span>
                  <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">{mobilityStep === 1 ? 'arrow_forward' : 'bolt'}</span>
               </button>
            </div>
@@ -6719,10 +6719,10 @@ const navigateSubView = (target: string) => {
           </div>
         </header>
 
-        <div className="flex-1 px-5 py-6 space-y-10 pb-48">
+        <div className="flex-1 px-5 py-6 space-y-10 pb-8">
           <div className="space-y-4">
             <div className="flex items-center justify-between px-2">
-              <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Resumo do ServiÃ§o</h3>
+              <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Resumo do Serviço</h3>
               <div className="px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/20">
                 <span className="text-xs font-black text-yellow-400 italic">R$ {price.toFixed(2).replace(".", ",")}</span>
               </div>
@@ -6738,9 +6738,9 @@ const navigateSubView = (target: string) => {
                   </div>
                   <div>
                     <h4 className="text-lg font-black text-white italic uppercase tracking-tighter leading-none">
-                      {transitData.type === 'mototaxi' ? 'MotoTÃ¡xi' : transitData.type === 'carro' ? 'Particular' : transitData.type === 'van' ? 'Van & Grupos' : 'Frete & MudanÃ§a'}
+                      {transitData.type === 'mototaxi' ? 'MotoTáxi' : transitData.type === 'carro' ? 'Particular' : transitData.type === 'van' ? 'Van & Grupos' : 'Frete & Mudança'}
                     </h4>
-                    <p className="text-[9px] font-black text-yellow-400/60 uppercase tracking-[0.2em] mt-1">{transitData.vehicleCategory || 'ServiÃ§o sob demanda'}</p>
+                    <p className="text-[9px] font-black text-yellow-400/60 uppercase tracking-[0.2em] mt-1">{transitData.vehicleCategory || 'Serviço sob demanda'}</p>
                   </div>
                </div>
 
@@ -6753,7 +6753,7 @@ const navigateSubView = (target: string) => {
                       </div>
                       <div>
                         <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Tipo</p>
-                        <p className="text-xs font-bold text-white uppercase">{transitData.tripType === 'round_trip' ? 'Ida e Volta' : transitData.tripType === 'hourly' ? 'DiÃ¡ria' : 'Ida'}</p>
+                        <p className="text-xs font-bold text-white uppercase">{transitData.tripType === 'round_trip' ? 'Ida e Volta' : transitData.tripType === 'hourly' ? 'Diária' : 'Ida'}</p>
                       </div>
                     </>
                   )}
@@ -6765,7 +6765,7 @@ const navigateSubView = (target: string) => {
                       </div>
                       <div>
                         <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Escadas</p>
-                        <p className="text-xs font-bold text-white">{(transitData.accessibility.stairsAtOrigin || transitData.accessibility.stairsAtDestination) ? 'Sim' : 'NÃ£o'}</p>
+                        <p className="text-xs font-bold text-white">{(transitData.accessibility.stairsAtOrigin || transitData.accessibility.stairsAtDestination) ? 'Sim' : 'Não'}</p>
                       </div>
                     </>
                   )}
@@ -6798,12 +6798,12 @@ const navigateSubView = (target: string) => {
             </h3>
             
             <div className="grid grid-cols-1 gap-3">
-              {/* CartÃ£o via App (Destaque se houver) */}
+              {/* Cartão via App (Destaque se houver) */}
               <PaymentMethodButton 
                 id="cartao" 
                 icon="credit_card" 
-                label="CartÃ£o via App" 
-                sub={selectedCard ? `${selectedCard.brand} â€¢â€¢â€¢â€¢ ${selectedCard.last4}` : "Pague com seguranÃ§a pelo App"}
+                label="Cartão via App" 
+                sub={selectedCard ? `${selectedCard.brand} â€¢â€¢â€¢â€¢ ${selectedCard.last4}` : "Pague com segurança pelo App"}
                 colorClass="text-blue-400"
               />
 
@@ -6811,8 +6811,8 @@ const navigateSubView = (target: string) => {
               <PaymentMethodButton 
                 id="pix" 
                 icon="pix" 
-                label="PIX InstantÃ¢neo" 
-                sub="AprovaÃ§Ã£o imediata via QR Code"
+                label="PIX Instantâneo" 
+                sub="Aprovação imediata via QR Code"
                 colorClass="text-emerald-400"
               />
 
@@ -6821,7 +6821,7 @@ const navigateSubView = (target: string) => {
                 id="bitcoin_lightning" 
                 icon="bolt" 
                 label="Bitcoin Lightning" 
-                sub="Pagamento instantÃ¢neo em Satoshis"
+                sub="Pagamento instantâneo em Satoshis"
                 colorClass="text-orange-400"
               />
 
@@ -6830,25 +6830,24 @@ const navigateSubView = (target: string) => {
                 id="saldo" 
                 icon="account_balance_wallet" 
                 label="Saldo IZI Wallet" 
-                sub={`R$ ${walletBalance.toFixed(2).replace(".", ",")} disponÃ­vel`}
+                sub={`R$ ${walletBalance.toFixed(2).replace(".", ",")} disponível`}
                 colorClass="text-cyan-400"
                 disabled={walletBalance < price}
               />
 
-              {/* CartÃ£o na Entrega */}
               <PaymentMethodButton 
                 id="cartao_entrega" 
                 icon="contactless" 
-                label="CartÃ£o na Entrega" 
+                label="Cartão na Entrega" 
                 sub="Pague com maquininha ao motoboy"
                 colorClass="text-zinc-500"
               />
 
-              {/* Dinheiro (EspÃ©cie) */}
+              {/* Dinheiro (Espécie) */}
               <PaymentMethodButton 
                 id="dinheiro" 
                 icon="payments" 
-                label="Dinheiro em EspÃ©cie" 
+                label="Dinheiro em Espécie" 
                 sub="Pague diretamente ao prestador"
                 colorClass="text-zinc-600"
               />
@@ -6861,16 +6860,16 @@ const navigateSubView = (target: string) => {
                <div className="size-8 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-700 group-hover:text-yellow-400 group-hover:border-yellow-400/20 transition-all">
                   <span className="material-symbols-outlined text-sm">enhanced_encryption</span>
                </div>
-               <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.4em]">ProteÃ§Ã£o Izi Security â€¢ RSA 4096-bit</p>
+               <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.4em]">Proteção Izi Security â€¢ RSA 4096-bit</p>
              </div>
              
              <button className="text-[9px] font-black text-zinc-800 uppercase tracking-widest hover:text-zinc-500 transition-colors">
-               Termos de Uso e PolÃ­tica de Privacidade
+               Termos de Uso e Política de Privacidade
              </button>
           </div>
         </div>
 
-        {/* BOTÃƒO DE CONFIRMAÃ‡ÃƒO FINAL */}
+        {/* BOTÃO DE CONFIRMAÇÃO FINAL */}
         <div className="fixed bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black via-black to-transparent z-50 pointer-events-none">
           <div className="pointer-events-auto">
             <button 
@@ -6893,12 +6892,12 @@ const navigateSubView = (target: string) => {
     if (!selectedItem) return null;
 
     const serviceLabels: Record<string, { label: string; icon: string; color: string }> = {
-      mototaxi: { label: "MotoTÃ¡xi", icon: "motorcycle", color: "text-yellow-400" },
+      mototaxi: { label: "MotoTáxi", icon: "motorcycle", color: "text-yellow-400" },
       carro: { label: "Carro Executivo", icon: "directions_car", color: "text-zinc-500" },
       van: { label: "Van de Carga", icon: "airport_shuttle", color: "text-blue-500" },
       utilitario: { label: "Izi Express", icon: "bolt", color: "text-purple-500" },
     };
-    const service = serviceLabels[selectedItem.service_type] || { label: "ServiÃ§o", icon: "local_shipping", color: "text-yellow-400" };
+    const service = serviceLabels[selectedItem.service_type] || { label: "Serviço", icon: "local_shipping", color: "text-yellow-400" };
 
     return (
       <div className="bg-black absolute inset-0 z-[115] bg-[#020617] flex flex-col items-center justify-center p-8 text-white overflow-hidden">
@@ -6915,12 +6914,12 @@ const navigateSubView = (target: string) => {
         </div>
 
         <h2 className="text-2xl font-black text-white tracking-tight text-center mb-2">Buscando Prestador</h2>
-        <p className="text-white/40 text-sm text-center mb-8 max-w-xs">Estamos encontrando o melhor prestador disponÃ­vel para vocÃª</p>
+        <p className="text-white/40 text-sm text-center mb-8 max-w-xs">Estamos encontrando o melhor prestador disponível para você</p>
 
         {/* Info do pedido */}
         <div className="w-full max-w-sm bg-white/5 border border-white/10 rounded-[32px] p-6 space-y-4 mb-8">
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">ServiÃ§o</span>
+            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Serviço</span>
             <span className="text-sm font-black text-white">{service.label}</span>
           </div>
           <div className="h-px bg-white/5" />
@@ -6945,15 +6944,15 @@ const navigateSubView = (target: string) => {
         <button
           onClick={async () => {
             if (!selectedItem?.id || !userId) return;
-            if (!await showConfirm({ message: "Cancelar a solicitaÃ§Ã£o?" })) return;
+            if (!await showConfirm({ message: "Cancelar a solicitação?" })) return;
             await supabase.from("orders_delivery").update({ status: "cancelado" }).eq("id", selectedItem.id);
             setSubView("none");
             fetchMyOrders(userId);
-            toastSuccess("SolicitaÃ§Ã£o cancelada.");
+            toastSuccess("Solicitação cancelada.");
           }}
           className="text-white/30 font-black text-[10px] uppercase tracking-widest border border-white/10 px-6 py-3 rounded-2xl hover:bg-white/5 transition-all active:scale-95"
         >
-          Cancelar SolicitaÃ§Ã£o
+          Cancelar Solicitação
         </button>
 
         {/* Auto-redireciona para active_order quando driver aceita */}
@@ -6979,9 +6978,9 @@ const navigateSubView = (target: string) => {
   const renderScheduledOrder = () => {
     if (!selectedItem) return null;
     const svcIcons: Record<string,string> = { mototaxi:'motorcycle', carro:'directions_car', van:'airport_shuttle', utilitario:'bolt' };
-    const svcLabels: Record<string,string> = { mototaxi:'MotoTÃ¡xi', carro:'Carro Executivo', van:'Van de Carga', utilitario:'Izi Express' };
+    const svcLabels: Record<string,string> = { mototaxi:'MotoTáxi', carro:'Carro Executivo', van:'Van de Carga', utilitario:'Izi Express' };
     const icon = svcIcons[selectedItem.service_type] || 'event';
-    const label = svcLabels[selectedItem.service_type] || 'ServiÃ§o';
+    const label = svcLabels[selectedItem.service_type] || 'Serviço';
     const scheduledAt = selectedItem.scheduled_date && selectedItem.scheduled_time
       ? new Date(`${selectedItem.scheduled_date}T${selectedItem.scheduled_time}`).toLocaleString('pt-BR', { weekday:'long', day:'2-digit', month:'long', hour:'2-digit', minute:'2-digit' })
       : null;
@@ -6992,7 +6991,7 @@ const navigateSubView = (target: string) => {
       setIsSavingObsState(true);
       await supabase.from('orders_delivery').update({ order_notes: schedObsState }).eq('id', selectedItem.id);
       setIsSavingObsState(false);
-      toastSuccess('ObservaÃ§Ã£o salva!');
+      toastSuccess('Observação salva!');
     };
 
     const sendScheduledMessage = () => {
@@ -7030,8 +7029,8 @@ const navigateSubView = (target: string) => {
               <span className={`material-symbols-outlined text-2xl ${hasDriver ? 'text-emerald-500' : 'text-blue-500'}`}>{hasDriver ? 'verified' : 'pending'}</span>
             </div>
             <div>
-              <p className={`text-[9px] font-black uppercase tracking-widest ${hasDriver ? 'text-emerald-500' : 'text-blue-400'}`}>{hasDriver ? 'Motorista Confirmado' : 'Aguardando ConfirmaÃ§Ã£o'}</p>
-              <h3 className="text-base font-black text-white">{hasDriver ? 'Seu motorista estÃ¡ confirmado!' : 'Buscando motorista disponÃ­vel...'}</h3>
+              <p className={`text-[9px] font-black uppercase tracking-widest ${hasDriver ? 'text-emerald-500' : 'text-blue-400'}`}>{hasDriver ? 'Motorista Confirmado' : 'Aguardando Confirmação'}</p>
+              <h3 className="text-base font-black text-white">{hasDriver ? 'Seu motorista está confirmado!' : 'Buscando motorista disponível...'}</h3>
             </div>
           </div>
 
@@ -7039,7 +7038,7 @@ const navigateSubView = (target: string) => {
             <div className="flex items-center gap-3">
               <Icon name={icon} />
               <div>
-                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">ServiÃ§o</p>
+                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Serviço</p>
                 <p className="text-sm font-black text-white">{label}</p>
               </div>
             </div>
@@ -7073,11 +7072,11 @@ const navigateSubView = (target: string) => {
           </div>
 
           <div className="bg-zinc-900 rounded-[28px] border border-zinc-800 p-5 shadow-sm space-y-3">
-            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">ObservaÃ§Ãµes para o Motorista</p>
+            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Observações para o Motorista</p>
             <textarea
               value={schedObsState}
               onChange={(e) => setSchedObsState(e.target.value)}
-              placeholder="Ex: endereÃ§o tem portÃ£o azul, preciso de nota fiscal..."
+              placeholder="Ex: endereço tem portão azul, preciso de nota fiscal..."
               rows={3}
               className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-3 text-sm font-medium text-white placeholder:text-zinc-600 focus:outline-none focus:border-blue-400 resize-none"
             />
@@ -7086,7 +7085,7 @@ const navigateSubView = (target: string) => {
               disabled={isSavingObsState}
               className="w-full py-3 bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-md active:scale-95 transition-all disabled:opacity-50"
             >
-              {isSavingObsState ? 'Salvando...' : 'Salvar ObservaÃ§Ã£o'}
+              {isSavingObsState ? 'Salvando...' : 'Salvar Observação'}
             </button>
           </div>
 
@@ -7098,7 +7097,7 @@ const navigateSubView = (target: string) => {
             <div className="p-4 min-h-[100px] space-y-3">
               {schedMessagesState.length === 0 && (
                 <p className="text-center text-[10px] font-black text-zinc-600 uppercase tracking-widest py-4">
-                  {hasDriver ? 'Inicie a conversa com seu motorista' : 'DisponÃ­vel apÃ³s confirmaÃ§Ã£o do motorista'}
+                  {hasDriver ? 'Inicie a conversa com seu motorista' : 'Disponível após confirmação do motorista'}
                 </p>
               )}
               {schedMessagesState.map((msg: any) => (
@@ -7221,7 +7220,7 @@ const navigateSubView = (target: string) => {
                 <span className="text-2xl font-black text-yellow-400 italic tracking-tighter">IZI</span>
               </div>
             </div>
-            <p className="mt-8 text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] animate-pulse">Carregando ExperiÃªncia</p>
+            <p className="mt-8 text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] animate-pulse">Carregando Experiência</p>
           </motion.div>
         )}
 
