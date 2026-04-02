@@ -236,9 +236,9 @@ export default function SettingsTab() {
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 font-bold text-xs">R$</span>
                 <input
                   className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-9 pr-2 py-3.5 font-black text-xl text-emerald-600 focus:ring-2 focus:ring-amber-300 shadow-inner transition-all hover:bg-amber-50/50 dark:hover:bg-slate-800"
-                  type="number" min="0.01" step="0.01"
-                  value={appSettings.iziCoinRate || 1.0}
-                  onChange={(e) => setAppSettings({ ...appSettings, iziCoinRate: parseFloat(e.target.value) || 1.0 })}
+                  type="number" min="0.001" step="0.001"
+                  value={appSettings.iziCoinRate || 0}
+                  onChange={(e) => setAppSettings({ ...appSettings, iziCoinRate: parseFloat(e.target.value) || 0 })}
                 />
               </div>
             </div>
