@@ -68,6 +68,7 @@ export interface User {
   wallet_balance?: number;
   cashback_earned?: number;
   is_izi_black?: boolean;
+  izi_coins?: number;
   created_at: string;
 }
 
@@ -195,6 +196,7 @@ export interface Promotion {
   type?: 'banner' | 'coupon' | 'flash';
   target_merchants?: string[];
   target_products?: string[];
+  target_users?: string[];
   created_at?: string;
 }
 
@@ -227,7 +229,7 @@ export interface AuditLog {
 export interface WalletTransaction {
   id: string;
   user_id: string;
-  type: 'deposito' | 'reembolso' | 'pagamento' | 'saque';
+  type: 'deposito' | 'reembolso' | 'pagamento' | 'saque' | 'cashback' | 'recompensa';
   amount: number;
   description?: string;
   created_at: string;

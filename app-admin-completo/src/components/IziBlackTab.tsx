@@ -142,7 +142,7 @@ export default function IziBlackTab() {
         {[
           { label: 'Total Membros', val: usersList.filter(u => u.is_izi_black).length, icon: 'group', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20' },
           { label: 'Recompensas Ativas', val: promotionsList.filter(p => p.is_vip && p.is_active).length, icon: 'redeem', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20' },
-          { label: 'Receita Est. (Mensal)', val: `R$ ${(usersList.filter(u => u.is_izi_black).length * (appSettings.iziBlackFee || 29.90)).toFixed(2).replace('.', ',')}`, icon: 'payments', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-500/10 border-blue-100 dark:border-blue-500/20' },
+          { label: 'Preço Black', val: `R$ ${(appSettings.iziBlackFee || 29.90).toFixed(2).replace('.', ',')}`, icon: 'payments', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-500/10 border-blue-100 dark:border-blue-500/20' },
           { label: 'Cashback Distribuído', val: `R$ ${usersList.reduce((acc, u) => acc + (u.cashback_earned || 0), 0).toFixed(0)}`, icon: 'monetization_on', color: 'text-primary', bg: 'bg-primary/10 border-primary/20' },
         ].map((s, i) => (
           <motion.div key={i} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay: i*0.07 }}
@@ -439,8 +439,7 @@ export default function IziBlackTab() {
                         <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Usuário VIP</th>
                         <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Benefícios Ativos</th>
                         <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Dados de Contato</th>
-                        <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Atividade</th>
-                        <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Cashback Total</th>
+                        <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo Premium</th>
                         <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Acções Estúdio</th>
                      </tr>
                   </thead>
@@ -488,26 +487,46 @@ export default function IziBlackTab() {
                               </td>
                               <td className="px-10 py-8">
                                  <div className="flex flex-wrap gap-2 max-w-[200px]">
-                                    {userBenefits.length > 0 ? (
-                                       userBenefits.map((b, idx) => {
-                                          const isExclusive = b.target_users && b.target_users.length > 0;
-                                          return (
-                                             <div key={idx} className={`p-1 flex items-center gap-1.5 rounded-lg border shadow-sm pr-3 ${isExclusive ? 'bg-blue-500/10 border-blue-500/20 text-blue-600' : 'bg-amber-500/10 border-amber-500/20 text-amber-600'}`} title={isExclusive ? 'Exclusivo para este usuário' : 'Válido para todos VIPs'}>
-                                                <div className={`p-1 rounded-md shadow-inner ${isExclusive ? 'bg-blue-500 text-white' : 'bg-amber-500 text-white'}`}>
-                                                   <span className="material-symbols-outlined text-[10px]">
-                                                      {b.image_url ? 'view_carousel' : b.coupon_code ? 'confirmation_number' : b.title.includes('Frete') ? 'local_shipping' : 'bolt'}
-                                                   </span>
-                                                </div>
-                                                <div className="flex flex-col leading-none">
-                                                   <span className="text-[8px] font-black uppercase tracking-tighter truncate w-20">{b.title}</span>
-                                                   <span className="text-[6px] font-bold uppercase opacity-60 tracking-widest italic">{isExclusive ? 'Exclusivo' : 'Global VIP'}</span>
-                                                </div>
+                                    {/* Cashback Permanente badge */}
+                                    {(() => {
+                                       const personalCashback = promotionsList.find(p => 
+                                          p.is_vip && p.is_active && p.title.includes('Cashback') && p.target_users?.includes(user.id)
+                                       );
+                                       const globalCashback = promotionsList.find(p => 
+                                          p.is_vip && p.is_active && p.title.includes('Cashback') && (!p.target_users || p.target_users.length === 0)
+                                       );
+                                       const activePct = personalCashback ? personalCashback.discount_value : (globalCashback ? globalCashback.discount_value : appSettings.iziBlackCashback);
+                                       const src = personalCashback ? 'Black+' : (globalCashback ? 'Oferta' : 'Plano');
+
+                                       return (
+                                          <div className={`p-1 flex items-center gap-1.5 rounded-lg border shadow-sm pr-3 ${personalCashback ? 'bg-blue-500/10 border-blue-500/20 text-blue-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'}`}>
+                                             <div className={`p-1 rounded-md shadow-inner ${personalCashback ? 'bg-blue-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                                                <span className="material-symbols-outlined text-[10px]">monetization_on</span>
                                              </div>
-                                          );
-                                       })
-                                    ) : (
-                                       <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Nenhum benefício</p>
-                                    )}
+                                             <div className="flex flex-col leading-none">
+                                                <span className="text-[8px] font-black uppercase tracking-tighter">{activePct}% Cashback</span>
+                                                <span className="text-[6px] font-bold uppercase opacity-60 tracking-widest italic">{src}</span>
+                                             </div>
+                                          </div>
+                                       );
+                                    })()}
+
+                                    {userBenefits.filter(b => !b.title.includes('Cashback')).map((b, idx) => {
+                                       const isExclusive = b.target_users && b.target_users.length > 0;
+                                       return (
+                                          <div key={idx} className={`p-1 flex items-center gap-1.5 rounded-lg border shadow-sm pr-3 ${isExclusive ? 'bg-blue-500/10 border-blue-500/20 text-blue-600' : 'bg-amber-500/10 border-amber-500/20 text-amber-600'}`} title={isExclusive ? 'Exclusivo para este usuário' : 'Válido para todos VIPs'}>
+                                             <div className={`p-1 rounded-md shadow-inner ${isExclusive ? 'bg-blue-500 text-white' : 'bg-amber-500 text-white'}`}>
+                                                <span className="material-symbols-outlined text-[10px]">
+                                                   {b.image_url ? 'view_carousel' : b.coupon_code ? 'confirmation_number' : b.title.includes('Frete') ? 'local_shipping' : 'bolt'}
+                                                </span>
+                                             </div>
+                                             <div className="flex flex-col leading-none">
+                                                <span className="text-[8px] font-black uppercase tracking-tighter truncate w-14">{b.title}</span>
+                                                <span className="text-[6px] font-bold uppercase opacity-60 tracking-widest italic">{isExclusive ? 'Exclusivo' : 'Global VIP'}</span>
+                                             </div>
+                                          </div>
+                                       );
+                                    })}
                                  </div>
                               </td>
                               <td className="px-10 py-8">
@@ -523,19 +542,25 @@ export default function IziBlackTab() {
                                  </div>
                               </td>
                               <td className="px-10 py-8">
-                                 <div className="flex flex-col gap-1.5 w-fit">
-                                    <span className="px-4 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-500/20">
-                                       Membro desde: {new Date(user.created_at).toLocaleDateString()}
-                                    </span>
-                                    <span className="px-4 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-full text-[9px] font-black uppercase tracking-widest">
-                                       Último Acesso: Recente
-                                    </span>
-                                 </div>
-                              </td>
-                              <td className="px-10 py-8">
-                                 <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl border border-emerald-100 dark:border-emerald-500/20 w-fit">
-                                    <p className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Acumulado</p>
-                                    <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 italic">R$ {(user.cashback_earned || 0).toFixed(2).replace('.', ',')}</p>
+                                 <div className="flex flex-col gap-3">
+                                    <div className="flex items-center gap-3">
+                                       <div className="size-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20 shadow-sm shadow-amber-500/5">
+                                          <span className="material-symbols-outlined text-sm font-black italic">payments</span>
+                                       </div>
+                                       <div>
+                                          <p className="text-sm font-black text-slate-900 dark:text-white tracking-tighter italic">{(user.izi_coins || 0).toLocaleString('pt-BR')}</p>
+                                          <p className="text-[8px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">Izi Coins</p>
+                                       </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                       <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 shadow-sm shadow-emerald-500/5">
+                                          <span className="material-symbols-outlined text-sm font-black italic">monetization_on</span>
+                                       </div>
+                                       <div>
+                                          <p className="text-sm font-black text-slate-900 dark:text-white tracking-tighter italic">R$ {(user.cashback_earned || 0).toFixed(2).replace('.', ',')}</p>
+                                          <p className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Cashback Ganho</p>
+                                       </div>
+                                    </div>
                                  </div>
                               </td>
                               <td className="px-10 py-8 text-right">

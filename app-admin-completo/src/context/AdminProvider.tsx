@@ -57,7 +57,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     activeOffers: 0,
     couponInvestment: 0
   });
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [recentOrders] = useState<Order[]>([]);
   const [usersList, setUsersList] = useState<User[]>([]);
   const [driversList, setDriversList] = useState<Driver[]>([]);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
@@ -132,6 +132,54 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     iziCoinRate: 1.0
   });
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'pending' | 'saved' | 'error'>('idle');
+  const [isFetchingSettings, setIsFetchingSettings] = useState(false);
+  const [lastSavedHash, setLastSavedHash] = useState('');
+
+  // Debounced Auto-save for Settings
+  useEffect(() => {
+    if (isFetchingSettings) return;
+    
+    // Gera um hash simples do conteúdo para evitar salvar se nada mudou de fato (ex: após o fetch inicial)
+    const currentHash = JSON.stringify(appSettings);
+    if (lastSavedHash === currentHash) return;
+    if (lastSavedHash === '') {
+      setLastSavedHash(currentHash);
+      return;
+    }
+
+    setAutoSaveStatus('pending');
+    const timer = setTimeout(async () => {
+      try {
+        const cleanSettings = {
+           ...appSettings,
+           iziBlackFee: Number(appSettings.iziBlackFee || 0),
+           iziBlackCashback: Number(appSettings.iziBlackCashback || 0),
+           iziBlackMinOrderFreeShipping: Number(appSettings.iziBlackMinOrderFreeShipping || 0),
+           radius: Number(appSettings.radius || 0),
+           baseFee: Number(appSettings.baseFee || 0),
+           appCommission: Number(appSettings.appCommission || 0),
+           serviceFee: Number(appSettings.serviceFee || 0),
+           flashOfferDiscount: Number(appSettings.flashOfferDiscount || 0),
+           iziCoinRate: Number(appSettings.iziCoinRate || 0),
+           updated_at: new Date().toISOString()
+        };
+        
+        const { error } = await supabase
+          .from('app_settings_delivery')
+          .upsert(cleanSettings);
+        
+        if (error) throw error;
+        setLastSavedHash(JSON.stringify(appSettings));
+        setAutoSaveStatus('saved');
+        setTimeout(() => setAutoSaveStatus('idle'), 2000);
+      } catch (err) {
+        console.error('AutoSave Error:', err);
+        setAutoSaveStatus('error');
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [appSettings, lastSavedHash, isFetchingSettings]);
 
   // Selection & UI
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -164,11 +212,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [newOrderNotification, setNewOrderNotification] = useState<{ show: boolean; orderId?: string }>({ show: false });
 
   // Wallet
-  const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
-  const [isWalletLoading, setIsWalletLoading] = useState(false);
+  const [walletTransactions] = useState<WalletTransaction[]>([]);
+  const [isWalletLoading] = useState(false);
   const [showAddCreditModal, setShowAddCreditModal] = useState(false);
   const [creditToAdd, setCreditToAdd] = useState('');
-  const [isAddingCredit, setIsAddingCredit] = useState(false);
+  const [isAddingCredit] = useState(false);
   const [showWalletStatementModal, setShowWalletStatementModal] = useState(false);
 
   // Dynamic Rates & Map
@@ -180,7 +228,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [mapCenterView, setMapCenterView] = useState({ lat: -23.5505, lng: -46.6333 });
   const [fixedGridCenter, setFixedGridCenter] = useState({ lat: -23.5505, lng: -46.6333 });
   const [selectedHexagons, setSelectedHexagons] = useState<string[]>([]);
-  const [hexGrid, setHexGrid] = useState<any[]>([]);
+  const [hexGrid] = useState<any[]>([]);
 
   // Preview Data
   const [previewProducts, setPreviewProducts] = useState<Product[]>([]);
@@ -656,11 +704,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const fetchAppSettings = useCallback(async () => {
+    setIsFetchingSettings(true);
     try {
       const { data } = await supabase.from('app_settings_delivery').select('*').single();
-      if (data) setAppSettings(data as AppSettings);
+      if (data) {
+        setAppSettings(data as AppSettings);
+        setLastSavedHash(JSON.stringify(data));
+      }
     } catch (err) {
       console.error('Erro ao buscar configurações:', err);
+    } finally {
+      setIsFetchingSettings(false);
     }
   }, []);
 
