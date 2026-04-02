@@ -5652,7 +5652,12 @@ function App() {
       <div className="absolute inset-0 z-[120] bg-transparent text-zinc-100 flex flex-col overflow-hidden">
         {/* MAPA NO FUNDO */}
         <div className="absolute inset-0 z-0 h-full">
-           <IziTrackingMap routePolyline={routePolyline} driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
+           <IziTrackingMap 
+             routePolyline={routePolyline} 
+             driverLoc={driverLocation} 
+             userLoc={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} 
+             onMyLocationClick={updateLocation} 
+           />
            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
         </div>
 
@@ -6434,7 +6439,12 @@ function App() {
       <div className="absolute inset-0 z-[120] bg-transparent text-zinc-100 flex flex-col overflow-hidden">
         {/* MAPA NO FUNDO */}
         <div className="absolute inset-0 z-0 h-full">
-           <IziTrackingMap routePolyline={routePolyline} driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
+           <IziTrackingMap 
+             routePolyline={routePolyline} 
+             driverLoc={driverLocation} 
+             userLoc={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} 
+             onMyLocationClick={updateLocation} 
+           />
            <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-zinc-950/90 pointer-events-none" />
         </div>
 
@@ -7448,7 +7458,7 @@ function App() {
               )}
               {subView === "active_order" && (
                 <motion.div key="aorder" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[100]">
-                  <ActiveOrderView selectedItem={selectedItem} driverLocation={driverLocation} userLocation={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} routePolyline={routePolyline || selectedItem?.route_polyline} onMyLocationClick={updateLocation} setSubView={setSubView} />
+                  <ActiveOrderView selectedItem={selectedItem} driverLocation={driverLocation} userLocation={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} routePolyline={routePolyline || selectedItem?.route_polyline} onMyLocationClick={updateLocation} setSubView={setSubView} />
                 </motion.div>
               )}
               {subView === "payment_processing" && (

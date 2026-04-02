@@ -118,12 +118,14 @@ export const ExploreRestaurantsView = ({
                          shopDesc.includes(catNormalized) ||
                          shopName.includes(catNormalized) ||
                          // Lógica de Sinônimos e Variações para resolver problemas de visibilidade (ex: Burguer vs Hambúrguer)
-                         ((catNormalized === 'burguer' || catNormalized === 'burger' || catNormalized === 'hamburguer') && 
-                          (shopFoodCat.includes('burguer') || shopFoodCat.includes('burger') || shopFoodCat.includes('hamburguer') || shopType.includes('hamburguer') || shopType.includes('hambur'))) ||
-                         ((catNormalized === 'japonesa' || catNormalized === 'sushi' || catNormalized === 'japones') && 
-                          (shopFoodCat.includes('japones') || shopFoodCat.includes('sushi') || shopType.includes('japones'))) ||
+                         ((catNormalized === 'burguer' || catNormalized === 'burger' || catNormalized === 'hamburguer' || catNormalized === 'hambúrguer') && 
+                          (shopFoodCat.includes('burguer') || shopFoodCat.includes('burger') || shopFoodCat.includes('hamburguer') || shopFoodCat.includes('hambúrguer') || shopType.includes('hamburguer') || shopType.includes('hambur'))) ||
+                         ((catNormalized === 'japonesa' || catNormalized === 'sushi' || catNormalized === 'japones' || catNormalized === 'japonês') && 
+                          (shopFoodCat.includes('japones') || shopFoodCat.includes('japonês') || shopFoodCat.includes('sushi') || shopType.includes('japones') || shopType.includes('japonês'))) ||
                          ((catNormalized === 'pizza' || catNormalized === 'pizzaria') && 
-                          (shopFoodCat.includes('pizza') || shopType.includes('pizza')));
+                          (shopFoodCat.includes('pizza') || shopFoodCat.includes('pizzaria') || shopType.includes('pizza') || shopType.includes('pizzaria'))) ||
+                         ((catNormalized === 'acai' || catNormalized === 'açai' || catNormalized === 'açaí') && 
+                          (shopFoodCat.includes('acai') || shopFoodCat.includes('açai') || shopFoodCat.includes('açaí') || shopType.includes('acai') || shopType.includes('açai')));
         }
 
       return isFoodRelated && matchesSearch && matchesCategory;
