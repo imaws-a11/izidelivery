@@ -1017,20 +1017,6 @@ function App() {
 
   const handleApplyCoupon = async (code: string) => {
     if (!code) return;
-    const { data, error } = await supabase
-      .from("promotions_delivery")
-      .select("*")
-      .eq("coupon_code", code.toUpperCase().trim())
-      .eq("is_active", true)
-      .single();
-
-    if (error || !data) {
-      toastError("Cupom invÃ¡lido ou expirado.");
-      return;
-    }
-
-    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const couponError = await validateCouponRules(data, subtotal);
     if (couponError) {
       setIsLoading(false);
     }
