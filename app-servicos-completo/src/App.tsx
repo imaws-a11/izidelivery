@@ -1268,6 +1268,9 @@ function App() {
       if (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") {
         if (!selectedShop?.id) { alert("Erro: Estabelecimento nÃ£o selecionado."); setIsLoading(false); return; }
         
+        console.log("[DIAG] Tentando insert em Dinheiro/Entrega:", orderBase);
+        // alert(`Criando pedido Dinheiro: Status=${orderBase.status}, Total=${orderBase.total_price}`);
+        
         const { data: order, error: insertError } = await supabase
           .from("orders_delivery")
           .insert({ 
@@ -3004,9 +3007,7 @@ function App() {
           }
 
           console.log("Criando pedido inicial 'pendente_pagamento' para " + (isSubscription ? "assinatura" : "delivery") + "...");
-          const { data: order, error: orderErr } = await supabase
-            .from("orders_delivery")
-            .insert({
+          const orderPayload = {
               user_id: userId,
               merchant_id: isSubscription ? null : selectedShop.id,
               status: "pendente_pagamento",
@@ -3016,7 +3017,14 @@ function App() {
               items: cart, // Adicionado para exibição no ActiveOrderView
               payment_method: "pix",
               service_type: isSubscription ? "subscription" : (selectedShop.type || "restaurant"),
-            })
+            };
+
+          console.log("[DIAG] Payload PIX preparado:", orderPayload);
+          // alert(`Enviando PIX: Status=${orderPayload.status}`);
+
+          const { data: order, error: orderErr } = await supabase
+            .from("orders_delivery")
+            .insert(orderPayload)
             .select()
             .single();
 
@@ -3285,6 +3293,9 @@ function App() {
                 payment_method: "cartao",
                 service_type: isSubscription ? "subscription" : "restaurant",
             };
+
+            console.log("[DIAG] Payload Cartão preparado:", orderBase);
+            // alert(`Enviando Cartão: Status=${orderBase.status}`);
 
             const { data: order } = await supabase.from("orders_delivery").insert(orderBase).select().single();
             if (!order) { toastError("Erro ao criar pedido."); return; }
