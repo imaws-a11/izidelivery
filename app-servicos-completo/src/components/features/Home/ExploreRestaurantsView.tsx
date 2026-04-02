@@ -37,7 +37,9 @@ export const ExploreRestaurantsView = ({
   const categoryImages: Record<string, string> = {
     "Todos": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600",
     "Promoções": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=600",
-    "Burgers": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600",
+    "Burguer": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600",
+    "Burger": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600",
+    "Hamburguer": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600",
     "Pizza": "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600",
     "Doces e Bolos": "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=600",
     "Salgados": "https://images.unsplash.com/photo-1541014741259-de529411b96a?q=80&w=600",
@@ -114,8 +116,15 @@ export const ExploreRestaurantsView = ({
                          shopType.includes(catNormalized) ||
                          shopTag.includes(catNormalized) || 
                          shopDesc.includes(catNormalized) ||
-                         shopName.includes(catNormalized);
-      }
+                         shopName.includes(catNormalized) ||
+                         // Lógica de Sinônimos e Variações para resolver problemas de visibilidade (ex: Burguer vs Hambúrguer)
+                         ((catNormalized === 'burguer' || catNormalized === 'burger' || catNormalized === 'hamburguer') && 
+                          (shopFoodCat.includes('burguer') || shopFoodCat.includes('burger') || shopFoodCat.includes('hamburguer') || shopType.includes('hamburguer') || shopType.includes('hambur'))) ||
+                         ((catNormalized === 'japonesa' || catNormalized === 'sushi' || catNormalized === 'japones') && 
+                          (shopFoodCat.includes('japones') || shopFoodCat.includes('sushi') || shopType.includes('japones'))) ||
+                         ((catNormalized === 'pizza' || catNormalized === 'pizzaria') && 
+                          (shopFoodCat.includes('pizza') || shopType.includes('pizza')));
+        }
 
       return isFoodRelated && matchesSearch && matchesCategory;
     });
