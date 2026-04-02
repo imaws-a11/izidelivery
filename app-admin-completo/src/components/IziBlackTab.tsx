@@ -43,6 +43,8 @@ export default function IziBlackTab() {
   });
 
   const [userSearch, setUserSearch] = useState('');
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [memberFilter, setMemberFilter] = useState('');
 
   const resetBenefitForm = () => {
     setBenefitData({
@@ -75,14 +77,14 @@ export default function IziBlackTab() {
         title: benefitData.title,
         description: benefitData.description,
         discount_type: benefitData.discount_type,
-        discount_value: benefitData.title === 'Cupom Black' && benefitData.discount_type === 'fixed' ? Number(benefitData.discount_percent || 0) : Number(benefitData.discount_percent || 0),
+        discount_value: Number(benefitData.discount_percent || 0),
         min_order_value: Number(benefitData.min_order_value || 0),
         expires_at: benefitData.expires_at || null,
         is_active: benefitData.is_active,
         is_vip: true,
-        coupon_code: benefitData.title === 'Cupom Black' ? (benefitData.coupon_code || `VIP_${Date.now()}`).toUpperCase().trim() : null,
+        coupon_code: (benefitData.title === 'Cupom Black' || benefitData.coupon_code) ? (benefitData.coupon_code || `VIP_${Date.now()}`).toUpperCase().trim() : null,
         image_url: isBanner ? benefitData.image_url : null,
-        target_users: benefitData.title === 'Cashback Individual' ? benefitData.target_users : [],
+        target_users: benefitData.target_users?.length > 0 ? benefitData.target_users : [],
       };
 
       const { error } = benefitData.id 
@@ -94,6 +96,7 @@ export default function IziBlackTab() {
       toastSuccess(`Benefício Izi Black ${benefitData.id ? 'atualizado' : 'publicado'}!`);
       setShowBenefitModal(false);
       fetchPromotions();
+      setSelectedUserIds([]); // Limpa seleção após salvar
     } catch (err: any) {
       toastError(err.message);
     } finally {
@@ -363,6 +366,222 @@ export default function IziBlackTab() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Widget Gestão de Membros VIP */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 top-10">
+         <div className="lg:col-span-12 bg-white dark:bg-slate-900 rounded-[48px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[600px] flex flex-col">
+            <div className="p-10 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center bg-slate-50/50 dark:bg-slate-950/20 gap-8">
+               <div className="flex items-center gap-6">
+                  <div className="size-16 rounded-[24px] bg-amber-500 flex items-center justify-center text-white shadow-xl shadow-amber-500/20">
+                     <span className="material-symbols-outlined text-3xl font-black italic">group_work</span>
+                  </div>
+                  <div>
+                     <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none">Gestão de Participantes</h3>
+                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">{usersList.filter(u => u.is_izi_black).length} Clientes VIP na Rede</p>
+                  </div>
+               </div>
+
+               <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+                  <div className="relative w-full md:w-80">
+                     <span className="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">person_search</span>
+                     <input 
+                       type="text" 
+                       placeholder="Buscar por nome, e-mail ou telefone..." 
+                       value={memberFilter}
+                       onChange={e => setMemberFilter(e.target.value)}
+                       className="w-full bg-white dark:bg-slate-800 border-none rounded-full pl-14 pr-6 py-5 text-xs font-black dark:text-white shadow-inner focus:ring-2 focus:ring-amber-500/50"
+                     />
+                  </div>
+                  
+                  <AnimatePresence>
+                     {selectedUserIds.length > 0 && (
+                        <motion.button 
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          onClick={() => {
+                             resetBenefitForm();
+                             setBenefitData({
+                                ...benefitData,
+                                title: 'Oferta Exclusiva',
+                                description: 'Benefício criado para um grupo selecionado de membros.',
+                                target_users: selectedUserIds,
+                             });
+                             setShowBenefitModal(true);
+                          }}
+                          className="px-10 py-5 bg-amber-500 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-amber-500/30 flex items-center gap-3 hover:brightness-110 active:scale-95 transition-all whitespace-nowrap"
+                        >
+                           <span className="material-symbols-outlined text-xl">loyalty</span>
+                           Criar Oferta para ({selectedUserIds.length}) Selecionados
+                        </motion.button>
+                     )}
+                  </AnimatePresence>
+
+                  <button 
+                    onClick={() => {
+                        const allVips = usersList.filter(u => u.is_izi_black).map(u => u.id);
+                        if (selectedUserIds.length === allVips.length) setSelectedUserIds([]);
+                        else setSelectedUserIds(allVips);
+                    }}
+                    className="px-6 py-5 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-full font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all border border-white/5"
+                  >
+                     {selectedUserIds.length === usersList.filter(u => u.is_izi_black).length ? 'Limpar Todos' : 'Selecionar Todos'}
+                  </button>
+               </div>
+            </div>
+
+            <div className="flex-1 overflow-x-auto custom-scrollbar">
+               <table className="w-full text-left border-collapse border-spacing-0">
+                  <thead className="bg-slate-50/80 dark:bg-slate-800/80 sticky top-0 z-10 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
+                     <tr>
+                        <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 w-20">#</th>
+                        <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Usuário VIP</th>
+                        <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Benefícios Ativos</th>
+                        <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Dados de Contato</th>
+                        <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Atividade</th>
+                        <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Cashback Total</th>
+                        <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Acções Estúdio</th>
+                     </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                     {usersList
+                        .filter(u => u.is_izi_black && (
+                           u.name?.toLowerCase().includes(memberFilter.toLowerCase()) ||
+                           u.email?.toLowerCase().includes(memberFilter.toLowerCase()) ||
+                           u.phone?.includes(memberFilter) ||
+                           !memberFilter
+                        ))
+                        .map((user, i) => {
+                           const userBenefits = promotionsList.filter(p => 
+                              p.is_vip && 
+                              p.is_active && 
+                              (!p.target_users || p.target_users.length === 0 || p.target_users.includes(user.id))
+                           );
+
+                           return (
+                           <tr key={user.id} className={`group hover:bg-amber-50/30 dark:hover:bg-amber-500/5 transition-all ${selectedUserIds.includes(user.id) ? 'bg-amber-500/5 border-l-4 border-l-amber-500' : ''}`}>
+                              <td className="px-10 py-8">
+                                 <button 
+                                    onClick={() => {
+                                       if (selectedUserIds.includes(user.id)) setSelectedUserIds(prev => prev.filter(id => id !== user.id));
+                                       else setSelectedUserIds(prev => [...prev, user.id]);
+                                    }}
+                                    className={`size-8 rounded-xl border-4 flex items-center justify-center transition-all ${selectedUserIds.includes(user.id) ? 'bg-amber-500 border-amber-500 text-white animate-bounce-short' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-transparent hover:border-slate-200'}`}
+                                 >
+                                    <span className="material-symbols-outlined text-sm font-black">check</span>
+                                 </button>
+                              </td>
+                              <td className="px-10 py-8">
+                                 <div className="flex items-center gap-5">
+                                    <div className="size-14 rounded-2xl bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-300 relative overflow-hidden group-hover:scale-110 transition-transform">
+                                       <span className="material-symbols-outlined text-3xl">{user.is_izi_black ? 'stars' : 'person'}</span>
+                                       {user.is_izi_black && (
+                                          <div className="absolute top-0 right-0 size-4 bg-amber-500 border-2 border-white dark:border-slate-800 rounded-bl-xl" />
+                                       )}
+                                    </div>
+                                    <div>
+                                       <p className="font-black text-slate-900 dark:text-white text-base tracking-tight italic uppercase">{user.name || 'S/ IDENTIFICAÇÃO'}</p>
+                                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">NÍVEL: BLACK VIP</p>
+                                    </div>
+                                 </div>
+                              </td>
+                              <td className="px-10 py-8">
+                                 <div className="flex flex-wrap gap-2 max-w-[200px]">
+                                    {userBenefits.length > 0 ? (
+                                       userBenefits.map((b, idx) => {
+                                          const isExclusive = b.target_users && b.target_users.length > 0;
+                                          return (
+                                             <div key={idx} className={`p-1 flex items-center gap-1.5 rounded-lg border shadow-sm pr-3 ${isExclusive ? 'bg-blue-500/10 border-blue-500/20 text-blue-600' : 'bg-amber-500/10 border-amber-500/20 text-amber-600'}`} title={isExclusive ? 'Exclusivo para este usuário' : 'Válido para todos VIPs'}>
+                                                <div className={`p-1 rounded-md shadow-inner ${isExclusive ? 'bg-blue-500 text-white' : 'bg-amber-500 text-white'}`}>
+                                                   <span className="material-symbols-outlined text-[10px]">
+                                                      {b.image_url ? 'view_carousel' : b.coupon_code ? 'confirmation_number' : b.title.includes('Frete') ? 'local_shipping' : 'bolt'}
+                                                   </span>
+                                                </div>
+                                                <div className="flex flex-col leading-none">
+                                                   <span className="text-[8px] font-black uppercase tracking-tighter truncate w-20">{b.title}</span>
+                                                   <span className="text-[6px] font-bold uppercase opacity-60 tracking-widest italic">{isExclusive ? 'Exclusivo' : 'Global VIP'}</span>
+                                                </div>
+                                             </div>
+                                          );
+                                       })
+                                    ) : (
+                                       <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Nenhum benefício</p>
+                                    )}
+                                 </div>
+                              </td>
+                              <td className="px-10 py-8">
+                                 <div className="space-y-1">
+                                    <p className="text-xs font-bold text-slate-500 flex items-center gap-2">
+                                       <span className="material-symbols-outlined text-sm">alternate_email</span>
+                                       {user.email || 'Não informado'}
+                                    </p>
+                                    <p className="text-xs font-bold text-slate-400 flex items-center gap-2 italic uppercase">
+                                       <span className="material-symbols-outlined text-sm">call</span>
+                                       {user.phone || 'Sem contato'}
+                                    </p>
+                                 </div>
+                              </td>
+                              <td className="px-10 py-8">
+                                 <div className="flex flex-col gap-1.5 w-fit">
+                                    <span className="px-4 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-500/20">
+                                       Membro desde: {new Date(user.created_at).toLocaleDateString()}
+                                    </span>
+                                    <span className="px-4 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-full text-[9px] font-black uppercase tracking-widest">
+                                       Último Acesso: Recente
+                                    </span>
+                                 </div>
+                              </td>
+                              <td className="px-10 py-8">
+                                 <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl border border-emerald-100 dark:border-emerald-500/20 w-fit">
+                                    <p className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Acumulado</p>
+                                    <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 italic">R$ {(user.cashback_earned || 0).toFixed(2).replace('.', ',')}</p>
+                                 </div>
+                              </td>
+                              <td className="px-10 py-8 text-right">
+                                 <div className="flex items-center justify-end gap-3 translate-x-2 group-hover:translate-x-0 transition-transform">
+                                    <button 
+                                       onClick={() => {
+                                          resetBenefitForm();
+                                          setBenefitData({
+                                             ...benefitData,
+                                             title: 'Cashback Individual',
+                                             target_users: [user.id],
+                                          });
+                                          setShowBenefitModal(true);
+                                       }}
+                                       className="size-12 rounded-2xl bg-white dark:bg-slate-800 text-slate-400 hover:text-amber-500 transition-all border border-slate-100 dark:border-slate-700 shadow-sm flex items-center justify-center hover:scale-110 active:scale-95"
+                                       title="Criar Oferta Única"
+                                    >
+                                       <span className="material-symbols-outlined text-xl">bolt</span>
+                                    </button>
+                                    <button 
+                                       className="size-12 rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-xl"
+                                       title="Ver Perfil Estúdio"
+                                    >
+                                       <span className="material-symbols-outlined text-xl">open_in_new</span>
+                                    </button>
+                                 </div>
+                              </td>
+                           </tr>
+                        );
+                        })}
+                  </tbody>
+
+               </table>
+               {usersList.filter(u => u.is_izi_black).length === 0 && (
+                  <div className="py-40 flex flex-col items-center justify-center text-center gap-6">
+                     <div className="size-24 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-200">
+                        <span className="material-symbols-outlined text-5xl">group_off</span>
+                     </div>
+                     <div className="space-y-2">
+                        <h4 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">Vácuo na Rede VIP</h4>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest max-w-xs mx-auto">Não encontramos assinantes Izi Black na sua rede ainda. Ative o programa para começar a converter!</p>
+                     </div>
+                  </div>
+               )}
+            </div>
+         </div>
       </div>
 
       {/* Benefit Editor Modal */}
