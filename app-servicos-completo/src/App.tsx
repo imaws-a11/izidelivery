@@ -637,6 +637,24 @@ function App() {
     if (data) setMyOrders(data);
   };
 
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from("orders_delivery")
+        .update({ status: "cancelado" })
+        .eq("id", orderId);
+
+      if (error) throw error;
+      toastSuccess("Pedido cancelado com sucesso!");
+      if (userId) fetchMyOrders(userId);
+      setTab("orders");
+      setSubView("none");
+    } catch (err) {
+      console.error("Erro ao cancelar pedido:", err);
+      toastError("Não foi possível cancelar o pedido.");
+    }
+  };
+
   const fetchCoupons = async () => {
     console.log("[DEBUG] Fetching coupons/banners...");
     const { data } = await supabase
@@ -1087,6 +1105,7 @@ function App() {
       status: "novo",
       total_price: total,
       delivery_fee: deliveryFee,
+      items: cart, // Adicionado para exibiÃ§Ã£o no ActiveOrderView
       pickup_address: selectedShop?.name || "EndereÃ§o do Estabelecimento",
       delivery_address: `${userLocation.address || "EndereÃ§o nÃ£o informado"} | ITENS: ${cart.map((i: any) => formatCartItemSummary(i)).join(', ')}`,
       payment_method: paymentMethod,
@@ -2979,6 +2998,7 @@ function App() {
               total_price: Number(total.toFixed(2)),
               pickup_address: isSubscription ? "Assinatura Izi Black" : (selectedShop.name || "Endereço do Estabelecimento"),
               delivery_address: isSubscription ? "Serviço Digital" : `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map((i: any) => formatCartItemSummary(i)).join(', ')}`,
+              items: cart, // Adicionado para exibição no ActiveOrderView
               payment_method: "pix",
               service_type: isSubscription ? "subscription" : (selectedShop.type || "restaurant"),
             })
@@ -3047,12 +3067,22 @@ function App() {
         }
 
         // 3. Atualizar UI com QR real
-        console.log("QR Code recebido com sucesso. Atualizando UI.");
-        const qr = fnData.qrCode || fnData.qr_code;
-        const qrBase64 = fnData.qrCodeBase64 || fnData.qr_code_base64;
-        const copyPaste = fnData.copyPaste || fnData.copy_paste;
-
-        setSelectedItem({ ...orderRef, pixQrCode: qr, pixQrBase64: qrBase64, pixCopyPaste: copyPaste });
+        const qr = fnData?.qrCode || fnData?.qr_code;
+        const qrBase64 = fnData?.qrCodeBase64 || fnData?.qr_code_base64;
+        const copyPaste = fnData?.copyPaste || fnData?.copy_paste;
+        
+        console.log("Mapeando dados do QR Code:", { qr, qrBase64, copyPaste: copyPaste?.slice(0, 10) });
+        
+        setSelectedItem((prev: any) => ({ 
+          ...prev, 
+          id: orderId, // Garante que o ID do pedido persista
+          pixQrCode: qr, 
+          pixQrBase64: qrBase64, 
+          pixCopyPaste: copyPaste,
+          pixError: false 
+        }));
+        
+        console.log("Estado setSelectedItem chamado com sucesso.");
         
         // Limpar sacola apÃ³s sucesso na geraÃ§Ã£o do PIX
         if (cart.length > 0) {
@@ -3068,7 +3098,8 @@ function App() {
       }
     };
 
-    const pixReady = selectedItem?.pixQrCode && pixConfirmed;
+    const pixReady = !!(selectedItem?.pixQrCode || selectedItem?.pixQrBase64) && pixConfirmed;
+    console.log("Estado de renderizaÃ§Ã£o PIX:", { pixConfirmed, pixReady, hasQr: !!selectedItem?.pixQrCode, hasError: selectedItem?.pixError });
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
@@ -3204,6 +3235,7 @@ function App() {
                 status: "pendente_pagamento",
                 pickup_address: isSubscription ? "Assinatura Izi Black" : (selectedShop?.name || "Estabelecimento"),
                 delivery_address: isSubscription ? "ServiÃ§o Digital" : (userLocation.address || "EndereÃ§o nÃ£o informado"),
+                items: cart, // Adicionado para exibiÃ§Ã£o no ActiveOrderView
                 payment_method: "cartao",
                 service_type: isSubscription ? "subscription" : "restaurant",
             };
@@ -7494,7 +7526,7 @@ function App() {
               )}
               {subView === "active_order" && (
                 <motion.div key="aorder" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[100]">
-                  <ActiveOrderView selectedItem={selectedItem} driverLocation={driverLocation} userLocation={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} routePolyline={routePolyline || selectedItem?.route_polyline} onMyLocationClick={updateLocation} setSubView={setSubView} />
+                  <ActiveOrderView selectedItem={selectedItem} driverLocation={driverLocation} userLocation={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} routePolyline={routePolyline || selectedItem?.route_polyline} onMyLocationClick={updateLocation} setSubView={setSubView} onCancelOrder={handleCancelOrder} />
                 </motion.div>
               )}
               {subView === "payment_processing" && (

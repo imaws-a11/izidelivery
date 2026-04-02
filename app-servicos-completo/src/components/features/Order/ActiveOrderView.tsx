@@ -10,6 +10,7 @@ interface ActiveOrderViewProps {
   routePolyline?: string;
   onMyLocationClick: () => void;
   setSubView: (view: string) => void;
+  onCancelOrder: (id: string) => void;
 }
 
 export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
@@ -19,6 +20,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
   routePolyline,
   onMyLocationClick,
   setSubView,
+  onCancelOrder,
 }) => {
   if (!selectedItem) return null;
 
@@ -412,6 +414,21 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
               </div>
             </div>
           </section>
+
+          {/* CANCELAR PEDIDO - Somente se nÃ£o foi aceito/preparando */}
+          {['novo', 'pendente', 'pendente_pagamento', 'pago', 'pending', 'waiting_merchant', 'waiting_driver'].includes(selectedItem.status) && (
+            <button
+              onClick={() => {
+                if(window.confirm("Deseja realmente cancelar este pedido?")) {
+                  onCancelOrder(selectedItem.id);
+                }
+              }}
+              className="w-full py-5 rounded-3xl bg-rose-500/10 border border-rose-500/20 text-rose-500 font-black text-[9px] uppercase tracking-[0.3em] active:scale-95 transition-all flex items-center justify-center gap-2 mb-3 mt-4 hover:bg-rose-500 hover:text-white"
+            >
+              <span className="material-symbols-outlined text-[16px]">close</span>
+              Cancelar Pedido
+            </button>
+          )}
 
           {/* AJUDA */}
           <button
