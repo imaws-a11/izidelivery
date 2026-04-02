@@ -27,7 +27,6 @@ import { EstablishmentListView } from "./components/features/Establishment/Estab
 import { ExploreRestaurantsView } from "./components/features/Home/ExploreRestaurantsView";
 import { BeverageOffersView } from "./components/features/Home/BeverageOffersView";
 import { RestaurantMenuView } from "./components/features/Home/RestaurantMenuView";
-import { StoreCatalogView } from "./components/features/Home/StoreCatalogView";
 import { MarketExploreView } from "./components/features/Home/MarketExploreView";
 import { PaymentMethodsView } from "./components/features/Profile/PaymentMethodsView";
 
@@ -138,6 +137,10 @@ function App() {
   const [iziBlackStep, setIziBlackStep] = useState<"info" | "payment" | "pix_qr" | "success">("info");
   const [iziBlackPixCode, setIziBlackPixCode] = useState("");
   const [isUsingCoins, setIsUsingCoins] = useState(false);
+
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [email, setEmail] = useState("");
+
 
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; expirationDate: string } | null>(null);
   const [lightningData, setLightningData] = useState<{ payment_request: string; satoshis: number; btc_price_brl: number } | null>(null);
@@ -929,7 +932,7 @@ function App() {
     setSelectedShop(shop);
     setActiveCategory("Destaques");
     const isRestaurant = shop.type === "restaurant";
-    const targetView = isRestaurant ? "restaurant_menu" : "store_catalog";
+    const targetView = "restaurant_menu";
 
     try {
       const { data: products } = await supabase
@@ -2873,20 +2876,6 @@ function App() {
   const renderRestaurantMenu = () => {
     return (
       <RestaurantMenuView 
-        selectedShop={selectedShop}
-        setSubView={setSubView}
-        activeCategory={activeCategory}
-        setActiveCategory={setActiveCategory}
-        handleAddToCart={handleAddToCart}
-        navigateSubView={navigateSubView}
-        cart={cart}
-      />
-    );
-  };
-
-  const renderStoreCatalog = () => {
-    return (
-      <StoreCatalogView 
         selectedShop={selectedShop}
         setSubView={setSubView}
         activeCategory={activeCategory}
@@ -7458,14 +7447,9 @@ function App() {
                   {renderGenericList()}
                 </motion.div>
               )}
-              {(subView === "restaurant_menu" || (subView === "shop" && selectedShop?.type === "restaurant")) && (
+              {(subView === "restaurant_menu" || subView === "shop") && (
                 <motion.div key="restaurant_menu" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[125]">
                   {renderRestaurantMenu()}
-                </motion.div>
-              )}
-              {(subView === "store_catalog" || (subView === "shop" && selectedShop?.type !== "restaurant")) && (
-                <motion.div key="store_catalog" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[125]">
-                  {renderStoreCatalog()}
                 </motion.div>
               )}
               {(subView === "product" || subView === "product_detail") && (
