@@ -3,7 +3,7 @@ import type {
   Order, Driver, User, Merchant, MerchantProfile,
   Product, Category, Promotion, DedicatedSlot,
   AuditLog, WalletTransaction, MenuCategory, DynamicRatesState,
-  Tab, UserRole, AppSettings, DashboardData
+  Tab, UserRole, AppSettings, DashboardData, EstablishmentType
 } from '../lib/types';
 
 export interface AdminContextType {
@@ -180,6 +180,14 @@ export interface AdminContextType {
   setPreviewProducts: (p: Product[]) => void;
   previewCategories: MenuCategory[];
   setPreviewCategories: (c: MenuCategory[]) => void;
+
+  // Establishment Types
+  establishmentTypes: EstablishmentType[];
+  setEstablishmentTypes: (t: EstablishmentType[]) => void;
+  fetchEstablishmentTypes: () => Promise<void>;
+  handleUpdateEstablishmentType: (type: any) => Promise<void>;
+  handleDeleteEstablishmentType: (id: string) => Promise<void>;
+
 
   // Computed
   dashboardData: DashboardData;

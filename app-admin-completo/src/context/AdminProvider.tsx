@@ -7,7 +7,7 @@ import type {
   Order, Driver, User, Merchant, MerchantProfile, 
   Product, Category, Promotion, DedicatedSlot,
   AuditLog, WalletTransaction, MenuCategory, DynamicRatesState,
-  Tab, UserRole, AppSettings, DashboardData
+  Tab, UserRole, AppSettings, DashboardData, EstablishmentType
 } from '../lib/types';
 import { useAuth } from './AuthContext';
 import { toastSuccess, toastError, toastWarning, showConfirm } from '../lib/useToast';
@@ -185,6 +185,65 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Preview Data
   const [previewProducts, setPreviewProducts] = useState<Product[]>([]);
   const [previewCategories, setPreviewCategories] = useState<MenuCategory[]>([]);
+
+  // Establishment Types
+  const [establishmentTypes, setEstablishmentTypes] = useState<EstablishmentType[]>([
+    { id: '1', name: 'Restaurante / Lanchonete', value: 'restaurant', icon: 'restaurant', is_active: true },
+    { id: '2', name: 'Farmácia', value: 'pharmacy', icon: 'medical_services', is_active: true },
+    { id: '3', name: 'Mercado / Conveniência', value: 'market', icon: 'shopping_cart', is_active: true },
+    { id: '4', name: 'Bebidas', value: 'beverages', icon: 'liquor', is_active: true },
+  ]);
+
+  const fetchEstablishmentTypes = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('establishment_types').select('*').order('name');
+      if (error) throw error;
+      if (data && data.length > 0) setEstablishmentTypes(data as EstablishmentType[]);
+    } catch (err) {
+      console.log('Usando tipos de estabelecimento padrão');
+    }
+  }, []);
+
+  const handleUpdateEstablishmentType = useCallback(async (type: any) => {
+    setIsSaving(true);
+    try {
+      // Tentar salvar no banco, se falhar (tabela não existe), apenas atualiza localmente para esta sessão
+      const { error } = await supabase.from('establishment_types').upsert(type);
+      if (error) {
+        console.warn('Erro ao salvar no banco (tabela pode não existir):', error);
+        // Atualização otimista local
+        setEstablishmentTypes(prev => {
+          const exists = prev.find(p => p.id === type.id);
+          if (exists) return prev.map(p => p.id === type.id ? type : p);
+          return [...prev, type];
+        });
+      } else {
+        toastSuccess('Tipo de estabelecimento salvo!');
+        fetchEstablishmentTypes();
+      }
+    } catch (err: any) {
+      toastError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [fetchEstablishmentTypes]);
+
+  const handleDeleteEstablishmentType = useCallback(async (id: string) => {
+    if (!await showConfirm({ message: 'Excluir este tipo de estabelecimento?' })) return;
+    try {
+      const { error } = await supabase.from('establishment_types').delete().eq('id', id);
+      if (error) {
+        console.warn('Erro ao deletar no banco:', error);
+        setEstablishmentTypes(prev => prev.filter(p => p.id !== id));
+      } else {
+        toastSuccess('Removido com sucesso!');
+        fetchEstablishmentTypes();
+      }
+    } catch (err: any) {
+      toastError(err.message);
+    }
+  }, [fetchEstablishmentTypes]);
+
 
   // RBAC & Session Effects
   useEffect(() => {
@@ -625,6 +684,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Common fetches
     fetchAppSettings();
+    fetchEstablishmentTypes();
     
     if (userRole === 'admin') {
       fetchStats();
@@ -1372,6 +1432,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsGeolocating, mapCenterView, setMapCenterView, fixedGridCenter, setFixedGridCenter, 
     hexGrid, getHexPath: () => [], 
     previewProducts, setPreviewProducts, previewCategories, setPreviewCategories, 
+    establishmentTypes, setEstablishmentTypes, fetchEstablishmentTypes, handleUpdateEstablishmentType, handleDeleteEstablishmentType,
     dashboardData: dashboardData as DashboardData,
     mapsLoadError: mapsLoadError ? mapsLoadError.message : null,
     isLoaded,

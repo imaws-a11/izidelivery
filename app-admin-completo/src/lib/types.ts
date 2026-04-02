@@ -164,6 +164,15 @@ export interface Category {
   created_at?: string;
 }
 
+export interface EstablishmentType {
+  id: string;
+  name: string;
+  value: string;
+  icon?: string;
+  is_active: boolean;
+  created_at?: string;
+}
+
 export interface Promotion {
   id?: string;
   title: string;
