@@ -170,6 +170,7 @@ export interface EstablishmentType {
   value: string;
   icon?: string;
   is_active: boolean;
+  parent_id?: string;
   created_at?: string;
 }
 

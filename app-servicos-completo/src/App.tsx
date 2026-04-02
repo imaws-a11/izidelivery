@@ -1952,7 +1952,7 @@ function App() {
   const foodCategories = [
     { id: "all",        name: "Todos",         icon: "restaurant",    action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
     { id: "promocoes",  name: "PromoÃ§Ãµes",     icon: "percent",       action: () => { setRestaurantInitialCategory("PromoÃ§Ãµes"); navigateSubView("explore_restaurants"); } },
-    { id: "burgers",    name: "Burgers",       icon: "lunch_dining",  action: () => { setRestaurantInitialCategory("Burgers"); navigateSubView("explore_restaurants"); } },
+    { id: "burguer",    name: "Burguer",       icon: "lunch_dining",  action: () => { setRestaurantInitialCategory("Burguer"); navigateSubView("explore_restaurants"); } },
     { id: "pizza",      name: "Pizza",         icon: "local_pizza",   action: () => { setRestaurantInitialCategory("Pizza"); navigateSubView("explore_restaurants"); } },
     { id: "doces",      name: "Doces e Bolos", icon: "cake",          action: () => { setRestaurantInitialCategory("Doces e Bolos"); navigateSubView("explore_restaurants"); } },
     { id: "salgados",   name: "Salgados",      icon: "bakery_dining", action: () => { setRestaurantInitialCategory("Salgados"); navigateSubView("explore_restaurants"); } },
@@ -2369,7 +2369,8 @@ function App() {
         filterFn={(estab: any) => {
           const catId = (exploreCategoryState.id || "").toLowerCase();
           const type = estab.type.toLowerCase();
-          return type === catId || estab.description.toLowerCase().includes(catId);
+          const foodCat = (estab.foodCategory || "").toLowerCase();
+          return type === catId || foodCat.includes(catId) || estab.description.toLowerCase().includes(catId);
         }}
         onShopClick={(shop) => handleShopClick({ ...shop, type: exploreCategoryState.id })}
         cartLength={cart.length}
@@ -5549,7 +5550,12 @@ function App() {
     return (
       <div className="absolute inset-0 z-[120] bg-transparent text-zinc-100 flex flex-col overflow-hidden">
         <div className="absolute inset-0 z-0 h-full">
-           <IziTrackingMap routePolyline={routePolyline} driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
+           <IziTrackingMap 
+             routePolyline={routePolyline} 
+             driverLoc={driverLocation} 
+             userLoc={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} 
+             onMyLocationClick={updateLocation} 
+           />
            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
         </div>
 
