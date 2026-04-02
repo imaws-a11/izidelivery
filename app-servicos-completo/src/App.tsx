@@ -1652,6 +1652,15 @@ function App() {
   const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
   const [mobilityStep, setMobilityStep] = useState(1);
 
+  // Sincronizar polilinha do mapa ao abrir um pedido ativo/histórico
+  useEffect(() => {
+    if (selectedItem?.route_polyline) {
+      setRoutePolyline(selectedItem.route_polyline);
+    } else if (selectedItem?.polyline) {
+      setRoutePolyline(selectedItem.polyline);
+    }
+  }, [selectedItem]);
+
   const [transitHistory, setTransitHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem("transitHistory");
     return saved ? JSON.parse(saved) : [];
@@ -2174,7 +2183,8 @@ function App() {
         : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`}`,
       payment_method: paymentMethod,
       payment_status: (paymentMethod === 'dinheiro' || paymentMethod === 'pix' || paymentMethod === 'bitcoin_lightning') ? 'pending' : 'paid',
-      scheduled_at: transitData.scheduled ? `${transitData.scheduledDate}T${transitData.scheduledTime}:00` : null
+      scheduled_at: transitData.scheduled ? `${transitData.scheduledDate}T${transitData.scheduledTime}:00` : null,
+      route_polyline: routePolyline
     };
 
     try {
@@ -3632,176 +3642,16 @@ function App() {
     </div>
   );
 
-  if (false) {
-  const renderWaitingDriver = () => (
-    <div className="absolute inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center">
-      <div className="size-24 rounded-full bg-yellow-400/10 flex items-center justify-center mb-8 relative">
-        <div className="absolute inset-0 rounded-full bg-yellow-400/20 animate-ping" />
-        <span className="material-symbols-outlined text-5xl text-yellow-400 relative z-10">two_wheeler</span>
-      </div>
-      <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-3">Buscando Entregador</h2>
-      <p className="text-zinc-400 font-medium max-w-[240px] leading-relaxed">
-        Seu pedido está pronto! Estamos localizando o condutor Izi mais próximo de você. 🛵
-      </p>
-    </div>
-  );
+  // renderWaitingDriver movido para mais abaixo (versão completa)
 
-  const renderOrderChat = () => (
-     <div className="absolute inset-0 z-50 bg-black flex flex-col">
-        <header className="px-5 py-6 border-b border-zinc-900 flex items-center gap-4">
-           <button onClick={() => setSubView("active_order")} className="size-10 rounded-full bg-zinc-900 flex items-center justify-center">
-              <span className="material-symbols-outlined text-white">close</span>
-           </button>
-           <div>
-              <h2 className="text-lg font-black text-white uppercase tracking-tight leading-none">Chat com Suporte</h2>
-              <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-1">Online</p>
-           </div>
-        </header>
-        <div className="flex-1 p-5 overflow-y-auto space-y-4 no-scrollbar">
-           <div className="flex justify-start">
-              <div className="bg-zinc-900 p-4 rounded-3xl rounded-tl-lg max-w-[85%] border border-zinc-800">
-                 <p className="text-sm text-zinc-300">Olá! Como podemos ajudar com seu pedido?</p>
-              </div>
-           </div>
-        </div>
-        <div className="p-5 border-t border-zinc-900 flex gap-3">
-           <input type="text" placeholder="Escreva sua mensagem..." className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 text-white text-sm focus:outline-none focus:border-yellow-400/50" />
-           <button className="size-14 rounded-2xl bg-yellow-400 text-black flex items-center justify-center shadow-lg shadow-yellow-400/20">
-              <span className="material-symbols-outlined font-black">send</span>
-           </button>
-        </div>
-     </div>
-  );
+  // renderOrderChat removido (funcionalidade em renderOrderChatFlow)
 
-  const renderOrderSupport = () => (
-     <div className="absolute inset-0 z-50 bg-black flex flex-col p-8 items-center justify-center text-center space-y-8">
-        <div className="size-20 rounded-3xl bg-blue-500/10 flex items-center justify-center">
-           <span className="material-symbols-outlined text-4xl text-blue-500">help</span>
-        </div>
-        <div>
-           <h2 className="text-2xl font-black text-white uppercase tracking-tight">Central de Ajuda</h2>
-           <p className="text-zinc-500 mt-2">Precisa de ajuda com o seu pedido? Nossa equipe de suporte está à disposição 24/7.</p>
-        </div>
-        <div className="w-full space-y-4">
-           <button onClick={() => setSubView("order_chat")} className="w-full py-4 bg-white text-black font-black rounded-2xl uppercase tracking-widest">Falar com Consultor</button>
-           <button onClick={() => setSubView("none")} className="w-full py-4 bg-zinc-900 text-zinc-400 font-black rounded-2xl uppercase tracking-widest">Voltar</button>
-        </div>
-     </div>
-  );
+  // renderOrderSupport removido (funcionalidade em renderOrderSupportFlow)
 
-  const renderOrderFeedback = () => (
-     <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-center">
-        <div className="size-20 rounded-full bg-yellow-400/10 flex items-center justify-center mb-8">
-           <span className="material-symbols-outlined text-4xl text-yellow-400">rate_review</span>
-        </div>
-        <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-4">Como foi sua experiência?</h2>
-        <div className="flex gap-2 mb-10">
-           {[1,2,3,4,5].map(s => (
-              <button key={s} className="size-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-yellow-400 hover:border-yellow-400/40 transition-all">
-                 <span className="material-symbols-outlined font-black">star</span>
-              </button>
-           ))}
-        </div>
-        <button onClick={() => setSubView("none")} className="w-full py-4 bg-yellow-400 text-black font-black rounded-2xl uppercase tracking-widest shadow-xl shadow-yellow-400/20">Enviar Avaliação</button>
-     </div>
-  );
+  // renderOrderFeedback movido para mais abaixo (versão completa)
 
-  const renderQuestCenter = () => (
-    <div className="absolute inset-0 z-50 bg-black flex flex-col">
-       <header className="header p-8 border-b border-zinc-900 flex items-center gap-4">
-          <button onClick={() => setSubView("none")} className="p-3 bg-zinc-900 rounded-2xl text-white">
-             <span className="material-symbols-outlined">arrow_back</span>
-          </button>
-          <h2 className="text-xl font-black text-white uppercase italic">Izi Quests</h2>
-       </header>
-       <div className="flex-1 p-8 overflow-y-auto no-scrollbar space-y-6">
-          <div className="p-6 bg-gradient-to-br from-yellow-400/10 to-orange-400/5 border border-yellow-400/20 rounded-[32px] relative overflow-hidden">
-             <div className="relative z-10">
-                <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Missão Semanal</span>
-                <h3 className="text-lg font-black text-white mt-1">Explorador Izi</h3>
-                <p className="text-xs text-zinc-500 mt-2">Faça 3 pedidos em estabelecimentos diferentes esta semana para ganhar 500 IziCoins!</p>
-             </div>
-          </div>
-       </div>
-    </div>
-  );
-    const menuItems = [
-      { icon: "location_on",            label: "Endereços",        desc: "Seus endereços salvos",          action: () => setSubView("addresses") },
-      { icon: "account_balance_wallet", label: "Carteira",         desc: "Saldo e extrato",                action: () => setTab("wallet") },
-      { icon: "workspace_premium",      label: "IZI Black",        desc: "Benefícios do plano premium",    action: () => { setIziBlackStep("info"); setSubView("izi_black_purchase"); } },
-      { icon: "military_tech",          label: "Quests & Ranking", desc: "MissÃƒµes e conquistas",           action: () => setSubView("quest_center") },
-      { icon: "support_agent",          label: "Suporte",          desc: "Central de ajuda",               action: () => setSubView("order_support") },
-      { icon: "settings",               label: "ConfiguraçÃƒµes",    desc: "Preferências da conta",          action: () => {} },
-    ];
+  // renderQuestCenter movido para mais abaixo (versão completa)
 
-    return (
-      <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32">
-
-        {/* HERO DO PERFIL */}
-        <div className="px-5 pt-14 pb-8 border-b border-zinc-900">
-          <div className="flex items-center gap-5">
-            <div className="relative">
-              <div className="size-20 rounded-3xl overflow-hidden border border-zinc-800">
-                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" className="size-full bg-zinc-900" />
-              </div>
-              {isIziBlackMembership && (
-                <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black size-6 rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(255,215,9,0.5)] border-2 border-black z-20">
-                  <span className="material-symbols-outlined text-[10px] font-black" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-black text-white tracking-tight truncate">{userName || "Usuário"}</h1>
-              <p className="text-zinc-600 text-xs mt-0.5">{userId ? `ID: ${userId.slice(0,8)}...` : "Visitante"}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-[10px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Nível {userLevel}</span>
-                <span className="text-[10px] font-black text-zinc-600 uppercase">{userXP} XP</span>
-              </div>
-            </div>
-          </div>
-
-          {/* XP Bar */}
-          <div className="mt-6 space-y-1.5">
-            <div className="flex justify-between">
-              <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">Progresso</span>
-              <span className="text-[9px] font-black text-yellow-400">{userXP} / {nextLevelXP} XP</span>
-            </div>
-            <div className="h-px w-full bg-zinc-900 rounded-full overflow-hidden">
-              <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((userXP/nextLevelXP)*100,100)}%` }}
-                className="h-full bg-gradient-to-r from-yellow-400 to-orange-400" />
-            </div>
-          </div>
-        </div>
-
-        {/* MENU */}
-        <div className="px-5 py-4 flex flex-col">
-          {menuItems.map((item, i) => (
-            <motion.button key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
-              onClick={item.action}
-              className="flex items-center gap-4 px-0 py-4 border-b border-zinc-900/60 active:opacity-60 transition-all text-left group last:border-0">
-              <span className="material-symbols-outlined text-zinc-600 group-hover:text-yellow-400 transition-colors text-xl">{item.icon}</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-black text-sm text-white">{item.label}</p>
-                <p className="text-zinc-600 text-xs mt-0.5">{item.desc}</p>
-              </div>
-              <span className="material-symbols-outlined text-zinc-800 group-hover:text-yellow-400/50 transition-colors text-lg">chevron_right</span>
-            </motion.button>
-          ))}
-        </div>
-
-        {/* LOGOUT */}
-        <div className="px-5 mt-2 pb-4">
-          <button onClick={async () => { await signOut(auth); setView("login"); setTab("home"); setSubView("none"); }}
-            className="w-full flex items-center justify-center gap-3 py-4 text-red-400/60 hover:text-red-400 transition-all active:scale-[0.98] group">
-            <span className="material-symbols-outlined text-lg">logout</span>
-            <span className="font-black text-sm uppercase tracking-wider">Sair da Conta</span>
-          </button>
-        </div>
-
-        <p className="text-center text-zinc-900 text-[10px] font-bold uppercase tracking-widest pb-6">IZI Delivery Ã¢â‚¬¢ Stealth Luxury</p>
-      </div>
-    );
-  }
 
   const renderAddresses = () => {
     return (
@@ -5685,8 +5535,8 @@ function App() {
     ];
 
     return (
-      <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
-        <div className="absolute inset-0 z-0 h-[35vh]">
+      <div className="absolute inset-0 z-[120] bg-transparent text-zinc-100 flex flex-col overflow-hidden">
+        <div className="absolute inset-0 z-0 h-full">
            <IziTrackingMap routePolyline={routePolyline} driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
         </div>
@@ -5701,7 +5551,7 @@ function App() {
           </div>
         </header>
 
-        <main className="relative z-40 mt-auto bg-zinc-950 border-t border-white/5 flex flex-col h-[70vh] rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
+        <main className="relative z-40 mt-auto bg-zinc-900/60 backdrop-blur-3xl border-t border-white/10 flex flex-col h-[70vh] rounded-t-[40px] shadow-[0_-20px_80px_rgba(0,0,0,0.6)]">
            <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
               {mobilityStep === 1 && (
                 <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
@@ -5709,26 +5559,26 @@ function App() {
                       <h3 className="text-xl font-bold text-white tracking-tight">Roteiro do Frete</h3>
                    </div>
                    <div className="space-y-4">
-                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="bg-zinc-900/40 backdrop-blur-3xl p-6 rounded-[35px] border border-white/10 shadow-2xl shadow-black/40 group transition-all">
                          <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2">Origem</p>
                          <AddressSearchInput 
-                           userCoords={userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null}
+                           userCoords={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                            initialValue={transitData.origin}
                            placeholder="Origem..."
                            className="w-full bg-transparent border-none p-0 text-base font-bold text-white"
                            onSelect={(p) => setTransitData({...transitData, origin: p.formatted_address || ""})}
                          />
-                      </div>
-                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                      </motion.div>
+                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="bg-zinc-900/40 backdrop-blur-3xl p-6 rounded-[35px] border border-white/10 shadow-2xl shadow-black/40 group transition-all">
                          <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2">Destino</p>
                          <AddressSearchInput 
-                           userCoords={userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null}
+                           userCoords={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                            initialValue={transitData.destination}
                            placeholder="Destino..."
                            className="w-full bg-transparent border-none p-0 text-base font-bold text-white"
                            onSelect={(p) => setTransitData({...transitData, destination: p.formatted_address || ""})}
                          />
-                      </div>
+                      </motion.div>
                    </div>
                 </motion.section>
               )}
@@ -5737,16 +5587,24 @@ function App() {
                 <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
                    <div className="space-y-4">
                       {categories.map((cat) => (
-                        <div key={cat.id} onClick={() => setTransitData({...transitData, vehicleCategory: cat.name})}
-                           className={'p-6 rounded-[35px] border-2 transition-all flex items-center gap-6 cursor-pointer'} style={{ borderColor: transitData.vehicleCategory === cat.name ? '#facc15' : 'transparent', background: transitData.vehicleCategory === cat.name ? 'rgba(250, 204, 21, 0.05)' : 'rgba(24, 24, 27, 0.4)' }}>
-                           <div className={'size-16 rounded-2xl flex items-center justify-center'} style={{ background: transitData.vehicleCategory === cat.name ? '#facc15' : '#27272a', color: transitData.vehicleCategory === cat.name ? '#000' : '#fff' }}>
+                        <motion.div 
+                          key={cat.id} 
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setTransitData({...transitData, vehicleCategory: cat.name})}
+                           className={'p-6 rounded-[35px] border transition-all flex items-center gap-6 cursor-pointer backdrop-blur-3xl shadow-xl'} 
+                           style={{ 
+                             borderColor: transitData.vehicleCategory === cat.name ? '#facc15' : 'rgba(255,255,255,0.05)', 
+                             background: transitData.vehicleCategory === cat.name ? '#facc15' : 'rgba(24, 24, 27, 0.4)'
+                           }}>
+                           <div className={'size-16 rounded-2xl flex items-center justify-center transition-all duration-300'} style={{ background: transitData.vehicleCategory === cat.name ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.05)', color: transitData.vehicleCategory === cat.name ? '#000' : '#fff' }}>
                               <span className="material-symbols-outlined text-4xl">{cat.icon}</span>
                            </div>
                            <div className="flex-1">
-                              <h4 className="font-black text-lg text-white">{cat.name}</h4>
-                              <p className="text-zinc-500 text-xs">{cat.desc}</p>
+                              <h4 className={`font-black text-lg ${transitData.vehicleCategory === cat.name ? 'text-black' : 'text-white'}`}>{cat.name}</h4>
+                              <p className={`text-xs ${transitData.vehicleCategory === cat.name ? 'text-black/60' : 'text-zinc-500'}`}>{cat.desc}</p>
                            </div>
-                        </div>
+                        </motion.div>
                       ))}
                    </div>
                 </motion.section>
@@ -5773,9 +5631,9 @@ function App() {
 
   const renderVanWizard = () => {
     return (
-      <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
+      <div className="absolute inset-0 z-[120] bg-transparent text-zinc-100 flex flex-col overflow-hidden">
         {/* MAPA NO FUNDO */}
-        <div className="absolute inset-0 z-0 h-[35vh]">
+        <div className="absolute inset-0 z-0 h-full">
            <IziTrackingMap routePolyline={routePolyline} driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
         </div>
@@ -5790,7 +5648,7 @@ function App() {
           </div>
         </header>
 
-        <main className="relative z-40 mt-auto bg-zinc-950 border-t border-white/5 flex flex-col h-[70vh] rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
+        <main className="relative z-40 mt-auto bg-zinc-900/60 backdrop-blur-3xl border-t border-white/10 flex flex-col h-[70vh] rounded-t-[40px] shadow-[0_-20px_80px_rgba(0,0,0,0.6)]">
            <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
               {/* STEP 1: ROTEIRO E PARADAS */}
               {mobilityStep === 1 && (
@@ -5802,37 +5660,38 @@ function App() {
                    
                    <div className="space-y-4">
                       {/* ORIGEM */}
-                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
+                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="bg-zinc-900/40 backdrop-blur-3xl p-6 rounded-[35px] border border-white/10 shadow-2xl shadow-black/40 group transition-all">
                          <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Início da Rota</p>
                          <AddressSearchInput 
+                           userCoords={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                            initialValue={transitData.origin}
                            placeholder="Partida..."
                            className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
                            onSelect={(p) => setTransitData({...transitData, origin: p.formatted_address || ""})}
                          />
-                      </div>
+                      </motion.div>
 
-                      {/* STOPS */}
-                      {transitData.stops.map((stop, idx) => (
-                         <div key={idx} className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5 flex items-center gap-3">
-                             <div className="flex-1">
-                                <p className="text-[9px] font-black uppercase text-yellow-400/60 tracking-widest mb-2 ml-1">Parada Adicional</p>
-                                <AddressSearchInput 
-                                  initialValue={stop}
-                                  placeholder="Recolher passageiro em..."
-                                  className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
-                                  onSelect={(p) => {
-                                    const newStops = [...transitData.stops];
-                                    newStops[idx] = p.formatted_address || "";
-                                    setTransitData({...transitData, stops: newStops});
-                                  }}
-                                />
-                             </div>
-                             <button onClick={() => setTransitData({...transitData, stops: transitData.stops.filter((_, i) => i !== idx)})} className="p-2 text-zinc-600 hover:text-red-400">
-                                <span className="material-symbols-outlined">close</span>
-                             </button>
-                         </div>
-                      ))}
+                       {transitData.stops.map((stop, idx) => (
+                          <motion.div key={idx} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="bg-zinc-900/40 backdrop-blur-3xl p-6 rounded-[35px] border border-white/10 shadow-2xl shadow-black/40 flex items-center gap-4 transition-all">
+                              <div className="flex-1">
+                                 <p className="text-[9px] font-black uppercase text-yellow-400/60 tracking-[0.2em] mb-3 ml-1">Parada Adicional</p>
+                                 <AddressSearchInput 
+                                   userCoords={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
+                                   initialValue={stop}
+                                   placeholder="Recolher passageiro em..."
+                                   className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 placeholder:text-zinc-600"
+                                   onSelect={(p) => {
+                                     const newStops = [...transitData.stops];
+                                     newStops[idx] = p.formatted_address || "";
+                                     setTransitData({...transitData, stops: newStops});
+                                   }}
+                                 />
+                              </div>
+                              <button onClick={() => setTransitData({...transitData, stops: transitData.stops.filter((_, i) => i !== idx)})} className="size-10 rounded-xl bg-red-400/10 text-red-400 flex items-center justify-center hover:bg-red-400/20 transition-all">
+                                 <span className="material-symbols-outlined text-xl">close</span>
+                              </button>
+                          </motion.div>
+                       ))}
 
                       <button onClick={() => setTransitData({...transitData, stops: [...transitData.stops, ""]})} className="w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-zinc-800 rounded-[30px] text-zinc-500 hover:text-yellow-400 transition-all">
                          <span className="material-symbols-outlined text-lg">add</span>
@@ -5843,6 +5702,7 @@ function App() {
                       <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
                          <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Destino Final</p>
                          <AddressSearchInput 
+                           userCoords={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                            initialValue={transitData.destination}
                            placeholder="Onde termina a rota?"
                            className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
@@ -5990,33 +5850,56 @@ function App() {
     ];
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
-        <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+        <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-6 py-6 border-b border-zinc-900/50 backdrop-blur-xl">
+          <div className="flex items-center gap-5">
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setSubView("none")} className="size-11 rounded-2xl bg-zinc-900/50 border border-white/10 flex items-center justify-center shadow-lg transition-all">
               <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
-            </button>
+            </motion.button>
             <div>
-              <h1 className="text-lg font-black tracking-tight text-white">Envios</h1>
+              <h1 className="text-xl font-black tracking-tighter text-white">Envios</h1>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Entregamos qualquer coisa</p>
             </div>
           </div>
         </header>
-        <main className="px-5 pt-8 flex flex-col gap-5 pb-10">
+
+        <main className="px-6 pt-10 flex flex-col gap-6">
           {services.map((svc, i) => (
-            <motion.div key={svc.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-              onClick={svc.action} className="relative group bg-transparent border border-zinc-800 rounded-2xl p-6 cursor-pointer active:scale-[0.98] transition-all hover:border-yellow-400/20">
-              <div className="flex items-center gap-5">
-                <div className="size-14 rounded-2xl bg-yellow-400/10 border border-yellow-400/10 flex items-center justify-center shrink-0 group-hover:bg-yellow-400/20 transition-colors">
-                  <span className="material-symbols-outlined text-2xl text-yellow-400">{svc.icon}</span>
+            <motion.div 
+              key={svc.id} 
+              initial={{ opacity: 0, y: 30 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ delay: i * 0.1, type: "spring", stiffness: 100 }}
+              whileHover={{ scale: 1.02, translateY: -4 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={svc.action} 
+              className="relative group bg-zinc-900/30 backdrop-blur-3xl border border-white/10 rounded-[35px] p-7 cursor-pointer shadow-xl shadow-black/40 transition-all hover:border-yellow-400/30"
+            >
+              <div className="flex items-center gap-6">
+                <div className="size-16 rounded-[22px] bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center shrink-0 group-hover:bg-yellow-400/20 transition-all duration-500 shadow-inner">
+                  <span className="material-symbols-outlined text-3xl text-yellow-400 transition-transform group-hover:scale-110">{svc.icon}</span>
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-black text-base text-white group-hover:text-yellow-400 transition-colors">{svc.name}</h3>
-                  <p className="text-zinc-500 text-xs mt-0.5">{svc.desc}</p>
+                  <h3 className="font-black text-lg text-white group-hover:text-yellow-400 transition-all duration-300 tracking-tight">{svc.name}</h3>
+                  <p className="text-zinc-500 text-[11px] mt-1 font-medium leading-tight">{svc.desc}</p>
                 </div>
-                <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors">chevron_right</span>
+                <div className="size-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-yellow-400 group-hover:text-black transition-all duration-500">
+                  <span className="material-symbols-outlined text-xl">chevron_right</span>
+                </div>
               </div>
             </motion.div>
           ))}
+
+          <div className="mt-8 p-8 rounded-[40px] bg-gradient-to-br from-yellow-400/20 to-amber-500/5 border border-yellow-400/10 relative overflow-hidden group">
+             <div className="relative z-10">
+                <h4 className="text-white font-black text-lg tracking-tight mb-2">Transporte Local</h4>
+                <p className="text-zinc-400 text-xs leading-relaxed max-w-[200px]">Precisa de algo maior? Confira nossas vans e caminhões para frete.</p>
+                <div className="mt-5 flex gap-3">
+                   <button onClick={() => setSubView("van_wizard")} className="px-4 py-2 bg-yellow-400 text-black text-[10px] font-black rounded-xl uppercase tracking-widest shadow-lg shadow-yellow-400/20">Vans</button>
+                   <button onClick={() => setSubView("freight_wizard")} className="px-4 py-2 bg-white/10 text-white text-[10px] font-black rounded-xl uppercase tracking-widest border border-white/10">Fretes</button>
+                </div>
+             </div>
+             <span className="material-symbols-outlined absolute -right-6 -bottom-6 text-[120px] text-yellow-400/10 rotate-12 group-hover:rotate-0 transition-transform duration-700">local_shipping</span>
+          </div>
         </main>
       </div>
     );
@@ -6026,72 +5909,86 @@ function App() {
     const priorities = [
       { id: "turbo", name: "Izi Turbo Flash", desc: "Entrega ultra-rápida até 15 min", time: "15 min", icon: "bolt", color: "text-amber-400", bg: "bg-amber-400/10" },
       { id: "light", name: "Izi Light Flash", desc: "Entrega agilizada até 30 min", time: "30 min", icon: "electric_bolt", color: "text-yellow-400", bg: "bg-yellow-400/10" },
-      { id: "normal", name: "Izi Express", desc: "Categoria normal", time: "1 hr", icon: "moped", color: "text-zinc-400", bg: "bg-zinc-800" },
+      { id: "normal", name: "Izi Express", desc: "Categoria normal de entrega", time: "1 hr", icon: "moped", color: "text-zinc-400", bg: "bg-zinc-800" },
       { id: "scheduled", name: "Izi Agendado", desc: "Você escolhe data e horário", time: "Agendar", icon: "event", color: "text-blue-400", bg: "bg-blue-400/10" },
     ];
 
     return (
       <div className="absolute inset-0 z-40 bg-black text-white flex flex-col hide-scrollbar overflow-y-auto pb-40">
-        <header className="px-6 py-8 flex items-center justify-between gap-4 sticky top-0 bg-black/80 backdrop-blur-xl z-50">
-          <button onClick={() => navigateSubView("explore_envios")} className="size-12 rounded-2xl bg-zinc-900 shadow-xl flex items-center justify-center text-white active:scale-90 transition-all border border-zinc-800">
+        <header className="px-6 py-8 flex items-center justify-between gap-4 sticky top-0 bg-black/80 backdrop-blur-xl z-50 border-b border-white/5">
+          <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigateSubView("explore_envios")} className="size-12 rounded-2xl bg-zinc-900/50 backdrop-blur-xl border border-white/10 shadow-xl flex items-center justify-center text-white active:scale-90 transition-all leading-none">
             <span className="material-symbols-outlined">arrow_back</span>
-          </button>
+          </motion.button>
           <div className="text-right">
             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Prioridade</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 font-jakarta">Escolha a velocidade</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Escolha a velocidade</p>
           </div>
         </header>
 
-        <main className="px-6 space-y-6 mt-4">
-          <div className="text-center mb-8">
-            <div className="size-20 rounded-[30px] bg-yellow-400/10 flex items-center justify-center mx-auto mb-4 border border-yellow-400/20 shadow-[0_0_40px_-10px_rgba(255,215,9,0.3)]">
-              <span className="material-symbols-outlined text-4xl text-yellow-400">speed</span>
-            </div>
-            <h3 className="text-lg font-black text-white tracking-tight">Qual a sua urgência?</h3>
-            <p className="text-zinc-500 text-xs font-medium mt-1">Selecione o nível de prioridade para sua entrega</p>
+        <main className="px-6 space-y-8 mt-10">
+          <div className="text-center mb-10">
+            <motion.div 
+               animate={{ scale: [1, 1.05, 1], rotate: [0, 2, -2, 0] }}
+               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+               className="size-24 rounded-[35px] bg-yellow-400/10 flex items-center justify-center mx-auto mb-5 border border-yellow-400/20 shadow-[0_0_50px_-10px_rgba(255,215,9,0.2)]"
+            >
+              <span className="material-symbols-outlined text-5xl text-yellow-400 drop-shadow-[0_0_15px_rgba(255,215,9,0.5)]">speed</span>
+            </motion.div>
+            <h3 className="text-xl font-black text-white tracking-tight">Qual a sua urgência?</h3>
+            <p className="text-zinc-500 text-xs font-semibold mt-2 max-w-[240px] mx-auto opacity-80">Oferecemos diferentes níveis de prioridade de acordo com sua necessidade</p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
-            {priorities.map((p, i) => (
-              <motion.div
-                key={p.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.1 }}
-                onClick={() => {
-                  setTransitData({ 
-                    ...transitData, 
-                    priority: p.id as any,
-                    scheduled: p.id === "scheduled"
-                  });
-                  navigateSubView("shipping_details");
-                }}
-                className={`p-6 rounded-[35px] border cursor-pointer active:scale-[0.98] transition-all flex items-center gap-5 ${
-                  transitData.priority === p.id 
-                    ? "bg-transparent border-yellow-400/50 shadow-2xl shadow-yellow-400/5" 
-                    : "bg-transparent border-zinc-800 hover:border-zinc-700"
-                }`}
-              >
-                <div className={`size-14 rounded-2xl ${p.bg} flex items-center justify-center`}>
-                  <span className={`material-symbols-outlined text-2xl ${p.color}`}>{p.icon}</span>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <h4 className="font-black text-white text-base tracking-tight">{p.name}</h4>
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${p.color}`}>{p.time}</span>
+          <div className="grid grid-cols-1 gap-5">
+            {priorities.map((p, i) => {
+              const isSelected = transitData.priority === p.id;
+              return (
+                <motion.div
+                  key={p.id}
+                  initial={{ opacity: 0, x: -30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1, type: "spring", damping: 20 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setTransitData({ 
+                      ...transitData, 
+                      priority: p.id as any,
+                      scheduled: p.id === "scheduled"
+                    });
+                    navigateSubView("shipping_details");
+                  }}
+                  className={`p-7 rounded-[40px] border cursor-pointer transition-all flex items-center gap-6 shadow-2xl relative overflow-hidden group ${
+                    isSelected 
+                      ? "bg-yellow-400 border-yellow-400 shadow-yellow-400/10" 
+                      : "bg-zinc-900/30 backdrop-blur-3xl border-white/5 hover:border-white/10 shadow-black/40"
+                  }`}
+                >
+                  <div className={`size-16 rounded-[22px] flex items-center justify-center transition-all duration-500 ${isSelected ? 'bg-black/10' : p.bg + ' group-hover:scale-110 shadow-inner'}`}>
+                    <span className={`material-symbols-outlined text-3xl ${isSelected ? 'text-black' : p.color}`}>{p.icon}</span>
                   </div>
-                  <p className="text-zinc-500 text-[11px] font-medium leading-tight">{p.desc}</p>
-                </div>
-              </motion.div>
-            ))}
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className={`font-black text-lg tracking-tight ${isSelected ? 'text-black' : 'text-white'}`}>{p.name}</h4>
+                      <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${isSelected ? 'text-black/60' : p.color}`}>{p.time}</span>
+                    </div>
+                    <p className={`text-[11px] font-medium leading-tight ${isSelected ? 'text-black/50' : 'text-zinc-500 opacity-80'}`}>{p.desc}</p>
+                  </div>
+                  {isSelected && (
+                    <motion.div layoutId="priority-check" className="absolute right-4 top-4 size-6 bg-black rounded-full flex items-center justify-center">
+                       <Icon name="check" className="text-yellow-400 text-[14px]" />
+                    </motion.div>
+                  )}
+                </motion.div>
+              );
+            })}
           </div>
 
-          <div className="bg-yellow-400/5 border border-yellow-400/10 p-6 rounded-[35px] flex items-center gap-4 mt-8">
-            <div className="size-10 rounded-full bg-yellow-400/20 flex items-center justify-center shrink-0">
-               <span className="material-symbols-outlined text-yellow-400 text-sm">info</span>
+          <div className="bg-zinc-900/40 backdrop-blur-3xl border border-white/10 p-7 rounded-[40px] flex items-center gap-5 mt-10 shadow-xl">
+            <div className="size-12 rounded-2xl bg-yellow-400/20 flex items-center justify-center shrink-0 border border-yellow-400/10">
+               <span className="material-symbols-outlined text-yellow-400 text-xl font-bold">info</span>
             </div>
-            <p className="text-[10px] text-yellow-400/80 font-medium leading-relaxed">
-              Os tempos de entrega são estimativas baseadas na disponibilidade de entregadores próximos no momento da confirmação.
+            <p className="text-[11px] text-zinc-400 font-semibold leading-relaxed">
+              Os tempos de entrega são estimativas calculadas pelo nosso algoritmo baseado na frota disponível em tempo real.
             </p>
           </div>
         </main>
@@ -6516,11 +6413,11 @@ function App() {
 
   const renderTaxiWizard = () => {
     return (
-      <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
+      <div className="absolute inset-0 z-[120] bg-transparent text-zinc-100 flex flex-col overflow-hidden">
         {/* MAPA NO FUNDO */}
-        <div className="absolute inset-0 z-0 h-[45vh]">
+        <div className="absolute inset-0 z-0 h-full">
            <IziTrackingMap routePolyline={routePolyline} driverLoc={driverLocation} userLoc={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} onMyLocationClick={updateLocation} />
-           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-zinc-950 pointer-events-none" />
+           <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-zinc-950/90 pointer-events-none" />
         </div>
 
         <header className="relative z-50 flex items-center justify-between px-6 pt-10">
@@ -6535,7 +6432,7 @@ function App() {
           </div>
         </header>
 
-        <main className="relative z-40 mt-auto bg-zinc-950 border-t border-white/5 flex flex-col h-[60vh] rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
+        <main className="relative z-40 mt-auto bg-zinc-900/60 backdrop-blur-3xl border-t border-white/10 flex flex-col h-[60vh] rounded-t-[40px] shadow-[0_-20px_80px_rgba(0,0,0,0.6)]">
            <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
               {mobilityStep === 1 && (
                 <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
@@ -6545,38 +6442,38 @@ function App() {
                    </div>
                    
                    <div className="space-y-6">
-                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
-                         <div className="flex justify-between items-center mb-2">
-                            <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-1">Origem</p>
-                            <button onClick={() => updateLocation()} disabled={userLocation.loading} className="text-[8px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/5 px-2 py-1 rounded-lg disabled:opacity-50">
+                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="bg-zinc-900/40 backdrop-blur-3xl p-6 rounded-[35px] border border-white/10 shadow-2xl shadow-black/40 group transition-all">
+                         <div className="flex justify-between items-center mb-3">
+                            <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] ml-1">Origem</p>
+                            <button onClick={() => updateLocation()} disabled={userLocation.loading} className="text-[8px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/10 px-3 py-1.5 rounded-xl disabled:opacity-50 active:scale-95 transition-all">
                                {userLocation.loading ? 'Buscando...' : 'Meu Local'}
                             </button>
                           </div>
                          <AddressSearchInput 
                            initialValue={transitData.origin}
                            placeholder="De onde você está saindo?"
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 placeholder:text-zinc-600"
                            userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                            onSelect={(p) => {
                              const ori = p.formatted_address || "";
                              setTransitData(prev => ({...prev, origin: ori}));
                            }}
                          />
-                      </div>
+                      </motion.div>
 
-                      <div className="bg-zinc-900/60 p-5 rounded-[30px] border border-white/5">
-                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-widest mb-2 ml-1">Destino</p>
+                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} className="bg-zinc-900/40 backdrop-blur-3xl p-6 rounded-[35px] border border-white/10 shadow-2xl shadow-black/40 group transition-all">
+                         <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-3 ml-1">Destino</p>
                          <AddressSearchInput 
                            initialValue={transitData.destination}
                            placeholder="Para onde vamos?"
-                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0"
+                           className="w-full bg-transparent border-none p-0 text-base font-bold text-white focus:ring-0 placeholder:text-zinc-600"
                            userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                           onSelect={(p) => {
                             const dest = p.formatted_address || "";
                             setTransitData(prev => ({...prev, destination: dest}));
                           }}
                          />
-                      </div>
+                      </motion.div>
 
                       {/* VEÍCULO E PREÇO IMEDIATO */}
                        <AnimatePresence>
@@ -6601,28 +6498,30 @@ function App() {
                                    const price = distancePrices[v.id] || 0;
                                    
                                    return (
-                                     <button
+                                     <motion.button
+                                       whileHover={{ scale: 1.02, translateY: -2 }}
+                                       whileTap={{ scale: 0.98 }}
                                        key={v.id}
                                        onClick={() => setTransitData(prev => ({ ...prev, type: v.id as any, estPrice: price }))}
-                                       className={`p-5 rounded-[35px] transition-all duration-300 flex flex-col items-center gap-2 border relative group overflow-hidden
-                                         ${isSelected ? 'bg-yellow-400 border-yellow-400 shadow-[0_20px_40px_rgba(255,217,9,0.15)]' : 'bg-zinc-900 border-white/5 hover:border-white/10'}
+                                       className={`p-6 rounded-[35px] transition-all duration-500 flex flex-col items-center gap-2 border relative group overflow-hidden backdrop-blur-3xl
+                                         ${isSelected ? 'bg-yellow-400 border-yellow-400 shadow-[0_25px_50px_rgba(250,204,21,0.2)]' : 'bg-zinc-900/40 border-white/10 hover:border-white/20 shadow-xl shadow-black/20'}
                                        `}
                                      >
-                                        <div className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-300
+                                        <div className={`size-14 rounded-2xl flex items-center justify-center transition-all duration-500
                                           ${isSelected ? 'bg-black/10 scale-110' : 'bg-white/5 group-hover:bg-white/10'}
                                         `}>
-                                           <span className={`material-symbols-outlined text-2xl ${isSelected ? 'text-black' : v.color}`}>{v.icon}</span>
+                                           <span className={`material-symbols-outlined text-3xl ${isSelected ? 'text-black' : v.color}`}>{v.icon}</span>
                                         </div>
                                         <div className="text-center z-10">
-                                           <p className={`text-[11px] font-black uppercase tracking-tighter ${isSelected ? 'text-black' : 'text-white'}`}>{v.label}</p>
-                                           <p className={`text-[8px] font-black uppercase tracking-widest mt-1 opacity-50 ${isSelected ? 'text-black' : 'text-zinc-600'}`}>{v.sub}</p>
-                                           <div className="mt-3">
-                                              <p className={`text-sm font-black italic ${isSelected ? 'text-black' : 'text-yellow-400'} ${isCalculatingPrice ? 'animate-pulse' : ''}`}>
+                                           <p className={`text-[11px] font-black uppercase tracking-tight ${isSelected ? 'text-black' : 'text-zinc-100'}`}>{v.label}</p>
+                                           <p className={`text-[8px] font-black uppercase tracking-widest mt-1 opacity-50 ${isSelected ? 'text-black' : 'text-zinc-500'}`}>{v.sub}</p>
+                                           <div className="mt-4">
+                                              <p className={`text-base font-black tracking-tight ${isSelected ? 'text-black' : 'text-yellow-400'} ${isCalculatingPrice ? 'animate-pulse' : ''}`}>
                                                 {isCalculatingPrice ? 'Calculando...' : price > 0 ? `R$ ${price.toFixed(2).replace(".", ",")}` : '---'}
                                               </p>
                                            </div>
                                         </div>
-                                     </button>
+                                     </motion.button>
                                    );
                                  })}
                               </div>
@@ -7528,7 +7427,7 @@ function App() {
               )}
               {subView === "active_order" && (
                 <motion.div key="aorder" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[100]">
-                  <ActiveOrderView selectedItem={selectedItem} driverLocation={driverLocation} userLocation={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} routePolyline={routePolyline} onMyLocationClick={updateLocation} setSubView={setSubView} />
+                  <ActiveOrderView selectedItem={selectedItem} driverLocation={driverLocation} userLocation={userLocation?.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null} routePolyline={routePolyline || selectedItem?.route_polyline} onMyLocationClick={updateLocation} setSubView={setSubView} />
                 </motion.div>
               )}
               {subView === "payment_processing" && (
@@ -7673,5 +7572,8 @@ function App() {
 
 
 export default App;
+
+
+
 
 
