@@ -3026,16 +3026,19 @@ function App() {
         });
 
         if (fnErr || !(fnData?.qrCode || fnData?.qr_code)) {
-          console.error("Erro MP PIX ou dados ausentes:", fnErr, fnData);
+          console.error("Erro MP PIX:", fnErr, fnData);
           
-          // Tentar extrair a mensagem de erro real do Mercado Pago se disponível
           let detail = "Erro ao gerar os dados do QR Code no Mercado Pago.";
-          if (fnData?.details?.cause?.[0]?.description) {
-            detail = `MP: ${fnData.details.cause[0].description}`;
-          } else if (fnData?.error) {
-            detail = typeof fnData.error === 'string' ? fnData.error : JSON.stringify(fnData.error);
+          // No SDK do Supabase, o corpo do erro (se status for 4xx) pode estar no fnData ou no fnErr
+          const source = fnData || fnErr;
+          
+          if (source?.details?.cause?.[0]?.description) {
+            detail = `MP: ${source.details.cause[0].description}`;
+          } else if (source?.error) {
+            detail = typeof source.error === 'string' ? source.error : JSON.stringify(source.error);
           } else if (fnErr?.message) {
-            detail = fnErr.message;
+            // Tenta remover a mensagem padrão chata do Supabase se houver detalhe
+            detail = fnErr.message === "Edge Function returned a non-2xx status code" ? "Erro no servidor de pagamentos." : fnErr.message;
           }
           
           setSelectedItem({ ...orderRef, pixError: true, pixErrorMessage: detail });
