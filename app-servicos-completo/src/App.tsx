@@ -1372,23 +1372,21 @@ function App() {
   };
 
     const calculateDeliveryFee = () => {
+    // PRIORIDADE MÁXIMA: Frete grátis do lojista
+    if (selectedShop?.freeDelivery === true || selectedShop?.free_delivery === true) return 0;
+    
+    // Prioridade 2: IZI Black
     const isIziBlack = Boolean(user?.izi_black_active);
     const minOrderIziBlack = Number(globalSettings?.izi_black_min_order || 0);
     const subtotal = cart.reduce((a, b) => a + (b.price || 0), 0);
+    if (isIziBlack && subtotal >= minOrderIziBlack && minOrderIziBlack > 0) return 0;
 
-    if (isIziBlack) {
-      if (subtotal >= minOrderIziBlack && minOrderIziBlack > 0) return 0;
-    }
-
-    // Prioridade 1: Informações da Loja Selecionada
-    if (selectedShop) {
-       if (selectedShop.freeDelivery === true || selectedShop.free_delivery === true) return 0;
-       if (selectedShop.service_fee !== undefined && selectedShop.service_fee !== null) {
-           return Number(selectedShop.service_fee);
-       }
+    // Prioridade 3: Taxa configurada pelo lojista
+    if (selectedShop?.service_fee !== undefined && selectedShop?.service_fee !== null) {
+      return Number(selectedShop.service_fee);
     }
     
-    // Prioridade 2: Fallback para metadados salvos no primeiro item do carrinho
+    // Prioridade 4: Fallback no primeiro item do carrinho
     if (cart.length > 0) {
        const first = cart[0];
        if (first.merchant_free_delivery === true || first.free_delivery === true || first.freeDelivery === true) return 0;
@@ -1667,7 +1665,6 @@ const navigateSubView = (target: string) => {
          // Mapeamento de tipos do banco para os filtros do App
          const rawType = (m.store_type || "restaurant").toLowerCase().trim();
          let normalizedType = rawType;
-         
          if (rawType.includes("restaurante")) normalizedType = "restaurant";
          else if (rawType === "saude") normalizedType = "pharmacy";
          else if (rawType === "mercado") normalizedType = "market";
@@ -1675,7 +1672,6 @@ const navigateSubView = (target: string) => {
          else if (rawType === "hamburguer") normalizedType = "restaurant";
          
          return {
-
           id: m.id,
           name: m.store_name || "Loja Parceira",
           tag: isOpen ? "Aberto Agora" : "Fechado",
@@ -1687,6 +1683,8 @@ const navigateSubView = (target: string) => {
           img: m.store_logo || "https://images.unsplash.com/photo-1552566626-52f8b828add9?q=80&w=200",
           banner: m.store_banner || "https://images.unsplash.com/photo-1514933651103-005eec06ccc0?q=80&w=800",
           freeDelivery: !!m.free_delivery,
+          free_delivery: !!m.free_delivery,
+          service_fee: m.free_delivery ? 0 : (m.service_fee !== undefined && m.service_fee !== null ? Number(m.service_fee) : undefined),
           type: normalizedType,
           foodCategory: m.food_category || "all",
           description: m.store_description || "",

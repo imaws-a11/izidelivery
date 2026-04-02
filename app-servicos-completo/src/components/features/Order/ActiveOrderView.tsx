@@ -193,10 +193,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
           <section className="space-y-8">
             <div className="flex items-center justify-between px-2">
               <h2 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em]">Fluxo Operacional</h2>
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Real-time</span>
-                <span className="size-1.5 bg-emerald-500 rounded-full animate-pulse" />
-              </div>
+              <span className="size-1.5 bg-emerald-500 rounded-full animate-pulse" />
             </div>
 
             <div className="relative space-y-10 pl-2">
