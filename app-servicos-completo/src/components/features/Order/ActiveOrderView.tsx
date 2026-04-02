@@ -57,16 +57,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
           label: "Pedido Confirmado",
           icon: "check_circle",
           status: [
-            "aceito",
-            "confirmado",
-            "preparando",
-            "pronto",
-            "a_caminho",
-            "picked_up",
-            "saiu_para_entrega",
-            "em_rota",
-            "no_local",
-            "concluido",
+            "novo", "pendente_pagamento", "pendente", "aceito", "confirmado", "preparando", "no_preparo", "pronto", "waiting_driver", "a_caminho_coleta", "saiu_para_coleta", "chegou_coleta", "picked_up", "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
           ],
         },
         {
@@ -74,35 +65,32 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
           label: "Preparando seu Pedido",
           icon: "restaurant",
           status: [
-            "preparando",
-            "pronto",
-            "a_caminho_coleta",
-            "chegou_coleta",
-            "a_caminho",
-            "picked_up",
-            "saiu_para_entrega",
-            "em_rota",
-            "no_local",
-            "concluido",
+            "preparando", "no_preparo", "pronto", "waiting_driver", "a_caminho_coleta", "saiu_para_coleta", "chegou_coleta", "picked_up", "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
           ],
         },
         {
           id: "aceito_ent",
           label: "Entregador a caminho da coleta",
           icon: "moped",
-          status: ["a_caminho_coleta", "chegou_coleta", "a_caminho", "picked_up", "saiu_para_entrega", "em_rota", "no_local", "concluido"],
+          status: [
+            "a_caminho_coleta", "saiu_para_coleta", "chegou_coleta", "picked_up", "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
+          ],
         },
         {
           id: "coletado",
           label: "Pedido Coletado",
           icon: "package_2",
-          status: ["a_caminho", "picked_up", "saiu_para_entrega", "em_rota", "no_local", "concluido"],
+          status: [
+            "picked_up", "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
+          ],
         },
         {
           id: "em_rota",
           label: "A Caminho",
           icon: "delivery_dining",
-          status: ["saiu_para_entrega", "em_rota", "no_local", "concluido"],
+          status: [
+            "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
+          ],
         },
         { id: "entregue", label: "Entregue", icon: "verified", status: ["concluido"] },
       ];
@@ -258,7 +246,9 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
 
             {/* BOTÃO DE CANCELAMENTO - POSIÇÃO DE DESTAQUE */}
             {(() => {
-                const canCancel = ['novo', 'pendente', 'pendente_pagamento', 'waiting_merchant', 'waiting_driver'].includes(selectedItem.status);
+                const canCancel = isMobility
+                  ? ['novo', 'pendente', 'pendente_pagamento', 'waiting_driver'].includes(selectedItem.status)
+                  : ['novo', 'pendente', 'pendente_pagamento', 'waiting_merchant'].includes(selectedItem.status);
                 if (!canCancel) return null;
                 
                 return (
