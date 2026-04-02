@@ -349,26 +349,26 @@ function App() {
       }
       resetAddressForm();
       fetchSavedAddresses(userId);
-    } catch (e: any) {
+    } catch (e) {
       toastError('Erro ao salvar: ' + e.message);
     } finally {
       setIsSavingAddress(false);
     }
   };
 
-  const handleDeleteAddress = async (addrId: string | number) => {
+  const handleDeleteAddress = async (addrId) => {
     if (!userId) return;
     try {
       const { error } = await supabase.from('saved_addresses').delete().eq('id', addrId);
       if (error) throw error;
       toastSuccess('Endereço removido.');
       fetchSavedAddresses(userId);
-    } catch (e: any) {
+    } catch (e) {
       toastError('Erro ao remover: ' + e.message);
     }
   };
 
-  const handleSetActiveAddress = async (addrId: string | number) => {
+  const handleSetActiveAddress = async (addrId) => {
     if (!userId) return;
     try {
       await supabase.from('saved_addresses').update({ is_active: false }).eq('user_id', userId);
@@ -376,7 +376,7 @@ function App() {
       if (error) throw error;
       toastSuccess('Endereço padrão atualizado!');
       fetchSavedAddresses(userId);
-    } catch (e: any) {
+    } catch (e) {
       toastError('Erro ao definir endereço: ' + e.message);
     }
   };
