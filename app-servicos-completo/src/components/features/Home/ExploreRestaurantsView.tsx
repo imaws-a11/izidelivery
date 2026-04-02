@@ -16,6 +16,7 @@ interface ExploreRestaurantsViewProps {
   copiedCoupon: string | null;
   setCopiedCoupon: (c: string | null) => void;
   initialCategory?: string;
+  isIziBlackMembership?: boolean;
 }
 
 export const ExploreRestaurantsView = ({
@@ -30,7 +31,8 @@ export const ExploreRestaurantsView = ({
   onShopClick,
   copiedCoupon,
   setCopiedCoupon,
-  initialCategory = "Todos"
+  initialCategory = "Todos",
+  isIziBlackMembership = false
 }: ExploreRestaurantsViewProps) => {
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
 
@@ -219,11 +221,11 @@ export const ExploreRestaurantsView = ({
         </section>
 
         {/* CUPONS VIP - PREMIUM STYLE */}
-        {availableCoupons && availableCoupons.filter(cpn => cpn.is_vip).length > 0 && (
-          <section className="mb-10">
+        {isIziBlackMembership && availableCoupons && availableCoupons.filter(cpn => cpn.is_vip).length > 0 && (
+          <section className="mb-10 animate-in fade-in slide-in-from-right duration-700">
             <div className="flex items-center justify-between mb-4 px-1">
-              <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Ofertas Exclusivas</h3>
-              <span className="text-[8px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse border border-yellow-400/20">VIP</span>
+              <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Benefícios Ativos</h3>
+              <span className="text-[8px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse border border-yellow-400/20 shadow-[0_0_15px_rgba(250,204,21,0.2)]">IZI BLACK</span>
             </div>
             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4">
               {availableCoupons.filter(cpn => cpn.is_vip).map((cpn, i) => (

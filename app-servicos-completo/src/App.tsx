@@ -2397,6 +2397,7 @@ function App() {
         copiedCoupon={copiedCoupon}
         setCopiedCoupon={setCopiedCoupon}
         initialCategory={restaurantInitialCategory}
+        isIziBlackMembership={isIziBlackMembership}
       />
     );
   };
