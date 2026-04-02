@@ -41,7 +41,7 @@ function App() {
     "home",
   );
 
-  // Carrega a Google Maps API uma Ãºnica vez para toda a aplicaÃ§Ã£o (singleton)
+      // [Comentario Limpo pelo Sistema]
   useGoogleMapsLoader();
   
   const {
@@ -240,7 +240,7 @@ function App() {
             : "linear-gradient(135deg, #1e293b, #0f172a)",
       }));
       setSavedCards(cards);
-      // Se tem cartÃ£o padrÃ£o, define o mÃ©todo de pagamento
+      // [Comentario Limpo pelo Sistema]
       const defaultCard = cards.find((c: any) => c.active);
       if (defaultCard) setPaymentMethod("cartao");
     }
@@ -286,7 +286,7 @@ function App() {
         active: addr.is_active,
       }));
       setSavedAddresses(addresses);
-      // Sincroniza o local atual se houver um endereÃ§o ativo no banco
+      // [Comentario Limpo pelo Sistema]
       const active = addresses.find(a => a.active);
       if (active) {
         setUserLocation(prev => ({ ...prev, address: active.street }));
@@ -433,7 +433,7 @@ function App() {
       
       if (data && data.cart_data && Array.isArray(data.cart_data)) {
         // Combinar localStorage com DB ou priorizar DB?
-        // Priorizamos o banco para manter consistÃªncia entre aparelhos
+      // [Comentario Limpo pelo Sistema]
         if (data.cart_data.length > 0) {
           setCart(data.cart_data);
         }
@@ -481,7 +481,7 @@ function App() {
             } catch { /* silent */ }
           }
 
-          // ÃƒÆ’Ã…Â¡ltimo fallback: Nominatim
+      // [Comentario Limpo pelo Sistema]
           if (!address) {
             const nomRes = await fetch(
               `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
@@ -538,12 +538,12 @@ function App() {
           
           if (newOrder.user_id !== userIdRef.current) return;
 
-          // Se o status mudou, mostrar notificaÃ§Ã£o personalizada
+      // [Comentario Limpo pelo Sistema]
           if (!oldOrder || (oldOrder && newOrder.status !== oldOrder.status)) {
              fetchMyOrders(userIdRef.current!);
           }
 
-          // Se o status mudou, mostrar notificaÃ§Ã£o personalizada
+      // [Comentario Limpo pelo Sistema]
           if (oldOrder && newOrder.status !== oldOrder.status) {
             const statusMessages: Record<string, string> = {
               'novo': 'Pagamento aprovado! O lojista jÃ¡ recebeu seu pedido. âš¡',
@@ -580,7 +580,7 @@ function App() {
               fetchMyOrders(userIdRef.current!);
             }
 
-            // Abrir tela de avaliaÃ§Ã£o ao concluir (exceto para assinaturas Izi Black)
+      // [Comentario Limpo pelo Sistema]
             if (newOrder.status === 'concluido') {
               setSelectedItem(newOrder);
               
@@ -594,7 +594,7 @@ function App() {
               }, 2000);
             }
 
-            // TransiÃ§ÃƒÆ’Âµes automÃ¡ticas de tela baseadas no status
+      // [Comentario Limpo pelo Sistema]
             if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
               showToast("Loja aceitou seu pedido! ðŸ¥³", "success");
               setSelectedItem(newOrder); 
@@ -687,7 +687,7 @@ function App() {
 
   const fetchBeveragePromo = useCallback(async () => {
     try {
-      // 1. Buscar Banners especÃ­ficos para bebidas ou banners gerais ativos
+      // [Comentario Limpo pelo Sistema]
       const { data: banners } = await supabase
         .from('promotions_delivery')
         .select('*')
@@ -696,7 +696,1213 @@ function App() {
         .order('created_at', { ascending: false });
       
       if (banners) {
-        // Filtra banners que mencionam bebidas no tÃ­tulo ou descriÃ§Ã£o
+      // [Comentario Limpo pelo Sistema]
+        const bevBanners = banners.filter(b => 
+          (b.title?.toLowerCase().includes('bebida') || b.description?.toLowerCase().includes('bebida') ||
+           b.title?.toLowerCase().includes('gelada') || b.description?.toLowerCase().includes('gelada'))
+        );
+        setBeverageBanners(bevBanners.length > 0 ? bevBanners : banners.slice(0, 1));
+      }
+
+      // 2. Buscar Produtos da categoria Bebidas para a tela de ofertas
+      const { data: pDeals } = await supabase
+        .from('products_delivery')
+        .select('*')
+        .eq('is_available', true)
+        .eq('category', 'Bebidas')
+        .limit(8);
+      
+      if (pDeals) {
+        const discountPct = globalSettings?.flash_offer_discount || 25;
+        const discountMult = 1 / (1 - (discountPct / 100)); // Calculate back to original price
+        
+        const formatted = pDeals.map(p => ({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          oldPrice: p.price * (discountMult || 1.25),
+          off: `${discountPct}%`,
+          img: p.image_url || "https://images.unsplash.com/photo-1596753738914-7bc33e08f58b?q=80&w=400",
+          cat: p.category || "Bebidas"
+        }));
+        setBeverageOffers(formatted);
+      }
+    } catch (err) {
+    }
+  }, [globalSettings]);
+
+  const normalizeCpf = (value?: string | null) => `${value || ""}`.replace(/\D/g, "");
+  const getBenefitTrackingCpf = () => normalizeCpf(profileCpf || pixCpf || cpf);
+  const getFlashOfferSourceId = (item: any) => item?.flash_offer_id || item?.offer_id || item?.id || null;
+  const normalizeFlashOfferProductKey = (value?: string | null) =>
+    String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+
+  const hasBenefitBeenUsed = async (sourceType: "coupon" | "flash_offer", sourceId: string) => {
+    const filters: string[] = [];
+    if (userId) filters.push(`user_id.eq.${userId}`);
+
+    const trackedCpf = getBenefitTrackingCpf();
+    if (trackedCpf) filters.push(`cpf.eq.${trackedCpf}`);
+    if (filters.length === 0) return false;
+
+    const { data, error } = await supabase
+      .from("benefit_redemptions_delivery")
+      .select("id")
+      .eq("source_type", sourceType)
+      .eq("source_id", sourceId)
+      .or(filters.join(","))
+      .limit(1);
+
+    if (error) {
+      console.error(`Erro ao verificar uso de ${sourceType}:`, error);
+      return false;
+    }
+
+    return Boolean(data && data.length > 0);
+  };
+
+  const validateCouponRules = async (coupon: any, subtotal: number) => {
+    if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+      return "Este cupom jÃ¡ expirou.";
+    }
+
+    if (subtotal < (coupon.min_order_value || 0)) {
+      return `O valor mÃ­nimo para este cupom Ã© R$ ${coupon.min_order_value.toFixed(2)}.`;
+    }
+
+    if (coupon.usage_count >= coupon.max_usage) {
+      return "Este cupom jÃ¡ atingiu o limite de usos.";
+    }
+
+    if (coupon.is_vip && !isIziBlackMembership) {
+      return "Este cupom Ã© exclusivo para membros IZI Black.";
+    }
+
+    if (coupon.id && await hasBenefitBeenUsed("coupon", coupon.id)) {
+      return "Este cupom jÃ¡ foi utilizado por este CPF/usuÃ¡rio.";
+    }
+
+    return null;
+  };
+
+  const validateFlashOfferRules = async (item: any) => {
+    const sourceId = getFlashOfferSourceId(item);
+    if (!item?.is_flash_offer || !sourceId) return null;
+    if (await hasBenefitBeenUsed("flash_offer", sourceId)) {
+      return "Esta oferta jÃ¡ foi utilizada por este CPF/usuÃ¡rio.";
+    }
+    return null;
+  };
+
+  const registerBenefitUsage = async (sourceType: "coupon" | "flash_offer", sourceId: string, orderId?: string) => {
+    const trackedCpf = getBenefitTrackingCpf();
+    const { error } = await supabase
+      .from("benefit_redemptions_delivery")
+      .insert({
+        source_type: sourceType,
+        source_id: sourceId,
+        user_id: userId || null,
+        cpf: trackedCpf || null,
+        order_id: orderId || null,
+      });
+
+    if (error) throw error;
+  };
+
+  const ensureCartBenefitsAreAvailable = async () => {
+    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+
+    if (appliedCoupon) {
+      const couponError = await validateCouponRules(appliedCoupon, subtotal);
+      if (couponError) return couponError;
+    }
+
+    const flashOfferIds = [...new Set(
+      cart
+        .filter((item: any) => item.is_flash_offer)
+        .map((item: any) => getFlashOfferSourceId(item))
+        .filter(Boolean)
+    )];
+    for (const offerId of flashOfferIds) {
+      const flashOfferError = await validateFlashOfferRules({ id: offerId, is_flash_offer: true });
+      if (flashOfferError) return flashOfferError;
+    }
+
+    return null;
+  };
+
+  const registerPendingBenefitUsages = async (orderId?: string) => {
+    if (appliedCoupon?.id) {
+      await registerBenefitUsage("coupon", appliedCoupon.id, orderId);
+      await supabase
+        .from("promotions_delivery")
+        .update({ usage_count: (appliedCoupon.usage_count || 0) + 1 })
+        .eq("id", appliedCoupon.id);
+    }
+
+    const flashOfferIds = [...new Set(
+      cart
+        .filter((item: any) => item.is_flash_offer)
+        .map((item: any) => getFlashOfferSourceId(item))
+        .filter(Boolean)
+    )];
+    for (const offerId of flashOfferIds) {
+      await registerBenefitUsage("flash_offer", offerId, orderId);
+    }
+  };
+
+  const validateCoupon = async (code: string) => {
+    if (!code.trim()) return;
+    setIsValidatingCoupon(true);
+    setCouponError("");
+
+    try {
+      const { data, error } = await supabase
+        .from('promotions_delivery')
+        .select('*')
+        .eq('coupon_code', code.trim().toUpperCase())
+        .eq('is_active', true)
+        .single();
+
+      if (error || !data) {
+        setCouponError("Cupom invÃ¡lido ou expirado.");
+        setAppliedCoupon(null);
+        return;
+      }
+
+      const subtotal = cart.reduce((acc, item) => acc + (item.price || 0), 0);
+      const couponError = await validateCouponRules(data, subtotal);
+      if (couponError) {
+        setCouponError(couponError);
+        setAppliedCoupon(null);
+        return;
+      }
+
+      setAppliedCoupon(data);
+      setCouponInput("");
+      setCouponError("");
+    } catch (err) {
+      setCouponError("Erro ao validar cupom.");
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+
+
+  const getItemCount = (id: number) =>
+    cart.filter((item) => item.id === id).length;
+
+  const processingItemsRef = useRef<Set<string>>(new Set());
+
+  const handleAddToCart = async (item: any, e?: React.MouseEvent) => {
+    if (processingItemsRef.current.has(item.id)) return;
+
+    // 1. Feedback Visual Imediato (Animação)
+    if (e && triggerCartAnimation) {
+      triggerCartAnimation(e, item.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400");
+    }
+
+    processingItemsRef.current.add(item.id);
+
+    try {
+      // 2. Validações básicas rápidas
+      const flashOfferError = await validateFlashOfferRules(item);
+      if (flashOfferError) {
+        showToast(flashOfferError, "error" as any);
+        processingItemsRef.current.delete(item.id);
+        return;
+      }
+
+      // 3. Verificação de Opcionais
+      const { data: groups } = await supabase
+        .from('product_options_groups_delivery')
+        .select('id')
+        .eq('product_id', item.id)
+        .limit(1);
+
+      if (groups && groups.length > 0) {
+        setSelectedItem(item);
+        setSubView("product_detail");
+        processingItemsRef.current.delete(item.id);
+        return;
+      }
+    } catch (err) {
+      console.error("Erro no fluxo do carrinho:", err);
+    }
+
+    // 4. Adição Real ao Carrinho
+    setCart((prev: any[]) => [...prev, { ...item, timestamp: Date.now() }]);
+    setUserXP((prev: number) => prev + 10);
+    processingItemsRef.current.delete(item.id);
+  };
+
+  const handleShopClick = async (shop: any) => {
+    setSelectedShop(shop);
+    setActiveCategory("Destaques");
+    const isRestaurant = shop.type === "restaurant";
+    const targetView = "restaurant_menu";
+
+    try {
+      const { data: products } = await supabase
+        .from("products_delivery")
+        .select("*")
+        .eq("merchant_id", shop.id)
+        .eq("is_available", true)
+        .order("created_at", { ascending: false });
+
+      console.log("Produtos recebidos:", products?.length, products?.[0]);
+      if (products && products.length > 0) {
+        const activeProductOffers = (flashOffers || []).filter((offer: any) =>
+          offer?.merchant_id === shop.id &&
+          offer?.is_active &&
+          (!offer?.expires_at || new Date(offer.expires_at).getTime() > Date.now())
+        );
+        const offersByProductId = new Map<string, any>();
+        const offersByProductName = new Map<string, any>();
+        activeProductOffers.forEach((offer: any) => {
+          if (offer?.product_id) {
+            const productId = String(offer.product_id);
+            if (!offersByProductId.has(productId)) {
+              offersByProductId.set(productId, offer);
+            }
+          }
+
+          const productNameKey = normalizeFlashOfferProductKey(offer?.product_name);
+          if (productNameKey && !offersByProductName.has(productNameKey)) {
+            offersByProductName.set(productNameKey, offer);
+          }
+        });
+
+        const grouped: Record<string, any[]> = {};
+        products.forEach((p: any) => {
+          const cat = p.category || p.subcategory || (isRestaurant ? "CardÃ¡pio" : "Produtos");
+          if (!grouped[cat]) grouped[cat] = [];
+          const linkedOffer =
+            offersByProductId.get(String(p.id)) ||
+            offersByProductName.get(normalizeFlashOfferProductKey(p.name));
+          const discountedPrice = linkedOffer ? Number(linkedOffer.discounted_price) : Number(p.price);
+          const hasLinkedOffer = Boolean(
+            linkedOffer &&
+            Number.isFinite(discountedPrice) &&
+            discountedPrice >= 0 &&
+            discountedPrice < Number(p.price)
+          );
+          grouped[cat].push({
+            id: p.id,
+            name: p.name,
+            desc: p.description || "",
+            price: hasLinkedOffer ? discountedPrice : p.price,
+            oldPrice: hasLinkedOffer ? Number(p.price) : undefined,
+            img: p.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600",
+            merchant_id: shop.id,
+            merchant_name: shop.name,
+            store: shop.name,
+            is_flash_offer: hasLinkedOffer,
+            flash_offer_id: hasLinkedOffer ? linkedOffer.id : undefined,
+          });
+        });
+        const categories = Object.entries(grouped).map(([name, items]) => ({ name, items }));
+        setSelectedShop({ ...shop, categories });
+      }
+    } catch (e) {}
+
+    navigateSubView(targetView);
+  };
+
+
+  const handleApplyCoupon = async (code: string) => {
+    if (!code) return;
+    const { data, error } = await supabase
+      .from("promotions_delivery")
+      .select("*")
+      .eq("coupon_code", code.toUpperCase().trim())
+      .eq("is_active", true)
+      .single();
+
+    if (error || !data) {
+      toastError("Cupom invÃ¡lido ou expirado.");
+      return;
+    }
+
+    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+    const couponError = await validateCouponRules(data, subtotal);
+    if (couponError) {
+      toastError(couponError);
+      return;
+    }
+
+    setAppliedCoupon(data);
+    setCouponInput(data.coupon_code);
+    toastSuccess("Cupom aplicado!");
+  };
+
+
+  const clearCart = async (orderId?: string) => {
+    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+    const couponDiscount = appliedCoupon
+      ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100)
+      : 0;
+    
+    const total = Math.max(0, subtotal - couponDiscount);
+    const coinRate = globalSettings?.izi_coin_rate || 1;
+    const earnedCoins = Math.floor(total * coinRate);
+    const finalCoins = isUsingCoins ? earnedCoins : (iziCoins + earnedCoins);
+    
+    await registerPendingBenefitUsages(orderId);
+
+    setCart([]);
+    setAppliedCoupon(null);
+    setCouponInput("");
+    setUserXP((prev: number) => prev + 50);
+    setIziCoins(finalCoins);
+    
+    if (userId) {
+      await supabase.from("users_delivery").update({ 
+        izi_coins: finalCoins,
+        user_xp: (userXP + 50) 
+      }).eq("id", userId);
+    }
+  };
+
+    const calculateDeliveryFee = () => {
+    const shop = selectedShop || (cart.length > 0 ? { id: cart[0].merchant_id, service_fee: cart[0].service_fee } : null);
+    if (!shop) return Number(globalSettings?.base_fee || 5.90);
+
+    // 1. Verificar se é IZI Black (Frete Grátis)
+    const isIziBlack = Boolean(userData?.izi_black_active);
+    const minOrderIziBlack = Number(globalSettings?.izi_black_min_order || 0);
+    const subtotal = cart.reduce((a, b) => a + (b.price || 0), 0);
+
+    if (isIziBlack) {
+      const hasActiveVipFreeShipping = availableCoupons.some(
+        (p) => p.is_vip === true && p.is_active === true && p.title === 'Frete Grátis'
+      );
+      if (hasActiveVipFreeShipping) return 0;
+      if (subtotal >= minOrderIziBlack && minOrderIziBlack > 0) return 0;
+    }
+    
+    if (shop.service_fee !== undefined && shop.service_fee !== null) {
+      return Number(shop.service_fee);
+    }
+    
+    return Number(globalSettings?.base_fee || 5.90);
+  };
+
+  const handlePlaceOrder = async (useCoins = false) => {
+    if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
+    if (!userId) { alert("Faça login para continuar."); return; }
+    if (cart.length === 0) { alert("Seu carrinho está vazio."); return; }
+
+    const benefitError = await ensureCartBenefitsAreAvailable();
+    if (benefitError) {
+      toastError(benefitError);
+      return;
+    }
+    
+    setIsUsingCoins(useCoins);
+
+    const subtotal = cart.reduce((a, b) => a + (b.price || 0), 0);
+    const couponDiscount = appliedCoupon
+      ? appliedCoupon.discount_type === "fixed"
+        ? appliedCoupon.discount_value
+        : (subtotal * appliedCoupon.discount_value) / 100
+      : 0;
+    
+    const coinValue = globalSettings?.izi_coin_value || 0.01;
+    const coinDiscount = useCoins ? iziCoins * coinValue : 0;
+    const deliveryFee = calculateDeliveryFee();
+    const total = Math.max(0, subtotal + deliveryFee - couponDiscount - coinDiscount);
+
+    const shopId = selectedShop?.id || cart[0]?.merchant_id || null;
+    const shopName = selectedShop?.name || "Estabelecimento";
+
+    const orderBase = {
+      user_id: userId,
+      merchant_id: shopId,
+      status: "novo",
+      total_price: Number(total.toFixed(2)),
+      delivery_fee: deliveryFee,
+      items: cart,
+      pickup_address: shopName,
+      delivery_address: `${userLocation.address || "Endereço não informado"}`,
+      payment_method: paymentMethod,
+      service_type: selectedShop?.type || "restaurant",
+      notes: paymentMethod === "dinheiro" && changeFor ? `TROCO PARA: R$ ${changeFor}` : "",
+    };
+
+    console.log("[DIAG] handlePlaceOrder acionado:", { paymentMethod, total, shopId });
+
+    try {
+      setIsLoading(true);
+
+      if (paymentMethod === "pix") {
+        setPixConfirmed(false);
+        setPixCpf("");
+        setSelectedItem({ id: "temp", total_price: total, merchant_id: shopId, merchant_name: shopName });
+        navigateSubView("pix_payment");
+        setIsLoading(false);
+        return;
+      }
+
+      if (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") {
+        if (!shopId) { alert("Erro: Loja não identificada."); setIsLoading(false); return; }
+        const payload = { ...orderBase, status: "waiting_merchant" };
+        const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(payload).select().single();
+        if (insertError || !order) {
+          alert("Erro ao criar pedido. Tente novamente.");
+          setIsLoading(false);
+          return;
+        }
+        setSelectedItem(order);
+        await clearCart(order.id);
+        navigateSubView("waiting_merchant");
+        setIsLoading(false);
+        return;
+      }
+
+      if (paymentMethod === "bitcoin_lightning") {
+        navigateSubView("payment_processing");
+        const { data: order, error } = await supabase.from("orders_delivery").insert({ ...orderBase, status: "pendente_pagamento" }).select().single();
+        if (error || !order) { alert("Erro Lightning."); setIsLoading(false); return; }
+        const { data: lnData } = await supabase.functions.invoke("create-lightning-invoice", { body: { amount: total, orderId: order.id } });
+        if (lnData?.payment_request) {
+           setLightningData(lnData);
+           setSelectedItem({ ...order, ...lnData });
+           await clearCart(order.id);
+           navigateSubView("lightning_payment");
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (paymentMethod === "saldo") {
+        const { data: order } = await supabase.from("orders_delivery").insert({ ...orderBase, status: "waiting_merchant", payment_status: "paid" }).select().single();
+        if (order) {
+          await supabase.from("wallet_transactions").insert({ user_id: userId, type: "pagamento", amount: total });
+          setSelectedItem(order);
+          await clearCart(order.id);
+          navigateSubView("waiting_merchant");
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (paymentMethod === "cartao") {
+        setSubView("card_payment");
+        setIsLoading(false);
+        return;
+      }
+
+    } catch (e) {
+      console.error(e);
+      navigateSubView("payment_error");
+    } finally {
+      setIsLoading(false);
+    }
+  };useRef, useCallback, Fragment } from "react";
+import { BespokeIcons } from "./lib/BespokeIcons";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "./lib/supabase";
+import { toast, toastSuccess, toastError, toastWarning, showConfirm } from "./lib/useToast";
+import { useGoogleMapsLoader } from "./hooks/useGoogleMapsLoader";
+import { GMAPS_KEY } from "./config";
+// Mercado Pago
+import { MercadoPagoCardForm } from "./components/MercadoPagoCardForm";
+import { calculateFreightPrice, calculateVanPrice } from "./lib/pricing_engine";
+
+// Novos Componentes Modulares
+import { Icon } from "./components/common/Icon";
+import { AddressSearchInput } from "./components/features/Address/AddressSearchInput";
+import { AIConciergePanel } from "./components/features/AI/AIConciergePanel";
+import { IziTrackingMap } from "./components/features/Map/IziTrackingMap";
+import { LoginView } from "./components/features/Auth/LoginView";
+import { HomeView } from "./components/features/Home/HomeView";
+import { OrderListView } from "./components/features/Order/OrderListView";
+import { ProfileView } from "./components/features/Profile/ProfileView";
+import { WalletView } from "./components/features/Wallet/WalletView";
+import { CartView } from "./components/features/Cart/CartView";
+import { CheckoutView } from "./components/features/Checkout/CheckoutView";
+import { ActiveOrderView } from "./components/features/Order/ActiveOrderView";
+import { EstablishmentListView } from "./components/features/Establishment/EstablishmentListView";
+import { ExploreRestaurantsView } from "./components/features/Home/ExploreRestaurantsView";
+import { BeverageOffersView } from "./components/features/Home/BeverageOffersView";
+import { RestaurantMenuView } from "./components/features/Home/RestaurantMenuView";
+import { MarketExploreView } from "./components/features/Home/MarketExploreView";
+import { PaymentMethodsView } from "./components/features/Profile/PaymentMethodsView";
+
+import { useAuth } from "./hooks/useAuth";
+import type { SavedAddress, Order, Quest } from "./types";
+
+// Componentes agora em arquivos separados
+
+function App() {
+  const [view, setView] = useState<"login" | "app" | "loading">("loading");
+  const [tab, setTab] = useState<"home" | "orders" | "wallet" | "profile">(
+    "home",
+  );
+
+      // [Comentario Limpo pelo Sistema]
+  useGoogleMapsLoader();
+  
+  const {
+    user,
+    userId,
+    userName,
+    setUserName,
+    phone,
+    setPhone,
+    loginEmail,
+    setLoginEmail,
+    loginPassword,
+    setLoginPassword,
+    authMode,
+    setAuthMode,
+    isLoading,
+    loginError,
+    setLoginError,
+    authInitLoading,
+    setAuthInitLoading,
+    handleLogin,
+    handleSignUp,
+    setIsLoading,
+    logout,
+    isAdmin
+  } = useAuth();
+
+  const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
+  const [shopRating, setShopRating] = useState<number>(0);
+  const [driverRating, setDriverRating] = useState<number>(0);
+  const [fbComment, setFbComment] = useState<string>("");
+  const [fbIsSubmitting, setFbIsSubmitting] = useState<boolean>(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositPixCode, setDepositPixCode] = useState("");
+  const [cartAnimations, setCartAnimations] = useState<{id: string, x: number, y: number, img: string}[]>([]);
+
+  const triggerCartAnimation = (e: React.MouseEvent, img: string) => {
+    const id = Date.now().toString() + Math.random();
+    setCartAnimations(prev => [...prev, { id, x: e.clientX, y: e.clientY, img }]);
+    setTimeout(() => {
+      setCartAnimations(prev => prev.filter(a => a.id !== id));
+    }, 800);
+  };
+
+  const [subView, setSubView] = useState<
+    | "none"
+    | "explore_restaurants"
+    | "market_list"
+    | "pharmacy_list"
+    | "restaurant_menu"
+    | "product_detail"
+    | "checkout"
+    | "active_order"
+    | "addresses"
+    | "payments"
+    | "transit_selection"
+    | "taxi_wizard"
+    | "van_wizard"
+    | "freight_wizard"
+    | "generic_list"
+    | "wallet"
+    | "payment_processing"
+    | "payment_error"
+    | "payment_success"
+    | "cart"
+    | "store_catalog"
+    | "all_pharmacies"
+    | "health_plantao"
+    | "daily_menus"
+    | "exclusive_offer"
+    | "shipping_details"
+    | "beverages_list"
+    | "beverage_offers"
+    | "explore_category"
+    | "explore_envios"
+    | "pix_payment"
+    | "order_chat"
+    | "quest_center"
+    | "order_support"
+    | "order_feedback"
+    | "mobility_payment"
+    | "waiting_merchant"
+    | "waiting_driver"
+    | "scheduled_order"
+    | "lightning_payment"
+    | "shipping_priority"
+    | "izi_black_purchase"
+    | "card_payment"
+  >("none");
+  const previousSubViewRef = useRef<string>("none");
+  const [iziBlackOrigin, setIziBlackOrigin] = useState<"home" | "checkout">("home");
+  const [iziBlackStep, setIziBlackStep] = useState<"info" | "payment" | "pix_qr" | "success">("info");
+  const [iziBlackPixCode, setIziBlackPixCode] = useState("");
+  const [isUsingCoins, setIsUsingCoins] = useState(false);
+
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [email, setEmail] = useState("");
+
+
+  const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; expirationDate: string } | null>(null);
+  const [lightningData, setLightningData] = useState<{ payment_request: string; satoshis: number; btc_price_brl: number } | null>(null);
+
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' | 'error' } | null>(null);
+  const toastTimeoutRef = useRef<any>(null);
+  const showToast = (message: string, type: 'success' | 'info' | 'warning' | 'error' = 'info') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ message, type });
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+      toastTimeoutRef.current = null;
+    }, 4000);
+  };
+  const toastError = (message: string) => showToast(message, 'error');
+
+  // --- Izi Elite Client Features ---
+  const [userXP, setUserXP] = useState(0);
+  const [iziCoins, setIziCoins] = useState(0);
+  const [userLevel] = useState(12);
+  const [nextLevelXP] = useState(2500);
+  const [isAIOpen, setIsAIOpen] = useState(false);
+  const [schedObsState, setSchedObsState] = useState('');
+  const [schedChatInputState, setSchedChatInputState] = useState('');
+  const [schedMessagesState, setSchedMessagesState] = useState<{id: string; text: string; from: 'user'|'driver'; time: string}[]>([]);
+  const [isSavingObsState, setIsSavingObsState] = useState(false);
+  const [aiMessage, setAiMessage] = useState("OlÃ¡! Sou seu assistente Izi. Percebi que vocÃª gosta de culinÃ¡ria japonesa. Que tal conferir as ofertas do Sushi Zen?");
+  const [isIziBlackMembership, setIsIziBlackMembership] = useState(false);
+  const [iziCashbackEarned, setIziCashbackEarned] = useState(0);
+  const [showIziBlackCard, setShowIziBlackCard] = useState(false);
+  const [showIziBlackWelcome, setShowIziBlackWelcome] = useState(false);
+  const [showMasterPerks, setShowMasterPerks] = useState(false);
+  const [activePerkDetail, setActivePerkDetail] = useState<string | null>(null);
+  const [flashOffers, setFlashOffers] = useState<any[]>([]);
+  const [globalSettings, setGlobalSettings] = useState<any>(null);
+  const [appSettings, setAppSettings] = useState<any>(null);
+
+  const fetchGlobalSettings = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('admin_settings_delivery')
+        .select('*')
+        .eq('id', '00000000-0000-0000-0000-000000000000')
+        .single();
+      if (data) setGlobalSettings(data);
+
+      const { data: appData } = await supabase
+        .from('app_settings_delivery')
+        .select('*')
+        .single();
+      if (appData) setAppSettings(appData);
+    } catch (e) {}
+  }, []);
+
+  const [nowTick, setNowTick] = useState<number>(Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+
+
+// Fetch payment methods when entering payments screen
+
+
+
+
+  const [savedCards, setSavedCards] = useState<any[]>([]);
+  const [isLoadingCards, setIsLoadingCards] = useState(false);
+  const [isAddingCard, setIsAddingCard] = useState(false);
+  const [isShowingMyQR, setIsShowingMyQR] = useState(false);
+  const [isScanningQR, setIsScanningQR] = useState(false);
+  const [transferTarget, setTransferTarget] = useState<any>(null);
+  const [newCardData, setNewCardData] = useState({ number: "", expiry: "", cvv: "", brand: "Visa" });
+  const [paymentsOrigin, setPaymentsOrigin] = useState<"checkout" | "profile" | "izi_black">("profile");
+
+  const fetchSavedCards = async (uid: string) => {
+    if (!uid) return;
+    setIsLoadingCards(true);
+    const { data, error } = await supabase
+      .from("payment_methods")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: true });
+    if (!error && data) {
+      const cards = data.map((c: any) => ({
+        id: c.id,
+        brand: c.brand,
+        last4: c.last_four,
+        mp_token: c.token,
+        active: c.is_default,
+        color: c.brand === "Visa"
+          ? "linear-gradient(135deg, #2563eb, #1e40af)"
+          : c.brand === "Amex"
+            ? "linear-gradient(135deg, #047857, #065f46)"
+            : "linear-gradient(135deg, #1e293b, #0f172a)",
+      }));
+      setSavedCards(cards);
+      // [Comentario Limpo pelo Sistema]
+      const defaultCard = cards.find((c: any) => c.active);
+      if (defaultCard) setPaymentMethod("cartao");
+    }
+    setIsLoadingCards(false);
+  };
+  const handleSetPrimaryCard = async (cardId: string) => {
+    if (!userId) return;
+    await supabase.from("payment_methods").update({ is_default: false }).eq("user_id", userId);
+    await supabase.from("payment_methods").update({ is_default: true }).eq("id", cardId);
+    setSavedCards((prev: any[]) => prev.map((c: any) => ({ ...c, active: c.id === cardId })));
+    setPaymentMethod("cartao");
+  };
+
+  const handleDeleteCard = async (cardId: string) => {
+    if (!userId) return;
+    if (await showConfirm({ message: "Remover este cartÃ£o?" })) {
+      await supabase.from("payment_methods").delete().eq("id", cardId).eq("user_id", userId);
+      const updated = savedCards.filter((c: any) => c.id !== cardId);
+      setSavedCards(updated);
+      const wasActive = savedCards.find((c: any) => c.id === cardId)?.active;
+      if (wasActive && updated.length > 0) {
+        await handleSetPrimaryCard(updated[0].id);
+      } else if (updated.length === 0) {
+        setPaymentMethod("pix");
+      }
+    }
+  };
+
+  const fetchSavedAddresses = async (uid: string) => {
+    if (!uid) return;
+    const { data, error } = await supabase
+      .from("saved_addresses")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: true });
+    if (!error && data) {
+      const addresses = data.map((addr: any) => ({
+        id: addr.id,
+        label: addr.label,
+        street: addr.street,
+        details: addr.details,
+        city: addr.city,
+        active: addr.is_active,
+      }));
+      setSavedAddresses(addresses);
+      // [Comentario Limpo pelo Sistema]
+      const active = addresses.find(a => a.active);
+      if (active) {
+        setUserLocation(prev => ({ ...prev, address: active.street }));
+      }
+    }
+  };
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const addressAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(
+    null,
+  );
+  const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [newAddrLabel, setNewAddrLabel] = useState('');
+  const [newAddrStreet, setNewAddrStreet] = useState('');
+  const [newAddrDetails, setNewAddrDetails] = useState('');
+  const [newAddrCity, setNewAddrCity] = useState('');
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+
+  const resetAddressForm = () => {
+    setNewAddrLabel(''); setNewAddrStreet(''); setNewAddrDetails(''); setNewAddrCity('');
+    setEditingAddress(null); setIsAddingAddress(false);
+  };
+
+  const openEditAddress = (addr: SavedAddress) => {
+    setEditingAddress(addr);
+    setNewAddrLabel(addr.label || '');
+    setNewAddrStreet(addr.street || '');
+    setNewAddrDetails(addr.details || '');
+    setNewAddrCity(addr.city || '');
+    setIsAddingAddress(true);
+  };
+
+  const handleSaveAddress = async () => {
+    if (!userId) return;
+    if (!newAddrLabel.trim() || !newAddrStreet.trim()) {
+      toastError('Preencha pelo menos o rÃ³tulo e a rua.');
+      return;
+    }
+    setIsSavingAddress(true);
+    try {
+      if (editingAddress) {
+        const { error } = await supabase.from('saved_addresses').update({
+          label: newAddrLabel.trim(),
+          street: newAddrStreet.trim(),
+          details: newAddrDetails.trim() || null,
+          city: newAddrCity.trim() || null,
+        }).eq('id', editingAddress.id);
+        if (error) throw error;
+        toastSuccess('EndereÃ§o atualizado!');
+      } else {
+        const { error } = await supabase.from('saved_addresses').insert({
+          user_id: userId,
+          label: newAddrLabel.trim(),
+          street: newAddrStreet.trim(),
+          details: newAddrDetails.trim() || null,
+          city: newAddrCity.trim() || null,
+          is_active: savedAddresses.length === 0,
+        });
+        if (error) throw error;
+        toastSuccess('EndereÃ§o salvo com sucesso!');
+      }
+      resetAddressForm();
+      fetchSavedAddresses(userId);
+    } catch (e: any) {
+      toastError('Erro ao salvar: ' + e.message);
+    } finally {
+      setIsSavingAddress(false);
+    }
+  };
+
+  const handleDeleteAddress = async (addrId: string | number) => {
+    if (!userId) return;
+    try {
+      const { error } = await supabase.from('saved_addresses').delete().eq('id', addrId);
+      if (error) throw error;
+      toastSuccess('EndereÃ§o removido.');
+      fetchSavedAddresses(userId);
+    } catch (e: any) {
+      toastError('Erro ao remover: ' + e.message);
+    }
+  };
+
+  const handleSetActiveAddress = async (addrId: string | number) => {
+    if (!userId) return;
+    try {
+      await supabase.from('saved_addresses').update({ is_active: false }).eq('user_id', userId);
+      const { error } = await supabase.from('saved_addresses').update({ is_active: true }).eq('id', addrId);
+      if (error) throw error;
+      toastSuccess('EndereÃ§o padrÃ£o atualizado!');
+      fetchSavedAddresses(userId);
+    } catch (e: any) {
+      toastError('Erro ao definir endereÃ§o: ' + e.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchMarketData();
+    fetchFlashOffers();
+    fetchGlobalSettings();
+    fetchBeveragePromo();
+    const interval = setInterval(fetchMarketData, 20000);
+    const flashChannel = supabase.channel('flash_offers_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'flash_offers' }, fetchFlashOffers)
+      .subscribe();
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(flashChannel);
+    };
+  }, []);
+
+  const fetchWalletBalance = async (uid: string) => {
+    if (!uid) return;
+    const { data } = await supabase
+      .from("users_delivery")
+      .select("wallet_balance, is_izi_black, cashback_earned, user_xp, izi_coins, cpf")
+      .eq("id", uid)
+      .single();
+    if (data) {
+      setWalletBalance(data.wallet_balance || 0);
+      setIsIziBlackMembership(data.is_izi_black || false);
+      setIziCashbackEarned(data.cashback_earned || 0);
+      setUserXP(data.user_xp || 0);
+      setIziCoins(data.izi_coins || 0);
+      setProfileCpf(data.cpf || "");
+    }
+
+    // Buscar transacoes reais
+    const { data: txData } = await supabase
+      .from("wallet_transactions")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (txData) setWalletTransactions(txData);
+  };
+
+  const fetchCartData = async (uid: string) => {
+    if (!uid) return;
+    try {
+      const { data, error } = await supabase
+        .from("users_delivery")
+        .select("cart_data")
+        .eq("id", uid)
+        .single();
+      
+      if (data && data.cart_data && Array.isArray(data.cart_data)) {
+        // Combinar localStorage com DB ou priorizar DB?
+      // [Comentario Limpo pelo Sistema]
+        if (data.cart_data.length > 0) {
+          setCart(data.cart_data);
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao buscar sacola sincronizada:", e);
+    }
+  };
+
+  const isLoaded = true; // Loaded via index.html
+
+  const updateLocation = (onSuccess?: (address: string) => void) => {
+    setUserLocation((prev) => ({ ...prev, loading: true }));
+    if (!("geolocation" in navigator)) {
+      setUserLocation({ address: "GeolocalizaÃ§Ã£o nÃ£o disponÃ­vel", loading: false });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          let address = "";
+
+          // Tenta reverse geocode via Google Maps Geocoder
+          if ((window as any).google?.maps) {
+            const geocoder = new google.maps.Geocoder();
+            const response = await geocoder.geocode({
+              location: { lat: latitude, lng: longitude },
+            });
+            if (response.results[0]) {
+              address = response.results[0].formatted_address;
+            }
+          }
+
+          // Fallback: Places API (New) reverse geocode via fetch
+          if (!address) {
+            try {
+              const res = await fetch(
+                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GMAPS_KEY}&language=pt-BR&result_type=street_address|route`
+              );
+              const data = await res.json();
+              if (data.results?.[0]) {
+                address = data.results[0].formatted_address;
+              }
+            } catch { /* silent */ }
+          }
+
+      // [Comentario Limpo pelo Sistema]
+          if (!address) {
+            const nomRes = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+            );
+            const nomData = await nomRes.json();
+            address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "LocalizaÃ§Ã£o atual";
+          }
+
+          setUserLocation({ address, loading: false, lat: latitude, lng: longitude });
+          setTransitData((prev) => ({ ...prev, origin: address }));
+          if (onSuccess) onSuccess(address);
+        } catch {
+          setUserLocation((prev) => ({ ...prev, loading: false }));
+        }
+      },
+      () => {
+        setUserLocation({ address: "PermissÃ£o de localizaÃ§Ã£o negada", loading: false });
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  useEffect(() => {
+    updateLocation();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setView("app");
+      window.history.replaceState({ view: "app", tab: "home", subView: "none" }, "");
+      
+      fetchMyOrders(userId!);
+      fetchWalletBalance(userId!);
+      fetchSavedCards(userId!);
+      fetchSavedAddresses(userId!);
+      fetchCartData(userId!);
+      fetchCoupons();
+      fetchBeveragePromo();
+    } else if (!authInitLoading) {
+      setView("login");
+    }
+  }, [user, authInitLoading]);
+  useEffect(() => {
+    if (!userId) return;
+
+    const sub = supabase
+      .channel("orders_tracking")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders_delivery" },
+        (payload) => {
+          const newOrder = payload.new as any;
+          const oldOrder = payload.old as any;
+          
+          if (newOrder.user_id !== userIdRef.current) return;
+
+      // [Comentario Limpo pelo Sistema]
+          if (!oldOrder || (oldOrder && newOrder.status !== oldOrder.status)) {
+             fetchMyOrders(userIdRef.current!);
+          }
+
+      // [Comentario Limpo pelo Sistema]
+          if (oldOrder && newOrder.status !== oldOrder.status) {
+            const statusMessages: Record<string, string> = {
+              'novo': 'Pagamento aprovado! O lojista jÃ¡ recebeu seu pedido. âš¡',
+              'pendente_pagamento': 'Aguardando confirmaÃ§Ã£o do pagamento... ðŸ’³',
+              'pendente': 'O lojista recebeu seu pedido! ðŸ¥³',
+              'aceito': 'O estabelecimento aceitou seu pedido! ðŸ¥³',
+              'confirmado': 'Pedido confirmado! O preparo comeÃ§ou. âœ…',
+              'preparando': 'Seu pedido estÃ¡ sendo preparado com carinho! ðŸ¥—',
+              'no_preparo': 'Seu pedido jÃ¡ estÃ¡ no preparo! ðŸ¥—',
+              'waiting_driver': 'Pedido aceito! Buscando o melhor entregador para vocÃª. ðŸ›µ',
+              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. ðŸ“¦',
+              'saiu_para_coleta': 'O motoboy aceitou e estÃ¡ indo retirar seu pedido! ðŸ›µ',
+              'picked_up': 'Pedido coletado! O motoboy iniciou a entrega para vocÃª. ðŸš€',
+              'a_caminho': 'Motoboy a caminho! Sua entrega estÃ¡ em rota. ðŸ›µ',
+              'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! ðŸ›µ',
+              'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. ðŸ›µ',
+              'no_local': 'O motoboy chegou ao seu endereÃ§o! ðŸ””',
+              'concluido': 'Pedido entregue com sucesso! Bom apetite. âœ¨',
+              'cancelado': 'Ah nÃ£o! Seu pedido foi cancelado. âš ï¸',
+              'recusado': 'Desculpe, o estabelecimento nÃ£o pÃ´de aceitar o pedido agora. âš ï¸'
+            };
+
+            const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
+            showToast(msg, newOrder.status === 'cancelado' ? 'warning' : 'success');
+
+            // Se o pagamento lightning foi confirmado, fechar a tela de pagamento
+            if (newOrder.payment_status === 'paid' && subViewRef.current === "lightning_payment") {
+              setSubView("payment_success");
+            }
+
+            // Se o pagamento PIX ou outros foram aprovados (status 'novo')
+            if (newOrder.status === 'novo' && (subViewRef.current === "pix_payment" || subViewRef.current === "payment_processing")) {
+              setSubView("payment_success");
+              fetchMyOrders(userIdRef.current!);
+            }
+
+      // [Comentario Limpo pelo Sistema]
+            if (newOrder.status === 'concluido') {
+              setSelectedItem(newOrder);
+              
+              setTimeout(() => {
+                if (newOrder.service_type === 'subscription') {
+                  setShowIziBlackWelcome(true);
+                  setSubView("none");
+                } else {
+                  setSubView("order_feedback");
+                }
+              }, 2000);
+            }
+
+      // [Comentario Limpo pelo Sistema]
+            if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
+              showToast("Loja aceitou seu pedido! ðŸ¥³", "success");
+              setSelectedItem(newOrder); 
+              setTimeout(() => setSubView("active_order"), 1000);
+            }
+            if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
+              showToast("Seu pedido foi recusado.", "warning");
+              setSubView("none");
+              fetchMyOrders(userIdRef.current!);
+            }
+            if (subViewRef.current === "waiting_driver" && 
+                ["a_caminho", "aceito", "confirmado", "em_rota", "no_local", "picked_up", "saiu_para_entrega"].includes(newOrder.status)) {
+              setSelectedItem(newOrder);
+              setTimeout(() => setSubView("active_order"), 1500);
+            }
+            if (subViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {
+              setSubView("none");
+              fetchMyOrders(userIdRef.current!);
+            }
+
+            if (selectedItemRef.current?.id === newOrder.id || !selectedItemRef.current) {
+              setSelectedItem(newOrder);
+            }
+          }
+          
+          if (userIdRef.current) fetchMyOrders(userIdRef.current);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(sub);
+    };
+  }, [userId, subView]);
+  
+  const fetchMyOrders = async (uid: string) => {
+    if (!uid) return;
+    const { data } = await supabase
+      .from("orders_delivery")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false });
+    if (data) setMyOrders(data);
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    console.log("[DEBUG] Iniciando cancelamento do pedido:", orderId);
+    if (!orderId) {
+      toastError("ID do pedido nÃ£o encontrado.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("orders_delivery")
+        .update({ status: "cancelado" })
+        .eq("id", orderId);
+
+      if (error) {
+        console.error("[DEBUG] Erro Supabase no cancelamento:", error);
+        throw error;
+      }
+
+      console.log("[DEBUG] Pedido cancelado no banco com sucesso.");
+      toastSuccess("Pedido cancelado com sucesso!");
+      
+      if (userId) fetchMyOrders(userId);
+      setSelectedItem(null);
+      setTab("orders");
+      setSubView("none");
+    } catch (err: any) {
+      console.error("Erro ao cancelar pedido:", err);
+      toastError(`NÃ£o foi possÃ­vel cancelar: ${err.message || 'Erro de rede'}`);
+    }
+  };
+
+  const fetchCoupons = async () => {
+    console.log("[DEBUG] Fetching coupons/banners...");
+    const { data } = await supabase
+      .from('promotions_delivery')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+    
+    if (data) {
+      console.log("[DEBUG] Available promotions found:", data.length, data);
+      setAvailableCoupons(data);
+    }
+  };
+
+  const fetchBeveragePromo = useCallback(async () => {
+    try {
+      // [Comentario Limpo pelo Sistema]
+      const { data: banners } = await supabase
+        .from('promotions_delivery')
+        .select('*')
+        .eq('is_active', true)
+        .is('coupon_code', null)
+        .order('created_at', { ascending: false });
+      
+      if (banners) {
+      // [Comentario Limpo pelo Sistema]
         const bevBanners = banners.filter(b => 
           (b.title?.toLowerCase().includes('bebida') || b.description?.toLowerCase().includes('bebida') ||
            b.title?.toLowerCase().includes('gelada') || b.description?.toLowerCase().includes('gelada'))
@@ -1077,233 +2283,19 @@ function App() {
     }
     if (!shop) return 0;
     
-    // 1. Respeitar a configuraÃ§Ã£o do lojista no banco
+      // [Comentario Limpo pelo Sistema]
     if (shop.freeDelivery === true || shop.free_delivery === true) return 0;
     
-    // 2. BenefÃ­cio IZI Black (se aplicÃ¡vel)
+      // [Comentario Limpo pelo Sistema]
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
     const minOrderIziBlack = Number(globalSettings?.izi_black_min_order_free_shipping || 50);
     
-    // Se a recompensa de frete grÃ¡tis IZI Black estiver ativa (no painel admin) ou atingir o mÃ­nimo
+      // [Comentario Limpo pelo Sistema]
     // Conecta com o widget do admin (IZI Black VIP > Exclusivos): lê promoções VIP ativas
     if (isIziBlackMembership) {
       const hasActiveVipFreeShipping = availableCoupons.some(
         (p: any) => p.is_vip === true && p.is_active === true && p.title === 'Frete Grátis'
       );
-      if (hasActiveVipFreeShipping) return 0;
-      if (subtotal >= minOrderIziBlack && minOrderIziBlack > 0) return 0;
-    }
-    
-    // 3. Taxa individual do estabelecimento cadastrada no banco
-    if (shop.service_fee !== undefined && shop.service_fee !== null) {
-      return Number(shop.service_fee);
-    }
-    
-    // Fallback: Taxa base global
-    return Number(globalSettings?.base_fee || 5.90);
-  };
-
-  const handlePlaceOrder = async (useCoins: boolean = false) => {
-    if (!paymentMethod) { alert("Selecione uma forma de pagamento."); return; }
-    if (!userId) { alert("FaÃ§a login para continuar."); return; }
-    if (cart.length === 0) { alert("Seu carrinho estÃ¡ vazio."); return; }
-
-    const benefitError = await ensureCartBenefitsAreAvailable();
-    if (benefitError) {
-      toastError(benefitError);
-      return;
-    }
-    
-    setIsUsingCoins(useCoins);
-
-    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const couponDiscount = appliedCoupon
-      ? appliedCoupon.discount_type === "fixed"
-        ? appliedCoupon.discount_value
-        : (subtotal * appliedCoupon.discount_value) / 100
-      : 0;
-    
-    const coinValue = globalSettings?.izi_coin_value || 0.01;
-    const coinDiscount = useCoins ? iziCoins * coinValue : 0;
-    const deliveryFee = calculateDeliveryFee();
-    const total = Math.max(0, subtotal + deliveryFee - couponDiscount - coinDiscount);
-
-    const orderBase = {
-      user_id: userId,
-      merchant_id: selectedShop?.id || cart[0]?.merchant_id || null,
-      status: "novo",
-      total_price: total,
-      delivery_fee: deliveryFee,
-      items: cart, // Adicionado para exibiÃ§Ã£o no ActiveOrderView
-      pickup_address: selectedShop?.name || "EndereÃ§o do Estabelecimento",
-      delivery_address: `${userLocation.address || "EndereÃ§o nÃ£o informado"} | ITENS: ${cart.map((i: any) => formatCartItemSummary(i)).join(', ')}`,
-      payment_method: paymentMethod,
-      service_type: selectedShop?.type || "restaurant",
-      notes: paymentMethod === "dinheiro" && changeFor ? `TROCO PARA: R$ ${changeFor}` : "",
-    };
-
-    try {
-      // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ PAGAMENTOS DIGITAIS (Pendente ConfirmaÃ§Ã£o) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-      const isDigital = ["pix", "cartao", "bitcoin_lightning", "google_pay"].includes(paymentMethod);
-      const initialStatus = isDigital ? "pendente_pagamento" : (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega" ? "waiting_merchant" : "novo");
-
-      // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ PIX (Mercado Pago) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-      if (paymentMethod === "pix") {
-        setPixConfirmed(false);
-        setPixCpf("");
-        setSelectedItem({ total_price: total, merchant_id: selectedShop?.id, merchant_name: selectedShop?.name });
-        navigateSubView("pix_payment");
-        return;
-      }
-
-      // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ BITCOIN LIGHTNING ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-      if (paymentMethod === "bitcoin_lightning") {
-        navigateSubView("payment_processing");
-        const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ 
-          ...orderBase, 
-          status: "pendente_pagamento",
-        }).select().single();
-        
-        if (insertError || !order) { 
-          alert("NÃ£o foi possÃ­vel registrar o pedido para pagamento Lightning: " + (insertError?.message || "Erro desconhecido"));
-          navigateSubView("payment_error"); 
-          return; 
-        }
-
-        try {
-          const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
-            body: { 
-              amount: Number(total.toFixed(2)), 
-              orderId: order.id, 
-              memo: `Pedido ${selectedShop?.name || "IziDelivery"}` 
-            },
-          });
-
-          if (lnErr || !lnData?.payment_request) {
-            console.error("Erro Lightning total:", lnErr, lnData);
-            setSelectedItem({ ...order, lightningError: true });
-            navigateSubView("lightning_payment");
-            return;
-          }
-
-          const lData = { 
-            lightningInvoice: lnData.payment_request, 
-            satoshis: lnData.satoshis, 
-            btc_price_brl: lnData.btc_price_brl 
-          };
-          setLightningData({ ...lData, payment_request: lData.lightningInvoice });
-          setSelectedItem({ ...order, ...lData });
-          
-          await clearCart(order.id);
-          navigateSubView("lightning_payment");
-        } catch (err) {
-          console.error("ExceÃ§Ã£o Lightning:", err);
-          setSelectedItem({ ...order, lightningError: true });
-          navigateSubView("lightning_payment");
-        }
-        return;
-      }
-
-      // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SALDO DA CARTEIRA ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-      if (paymentMethod === "saldo") {
-        const walletBal = walletTransactions.reduce((acc: number, t: any) =>
-          ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
-
-        if (walletBal < total) {
-          alert(`Saldo insuficiente. Seu saldo: R$ ${walletBal.toFixed(2).replace(".",",")}`);
-          setIsLoading(false);
-          return;
-        }
-
-        navigateSubView("payment_processing");
-        const { data: order } = await supabase.from("orders_delivery").insert({ 
-          ...orderBase, 
-          status: "waiting_merchant",
-          payment_status: "paid"
-        }).select().single();
-        
-        if (!order) { 
-          alert("Erro ao debitar saldo. Tente novamente.");
-          navigateSubView("payment_error"); 
-          return; 
-        }
-
-        await supabase.from("wallet_transactions").insert({
-          user_id: userId, type: "pagamento", amount: total,
-          description: `Pedido em ${selectedShop?.name || "Loja"}`,
-        });
-
-        setSelectedItem(order);
-        await clearCart(order.id);
-        navigateSubView("waiting_merchant");
-        return;
-      }
-
-      // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ GOOGLE PAY ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-      if (paymentMethod === "google_pay") {
-        setIsLoading(true);
-        navigateSubView("payment_processing");
-        // SimulaÃ§Ã£o de processamento Google Pay
-        setTimeout(async () => {
-          const { data: order, error } = await supabase.from("orders_delivery").insert({ 
-            ...orderBase, 
-            status: "waiting_merchant",
-            payment_status: "paid"
-          }).select().single();
-
-          if (error || !order) {
-            toastError("Erro ao processar Google Pay.");
-            navigateSubView("payment_error");
-            return;
-          }
-          setSelectedItem(order);
-          await clearCart(order.id);
-          navigateSubView("waiting_merchant");
-          setIsLoading(false);
-        }, 2000);
-        return;
-      }
-
-      // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ DINHEIRO / CARTÃƒÆ’Ã†â€™O NA ENTREGA ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-      if (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") {
-        if (!selectedShop?.id) { alert("Erro: Estabelecimento nÃ£o selecionado."); setIsLoading(false); return; }
-        
-        console.log("[DIAG] Tentando insert em Dinheiro/Entrega:", orderBase);
-        // alert(`Criando pedido Dinheiro: Status=${orderBase.status}, Total=${orderBase.total_price}`);
-        
-        const { data: order, error: insertError } = await supabase
-          .from("orders_delivery")
-          .insert({ 
-            ...orderBase, 
-            merchant_id: selectedShop.id,
-            status: "waiting_merchant",
-            total_price: Number(total.toFixed(2))
-          })
-          .select()
-          .single();
-
-        if (insertError || !order) {
-          console.error(`Erro insert ${paymentMethod}:`, insertError);
-          alert("NÃ£o foi possÃ­vel processar o pedido. Erro: " + (insertError?.message || "Tente novamente."));
-          setIsLoading(false);
-          return;
-        }
-
-        setSelectedItem(order);
-        await clearCart(order.id);
-        setChangeFor("");
-        navigateSubView("waiting_merchant");
-        return;
-      }
-
-      // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ CARTÃƒÆ’Ã†â€™O (Mercado Pago / Online Checkout) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-      if (paymentMethod === "cartao") {
-        setSubView("card_payment");
-        return;
-      }
-
-    } catch (e) {
-      console.error("Erro ao criar pedido:", e);
       navigateSubView("payment_error");
     } finally {
       setIsLoading(false);
@@ -1380,7 +2372,7 @@ function App() {
     { id: 3, title: 'Madrugador Izi', desc: 'PeÃ§a cafÃ© da manhÃ£ antes das 9h', xp: 300, progress: 0, total: 1, icon: 'wb_sunny', color: '#f59e0b' },
   ]);
 
-  // Refs para manter o estado atual sempre acessÃ­vel nos handlers
+      // [Comentario Limpo pelo Sistema]
   const viewRef = useRef(view);
   const tabRef = useRef(tab);
   const subViewRef = useRef(subView);
@@ -1565,12 +2557,12 @@ function App() {
   ];
   useEffect(() => { subViewRef.current = subView; }, [subView]);
 
-  // Suporte ao botÃ£o voltar do hardware/navegador
+      // [Comentario Limpo pelo Sistema]
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
       if (event.state) {
         const { view: v, tab: t, subView: sv } = event.state;
-        // Se o usuÃ¡rio estÃ¡ autenticado, nunca permitir voltar para login
+      // [Comentario Limpo pelo Sistema]
         if (userIdRef.current && v === "login") {
           window.history.pushState(
             { view: "app", tab: t || tabRef.current, subView: "none" },
@@ -1583,7 +2575,7 @@ function App() {
         if (t) setTab(t);
         setSubView(sv || "none");
       } else {
-        // Sem estado no histÃ³rico ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â se autenticado, manter no app
+      // [Comentario Limpo pelo Sistema]
         if (userIdRef.current) {
           window.history.pushState(
             { view: "app", tab: tabRef.current, subView: "none" },
@@ -1710,7 +2702,7 @@ function App() {
   const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
   const [mobilityStep, setMobilityStep] = useState(1);
 
-  // Sincronizar polilinha do mapa ao abrir um pedido ativo/histÃ³rico
+      // [Comentario Limpo pelo Sistema]
   useEffect(() => {
     if (selectedItem?.route_polyline) {
       setRoutePolyline(selectedItem.route_polyline);
@@ -1741,13 +2733,13 @@ function App() {
 
   const isStoreOpen = useCallback((openingHours: any, manualOpen: boolean) => {
     // Prioridade total para o status manual definido pelo lojista na admin.
-    // Se is_open for true no banco, a loja estÃ¡ aberta independentemente do horÃ¡rio.
-    // Se is_open for false no banco, a loja estÃ¡ fechada.
+      // [Comentario Limpo pelo Sistema]
+      // [Comentario Limpo pelo Sistema]
     if (manualOpen !== undefined && manualOpen !== null) {
       return manualOpen;
     }
 
-    // Fallback para horÃ¡rio caso o status manual nÃ£o esteja definido (ex: lojas antigas)
+      // [Comentario Limpo pelo Sistema]
     if (!openingHours || Object.keys(openingHours).length === 0) return true;
 
     const now = new Date();
@@ -1834,7 +2826,7 @@ function App() {
       setAiMessage(aiTips[index]);
     }, 15000);
 
-    // InscriÃ§Ã£o em tempo real para atualizaÃ§ÃƒÆ’Âµes de status da loja
+      // [Comentario Limpo pelo Sistema]
     const channel = supabase
       .channel('admin_users_updates')
       .on(
@@ -1860,7 +2852,7 @@ function App() {
   useEffect(() => {
     if (!userId) return;
     
-    // InscriÃ§Ã£o em tempo real para atualizaÃ§ÃƒÆ’Âµes dos pedidos do prÃ³prio cliente
+      // [Comentario Limpo pelo Sistema]
     const ordersChannel = supabase
       .channel('my_orders_realtime')
       .on(
@@ -1918,9 +2910,9 @@ function App() {
       
       // Sincronizar com o banco se estiver logado
       if (userId) {
-        // Se a sacola comeÃ§ou vazia, NÃƒO sincronize o vazio com a nuvem durante o boot do componente. 
+      // [Comentario Limpo pelo Sistema]
         // Deixe que o load da nuvem (fetchCartData) recupere a sacola real.
-        // Assim evitamos sobrescrever o cart_data de um aparelho 1 com o localstorage vazio de um aparelho 2 recÃ©m-logado.
+      // [Comentario Limpo pelo Sistema]
         if (isFirstEmptySync.current && cart.length === 0) {
             return;
         }
@@ -1977,7 +2969,7 @@ function App() {
   }, [beverageBanners.length]);
   const [beverageOffers, setBeverageOffers] = useState<any[]>([]);
 
-  // --- MOTOR DE PRECIFICAÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã†â€™O DINÃƒÆ’Ã¢â‚¬Å¡MICA (REAL-TIME DATA) ---
+      // [Comentario Limpo pelo Sistema]
   const [marketConditions, setMarketConditions] = useState({
     demand: 1.0,
     traffic: "Normal",
@@ -2028,7 +3020,7 @@ function App() {
 
   const fetchMarketData = async () => {
     try {
-      // 1. Buscar ConfiguraÃ§Ãµes Centrais do Admin
+      // [Comentario Limpo pelo Sistema]
       const { data: ratesData } = await supabase
         .from('dynamic_rates_delivery')
         .select('*');
@@ -2051,17 +3043,17 @@ function App() {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending');
 
-      // 4. Clima (SimulaÃ§Ã£o estruturada - pronta para API externa)
+      // [Comentario Limpo pelo Sistema]
       const weathers = ["Ensolarado", "Nublado", "Chuva Leve", "Tempestade"];
       const hour = new Date().getHours();
       const currentWeather = (hour > 18 || hour < 6) ? "Nublado" : weathers[Math.floor(Math.random() * 2)];
 
-      // 5. LÃ³gica de EquilÃ­brio de Marketplace usando ConfiguraÃ§Ãµes do Admin
+      // [Comentario Limpo pelo Sistema]
       const drivers = onlineDrivers || 5; 
       const orders = pendingOrders || 0;
       const ratio = orders / drivers;
 
-      // CÃ¡lculo do Multiplicador (Surge) baseado no Threshold e Sensibilidade do Admin
+      // [Comentario Limpo pelo Sistema]
       let surge = 1.0;
       const { threshold, sensitivity, maxSurge } = config.equilibrium;
       
@@ -2069,14 +3061,14 @@ function App() {
         surge = 1.0 + (ratio - threshold) * sensitivity;
       }
 
-      // 6. Aplicar Fatores ClimÃ¡ticos Ativos
+      // [Comentario Limpo pelo Sistema]
       if (currentWeather === "Tempestade" && config.weather.storm.active) surge += (config.weather.storm.multiplier - 1);
       if (currentWeather === "Chuva Leve" && config.weather.rain.active) surge += (config.weather.rain.multiplier - 1);
       
-      // HorÃ¡rio de Pico (Fixado ou DinÃ¢mico)
+      // [Comentario Limpo pelo Sistema]
       if (hour >= 18 && hour <= 21) surge += 0.3; 
 
-      // 7. Limites de SeguranÃ§a (Hard Caps vindos do Admin)
+      // [Comentario Limpo pelo Sistema]
       const finalSurge = Math.max(1.0, Math.min(maxSurge, surge));
 
       setMarketConditions({
@@ -2102,7 +3094,7 @@ function App() {
       : basePrice;
   };
 
-  // Calcula preÃ§os usando Routes API (nova, nÃ£o deprecated)
+      // [Comentario Limpo pelo Sistema]
   const calculateDistancePrices = async (origin: string, destination: string) => {
     if (!origin || !destination) return;
     setIsCalculatingPrice(true);
@@ -2200,7 +3192,7 @@ function App() {
       utilitario: bv.utilitario_min || 10 
     };
     
-    // Calcular preÃ§o final usando o novo motor de precificaÃ§Ã£o se disponÃ­vel ou o fallback dinÃƒÂ¢mico
+      // [Comentario Limpo pelo Sistema]
     let finalPrice = 0;
     if (transitData.type === 'utilitario') {
        finalPrice = calculateFreightPrice({
@@ -2227,7 +3219,7 @@ function App() {
        finalPrice = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || 6) : rawP;
     }
 
-    // Aplica benefÃ­cio IZI Black para serviÃ§os de Frete/Envio automaticamente
+      // [Comentario Limpo pelo Sistema]
     if (isIziBlackMembership && isShipping) {
       finalPrice = 0;
     }
@@ -2298,7 +3290,7 @@ function App() {
           } catch(e) {}
       }
 
-      // Salvar no histÃ³rico
+      // [Comentario Limpo pelo Sistema]
       const newHistory = [transitData.destination, ...transitHistory.filter(h => h !== transitData.destination)].slice(0, 10);
       setTransitHistory(newHistory);
       localStorage.setItem("transitHistory", JSON.stringify(newHistory));
@@ -2330,7 +3322,7 @@ function App() {
     return () => clearInterval(adTimer);
   }, []);
 
-  // Monitorar mudanÃ§as em origem/destino para calcular preÃ§os em tempo real
+      // [Comentario Limpo pelo Sistema]
   useEffect(() => {
     if ((subView === "taxi_wizard" || subView === "transit_selection") && transitData.origin && transitData.destination) {
       setIsCalculatingPrice(true);
@@ -3092,7 +4084,7 @@ function App() {
         // 3. Atualizar UI com QR real
         console.log("[DEBUG] DADOS BRUTOS MP (STRING):", JSON.stringify(fnData));
         
-        // Mapeamento exaustivo (Tenta todas as variaÃ§Ãµes possÃ­veis)
+      // [Comentario Limpo pelo Sistema]
         const qr = fnData?.qrCode || 
                    fnData?.qr_code || 
                    fnData?.emv ||
@@ -3131,7 +4123,7 @@ function App() {
           pixError: false 
         }));
         
-        // Limpar sacola apÃ³s sucesso na geraÃ§Ã£o do PIX
+      // [Comentario Limpo pelo Sistema]
         if (cart.length > 0) {
             console.log("Limpando sacola...");
             await clearCart(orderId);
@@ -3768,15 +4760,15 @@ function App() {
     </div>
   );
 
-  // renderWaitingDriver movido para mais abaixo (versÃ£o completa)
+      // [Comentario Limpo pelo Sistema]
 
   // renderOrderChat removido (funcionalidade em renderOrderChatFlow)
 
   // renderOrderSupport removido (funcionalidade em renderOrderSupportFlow)
 
-  // renderOrderFeedback movido para mais abaixo (versÃ£o completa)
+      // [Comentario Limpo pelo Sistema]
 
-  // renderQuestCenter movido para mais abaixo (versÃ£o completa)
+      // [Comentario Limpo pelo Sistema]
 
 
   const renderAddresses = () => {
@@ -3846,7 +4838,7 @@ function App() {
                     userCoords={userLocation?.lat && userLocation?.lng ? { lat: userLocation.lat, lng: userLocation.lng } : null}
                     onSelect={(place: any) => {
                       setNewAddrStreet(place.formatted_address || "");
-                      // Tenta extrair cidade se disponÃ­vel
+      // [Comentario Limpo pelo Sistema]
                       if (place.address_components) {
                         const cityComp = place.address_components.find((c: any) => c.types.includes("administrative_area_level_2"));
                         if (cityComp) setNewAddrCity(cityComp.long_name);
@@ -4792,7 +5784,7 @@ function App() {
             });
           if (walletErr) throw walletErr;
           
-          // Marca pedido como concluÃ­do
+      // [Comentario Limpo pelo Sistema]
           await supabase.from("orders_delivery").update({ status: "concluido" }).eq("id", orderData.id);
           
           // Ativa Izi Black no perfil
@@ -4807,7 +5799,7 @@ function App() {
       }
     };
 
-    // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SUCESSO ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+      // [Comentario Limpo pelo Sistema]
     if (iziBlackStep === 'success') {
       return (
         <div className="absolute inset-0 z-50 bg-[#000000] flex flex-col items-center justify-center px-6 gap-12 overflow-hidden">
