@@ -31,7 +31,9 @@ serve(async (req) => {
         },
       },
       date_of_expiration: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      notification_url: 'https://mbqmyozgwpxwxrdwwkwn.supabase.co/functions/v1/mp-webhook',
     }
+    console.log(`[DEBUG] Enviando pedido para MP: OrderID=${orderId}, Amount=${amount}, NotifyURL=${payload.notification_url}`);
     const response = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
@@ -42,6 +44,7 @@ serve(async (req) => {
       body: JSON.stringify(payload),
     })
     const data = await response.json()
+    console.log(`[DEBUG] Resposta MP: ID=${data.id}, Status=${data.status}`);
     if (!response.ok) {
       console.error('MP error:', JSON.stringify(data))
       return new Response(JSON.stringify({ error: 'Erro ao criar PIX', details: data }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
