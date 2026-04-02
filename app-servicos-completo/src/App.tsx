@@ -3002,14 +3002,22 @@ function App() {
 
         // 2. Chamar Edge Function do Mercado Pago
         console.log("Chamando edge function process-mp-payment...");
+        const cleanCpf = pixCpf.replace(/\D/g, "");
+        const cleanEmail = (user?.email || loginEmail || "cliente@izidelivery.com").trim().toLowerCase();
+
+        if (cleanCpf.length !== 11) {
+          toastError("CPF inválido. Por favor, verifique.");
+          return;
+        }
+
         const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
           body: {
             amount: Number(total.toFixed(2)),
             orderId: orderId,
             payment_method_id: 'pix',
-            email: user?.email || loginEmail || "cliente@izidelivery.com",
+            email: cleanEmail,
             customer: {
-              cpf: pixCpf.replace(/\D/g,""),
+              cpf: cleanCpf,
               name: userName || "Cliente IziDelivery",
             },
           },
@@ -3017,7 +3025,16 @@ function App() {
 
         if (fnErr || !(fnData?.qrCode || fnData?.qr_code)) {
           console.error("Erro MP PIX ou dados ausentes:", fnErr, fnData);
-          const detail = fnData?.details || fnData?.error || fnErr?.message || "Erro ao gerar os dados do QR Code no Mercado Pago.";
+          
+          // Tentar extrair a mensagem de erro real do Mercado Pago se disponível
+          let detail = "Erro ao gerar os dados do QR Code no Mercado Pago.";
+          if (fnData?.details?.cause?.[0]?.description) {
+            detail = `MP: ${fnData.details.cause[0].description}`;
+          } else if (fnData?.error) {
+            detail = typeof fnData.error === 'string' ? fnData.error : JSON.stringify(fnData.error);
+          } else if (fnErr?.message) {
+            detail = fnErr.message;
+          }
           
           setSelectedItem({ ...orderRef, pixError: true, pixErrorMessage: detail });
           setPixConfirmed(true);
@@ -3189,20 +3206,21 @@ function App() {
             const { data: order } = await supabase.from("orders_delivery").insert(orderBase).select().single();
             if (!order) { toastError("Erro ao criar pedido."); return; }
 
+            const cleanEmail = (user?.email || loginEmail || "cliente@izidelivery.com").trim().toLowerCase();
             const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
                 body: {
-                    amount: total,
+                    amount: Number(total.toFixed(2)),
                     orderId: order.id,
                     payment_method_id: brand.toLowerCase().includes('visa') ? 'visa' : 'master',
                     token: token,
-                    email: user?.email || loginEmail || "cliente@izidelivery.com",
+                    email: cleanEmail,
                     installments: 1
                 },
             });
 
             if (fnErr || (fnData && fnData.status !== 'approved')) {
-                const msg = fnData?.details || fnErr?.message || "O cartÃ£o foi recusado pela operadora.";
-                toastError(`Pagamento nÃ£o aprovado: ${msg}`);
+                const mpMsg = fnData?.details?.cause?.[0]?.description || fnData?.error || fnErr?.message || "O cartão foi recusado pela operadora.";
+                toastError(`Pagamento não aprovado: ${mpMsg}`);
                 setSubView(isSubscription ? "izi_black_purchase" : "checkout");
                 return;
             }
@@ -4632,17 +4650,29 @@ function App() {
           return;
         } else if (paymentMethod === "pix") {
           setSubView("payment_processing");
+          const cleanCpf = (cpf || "").replace(/\D/g, "");
+          const cleanEmail = (user?.email || loginEmail || "cliente@izidelivery.com").trim().toLowerCase();
+
+          if (cleanCpf.length !== 11) {
+            toastError("CPF do perfil incompleto ou inválido para gerar o PIX.");
+            setIsLoading(false);
+            return;
+          }
+
           const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
             body: {
-              amount: total,
+              amount: Number(total.toFixed(2)),
               orderId: orderData.id,
               payment_method_id: 'pix',
-              email: user?.email || loginEmail || "cliente@izidelivery.com",
-              customer: { name: userName, cpf: cpf }
+              email: cleanEmail,
+              customer: { name: userName || "Cliente Izi", cpf: cleanCpf }
             },
           });
 
-          if (fnErr || !fnData?.qrCode) throw new Error("Erro ao gerar PIX Mercado Pago.");
+          if (fnErr || !(fnData?.qrCode || fnData?.qr_code)) {
+            const mpErr = fnData?.details?.cause?.[0]?.description || fnData?.error || fnErr?.message || "Erro MP PIX";
+            throw new Error(`Falha no pagamento: ${mpErr}`);
+          }
 
           setSelectedItem({ ...orderData, pixQrCode: fnData.qrCode, pixQrBase64: fnData.qrCodeBase64, pixCopyPaste: fnData.copyPaste });
           setPaymentsOrigin("izi_black");
