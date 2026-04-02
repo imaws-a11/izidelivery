@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { BespokeIcons } from "./lib/BespokeIcons";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -41,7 +41,7 @@ function App() {
     "home",
   );
 
-  // Carrega a Google Maps API uma ÃƒÂºnica vez para toda a aplicaÃƒÂ§ÃƒÂ£o (singleton)
+  // Carrega a Google Maps API uma única vez para toda a aplicação (singleton)
   useGoogleMapsLoader();
   
   const {
@@ -167,7 +167,7 @@ function App() {
   const [schedChatInputState, setSchedChatInputState] = useState('');
   const [schedMessagesState, setSchedMessagesState] = useState<{id: string; text: string; from: 'user'|'driver'; time: string}[]>([]);
   const [isSavingObsState, setIsSavingObsState] = useState(false);
-  const [aiMessage, setAiMessage] = useState("OlÃƒÂ¡! Sou seu assistente Izi. Percebi que vocÃƒÂª gosta de culinÃƒÂ¡ria japonesa. Que tal conferir as ofertas do Sushi Zen?");
+  const [aiMessage, setAiMessage] = useState("Olá! Sou seu assistente Izi. Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?");
   const [isIziBlackMembership, setIsIziBlackMembership] = useState(false);
   const [iziCashbackEarned, setIziCashbackEarned] = useState(0);
   const [showIziBlackCard, setShowIziBlackCard] = useState(false);
@@ -4796,270 +4796,236 @@ function App() {
       }
     };
 
-    // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ SUCESSO ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬
-    if (iziBlackStep === 'success') {
-      return (
-        <div className="absolute inset-0 z-50 bg-[#000000] flex flex-col items-center justify-center px-6 gap-12 overflow-hidden">
-          <motion.div 
-            initial={{ scale: 0, rotate: -20, opacity: 0 }} 
-            animate={{ scale: 1, rotate: 0, opacity: 1 }} 
-            transition={{ type: "spring", stiffness: 200, damping: 15 }}
-            className="relative"
-          >
-            <div className="absolute inset-0 bg-yellow-400/10 blur-[100px] rounded-full" />
-            <div className="size-32 rounded-full flex items-center justify-center relative overflow-hidden group">
-              <span className="material-symbols-outlined text-7xl text-yellow-500" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
-            </div>
-          </motion.div>
-
-          <div className="text-center space-y-4">
-            <motion.p 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-yellow-500 text-[11px] font-black uppercase tracking-[0.6em]"
-            >
-              Protocolo Ativado
-            </motion.p>
-            <motion.h2 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="text-5xl font-black text-white uppercase tracking-tighter leading-none italic"
-            >
-              IZI <span className="text-yellow-500">BLACK</span>
-            </motion.h2>
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="text-zinc-500 text-sm max-w-xs mx-auto leading-relaxed font-medium"
-            >
-              Bem-vindo ÃƒÂ  elite. Seus privilÃƒÂ©gios exclusivos jÃƒÂ¡ estÃƒÂ£o vinculados ÃƒÂ  sua conta com sucesso.
-            </motion.p>
+    // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ SUCESSO ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒ              Começar Experiência Elite
+            </motion.button>
           </div>
-
-          <motion.button 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
-            onClick={() => { setSubView("none"); setIziBlackStep("info"); }}
-            className="w-full max-w-xs py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all text-zinc-900"
-            style={{ backgroundColor: "#FBBF24" }}
-          >
-            ComeÃƒÂ§ar ExperiÃƒÂªncia Elite
-          </motion.button>
-        </div>
-      );
-    }
-
-    if (iziBlackStep === 'payment') {
-      const walletBal = walletTransactions.reduce((acc: number, t: any) =>
-        ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
-
-      const subOptions = [
-        { id: "cartao",            icon: "credit_card",            label: "CartÃƒÂ£o de CrÃƒÂ©dito" },
-        { id: "pix",               icon: "pix",                    label: "PIX" },
-        { id: "saldo",             icon: "account_balance_wallet", label: `Saldo IZI (R$ ${walletBal.toFixed(2)})`, disabled: walletBal < iziBlackPrice },
-        { id: "bitcoin_lightning", icon: "bolt",                   label: "Bitcoin Lightning" },
-      ];
-
-      return (
-        <div className="absolute inset-0 z-50 bg-[#000000] text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
-          <header className="bg-transparent sticky top-0 z-50 flex items-center gap-4 px-5 py-6">
-            <button onClick={() => setIziBlackStep("info")} className="size-10 flex items-center justify-center active:scale-90 transition-all text-white">
-              <span className="material-symbols-outlined text-zinc-400">arrow_back</span>
-            </button>
-            <h1 className="font-black text-base text-white uppercase tracking-tight">Checkout IZI Black</h1>
-          </header>
-          <main className="px-5 py-6 max-w-sm mx-auto w-full space-y-12">
-            <div className="text-center space-y-1">
-              <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Plano de Elite</p>
-              <div className="flex items-center justify-center gap-1">
-                <span className="text-2xl font-black text-white mt-2">R$</span>
-                <p className="font-black text-white leading-none tracking-tighter" style={{ fontSize: "72px" }}>
-                  {Math.floor(iziBlackPrice)}
-                  <span className="text-3xl text-zinc-500 font-black">,{((iziBlackPrice % 1) * 100).toFixed(0).padStart(2, '0')}</span>
-                </p>
-              </div>
-              <p className="text-zinc-600 text-[10px] font-bold mt-2 uppercase text-center">Mensal, cancele quando quiser</p>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Pagamento</p>
-              <div className="flex flex-col">
-                {subOptions.map((m) => (
-                  <button key={m.id} 
-                    onClick={() => !m.disabled && setPaymentMethod(m.id as any)}
-                    disabled={m.disabled}
-                    className={`w-full flex items-center gap-4 py-6 transition-all border-b border-zinc-900 last:border-0 ${m.disabled ? "opacity-30 cursor-not-allowed" : "active:opacity-75"}`}>
-                    <div className={`flex items-center justify-center ${paymentMethod === m.id ? "text-yellow-500" : "text-zinc-600"}`}>
-                      <span className="material-symbols-outlined text-xl">{m.icon}</span>
-                    </div>
-                    <span className={`font-black text-sm flex-1 text-left ${paymentMethod === m.id ? "text-white" : "text-zinc-500"}`}>{m.label}</span>
-                    <div className="flex items-center justify-center">
-                      <span className={`material-symbols-outlined text-lg ${paymentMethod === m.id ? "text-yellow-500" : "text-transparent"}`} style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Documento (CPF)</p>
-              <input type="text" inputMode="numeric" value={cpf} onChange={(e) => setCpf(e.target.value)}
-                placeholder="000.000.000-00"
-                className="w-full bg-transparent border-b border-zinc-900 py-4 text-white placeholder:text-zinc-800 focus:outline-none focus:border-yellow-500 focus:border-b-2 text-sm font-black tracking-widest transition-all" />
-            </div>
-
-            <button onClick={handleSubscribeReal} disabled={isLoading}
-              className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-30 text-zinc-900"
-              style={{ backgroundColor: "#FBBF24" }}>
-              {isLoading ? "Processando..." : "Ativar Assinatura Elite"}
-            </button>
-          </main>
-        </div>
-      );
-    }
-
-    const perks = [
-      { icon: "delivery_dining",    title: "Taxa Zero",        desc: "Entrega grÃƒÂ¡tis em toda a cidade, sem limite.",    highlight: true },
-      { icon: "bolt",               title: "Prioridade IZI",   desc: "Seus pedidos sempre primeiro na fila.",           highlight: false },
-      { icon: "stars",              title: "Cashback 5%",      desc: "Pontos dobrados em todos os pedidos.",            highlight: false },
-      { icon: "support_agent",      title: "Suporte VIP",      desc: "Canal exclusivo 24 horas via App.",               highlight: false },
-      { icon: "confirmation_number",title: "Cupons Black",     desc: "Ofertas exclusivas sÃƒÂ³ para membros.",             highlight: false },
-      { icon: "qr_code_scanner",    title: "Early Access",     desc: "LanÃƒÂ§amentos e novidades antecipadas.",         highlight: false },
-    ];
-
-    return (
-      <div className="absolute inset-0 z-50 bg-[#000000] text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
-        <header className="px-6 pt-10 pb-4 flex items-center justify-between sticky top-0 z-[60] bg-transparent">
-          <button onClick={handleClose}
-            className="size-10 flex items-center justify-center active:scale-90 transition-all text-white drop-shadow-md">
-            <span className="material-symbols-outlined text-zinc-100">close</span>
-          </button>
-          <div className="text-center drop-shadow-md">
-            <h2 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none mb-0.5">Izi <span className="text-yellow-500">Black</span></h2>
-            <p className="text-[8px] text-yellow-500 font-black uppercase tracking-[0.4em]">Elite</p>
-          </div>
-          <div className="size-10" />
-        </header>
-
-        <main className="relative z-10 flex flex-col">
-          <section className="mb-12 mt-[-88px]">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8 }}
-              className="relative h-[480px] overflow-hidden group"
-              style={{ backgroundImage: 'url("/izi_black_allblack.png")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#000' }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black/90" />
-              
-              <div className="absolute inset-x-8 bottom-10 space-y-4">
-                <div className="flex flex-col">
-                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.4em] mb-2 animate-pulse">Status: Elite</span>
-                  <h3 className="text-5xl font-black text-white leading-[0.9] uppercase tracking-tighter italic">
-                    Izi<br/>Black.
-                  </h3>
-                </div>
-
-                <div className="flex items-end gap-3 pt-4">
-                  <div className="flex items-start gap-1">
-                    <span className="text-zinc-600 font-black text-xl mt-1 italic">R$</span>
-                    <span className="text-6xl font-black text-white tracking-tighter leading-none italic">{Math.floor(iziBlackPrice)}</span>
-                    <span className="text-2xl font-black text-zinc-600 mt-1">,{((iziBlackPrice % 1) * 100).toFixed(0).padStart(2, '0')}</span>
-                  </div>
-                  <div className="mb-1">
-                    <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest italic">Por mÃƒÂªs</p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </section>
-
-          <section className="px-8 space-y-2">
-            <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-6">Seus PrivilÃƒÂ©gios</h3>
-
-            <div className="flex flex-col">
-              {perks.map((p, i) => (
-                <motion.div 
-                  key={i} 
-                  initial={{ opacity: 0, y: 10 }} 
-                  animate={{ opacity: 1, y: 0 }} 
-                  transition={{ delay: 0.2 + i * 0.08 }}
-                  className="flex items-start gap-6 py-6 border-b border-zinc-900 last:border-0 group"
-                >
-                  <div className={`mt-0.5 ${p.highlight ? 'text-yellow-500' : 'text-zinc-600'} transition-all duration-300`}>
-                    <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>{p.icon}</span>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-black text-sm text-white tracking-tight uppercase mb-0.5">{p.title}</p>
-                    <p className="text-zinc-500 text-xs font-medium leading-relaxed">{p.desc}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </section>
-
-          <section className="px-8 mt-16 pb-12">
-            {!isIziBlackMembership ? (
-              <div className="space-y-6">
-                <button onClick={() => setIziBlackStep("payment")}
-                  className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all text-zinc-900 shadow-[0_0_20px_rgba(251,191,36,0.15)]"
-                  style={{ backgroundColor: "#FBBF24" }}>
-                  Quero ser IZI Black Agora
-                </button>
-                <div className="flex flex-col items-center gap-2 text-center">
-                  <p className="text-zinc-700 text-[9px] font-black uppercase tracking-[0.3em]">Ambiente Seguro 256-bit</p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-6 py-10 border-t border-b border-zinc-900">
-                <div className="text-yellow-500 animate-pulse">
-                  <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
-                </div>
-                <div className="text-center">
-                  <h4 className="text-white font-black text-lg uppercase tracking-tight italic">Assinatura Ativa</h4>
-                  <p className="text-zinc-500 text-xs mt-1">Sua jornada de elite jÃƒÂ¡ comeÃƒÂ§ou.</p>
-                </div>
-              </div>
-            )}
-            
-            <p className="text-zinc-800 text-[10px] text-center mt-8 font-bold uppercase tracking-widest">Cancele quando quiser Ã¢â‚¬Â¢ Sem fidelidade</p>
-          </section>
-
-        </main>
+        </motion.div>
       </div>
     );
   };
-  const renderIziBlackWelcome = () => {
-    return (
-      <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 sm:p-12">
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/95 backdrop-blur-3xl"
-        />
-        
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0, y: 50 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: -20 }}
-          transition={{ type: "spring", damping: 25, stiffness: 200, delay: 0.2 }}
-          className="relative w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-[56px] p-12 overflow-hidden shadow-[0_0_100px_rgba(234,179,8,0.07)]"
-        >
-          {/* Decorative Elements */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent shadow-[0_0_20px_rgba(234,179,8,0.5)]" />
-          <div className="absolute -top-40 -right-40 size-80 bg-yellow-600/10 rounded-full blur-[100px]" />
-          <div className="absolute -bottom-40 -left-40 size-80 bg-yellow-600/10 rounded-full blur-[100px]" />
 
-          <div className="flex flex-col items-center text-center relative z-10">
-            <motion.div
-              initial={{ rotate: -20, scale: 0 }}
-              animate={{ rotate: 0, scale: 1 }}
-              transition={{ type: "spring", delay: 0.5, bounce: 0.6 }}
+  const renderIziBlackCard = () => {
+    const iziCoins = Math.floor(userXP * 2.5);
+    const progressPercent = Math.min(100, (userXP / nextLevelXP) * 100);
+    
+    return (
+      <div className="absolute inset-0 z-[170] bg-black text-white flex flex-col hide-scrollbar overflow-y-auto">
+         {/* Background Glows */}
+         <div className="fixed inset-0 pointer-events-none">
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yellow-400/10 blur-[120px] rounded-full animate-pulse" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-600/10 blur-[120px] rounded-full" />
+         </div>
+
+         <header className="px-8 pt-12 pb-6 flex items-center justify-between sticky top-0 bg-black/80 backdrop-blur-2xl z-50 border-b border-white/5">
+            <div className="flex flex-col">
+               <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">IZI <span className="text-yellow-400">BLACK</span></h2>
+               <div className="flex items-center gap-1.5">
+                  <div className="size-1.5 rounded-full bg-yellow-400 animate-ping" />
+                  <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.3em] opacity-80">Dashboard de Elite</p>
+               </div>
+            </div>
+            <motion.button 
+               whileTap={{ scale: 0.9 }}
+               onClick={() => setShowIziBlackCard(false)} 
+               className="size-12 rounded-[22px] bg-zinc-900/50 border border-white/10 flex items-center justify-center text-white shadow-2xl backdrop-blur-xl"
+            >
+               <span className="material-symbols-outlined">close</span>
+            </motion.button>
+         </header>
+
+         <main className="relative z-10 px-8 py-10 space-y-12">
+            {/* Ultra Premium Card */}
+            <div className="p-8 rounded-[45px] bg-gradient-to-br from-zinc-900 via-zinc-900 to-black border border-white/10 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.8)] relative overflow-hidden group">
+               <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12 group-hover:rotate-0 transition-transform duration-1000">
+                  <span className="material-symbols-outlined text-[120px] text-yellow-400">military_tech</span>
+               </div>
+               
+               <div className="relative z-10 flex flex-col gap-8">
+                  <div className="flex justify-between items-start">
+                     <div>
+                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Status do Membro</p>
+                        <div className="flex items-center gap-2">
+                           <h3 className="text-white font-black text-xl italic uppercase tracking-tighter">Membro Fundador</h3>
+                           <div className="px-2 py-0.5 rounded-md bg-yellow-400 text-black text-[8px] font-black uppercase tracking-tighter">MASTER</div>
+                        </div>
+                     </div>
+                     <div className="text-right">
+                        <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-1.5 opacity-80">Tier Atual</p>
+                        <p className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">Master</p>
+                     </div>
+                  </div>
+
+                  <div className="space-y-5">
+                     <div className="flex justify-between items-end mb-1 px-2">
+                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none">Progresso de Experiência</p>
+                        <p className="text-sm font-black text-white italic leading-none">{userXP.toLocaleString('pt-BR')} <span className="text-zinc-600 font-bold mx-1">/</span> {nextLevelXP.toLocaleString('pt-BR')} <span className="text-yellow-400 ml-1 text-[10px] not-italic">XP</span></p>
+                     </div>
+                     <div className="h-5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5 p-1 shadow-inner">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progressPercent}%` }}
+                          transition={{ duration: 2, ease: [0.34, 1.56, 0.64, 1] }}
+                          className="h-full bg-gradient-to-r from-yellow-500 via-yellow-400 to-amber-300 rounded-full shadow-[0_0_20px_rgba(251,191,36,0.4)] relative overflow-hidden"
+                        >
+                           <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_25%,rgba(255,255,255,0.4)_50%,transparent_75%)] bg-[length:250%_100%] animate-[shimmer_2s_infinite]" />
+                        </motion.div>
+                     </div>
+                     <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] text-center italic">Restam apenas {Math.max(0, nextLevelXP - userXP)} pontos para o status Elite</p>
+                  </div>
+               </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-5">
+               <div className="p-7 rounded-[40px] bg-zinc-900/30 border border-white/5 backdrop-blur-3xl shadow-xl flex flex-col gap-2">
+                  <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.2em] opacity-80 italic">Economia App</p>
+                  <p className="text-2xl font-black text-white tracking-tighter italic tabular-nums leading-none">R$ {(iziCashbackEarned * 1.5).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+               </div>
+               <div className="p-7 rounded-[40px] bg-emerald-500/5 border border-emerald-500/10 backdrop-blur-3xl shadow-xl flex flex-col gap-2">
+                  <p className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.2em] opacity-80 italic">Entregas Grátis</p>
+                  <p className="text-2xl font-black text-white tracking-tighter italic tabular-nums leading-none">42 <span className="text-[10px] opacity-30">ENVS</span></p>
+               </div>
+            </div>
+
+            {/* Quick Actions Panel */}
+            <div className="space-y-6 pt-4">
+               <h4 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em] px-4 flex items-center gap-4">
+                  <span>Gestão do Membro</span>
+                  <div className="h-px flex-1 bg-white/5" />
+               </h4>
+
+               <div className="space-y-4">
+                  <motion.button 
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowMasterPerks(true)}
+                    className="w-full p-6 rounded-[40px] bg-zinc-900/40 border border-white/5 flex items-center justify-between group shadow-2xl transition-all hover:bg-zinc-900/60 hover:border-yellow-400/20"
+                  >
+                     <div className="flex items-center gap-6 text-left">
+                        <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20 shadow-inner group-hover:scale-110 transition-all duration-500">
+                           <span className="material-symbols-outlined text-yellow-400 text-2xl font-bold">military_tech</span>
+                        </div>
+                        <div>
+                           <h5 className="font-black text-sm text-white tracking-tight uppercase italic leading-none mb-1">Meus Benefícios</h5>
+                           <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Master Tier v4</p>
+                        </div>
+                     </div>
+                     <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors">arrow_forward_ios</span>
+                  </motion.button>
+
+                  <motion.button 
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => { setShowIziBlackCard(false); setSubView("quest_center"); }}
+                    className="w-full p-6 rounded-[40px] bg-zinc-900/40 border border-white/5 flex items-center justify-between group shadow-2xl transition-all hover:bg-zinc-900/60 hover:border-blue-400/20"
+                  >
+                     <div className="flex items-center gap-6 text-left">
+                        <div className="size-14 rounded-2xl bg-blue-400/10 flex items-center justify-center border border-blue-400/20 shadow-inner group-hover:scale-110 transition-all duration-500">
+                           <span className="material-symbols-outlined text-blue-400 text-2xl font-bold">stars</span>
+                        </div>
+                        <div>
+                           <h5 className="font-black text-sm text-white tracking-tight uppercase italic leading-none mb-1">Centro de Missões</h5>
+                           <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Multiplicadores X2</p>
+                        </div>
+                     </div>
+                     <span className="material-symbols-outlined text-zinc-700 group-hover:text-blue-400 transition-colors">arrow_forward_ios</span>
+                  </motion.button>
+               </div>
+            </div>
+
+            {/* Security Footnote */}
+            <div className="bg-zinc-900/20 p-8 rounded-[40px] border border-white/5 text-center space-y-3">
+               <p className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.4em]">Protocolo Izi Black v4.0</p>
+               <p className="text-[8px] font-bold text-zinc-700 leading-relaxed uppercase tracking-widest">
+                  Seus benefícios são vinculados à conta e intransferíveis. <br/> Renovação automática habilitada.
+               </p>
+            </div>
+         </main>
+
+         <div className="fixed bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-black via-black/95 to-transparent z-50">
+            <button 
+              onClick={() => setShowIziBlackCard(false)}
+              className="w-full bg-zinc-900 text-white font-black text-sm py-6 rounded-[32px] shadow-2xl active:scale-95 transition-all border border-white/5 uppercase tracking-[0.2em] shadow-black/80 ring-1 ring-white/10"
+            >
+               Fechar Dashboard
+            </button>
+         </div>
+      </div>
+    );
+  };
+
+  const renderMasterPerks = () => {
+    const perks = [
+      { id: 1, icon: 'delivery_dining', name: 'Entrega Grátis Ilimitada', desc: 'Em todos os pedidos acima de R$ 30,00 reais via Izi Express.', color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
+      { id: 2, icon: 'hotel_class', name: 'Suporte Prioritário VIP', desc: 'Atendimento exclusivo via Chat em menos de 2 minutos.', color: 'text-blue-400', bg: 'bg-blue-400/10' },
+      { id: 3, icon: 'local_shipping', name: 'Serviço de Frete Grátis', desc: '1 Frete regional grátis por mês para assinantes Izi Black.', color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
+      { id: 4, icon: 'redeem', name: 'Cupons de Desconto', desc: 'Cupons exclusivos de até 50% em lojas parceiras selecionadas.', color: 'text-rose-400', bg: 'bg-rose-400/10' },
+      { id: 5, icon: 'loyalty', name: 'Cashback em Dobro', desc: 'Receba 2% de cashback em todas as compras no app.', color: 'text-purple-400', bg: 'bg-purple-400/10' },
+    ];
+
+    return (
+      <div className="absolute inset-0 z-[180] bg-black text-white flex flex-col hide-scrollbar overflow-y-auto pb-40">
+        <header className="px-6 py-8 flex items-center justify-between gap-4 sticky top-0 bg-black/80 backdrop-blur-xl z-50 border-b border-white/5">
+          <motion.button 
+            whileTap={{ scale: 0.9 }} 
+            onClick={() => setShowMasterPerks(false)} 
+            className="size-12 rounded-2xl bg-zinc-900/50 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white shadow-xl shadow-black/40"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </motion.button>
+          <div className="text-right">
+            <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1 italic">BENEFÍCIOS</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Exclusividades Tier Master</p>
+          </div>
+        </header>
+
+        <main className="px-6 pt-10 space-y-8">
+           <div className="text-center mb-10">
+              <motion.div 
+                 animate={{ scale: [1, 1.05, 1], rotate: [0, 5, -5, 0] }}
+                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                 className="size-24 rounded-[35px] bg-gradient-to-br from-yellow-400 to-amber-600 flex items-center justify-center mx-auto mb-6 shadow-[0_0_50px_-10px_rgba(251,191,36,0.3)] border-4 border-white/10"
+              >
+                 <span className="material-symbols-outlined text-5xl text-black drop-shadow-lg">workspace_premium</span>
+              </motion.div>
+              <h3 className="text-2xl font-black text-white tracking-tight italic uppercase">Você é Izi Black</h3>
+              <p className="text-zinc-500 text-xs font-semibold mt-2 max-w-[280px] mx-auto opacity-90 leading-relaxed">
+                Como membro Master, estas são as vantagens que você já está aproveitando em nosso ecossistema.
+              </p>
+           </div>
+
+           <div className="space-y-4">
+              {perks.map((perk, i) => (
+                <motion.div
+                  key={perk.id}
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="p-6 rounded-[35px] bg-zinc-900/30 backdrop-blur-3xl border border-white/5 shadow-2xl flex items-center gap-6 group hover:border-yellow-400/20 transition-all"
+                >
+                  <div className={`size-16 rounded-[22px] ${perk.bg} flex items-center justify-center shrink-0 border border-white/5 shadow-inner`}>
+                    <span className={`material-symbols-outlined text-3xl ${perk.color} drop-shadow-md`}>{perk.icon}</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-black text-sm text-white tracking-tight italic uppercase leading-none mb-1.5">{perk.name}</h4>
+                    <p className="text-[11px] text-zinc-500 font-medium leading-tight opacity-80">{perk.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
+           </div>
+
+           <div className="p-8 rounded-[40px] bg-gradient-to-br from-yellow-400/10 via-amber-500/5 to-transparent border border-yellow-400/10 relative overflow-hidden group mt-6">
+              <div className="relative z-10 text-center">
+                 <h4 className="text-white font-black text-base tracking-tight mb-2 italic">DÚVIDAS OU SUPORTE?</h4>
+                 <p className="text-zinc-400 text-[11px] font-medium leading-relaxed max-w-[200px] mx-auto mb-5">Nosso time de consierges está pronto para te atender de forma prioritária.</p>
+                 <button onClick={() => setIsAIOpen(true)} className="px-6 py-3 bg-yellow-400 text-black text-[10px] font-black rounded-2xl shadow-lg shadow-yellow-400/20 uppercase tracking-widest active:scale-95 transition-all">
+                    Falar com Concierge
+                 </button>
+              </div>
+              <span className="material-symbols-outlined absolute -right-6 -bottom-6 text-[100px] text-yellow-400/5 rotate-12 group-hover:rotate-0 transition-transform duration-700">support_agent</span>
+           </div>
+        </main>
+      </div>
+    );
+  };    transition={{ type: "spring", delay: 0.5, bounce: 0.6 }}
               className="size-24 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-[32px] flex items-center justify-center shadow-[0_15px_40px_rgba(234,179,8,0.3)] mb-10"
             >
               <Icon name="workspace_premium" />
