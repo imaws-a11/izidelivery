@@ -636,7 +636,57 @@ function App() {
     return () => {
       supabase.removeChannel(sub);
     };
-  }, [userId, subView]);
+   }, [userId, subView]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    // Sincronização em tempo real de Perfil (Saldo, XP, Coins, Izi Black)
+    const userSub = supabase
+      .channel(`user_sync_${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "users_delivery", filter: `id=eq.${userId}` },
+        () => {
+          console.log("[SYNC] Perfil do usuário atualizado, sincronizando...");
+          fetchWalletBalance(userId);
+          fetchCartData(userId);
+        }
+      )
+      .subscribe();
+
+    // Sincronização de Endereços Salvos em tempo real
+    const addrSub = supabase
+      .channel(`addr_sync_${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "saved_addresses", filter: `user_id=eq.${userId}` },
+        () => {
+          console.log("[SYNC] Endereços salvos atualizados, sincronizando...");
+          fetchSavedAddresses(userId);
+        }
+      )
+      .subscribe();
+
+    // Sincronização de Cartões Salvos em tempo real
+    const cardSub = supabase
+      .channel(`card_sync_${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "payment_methods", filter: `user_id=eq.${userId}` },
+        () => {
+          console.log("[SYNC] Cartões salvos atualizados, sincronizando...");
+          fetchSavedCards(userId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(userSub);
+      supabase.removeChannel(addrSub);
+      supabase.removeChannel(cardSub);
+    };
+  }, [userId]);
   
   const fetchMyOrders = async (uid: string) => {
     if (!uid) return;
