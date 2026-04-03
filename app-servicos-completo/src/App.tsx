@@ -1106,22 +1106,29 @@ function App() {
       : 0;
     
     const total = Math.max(0, subtotal - couponDiscount);
-    const coinRate = globalSettings?.izi_coin_rate || 1;
+    
+    // BENEFÍCIO IZI BLACK: Dobro de Cashback (Coins)
+    const baseRate = globalSettings?.izi_coin_rate || 1;
+    const coinRate = isIziBlackMembership ? (baseRate * 2) : baseRate;
+    
     const earnedCoins = Math.floor(total * coinRate);
     const finalCoins = isUsingCoins ? earnedCoins : (iziCoins + earnedCoins);
+    
+    // BENEFÍCIO IZI BLACK: XP em dobro (100 em vez de 50)
+    const earnedXP = isIziBlackMembership ? 100 : 50;
     
     await registerPendingBenefitUsages(orderId);
 
     setCart([]);
     setAppliedCoupon(null);
     setCouponInput("");
-    setUserXP((prev: number) => prev + 50);
+    setUserXP((prev: number) => prev + earnedXP);
     setIziCoins(finalCoins);
     
     if (userId) {
       await supabase.from("users_delivery").update({ 
         izi_coins: finalCoins,
-        user_xp: (userXP + 50) 
+        user_xp: (userXP + earnedXP) 
       }).eq("id", userId);
       
       fetchMyOrders(userId);
@@ -1434,10 +1441,15 @@ function App() {
     if (selectedShop?.freeDelivery === true || selectedShop?.free_delivery === true) return 0;
     
     // Prioridade 2: IZI Black
-    const isIziBlack = Boolean(user?.izi_black_active);
     const minOrderIziBlack = Number(globalSettings?.izi_black_min_order || 0);
-    const subtotal = cart.reduce((a, b) => a + (b.price || 0), 0);
-    if (isIziBlack && subtotal >= minOrderIziBlack && minOrderIziBlack > 0) return 0;
+    const subtotal = cart.reduce((a, b: any) => a + (Number(b.price) || 0), 0);
+    
+    // Se for IZI Black, frete grátis se o subtotal atingir o mínimo (ou se não houver mínimo definido)
+    if (isIziBlackMembership) {
+       if (minOrderIziBlack === 0 || subtotal >= minOrderIziBlack) {
+           return 0;
+       }
+    }
 
     // Prioridade 3: Taxa configurada pelo lojista
     if (selectedShop?.service_fee !== undefined && selectedShop?.service_fee !== null) {
@@ -6642,6 +6654,7 @@ const navigateSubView = (target: string) => {
                     merchantProducts={selectedShop?.products || []}
                     merchantName={selectedShop?.name || ""}
                     handleAddToCart={handleAddToCart}
+                    iziCoinRate={globalSettings?.izi_coin_rate || 1}
                     isIziBlack={isIziBlackMembership} 
                     deliveryFee={calculateDeliveryFee()} 
                   />
@@ -6670,7 +6683,8 @@ const navigateSubView = (target: string) => {
                     setPaymentsOrigin={setPaymentsOrigin} 
                     setSubView={(v: any) => setSubView(v)} 
                     iziCoins={iziCoins} 
-                    iziCoinValue={globalSettings?.izi_coin_value || globalSettings?.iziCoinRate || 0.01} 
+                    iziCoinValue={globalSettings?.izi_coin_value || 0.01} 
+                    iziCoinRate={globalSettings?.izi_coin_rate || 1}
                     deliveryFee={calculateDeliveryFee()} 
                     isIziBlack={isIziBlackMembership}
                   />
