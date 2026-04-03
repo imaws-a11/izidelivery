@@ -2888,7 +2888,7 @@ const navigateSubView = (target: string) => {
   };
 
   const renderLightningPayment = () => {
-    const invoice = selectedItem?.lightningInvoice || lightningData?.payment_request || "";
+    const invoice = selectedItem?.lightning_invoice || selectedItem?.lightningInvoice || lightningData?.payment_request || "";
     const satoshis = selectedItem?.satoshis || lightningData?.satoshis || 0;
     const btcPrice = selectedItem?.btcPrice || selectedItem?.btc_price_brl || lightningData?.btc_price_brl || 0;
 
@@ -3119,6 +3119,9 @@ const navigateSubView = (target: string) => {
         // O carrinho agora é limpo somente via Realtime quando o pagamento é CONFIRMADO (liveOrder.status !== 'pendente_pagamento')
 
       } catch (e: any) {
+        const qr = selectedItem?.pix_qr_code || selectedItem?.pixQrCode || "";
+        const qrBase64 = selectedItem?.pix_qr_base64 || selectedItem?.pixQrBase64 || "";
+        const copyPaste = selectedItem?.pix_copy_paste || selectedItem?.pixCopyPaste || qr;
         console.error("Exceção crítica no fluxo PIX:", e);
         const errDetail = e.message || "Erro de conexão. Tente novamente.";
         setSelectedItem((prev: any) => ({ ...prev, pixError: true, pixErrorMessage: errDetail }));
