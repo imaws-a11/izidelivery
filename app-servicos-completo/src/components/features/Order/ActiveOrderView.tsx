@@ -53,11 +53,17 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
       ]
     : [
         {
+          id: "pagamento",
+          label: "Aguardando Pagamento",
+          icon: "schedule",
+          status: ["pendente_pagamento"],
+        },
+        {
           id: "confirmado",
-          label: "Pedido Confirmado",
+          label: "Pedido Recebido",
           icon: "check_circle",
           status: [
-            "novo", "pendente_pagamento", "pendente", "aceito", "confirmado", "preparando", "no_preparo", "pronto", "waiting_driver", "a_caminho_coleta", "saiu_para_coleta", "chegou_coleta", "picked_up", "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
+            "novo", "pendente", "aceito", "confirmado", "preparando", "no_preparo", "pronto", "waiting_driver", "a_caminho_coleta", "saiu_para_coleta", "chegou_coleta", "picked_up", "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
           ],
         },
         {
