@@ -1518,22 +1518,27 @@ function App() {
 
       if (paymentMethod === "bitcoin_lightning") {
         try {
-          const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ ...orderBase, status: "pendente_pagamento" }).select().single();
+          // Explicitly omit status from orderBase to ensure override works correctly
+          const { status: _, ...restOfOrderBase } = orderBase;
+          const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ ...restOfOrderBase, status: "pendente_pagamento", payment_status: "pending" }).select().single();
           if (insertError) throw insertError;
 
           const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
             body: { amount: total, orderId: order.id, memo: `Pedido #${order.id.slice(0, 8)}` },
           });
 
-          if (lnErr) throw lnErr;
+          if (lnErr || !lnData?.payment_request) {
+            console.error("LN Error Details:", lnErr, lnData);
+            throw new Error(lnData?.error || "Não foi possível gerar a fatura Bitcoin.");
+          }
 
           setSelectedItem({ ...order, lightningInvoice: lnData.payment_request, satoshis: lnData.satoshis, btc_price_brl: lnData.btc_price_brl });
-          if (cart.length > 0) await clearCart(order.id);
+          // O cart NÃO deve ser limpo aqui. Só após o pagamento ser confirmado via Realtime/Webhook
           navigateSubView("lightning_payment");
           return;
-        } catch (e) {
+        } catch (e: any) {
           console.error("LN Error:", e);
-          alert("Erro ao iniciar pagamento Bitcoin. Tente outro método.");
+          alert(`Erro ao iniciar pagamento Bitcoin: ${e.message || "Tente outro método."}`);
           return;
         }
       }
@@ -1853,6 +1858,20 @@ const navigateSubView = (target: string) => {
   useEffect(() => {
     if ((subView === "pix_payment" || subView === "lightning_payment") && selectedItem?.id) {
       const liveOrder = myOrders.find((o) => o.id === selectedItem.id);
+      if (liveOrder?.payment_status === "paid" || liveOrder?.status === "novo") {
+        if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') console.log("[SYNC] Pagamento detectado, finalizando fluxo...");
+        
+        // Limpar o carrinho somente APÓS a confirmação do pagamento
+        if (cart.length > 0) {
+          clearCart(liveOrder.id);
+        }
+
+        setSubView("none");
+        setTab("orders");
+        setSelectedItem(liveOrder);
+        toastSuccess("Pagamento Confirmado!");
+      }
+      
       if (liveOrder && liveOrder.status && liveOrder.status !== "pendente_pagamento") {
         if (liveOrder.status === "cancelado" || liveOrder.status === "recusado") {
             toastError("Pagamento recusado ou expirado.");
@@ -3097,10 +3116,7 @@ const navigateSubView = (target: string) => {
         }));
         
       // [Comentario Limpo pelo Sistema]
-        if (cart.length > 0) {
-            console.log("Limpando sacola...");
-            await clearCart(orderId);
-        }
+        // O carrinho agora é limpo somente via Realtime quando o pagamento é CONFIRMADO (liveOrder.status !== 'pendente_pagamento')
 
       } catch (e: any) {
         console.error("Exceção crítica no fluxo PIX:", e);
