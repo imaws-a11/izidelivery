@@ -10,12 +10,13 @@ interface CartViewProps {
   merchantName?: string;
   handleAddToCart: (item: any) => void;
   isIziBlack?: boolean;
+  iziCoinRate?: number;
   deliveryFee?: number;
 }
 
 export const CartView: React.FC<CartViewProps> = ({ 
   cart, setCart, setSubView, navigateSubView, merchantProducts, merchantName, handleAddToCart,
-  isIziBlack = false, deliveryFee = 0
+  isIziBlack = false, iziCoinRate = 0, deliveryFee = 0
 }) => {
   const subtotal: number = cart.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0);
   const taxa: number = deliveryFee; 
@@ -188,14 +189,24 @@ export const CartView: React.FC<CartViewProps> = ({
                   <span className="font-black text-white text-xs uppercase tracking-tight italic">35 - 45 min</span>
                </div>
             </div>
-            <div className="text-right">
-              <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em] mb-1">Valor Total</p>
-              <p className="text-4xl font-black text-white leading-none tracking-tighter" style={{ textShadow: "0 0 30px rgba(255,255,255,0.1)" }}>
-                R$ {total.toFixed(2).replace(".", ",")}
-              </p>
-            </div>
-          </div>
-        </section>
+             <div className="text-right">
+               <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em] mb-1">Valor Total</p>
+               <p className="text-4xl font-black text-white leading-none tracking-tighter" style={{ textShadow: "0 0 30px rgba(255,255,255,0.1)" }}>
+                 R$ {total.toFixed(2).replace(".", ",")}
+               </p>
+               {iziCoinRate > 0 && (
+                 <motion.p 
+                   initial={{ opacity: 0, y: 5 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   className="text-yellow-400 text-[8px] font-black uppercase tracking-widest mt-2 flex items-center justify-end gap-1"
+                 >
+                   <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>monetization_on</span>
+                   Ganha +{Math.floor(total * (isIziBlack ? iziCoinRate * 2 : iziCoinRate))} Coins {isIziBlack && "Black 2x"}
+                 </motion.p>
+               )}
+             </div>
+           </div>
+         </section>
 
         {/* BOTÃO DE LIMPEZA DISCRETO */}
         <button

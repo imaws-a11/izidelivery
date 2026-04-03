@@ -23,6 +23,7 @@ interface CheckoutViewProps {
   setSubView: (view: string) => void;
   iziCoins?: number;
   iziCoinValue?: number;
+  iziCoinRate?: number;
   deliveryFee: number;
   isIziBlack?: boolean;
 }
@@ -49,6 +50,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   setSubView,
   iziCoins = 0,
   iziCoinValue = 0.01,
+  iziCoinRate = 1,
   deliveryFee = 0,
   isIziBlack = false,
 }) => {
@@ -392,12 +394,16 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                      R$ {total.toFixed(2).replace(".", ",")}
                    </p>
                 </div>
-                <div className="flex flex-col items-end">
-                   <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 italic">Ganha + Cashback</span>
-                   <div className="bg-yellow-400/10 px-3 py-1.5 rounded-full border border-yellow-400/10">
-                      <span className="text-yellow-400 font-black text-[9px] uppercase tracking-widest italic">+ 50 Coins</span>
-                   </div>
-                </div>
+                 <div className="flex flex-col items-end">
+                    <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 italic">
+                       {isIziBlack ? "Cashback Duplo Izi Black" : "Ganha + Cashback"}
+                    </span>
+                    <div className="bg-yellow-400/10 px-3 py-1.5 rounded-full border border-yellow-400/10">
+                       <span className="text-yellow-400 font-black text-[9px] uppercase tracking-widest italic">
+                          + {Math.floor(total * (isIziBlack ? (iziCoinRate * 2) : iziCoinRate))} Coins
+                       </span>
+                    </div>
+                 </div>
               </div>
            </div>
         </section>
