@@ -38,7 +38,7 @@ serve(async (req) => {
           number: customer?.cpf?.replace(/\D/g, '') || '00000000000',
         },
       },
-      notification_url: 'https://mbqmyozgwpxwxrdwwkwn.supabase.co/functions/v1/mp-webhook',
+      notification_url: `https://mbqmyozgwpxwxrdwwkwn.supabase.co/functions/v1/mp-webhook`,
     }
 
     // Se for cartão, adiciona token e detalhes extras
