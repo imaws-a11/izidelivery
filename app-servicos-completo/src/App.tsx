@@ -1516,10 +1516,26 @@ function App() {
         return;
       }
 
-      if (paymentMethod === "lightning") {
-        setSelectedItem({ id: "temp", total_price: total, merchant_id: shopId, merchant_name: shopName });
-        navigateSubView("lightning_payment");
-        return;
+      if (paymentMethod === "bitcoin_lightning") {
+        try {
+          const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ ...orderBase, status: "pendente_pagamento" }).select().single();
+          if (insertError) throw insertError;
+
+          const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
+            body: { amount: total, orderId: order.id, memo: `Pedido #${order.id.slice(0, 8)}` },
+          });
+
+          if (lnErr) throw lnErr;
+
+          setSelectedItem({ ...order, lightningInvoice: lnData.payment_request, satoshis: lnData.satoshis, btc_price_brl: lnData.btc_price_brl });
+          if (cart.length > 0) await clearCart(order.id);
+          navigateSubView("lightning_payment");
+          return;
+        } catch (e) {
+          console.error("LN Error:", e);
+          alert("Erro ao iniciar pagamento Bitcoin. Tente outro método.");
+          return;
+        }
       }
 
       if (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") {
