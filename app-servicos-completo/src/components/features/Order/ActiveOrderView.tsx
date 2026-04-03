@@ -247,6 +247,30 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
               })}
             </div>
 
+            {(() => {
+                const isPending = selectedItem.status === 'pendente_pagamento' || selectedItem.payment_status === 'pending';
+                if (!isPending) return null;
+                
+                const tech = (selectedItem.payment_method || 'pix').toLowerCase();
+                const targetView = tech.includes('bitcoin') || tech.includes('lightning') ? 'lightning_payment' : 'pix_payment';
+
+                return (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="mb-4"
+                  >
+                    <button
+                      onClick={() => setSubView(targetView)}
+                      className="w-full py-5 rounded-[28px] bg-yellow-400 text-black font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all flex items-center justify-center gap-3 shadow-[8px_8px_20px_rgba(250,204,21,0.2),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.1)] group"
+                    >
+                      <span className="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">payments</span>
+                      Ir para Pagamento
+                    </button>
+                  </motion.div>
+                );
+            })()}
+
             {/* BOTÃO DE CANCELAMENTO - POSIÇÃO DE DESTAQUE */}
             {(() => {
                 const canCancel = isMobility
