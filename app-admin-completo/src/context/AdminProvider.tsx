@@ -580,11 +580,25 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         },
         (payload) => {
           console.log('Evento de pedido em tempo real:', payload.eventType, payload);
+          
           if (payload.eventType === 'INSERT') {
-            playIziSound('merchant');
-            setNewOrderNotification({ show: true, orderId: payload.new.id });
+            // Se o pedido for inserido como pendente_pagamento, não notifica o lojista ainda
+            if (payload.new.status !== 'pendente_pagamento') {
+              playIziSound('merchant');
+              setNewOrderNotification({ show: true, orderId: payload.new.id });
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            // Se o status mudou de pendente_pagamento para um status que o lojista deva agir (novo ou waiting_merchant)
+            const wasPending = payload.old?.status === 'pendente_pagamento';
+            const isNowActionable = payload.new.status === 'novo' || payload.new.status === 'waiting_merchant';
+            
+            if (wasPending && isNowActionable) {
+              playIziSound('merchant');
+              setNewOrderNotification({ show: true, orderId: payload.new.id });
+            }
           }
-          // Atualizar lista e estatísticas
+
+          // Atualizar lista e estatísticas em qualquer mudança relevante
           fetchAllOrders(merchantOrdersPage);
           fetchStats();
         }
