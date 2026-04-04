@@ -42,8 +42,16 @@ export interface Establishment {
   name: string;
   type: "restaurant" | "market" | "beverage" | "pharmacy";
   img: string;
-  rating: number;
+  rating: string | number;
   time: string;
   tag: string;
+  statusTag?: string;
+  isOpen?: boolean;
+  opening_hours?: any;
   freeDelivery?: boolean;
+  free_delivery?: boolean;
+  service_fee?: number;
+  foodCategory?: string;
+  description?: string;
+  banner?: string;
 }

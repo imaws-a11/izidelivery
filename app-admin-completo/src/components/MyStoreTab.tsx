@@ -105,14 +105,42 @@ export default function MyStoreTab() {
 
           <div className="flex flex-wrap items-center gap-6">
             {/* STATUS LOJA */}
-            <div className="flex items-center gap-6 px-8 py-6 bg-slate-50 dark:bg-slate-800/50 rounded-[32px] border border-slate-100 dark:border-white/5 shadow-inner">
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Sinal da Loja</p>
-                <p className={`text-sm font-black uppercase tracking-widest ${merchantProfile.is_open ? 'text-emerald-500 shadow-emerald-500/20' : 'text-rose-500 shadow-rose-500/20'}`}>
-                  {merchantProfile.is_open ? 'Aberta agora' : 'Fechada'}
-                </p>
+            <div className="flex flex-col gap-3 px-8 py-6 bg-slate-50 dark:bg-slate-800/50 rounded-[32px] border border-slate-100 dark:border-white/5 shadow-inner">
+              <div className="flex items-center gap-6">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Sinal da Loja</p>
+                  <p className={`text-sm font-black uppercase tracking-widest ${merchantProfile.is_open ? 'text-emerald-500 shadow-emerald-500/20' : 'text-rose-500 shadow-rose-500/20'}`}>
+                    {merchantProfile.is_open ? 'Aberta agora' : 'Fechada'}
+                  </p>
+                </div>
+                <PremiumToggle active={!!merchantProfile.is_open} onClick={async () => {
+                   setIsSaving(true);
+                   const nextOpen = !merchantProfile.is_open;
+                   const { error } = await supabase.from('admin_users').update({ is_open: nextOpen, opening_mode: 'manual' }).eq('id', merchantProfile.merchant_id);
+                   if (!error) setMerchantProfile({ ...merchantProfile, is_open: nextOpen, opening_mode: 'manual' });
+                   setIsSaving(false);
+                }} />
               </div>
-              <PremiumToggle active={!!merchantProfile.is_open} onClick={() => updateProfileField('is_open', !merchantProfile.is_open)} />
+              <div className="flex items-center justify-between border-t border-slate-200 dark:border-white/5 pt-3 mt-1">
+                 <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">
+                   Modo: <span className={merchantProfile.opening_mode === 'manual' ? 'text-amber-500' : 'text-primary'}>
+                     {merchantProfile.opening_mode === 'manual' ? 'Manual (Padrão Override)' : 'Automático (Horários)'}
+                   </span>
+                 </p>
+                 {merchantProfile.opening_mode === 'manual' && (
+                   <button 
+                     onClick={async () => {
+                        setIsSaving(true);
+                        const { error } = await supabase.from('admin_users').update({ opening_mode: 'auto' }).eq('id', merchantProfile.merchant_id);
+                        if (!error) setMerchantProfile({ ...merchantProfile, opening_mode: 'auto' });
+                        setIsSaving(false);
+                     }}
+                     className="text-[8px] font-black uppercase text-primary hover:underline"
+                   >
+                     Resetar para Automático
+                   </button>
+                 )}
+              </div>
             </div>
 
             {/* FRETE GRÁTIS */}

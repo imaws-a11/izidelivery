@@ -996,6 +996,11 @@ function App() {
   };
 
   const handleShopClick = async (shop: any) => {
+    if (!shop.isOpen) {
+      toastError(`Desculpe! ${shop.name} está fechado no momento. 🕒`);
+      return;
+    }
+    
     setSelectedShop(shop);
     setActiveCategory("Destaques");
     const isRestaurant = shop.type === "restaurant";
@@ -1721,16 +1726,15 @@ const navigateSubView = (target: string) => {
   }, []);
   const [ESTABLISHMENTS, setESTABLISHMENTS] = useState<any[]>([]);
 
-  const isStoreOpen = useCallback((openingHours: any, manualOpen: boolean) => {
-    // Prioridade total para o status manual definido pelo lojista na admin.
-      // [Comentario Limpo pelo Sistema]
-      // [Comentario Limpo pelo Sistema]
-    if (manualOpen !== undefined && manualOpen !== null) {
-      return manualOpen;
+  const isStoreOpen = useCallback((openingHours: any, manualOpen: boolean, mode: string = 'auto') => {
+    // Modo Manual: O lojista forçou um estado (Aberto ou Fechado) via toggle.
+    // O usuário solicitou que se habilitar como aberta pelo botão, a loja deve abrir mesmo fora do horário.
+    if (mode === 'manual') {
+      return manualOpen === true;
     }
 
-      // [Comentario Limpo pelo Sistema]
-    if (!openingHours || Object.keys(openingHours).length === 0) return true;
+    // Modo Automático: Segue o horário programado
+    if (!openingHours || Object.keys(openingHours).length === 0) return manualOpen !== false;
 
     const now = new Date();
     const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
@@ -1741,10 +1745,8 @@ const navigateSubView = (target: string) => {
 
     const [openH, openM] = config.open.split(':').map(Number);
     const [closeH, closeM] = config.close.split(':').map(Number);
-    
     const nowH = now.getHours();
     const nowM = now.getMinutes();
-    
     const nowInMinutes = nowH * 60 + nowM;
     const openInMinutes = openH * 60 + openM;
     const closeInMinutes = closeH * 60 + closeM;
@@ -1762,39 +1764,44 @@ const navigateSubView = (target: string) => {
         
       if (error) throw error;
       
-       const realEstabs = data?.map(m => {
-         const isOpen = isStoreOpen(m.opening_hours, m.is_open);
-         
-         // Mapeamento de tipos do banco para os filtros do App
-         const rawType = (m.store_type || "restaurant").toLowerCase().trim();
-         let normalizedType = rawType;
-         if (rawType.includes("restaurante")) normalizedType = "restaurant";
-         else if (rawType === "saude") normalizedType = "pharmacy";
-         else if (rawType === "mercado") normalizedType = "market";
-         else if (rawType === "bebidas") normalizedType = "beverages";
-         else if (rawType === "hamburguer") normalizedType = "restaurant";
-         
-         return {
-          id: m.id,
-          name: m.store_name || "Loja Parceira",
-          tag: isOpen ? "Aberto Agora" : "Fechado",
-          statusTag: isOpen ? "Aberto" : "Fechado",
-          isOpen,
-          rating: "4.9",
-          dist: "1.5 km",
-          time: m.estimated_time || "30-45 min",
-          img: m.store_logo || "https://images.unsplash.com/photo-1552566626-52f8b828add9?q=80&w=200",
-          banner: m.store_banner || "https://images.unsplash.com/photo-1514933651103-005eec06ccc0?q=80&w=800",
-          freeDelivery: !!m.free_delivery,
-          free_delivery: !!m.free_delivery,
-          service_fee: m.free_delivery ? 0 : (m.service_fee !== undefined && m.service_fee !== null ? Number(m.service_fee) : undefined),
-          type: normalizedType,
-          foodCategory: m.food_category || "all",
-          description: m.store_description || "",
-        };
-      }) || [];
-      
-      setESTABLISHMENTS(realEstabs);
+        const realEstabs = data?.map(m => {
+          const isOpen = isStoreOpen(m.opening_hours, m.is_open, m.opening_mode);
+          
+          // Mapeamento de tipos do banco para os filtros do App
+          const rawType = (m.store_type || "restaurant").toLowerCase().trim();
+          let normalizedType = rawType;
+          if (rawType.includes("restaurante")) normalizedType = "restaurant";
+          else if (rawType === "saude") normalizedType = "pharmacy";
+          else if (rawType === "mercado") normalizedType = "market";
+          else if (rawType === "bebidas") normalizedType = "beverages";
+          else if (rawType === "hamburguer") normalizedType = "restaurant";
+          
+          return {
+            id: m.id,
+            name: m.store_name || "Loja Parceira",
+            tag: isOpen ? "Aberto Agora" : "Fechado",
+            statusTag: isOpen ? "Aberto" : "Fechado",
+            isOpen,
+            mode: m.opening_mode || 'auto',
+            opening_hours: m.opening_hours,
+            rating: "4.9",
+            dist: "1.5 km",
+            time: m.estimated_time || "30-45 min",
+            img: m.store_logo || "https://images.unsplash.com/photo-1552566626-52f8b828add9?q=80&w=200",
+            banner: m.store_banner || "https://images.unsplash.com/photo-1514933651103-005eec06ccc0?q=80&w=800",
+            freeDelivery: !!m.free_delivery,
+            free_delivery: !!m.free_delivery,
+            service_fee: m.free_delivery ? 0 : (m.service_fee !== undefined && m.service_fee !== null ? Number(m.service_fee) : undefined),
+            type: normalizedType,
+            foodCategory: m.food_category || "all",
+            description: m.store_description || "",
+          };
+        }) || [];
+
+        // Ordenar: Abertos primeiro
+        const sortedEstabs = [...realEstabs].sort((a, b) => (a.isOpen === b.isOpen ? 0 : a.isOpen ? -1 : 1));
+        
+        setESTABLISHMENTS(sortedEstabs);
     } catch (err) {
     }
   }, [isStoreOpen]);
