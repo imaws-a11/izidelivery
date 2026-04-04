@@ -459,9 +459,19 @@ function App() {
             .eq('driver_id', driverId).order('created_at', { ascending: false }).limit(10)
             .then(({ data: orders, error: qErr }) => {
                 if (qErr) { console.error('Erro busca missão:', qErr.message); return; }
-                const activeOrder = orders?.find((o: any) => ['saiu_para_coleta', 'no_local', 'picked_up', 'a_caminho', 'em_rota', 'saiu_para_entrega'].includes(o.status));
+                const activeOrder = orders?.find((o: any) => ['saiu_para_coleta', 'no_local', 'picked_up', 'a_caminho', 'em_rota', 'saiu_para_entrega', 'waiting_driver'].includes(o.status));
                 if (activeOrder) {
-                    const mission: any = { ...activeOrder, realId: activeOrder.id, type: activeOrder.service_type || 'delivery', origin: activeOrder.pickup_address || 'Origem', destination: activeOrder.delivery_address || 'Destino', price: activeOrder.total_price || 0, status: activeOrder.status, customer: activeOrder.user_name || 'Cliente Izi' };
+                    const mission: any = { 
+                        ...activeOrder, 
+                        realId: activeOrder.id, 
+                        type: activeOrder.service_type || 'delivery', 
+                        origin: activeOrder.pickup_address || 'Origem', 
+                        destination: activeOrder.delivery_address || 'Destino', 
+                        price: activeOrder.total_price || 0, 
+                        status: activeOrder.status, 
+                        preparation_status: activeOrder.preparation_status || 'preparando',
+                        customer: activeOrder.user_name || 'Cliente Izi' 
+                    };
                     setActiveMission(mission);
                     localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                     setActiveTab('active_mission');
@@ -559,7 +569,16 @@ function App() {
                 if (now - ts < 5000) cleanDeclined[id] = ts;
             });
             localStorage.setItem('Izi_declined_timed', JSON.stringify(cleanDeclined));
-            setOrders(data.map((o: any) => ({ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type as ServiceType, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' })).filter((o: any) => !cleanDeclined[o.realId]));
+            setOrders(data.map((o: any) => ({ 
+              id: o.id.slice(0, 8).toUpperCase(), 
+              realId: o.id, 
+              type: o.service_type as ServiceType, 
+              origin: o.pickup_address, 
+              destination: o.delivery_address, 
+              price: o.total_price, 
+              preparation_status: o.preparation_status || 'preparando',
+              customer: 'Cliente Izi' 
+            })).filter((o: any) => !cleanDeclined[o.realId]));
         };
         const fetchDedicatedSlots = async () => {
             const declinedIds = JSON.parse(localStorage.getItem('Izi_declined_slots') || '[]');
@@ -587,15 +606,18 @@ function App() {
                 const o = payload.new as any;
                 const currentMission = activeMissionRef.current;
                 
-                // Se a missão ativa recebeu uma atualização do servidor, sincronizar o status
+                // Se a missão ativa recebeu uma atualização do servidor, sincronizar o status e a preparação
                 if (currentMission && o.id === currentMission.id) {
-                    if (o.status === 'pronto') {
+                    const wasPreparing = currentMission.preparation_status !== 'pronto';
+                    const isNowReady = o.preparation_status === 'pronto';
+
+                    if (wasPreparing && isNowReady) {
                         playIziSound('driver');
                         toastSuccess('🔥 O Pedido está PRONTO para coleta!');
                         if (Notification.permission === 'granted') new Notification('📦 Pedido Pronto!', { body: 'O estabelecimento finalizou o preparo. Pode coletar!' });
                     }
                     // Sincronizar o status da missão ativa com o servidor
-                    const updatedMission = { ...currentMission, status: o.status };
+                    const updatedMission = { ...currentMission, ...o };
                     setActiveMission(updatedMission);
                     localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
                     return;
@@ -1023,7 +1045,16 @@ function App() {
                                     <div className={`size-14 rounded-[20px] ${details.bg} ${details.color} flex items-center justify-center border border-current/10`}><Icon name={details.icon} className="text-3xl" /></div>
                                     <div><p className={`text-[9px] font-black uppercase tracking-widest mb-0.5 ${details.color}`}>{details.label}</p><h3 className="text-base font-black text-white">{isMobility ? 'Chamada de Passageiro' : 'Entrega de Pacote'}</h3></div>
                                 </div>
-                                <div className="text-right"><p className="text-2xl font-black text-primary">R$ {order.price.toFixed(0)}</p><p className="text-[8px] text-white/20 uppercase tracking-widest">Ganho estimado</p></div>
+                                <div className="text-right">
+                                    <p className="text-2xl font-black text-primary">R$ {order.price.toFixed(0)}</p>
+                                    <p className="text-[8px] text-white/20 uppercase tracking-widest">Ganho estimado</p>
+                                    {order.preparation_status === 'pronto' && (
+                                        <div className="mt-2 flex items-center justify-end gap-1 text-emerald-400">
+                                            <span className="material-symbols-outlined text-[10px]">check_circle</span>
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Já está Pronto</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <div className="bg-black/20 rounded-[20px] p-4 space-y-3">
                                 <div className="flex items-start gap-3"><div className="mt-1.5 size-2 rounded-full bg-white/30 shrink-0" /><div><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Coleta</p><p className="text-xs font-bold text-white/70 leading-tight">{order.origin}</p></div></div>
@@ -1449,6 +1480,24 @@ function App() {
                                     <div className="flex-1 min-w-0">
                                         <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Retirada: {activeMission.merchant_name || 'Estabelecimento'}</p>
                                         <p className="text-sm font-bold text-white/80 leading-tight">{activeMission.origin || activeMission.pickup_address}</p>
+                                        
+                                        {/* Status de Preparo do Lojista */}
+                                        {activeMission.preparation_status && ['saiu_para_coleta', 'no_local'].includes(activeMission.status || '') && (
+                                            <div className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border shadow-lg ${
+                                                activeMission.preparation_status === 'pronto' 
+                                                ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 shadow-emerald-500/10' 
+                                                : 'bg-amber-500/20 border-amber-500/30 text-amber-400 shadow-amber-500/10'
+                                            }`}>
+                                                <Icon 
+                                                    name={activeMission.preparation_status === 'pronto' ? 'check_circle' : 'restaurant'} 
+                                                    size={16} 
+                                                    className={activeMission.preparation_status === 'preparando' ? 'animate-pulse' : ''} 
+                                                />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">
+                                                    {activeMission.preparation_status === 'pronto' ? 'Pronto para Retirada' : 'Em Preparação...'}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 

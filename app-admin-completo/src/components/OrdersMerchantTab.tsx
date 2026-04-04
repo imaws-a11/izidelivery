@@ -35,6 +35,32 @@ export default function OrdersMerchantTab() {
   const [localProcessingId, setLocalProcessingId] = React.useState<string | null>(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = React.useState<any>(null);
 
+  const handleTogglePreparation = async (id: string, currentStatus: string) => {
+    const nextStatus = currentStatus === 'preparando' ? 'pronto' : 'preparando';
+    setLocalProcessingId(id);
+    try {
+      const { data, error } = await supabase
+        .from('orders_delivery')
+        .update({ preparation_status: nextStatus })
+        .eq('id', id)
+        .select();
+
+      if (error) throw error;
+      
+      toastSuccess(`Pedido marcado como ${nextStatus === 'pronto' ? 'PRONTO' : 'EM PREPARAÇÃO'}`);
+      
+      await fetchAllOrders(merchantOrdersPage);
+      if (selectedOrderDetails?.id === id) {
+          setSelectedOrderDetails(data[0]);
+      }
+    } catch (err: any) {
+      console.error('Erro ao alternar preparação:', err);
+      toastError('Erro ao atualizar status de preparação');
+    } finally {
+      setLocalProcessingId(null);
+    }
+  };
+
   const handleAction = async (id: string, newStatus: string, reason?: string) => {
     setLocalProcessingId(id);
     try {
@@ -282,6 +308,30 @@ export default function OrdersMerchantTab() {
                       {o.payment_method === 'dinheiro' && <span className="text-[8px] font-black text-rose-500 uppercase mt-1">Dinheiro na Entrega</span>}
                     </div>
                   </div>
+
+                  {/* Toggle de Preparação */}
+                  <div className="mb-4">
+                    <button
+                      disabled={localProcessingId === o.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleTogglePreparation(o.id, o.preparation_status || 'preparando');
+                      }}
+                      className={`w-full py-2.5 rounded-2xl border-2 flex items-center justify-center gap-2 transition-all ${
+                        o.preparation_status === 'pronto' 
+                          ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:border-emerald-500/20' 
+                          : 'bg-amber-50 border-amber-100 text-amber-600 dark:bg-amber-500/10 dark:border-amber-500/20'
+                      }`}
+                    >
+                      <span className={`material-symbols-outlined text-sm ${o.preparation_status === 'preparando' ? 'animate-pulse' : ''}`}>
+                        {o.preparation_status === 'pronto' ? 'check_circle' : 'restaurant'}
+                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">
+                        {o.preparation_status === 'pronto' ? 'Pronto para Retirada' : 'Em Preparação...'}
+                      </span>
+                    </button>
+                  </div>
+
                   <p className="text-[11px] font-bold text-slate-500 truncate mb-4">{parseOrderAddress(o.delivery_address).address}</p>
                   <div className="flex items-center justify-between pt-4 border-t border-slate-50 dark:border-slate-800">
                     <span className="text-lg font-black text-primary">R$ {o.total_price?.toFixed(2).replace('.', ',')}</span>
@@ -471,6 +521,26 @@ export default function OrdersMerchantTab() {
                                       </p>
                                   </div>
                               </div>
+
+                               {/* Controle de Preparação no Modal */}
+                               <div className="flex items-center gap-2">
+                                  <button
+                                    disabled={localProcessingId === selectedOrderDetails.id}
+                                    onClick={() => handleTogglePreparation(selectedOrderDetails.id, selectedOrderDetails.preparation_status || 'preparando')}
+                                    className={`px-6 py-3 rounded-2xl border-2 flex items-center gap-2 transition-all ${
+                                      selectedOrderDetails.preparation_status === 'pronto'
+                                        ? 'bg-emerald-500 text-white border-emerald-400'
+                                        : 'bg-amber-500 text-white border-amber-400'
+                                    }`}
+                                  >
+                                    <span className={`material-symbols-outlined ${selectedOrderDetails.preparation_status === 'preparando' ? 'animate-pulse' : ''}`}>
+                                      {selectedOrderDetails.preparation_status === 'pronto' ? 'check_circle' : 'restaurant'}
+                                    </span>
+                                    <span className="text-xs font-black uppercase tracking-widest">
+                                      {selectedOrderDetails.preparation_status === 'pronto' ? 'Pronto' : 'Preparando'}
+                                    </span>
+                                  </button>
+                               </div>
                           </div>
 
                           {/* Items Section */}
