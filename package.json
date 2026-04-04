@@ -10,6 +10,7 @@
     ],
     "scripts": {
         "install:all": "npm install",
+        "dev": "npm run dev:all",
         "dev:admin": "npm run dev -w app-admin-completo",
         "dev:entregador": "npm run dev -w app-entregador-completo",
         "dev:servicos": "npm run dev -w app-servicos-completo",

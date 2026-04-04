@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 interface CartViewProps {
   cart: any[];
   setCart: React.Dispatch<React.SetStateAction<any[]>>;
+  handleClearCart: () => void;
   setSubView: (view: string) => void;
   navigateSubView: (view: string) => void;
   merchantProducts: any[];
@@ -15,7 +16,7 @@ interface CartViewProps {
 }
 
 export const CartView: React.FC<CartViewProps> = ({ 
-  cart, setCart, setSubView, navigateSubView, merchantProducts, merchantName, handleAddToCart,
+  cart, setCart, handleClearCart, setSubView, navigateSubView, merchantProducts, merchantName, handleAddToCart,
   isIziBlack = false, iziCoinRate = 0, deliveryFee = 0
 }) => {
   const subtotal: number = cart.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0);
@@ -55,9 +56,7 @@ export const CartView: React.FC<CartViewProps> = ({
     });
   };
 
-  const handleClearCart = () => {
-    setCart([]);
-  };
+  // Removendo handleClearCart local para usar o da prop
 
   return (
     <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">

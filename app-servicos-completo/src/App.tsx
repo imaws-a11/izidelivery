@@ -439,12 +439,10 @@ function App() {
         .eq("id", uid)
         .single();
       
-      if (data && data.cart_data && Array.isArray(data.cart_data)) {
-        // Combinar localStorage com DB ou priorizar DB?
-      // [Comentario Limpo pelo Sistema]
-        if (data.cart_data.length > 0) {
-          setCart(data.cart_data);
-        }
+      if (!error && data && Array.isArray(data.cart_data)) {
+        // [Comentario Limpo pelo Sistema]
+        setCart(data.cart_data);
+        isFirstEmptySync.current = false;
       }
     } catch (e) {
       console.error("Erro ao buscar sacola sincronizada:", e);
@@ -1474,7 +1472,7 @@ function App() {
     
     setIsUsingCoins(useCoins);
 
-    const subtotal = cart.reduce((a, b) => a + (b.price || 0), 0);
+    const subtotal = cart.reduce((a, b) => a + (Number(b.price) || 0), 0);
     const couponDiscount = appliedCoupon
       ? appliedCoupon.discount_type === "fixed"
         ? appliedCoupon.discount_value
@@ -1482,9 +1480,10 @@ function App() {
       : 0;
     
     const coinValue = globalSettings?.izi_coin_value || 0.01;
-    const coinDiscount = useCoins ? (user?.izi_coins || 0) * coinValue : 0;
+    const coinDiscount = useCoins ? (iziCoins || 0) * coinValue : 0;
     const deliveryFee = calculateDeliveryFee();
-    const total = Math.max(0, subtotal + deliveryFee - couponDiscount - coinDiscount);
+    const totalRaw = subtotal + deliveryFee - couponDiscount - coinDiscount;
+    const total = Math.max(0, Number(totalRaw.toFixed(2)));
 
     const shopId = selectedShop?.id || cart[0]?.merchant_id || null;
     const shopName = selectedShop?.name || "Estabelecimento";
@@ -1903,14 +1902,12 @@ const navigateSubView = (target: string) => {
       
       // Sincronizar com o banco se estiver logado
       if (userId) {
-      // [Comentario Limpo pelo Sistema]
-        // Deixe que o load da nuvem (fetchCartData) recupere a sacola real.
-      // [Comentario Limpo pelo Sistema]
+        // [Comentario Limpo pelo Sistema]
         if (isFirstEmptySync.current && cart.length === 0) {
             return;
         }
         
-        isFirstEmptySync.current = false; // Destrava a nuvem a partir de agora!
+        isFirstEmptySync.current = false;
 
         supabase.from("users_delivery")
           .update({ cart_data: cart })
@@ -1921,6 +1918,24 @@ const navigateSubView = (target: string) => {
       }
     } catch {}
   }, [cart, userId]);
+
+  const handleClearCart = async () => {
+    setCart([]);
+    setAppliedCoupon(null);
+    setCouponInput("");
+    
+    if (userId) {
+      try {
+        await supabase.from("users_delivery")
+          .update({ cart_data: [] })
+          .eq("id", userId);
+        console.log("[CART] Sacola esvaziada na nuvem");
+      } catch (e) {
+        console.error("[CART] Erro ao esvaziar sacola na nuvem:", e);
+      }
+    }
+    localStorage.setItem("izi_cart", JSON.stringify([]));
+  };
   const [userLocation, setUserLocation] = useState<{
     address: string;
     loading: boolean;
@@ -6690,6 +6705,7 @@ const navigateSubView = (target: string) => {
                   <CartView 
                     cart={cart} 
                     setCart={setCart}
+                    handleClearCart={handleClearCart}
                     setSubView={(v: any) => setSubView(v)} 
                     navigateSubView={navigateSubView}
                     merchantProducts={selectedShop?.products || []}

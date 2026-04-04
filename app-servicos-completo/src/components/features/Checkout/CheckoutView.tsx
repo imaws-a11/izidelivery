@@ -55,7 +55,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   isIziBlack = false,
 }) => {
   const [useCoins, setUseCoins] = React.useState(false);
-  const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+  const subtotal = cart.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0);
   const getAddonDetails = (item: any) => Array.isArray(item.addonDetails) ? item.addonDetails : [];
   const couponDiscount = appliedCoupon
     ? appliedCoupon.discount_type === "fixed"
