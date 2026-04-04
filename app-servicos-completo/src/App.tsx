@@ -1523,8 +1523,9 @@ function App() {
           const { data: order, error: insertError } = await supabase.from("orders_delivery").insert({ ...restOfOrderBase, status: "pendente_pagamento", payment_status: "pending" }).select().single();
           if (insertError) throw insertError;
 
+          console.log("Invocando create-lightning-invoice com total:", total, "orderId:", order.id);
           const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
-            body: { amount: total, orderId: order.id, memo: `Pedido #${order.id.slice(0, 8)}` },
+            body: { amount: total, orderId: order.id, customerName: userName, memo: `IziDelivery #${order.id.slice(0,8).toUpperCase()}` }
           });
 
           if (lnErr || !lnData?.payment_request) {
@@ -4761,7 +4762,12 @@ const navigateSubView = (target: string) => {
             body: { amount: total, orderId: orderData.id, memo: "Assinatura Izi Black" },
           });
           if (lnErr) throw lnErr;
-          setSelectedItem({ ...orderData, lightningInvoice: lnData.payment_request });
+          setSelectedItem({ 
+            ...orderData, 
+            lightningInvoice: lnData.payment_request, 
+            satoshis: lnData.satoshis, 
+            btc_price_brl: lnData.btc_price_brl 
+          });
           setPaymentsOrigin("izi_black");
           setSubView("lightning_payment");
         } else if (paymentMethod === "saldo") {
