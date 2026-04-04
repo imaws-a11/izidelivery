@@ -94,6 +94,7 @@ export interface Merchant {
   dispatch_priority?: 'exclusive' | 'global';
   scheduling_priority?: 'exclusive' | 'global';
   opening_hours?: Record<string, { active: boolean; open: string; close: string }>;
+  opening_mode?: "auto" | "manual";
   free_delivery?: boolean;
   estimated_time?: string;
   food_category?: string;
@@ -114,6 +115,7 @@ export interface MerchantProfile {
   dispatch_priority?: 'exclusive' | 'global';
   scheduling_priority?: 'exclusive' | 'global';
   is_open?: boolean;
+  opening_mode?: "auto" | "manual";
   store_type?: string;
   free_delivery?: boolean;
   estimated_time?: string;
