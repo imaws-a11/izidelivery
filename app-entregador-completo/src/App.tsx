@@ -106,9 +106,10 @@ interface Order {
 }
 function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-  const { isLoaded } = useJsApiLoader({
+  const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: mapsKey,
+    libraries: ['places', 'geometry'] as any,
     language: 'pt-BR',
     region: 'BR',
   });
@@ -142,6 +143,12 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
         (result, status) => {
           if (status === google.maps.DirectionsStatus.OK && result) {
             setDirections(result);
+          } else {
+            console.error('FALHA ROTA:', status, result);
+            // Se for negado na 1a vez, tenta fallback se tivermos texto mas não coords
+            if (status === 'REQUEST_DENIED') {
+              console.warn('Acesso negado ao Directions API. Verifique se o Billing e Directions API estão ativos no Google Console.');
+            }
           }
         }
       );
@@ -159,11 +166,20 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
     return () => clearInterval(interval);
   }, [isLoaded, validDriverCoords, resolvedDest]);
 
+  if (loadError) return (
+    <div className="absolute inset-0 bg-red-950 flex flex-col items-center justify-center p-8 text-center z-50">
+        <Icon name="satellite_alt" className="text-6xl text-red-500 mb-6 animate-bounce" />
+        <h1 className="text-2xl font-black text-white uppercase mb-2">Erro de Mapa</h1>
+        <p className="text-white/60 text-xs max-w-xs">{loadError.message || 'Falha ao conectar com Google Maps. Chave inválida ou limite atingido.'}</p>
+        <button onClick={() => window.location.reload()} className="mt-8 px-6 py-3 bg-white/10 rounded-2xl text-[10px] uppercase font-black tracking-widest text-white/40">Tentar Novamente</button>
+    </div>
+  );
+
   if (!isLoaded || !validDriverCoords) return (
     <div className="absolute inset-0 bg-slate-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-pulse">
             <Icon name="radar" className="text-primary text-4xl" />
-            <p className="text-[10px] font-black text-primary uppercase tracking-widest">Sincronizando GPS...</p>
+            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em]">Calibrando Sinal GPS...</p>
         </div>
     </div>
   );
@@ -1516,6 +1532,9 @@ function App() {
                                         {activeMission.notes && <p className="mt-2 text-[10px] text-primary/60 border-l border-primary/20 pl-2 italic">Obs: {activeMission.notes}</p>}
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
                         {/* Seção 4: Botões de Ação */}
                         <div className="pt-4 space-y-4">
                             {/* Aceite -> No Local de Coleta */}
@@ -1606,7 +1625,7 @@ function App() {
                 )}
             </motion.div>
         );
-    };;
+    };
 
     const renderSOS = () => (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="fixed inset-0 z-[200] bg-red-950 flex flex-col items-center justify-center p-8 text-center">
