@@ -459,7 +459,7 @@ function App() {
             .eq('driver_id', driverId).order('created_at', { ascending: false }).limit(10)
             .then(({ data: orders, error: qErr }) => {
                 if (qErr) { console.error('Erro busca missão:', qErr.message); return; }
-                const activeOrder = orders?.find((o: any) => ['saiu_para_coleta', 'no_local', 'picked_up', 'a_caminho', 'em_rota', 'saiu_para_entrega', 'waiting_driver'].includes(o.status));
+                const activeOrder = orders?.find((o: any) => ['saiu_para_coleta', 'a_caminho_coleta', 'no_local', 'chegou_coleta', 'picked_up', 'a_caminho', 'em_rota', 'saiu_para_entrega', 'waiting_driver'].includes(o.status));
                 if (activeOrder) {
                     const mission: any = { 
                         ...activeOrder, 
@@ -672,9 +672,9 @@ function App() {
             const { data: realOrder, error: findError } = await supabase.from('orders_delivery').select('*').eq('id', targetId).single();
             if (findError || !realOrder || !['pendente', 'pronto', 'waiting_driver'].includes(realOrder.status)) { toastError('Pedido indisponível ou já aceito.'); setOrders(prev => prev.filter((o: any) => o.id !== order.id)); return; }
             if (!driverId) { toastError('Sessão expirada. Faça login novamente.'); return; }
-            const { error } = await supabase.from('orders_delivery').update({ status: 'saiu_para_coleta', driver_id: driverId }).eq('id', realOrder.id);
+            const { error } = await supabase.from('orders_delivery').update({ status: 'a_caminho_coleta', driver_id: driverId }).eq('id', realOrder.id);
             if (error) { toastError('Erro ao aceitar corrida.'); return; }
-            const mission = { ...order, ...realOrder, id: realOrder.id, realId: realOrder.id, status: 'saiu_para_coleta' };
+            const mission = { ...order, ...realOrder, id: realOrder.id, realId: realOrder.id, status: 'a_caminho_coleta' };
             setActiveMission(mission);
             localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
             setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
@@ -1343,11 +1343,14 @@ function App() {
         // Status Label & Color logic
         const getStatusDisplay = () => {
             switch(activeMission.status) {
-                case 'saiu_para_coleta': return { label: 'Indo retirar', color: 'text-blue-400', bg: 'bg-blue-400/10', icon: 'navigation' };
-                case 'no_local': return { label: 'No local de coleta', color: 'text-amber-400', bg: 'bg-amber-400/10', icon: 'location_on' };
+                case 'saiu_para_coleta':
+                case 'a_caminho_coleta': return { label: 'Indo retirar', color: 'text-blue-400', bg: 'bg-blue-400/10', icon: 'navigation' };
+                case 'no_local_coleta':
+                case 'chegou_coleta': return { label: 'No local de coleta', color: 'text-amber-400', bg: 'bg-amber-400/10', icon: 'location_on' };
                 case 'picked_up': return { label: 'Pedido coletado', color: 'text-emerald-400', bg: 'bg-emerald-400/10', icon: 'package_2' };
                 case 'a_caminho': 
                 case 'em_rota': return { label: 'Em rota de entrega', color: 'text-primary', bg: 'bg-primary/10', icon: 'moped' };
+                case 'no_local': return { label: 'No destino final', color: 'text-blue-400', bg: 'bg-blue-400/10', icon: 'person_pin_circle' };
                 default: return { label: 'Em andamento', color: 'text-white/40', bg: 'bg-white/5', icon: 'radar' };
             }
         };
@@ -1474,7 +1477,7 @@ function App() {
                                 <div className="absolute left-[11px] top-6 bottom-6 w-[2px] bg-gradient-to-b from-blue-500/20 via-primary/20 to-primary/40" />
                                 
                                 <div className="flex items-start gap-5 relative z-10">
-                                    <div className={`mt-1.5 size-6 rounded-full flex items-center justify-center shrink-0 ${['saiu_para_coleta', 'no_local'].includes(activeMission.status || '') ? 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)] ring-4 ring-blue-500/20' : 'bg-white/10'}`}>
+                                    <div className={`mt-1.5 size-6 rounded-full flex items-center justify-center shrink-0 ${['a_caminho_coleta', 'chegou_coleta', 'saiu_para_coleta', 'no_local_coleta'].includes(activeMission.status || '') ? 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)] ring-4 ring-blue-500/20' : 'bg-white/10'}`}>
                                         <Icon name="hospital" size={12} className="text-white" />
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -1482,7 +1485,7 @@ function App() {
                                         <p className="text-sm font-bold text-white/80 leading-tight">{activeMission.origin || activeMission.pickup_address}</p>
                                         
                                         {/* Status de Preparo do Lojista */}
-                                        {activeMission.preparation_status && ['saiu_para_coleta', 'no_local'].includes(activeMission.status || '') && (
+                                        {activeMission.preparation_status && ['a_caminho_coleta', 'chegou_coleta', 'saiu_para_coleta', 'no_local_coleta'].includes(activeMission.status || '') && (
                                             <div className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border shadow-lg ${
                                                 activeMission.preparation_status === 'pronto' 
                                                 ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 shadow-emerald-500/10' 
@@ -1504,7 +1507,7 @@ function App() {
                                 <div className="h-8" />
 
                                 <div className="flex items-start gap-5 relative z-10">
-                                    <div className={`mt-1.5 size-6 rounded-full flex items-center justify-center shrink-0 ${['picked_up', 'a_caminho', 'em_rota'].includes(activeMission.status || '') ? 'bg-primary shadow-[0_0_12px_rgba(255,217,0,0.5)] ring-4 ring-primary/20' : 'bg-white/10'}`}>
+                                    <div className={`mt-1.5 size-6 rounded-full flex items-center justify-center shrink-0 ${['picked_up', 'a_caminho', 'em_rota', 'no_local'].includes(activeMission.status || '') ? 'bg-primary shadow-[0_0_12px_rgba(255,217,0,0.5)] ring-4 ring-primary/20' : 'bg-white/10'}`}>
                                         <Icon name="location_on" size={12} className="text-slate-900" />
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -1513,23 +1516,20 @@ function App() {
                                         {activeMission.notes && <p className="mt-2 text-[10px] text-primary/60 border-l border-primary/20 pl-2 italic">Obs: {activeMission.notes}</p>}
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
                         {/* Seção 4: Botões de Ação */}
                         <div className="pt-4 space-y-4">
-                            {/* Aceite -> No Local */}
-                            {(activeMission.status === 'saiu_para_coleta' || ['confirmado', 'preparando'].includes(activeMission.status || '')) && (
+                            {/* Aceite -> No Local de Coleta */}
+                            {(['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando'].includes(activeMission.status || '')) && (
                                 <div className="space-y-4">
                                     <button 
-                                        onClick={() => handleUpdateStatus('no_local')} 
+                                        onClick={() => handleUpdateStatus('chegou_coleta')} 
                                         disabled={isAccepting}
                                         className="w-full h-18 bg-gradient-to-r from-blue-700 via-blue-600 to-blue-500 text-white font-black text-base uppercase tracking-widest rounded-3xl shadow-2xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-50 border border-white/10"
                                     >
                                         <div className="size-10 bg-white/20 rounded-xl flex items-center justify-center shadow-inner">
                                             <Icon name="location_on" size={24} />
                                         </div>
-                                        <span className="flex-1 text-center pr-10">Cheguei no Local</span>
+                                        <span className="flex-1 text-center pr-10">Cheguei na Coleta</span>
                                     </button>
 
                                     <button 
@@ -1545,8 +1545,8 @@ function App() {
                                 </div>
                             )}
 
-                            {/* No Local -> Coletado */}
-                            {(activeMission.status === 'no_local' || activeMission.status === 'pronto') && (
+                            {/* Chegou Coleta -> Coletado */}
+                            {(['chegou_coleta', 'no_local_coleta'].includes(activeMission.status || '') || activeMission.status === 'pronto') && (
                                 <button 
                                     onClick={() => handleUpdateStatus('picked_up')} 
                                     disabled={isAccepting}
@@ -1559,7 +1559,7 @@ function App() {
                                 </button>
                             )}
 
-                            {/* Coletado -> A Caminho */}
+                            {/* Coletado -> A Caminho / Em Rota */}
                             {activeMission.status === 'picked_up' && (
                                 <button 
                                     onClick={() => handleUpdateStatus('a_caminho')} 
@@ -1573,12 +1573,26 @@ function App() {
                                 </button>
                             )}
 
-                            {/* A Caminho -> Concluído */}
-                            {(activeMission.status === 'a_caminho' || activeMission.status === 'em_rota' || activeMission.status === 'saiu_para_entrega') && (
+                            {/* In Entrega -> No Destino */}
+                            {(activeMission.status === 'a_caminho' || activeMission.status === 'em_rota') && (
+                                <button 
+                                    onClick={() => handleUpdateStatus('no_local')} 
+                                    disabled={isAccepting}
+                                    className="w-full h-18 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400 text-white font-black text-base uppercase tracking-widest rounded-3xl shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-50 border border-white/10"
+                                >
+                                    <div className="size-10 bg-white/20 rounded-xl flex items-center justify-center shadow-inner">
+                                        <Icon name="person_pin_circle" size={24} />
+                                    </div>
+                                    <span className="flex-1 text-center pr-10">Tô no Destino</span>
+                                </button>
+                            )}
+
+                            {/* No Destino / Finalização -> Concluído */}
+                            {(activeMission.status === 'no_local' || activeMission.status === 'saiu_para_entrega') && (
                                 <button 
                                     onClick={() => handleUpdateStatus('concluido')} 
                                     disabled={isAccepting}
-                                    className="w-full h-20 bg-gradient-to-r from-primary via-yellow-400 to-yellow-300 text-slate-900 font-black text-lg uppercase tracking-tight rounded-3xl shadow-[0_20px_50px_rgba(255,215,0,0.3)] active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-50 border-t border-white/30"
+                                    className="w-full h-20 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-300 text-white font-black text-lg uppercase tracking-tight rounded-3xl shadow-[0_20px_50px_rgba(16,185,129,0.3)] active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-50 border-t border-white/30"
                                 >
                                     <div className="size-12 bg-white/30 rounded-2xl flex items-center justify-center shadow-md">
                                         <Icon name="check_circle" size={28} />
