@@ -19,7 +19,13 @@ export const CartView: React.FC<CartViewProps> = ({
   cart, setCart, handleClearCart, setSubView, navigateSubView, merchantProducts, merchantName, handleAddToCart,
   isIziBlack = false, iziCoinRate = 0, deliveryFee = 0
 }) => {
-  const subtotal: number = cart.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0);
+  const subtotal: number = cart.reduce((sum, item) => {
+    const basePrice = Number(item.price) || 0;
+    const addonsPrice = Array.isArray(item.addonDetails) 
+      ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0)
+      : 0;
+    return sum + basePrice + addonsPrice;
+  }, 0);
   const taxa: number = deliveryFee; 
   const total: number = subtotal + taxa;
   const getAddonDetails = (item: any) => Array.isArray(item.addonDetails) ? item.addonDetails : [];

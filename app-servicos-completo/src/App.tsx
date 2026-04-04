@@ -532,7 +532,6 @@ function App() {
   }, [user, authInitLoading]);
   useEffect(() => {
     if (!userId) return;
-
     const sub = supabase
       .channel("orders_tracking")
       .on(
@@ -542,99 +541,98 @@ function App() {
           const newOrder = payload.new as any;
           const oldOrder = payload.old as any;
           
-          if (newOrder.user_id !== userIdRef.current) return;
+          if (!newOrder || newOrder.user_id !== userIdRef.current) return;
 
-      // [Comentario Limpo pelo Sistema]
-          if (!oldOrder || (oldOrder && newOrder.status !== oldOrder.status)) {
-             fetchMyOrders(userIdRef.current!);
-          }
+          // Sempre atualizar a lista local para refletir no F5 ou navegações
+          if (userIdRef.current) fetchMyOrders(userIdRef.current);
 
-      // [Comentario Limpo pelo Sistema]
-          if (oldOrder && newOrder.status !== oldOrder.status) {
+          // Verificar transições de status para Toasts
+          const statusChanged = oldOrder && oldOrder.status && newOrder.status !== oldOrder.status;
+          
+          if (statusChanged || !oldOrder) {
             const statusMessages: Record<string, string> = {
               'novo': 'Pagamento aprovado! O lojista já recebeu seu pedido. ⚡',
               'pendente_pagamento': 'Aguardando confirmação do pagamento... 💳',
-              'pendente': 'O lojista recebeu seu pedido! ðŸ¥³',
-              'aceito': 'O estabelecimento aceitou seu pedido! ðŸ¥³',
+              'pendente': 'O lojista recebeu seu pedido! 🥳',
+              'aceito': 'O estabelecimento aceitou seu pedido! 🥳',
               'confirmado': 'Pedido confirmado! O preparo começou. ✅',
               'preparando': 'Seu pedido está sendo preparado com carinho! 🥗',
               'no_preparo': 'Seu pedido já está no preparo! 🥗',
               'waiting_driver': 'Pedido aceito! Buscando o melhor entregador para você. 🛵',
-              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. ðŸ“¦',
+              'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. 📦',
               'saiu_para_coleta': 'O motoboy aceitou e está indo retirar seu pedido! 🛵',
               'picked_up': 'Pedido coletado! O motoboy iniciou a entrega para você. 🚀',
               'a_caminho': 'Motoboy a caminho! Sua entrega está em rota. 🛵',
               'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! 🛵',
               'em_rota': 'Motoboy a caminho! Prepare-se para receber seu Izi. 🛵',
               'no_local': 'O motoboy chegou ao seu endereço! 🔔',
-              'concluido': 'Pedido entregue com sucesso! Bom apetite. âœ¨',
-              'cancelado': 'Ah não! Seu pedido foi cancelado. âš ï¸',
-              'recusado': 'Desculpe, o estabelecimento não pôde aceitar o pedido agora. âš ï¸'
+              'concluido': 'Pedido entregue com sucesso! Bom apetite. ✨',
+              'cancelado': 'Ah não! Seu pedido foi cancelado. ⚠️',
+              'recusado': 'Desculpe, o estabelecimento não pôde aceitar o pedido agora. ⚠️'
             };
 
             const msg = statusMessages[newOrder.status] || `Status do pedido atualizado: ${newOrder.status}`;
             showToast(msg, newOrder.status === 'cancelado' ? 'warning' : 'success');
+          }
 
-            // Se o pagamento lightning foi confirmado, fechar a tela de pagamento
-            if (newOrder.payment_status === 'paid' && subViewRef.current === "lightning_payment") {
+          // Monitoramento de Sucesso de Pagamento (Bitcoin / Pix / Geral)
+          const isPaid = newOrder.payment_status === 'paid' || (newOrder.status === 'novo' && (oldOrder?.status === 'pendente_pagamento' || !oldOrder));
+          
+          if (isPaid) {
+            const isPaymentSubView = ["lightning_payment", "pix_payment", "payment_processing"].includes(subViewRef.current);
+            if (isPaymentSubView) {
+              console.log("[REALTIME] Sucesso detectado para pedido:", newOrder.id);
+              clearCart(newOrder.id);
               setSubView("payment_success");
-            }
-
-            // Se o pagamento PIX ou outros foram aprovados (status 'novo')
-            if (newOrder.status === 'novo' && (subViewRef.current === "pix_payment" || subViewRef.current === "payment_processing")) {
-              setSubView("payment_success");
-              fetchMyOrders(userIdRef.current!);
-            }
-
-      // [Comentario Limpo pelo Sistema]
-            if (newOrder.status === 'concluido') {
-              setSelectedItem(newOrder);
-              
-              setTimeout(() => {
-                if (newOrder.service_type === 'subscription') {
-                  setShowIziBlackWelcome(true);
-                  setSubView("none");
-                } else {
-                  setSubView("order_feedback");
-                }
-              }, 2000);
-            }
-
-      // [Comentario Limpo pelo Sistema]
-            if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
-              showToast("Loja aceitou seu pedido! ðŸ¥³", "success");
-              setSelectedItem(newOrder); 
-              setTimeout(() => setSubView("active_order"), 1000);
-            }
-            if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
-              showToast("Seu pedido foi recusado.", "warning");
-              setSubView("none");
-              fetchMyOrders(userIdRef.current!);
-            }
-            if (subViewRef.current === "waiting_driver" && 
-                ["a_caminho", "aceito", "confirmado", "em_rota", "no_local", "picked_up", "saiu_para_entrega"].includes(newOrder.status)) {
-              setSelectedItem(newOrder);
-              setTimeout(() => setSubView("active_order"), 1500);
-            }
-            if (subViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {
-              setSubView("none");
-              fetchMyOrders(userIdRef.current!);
-            }
-
-            if (selectedItemRef.current?.id === newOrder.id || !selectedItemRef.current) {
-              setSelectedItem(newOrder);
             }
           }
-          
-          if (userIdRef.current) fetchMyOrders(userIdRef.current);
-        },
+
+          // Feedback de conclusão
+          if (newOrder.status === 'concluido' && (oldOrder?.status !== 'concluido' || !oldOrder)) {
+            setSelectedItem(newOrder);
+            setTimeout(() => {
+              if (newOrder.service_type === 'subscription') {
+                setShowIziBlackWelcome(true);
+                setSubView("none");
+              } else {
+                setSubView("order_feedback");
+              }
+            }, 2000);
+          }
+
+          // Transições de estados de espera
+          if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
+            showToast("Loja aceitou seu pedido! 🥳", "success");
+            setSelectedItem(newOrder); 
+            setTimeout(() => setSubView("active_order"), 1000);
+          }
+
+          if (subViewRef.current === "waiting_merchant" && newOrder.status === "cancelado") {
+            showToast("Seu pedido foi recusado.", "warning");
+            setSubView("none");
+          }
+
+          if (subViewRef.current === "waiting_driver" && ["a_caminho", "em_rota", "no_local", "picked_up", "saiu_para_entrega"].includes(newOrder.status)) {
+            setSelectedItem(newOrder);
+            setTimeout(() => setSubView("active_order"), 1500);
+          }
+
+          if (subViewRef.current === "waiting_driver" && newOrder.status === "cancelado") {
+            setSubView("none");
+          }
+
+          // Atualizar item selecionado se for o pedido atual sendo visualizado
+          if (selectedItemRef.current?.id === newOrder.id) {
+            setSelectedItem(newOrder);
+          }
+        }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(sub);
     };
-   }, [userId, subView]);
+  }, [userId, subView]);
 
   useEffect(() => {
     if (!userId) return;
@@ -648,7 +646,7 @@ function App() {
         () => {
           console.log("[SYNC] Perfil do usuário atualizado, sincronizando...");
           fetchWalletBalance(userId);
-          fetchCartData(userId);
+          // O fetchCartData(userId) foi removido daqui para evitar 'ressurreição' da sacola após limpeza
         }
       )
       .subscribe();
@@ -1126,9 +1124,11 @@ function App() {
     if (userId) {
       await supabase.from("users_delivery").update({ 
         izi_coins: finalCoins,
-        user_xp: (userXP + earnedXP) 
+        user_xp: (userXP + earnedXP),
+        cart_data: []
       }).eq("id", userId);
       
+      fetchCartData(userId); // Refetch to sync state
       fetchMyOrders(userId);
     }
   };
@@ -1472,7 +1472,13 @@ function App() {
     
     setIsUsingCoins(useCoins);
 
-    const subtotal = cart.reduce((a, b) => a + (Number(b.price) || 0), 0);
+    const subtotal = cart.reduce((sum, item) => {
+      const basePrice = Number(item.price) || 0;
+      const addonsPrice = Array.isArray(item.addonDetails) 
+        ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0)
+        : 0;
+      return sum + basePrice + addonsPrice;
+    }, 0);
     const couponDiscount = appliedCoupon
       ? appliedCoupon.discount_type === "fixed"
         ? appliedCoupon.discount_value
@@ -1503,6 +1509,12 @@ function App() {
     };
 
     console.log("[DIAG] handlePlaceOrder acionado:", { paymentMethod, total, shopId });
+
+    if (total <= 0) {
+       toastError("O valor total do pedido não pode ser R$ 0,00.");
+       setIsLoading(false);
+       return;
+    }
 
     try {
       setIsLoading(true);
@@ -1885,6 +1897,13 @@ const navigateSubView = (target: string) => {
       }
     }
   }, [myOrders, subView, selectedItem]);
+  const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
+  const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [couponInput, setCouponInput] = useState("");
+  const [, setCouponError] = useState("");
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+
   const [cart, setCart] = useState<any[]>(() => {
     try {
       const saved = localStorage.getItem("izi_cart");
@@ -1959,12 +1978,6 @@ const navigateSubView = (target: string) => {
   const [walletBalance, setWalletBalance] = useState(0);
   const [driverPos, setDriverPos] = useState({ lat: -23.5505, lng: -46.6333 });
   const [adIndex, setAdIndex] = useState(0);
-  const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
-  const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-  const [couponInput, setCouponInput] = useState("");
-  const [, setCouponError] = useState("");
-  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [beverageBanners, setBeverageBanners] = useState<any[]>([]);
   const [bevBannerIndex, setBevBannerIndex] = useState(0);
   useEffect(() => {
@@ -6706,7 +6719,7 @@ const navigateSubView = (target: string) => {
                     cart={cart} 
                     setCart={setCart}
                     handleClearCart={handleClearCart}
-                    setSubView={(v: any) => setSubView(v)} 
+                    setSubView={setSubView} 
                     navigateSubView={navigateSubView}
                     merchantProducts={selectedShop?.products || []}
                     merchantName={selectedShop?.name || ""}
