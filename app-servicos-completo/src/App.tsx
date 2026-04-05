@@ -2169,7 +2169,7 @@ const navigateSubView = (target: string) => {
         const mins = Math.round(secs / 60);
         const durationText = mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60}min` : `${mins} min`;
         const distText = distKm < 1 ? `${Math.round(distKm*1000)} m` : `${distKm.toFixed(1)} km`;
-        setRouteDistance(`${distText} â€¢ ${durationText}`);
+        setRouteDistance(`${distText} • ${durationText}`);
         setDistanceValueKm(distKm);
         if (route.polyline?.encodedPolyline) {
           setRoutePolyline(route.polyline.encodedPolyline);
@@ -2188,11 +2188,11 @@ const navigateSubView = (target: string) => {
           const logistica_km   = parseFloat(String(bv.logistica_km))   || 8.0;
 
           const newPrices = {
-            mototaxi:   parseFloat((Math.max(mototaxi_min,   mototaxi_km   * distKm * surge)).toFixed(2)),
-            carro:      parseFloat((Math.max(carro_min,       carro_km      * distKm * surge)).toFixed(2)),
-            van:        parseFloat((Math.max(van_min,         van_km        * distKm * surge)).toFixed(2)),
-            utilitario: parseFloat((Math.max(utilitario_min,  utilitario_km * distKm * surge)).toFixed(2)),
-            logistica:  parseFloat((Math.max(logistica_min,   logistica_km  * distKm * surge)).toFixed(2)),
+            mototaxi:   parseFloat((mototaxi_min   + (mototaxi_km   * distKm * surge)).toFixed(2)),
+            carro:      parseFloat((carro_min      + (carro_km      * distKm * surge)).toFixed(2)),
+            van:        parseFloat((van_min        + (van_km        * distKm * surge)).toFixed(2)),
+            utilitario: parseFloat((utilitario_min + (utilitario_km * distKm * surge)).toFixed(2)),
+            logistica:  parseFloat((logistica_min  + (logistica_km  * distKm * surge)).toFixed(2)),
           };
           setDistancePrices(newPrices);
           // Atualizar estPrice no transitData para uso no pagamento
@@ -2244,12 +2244,13 @@ const navigateSubView = (target: string) => {
     
       // [Comentario Limpo pelo Sistema]
     let finalPrice = 0;
+    const surgeMultiplier = bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0;
+
     if (transitData.type === 'logistica' || transitData.type === 'frete') {
-       const bv = marketConditions.settings.baseValues;
        finalPrice = calculateFreightPrice({
           baseFare: parseFloat(String(bv.logistica_min || 45)),
           distanceInKm: distanceValueKm || 1,
-          distanceRate: parseFloat(String(bv.logistica_km || 3)),
+          distanceRate: parseFloat(String(bv.logistica_km || 8)) * surgeMultiplier,
           helperCount: transitData.helpers || 0,
           helperRate: parseFloat(String(bv.logistica_helper || 35)),
           hasStairs: transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination,
@@ -2257,18 +2258,20 @@ const navigateSubView = (target: string) => {
        }).totalPrice;
     } else if (transitData.type === 'van') {
        finalPrice = calculateVanPrice({
-          baseFare: 80,
+          baseFare: parseFloat(String(bv.van_min || 35)),
           distanceInKm: distanceValueKm || 1,
-          distanceRate: 3.5,
-          stopCount: transitData.stops.length,
-          stopRate: 15,
+          distanceRate: parseFloat(String(bv.van_km || 8)) * surgeMultiplier,
+          stopCount: transitData.stops?.length || 0,
+          stopRate: 15, // Mover para settings se necessário
           isDaily: transitData.tripType === 'hourly',
           hours: 4,
           hourlyRate: 45
        }).totalPrice;
     } else {
-       const rawP = distancePrices[transitData.type] || calculateDynamicPrice(basePrices[transitData.type] || 6);
-       finalPrice = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || 6) : rawP;
+       // Para outros tipos (mototaxi, carro, utilitario), usamos o preço já calculado no preview
+       // que agora também é aditivo por padrão.
+       const rawP = distancePrices[transitData.type];
+       finalPrice = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || 6.90) : rawP;
     }
 
       // [Comentario Limpo pelo Sistema]
@@ -2376,7 +2379,8 @@ const navigateSubView = (target: string) => {
 
       // [Comentario Limpo pelo Sistema]
   useEffect(() => {
-    if ((subView === "taxi_wizard" || subView === "transit_selection") && transitData.origin && transitData.destination) {
+    const includedViews = ["taxi_wizard", "transit_selection", "freight_wizard", "van_wizard", "shipping_details"];
+    if (includedViews.includes(subView) && transitData.origin && transitData.destination) {
       setIsCalculatingPrice(true);
       setDistancePrices({});
       const timer = setTimeout(() => {
