@@ -59,13 +59,32 @@ export const TaxiWizard: React.FC<TaxiWizardProps> = ({
       </div>
 
       <header className="relative z-50 flex items-center justify-between px-6 pt-10">
-        <motion.button 
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setSubView("none")} 
-          className="size-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-yellow-400 shadow-[4px_4px_10px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.05)]"
-        >
-          <Icon name="arrow_back" />
-        </motion.button>
+        <div className="flex items-center gap-4">
+          <motion.button 
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              if (mobilityStep > 1) {
+                setMobilityStep(mobilityStep - 1);
+              } else {
+                setSubView("none");
+              }
+            }} 
+            className="size-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-yellow-400 shadow-[4px_4px_10px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.05)]"
+          >
+            <Icon name="arrow_back" />
+          </motion.button>
+          {mobilityStep > 1 && (
+            <motion.button 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setSubView("none")} 
+              className="px-4 py-3 rounded-2xl bg-zinc-900/50 border border-white/5 flex items-center justify-center text-zinc-500 text-[10px] font-black uppercase tracking-widest shadow-lg"
+            >
+              Sair
+            </motion.button>
+          )}
+        </div>
         <div className="text-right">
           <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1 uppercase">
             {transitData.type === 'mototaxi' ? "MotoTáxi" : "Motorista Particular"}
@@ -74,7 +93,10 @@ export const TaxiWizard: React.FC<TaxiWizardProps> = ({
         </div>
       </header>
 
-      <main className="relative z-40 mt-auto bg-zinc-950/90 backdrop-blur-3xl border-t border-white/5 flex flex-col h-[65vh] rounded-t-[45px] shadow-[0_-25px_50px_rgba(0,0,0,0.6)]">
+      <main className="relative z-40 mt-auto bg-zinc-950/90 backdrop-blur-3xl border-t border-white/5 flex flex-col h-[70vh] rounded-t-[45px] shadow-[0_-25px_50px_rgba(0,0,0,0.6)]">
+        <div className="flex justify-center pt-4 pb-2">
+          <div className="w-12 h-1.5 bg-white/10 rounded-full" />
+        </div>
         <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
           {mobilityStep === 1 && (
             <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
