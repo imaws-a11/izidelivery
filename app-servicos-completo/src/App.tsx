@@ -853,22 +853,34 @@ function App() {
   };
 
   const registerBenefitUsage = async (sourceType: "coupon" | "flash_offer", sourceId: string, orderId?: string) => {
-    const trackedCpf = getBenefitTrackingCpf();
-    const { error } = await supabase
-      .from("benefit_redemptions_delivery")
-      .insert({
-        source_type: sourceType,
-        source_id: sourceId,
-        user_id: userId || null,
-        cpf: trackedCpf || null,
-        order_id: orderId || null,
-      });
+    try {
+      const trackedCpf = getBenefitTrackingCpf();
+      const { error } = await supabase
+        .from("benefit_redemptions_delivery")
+        .insert({
+          source_type: sourceType,
+          source_id: sourceId,
+          user_id: userId || null,
+          cpf: trackedCpf || null,
+          order_id: orderId || null,
+        });
 
-    if (error) throw error;
+      if (error) {
+        console.warn("[BENEFIT] Erro ao registrar uso:", error.message);
+      }
+    } catch (e) {
+      console.warn("[BENEFIT] Falha crítica ao registrar uso:", e);
+    }
   };
 
   const ensureCartBenefitsAreAvailable = async () => {
-    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+    const subtotal = cart.reduce((sum, item) => {
+      const basePrice = Number(item.price) || 0;
+      const addonsPrice = Array.isArray(item.addonDetails) 
+        ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0)
+        : 0;
+      return sum + basePrice + addonsPrice;
+    }, 0);
 
     if (appliedCoupon) {
       const couponError = await validateCouponRules(appliedCoupon, subtotal);
@@ -928,7 +940,13 @@ function App() {
         return;
       }
 
-      const subtotal = cart.reduce((acc, item) => acc + (item.price || 0), 0);
+      const subtotal = cart.reduce((sum, item) => {
+        const basePrice = Number(item.price) || 0;
+        const addonsPrice = Array.isArray(item.addonDetails) 
+          ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0)
+          : 0;
+        return sum + basePrice + addonsPrice;
+      }, 0);
       const couponError = await validateCouponRules(data, subtotal);
       if (couponError) {
         setCouponError(couponError);
@@ -1480,7 +1498,7 @@ function App() {
     const subtotal = cart.reduce((sum, item) => {
       const basePrice = Number(item.price) || 0;
       const addonsPrice = Array.isArray(item.addonDetails) 
-        ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0)
+        ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0)
         : 0;
       return sum + basePrice + addonsPrice;
     }, 0);
@@ -3479,8 +3497,8 @@ const navigateSubView = (target: string) => {
       pending: "Aguardando", pendente: "Aguardando", novo: "Processando",
       waiting_driver: "Buscando Condutor",
       aceito: "Confirmado", confirmado: "Confirmado", preparando: "Em Preparação", pronto: "Pronto para Coleta",
-      a_caminho: "Em Rota de Coleta", at_pickup: "No Local",
-      picked_up: "Coletado / Em Viagem", 
+      a_caminho: "Em Rota", a_caminho_coleta: "Motorista a Caminho", chegou_coleta: "Motorista no Local de Coleta", 
+      no_local: "Motorista no seu Local", picked_up: "Coletado / Em Viagem", 
       em_rota: "A Caminho do Destino", saiu_para_entrega: "Saindo para Entrega",
       concluido: "Concluído", cancelado: "Cancelado",
     };
@@ -5749,7 +5767,13 @@ const navigateSubView = (target: string) => {
 
         <div className="fixed bottom-10 left-8 right-8 z-[80]">
           <button onClick={() => {
-            const items = Array.from({ length: tempQuantity }, (_, i) => ({ ...selectedItem, cartId: selectedItem.id + "-" + Date.now() + "-" + i }));
+            const details = buildCartItemDetails(selectedItem, selectedOptions);
+            const items = Array.from({ length: tempQuantity }, (_, i) => ({ 
+              ...selectedItem, 
+              ...details,
+              timestamp: Date.now(),
+              cartId: selectedItem.id + "-" + Date.now() + "-" + i 
+            }));
             setCart([...cart, ...items]);
             handleBack();
             showToast("Item adicionado!", "success");

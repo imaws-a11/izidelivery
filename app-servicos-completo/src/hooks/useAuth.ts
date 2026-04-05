@@ -16,7 +16,16 @@ export const useAuth = () => {
 
   useEffect(() => {
     // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error("Erro ao recuperar sessão inicial (auth):", error.message);
+        if (error.message.includes("refresh_token_not_found") || error.message.includes("Invalid Refresh Token")) {
+          // Limpa estado local se a sessão for fatalmente inválida
+          setUser(null);
+          setUserId(null);
+          return;
+        }
+      }
       const u = session?.user || null;
       setUser(u);
       setUserId(u ? u.id : null);

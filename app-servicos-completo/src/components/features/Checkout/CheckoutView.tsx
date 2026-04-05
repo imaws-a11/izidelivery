@@ -33,7 +33,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   appliedCoupon,
   walletTransactions,
   savedCards,
-  userId,
   userLocation,
   paymentMethod,
   setPaymentMethod,
@@ -46,7 +45,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   handleApplyCoupon,
   setAppliedCoupon,
   handlePlaceOrder,
-  setPaymentsOrigin,
   setSubView,
   iziCoins = 0,
   iziCoinValue = 0.01,
@@ -55,8 +53,19 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   isIziBlack = false,
 }) => {
   const [useCoins, setUseCoins] = React.useState(false);
-  const subtotal = cart.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0);
+  const subtotal = cart.reduce((sum, item) => {
+    const basePrice = Number(item.price) || 0;
+    const addonsPrice = Array.isArray(item.addonDetails) 
+      ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0)
+      : 0;
+    return sum + basePrice + addonsPrice;
+  }, 0);
   const getAddonDetails = (item: any) => Array.isArray(item.addonDetails) ? item.addonDetails : [];
+  const getItemTotal = (item: any) => {
+    const basePrice = Number(item.price) || 0;
+    const addonsPrice = getAddonDetails(item).reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0);
+    return basePrice + addonsPrice;
+  };
   const couponDiscount = appliedCoupon
     ? appliedCoupon.discount_type === "fixed"
       ? appliedCoupon.discount_value
@@ -292,7 +301,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                     )}
                   </div>
                   <div className="text-right">
-                    <p className="text-white font-black text-xs">R$ {Number(item.price || 0).toFixed(2).replace(".", ",")}</p>
+                    <p className="text-white font-black text-xs">R$ {getItemTotal(item).toFixed(2).replace(".", ",")}</p>
                   </div>
                 </div>
               ))}
