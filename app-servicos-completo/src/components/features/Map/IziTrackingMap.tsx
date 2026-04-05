@@ -56,30 +56,46 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
     }
   }, [path]);
 
+  const [isFollowing, setIsFollowing] = useState(true);
+
   // Auto-fit bounds quando o path muda dinamicamente
   useEffect(() => {
     if (mapRef.current && path.length > 1) {
       const bounds = new google.maps.LatLngBounds();
       path.forEach(p => bounds.extend(p));
-      mapRef.current.fitBounds(bounds, { top: 80, bottom: 80, right: 30, left: 30 });
+      mapRef.current.fitBounds(bounds, { top: 120, bottom: 250, right: 50, left: 50 });
+      setIsFollowing(false); // Quando ajustamos o zoom para a rota toda, paramos de seguir o ponto fixo
     }
   }, [path]);
+
+  // Seguir o motorista ou usuário suavemente
+  useEffect(() => {
+    if (isFollowing && mapRef.current) {
+        const target = driverLoc || userLoc;
+        if (target) {
+            mapRef.current.panTo(target);
+        }
+    }
+  }, [driverLoc, userLoc, isFollowing]);
 
   const onUnmount = useCallback(() => {
     mapRef.current = null;
   }, []);
 
   const handleCenterUser = () => {
+    setIsLocating(true);
+    setIsFollowing(true);
+    
     if (onMyLocationClick) {
-      setIsLocating(true);
       onMyLocationClick();
-      setTimeout(() => setIsLocating(false), 2000);
     }
     
     if (userLoc && mapRef.current) {
       mapRef.current.panTo(userLoc);
       mapRef.current.setZoom(16);
     }
+    
+    setTimeout(() => setIsLocating(false), 1500);
   };
 
   // Fallback quando a API falha
@@ -117,22 +133,24 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
     );
   }
 
-  const center = driverLoc ?? userLoc ?? { lat: -23.5505, lng: -46.6333 };
+  const initialCenter = driverLoc ?? userLoc ?? { lat: -23.5505, lng: -46.6333 };
 
   return (
     <div className="w-full h-full relative z-0 overflow-hidden rounded-[inherit]">
       <GoogleMap
         mapContainerStyle={{ width: '100%', height: '100%' }}
-        center={center}
-        zoom={path.length > 0 ? undefined : 15}
+        center={initialCenter}
+        zoom={path.length > 0 ? 14 : 15}
         onLoad={onLoad}
         onUnmount={onUnmount}
+        onDragStart={() => setIsFollowing(false)} // PARA DE SEGUIR QUANDO O USUÁRIO ARRASTA
         options={{
           disableDefaultUI: true,
           zoomControl: false,
           gestureHandling: 'greedy',
           styles: WAZE_CLEAN_STYLE,
-          backgroundColor: '#f5f5f5'
+          backgroundColor: '#f5f5f5',
+          clickableIcons: false
         }}
       >
         {/* ROTA AMARELA ESTILO IZI/WAZE */}

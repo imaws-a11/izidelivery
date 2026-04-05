@@ -560,7 +560,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </div>
                 <div className="flex flex-col items-end">
                    <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-3 py-1.5 rounded-full border border-yellow-400/20">
-                     {activeOrder.status === 'novo' ? "Aprovado" : activeOrder.status === 'waiting_merchant' ? "Aguardando Loja" : activeOrder.status === 'preparando' ? "No Preparo" : activeOrder.status === 'saiu_para_entrega' ? "À Caminho" : activeOrder.status}
+                     {activeOrder.status === 'novo' ? "Aprovado" : 
+                      activeOrder.status === 'waiting_merchant' ? "Aguardando Loja" : 
+                      activeOrder.status === 'preparando' ? "No Preparo" : 
+                      activeOrder.status === 'a_caminho_coleta' ? "Motorista a Caminho" :
+                      activeOrder.status === 'chegou_coleta' ? "Entregador na Loja" :
+                      activeOrder.status === 'saiu_para_entrega' ? "Em Trânsito" : 
+                      activeOrder.status === 'no_local' ? "No seu Local" :
+                      activeOrder.status}
                    </span>
                 </div>
               </div>

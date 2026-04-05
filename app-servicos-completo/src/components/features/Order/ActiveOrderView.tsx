@@ -76,7 +76,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
         },
         {
           id: "aceito_ent",
-          label: "Entregador a caminho da coleta",
+          label: "Buscando o Pedido",
           icon: "moped",
           status: [
             "a_caminho_coleta", "saiu_para_coleta", "chegou_coleta", "picked_up", "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
@@ -98,6 +98,12 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
             "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
           ],
         },
+        {
+          id: "no_local",
+          label: "No seu Endereço",
+          icon: "location_home",
+          status: ["no_local", "concluido"],
+        },
         { id: "entregue", label: "Entregue", icon: "verified", status: ["concluido"] },
       ];
 
@@ -113,7 +119,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
     half: { y: "50%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
     expanded: { y: "15%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } }
   };
-  const [sheetState, setSheetState] = React.useState<"collapsed" | "half" | "expanded">("half");
+  const [sheetState, setSheetState] = React.useState<"collapsed" | "half" | "expanded">("collapsed");
 
   const handleDragEnd = (_: any, info: any) => {
     if (info.offset.y > 100) {
