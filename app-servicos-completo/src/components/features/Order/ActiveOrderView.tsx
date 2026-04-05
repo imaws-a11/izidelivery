@@ -330,14 +330,17 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
                       ? selectedItem.driver_name || "Entregador Izi"
                       : selectedItem.merchant_name || "Estabelecimento"}
                   </h4>
-                  <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest opacity-80">
-                    {selectedItem.driver_id ? "Entregador Parceiro" : "Protocolo Izi"} #
-                    {String(selectedItem.id).slice(-6)}
+                  <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest opacity-80">
+                    {selectedItem.driver_id ? "Sua Entrega" : "Seu Pedido"}
                   </p>
                 </div>
               </div>
-              <button onClick={() => setSubView("order_support")} className="size-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 active:scale-90 transition-all">
-                <Icon name="support_agent" size={18} className="text-zinc-500" />
+              <button 
+                onClick={() => setSubView("order_support")} 
+                className="h-12 px-4 rounded-2xl bg-yellow-400 flex items-center gap-2 shadow-[4px_4px_10px_rgba(250,204,21,0.2),inset_2px_2px_4px_rgba(255,255,255,0.4)] active:scale-95 transition-all group"
+              >
+                <Icon name="support_agent" size={20} className="text-black group-hover:rotate-12 transition-transform" />
+                <span className="text-[10px] font-black text-black uppercase tracking-wider">Suporte</span>
               </button>
             </div>
 
