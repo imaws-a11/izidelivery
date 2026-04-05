@@ -2247,22 +2247,42 @@ const navigateSubView = (target: string) => {
     const surgeMultiplier = bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0;
 
     if (transitData.type === 'logistica' || transitData.type === 'frete') {
-       const vehicleMultipliers: Record<string, number> = {
-         "Fiorino": 1.0,
-         "Caminhonete": 1.25,
-         "Caminhão Baú Pequeno": 1.6,
-         "Caminhão Baú Médio": 2.1,
-         "Caminhão Baú Grande": 2.8,
-         "Caminhão Aberto": 1.8
+       const vehicleConfigs: Record<string, { min: string, km: string }> = {
+         "Fiorino": { min: 'fiorino_min', km: 'fiorino_km' },
+         "Caminhonete": { min: 'caminhonete_min', km: 'caminhonete_km' },
+         "Caminhão Baú Pequeno": { min: 'bau_p_min', km: 'bau_p_km' },
+         "Caminhão Baú Médio": { min: 'bau_m_min', km: 'bau_m_km' },
+         "Caminhão Baú Grande": { min: 'bau_g_min', km: 'bau_g_km' },
+         "Caminhão Aberto": { min: 'aberto_min', km: 'aberto_km' }
        };
-       const categoryMult = vehicleMultipliers[transitData.vehicleCategory] || 1.0;
+
+       const configKeys = vehicleConfigs[transitData.vehicleCategory];
+       let baseFare = parseFloat(String(bv.logistica_min || 45));
+       let distanceRate = parseFloat(String(bv.logistica_km || 4.5));
+
+       if (configKeys && bv[configKeys.min] && parseFloat(String(bv[configKeys.min])) > 0) {
+          baseFare = parseFloat(String(bv[configKeys.min]));
+          distanceRate = parseFloat(String(bv[configKeys.km]));
+       } else {
+          const vehicleMultipliers: Record<string, number> = {
+            "Fiorino": 1.0,
+            "Caminhonete": 1.25,
+            "Caminhão Baú Pequeno": 1.6,
+            "Caminhão Baú Médio": 2.2,
+            "Caminhão Baú Grande": 3.5,
+            "Caminhão Aberto": 1.9,
+          };
+          const multiplier = vehicleMultipliers[transitData.vehicleCategory] || 1.0;
+          baseFare *= multiplier;
+          distanceRate *= multiplier;
+       }
 
        finalPrice = calculateFreightPrice({
-          baseFare: parseFloat(String(bv.logistica_min || 45)) * categoryMult,
+          baseFare: baseFare * surgeMultiplier,
           distanceInKm: distanceValueKm || 1,
-          distanceRate: parseFloat(String(bv.logistica_km || 8)) * surgeMultiplier * categoryMult,
+          distanceRate: distanceRate * surgeMultiplier,
           helperCount: transitData.helpers || 0,
-          helperRate: parseFloat(String(bv.logistica_helper || 35)),
+          helperRate: parseFloat(String(bv.logistica_helper || 50)),
           hasStairs: transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination,
           stairsFee: parseFloat(String(bv.logistica_stairs || 30))
        }).totalPrice;

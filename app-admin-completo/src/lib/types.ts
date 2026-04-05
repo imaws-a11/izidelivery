@@ -285,6 +285,19 @@ export interface DynamicRatesState {
     logistica_km: string;
     logistica_stairs: string;
     logistica_helper: string;
+    // Granular Logistics/Freight categories
+    fiorino_min: string;
+    fiorino_km: string;
+    caminhonete_min: string;
+    caminhonete_km: string;
+    bau_p_min: string;
+    bau_p_km: string;
+    bau_m_min: string;
+    bau_m_km: string;
+    bau_g_min: string;
+    bau_g_km: string;
+    aberto_min: string;
+    aberto_km: string;
     isDynamicActive: boolean;
   };
   flowControl: {
