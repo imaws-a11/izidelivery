@@ -279,6 +279,8 @@ export interface DynamicRatesState {
     van_km: string;
     utilitario_min: string;
     utilitario_km: string;
+    logistica_min: string;
+    logistica_km: string;
     isDynamicActive: boolean;
   };
   flowControl: {

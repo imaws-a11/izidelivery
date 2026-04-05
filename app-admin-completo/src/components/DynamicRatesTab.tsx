@@ -12,84 +12,148 @@ export default function DynamicRatesTab() {
     fixedGridCenter, setFixedGridCenter, selectedHexagons, setSelectedHexagons, 
     hexGrid, getHexPath, isLoaded, mapsLoadError, handleAddPeakRule, 
     handleRemovePeakRule, handleAddZone, handleRemoveZone,
-    fetchDynamicRates, saveDynamicRates, saveSpecificRateMetadata, stats, allOrders
+    fetchDynamicRates, saveDynamicRates, saveSpecificRateMetadata, stats, allOrders,
+    isSaving
   } = useAdmin();
 
-  const [isSaving, setIsSaving] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
 
   return (
     <>
-      {/* Dynamic Rates Pro Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 bg-white dark:bg-slate-900 p-10 rounded-[48px] border border-slate-100 dark:border-slate-800 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 -mr-32 -mt-32 rounded-full blur-3xl"></div>
-        <div className="flex flex-col gap-2 relative z-10">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/20">Motor de Preços v4.0</span>
+      {/* Header de Comando Financeiro */}
+      <div ref={headerRef} className="flex flex-col lg:flex-row lg:items-center justify-between gap-10 bg-white dark:bg-slate-900 p-12 rounded-[56px] border border-slate-100 dark:border-slate-800 shadow-2xl relative overflow-hidden group">
+        {/* Camada de Gradiente Decorativo */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full -mr-64 -mt-64 blur-[120px] pointer-events-none group-hover:bg-primary/10 transition-all duration-700"></div>
+        
+        <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+          <div className="size-20 rounded-[35px] bg-primary flex items-center justify-center shadow-[0_20px_50px_rgba(255,217,0,0.4)] group-hover:rotate-6 transition-all duration-500">
+             <span className="material-symbols-outlined text-white text-4xl font-black">finance_chip</span>
           </div>
-          <h1 className="text-4xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">Gestão de Taxas Dinâmicas</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-lg font-medium max-w-2xl">Refine a economia do seu marketplace ajustando multiplicadores em tempo real para equilibrar oferta e demanda.</p>
+          <div className="text-center md:text-left space-y-2">
+            <div className="flex items-center justify-center md:justify-start gap-4">
+               <h1 className="text-4xl font-black text-slate-900 dark:text-white leading-tight tracking-tighter italic">Gestão de Taxas</h1>
+               <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase tracking-[0.2em] rounded-full flex items-center gap-2">
+                  <div className="size-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                  Operação Ativa
+               </span>
+            </div>
+            <p className="text-slate-500 dark:text-slate-400 text-lg font-medium max-w-xl leading-relaxed">
+               Configure multiplicadores surge, preços base e zonas de demanda para otimizar o equilíbrio da plataforma.
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-4 relative z-10">
+
+        <div className="flex items-center gap-6 relative z-10 self-center lg:self-center">
           <button
-            onClick={() => fetchDynamicRates()}
-            className="group flex items-center justify-center gap-3 px-8 h-16 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-[28px] font-black text-xs uppercase tracking-[0.2em] hover:bg-slate-200 transition-all"
-          >
-            <span className="material-symbols-outlined transition-transform group-hover:rotate-180">restart_alt</span>
-            Descartar
-          </button>
-          <button
+            disabled={isSaving}
             onClick={saveDynamicRates}
-            className="flex items-center justify-center gap-3 px-12 h-16 bg-primary text-slate-900 rounded-[28px] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-primary/30 hover:scale-105 active:scale-95 transition-all"
+            className={`group/btn flex items-center justify-center gap-4 px-14 h-20 rounded-[35px] font-black text-xs uppercase tracking-[0.3em] shadow-2xl transition-all duration-500 relative overflow-hidden ${
+              isSaving 
+              ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed scale-95' 
+              : 'bg-primary text-slate-900 hover:scale-105 active:scale-95 hover:shadow-primary/40'
+            }`}
           >
-            <span className="material-symbols-outlined">verified</span>
-            Publicar Alterações
+            {isSaving ? (
+              <>
+                <div className="size-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+                Publicando...
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-xl transition-transform group-hover/btn:translate-y-[-3px]">rocket_launch</span>
+                Publicar Alterações
+              </>
+            )}
+            
+            {/* Brilho interno no hover */}
+            {!isSaving && <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>}
           </button>
         </div>
       </div>
 
       {/* Market Pulse & Quick Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-10">
-        <div className="lg:col-span-2 bg-slate-900 rounded-[48px] p-10 text-white relative overflow-hidden flex flex-col justify-between shadow-2xl">
-          <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(circle_at_50%_50%,#ffd900,transparent_70%)]"></div>
-          <div className="flex justify-between items-start relative z-10">
-            <div>
-              <h3 className="text-xl font-black uppercase tracking-widest text-primary mb-1">Pulso do Mercado</h3>
-              <p className="text-slate-400 text-sm font-bold">Equilíbrio da Operação em Tempo Real</p>
-            </div>
-            <div className="flex items-center gap-2 bg-white/5 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
-              <div className="size-2 rounded-full bg-emerald-500 animate-pulse"></div>
-              <span className="text-[10px] font-black uppercase tracking-widest">Sincronizado</span>
-            </div>
-          </div>
+        <div className="lg:col-span-2 bg-slate-950 rounded-[48px] p-10 text-white relative overflow-hidden flex flex-col justify-between shadow-2xl border border-white/5 group">
+           {/* Background decorativo */}
+           <div className="absolute top-0 right-0 w-96 h-96 bg-primary/20 -mr-48 -mt-48 rounded-full blur-[120px] transition-all group-hover:bg-primary/30"></div>
+           <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 -ml-32 -mb-32 rounded-full blur-[100px]"></div>
+           
+           <div className="flex flex-col sm:flex-row justify-between items-start gap-6 relative z-10">
+              <div className="space-y-4">
+                 <div className="flex items-center gap-4">
+                    <div className="size-14 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-3xl shadow-inner">
+                       <span className="material-symbols-outlined text-primary text-3xl font-black">query_stats</span>
+                    </div>
+                    <div>
+                       <h3 className="text-2xl font-black tracking-tight text-white italic">Pulso da Operação</h3>
+                       <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Monitoramento de Equilíbrio em Tempo Real</p>
+                    </div>
+                 </div>
 
-          <div className="grid grid-cols-3 gap-8 mt-12 relative z-10">
-            <div className="space-y-2">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ratio Atual (D/O)</p>
-              <h4 className="text-4xl font-black">
-                {stats ? (stats.onlineDrivers / (allOrders?.filter(o => o.status === 'pendente').length || 1)).toFixed(2) : '1.00'}
-              </h4>
-            </div>
-            <div className="space-y-2">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Surge Sugerido</p>
-              <h4 className="text-4xl font-black text-primary">1.25x</h4>
-            </div>
-            <div className="space-y-2">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tempo de Espera Clientes</p>
-              <h4 className="text-4xl font-black">8.5 min</h4>
-            </div>
-          </div>
+                 <div className="flex items-center gap-8 pl-1">
+                    <div className="flex flex-col">
+                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 italic">Entregadores Online</span>
+                       <div className="flex items-center gap-2">
+                          <div className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                          <span className="text-2xl font-black">{stats?.onlineDrivers || 0}</span>
+                       </div>
+                    </div>
+                    <div className="w-px h-10 bg-white/10"></div>
+                    <div className="flex flex-col">
+                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 italic">Pedidos Ativos</span>
+                       <div className="flex items-center gap-2 text-primary">
+                          <span className="material-symbols-outlined text-sm">shopping_bag</span>
+                          <span className="text-2xl font-black">{(allOrders?.filter(o => ['pendente', 'aceito', 'preparando', 'novo', 'waiting_driver'].includes(o.status)).length) || 0}</span>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="bg-white/5 backdrop-blur-2xl px-8 py-6 rounded-[35px] border border-white/10 shadow-lg flex flex-col items-center gap-3">
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Indice de Surge</p>
+                 <div className="text-4xl font-black text-primary drop-shadow-[0_0_15px_rgba(255,217,0,0.3)] italic">1,25x</div>
+                 <div className="px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[9px] font-black uppercase tracking-widest border border-emerald-500/20">Saudável</div>
+              </div>
+           </div>
+
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-12 relative z-10">
+              <div className="bg-white/5 rounded-3xl p-6 border border-white/5 space-y-4">
+                 <div className="flex justify-between items-center">
+                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Saúde da Malha</span>
+                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Excelente</span>
+                 </div>
+                 <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden flex">
+                    <div className="w-4/5 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]"></div>
+                 </div>
+                 <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em]">Sua capacidade de atendimento é de 92%</p>
+              </div>
+
+              <div className="bg-white/5 rounded-3xl p-6 border border-white/5 flex items-center justify-between group-hover:border-primary/20 transition-all">
+                 <div className="space-y-1">
+                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Tempo Médio Pickup</span>
+                    <p className="text-xl font-black text-white italic">8.5 min</p>
+                 </div>
+                 <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20">
+                    <span className="material-symbols-outlined text-lg">avg_time</span>
+                 </div>
+              </div>
+           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-[48px] p-10 border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col gap-8">
-          <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-            <span className="material-symbols-outlined text-primary">rocket_launch</span>
-            Controle de Fluxo
-          </h3>
+        <div className="bg-white dark:bg-slate-900 rounded-[48px] p-10 border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col gap-10 hover:shadow-2xl transition-all">
+          <div className="space-y-2">
+            <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary text-2xl">bolt</span>
+              Modo Turbo
+            </h3>
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest italic">Ações Rápidas de Operação</p>
+          </div>
+
           <div className="space-y-6">
-            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
+            <div className="flex items-center justify-between p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-white/5 shadow-sm hover:border-primary/30 transition-all cursor-pointer">
               <div className="flex flex-col">
-                <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Modo Dinâmico Automático</span>
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{dynamicRatesState.flowControl?.mode === 'auto' ? 'IA ativa monitorando oferta/demanda' : 'Modo manual habilitado'}</span>
+                <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Modo Inteligente</span>
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">IA monitorando tráfego</span>
               </div>
               <button 
                 onClick={() => {
@@ -97,15 +161,16 @@ export default function DynamicRatesTab() {
                   setDynamicRatesState({ ...dynamicRatesState, flowControl: newFlow });
                   saveSpecificRateMetadata('flow_control', newFlow);
                 }}
-                className={`w-12 h-7 rounded-full relative shadow-lg transition-all ${dynamicRatesState.flowControl?.mode === 'auto' ? 'bg-primary shadow-primary/20' : 'bg-slate-300 dark:bg-slate-700'}`}
+                className={`w-14 h-8 rounded-full relative shadow-lg transition-all ${dynamicRatesState.flowControl?.mode === 'auto' ? 'bg-primary shadow-primary/20' : 'bg-slate-300 dark:bg-slate-700'}`}
               >
-                <div className={`absolute top-1 size-5 bg-white rounded-full transition-all ${dynamicRatesState.flowControl?.mode === 'auto' ? 'right-1' : 'left-1'}`}></div>
+                <div className={`absolute top-1 size-6 bg-white rounded-full transition-all ${dynamicRatesState.flowControl?.mode === 'auto' ? 'right-1' : 'left-1'}`}></div>
               </button>
             </div>
-            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
+
+            <div className="flex items-center justify-between p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-white/5 shadow-sm hover:border-red-500/30 transition-all cursor-pointer">
               <div className="flex flex-col">
-                <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Modo de Alta Demanda</span>
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Forçar surge em todo o mapa</span>
+                <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Surge Crítico</span>
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Forçar 1.5x global agora</span>
               </div>
               <button 
                 onClick={() => {
@@ -113,9 +178,9 @@ export default function DynamicRatesTab() {
                   setDynamicRatesState({ ...dynamicRatesState, flowControl: newFlow });
                   saveSpecificRateMetadata('flow_control', newFlow);
                 }}
-                className={`w-12 h-7 rounded-full relative transition-all ${dynamicRatesState.flowControl?.highDemandActive ? 'bg-red-500 shadow-lg shadow-red-200' : 'bg-slate-200 dark:bg-slate-700'}`}
+                className={`w-14 h-8 rounded-full relative transition-all ${dynamicRatesState.flowControl?.highDemandActive ? 'bg-red-500 shadow-lg shadow-red-500/20' : 'bg-slate-300 dark:bg-slate-700 shadow-inner'}`}
               >
-                <div className={`absolute top-1 size-5 bg-white rounded-full transition-all ${dynamicRatesState.flowControl?.highDemandActive ? 'right-1' : 'left-1'}`}></div>
+                <div className={`absolute top-1 size-6 bg-white rounded-full transition-all ${dynamicRatesState.flowControl?.highDemandActive ? 'right-1' : 'left-1'}`}></div>
               </button>
             </div>
           </div>
@@ -154,7 +219,8 @@ export default function DynamicRatesTab() {
               { title: 'MotoTáxi', minKey: 'mototaxi_min', kmKey: 'mototaxi_km' },
               { title: 'Carro Executivo', minKey: 'carro_min', kmKey: 'carro_km' },
               { title: 'Entrega Express', minKey: 'utilitario_min', kmKey: 'utilitario_km' },
-              { title: 'Van de Transporte', minKey: 'van_min', kmKey: 'van_km' }
+              { title: 'Van de Transporte', minKey: 'van_min', kmKey: 'van_km' },
+              { title: 'Logística / Frete', minKey: 'logistica_min', kmKey: 'logistica_km' }
             ].map((cat) => (
               <div key={cat.title} className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50">
                 <div className="flex items-center gap-3">
