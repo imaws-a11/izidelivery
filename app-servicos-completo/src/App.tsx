@@ -1727,14 +1727,17 @@ const navigateSubView = (target: string) => {
   const [ESTABLISHMENTS, setESTABLISHMENTS] = useState<any[]>([]);
 
   const isStoreOpen = useCallback((openingHours: any, manualOpen: boolean, mode: string = 'auto') => {
-    // Modo Manual: O lojista forçou um estado (Aberto ou Fechado) via toggle.
-    // O usuário solicitou que se habilitar como aberta pelo botão, a loja deve abrir mesmo fora do horário.
-    if (mode === 'manual') {
-      return manualOpen === true;
-    }
+    // 1. Prioridade Máxima: Botão de Override Manual (is_open)
+    // Se o lojista DESLIGOU a loja manualmente, ela fica FECHADA independente do modo.
+    // Isso garante que o lojista possa fechar a loja rapidamente em emergências.
+    if (manualOpen === false) return false;
 
-    // Modo Automático: Segue o horário programado
-    if (!openingHours || Object.keys(openingHours).length === 0) return manualOpen !== false;
+    // 2. Se o modo for 'manual' e o botão estiver ligado (true), a loja está ABERTA.
+    if (mode === 'manual') return manualOpen === true;
+
+    // 3. Modo Automático: Segue o horário programado
+    // Se não houver horários configurados, assume que está aberta (já verificamos manualOpen !== false acima).
+    if (!openingHours || Object.keys(openingHours).length === 0) return true;
 
     const now = new Date();
     const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
@@ -1743,15 +1746,28 @@ const navigateSubView = (target: string) => {
 
     if (!config || !config.active) return false;
 
-    const [openH, openM] = config.open.split(':').map(Number);
-    const [closeH, closeM] = config.close.split(':').map(Number);
-    const nowH = now.getHours();
-    const nowM = now.getMinutes();
-    const nowInMinutes = nowH * 60 + nowM;
-    const openInMinutes = openH * 60 + openM;
-    const closeInMinutes = closeH * 60 + closeM;
+    try {
+      const [openH, openM] = config.open.split(':').map(Number);
+      const [closeH, closeM] = config.close.split(':').map(Number);
+      
+      const nowH = now.getHours();
+      const nowM = now.getMinutes();
+      const nowInMinutes = nowH * 60 + nowM;
+      const openInMinutes = openH * 60 + openM;
+      let closeInMinutes = closeH * 60 + closeM;
 
-    return nowInMinutes >= openInMinutes && nowInMinutes <= closeInMinutes;
+      // Suporte para Horário que vira a noite (Ex: 18:00 até 02:00)
+      if (closeInMinutes < openInMinutes) {
+        // Se o horário de fechamento for menor que o de abertura, a loja fecha no dia seguinte.
+        // Estamos abertos se: agora >= abertura OU agora <= fechamento
+        return nowInMinutes >= openInMinutes || nowInMinutes <= closeInMinutes;
+      }
+
+      return nowInMinutes >= openInMinutes && nowInMinutes <= closeInMinutes;
+    } catch (e) {
+      console.warn("Erro ao processar horário de funcionamento:", e);
+      return true; // Fallback seguro para aberta se houver erro na configuração
+    }
   }, []);
 
   const fetchRealEstablishments = useCallback(async () => {
@@ -2015,6 +2031,8 @@ const navigateSubView = (target: string) => {
         carro_min: 14.0, carro_km: 4.5,
         van_min: 35.0, van_km: 8.0,
         utilitario_min: 10.0, utilitario_km: 3.0,
+        logistica_min: 45.0, logistica_km: 8.0,
+        logistica_stairs: 30.0, logistica_helper: 35.0,
         isDynamicActive: true
       }
     }
@@ -2158,14 +2176,16 @@ const navigateSubView = (target: string) => {
         }
           const bv = marketConditions.settings.baseValues;
           const surge = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
-          const mototaxi_min = parseFloat(String(bv.mototaxi_min)) || 6.0;
-          const mototaxi_km  = parseFloat(String(bv.mototaxi_km))  || 2.5;
-          const carro_min    = parseFloat(String(bv.carro_min))    || 14.0;
-          const carro_km     = parseFloat(String(bv.carro_km))     || 4.5;
-          const van_min      = parseFloat(String(bv.van_min))      || 35.0;
-          const van_km       = parseFloat(String(bv.van_km))       || 8.0;
-          const logistica_min = parseFloat(String(bv.logistica_min)) || 45.0;
-          const logistica_km  = parseFloat(String(bv.logistica_km))  || 3.0;
+          const mototaxi_min   = parseFloat(String(bv.mototaxi_min))   || 6.0;
+          const mototaxi_km    = parseFloat(String(bv.mototaxi_km))    || 2.5;
+          const carro_min      = parseFloat(String(bv.carro_min))      || 14.0;
+          const carro_km       = parseFloat(String(bv.carro_km))       || 4.5;
+          const van_min        = parseFloat(String(bv.van_min))        || 35.0;
+          const van_km         = parseFloat(String(bv.van_km))         || 8.0;
+          const utilitario_min = parseFloat(String(bv.utilitario_min)) || 10.0;
+          const utilitario_km  = parseFloat(String(bv.utilitario_km))  || 3.0;
+          const logistica_min  = parseFloat(String(bv.logistica_min))  || 45.0;
+          const logistica_km   = parseFloat(String(bv.logistica_km))   || 8.0;
 
           const newPrices = {
             mototaxi:   parseFloat((Math.max(mototaxi_min,   mototaxi_km   * distKm * surge)).toFixed(2)),
@@ -2213,7 +2233,7 @@ const navigateSubView = (target: string) => {
       return;
     }
 
-    const isShipping = ['utilitario', 'van', 'frete'].includes(transitData.type);
+    const isShipping = ['utilitario', 'van', 'frete', 'logistica'].includes(transitData.type);
     const bv = marketConditions.settings.baseValues;
     const basePrices: Record<string, number> = { 
       mototaxi: bv.mototaxi_min || 6, 
@@ -2224,15 +2244,16 @@ const navigateSubView = (target: string) => {
     
       // [Comentario Limpo pelo Sistema]
     let finalPrice = 0;
-    if (transitData.type === 'logistica') {
+    if (transitData.type === 'logistica' || transitData.type === 'frete') {
        const bv = marketConditions.settings.baseValues;
        finalPrice = calculateFreightPrice({
           baseFare: parseFloat(String(bv.logistica_min || 45)),
           distanceInKm: distanceValueKm || 1,
           distanceRate: parseFloat(String(bv.logistica_km || 3)),
-          helperCount: transitData.helpers,
-          helperRate: 35,
-          hasStairs: transitData.accessibility.stairsAtOrigin || transitData.accessibility.stairsAtDestination
+          helperCount: transitData.helpers || 0,
+          helperRate: parseFloat(String(bv.logistica_helper || 35)),
+          hasStairs: transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination,
+          stairsFee: parseFloat(String(bv.logistica_stairs || 30))
        }).totalPrice;
     } else if (transitData.type === 'van') {
        finalPrice = calculateVanPrice({
@@ -2371,6 +2392,14 @@ const navigateSubView = (target: string) => {
       setTransitData(prev => ({ ...prev, origin: userLocation.address }));
     }
   }, [subView, userLocation.address]);
+
+  // Definir tipo de serviço correto ao entrar no FreightWizard
+  useEffect(() => {
+    if (subView === "freight_wizard") {
+      setTransitData(prev => ({ ...prev, type: "frete" }));
+      setMobilityStep(1);
+    }
+  }, [subView]);
 
   useEffect(() => {
     const previousSubView = previousSubViewRef.current;

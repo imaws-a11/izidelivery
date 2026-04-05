@@ -1,19 +1,12 @@
-import React, { useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useRef } from 'react';
 import { useAdmin } from '../context/AdminContext';
 
 // Taxas Dinâmicas
 export default function DynamicRatesTab() {
   const {
-    dynamicRatesState, setDynamicRatesState, isAddingPeakRule, setIsAddingPeakRule, 
-    newPeakRule, setNewPeakRule, newZoneData, setNewZoneData, 
-    selectedZoneForMap, setSelectedZoneForMap, mapSearch, setMapSearch, 
-    isGeolocating, setIsGeolocating, mapCenterView, setMapCenterView, 
-    fixedGridCenter, setFixedGridCenter, selectedHexagons, setSelectedHexagons, 
-    hexGrid, getHexPath, isLoaded, mapsLoadError, handleAddPeakRule, 
-    handleRemovePeakRule, handleAddZone, handleRemoveZone,
-    fetchDynamicRates, saveDynamicRates, saveSpecificRateMetadata, stats, allOrders,
-    isSaving
+    dynamicRatesState, setDynamicRatesState, setIsAddingPeakRule, 
+    handleRemovePeakRule, saveDynamicRates, saveSpecificRateMetadata, 
+    stats, allOrders, isSaving
   } = useAdmin();
 
   const headerRef = useRef<HTMLDivElement>(null);
@@ -205,7 +198,7 @@ export default function DynamicRatesTab() {
               <button 
                 onClick={() => {
                   const newBase = { ...dynamicRatesState.baseValues, isDynamicActive: !dynamicRatesState.baseValues?.isDynamicActive };
-                  setDynamicRatesState(prev => ({ ...prev, baseValues: newBase }));
+                  setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
                 }}
                 className={`w-14 h-8 rounded-full relative shadow-lg transition-all ${dynamicRatesState.baseValues?.isDynamicActive ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-slate-300 dark:bg-slate-700'}`}
               >
@@ -220,15 +213,28 @@ export default function DynamicRatesTab() {
               { title: 'Carro Executivo', minKey: 'carro_min', kmKey: 'carro_km' },
               { title: 'Entrega Express', minKey: 'utilitario_min', kmKey: 'utilitario_km' },
               { title: 'Van de Transporte', minKey: 'van_min', kmKey: 'van_km' },
-              { title: 'Logística / Frete', minKey: 'logistica_min', kmKey: 'logistica_km' }
-            ].map((cat) => (
-              <div key={cat.title} className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-2xl bg-white dark:bg-slate-700 flex items-center justify-center shadow-sm"><span className="material-symbols-outlined text-sm text-primary">category</span></div>
-                  <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">{cat.title}</span>
+              { 
+                title: 'Logística / Frete', 
+                minKey: 'logistica_min', 
+                kmKey: 'logistica_km',
+                extras: [
+                  { label: 'Adicional Escada', key: 'logistica_stairs' },
+                  { label: 'Por Ajudante', key: 'logistica_helper' }
+                ]
+              }
+            ].map((cat: any) => (
+              <div key={cat.title} className="flex flex-col gap-6 p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 rounded-2xl bg-white dark:bg-slate-700 flex items-center justify-center shadow-sm">
+                      <span className="material-symbols-outlined text-sm text-primary">category</span>
+                    </div>
+                    <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">{cat.title}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="space-y-1 relative group w-1/2 xl:w-28">
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-1 relative group">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Taxa Mínima</label>
                     <div className="relative">
                       <input
@@ -236,14 +242,15 @@ export default function DynamicRatesTab() {
                         value={dynamicRatesState.baseValues?.[cat.minKey] || '0.00'}
                         onChange={(e) => {
                           const newBase = { ...dynamicRatesState.baseValues, [cat.minKey]: e.target.value };
-                          setDynamicRatesState(prev => ({ ...prev, baseValues: newBase }));
+                          setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
                         }}
                         className="w-full text-right bg-white dark:bg-slate-900 border-none outline-none font-black text-primary text-lg rounded-2xl py-3 px-4 shadow-inner focus:ring-2 focus:ring-primary/20 transition-all pr-[35px]"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">R$</span>
                     </div>
                   </div>
-                  <div className="space-y-1 relative group w-1/2 xl:w-28">
+
+                  <div className="space-y-1 relative group">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Por KM</label>
                     <div className="relative">
                       <input
@@ -251,13 +258,31 @@ export default function DynamicRatesTab() {
                         value={dynamicRatesState.baseValues?.[cat.kmKey] || '0.00'}
                         onChange={(e) => {
                           const newBase = { ...dynamicRatesState.baseValues, [cat.kmKey]: e.target.value };
-                          setDynamicRatesState(prev => ({ ...prev, baseValues: newBase }));
+                          setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
                         }}
                         className="w-full text-right bg-white dark:bg-slate-900 border-none outline-none font-black text-primary text-lg rounded-2xl py-3 px-4 shadow-inner focus:ring-2 focus:ring-primary/20 transition-all pr-[35px]"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">R$</span>
                     </div>
                   </div>
+
+                  {cat.extras?.map((extra: any) => (
+                    <div key={extra.key} className="space-y-1 relative group">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{extra.label}</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={dynamicRatesState.baseValues?.[extra.key] || '0.00'}
+                          onChange={(e) => {
+                            const newBase = { ...dynamicRatesState.baseValues, [extra.key]: e.target.value };
+                            setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
+                          }}
+                          className="w-full text-right bg-white dark:bg-slate-900 border-none outline-none font-black text-primary text-lg rounded-2xl py-3 px-4 shadow-inner focus:ring-2 focus:ring-primary/20 transition-all pr-[35px]"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">R$</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
@@ -287,7 +312,7 @@ export default function DynamicRatesTab() {
                 value={dynamicRatesState.equilibrium?.threshold || 1.0}
                 onChange={(e) => {
                   const newEqui = { ...dynamicRatesState.equilibrium, threshold: parseFloat(e.target.value) };
-                  setDynamicRatesState(prev => ({ ...prev, equilibrium: newEqui }));
+                  setDynamicRatesState((prev: any) => ({ ...prev, equilibrium: newEqui }));
                 }}
                 className="w-full accent-primary h-2 bg-slate-100 rounded-full appearance-none cursor-pointer"
               />
@@ -302,7 +327,7 @@ export default function DynamicRatesTab() {
                 value={dynamicRatesState.equilibrium?.sensitivity || 1.0}
                 onChange={(e) => {
                   const newEqui = { ...dynamicRatesState.equilibrium, sensitivity: parseFloat(e.target.value) };
-                  setDynamicRatesState(prev => ({ ...prev, equilibrium: newEqui }));
+                  setDynamicRatesState((prev: any) => ({ ...prev, equilibrium: newEqui }));
                 }}
                 className="w-full accent-primary h-2 bg-slate-100 rounded-full appearance-none cursor-pointer"
               />
@@ -317,7 +342,7 @@ export default function DynamicRatesTab() {
                 value={dynamicRatesState.equilibrium?.maxSurge || 2.0}
                 onChange={(e) => {
                   const newEqui = { ...dynamicRatesState.equilibrium, maxSurge: parseFloat(e.target.value) };
-                  setDynamicRatesState(prev => ({ ...prev, equilibrium: newEqui }));
+                  setDynamicRatesState((prev: any) => ({ ...prev, equilibrium: newEqui }));
                 }}
                 className="w-full accent-primary h-2 bg-slate-100 rounded-full appearance-none cursor-pointer"
               />

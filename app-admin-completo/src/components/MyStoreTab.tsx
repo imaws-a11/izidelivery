@@ -59,9 +59,52 @@ export default function MyStoreTab() {
     }
   };
 
+  const isStoreOpen = (openingHours: any, manualOpen: boolean, mode: string = 'auto') => {
+    if (manualOpen === false) return false;
+    if (mode === 'manual') return manualOpen === true;
+    if (!openingHours || Object.keys(openingHours).length === 0) return true;
+
+    const now = new Date();
+    const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+    const today = days[now.getDay()];
+    const config = openingHours[today];
+
+    if (!config || !config.active) return false;
+
+    try {
+      const [openH, openM] = config.open.split(':').map(Number);
+      const [closeH, closeM] = config.close.split(':').map(Number);
+      const nowH = now.getHours();
+      const nowM = now.getMinutes();
+      const nowInMinutes = nowH * 60 + nowM;
+      const openInMinutes = openH * 60 + openM;
+      let closeInMinutes = closeH * 60 + closeM;
+
+      if (closeInMinutes < openInMinutes) {
+        return nowInMinutes >= openInMinutes || nowInMinutes <= closeInMinutes;
+      }
+      return nowInMinutes >= openInMinutes && nowInMinutes <= closeInMinutes;
+    } catch (e) {
+      return true;
+    }
+  };
+
   const handleSaveHours = async () => {
-    const success = await updateProfileField('opening_hours', merchantProfile.opening_hours);
-    if (success) alert('Horários de funcionamento atualizados com sucesso! 🕒');
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('admin_users')
+        .update({ opening_hours: merchantProfile.opening_hours, opening_mode: 'auto' })
+        .eq('id', merchantProfile.merchant_id);
+      
+      if (error) throw error;
+      setMerchantProfile({ ...merchantProfile, opening_mode: 'auto' });
+      alert('Horários de funcionamento atualizados e sistema automático ATIVADO! 🕒');
+    } catch (err: any) {
+      alert('Erro ao atualizar horários: ' + err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const dayNames: Record<string, string> = {
@@ -87,9 +130,14 @@ export default function MyStoreTab() {
                   <span className="material-symbols-outlined text-5xl text-slate-300">storefront</span>
                 )}
               </div>
-              <div className={`absolute -bottom-2 -right-2 size-12 rounded-[22px] flex items-center justify-center border-4 border-white dark:border-slate-900 shadow-2xl ${merchantProfile.is_open ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
-                <span className="material-symbols-outlined text-2xl">{merchantProfile.is_open ? 'check' : 'close'}</span>
-              </div>
+              {(() => {
+                const isOpen = isStoreOpen(merchantProfile.opening_hours, !!merchantProfile.is_open, merchantProfile.opening_mode);
+                return (
+                  <div className={`absolute -bottom-2 -right-2 size-12 rounded-[22px] flex items-center justify-center border-4 border-white dark:border-slate-900 shadow-2xl ${isOpen ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                    <span className="material-symbols-outlined text-2xl">{isOpen ? 'check' : 'close'}</span>
+                  </div>
+                );
+              })()}
             </div>
             <div>
               <div className="flex items-center gap-3 mb-2">
@@ -109,9 +157,14 @@ export default function MyStoreTab() {
               <div className="flex items-center gap-6">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Sinal da Loja</p>
-                  <p className={`text-sm font-black uppercase tracking-widest ${merchantProfile.is_open ? 'text-emerald-500 shadow-emerald-500/20' : 'text-rose-500 shadow-rose-500/20'}`}>
-                    {merchantProfile.is_open ? 'Aberta agora' : 'Fechada'}
-                  </p>
+                  {(() => {
+                    const isOpen = isStoreOpen(merchantProfile.opening_hours, !!merchantProfile.is_open, merchantProfile.opening_mode);
+                    return (
+                      <p className={`text-sm font-black uppercase tracking-widest ${isOpen ? 'text-emerald-500 shadow-emerald-500/20' : 'text-rose-500 shadow-rose-500/20'}`}>
+                        {isOpen ? 'Aberta agora' : 'Fechada'}
+                      </p>
+                    );
+                  })()}
                 </div>
                 <PremiumToggle active={!!merchantProfile.is_open} onClick={async () => {
                    setIsSaving(true);

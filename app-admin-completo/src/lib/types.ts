@@ -261,6 +261,7 @@ export interface DynamicRatesState {
   peakHours: any[];
   zones: any[];
   weather: {
+    [key: string]: { multiplier: number; active: boolean };
     rain: { multiplier: number; active: boolean };
     storm: { multiplier: number; active: boolean };
     snow: { multiplier: number; active: boolean };
@@ -271,6 +272,7 @@ export interface DynamicRatesState {
     maxSurge: number;
   };
   baseValues: {
+    [key: string]: string | boolean;
     mototaxi_min: string;
     mototaxi_km: string;
     carro_min: string;
@@ -281,6 +283,8 @@ export interface DynamicRatesState {
     utilitario_km: string;
     logistica_min: string;
     logistica_km: string;
+    logistica_stairs: string;
+    logistica_helper: string;
     isDynamicActive: boolean;
   };
   flowControl: {
