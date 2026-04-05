@@ -98,6 +98,9 @@ export interface Merchant {
   free_delivery?: boolean;
   estimated_time?: string;
   food_category?: string;
+  latitude?: number;
+  longitude?: number;
+  google_place_id?: string;
   created_at: string;
   updated_at?: string;
 }
@@ -121,6 +124,9 @@ export interface MerchantProfile {
   estimated_time?: string;
   password?: string;
   food_category?: string;
+  latitude?: number;
+  longitude?: number;
+  google_place_id?: string;
 }
 
 export interface Product {

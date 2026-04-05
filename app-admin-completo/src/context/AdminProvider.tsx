@@ -1071,6 +1071,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         commission_percent: editingItem.commission_percent,
         service_fee: editingItem.service_fee,
         is_active: editingItem.is_active ?? true,
+        latitude: editingItem.latitude,
+        longitude: editingItem.longitude,
+        google_place_id: editingItem.google_place_id,
         role: 'merchant'
       };
 

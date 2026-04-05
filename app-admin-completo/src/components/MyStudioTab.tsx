@@ -9,6 +9,8 @@ import { supabase } from '../lib/supabase';
 import { ProductStudio } from './ProductStudio';
 import FlashOffersSection from './FlashOffersSection';
 import PromotionStudio from './PromotionStudio';
+import { AddressSearchInput } from './AddressSearchInput';
+import { GMAPS_KEY } from '../config';
 
 
 export default function MyStudioTab() {
@@ -58,6 +60,48 @@ export default function MyStudioTab() {
     savePromotion, autoSavePromo, fetchPromotions,
     establishmentTypes, fetchEstablishmentTypes, handleUpdateEstablishmentType, handleDeleteEstablishmentType,
   } = useAdmin();
+
+  const [isLocating, setIsLocating] = React.useState(false);
+
+  const getCurrentLocation = async (updateItem: (updated: any) => void, targetItem: any) => {
+    if (!navigator.geolocation) {
+      toastError("Geolocalização não é suportada pelo seu navegador.");
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GMAPS_KEY}&language=pt-BR`);
+          const data = await res.json();
+          if (data.status === 'OK' && data.results.length > 0) {
+            const result = data.results[0];
+            updateItem({
+              ...targetItem,
+              store_address: result.formatted_address,
+              latitude,
+              longitude,
+              google_place_id: result.place_id
+            });
+            toastSuccess("Localização capturada com sucesso!");
+          } else {
+            toastError("Não foi possível converter as coordenadas em endereço.");
+          }
+        } catch (err: any) {
+          toastError("Erro ao buscar endereço: " + err.message);
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (error) => {
+        setIsLocating(false);
+        toastError("Erro ao obter localização: " + error.message);
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    );
+  };
 
   const [dateModalOpen, setDateModalOpen] = React.useState(false);
   const [tempDate, setTempDate] = React.useState('');
@@ -195,12 +239,41 @@ export default function MyStudioTab() {
                     </div>
                     <div className="md:col-span-2 space-y-2">
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Endereço de Origem (Para cálculo de entregas)</label>
-                       <input 
-                         className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
-                         value={targetItem.store_address || ''}
-                         onChange={e => updateItem({...targetItem, store_address: e.target.value})}
-                         placeholder="Av. Exemplo, 123 - Bairro"
-                       />
+                       <div className="relative group">
+                         <AddressSearchInput 
+                           className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 pr-14 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
+                           initialValue={targetItem.store_address || ''}
+                           userCoords={targetItem.latitude && targetItem.longitude ? { lat: targetItem.latitude, lng: targetItem.longitude } : null}
+                           onSelect={(addr) => {
+                             updateItem({
+                               ...targetItem, 
+                               store_address: addr.formatted_address,
+                               latitude: addr.lat,
+                               longitude: addr.lng
+                             });
+                           }}
+                           placeholder="Av. Exemplo, 123 - Bairro"
+                         />
+                         <button
+                           type="button"
+                           onClick={() => getCurrentLocation(updateItem, targetItem)}
+                           disabled={isLocating}
+                           className="absolute right-3 top-1/2 -translate-y-1/2 size-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-all flex items-center justify-center hover:bg-primary/10 group-hover:bg-white dark:group-hover:bg-slate-700 shadow-sm"
+                           title="Usar localização atual"
+                         >
+                           {isLocating ? (
+                             <div className="size-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                           ) : (
+                             <span className="material-symbols-outlined text-xl">my_location</span>
+                           )}
+                         </button>
+                       </div>
+                       {(targetItem.latitude && targetItem.longitude) && (
+                         <div className="flex items-center gap-2 ml-4 mt-1 opacity-60">
+                           <span className="material-symbols-outlined text-[10px]">location_searching</span>
+                           <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-500">Coordenadas Precisas: {targetItem.latitude.toFixed(6)}, {targetItem.longitude.toFixed(6)}</span>
+                         </div>
+                       )}
                     </div>
                   </div>
 
@@ -387,7 +460,10 @@ export default function MyStudioTab() {
                              store_type: (targetItem as any).store_type,
                              delivery_radius: targetItem.delivery_radius,
                              store_banner: targetItem.store_banner,
-                             store_logo: targetItem.store_logo
+                             store_logo: targetItem.store_logo,
+                             latitude: targetItem.latitude,
+                             longitude: targetItem.longitude,
+                             google_place_id: targetItem.google_place_id
                            };
 
                            // Credenciais (Email/Password)
@@ -1416,13 +1492,41 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
         </div>
         <div className="space-y-1">
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Endereço Completo</label>
-          <input
-            type="text"
-            value={editingItem.store_address || ''}
-            onChange={e => setEditingItem({ ...editingItem, store_address: e.target.value })}
-            placeholder="Rua, Número, Bairro, Cidade"
-            className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
+          <div className="relative group">
+            <AddressSearchInput
+              className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 pr-14 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              initialValue={editingItem.store_address || ''}
+              userCoords={editingItem.latitude && editingItem.longitude ? { lat: editingItem.latitude, lng: editingItem.longitude } : null}
+              onSelect={(addr) => {
+                setEditingItem({
+                  ...editingItem,
+                  store_address: addr.formatted_address,
+                  latitude: addr.lat,
+                  longitude: addr.lng
+                });
+              }}
+              placeholder="Rua, Número, Bairro, Cidade"
+            />
+            <button
+               type="button"
+               onClick={() => getCurrentLocation(setEditingItem, editingItem)}
+               disabled={isLocating}
+               className="absolute right-3 top-1/2 -translate-y-1/2 size-10 rounded-xl bg-white/50 dark:bg-slate-800/50 text-slate-400 hover:text-primary transition-all flex items-center justify-center hover:bg-primary/10 shadow-sm"
+               title="Usar localização atual"
+             >
+               {isLocating ? (
+                 <div className="size-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+               ) : (
+                 <span className="material-symbols-outlined text-xl">my_location</span>
+               )}
+             </button>
+          </div>
+          {(editingItem.latitude && editingItem.longitude) && (
+            <div className="flex items-center gap-2 ml-4 mt-1 opacity-60">
+              <span className="material-symbols-outlined text-[10px]">location_searching</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-500">Coordenadas: {editingItem.latitude.toFixed(5)}, {editingItem.longitude.toFixed(5)}</span>
+            </div>
+          )}
         </div>
       </div>
 
