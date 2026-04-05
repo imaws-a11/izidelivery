@@ -44,17 +44,31 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
   navigateSubView,
   showToast,
 }) => {
+  const [showVehicleSelector, setShowVehicleSelector] = React.useState(false);
+
   // CÁLCULO DINÂMICO DE FRETE
   const getEstimatedTotal = () => {
     if (!marketConditions?.settings?.baseValues) return 0;
     const bv = marketConditions.settings.baseValues;
     const surgeMultiplier = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
     
+    // Multiplicadores por categoria de veículo
+    const vehicleMultipliers: Record<string, number> = {
+      "Fiorino": 1.0,
+      "Caminhonete": 1.25,
+      "Caminhão Baú Pequeno": 1.6,
+      "Caminhão Baú Médio": 2.1,
+      "Caminhão Baú Grande": 2.8,
+      "Caminhão Aberto": 1.8
+    };
+    
+    const categoryMult = vehicleMultipliers[transitData.vehicleCategory] || 1.0;
+
     try {
       const calculation = calculateFreightPrice({
-        baseFare: parseFloat(String(bv.logistica_min || 45)),
+        baseFare: parseFloat(String(bv.logistica_min || 45)) * categoryMult,
         distanceInKm: distanceValueKm || 0,
-        distanceRate: parseFloat(String(bv.logistica_km || 3)) * surgeMultiplier,
+        distanceRate: parseFloat(String(bv.logistica_km || 3)) * surgeMultiplier * categoryMult,
         helperCount: transitData.helpers || 0,
         helperRate: parseFloat(String(bv.logistica_helper || 35)),
         hasStairs: transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination,
@@ -130,9 +144,43 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
         <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
           {mobilityStep === 1 && (
             <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
+              <div className="space-y-4">
+                <h3 className="text-xl font-black text-white tracking-tight uppercase italic">Escolha o Veículo</h3>
+                
+                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-6 snap-x">
+                   {[
+                     { name: "Fiorino", icon: "local_shipping", label: "Fiorino / Furgão" },
+                     { name: "Caminhonete", icon: "airport_shuttle", label: "Caminhonete" },
+                     { name: "Caminhão Baú Pequeno", icon: "inventory", label: "Baú Pequeno" },
+                     { name: "Caminhão Baú Médio", icon: "inventory_2", label: "Baú Médio" },
+                     { name: "Caminhão Baú Grande", icon: "conveyor_belt", label: "Baú Grande" },
+                     { name: "Caminhão Aberto", icon: "front_loader", label: "Carroceria" }
+                   ].map((v) => (
+                     <motion.button
+                       key={v.name}
+                       whileTap={{ scale: 0.95 }}
+                       onClick={() => setTransitData((prev: any) => ({ ...prev, vehicleCategory: v.name }))}
+                       className={`flex-shrink-0 w-36 aspect-square p-5 rounded-[30px] border transition-all snap-start flex flex-col justify-between ${
+                         transitData.vehicleCategory === v.name 
+                           ? "bg-purple-600 border-purple-400 shadow-[0_10px_20px_rgba(168,85,247,0.3)] text-white" 
+                           : "bg-zinc-900/50 border-white/5 text-zinc-500 hover:border-white/10"
+                       }`}
+                     >
+                        <span className="material-symbols-outlined text-3xl font-black italic">{v.icon}</span>
+                        <div className="text-left">
+                           <p className={`text-[10px] font-black uppercase tracking-widest leading-tight ${transitData.vehicleCategory === v.name ? "text-purple-100" : "text-zinc-600"}`}>
+                             Veículo
+                           </p>
+                           <p className="text-[13px] font-black uppercase tracking-tighter leading-none mt-1">{v.label}</p>
+                        </div>
+                     </motion.button>
+                   ))}
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <h3 className="text-xl font-black text-white tracking-tight uppercase italic">Configuração do Frete</h3>
-                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest italic">Informe a rota e as condições de acessibilidade.</p>
+                <h3 className="text-xl font-black text-white tracking-tight uppercase italic">Roteiro e Equipe</h3>
+                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest italic">Informe a rota e se precisará de mão de obra.</p>
               </div>
               
               <div className="space-y-6">
@@ -311,17 +359,28 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                 <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest italic">Confira todos os detalhes antes de solicitar.</p>
               </div>
 
-              <div className="bg-zinc-900 border border-white/5 p-8 rounded-[45px] shadow-[25px_25px_50px_rgba(0,0,0,0.6),inset_4px_4px_10px_rgba(255,255,255,0.05)]">
+              <div className="bg-zinc-900 border border-zinc-800/50 p-8 rounded-[45px] shadow-[25px_25px_50px_rgba(0,0,0,0.6),inset_4px_4px_10px_rgba(255,255,255,0.05)]">
                 <div className="flex flex-col gap-6">
-                  <div className="flex items-center gap-5">
-                     <div className="size-15 rounded-3xl bg-zinc-800 flex items-center justify-center border border-white/5 shadow-inner">
-                        <span className="material-symbols-outlined text-purple-400 text-2xl font-black">inventory_2</span>
+                  <motion.div 
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowVehicleSelector(true)}
+                    className="flex items-center gap-5 cursor-pointer group p-3 -m-3 rounded-3xl hover:bg-white/5 transition-colors"
+                  >
+                     <div className="size-15 rounded-3xl bg-zinc-800 flex items-center justify-center border border-white/5 shadow-inner group-hover:border-purple-500/50 transition-all">
+                        <span className="material-symbols-outlined text-purple-400 text-2xl font-black italic">
+                          {transitData.vehicleCategory === "Fiorino" ? "local_shipping" :
+                           transitData.vehicleCategory === "Caminhonete" ? "airport_shuttle" :
+                           transitData.vehicleCategory === "Caminhão Baú Pequeno" ? "inventory" :
+                           transitData.vehicleCategory === "Caminhão Baú Médio" ? "inventory_2" :
+                           transitData.vehicleCategory === "Caminhão Baú Grande" ? "conveyor_belt" : "front_loader"}
+                        </span>
                      </div>
                      <div className="flex-1">
-                        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] leading-none mb-2">Transporte</p>
-                        <p className="text-base font-black text-white italic uppercase tracking-tighter">Caminhão Baú de Frete</p>
+                        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] leading-none mb-2">Veículo <span className="text-purple-500/50 ml-1 italic">(toque para mudar)</span></p>
+                        <p className="text-base font-black text-white italic uppercase tracking-tighter">{transitData.vehicleCategory}</p>
                      </div>
-                  </div>
+                     <span className="material-symbols-outlined text-zinc-700 group-hover:text-purple-500 transition-colors">swap_horiz</span>
+                  </motion.div>
 
                   <div className="h-px bg-white/5" />
 
@@ -397,6 +456,74 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
             </div>
           </motion.button>
         </div>
+
+        <AnimatePresence>
+          {showVehicleSelector && (
+            <div className="absolute inset-0 z-[200]">
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }} 
+                onClick={() => setShowVehicleSelector(false)}
+                className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
+              />
+              <motion.div 
+                initial={{ y: "100%" }} 
+                animate={{ y: 0 }} 
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="absolute bottom-0 left-0 right-0 p-8 pt-4 bg-zinc-950 rounded-t-[50px] border-t border-white/10 shadow-[0_-25px_50px_rgba(0,0,0,0.8)] flex flex-col gap-8 pb-12"
+              >
+                 <div className="flex justify-center mb-2">
+                    <div className="w-12 h-1.5 bg-white/10 rounded-full" />
+                 </div>
+                 <div className="flex flex-col gap-2">
+                    <h4 className="text-2xl font-black text-white uppercase italic tracking-tighter">Cockpit de Frotas</h4>
+                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] italic">Escolha o veículo ideal para sua carga</p>
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { name: "Fiorino", icon: "local_shipping", label: "Fiorino", info: "Ligeiro" },
+                      { name: "Caminhonete", icon: "airport_shuttle", label: "Caminhonete", info: "Expresso" },
+                      { name: "Caminhão Baú Pequeno", icon: "inventory", label: "Baú P", info: "Até 3t" },
+                      { name: "Caminhão Baú Médio", icon: "inventory_2", label: "Baú M", info: "Até 6t" },
+                      { name: "Caminhão Baú Grande", icon: "conveyor_belt", label: "Baú G", info: "Até 14t" },
+                      { name: "Caminhão Aberto", icon: "front_loader", label: "Carroceria", info: "Aberto" }
+                    ].map((v) => (
+                      <motion.button
+                        key={v.name}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                          setTransitData((prev: any) => ({ ...prev, vehicleCategory: v.name }));
+                          setShowVehicleSelector(false);
+                        }}
+                        className={`p-6 rounded-[35px] border transition-all flex flex-col gap-3 text-left ${
+                          transitData.vehicleCategory === v.name
+                            ? "bg-purple-600 border-purple-400 shadow-xl"
+                            : "bg-zinc-900/50 border-white/5"
+                        }`}
+                      >
+                         <span className={`material-symbols-outlined text-3xl font-black ${transitData.vehicleCategory === v.name ? "text-white" : "text-purple-400"}`}>{v.icon}</span>
+                         <div>
+                            <p className="text-[12px] font-black text-white uppercase tracking-tighter leading-none italic">{v.label}</p>
+                            <p className={`text-[8px] font-black uppercase mt-1 tracking-widest ${transitData.vehicleCategory === v.name ? "text-purple-200" : "text-zinc-600"}`}>{v.info}</p>
+                         </div>
+                      </motion.button>
+                    ))}
+                 </div>
+
+                 <motion.button 
+                   whileTap={{ scale: 0.95 }}
+                   onClick={() => setShowVehicleSelector(false)}
+                   className="w-full py-6 rounded-[30px] border border-white/10 text-zinc-500 text-[10px] uppercase font-black tracking-widest"
+                 >
+                   Cancelar
+                 </motion.button>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );
