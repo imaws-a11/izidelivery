@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { supabase } from '../lib/supabase';
+import { AddressSearchInput } from './AddressSearchInput';
 
 // Componente de Toggle Premium
 const PremiumToggle = ({ active, onClick, color = 'emerald' }: { active: boolean; onClick: () => void; color?: string }) => {
@@ -50,6 +51,25 @@ export default function MyStoreTab() {
       
       if (error) throw error;
       setMerchantProfile({ ...merchantProfile, [field]: value });
+      return true;
+    } catch (err: any) {
+      alert('Erro ao atualizar: ' + err.message);
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateProfileFields = async (updates: Record<string, any>) => {
+    try {
+      setIsSaving(true);
+      const { error } = await supabase
+        .from('admin_users')
+        .update(updates)
+        .eq('id', merchantProfile.merchant_id);
+      
+      if (error) throw error;
+      setMerchantProfile({ ...merchantProfile, ...updates });
       return true;
     } catch (err: any) {
       alert('Erro ao atualizar: ' + err.message);
@@ -234,11 +254,68 @@ export default function MyStoreTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2 space-y-10">
           
+          {/* ENDEREÇO & LOCALIZAÇÃO */}
+          <section className="bg-white dark:bg-slate-900 p-10 rounded-[56px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+             <div className="relative z-10 flex flex-col gap-6">
+                <div>
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Endereço & Localização</h3>
+                  <p className="text-slate-400 text-sm font-medium">Assegure que sua localização no mapa esteja correta para o roteamento dos entregadores.</p>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-[2]">
+                       <AddressSearchInput
+                         initialValue={merchantProfile.store_address || ''}
+                         placeholder="Buscar endereço no Google..."
+                         userCoords={merchantProfile.latitude && merchantProfile.longitude ? {
+                            lat: merchantProfile.latitude,
+                            lng: merchantProfile.longitude
+                         } : null}
+                         onSelect={(addr) => {
+                            updateProfileFields({
+                              store_address: addr.formatted_address,
+                              latitude: addr.lat,
+                              longitude: addr.lng
+                            });
+                         }}
+                       />
+                    </div>
+                    <div className="flex-1">
+                      <button 
+                        onClick={() => {
+                          if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(async (pos) => {
+                              const { latitude, longitude } = pos.coords;
+                              updateProfileFields({ latitude, longitude });
+                              alert('Localização GPS capturada com sucesso! 📍');
+                            });
+                          }
+                        }}
+                        className="w-full h-[72px] bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-3xl flex items-center justify-center gap-3 text-slate-500 hover:text-primary hover:border-primary transition-all group"
+                      >
+                        <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">my_location</span>
+                        <span className="text-xs font-black uppercase tracking-widest text-center">Usar GPS Atual</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-500/5 rounded-3xl border border-emerald-100 dark:border-emerald-500/10 flex items-center gap-4">
+                    <div className="size-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-emerald-500">pin_drop</span>
+                    </div>
+                    <div className="text-[10px] font-bold text-emerald-600/80 leading-tight">
+                      Coordenadas Atuais: <span className="font-black text-emerald-600">{Number(merchantProfile.latitude || 0).toFixed(6)}, {Number(merchantProfile.longitude || 0).toFixed(6)}</span>
+                    </div>
+                  </div>
+                </div>
+             </div>
+          </section>
+
           {/* LOGÍSTICA & RAIO */}
           <section className="bg-white dark:bg-slate-900 p-10 rounded-[56px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
-             <div className="relative z-10">
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Gestão de Cobertura</h3>
-                <p className="text-slate-400 text-sm font-medium mb-10">Defina o alcance máximo das suas entregas no mapa.</p>
+             <div className="relative z-10 text-left">
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 text-left">Gestão de Cobertura</h3>
+                <p className="text-slate-400 text-sm font-medium mb-10 text-left">Defina o alcance máximo das suas entregas no mapa.</p>
                 
                 <div className="flex flex-col md:flex-row items-center gap-10">
                   <div className="flex-1 w-full space-y-6">
@@ -253,7 +330,7 @@ export default function MyStoreTab() {
                             className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-[32px] px-8 h-20 text-3xl font-black text-slate-900 dark:text-white focus:border-primary transition-all pr-32"
                             placeholder="0"
                           />
-                          <div className="absolute right-4">
+                          <div className="absolute right-4 text-left">
                              <button 
                                onClick={() => updateProfileField('delivery_radius', localRadius)}
                                disabled={isSaving}
@@ -266,7 +343,7 @@ export default function MyStoreTab() {
                     </div>
                     <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[32px] flex items-start gap-4 border border-slate-100 dark:border-white/5">
                        <span className="material-symbols-outlined text-blue-500">info</span>
-                       <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed">
+                       <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed text-left">
                           Clientes localizados a mais de <span className="text-primary font-black">{localRadius}km</span> da sua loja não conseguirão visualizar seu card no aplicativo. Use com sabedoria para garantir a qualidade térmica dos seus produtos.
                        </p>
                     </div>
@@ -274,7 +351,7 @@ export default function MyStoreTab() {
                   
                   <div className="relative shrink-0 flex items-center justify-center p-12 bg-primary/5 dark:bg-primary/10 rounded-[56px] border-2 border-dashed border-primary/20 group-hover:border-primary/40 transition-all">
                      <span className="material-symbols-outlined text-8xl text-primary animate-pulse opacity-50">radar</span>
-                     <div className="absolute inset-0 flex items-center justify-center">
+                     <div className="absolute inset-0 flex items-center justify-center text-left">
                         <div className="size-32 rounded-full border border-primary/30 animate-ping opacity-20" />
                      </div>
                   </div>

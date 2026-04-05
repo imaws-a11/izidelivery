@@ -10,7 +10,9 @@ export default function OrdersAdminTab() {
     ordersPage, 
     ordersTotalCount, 
     fetchAllOrders,
-    isLoadingList
+    isLoadingList,
+    appSettings,
+    merchantsList
   } = useAdmin();
 
   React.useEffect(() => {
@@ -373,10 +375,24 @@ export default function OrdersAdminTab() {
                                                        <span className="text-rose-500 font-black">- R$ {Number(selectedOrderDetails.discount).toFixed(2).replace('.', ',')}</span>
                                                    </div>
                                                )}
-                                               <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                                                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-display">Resumo Total</span>
-                                                   <span className="text-xl font-black text-primary italic">R$ {Number(selectedOrderDetails.total_price || 0).toFixed(2).replace('.', ',')}</span>
-                                               </div>
+                                               <div className="pt-3 border-t border-slate-200 dark:border-slate-700 space-y-2">
+                                                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                       <span>Taxa Plataforma ({(() => {
+                                                           const merchant = merchantsList.find(m => m.id === selectedOrderDetails.merchant_id);
+                                                           return merchant?.commission_percent ?? appSettings?.appCommission ?? 12;
+                                                       })()}%)</span>
+                                                       <span className="text-amber-600">
+                                                           R$ {(() => {
+                                                               const rate = merchantsList.find(m => m.id === selectedOrderDetails.merchant_id)?.commission_percent ?? appSettings?.appCommission ?? 12;
+                                                               return ((selectedOrderDetails.total_price || 0) * (rate / 100)).toFixed(2).replace('.', ',');
+                                                           })()}
+                                                       </span>
+                                                   </div>
+                                                   <div className="flex justify-between items-center pt-2">
+                                                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-display">Resumo Total</span>
+                                                       <span className="text-xl font-black text-primary italic">R$ {Number(selectedOrderDetails.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                                   </div>
+                                                </div>
                                           </div>
                                       </>
                                   ) : parseOrderAddress(selectedOrderDetails.delivery_address).items.length > 0 ? (
@@ -413,10 +429,24 @@ export default function OrdersAdminTab() {
                                                         <span className="text-rose-500 font-black">- R$ {Number(selectedOrderDetails.discount).toFixed(2).replace('.', ',')}</span>
                                                    </div>
                                                )}
-                                               <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                                                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-display">Valor Total</span>
-                                                   <span className="text-xl font-black text-primary italic">R$ {Number(selectedOrderDetails.total_price || 0).toFixed(2).replace('.', ',')}</span>
-                                               </div>
+                                               <div className="pt-3 border-t border-slate-200 dark:border-slate-700 space-y-2">
+                                                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                       <span>Taxa Plataforma ({(() => {
+                                                           const merchant = merchantsList.find(m => m.id === selectedOrderDetails.merchant_id);
+                                                           return merchant?.commission_percent ?? appSettings?.appCommission ?? 12;
+                                                       })()}%)</span>
+                                                       <span className="text-amber-600">
+                                                           R$ {(() => {
+                                                               const rate = merchantsList.find(m => m.id === selectedOrderDetails.merchant_id)?.commission_percent ?? appSettings?.appCommission ?? 12;
+                                                               return ((selectedOrderDetails.total_price || 0) * (rate / 100)).toFixed(2).replace('.', ',');
+                                                           })()}
+                                                       </span>
+                                                   </div>
+                                                   <div className="flex justify-between items-center pt-2">
+                                                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-display">Valor Total</span>
+                                                       <span className="text-xl font-black text-primary italic">R$ {Number(selectedOrderDetails.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                                   </div>
+                                                </div>
                                           </div>
                                       </div>
                                   ) : (
