@@ -1674,7 +1674,7 @@ const navigateSubView = (target: string) => {
     packageDesc: "",
     weightClass: "Pequeno (até 5kg)",
     // Novos campos para Frete e Van
-    vehicleCategory: "Fiorino/Furgão",
+    vehicleCategory: "Fiorino",
     helpers: 0,
     accessibility: { stairsAtOrigin: false, stairsAtDestination: false, serviceElevator: false },
     cargoPhotos: [] as string[],
@@ -2247,10 +2247,20 @@ const navigateSubView = (target: string) => {
     const surgeMultiplier = bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0;
 
     if (transitData.type === 'logistica' || transitData.type === 'frete') {
+       const vehicleMultipliers: Record<string, number> = {
+         "Fiorino": 1.0,
+         "Caminhonete": 1.25,
+         "Caminhão Baú Pequeno": 1.6,
+         "Caminhão Baú Médio": 2.1,
+         "Caminhão Baú Grande": 2.8,
+         "Caminhão Aberto": 1.8
+       };
+       const categoryMult = vehicleMultipliers[transitData.vehicleCategory] || 1.0;
+
        finalPrice = calculateFreightPrice({
-          baseFare: parseFloat(String(bv.logistica_min || 45)),
+          baseFare: parseFloat(String(bv.logistica_min || 45)) * categoryMult,
           distanceInKm: distanceValueKm || 1,
-          distanceRate: parseFloat(String(bv.logistica_km || 8)) * surgeMultiplier,
+          distanceRate: parseFloat(String(bv.logistica_km || 8)) * surgeMultiplier * categoryMult,
           helperCount: transitData.helpers || 0,
           helperRate: parseFloat(String(bv.logistica_helper || 35)),
           hasStairs: transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination,
@@ -2288,9 +2298,15 @@ const navigateSubView = (target: string) => {
       total_price: finalPrice,
       service_type: transitData.type,
       pickup_address: transitData.origin,
-      delivery_address: `${transitData.destination} | OBS: ${isShipping 
-        ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
-        : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`}`,
+      delivery_address: `${transitData.destination} | OBS: ${
+        (transitData.type === 'logistica' || transitData.type === 'frete')
+          ? `FRETE: ${transitData.vehicleCategory}. ${transitData.helpers || 0} ajudantes. ${
+              (transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination) ? 'Necessário subir ESCADAS.' : 'Sem escadas.'
+            }`
+          : isShipping
+            ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
+            : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`
+      }`,
       payment_method: paymentMethod,
       payment_status: (paymentMethod === 'dinheiro' || paymentMethod === 'pix' || paymentMethod === 'bitcoin_lightning') ? 'pending' : 'paid',
       scheduled_at: transitData.scheduled ? `${transitData.scheduledDate}T${transitData.scheduledTime}:00` : null,
