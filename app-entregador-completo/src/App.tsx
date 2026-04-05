@@ -271,6 +271,47 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
   );
 }
 
+// Normaliza aliases variados de service_type que vêm do banco de dados para os tipos canônicos
+const normalizeServiceType = (raw: string | undefined | null): string => {
+    if (!raw) return 'delivery';
+    const t = raw.toLowerCase().trim();
+    // Tipos de comida / restaurante
+    if (['restaurant', 'restaurante', 'food', 'hamburguer', 'hamburger', 'burger',
+         'lanchonete', 'lanche', 'pizzaria', 'pizza', 'sushi', 'japanese',
+         'churrasco', 'grill', 'culinaria', 'culinária', 'refeicao', 'refeição'].includes(t)) return 'restaurant';
+    // Mercado / supermercado
+    if (['market', 'mercado', 'supermercado', 'hortifruti'].includes(t)) return 'market';
+    // Farmácia / saúde
+    if (['pharmacy', 'farmacia', 'farmácia', 'saude', 'saúde', 'health'].includes(t)) return 'pharmacy';
+    // Bebidas
+    if (['beverages', 'bebidas', 'drinks', 'bar'].includes(t)) return 'beverages';
+    // Mobilidade
+    if (['mototaxi', 'moto_taxi', 'motortaxi'].includes(t)) return 'mototaxi';
+    if (['car_ride', 'carro', 'taxi', 'car', 'ride'].includes(t)) return 'car_ride';
+    if (['motorista_particular', 'motorista particular', 'chauffeur'].includes(t)) return 'motorista_particular';
+    // Logística
+    if (['frete', 'carreto', 'freight', 'van', 'mudanca', 'mudança'].includes(t)) return 'frete';
+    if (['package', 'pacote', 'encomenda', 'express', 'delivery'].includes(t)) return 'package';
+    return t; // retorna o tipo original se não houver mapeamento
+};
+
+const getTypeDetails = (rawType: string) => {
+    const type = normalizeServiceType(rawType);
+    switch (type) {
+        case 'package': return { icon: 'package_2', color: 'text-primary', bg: 'bg-primary/10', label: 'Encomenda', isFood: false };
+        case 'mototaxi': return { icon: 'two_wheeler', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'MotoTaxi', isFood: false };
+        case 'car_ride': return { icon: 'directions_car', color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'Carro', isFood: false };
+        case 'frete': return { icon: 'local_shipping', color: 'text-orange-400', bg: 'bg-orange-400/10', label: 'Frete/Carreto', isFood: false };
+        case 'restaurant': return { icon: 'restaurant', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Restaurante', isFood: true };
+        case 'market': return { icon: 'local_mall', color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'Mercado', isFood: false };
+        case 'pharmacy': return { icon: 'medication', color: 'text-rose-400', bg: 'bg-rose-400/10', label: 'Farmácia', isFood: false };
+        case 'beverages': return { icon: 'local_bar', color: 'text-purple-400', bg: 'bg-purple-400/10', label: 'Bebidas', isFood: false };
+        case 'motorista_particular': return { icon: 'military_tech', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Motorista Particular', isFood: false };
+        case 'motoboy': return { icon: 'moped', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'Motoboy', isFood: false };
+        default: return { icon: 'local_shipping', color: 'text-primary', bg: 'bg-primary/10', label: 'Serviço Express', isFood: false };
+    }
+};
+
 function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('izi_driver_authenticated') === 'true');
     const [driverId, setDriverId] = useState<string | null>(() => localStorage.getItem('izi_driver_uid'));
@@ -786,46 +827,6 @@ function App() {
         localStorage.removeItem('Izi_online'); localStorage.removeItem('Izi_declined'); localStorage.removeItem('Izi_declined_timed'); localStorage.removeItem('Izi_active_mission');
     };
 
-    // Normaliza aliases variados de service_type que vêm do banco de dados para os tipos canônicos
-    const normalizeServiceType = (raw: string | undefined | null): string => {
-        if (!raw) return 'delivery';
-        const t = raw.toLowerCase().trim();
-        // Tipos de comida / restaurante
-        if (['restaurant', 'restaurante', 'food', 'hamburguer', 'hamburger', 'burger',
-             'lanchonete', 'lanche', 'pizzaria', 'pizza', 'sushi', 'japanese',
-             'churrasco', 'grill', 'culinaria', 'culinária', 'refeicao', 'refeição'].includes(t)) return 'restaurant';
-        // Mercado / supermercado
-        if (['market', 'mercado', 'supermercado', 'hortifruti'].includes(t)) return 'market';
-        // Farmácia / saúde
-        if (['pharmacy', 'farmacia', 'farmácia', 'saude', 'saúde', 'health'].includes(t)) return 'pharmacy';
-        // Bebidas
-        if (['beverages', 'bebidas', 'drinks', 'bar'].includes(t)) return 'beverages';
-        // Mobilidade
-        if (['mototaxi', 'moto_taxi', 'motortaxi'].includes(t)) return 'mototaxi';
-        if (['car_ride', 'carro', 'taxi', 'car', 'ride'].includes(t)) return 'car_ride';
-        if (['motorista_particular', 'motorista particular', 'chauffeur'].includes(t)) return 'motorista_particular';
-        // Logística
-        if (['frete', 'carreto', 'freight', 'van', 'mudanca', 'mudança'].includes(t)) return 'frete';
-        if (['package', 'pacote', 'encomenda', 'express', 'delivery'].includes(t)) return 'package';
-        return t; // retorna o tipo original se não houver mapeamento
-    };
-
-    const getTypeDetails = (rawType: string) => {
-        const type = normalizeServiceType(rawType);
-        switch (type) {
-            case 'package': return { icon: 'package_2', color: 'text-primary', bg: 'bg-primary/10', label: 'Encomenda', isFood: false };
-            case 'mototaxi': return { icon: 'two_wheeler', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'MotoTaxi', isFood: false };
-            case 'car_ride': return { icon: 'directions_car', color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'Carro', isFood: false };
-            case 'frete': return { icon: 'local_shipping', color: 'text-orange-400', bg: 'bg-orange-400/10', label: 'Frete/Carreto', isFood: false };
-            case 'restaurant': return { icon: 'restaurant', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Restaurante', isFood: true };
-            case 'market': return { icon: 'local_mall', color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'Mercado', isFood: false };
-            case 'pharmacy': return { icon: 'medication', color: 'text-rose-400', bg: 'bg-rose-400/10', label: 'Farmácia', isFood: false };
-            case 'beverages': return { icon: 'local_bar', color: 'text-purple-400', bg: 'bg-purple-400/10', label: 'Bebidas', isFood: false };
-            case 'motorista_particular': return { icon: 'military_tech', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Motorista Particular', isFood: false };
-            case 'motoboy': return { icon: 'moped', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'Motoboy', isFood: false };
-            default: return { icon: 'local_shipping', color: 'text-primary', bg: 'bg-primary/10', label: 'Serviço Express', isFood: false };
-        }
-    };
 
     const renderHeader = () => (
         <header className="px-6 py-6 flex items-center justify-between sticky top-0 z-50 bg-[#020617]/80 backdrop-blur-3xl border-b border-white/5 shrink-0">
@@ -861,9 +862,31 @@ function App() {
                             <div className="size-12 bg-primary/20 rounded-2xl flex items-center justify-center"><Icon name="account_balance_wallet" size={24} className="text-primary" /></div>
                         </div>
                         <nav className="flex-1 space-y-2">
-                            {[{ id: 'dashboard', label: 'Painel', icon: 'grid_view' }, { id: 'dedicated', label: 'Vagas Dedicadas', icon: 'stars' }, { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length }, { id: 'history', label: 'Histórico', icon: 'history' }, { id: 'earnings', label: 'Financeiro', icon: 'payments' }, { id: 'profile', label: 'Meu Perfil', icon: 'person' }].map(item => (
-                                <button key={item.id} onClick={() => { setActiveTab(item.id as any); setIsMenuOpen(false); }} className={`w-full flex items-center gap-5 px-5 py-4.5 rounded-[22px] transition-all text-left group ${activeTab === item.id ? 'bg-primary text-slate-950 font-black shadow-lg shadow-primary/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
-                                    <div className="relative"><Icon name={item.icon} size={22} />{(item as any).badge > 0 && <span className="absolute -top-1.5 -right-1.5 size-5 bg-blue-500 text-white text-[9px] font-black rounded-full flex items-center justify-center ring-2 ring-[#030712]">{(item as any).badge}</span>}</div><span className="text-sm font-black uppercase tracking-[0.1em]">{item.label}</span>
+                            {[
+                                { id: 'dashboard', label: 'Painel', icon: 'grid_view' },
+                                { id: 'active_mission', label: 'Missão Ativa', icon: 'route', badge: activeMission ? 1 : 0 },
+                                { id: 'dedicated', label: 'Vagas Dedicadas', icon: 'stars' },
+                                { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length },
+                                { id: 'history', label: 'Histórico', icon: 'history' },
+                                { id: 'earnings', label: 'Financeiro', icon: 'payments' },
+                                { id: 'suporte', label: 'Suporte Izi', icon: 'support_agent', onClick: () => { setActiveTab('profile'); setIsMenuOpen(false); } },
+                                { id: 'sos', label: 'Emergência (SOS)', icon: 'emergency', onClick: () => { setIsSOSActive(true); setIsMenuOpen(false); } },
+                                { id: 'profile', label: 'Meu Perfil', icon: 'person' }
+                            ].map(item => (
+                                <button 
+                                    key={item.id} 
+                                    onClick={item.onClick || (() => { setActiveTab(item.id as any); setIsMenuOpen(false); })} 
+                                    className={`w-full flex items-center gap-5 px-5 py-4.5 rounded-[22px] transition-all text-left group ${activeTab === item.id ? 'bg-primary text-slate-950 font-black shadow-lg shadow-primary/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                                >
+                                    <div className="relative">
+                                        <Icon name={item.icon} size={22} />
+                                        {item.badge > 0 && (
+                                            <span className={`absolute -top-1.5 -right-1.5 size-5 ${item.id === 'active_mission' ? 'bg-emerald-500' : 'bg-blue-500'} text-white text-[9px] font-black rounded-full flex items-center justify-center ring-2 ring-[#030712]`}>
+                                                {item.badge}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span className="text-sm font-black uppercase tracking-[0.1em]">{item.label}</span>
                                 </button>
                             ))}
                         </nav>
