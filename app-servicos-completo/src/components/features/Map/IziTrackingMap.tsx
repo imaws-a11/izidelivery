@@ -166,25 +166,29 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
           />
         )}
 
-        {driverLoc && (
+        {driverLoc && window.google?.maps?.marker?.AdvancedMarkerElement && (
           <Marker
             position={driverLoc}
-            icon={{
-              url: 'https://cdn-icons-png.flaticon.com/128/3448/3448339.png',
-              scaledSize: new google.maps.Size(42, 42),
-              anchor: new google.maps.Point(21, 21),
+            options={{
+              icon: {
+                 url: 'https://cdn-icons-png.flaticon.com/128/3448/3448339.png',
+                 scaledSize: new window.google.maps.Size(42, 42),
+                 anchor: new window.google.maps.Point(21, 21),
+              }
             }}
             zIndex={100}
           />
         )}
 
-        {userLoc && (
-          <Marker
+        {userLoc && window.google?.maps?.marker?.AdvancedMarkerElement && (
+           <Marker
             position={userLoc}
-            icon={{
-              url: 'https://cdn-icons-png.flaticon.com/128/484/484167.png',
-              scaledSize: new google.maps.Size(34, 34),
-              anchor: new google.maps.Point(17, 34),
+            options={{
+              icon: {
+                url: 'https://cdn-icons-png.flaticon.com/128/484/484167.png',
+                scaledSize: new window.google.maps.Size(34, 34),
+                anchor: new window.google.maps.Point(17, 34),
+              }
             }}
             zIndex={90}
           />

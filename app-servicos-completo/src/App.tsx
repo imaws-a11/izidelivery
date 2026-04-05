@@ -576,7 +576,9 @@ function App() {
           }
 
           // Monitoramento de Sucesso de Pagamento (Bitcoin / Pix / Geral)
-          const isPaid = newOrder.payment_status === 'paid' || (newOrder.status === 'novo' && (oldOrder?.status === 'pendente_pagamento' || !oldOrder));
+          // NOTA: !oldOrder foi removido — sem ele, pedidos de dinheiro/maquininha (que são INSERTs novos)
+          // não disparam incorretamente o fluxo de confirmação digital.
+          const isPaid = newOrder.payment_status === 'paid' || (newOrder.status === 'novo' && oldOrder?.status === 'pendente_pagamento');
           
           if (isPaid) {
             const isPaymentSubView = ["lightning_payment", "pix_payment", "payment_processing"].includes(subViewRef.current);
@@ -1528,7 +1530,7 @@ function App() {
       delivery_address: `${userLocation?.address || "Endereço não informado"}`,
       payment_method: paymentMethod,
       service_type: selectedShop?.type || "restaurant",
-      notes: paymentMethod === "dinheiro" && (window as any).changeFor ? `TROCO PARA: R$ ${(window as any).changeFor}` : "",
+      notes: (paymentMethod === "dinheiro" && changeFor) ? `TROCO PARA: R$ ${changeFor}` : "",
     };
 
     console.log("[DIAG] handlePlaceOrder acionado:", { paymentMethod, total, shopId });
@@ -1579,16 +1581,39 @@ function App() {
       }
 
       if (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") {
-        if (!shopId) { alert("Erro: Loja não identificada."); return; }
-        const payload = { ...orderBase, status: "waiting_merchant" };
-        const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(payload).select().single();
-        if (insertError || !order) {
-          alert("Erro ao criar pedido. Tente novamente.");
-          return;
+        if (!shopId) { 
+          toastError("Erro: Loja não identificada.");
+          setIsLoading(false);
+          return; 
         }
-        setSelectedItem(order);
-        if (cart.length > 0) await clearCart(order.id);
-        navigateSubView("waiting_merchant");
+        
+        const payload = { ...orderBase, status: "waiting_merchant", payment_status: "pending" };
+        
+        try {
+          const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(payload).select().single();
+          
+          if (insertError || !order) {
+            console.error("Insert Error:", insertError);
+            toastError("Erro ao criar pedido. Tente novamente.");
+            setIsLoading(false);
+            return;
+          }
+
+          setSelectedItem(order);
+          
+          // Limpeza do carrinho em bloco try/catch isolado para não afetar a criação com sucesso
+          try {
+            if (cart.length > 0) await clearCart(order.id);
+          } catch (clearErr) {
+            console.warn("Aviso: Carrinho não foi limpo, mas pedido foi criado:", clearErr);
+          }
+
+          navigateSubView("waiting_merchant");
+        } catch (dbErr) {
+          console.error("DB Error:", dbErr);
+          toastError("Erro de conexão. Verifique sua rede.");
+          setIsLoading(false);
+        }
         return;
       }
 
@@ -1908,36 +1933,32 @@ const navigateSubView = (target: string) => {
   const [myOrders, setMyOrders] = useState<any[]>([]);
 
   // Atualiza automaticamente as telas PIX/Lightning se o pagamento for confirmado em tempo real
+  // Usa selectedItem.id (não o objeto inteiro) como dependência para evitar loops de re-render
   useEffect(() => {
-    if ((subView === "pix_payment" || subView === "lightning_payment") && selectedItem?.id) {
-      const liveOrder = myOrders.find((o) => o.id === selectedItem.id);
-      if (liveOrder?.payment_status === "paid" || liveOrder?.status === "novo") {
-        if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') console.log("[SYNC] Pagamento detectado, finalizando fluxo...");
-        
-        // Limpar o carrinho somente APÓS a confirmação do pagamento
-        if (cart.length > 0) {
-          clearCart(liveOrder.id);
-        }
+    if ((subView !== "pix_payment" && subView !== "lightning_payment")) return;
+    if (!selectedItem?.id || selectedItem.id === "temp") return;
 
-        setSubView("none");
-        setTab("orders");
-        setSelectedItem(liveOrder);
-        toastSuccess("Pagamento Confirmado!");
-      }
-      
-      if (liveOrder && liveOrder.status && liveOrder.status !== "pendente_pagamento") {
-        if (liveOrder.status === "cancelado" || liveOrder.status === "recusado") {
-            toastError("Pagamento recusado ou expirado.");
-            setSubView("payment_error");
-        } else {
-            toastSuccess("Pagamento confirmado com sucesso!");
-            setSubView("none");
-            setTab("orders");
-            setSelectedItem(null);
-        }
-      }
+    const liveOrder = myOrders.find((o: any) => o.id === selectedItem.id);
+    if (!liveOrder || !liveOrder.status) return;
+
+    // PRIORIDADE 1: Pagamento confirmado (paid ou novo)
+    const isPaid = liveOrder.payment_status === "paid" || liveOrder.status === "novo";
+    if (isPaid) {
+      console.log("[SYNC] Pagamento aprovado detectado, finalizando fluxo...");
+      if (cart.length > 0) clearCart(liveOrder.id);
+      setSelectedItem(liveOrder);
+      setSubView("none");
+      setTab("orders");
+      toastSuccess("Pagamento Confirmado! 🎉");
+      return; // Sair imediatamente para não processar o bloco abaixo
     }
-  }, [myOrders, subView, selectedItem]);
+
+    // PRIORIDADE 2: Pedido cancelado/recusado enquanto aguardando pagamento
+    if (liveOrder.status === "cancelado" || liveOrder.status === "recusado") {
+      toastError("Pagamento recusado ou pedido cancelado.");
+      setSubView("payment_error");
+    }
+  }, [myOrders, subView, selectedItem?.id]); // selectedItem.id previne loop
   const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
   const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
@@ -6447,8 +6468,8 @@ const navigateSubView = (target: string) => {
     const svcLabels: Record<string,string> = { mototaxi:'MotoTáxi', carro:'Carro Executivo', van:'Van de Carga', utilitario:'Izi Express' };
     const icon = svcIcons[selectedItem.service_type] || 'event';
     const label = svcLabels[selectedItem.service_type] || 'Serviço';
-    const scheduledAt = selectedItem.scheduled_date && selectedItem.scheduled_time
-      ? new Date(`${selectedItem.scheduled_date}T${selectedItem.scheduled_time}`).toLocaleString('pt-BR', { weekday:'long', day:'2-digit', month:'long', hour:'2-digit', minute:'2-digit' })
+    const scheduledAt = selectedItem.scheduled_at 
+      ? new Date(selectedItem.scheduled_at).toLocaleString('pt-BR', { weekday:'long', day:'2-digit', month:'long', hour:'2-digit', minute:'2-digit' })
       : null;
     const hasDriver = !!selectedItem.driver_id;
 

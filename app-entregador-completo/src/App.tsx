@@ -6,6 +6,8 @@ import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer } from '@react-google-maps/api';
 
+const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
+const GOOGLE_MAPS_ID = 'izi-pilot-map';
 
 const mapContainerStyle = { width: '100%', height: '100%' };
 const mapOptions = {
@@ -107,9 +109,9 @@ interface Order {
 function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
+    id: GOOGLE_MAPS_ID,
     googleMapsApiKey: mapsKey,
-    libraries: ['places', 'geometry'] as any,
+    libraries: GOOGLE_MAPS_LIBRARIES,
     language: 'pt-BR',
     region: 'BR',
   });
@@ -192,23 +194,29 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
         zoom={16}
         options={mapOptions}
       >
-        <Marker 
-          position={validDriverCoords} 
-          icon={{
-            url: 'https://cdn-icons-png.flaticon.com/512/2965/2965319.png', // Motociclista Premium Amarelo
-            scaledSize: new google.maps.Size(48, 48),
-            anchor: new google.maps.Point(24, 24)
-          }}
-          zIndex={1000} // Sempre no topo
-        />
+        {window.google?.maps?.marker?.AdvancedMarkerElement && (
+           <Marker 
+            position={validDriverCoords} 
+            options={{
+              icon: {
+                url: 'https://cdn-icons-png.flaticon.com/512/2965/2965319.png', // Motociclista Premium Amarelo
+                scaledSize: new window.google.maps.Size(48, 48),
+                anchor: new window.google.maps.Point(24, 24)
+              }
+            }}
+            zIndex={1000} // Sempre no topo
+          />
+        )}
         
-        {validDestCoords && (
+        {validDestCoords && window.google?.maps?.marker?.AdvancedMarkerElement && (
           <Marker 
             position={validDestCoords}
-            icon={{
-              url: 'https://cdn-icons-png.flaticon.com/512/9131/9131546.png', // Pin de Destino Premium
-              scaledSize: new google.maps.Size(42, 42),
-              anchor: new google.maps.Point(21, 42)
+            options={{
+              icon: {
+                url: 'https://cdn-icons-png.flaticon.com/512/9131/9131546.png', // Pin de Destino Premium
+                scaledSize: new window.google.maps.Size(42, 42),
+                anchor: new window.google.maps.Point(21, 42)
+              }
             }}
             zIndex={500}
           />
@@ -526,15 +534,14 @@ function App() {
         if (!isAuthenticated || !driverId) return;
 
         const fetchScheduled = async () => {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toISOString();
             const { data } = await supabase
                 .from('orders_delivery')
                 .select('*, merchant_id')
-                .not('scheduled_date', 'is', null)
-                .in('status', ['pendente', 'agendado', 'a_caminho', 'preparando']).not('status', 'eq', 'novo')
-                .gte('scheduled_date', today)
-                .order('scheduled_date', { ascending: true })
-                .order('scheduled_time', { ascending: true });
+                .not('scheduled_at', 'is', null)
+                .or(`status.eq.pendente,status.eq.agendado,status.eq.a_caminho,status.eq.preparando,driver_id.eq.${driverId}`)
+                .gte('scheduled_at', today)
+                .order('scheduled_at', { ascending: true });
 
             if (data) setScheduledOrders(data);
         };
@@ -545,16 +552,15 @@ function App() {
         const scheduledChannel = supabase.channel('scheduled_orders_realtime')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 const o = payload.new as any;
-                if (o.scheduled_date) {
+                if (o.scheduled_at) {
                     setScheduledOrders(prev => [...prev, o].sort((a, b) =>
-                        new Date(a.scheduled_date + 'T' + (a.scheduled_time || '00:00')).getTime() -
-                        new Date(b.scheduled_date + 'T' + (b.scheduled_time || '00:00')).getTime()
+                        new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
                     ));
                 }
             })
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 const o = payload.new as any;
-                if (o.scheduled_date) {
+                if (o.scheduled_at) {
                     if (['concluido', 'cancelado'].includes(o.status)) {
                         setScheduledOrders(prev => prev.filter(s => s.id !== o.id));
                     } else {
@@ -574,7 +580,7 @@ function App() {
         if (!isAuthenticated || !driverId) return;
 
         const fetchOrders = async () => {
-            const { data, error } = await supabase.from('orders_delivery').select('*').in('status', ['pendente', 'pronto', 'waiting_driver']).not('status', 'eq', 'novo').not('status', 'eq', 'waiting_merchant');
+            const { data, error } = await supabase.from('orders_delivery').select('*').in('status', ['pendente', 'pronto', 'waiting_driver']);
             if (error || !data) return;
             // Filtrar somente rejeições com menos de 5 segundos
             const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
@@ -678,15 +684,40 @@ function App() {
 
 
 
-    const filteredOrders = useMemo(() => filter === 'all' ? orders : orders.filter((o: any) => o.type === filter), [filter, orders]);
+    const getCategory = (rawType: string): string => {
+        const type = normalizeServiceType(rawType);
+        if (['restaurant', 'package', 'market', 'pharmacy', 'beverages', 'motoboy'].includes(type)) return 'motoboy';
+        if (['car_ride', 'mototaxi'].includes(type)) return 'car_ride';
+        if (['frete', 'van', 'utilitario'].includes(type)) return 'frete';
+        if (type === 'motorista_particular') return 'motorista_particular';
+        return 'all';
+    };
+
+    const filteredOrders = useMemo(() => {
+        if (filter === 'all') return orders;
+        return orders.filter((o: any) => getCategory(o.type) === filter);
+    }, [filter, orders, normalizeServiceType]);
 
     const handleAccept = async (order: Order) => {
         if (isAccepting) return;
         setIsAccepting(true);
         try {
-            const targetId = order.realId || order.id;
+            // Validar UUID — order.id é o ID curto (8 chars), order.realId é o UUID completo
+            const targetId = order.realId ?? order.id;
+            const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(targetId));
+            if (!isValidUUID) {
+                console.error('[handleAccept] ID inválido (não é UUID):', targetId, '| order:', order);
+                toastError('Pedido com ID inválido. Sincronize a lista e tente novamente.');
+                setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
+                return;
+            }
+
             const { data: realOrder, error: findError } = await supabase.from('orders_delivery').select('*').eq('id', targetId).single();
-            if (findError || !realOrder || !['pendente', 'pronto', 'waiting_driver'].includes(realOrder.status)) { toastError('Pedido indisponível ou já aceito.'); setOrders(prev => prev.filter((o: any) => o.id !== order.id)); return; }
+            if (findError || !realOrder || !['pendente', 'pronto', 'waiting_driver'].includes(realOrder.status)) {
+                toastError('Pedido indisponível ou já aceito por outro entregador.');
+                setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
+                return;
+            }
             if (!driverId) { toastError('Sessão expirada. Faça login novamente.'); return; }
             const { error } = await supabase.from('orders_delivery').update({ status: 'a_caminho_coleta', driver_id: driverId }).eq('id', realOrder.id);
             if (error) { toastError('Erro ao aceitar corrida.'); return; }
@@ -755,7 +786,32 @@ function App() {
         localStorage.removeItem('Izi_online'); localStorage.removeItem('Izi_declined'); localStorage.removeItem('Izi_declined_timed'); localStorage.removeItem('Izi_active_mission');
     };
 
-    const getTypeDetails = (type: string) => {
+    // Normaliza aliases variados de service_type que vêm do banco de dados para os tipos canônicos
+    const normalizeServiceType = (raw: string | undefined | null): string => {
+        if (!raw) return 'delivery';
+        const t = raw.toLowerCase().trim();
+        // Tipos de comida / restaurante
+        if (['restaurant', 'restaurante', 'food', 'hamburguer', 'hamburger', 'burger',
+             'lanchonete', 'lanche', 'pizzaria', 'pizza', 'sushi', 'japanese',
+             'churrasco', 'grill', 'culinaria', 'culinária', 'refeicao', 'refeição'].includes(t)) return 'restaurant';
+        // Mercado / supermercado
+        if (['market', 'mercado', 'supermercado', 'hortifruti'].includes(t)) return 'market';
+        // Farmácia / saúde
+        if (['pharmacy', 'farmacia', 'farmácia', 'saude', 'saúde', 'health'].includes(t)) return 'pharmacy';
+        // Bebidas
+        if (['beverages', 'bebidas', 'drinks', 'bar'].includes(t)) return 'beverages';
+        // Mobilidade
+        if (['mototaxi', 'moto_taxi', 'motortaxi'].includes(t)) return 'mototaxi';
+        if (['car_ride', 'carro', 'taxi', 'car', 'ride'].includes(t)) return 'car_ride';
+        if (['motorista_particular', 'motorista particular', 'chauffeur'].includes(t)) return 'motorista_particular';
+        // Logística
+        if (['frete', 'carreto', 'freight', 'van', 'mudanca', 'mudança'].includes(t)) return 'frete';
+        if (['package', 'pacote', 'encomenda', 'express', 'delivery'].includes(t)) return 'package';
+        return t; // retorna o tipo original se não houver mapeamento
+    };
+
+    const getTypeDetails = (rawType: string) => {
+        const type = normalizeServiceType(rawType);
         switch (type) {
             case 'package': return { icon: 'package_2', color: 'text-primary', bg: 'bg-primary/10', label: 'Encomenda', isFood: false };
             case 'mototaxi': return { icon: 'two_wheeler', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'MotoTaxi', isFood: false };
@@ -767,7 +823,7 @@ function App() {
             case 'beverages': return { icon: 'local_bar', color: 'text-purple-400', bg: 'bg-purple-400/10', label: 'Bebidas', isFood: false };
             case 'motorista_particular': return { icon: 'military_tech', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Motorista Particular', isFood: false };
             case 'motoboy': return { icon: 'moped', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'Motoboy', isFood: false };
-            default: return { icon: 'local_shipping', color: 'text-primary', bg: 'bg-primary/10', label: 'Serviço', isFood: false };
+            default: return { icon: 'local_shipping', color: 'text-primary', bg: 'bg-primary/10', label: 'Serviço Express', isFood: false };
         }
     };
 
@@ -946,6 +1002,7 @@ function App() {
                 ) : (
                     <div className="space-y-3">
                         {scheduledOrders.map((order: any) => {
+                            const dt = new Date(order.scheduled_at);
                             const isPending = (order.status === 'pendente' || order.status === 'agendado' || order.status === 'pronto') && order.status !== 'novo' && order.status !== 'waiting_merchant';
                             const isAccepted = order.driver_id === driverId;
                             const statusColor = isAccepted ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : isPending ? 'text-blue-400 bg-blue-400/10 border-blue-400/20' : 'text-white/40 bg-white/5 border-white/10';
@@ -963,8 +1020,8 @@ function App() {
                                             <div className="flex items-center gap-2 mb-1">
                                                 <Icon name="event" className="text-blue-400 text-sm" />
                                                 <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">
-                                                    {new Date(order.scheduled_date).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
-                                                    {order.scheduled_time && ` • ${order.scheduled_time.slice(0,5)}`}
+                                                    {dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
+                                                    {` • ${dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
                                                 </span>
                                             </div>
                                             <p className="text-sm font-black text-white truncate">{order.delivery_address}</p>
@@ -992,10 +1049,10 @@ function App() {
                                                     destination: order.delivery_address,
                                                     price: order.total_price,
                                                     distance: '---',
-                                                    time: order.scheduled_time || 'Agendado',
+                                                    time: dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                                                     customer: 'Cliente Izi',
                                                     rating: 5.0,
-                                                    scheduled_at: order.scheduled_date
+                                                    scheduled_at: order.scheduled_at
                                                 })}
                                                 disabled={isAccepting}
                                                 className="bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-2xl flex items-center gap-2 active:scale-95 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
@@ -1057,7 +1114,8 @@ function App() {
                     </div>
                 ) : filteredOrders.map((order: any, i: number) => {
                     const details = getTypeDetails(order.type);
-                    const isMobility = order.type === 'mototaxi' || order.type === 'car_ride';
+                    // isMobility é determinado pelo label normalizado, não pelo tipo bruto
+                    const isMobility = ['MotoTaxi', 'Carro', 'Motorista Particular', 'Motoboy'].includes(details.label);
                     return (
                         <motion.div key={order.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }} className="bg-white/[0.03] border border-white/8 rounded-[32px] p-6 space-y-5">
                             <div className="flex items-start justify-between">
@@ -1166,15 +1224,15 @@ function App() {
                     <p className="text-[10px] text-white/10 mt-1">Novos agendamentos aparecem aqui em tempo real</p>
                 </div>
             ) : scheduledOrders.map((order: any, i: number) => {
+                const dt = new Date(order.scheduled_at);
                 const isPending = order.status === 'pendente' ||  order.status === 'agendado';
                 const isAccepted = order.driver_id === driverId;
                 const isMyAccepted = isAccepted;
                 const statusColor = isMyAccepted ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : isPending ? 'text-blue-400 bg-blue-400/10 border-blue-400/20' : 'text-white/40 bg-white/5 border-white/10';
                 const statusLabel = isMyAccepted ? '✓ Aceito por você' : isPending ? 'Disponível' : order.status;
-                const schedDate = new Date(order.scheduled_date + 'T12:00:00');
-                const isToday = schedDate.toDateString() === new Date().toDateString();
-                const isTomorrow = schedDate.toDateString() === new Date(Date.now() + 86400000).toDateString();
-                const dateLabel = isToday ? 'Hoje' : isTomorrow ? 'Amanhã' : schedDate.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+                const isToday = dt.toDateString() === new Date().toDateString();
+                const isTomorrow = dt.toDateString() === new Date(Date.now() + 86400000).toDateString();
+                const dateLabel = isToday ? 'Hoje' : isTomorrow ? 'Amanhã' : dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
 
                 return (
                     <motion.div key={order.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
@@ -1187,7 +1245,7 @@ function App() {
                             </div>
                             <div>
                                 <p className={`text-sm font-black uppercase tracking-widest ${isToday ? 'text-blue-400' : 'text-white/50'}`}>{dateLabel}</p>
-                                <p className="text-[10px] text-white/30">{order.scheduled_time ? order.scheduled_time.slice(0,5) + 'h' : 'Horário a confirmar'}</p>
+                                <p className="text-[10px] text-white/30">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + 'h'}</p>
                             </div>
                             <div className={`ml-auto text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border ${statusColor}`}>
                                 {statusLabel}
@@ -1231,10 +1289,10 @@ function App() {
                                     destination: order.delivery_address,
                                     price: order.total_price,
                                     distance: '---',
-                                    time: order.scheduled_time || 'Agendado',
+                                    time: dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                                     customer: 'Cliente Izi',
                                     rating: 5.0,
-                                    scheduled_at: order.scheduled_date
+                                    scheduled_at: order.scheduled_at
                                 })}
                                 disabled={isAccepting}
                                 className="w-full bg-blue-500 text-white font-black text-[11px] uppercase tracking-widest py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
