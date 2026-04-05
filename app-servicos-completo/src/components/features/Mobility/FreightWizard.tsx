@@ -55,8 +55,9 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
         distanceInKm: distanceValueKm || 0,
         distanceRate: parseFloat(String(bv.logistica_km || 3)),
         helperCount: transitData.helpers || 0,
-        helperRate: 35,
-        hasStairs: transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination
+        helperRate: parseFloat(String(bv.logistica_helper || 35)),
+        hasStairs: transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination,
+        stairsFee: parseFloat(String(bv.logistica_stairs || 30))
       });
       return calculation.totalPrice;
     } catch (e) {

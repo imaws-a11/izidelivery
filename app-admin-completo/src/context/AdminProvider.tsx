@@ -83,6 +83,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       utilitario_km: '4,00',
       logistica_min: '45,00',
       logistica_km: '8,00',
+      logistica_stairs: '30,00',
+      logistica_helper: '35,00',
       isDynamicActive: true
     },
     flowControl: { mode: 'manual', highDemandActive: false },
@@ -676,6 +678,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             utilitario_km: (baseValuesRow.metadata as any).utilitario_km?.toString().replace('.', ',') || '4,00',
             logistica_min: (baseValuesRow.metadata as any).logistica_min?.toString().replace('.', ',') || '45,00',
             logistica_km: (baseValuesRow.metadata as any).logistica_km?.toString().replace('.', ',') || '8,00',
+            logistica_stairs: (baseValuesRow.metadata as any).logistica_stairs?.toString().replace('.', ',') || '30,00',
+            logistica_helper: (baseValuesRow.metadata as any).logistica_helper?.toString().replace('.', ',') || '35,00',
             isDynamicActive: (baseValuesRow.metadata as any).isDynamicActive ?? true
           } : prev.baseValues
         }));
@@ -1311,6 +1315,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         utilitario_km: parseFloat(dynamicRatesState.baseValues.utilitario_km.replace(',', '.')),
         logistica_min: parseFloat(dynamicRatesState.baseValues.logistica_min.replace(',', '.')),
         logistica_km: parseFloat(dynamicRatesState.baseValues.logistica_km.replace(',', '.')),
+        logistica_stairs: parseFloat((dynamicRatesState.baseValues.logistica_stairs as string || '30').replace(',', '.')),
+        logistica_helper: parseFloat((dynamicRatesState.baseValues.logistica_helper as string || '35').replace(',', '.')),
       };
 
       const rows = [
