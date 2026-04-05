@@ -316,16 +316,30 @@ export default function OrdersAdminTab() {
                                                        </div>
                                                        <div>
                                                            <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{it.name || it.product_name || 'Produto'}</p>
-                                                           {it.options && it.options.length > 0 && (
-                                                               <p className="text-[10px] text-slate-400 font-medium italic">
-                                                                   + {it.options.map((opt: any) => opt.name).join(', ')}
-                                                               </p>
+                                                           {((it.options && it.options.length > 0) || (it.addonDetails && it.addonDetails.length > 0)) && (
+                                                               <div className="mt-1 space-y-0.5">
+                                                                   {(it.options || []).map((opt: any, oIdx: number) => (
+                                                                       <p key={oIdx} className="text-[10px] text-slate-400 font-medium italic">
+                                                                           + {opt.name}
+                                                                       </p>
+                                                                   ))}
+                                                                   {(it.addonDetails || []).map((addon: any, aIdx: number) => (
+                                                                       <p key={aIdx} className="text-[10px] text-slate-400 font-medium italic">
+                                                                           {addon.group_name}: {addon.name}
+                                                                       </p>
+                                                                   ))}
+                                                               </div>
                                                            )}
                                                        </div>
                                                   </div>
                                                   <div className="text-right">
                                                       <p className="text-sm font-black text-slate-900 dark:text-white">
-                                                          R$ {Number((it.price || 0) * (it.quantity || 1)).toFixed(2).replace('.', ',')}
+                                                          R$ {(
+                                                              (Number(it.price || 0) + 
+                                                              (it.options || []).reduce((acc: number, opt: any) => acc + (Number(opt.price) || 0), 0) +
+                                                              (it.addonDetails || []).reduce((acc: number, ad: any) => acc + (Number(ad.price || ad.unit_price) || 0), 0)
+                                                              ) * (it.quantity || 1)
+                                                          ).toFixed(2).replace('.', ',')}
                                                       </p>
                                                       {it.quantity > 1 && (
                                                           <p className="text-[9px] font-bold text-slate-400 uppercase">

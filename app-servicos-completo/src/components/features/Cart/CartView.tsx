@@ -22,13 +22,18 @@ export const CartView: React.FC<CartViewProps> = ({
   const subtotal: number = cart.reduce((sum, item) => {
     const basePrice = Number(item.price) || 0;
     const addonsPrice = Array.isArray(item.addonDetails) 
-      ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.price) || 0), 0)
+      ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0)
       : 0;
     return sum + basePrice + addonsPrice;
   }, 0);
   const taxa: number = deliveryFee; 
   const total: number = subtotal + taxa;
   const getAddonDetails = (item: any) => Array.isArray(item.addonDetails) ? item.addonDetails : [];
+  const getItemTotal = (item: any) => {
+    const basePrice = Number(item.price) || 0;
+    const addonsPrice = getAddonDetails(item).reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0);
+    return basePrice + addonsPrice;
+  };
   const cartProductIds = new Set(cart.map((item: any) => item.id));
   const suggestedMerchantProducts = (merchantProducts || [])
     .filter((item: any) => item?.id && !cartProductIds.has(item.id))
@@ -115,7 +120,7 @@ export const CartView: React.FC<CartViewProps> = ({
                   </div>
                 )}
                 <div className="flex items-center gap-2 mt-2">
-                   <p className="text-white font-black text-sm">R$ {Number(item.price || 0).toFixed(2).replace(".", ",")}</p>
+                   <p className="text-white font-black text-sm">R$ {getItemTotal(item).toFixed(2).replace(".", ",")}</p>
                    {item.oldPrice && <p className="text-[10px] text-zinc-600 line-through font-bold">R$ {item.oldPrice.toFixed(2).replace(".", ",")}</p>}
                 </div>
               </div>
