@@ -66,36 +66,43 @@ export default function TrackingTab() {
           zoomControl: false,
         }}
       >
-        {/* Driver Markers */}
         {driversList.filter(d => d.is_online).map((driver, i) => (
-          <Marker
-            key={driver.id}
-            position={{
-              lat: mapCenterView.lat + (i * 0.005) * Math.sin(i),
-              lng: mapCenterView.lng + (i * 0.005) * Math.cos(i)
-            }}
-            onClick={() => setSelectedTrackingItem({ type: 'driver', ...driver })}
-            icon={typeof google !== 'undefined' ? {
-              url: 'https://cdn-icons-png.flaticon.com/512/3253/3253113.png',
-              scaledSize: new google.maps.Size(40, 40)
-            } : undefined}
-          />
+          window.google?.maps?.marker?.AdvancedMarkerElement && (
+            <Marker
+              key={driver.id}
+              position={{
+                lat: mapCenterView.lat + (i * 0.005) * Math.sin(i),
+                lng: mapCenterView.lng + (i * 0.005) * Math.cos(i)
+              }}
+              onClick={() => setSelectedTrackingItem({ type: 'driver', ...driver })}
+              options={{
+                icon: {
+                  url: 'https://cdn-icons-png.flaticon.com/512/3253/3253113.png',
+                  scaledSize: new window.google.maps.Size(40, 40)
+                }
+              }}
+            />
+          )
         ))}
 
         {/* Order Markers */}
         {allOrders.filter(o => ['pending', 'picked_up', 'a_caminho'].includes(o.status)).map((order, i) => (
-          <Marker
-            key={order.id}
-            position={{
-              lat: mapCenterView.lat - (i * 0.008) * Math.cos(i),
-              lng: mapCenterView.lng + (i * 0.008) * Math.sin(i)
-            }}
-            onClick={() => setSelectedTrackingItem({ type: 'order', ...order })}
-            icon={typeof google !== 'undefined' ? {
-              url: 'https://cdn-icons-png.flaticon.com/512/2830/2830305.png',
-              scaledSize: new google.maps.Size(35, 35)
-            } : undefined}
-          />
+          window.google?.maps?.marker?.AdvancedMarkerElement && (
+            <Marker
+              key={order.id}
+              position={{
+                lat: mapCenterView.lat - (i * 0.008) * Math.cos(i),
+                lng: mapCenterView.lng + (i * 0.008) * Math.sin(i)
+              }}
+              onClick={() => setSelectedTrackingItem({ type: 'order', ...order })}
+              options={{
+                icon: {
+                  url: 'https://cdn-icons-png.flaticon.com/512/2830/2830305.png',
+                  scaledSize: new window.google.maps.Size(35, 35)
+                }
+              }}
+            />
+          )
         ))}
       </GoogleMap>
     ) : (

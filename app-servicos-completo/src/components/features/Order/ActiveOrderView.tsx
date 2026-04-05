@@ -254,8 +254,11 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
             </div>
 
             {(() => {
+                const method = (selectedItem.payment_method || '').toLowerCase();
+                const isOffline = method === 'dinheiro' || method === 'cartao_entrega';
                 const isPending = selectedItem.status === 'pendente_pagamento' || selectedItem.payment_status === 'pending';
-                if (!isPending) return null;
+                
+                if (!isPending || isOffline) return null;
                 
                 const tech = (selectedItem.payment_method || 'pix').toLowerCase();
                 const targetView = tech.includes('bitcoin') || tech.includes('lightning') ? 'lightning_payment' : 'pix_payment';
@@ -457,20 +460,31 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
               )}
 
               <div className="pt-4 border-t border-white/10 flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Total Pago</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                  {selectedItem.payment_status === 'paid' ? 'Total Pago' : 'Total a Pagar'}
+                </span>
                 <span className="text-2xl font-black text-white italic tracking-tighter">R$ {Number(selectedItem.total_price || 0).toFixed(2).replace('.', ',')}</span>
               </div>
               
               <div className="pt-2 flex flex-col gap-1 items-end">
-                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[10px]">check_circle</span>
-                  Pago via {String(selectedItem.payment_method || 'Pix').toUpperCase()}
-                </span>
-                {selectedItem.payment_status === 'pending' && (
-                  <span className="text-[9px] font-black uppercase tracking-widest text-amber-500 flex items-center gap-1 animate-pulse mt-1">
-                    <span className="material-symbols-outlined text-[10px]">schedule</span>
-                    Aguardando Confirmação
+                {selectedItem.payment_status === 'paid' ? (
+                  <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[10px]">check_circle</span>
+                    Pago via {String(selectedItem.payment_method || 'Pix').toUpperCase()}
                   </span>
+                ) : (
+                  <>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[10px]">payments</span>
+                      Pagamento: {String(selectedItem.payment_method || 'Não Info').toUpperCase()}
+                    </span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-amber-500 flex items-center gap-1 animate-pulse mt-1">
+                      <span className="material-symbols-outlined text-[10px]">schedule</span>
+                      {(selectedItem.payment_method === 'dinheiro' || selectedItem.payment_method === 'cartao_entrega') 
+                        ? 'Pagar na Entrega' 
+                        : 'Aguardando Aprovação'}
+                    </span>
+                  </>
                 )}
               </div>
             </div>
