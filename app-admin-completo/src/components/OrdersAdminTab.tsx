@@ -503,11 +503,37 @@ export default function OrdersAdminTab() {
                                       <span className="material-symbols-outlined text-blue-500">payments</span>
                                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pagamento ({selectedOrderDetails.payment_method})</h4>
                                   </div>
-                                  <div className="flex items-end justify-between">
-                                      <p className="text-2xl font-black text-primary">R$ {selectedOrderDetails.total_price?.toFixed(2).replace('.', ',')}</p>
-                                      {selectedOrderDetails.payment_method === 'dinheiro' && (
-                                          <span className="px-2 py-1 bg-rose-100 text-rose-600 rounded-lg text-[8px] font-black uppercase mb-1">Receber no local</span>
-                                      )}
+                                  <div className="space-y-4">
+                                      <div className="flex items-end justify-between">
+                                          <p className="text-2xl font-black text-primary">R$ {selectedOrderDetails.total_price?.toFixed(2).replace('.', ',')}</p>
+                                          {selectedOrderDetails.payment_method === 'dinheiro' && (
+                                              <span className="px-2 py-1 bg-rose-100 text-rose-600 rounded-lg text-[8px] font-black uppercase mb-1">Receber no local</span>
+                                          )}
+                                      </div>
+
+                                      <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                                          <div>
+                                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Comissão App ({(() => {
+                                                  const merchant = merchantsList.find(m => m.id === selectedOrderDetails.merchant_id);
+                                                  return merchant?.commission_percent ?? appSettings?.appCommission ?? 12;
+                                              })()}%)</p>
+                                              <p className="text-sm font-black text-amber-600">
+                                                  R$ {(() => {
+                                                      const rate = merchantsList.find(m => m.id === selectedOrderDetails.merchant_id)?.commission_percent ?? appSettings?.appCommission ?? 12;
+                                                      return ((selectedOrderDetails.total_price || 0) * (rate / 100)).toFixed(2).replace('.', ',');
+                                                  })()}
+                                              </p>
+                                          </div>
+                                          <div className="text-right">
+                                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Líquido Loja</p>
+                                              <p className="text-sm font-black text-emerald-600">
+                                                  R$ {(() => {
+                                                      const rate = merchantsList.find(m => m.id === selectedOrderDetails.merchant_id)?.commission_percent ?? appSettings?.appCommission ?? 12;
+                                                      return ((selectedOrderDetails.total_price || 0) * (1 - rate / 100)).toFixed(2).replace('.', ',');
+                                                  })()}
+                                              </p>
+                                          </div>
+                                      </div>
                                   </div>
                               </div>
                           </div>

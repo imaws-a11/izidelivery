@@ -1459,34 +1459,46 @@ function App() {
     return target;
   };
 
-    const calculateDeliveryFee = () => {
-    // PRIORIDADE MÁXIMA: Frete grátis do lojista
-    if (selectedShop?.freeDelivery === true || selectedShop?.free_delivery === true) return 0;
-    
-    // Prioridade 2: IZI Black
-    const minOrderIziBlack = Number(globalSettings?.izi_black_min_order || 0);
-    const subtotal = cart.reduce((a, b: any) => a + (Number(b.price) || 0), 0);
-    
-    // Se for IZI Black, frete grátis se o subtotal atingir o mínimo (ou se não houver mínimo definido)
+  const calculateDeliveryFee = () => {
+    // 1. Prioridade Total: Configuração do Lojista Selecionado
+    if (selectedShop) {
+      if (selectedShop.free_delivery === true || selectedShop.freeDelivery === true) {
+        return 0;
+      }
+      
+      // Se houver uma taxa de serviço específica do lojista, use-a
+      if (selectedShop.service_fee !== undefined && selectedShop.service_fee !== null) {
+        return Number(selectedShop.service_fee);
+      }
+    }
+
+    // 2. IZI Black (Benefício do Usuário)
+    // Verificamos se o usuário é IZI Black e se atingiu o pedido mínimo (se houver)
     if (isIziBlackMembership) {
+       const minOrderIziBlack = Number(globalSettings?.izi_black_min_order || 0);
+       const subtotal = cart.reduce((a, b: any) => a + (Number(b.price) || 0), 0);
+       
        if (minOrderIziBlack === 0 || subtotal >= minOrderIziBlack) {
-           return 0;
+         return 0;
        }
     }
 
-    // Prioridade 3: Taxa configurada pelo lojista
-    if (selectedShop?.service_fee !== undefined && selectedShop?.service_fee !== null) {
-      return Number(selectedShop.service_fee);
-    }
-    
-    // Prioridade 4: Fallback no primeiro item do carrinho
+    // 3. Fallback: Taxa de Entrega informada no primeiro item (Legado/Compatibilidade)
     if (cart.length > 0) {
        const first = cart[0];
-       if (first.merchant_free_delivery === true || first.free_delivery === true || first.freeDelivery === true) return 0;
-       if (first.merchant_service_fee !== undefined) return Number(first.merchant_service_fee);
-       if (first.service_fee !== undefined) return Number(first.service_fee);
+       
+       // Verificamos se o lojista deste item especificou frete grátis no momento da adição
+       if (first.merchant_free_delivery === true) {
+           return 0;
+       }
+       
+       // Se o item tem uma taxa fixa (ex: produtos de marketplace com frete próprio)
+       if (first.service_fee !== undefined && first.service_fee !== null) {
+         return Number(first.service_fee);
+       }
     }
-    
+
+    // 4. Último Recurso: Taxa Base Global do Aplicativo
     return Number(globalSettings?.base_fee || 5.90);
   };
 
