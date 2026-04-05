@@ -39,34 +39,35 @@ const playTone = (
 
 export const playIziSound = (role: 'merchant' | 'driver') => {
   const ctx = getAudioContext();
-  if (!ctx) return;
+  if (ctx && ctx.state === 'suspended') ctx.resume();
 
   try {
-    // SOM DE TELEFONE ANTIGO (RETRO-RING) - ALTO E PENETRANTE
-    // Mesmo som para lojistas e entregadores (Vagas Dedicadas Requisitadas)
-    const playRetroRing = () => {
+    // 1. Tentar tocar o som personalizado do Pixabay
+    const audio = new Audio('https://cdn.pixabay.com/audio/2022/10/04/audio_79bd7a4d75.mp3');
+    audio.play().catch(err => {
+       console.warn('Erro ao tocar áudio personalizado, tentando sintetizador:', err);
+       playSyntheticRing(ctx);
+    });
+
+    // Função de fallback sintética
+    function playSyntheticRing(ac: AudioContext | null) {
+      if (!ac) return;
       for (let i = 0; i < 3; i++) {
         const offset = i * 0.8;
-        
-        // Simular o motor da campainha (vibrato rápido entre 440 e 480Hz)
         for (let j = 0; j < 15; j++) {
           const microOffset = offset + (j * 0.02);
           const freq = (j % 2 === 0) ? 440 : 480;
-          playTone(ctx, freq, 'square', microOffset, 0.04, 0.45); 
-          playTone(ctx, freq * 1.5, 'sawtooth', microOffset, 0.04, 0.15); 
+          playTone(ac, freq, 'square', microOffset, 0.04, 0.45); 
+          playTone(ac, freq * 1.5, 'sawtooth', microOffset, 0.04, 0.15); 
         }
-        
-        // Breve pausa no meio do ring-ring duplo clássico
         const offset2 = offset + 0.35;
         for (let j = 0; j < 12; j++) {
            const microOffset = offset2 + (j * 0.02);
            const freq = (j % 2 === 0) ? 440 : 480;
-           playTone(ctx, freq, 'square', microOffset, 0.04, 0.45);
+           playTone(ac, freq, 'square', microOffset, 0.04, 0.45);
         }
       }
-    };
-
-    playRetroRing();
+    }
 
   } catch (e) {
     console.warn('Erro ao reproduzir som:', e);
