@@ -220,22 +220,30 @@ export default function DynamicRatesTab() {
                 extras: [
                   { label: 'Adicional Escada', key: 'logistica_stairs' },
                   { label: 'Por Ajudante', key: 'logistica_helper' }
+                ],
+                vehicles: [
+                  { title: 'Fiorino', minKey: 'fiorino_min', kmKey: 'fiorino_km' },
+                  { title: 'Caminhonete', minKey: 'caminhonete_min', kmKey: 'caminhonete_km' },
+                  { title: 'Baú P', minKey: 'bau_p_min', kmKey: 'bau_p_km' },
+                  { title: 'Baú M', minKey: 'bau_m_min', kmKey: 'bau_m_km' },
+                  { title: 'Baú G', minKey: 'bau_g_min', kmKey: 'bau_g_km' },
+                  { title: 'Aberto', minKey: 'aberto_min', kmKey: 'aberto_km' }
                 ]
               }
             ].map((cat: any) => (
-              <div key={cat.title} className="flex flex-col gap-6 p-6 rounded-[32px] bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50">
+              <div key={cat.title} className={`flex flex-col gap-6 p-8 rounded-[38px] ${cat.vehicles ? 'col-span-1 md:col-span-2' : ''} bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="size-10 rounded-2xl bg-white dark:bg-slate-700 flex items-center justify-center shadow-sm">
-                      <span className="material-symbols-outlined text-sm text-primary">category</span>
+                      <span className="material-symbols-outlined text-sm text-primary">{cat.vehicles ? 'local_shipping' : 'category'}</span>
                     </div>
                     <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">{cat.title}</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="space-y-1 relative group">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Taxa Mínima</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Taxa Mínima (Base)</label>
                     <div className="relative">
                       <input
                         type="text"
@@ -244,14 +252,14 @@ export default function DynamicRatesTab() {
                           const newBase = { ...dynamicRatesState.baseValues, [cat.minKey]: e.target.value };
                           setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
                         }}
-                        className="w-full text-right bg-white dark:bg-slate-900 border-none outline-none font-black text-primary text-lg rounded-2xl py-3 px-4 shadow-inner focus:ring-2 focus:ring-primary/20 transition-all pr-[35px]"
+                        className="w-full text-right bg-white dark:bg-slate-900 border-none outline-none font-black text-primary text-base rounded-2xl py-3 px-4 shadow-inner focus:ring-2 focus:ring-primary/20 transition-all pr-[35px]"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">R$</span>
                     </div>
                   </div>
 
                   <div className="space-y-1 relative group">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Por KM</label>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Por KM (Global)</label>
                     <div className="relative">
                       <input
                         type="text"
@@ -260,7 +268,7 @@ export default function DynamicRatesTab() {
                           const newBase = { ...dynamicRatesState.baseValues, [cat.kmKey]: e.target.value };
                           setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
                         }}
-                        className="w-full text-right bg-white dark:bg-slate-900 border-none outline-none font-black text-primary text-lg rounded-2xl py-3 px-4 shadow-inner focus:ring-2 focus:ring-primary/20 transition-all pr-[35px]"
+                        className="w-full text-right bg-white dark:bg-slate-900 border-none outline-none font-black text-primary text-base rounded-2xl py-3 px-4 shadow-inner focus:ring-2 focus:ring-primary/20 transition-all pr-[35px]"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">R$</span>
                     </div>
@@ -277,13 +285,55 @@ export default function DynamicRatesTab() {
                             const newBase = { ...dynamicRatesState.baseValues, [extra.key]: e.target.value };
                             setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
                           }}
-                          className="w-full text-right bg-white dark:bg-slate-900 border-none outline-none font-black text-primary text-lg rounded-2xl py-3 px-4 shadow-inner focus:ring-2 focus:ring-primary/20 transition-all pr-[35px]"
+                          className="w-full text-right bg-white dark:bg-slate-900 border-none outline-none font-black text-primary text-base rounded-2xl py-3 px-4 shadow-inner focus:ring-2 focus:ring-primary/20 transition-all pr-[35px]"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">R$</span>
                       </div>
                     </div>
                   ))}
                 </div>
+
+                {/* Subcategorias de Veículos para Logística */}
+                {cat.vehicles && (
+                  <div className="mt-4 pt-6 border-t border-slate-200/50 dark:border-slate-700/50 space-y-6">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Configurações Específicas por Veículo</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {cat.vehicles.map((v: any) => (
+                        <div key={v.minKey} className="p-5 rounded-3xl bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+                           <p className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-wider">{v.title}</p>
+                           <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Min (R$)</label>
+                                <input
+                                  type="text"
+                                  value={dynamicRatesState.baseValues?.[v.minKey] || '0.00'}
+                                  onChange={(e) => {
+                                    const newBase = { ...dynamicRatesState.baseValues, [v.minKey]: e.target.value };
+                                    setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
+                                  }}
+                                  className="w-full text-right bg-slate-50 dark:bg-slate-800 border-none outline-none font-black text-primary text-xs rounded-xl py-2 px-3 shadow-inner"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">KM (R$)</label>
+                                <input
+                                  type="text"
+                                  value={dynamicRatesState.baseValues?.[v.kmKey] || '0.00'}
+                                  onChange={(e) => {
+                                    const newBase = { ...dynamicRatesState.baseValues, [v.kmKey]: e.target.value };
+                                    setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
+                                  }}
+                                  className="w-full text-right bg-slate-50 dark:bg-slate-800 border-none outline-none font-black text-primary text-xs rounded-xl py-2 px-3 shadow-inner"
+                                />
+                              </div>
+                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
