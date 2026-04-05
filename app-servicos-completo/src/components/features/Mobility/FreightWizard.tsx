@@ -48,12 +48,13 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
   const getEstimatedTotal = () => {
     if (!marketConditions?.settings?.baseValues) return 0;
     const bv = marketConditions.settings.baseValues;
+    const surgeMultiplier = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
     
     try {
       const calculation = calculateFreightPrice({
         baseFare: parseFloat(String(bv.logistica_min || 45)),
         distanceInKm: distanceValueKm || 0,
-        distanceRate: parseFloat(String(bv.logistica_km || 3)),
+        distanceRate: parseFloat(String(bv.logistica_km || 3)) * surgeMultiplier,
         helperCount: transitData.helpers || 0,
         helperRate: parseFloat(String(bv.logistica_helper || 35)),
         hasStairs: transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination,
