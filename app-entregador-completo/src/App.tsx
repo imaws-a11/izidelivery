@@ -755,15 +755,19 @@ function App() {
         localStorage.removeItem('Izi_online'); localStorage.removeItem('Izi_declined'); localStorage.removeItem('Izi_declined_timed'); localStorage.removeItem('Izi_active_mission');
     };
 
-    const getTypeDetails = (type: ServiceType) => {
+    const getTypeDetails = (type: string) => {
         switch (type) {
-            case 'package': return { icon: 'package_2', color: 'text-primary', bg: 'bg-primary/10', label: 'Encomenda' };
-            case 'mototaxi': return { icon: 'two_wheeler', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'MotoTaxi' };
-            case 'car_ride': return { icon: 'directions_car', color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'Carro' };
-            case 'frete': return { icon: 'local_shipping', color: 'text-orange-400', bg: 'bg-orange-400/10', label: 'Frete/Carreto' };
-            case 'motorista_particular': return { icon: 'military_tech', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Motorista Particular' };
-            case 'motoboy': return { icon: 'moped', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'Motoboy' };
-            default: return { icon: 'local_shipping', color: 'text-primary', bg: 'bg-primary/10', label: 'Serviço' };
+            case 'package': return { icon: 'package_2', color: 'text-primary', bg: 'bg-primary/10', label: 'Encomenda', isFood: false };
+            case 'mototaxi': return { icon: 'two_wheeler', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'MotoTaxi', isFood: false };
+            case 'car_ride': return { icon: 'directions_car', color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'Carro', isFood: false };
+            case 'frete': return { icon: 'local_shipping', color: 'text-orange-400', bg: 'bg-orange-400/10', label: 'Frete/Carreto', isFood: false };
+            case 'restaurant': return { icon: 'restaurant', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Restaurante', isFood: true };
+            case 'market': return { icon: 'local_mall', color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'Mercado', isFood: false };
+            case 'pharmacy': return { icon: 'medication', color: 'text-rose-400', bg: 'bg-rose-400/10', label: 'Farmácia', isFood: false };
+            case 'beverages': return { icon: 'local_bar', color: 'text-purple-400', bg: 'bg-purple-400/10', label: 'Bebidas', isFood: false };
+            case 'motorista_particular': return { icon: 'military_tech', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Motorista Particular', isFood: false };
+            case 'motoboy': return { icon: 'moped', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'Motoboy', isFood: false };
+            default: return { icon: 'local_shipping', color: 'text-primary', bg: 'bg-primary/10', label: 'Serviço', isFood: false };
         }
     };
 
@@ -1059,7 +1063,7 @@ function App() {
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-4">
                                     <div className={`size-14 rounded-[20px] ${details.bg} ${details.color} flex items-center justify-center border border-current/10`}><Icon name={details.icon} className="text-3xl" /></div>
-                                    <div><p className={`text-[9px] font-black uppercase tracking-widest mb-0.5 ${details.color}`}>{details.label}</p><h3 className="text-base font-black text-white">{isMobility ? 'Chamada de Passageiro' : 'Entrega de Pacote'}</h3></div>
+                                    <div><p className={`text-[9px] font-black uppercase tracking-widest mb-0.5 ${details.color}`}>{details.label}</p><h3 className="text-base font-black text-white">{isMobility ? 'Corrida de Passageiro' : (details.isFood ? 'Entrega de Refeição' : 'Entrega de Pacote')}</h3></div>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-2xl font-black text-primary">R$ {order.price.toFixed(0)}</p>
