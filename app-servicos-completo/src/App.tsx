@@ -2164,13 +2164,15 @@ const navigateSubView = (target: string) => {
           const carro_km     = parseFloat(String(bv.carro_km))     || 4.5;
           const van_min      = parseFloat(String(bv.van_min))      || 35.0;
           const van_km       = parseFloat(String(bv.van_km))       || 8.0;
-          const utilitario_min = parseFloat(String(bv.utilitario_min)) || 10.0;
-          const utilitario_km  = parseFloat(String(bv.utilitario_km))  || 3.0;
+          const logistica_min = parseFloat(String(bv.logistica_min)) || 45.0;
+          const logistica_km  = parseFloat(String(bv.logistica_km))  || 3.0;
+
           const newPrices = {
             mototaxi:   parseFloat((Math.max(mototaxi_min,   mototaxi_km   * distKm * surge)).toFixed(2)),
             carro:      parseFloat((Math.max(carro_min,       carro_km      * distKm * surge)).toFixed(2)),
             van:        parseFloat((Math.max(van_min,         van_km        * distKm * surge)).toFixed(2)),
             utilitario: parseFloat((Math.max(utilitario_min,  utilitario_km * distKm * surge)).toFixed(2)),
+            logistica:  parseFloat((Math.max(logistica_min,   logistica_km  * distKm * surge)).toFixed(2)),
           };
           setDistancePrices(newPrices);
           // Atualizar estPrice no transitData para uso no pagamento
@@ -2222,11 +2224,12 @@ const navigateSubView = (target: string) => {
     
       // [Comentario Limpo pelo Sistema]
     let finalPrice = 0;
-    if (transitData.type === 'utilitario') {
+    if (transitData.type === 'logistica') {
+       const bv = marketConditions.settings.baseValues;
        finalPrice = calculateFreightPrice({
-          baseFare: 45,
+          baseFare: parseFloat(String(bv.logistica_min || 45)),
           distanceInKm: distanceValueKm || 1,
-          distanceRate: 2.8,
+          distanceRate: parseFloat(String(bv.logistica_km || 3)),
           helperCount: transitData.helpers,
           helperRate: 35,
           hasStairs: transitData.accessibility.stairsAtOrigin || transitData.accessibility.stairsAtDestination
@@ -5702,11 +5705,8 @@ const navigateSubView = (target: string) => {
         routePolyline={routePolyline}
         driverLocation={driverLocation}
         distancePrices={distancePrices}
-        isCalculatingPrice={isCalculatingPrice}
-        marketConditions={marketConditions}
-        paymentMethod={paymentMethod}
-        userLevel={userLevel}
-        routeDistance={routeDistance}
+        setShowDatePicker={setShowDatePicker}
+        setShowTimePicker={setShowTimePicker}
         setPaymentsOrigin={setPaymentsOrigin}
         setSubView={setSubView}
         navigateSubView={navigateSubView}
@@ -5834,8 +5834,8 @@ const navigateSubView = (target: string) => {
                 <h4 className="text-white font-black text-lg tracking-tight mb-2">Transporte Local</h4>
                 <p className="text-zinc-400 text-xs leading-relaxed max-w-[200px]">Precisa de algo maior? Confira nossas vans e caminhões para frete.</p>
                 <div className="mt-5 flex gap-3">
-                   <button onClick={() => setSubView("van_wizard")} className="px-4 py-2 bg-yellow-400 text-black text-[10px] font-black rounded-xl uppercase tracking-widest shadow-lg shadow-yellow-400/20">Vans</button>
-                   <button onClick={() => setSubView("freight_wizard")} className="px-4 py-2 bg-white/10 text-white text-[10px] font-black rounded-xl uppercase tracking-widest border border-white/10">Fretes</button>
+                   <button onClick={() => { setTransitData({ ...transitData, type: "van", scheduled: true }); setSubView("van_wizard"); setMobilityStep(1); }} className="px-4 py-2 bg-yellow-400 text-black text-[10px] font-black rounded-xl uppercase tracking-widest shadow-lg shadow-yellow-400/20">Vans</button>
+                   <button onClick={() => { setTransitData({ ...transitData, type: "logistica", scheduled: true }); setSubView("freight_wizard"); setMobilityStep(1); }} className="px-4 py-2 bg-white/10 text-white text-[10px] font-black rounded-xl uppercase tracking-widest border border-white/10">Fretes</button>
                 </div>
              </div>
              <span className="material-symbols-outlined absolute -right-6 -bottom-6 text-[120px] text-yellow-400/10 rotate-12 group-hover:rotate-0 transition-transform duration-700">local_shipping</span>
@@ -6227,99 +6227,6 @@ const navigateSubView = (target: string) => {
               </div>
             </motion.section>
           )}
-
-          {/* LOJISTAS MODAL */}
-          <AnimatePresence>
-            {showLojistasModal && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[250] bg-black/98 backdrop-blur-2xl flex flex-col p-6">
-                <header className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-black text-white">Lojas Parceiras</h3>
-                  <button onClick={() => setShowLojistasModal(false)} className="size-10 rounded-xl bg-zinc-900 flex items-center justify-center text-zinc-400">
-                    <span className="material-symbols-outlined">close</span>
-                  </button>
-                </header>
-                <div className="relative mb-6">
-                   <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">search</span>
-                   <input type="text" placeholder="Buscar por nome ou região..." className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl py-4 pl-12 pr-6 text-sm font-bold focus:ring-1 focus:ring-yellow-400/50 outline-none text-white placeholder-zinc-600" />
-                </div>
-                <div className="flex-1 overflow-y-auto no-scrollbar space-y-4">
-                   {partnerStores.map((store) => (
-                      <motion.div 
-                        whileTap={{ scale: 0.98 }}
-                        key={store.id} 
-                        onClick={() => { 
-                          setTransitData({
-                            ...transitData, 
-                            receiverName: store.name, 
-                            receiverPhone: store.phone, 
-                            origin: store.address
-                          }); 
-                          setShowLojistasModal(false); 
-                        }}
-                        className="p-6 rounded-[30px] border border-zinc-800 hover:border-yellow-400/30 transition-all group cursor-pointer"
-                      >
-                         <div className="flex justify-between items-start mb-2">
-                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded bg-yellow-400/10 text-yellow-400">{store.type}</span>
-                            <span className="text-[10px] font-bold text-zinc-500">{store.hours}</span>
-                         </div>
-                         <h4 className="font-black text-white text-base group-hover:text-yellow-400 transition-colors">{store.name}</h4>
-                         <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">{store.address}</p>
-                      </motion.div>
-                   ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* DATE PICKER MODAL */}
-          <AnimatePresence>
-            {showDatePicker && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
-                <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
-                  <div className="text-center mb-8">
-                    <h3 className="text-xl font-black text-white">Próximos 7 dias</h3>
-                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Selecione uma data</p>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
-                    {[...Array(7)].map((_, i) => {
-                      const d = new Date();
-                      d.setDate(d.getDate() + i);
-                      const label = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' });
-                      const iso = d.toISOString().split('T')[0];
-                      return (
-                        <button key={i} onClick={() => { setTransitData({...transitData, scheduledDate: iso}); setShowDatePicker(false); }} className={`w-full py-5 rounded-[25px] border-2 transition-all font-bold text-sm capitalize ${transitData.scheduledDate === iso ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-900 text-zinc-400 hover:border-zinc-800"}`}>
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <button onClick={() => setShowDatePicker(false)} className="mt-8 w-full py-4 text-zinc-500 font-black uppercase text-[10px] tracking-widest ring-1 ring-zinc-800 rounded-[20px]">Fechar</button>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* TIME PICKER MODAL */}
-          <AnimatePresence>
-            {showTimePicker && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
-                <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
-                  <div className="text-center mb-8">
-                    <h3 className="text-xl font-black text-white">Horário</h3>
-                    <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Das 08:00 às 22:00</p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
-                    {["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"].map((h) => (
-                      <button key={h} onClick={() => { setTransitData({...transitData, scheduledTime: h}); setShowTimePicker(false); }} className={`py-4 rounded-[20px] border-2 transition-all font-black text-xs ${transitData.scheduledTime === h ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-900 text-zinc-400 hover:border-zinc-800"}`}>
-                        {h}
-                      </button>
-                    ))}
-                  </div>
-                  <button onClick={() => setShowTimePicker(false)} className="mt-8 w-full py-4 text-zinc-500 font-black uppercase text-[10px] tracking-widest ring-1 ring-zinc-800 rounded-[20px]">Fechar</button>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
           <div className="bg-amber-400/5  p-6 rounded-[35px] border border-amber-400/10  flex items-start gap-4">
              <div className="size-10 rounded-full bg-amber-400/20 flex items-center justify-center shrink-0">
@@ -7064,6 +6971,93 @@ const navigateSubView = (target: string) => {
           </div>
         </motion.div>
       )}
+
+      {/* GLOBAL MODALS (DATE, TIME, LOJISTAS) */}
+      <AnimatePresence>
+        {showLojistasModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[250] bg-black/98 backdrop-blur-2xl flex flex-col p-6">
+            <header className="flex items-center justify-between mb-8">
+              <h3 className="text-xl font-black text-white">Lojas Parceiras</h3>
+              <button onClick={() => setShowLojistasModal(false)} className="size-10 rounded-xl bg-zinc-900 flex items-center justify-center text-zinc-400">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </header>
+            <div className="relative mb-6">
+               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">search</span>
+               <input type="text" placeholder="Buscar por nome ou região..." className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl py-4 pl-12 pr-6 text-sm font-bold focus:ring-1 focus:ring-yellow-400/50 outline-none text-white placeholder-zinc-600" />
+            </div>
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-4">
+               {partnerStores.map((store) => (
+                  <motion.div 
+                    whileTap={{ scale: 0.98 }}
+                    key={store.id} 
+                    onClick={() => { 
+                      setTransitData({
+                        ...transitData, 
+                        receiverName: store.name, 
+                        receiverPhone: store.phone, 
+                        origin: store.address
+                      }); 
+                      setShowLojistasModal(false); 
+                    }}
+                    className="p-6 rounded-[30px] border border-zinc-800 hover:border-yellow-400/30 transition-all group cursor-pointer"
+                  >
+                     <div className="flex justify-between items-start mb-2">
+                        <span className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded bg-yellow-400/10 text-yellow-400">{store.type}</span>
+                        <span className="text-[10px] font-bold text-zinc-500">{store.hours}</span>
+                     </div>
+                     <h4 className="font-black text-white text-base group-hover:text-yellow-400 transition-colors">{store.name}</h4>
+                     <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">{store.address}</p>
+                  </motion.div>
+               ))}
+            </div>
+          </motion.div>
+        )}
+
+        {showDatePicker && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
+              <div className="text-center mb-8">
+                <h3 className="text-xl font-black text-white">Próximos 7 dias</h3>
+                <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Selecione uma data</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
+                {[...Array(7)].map((_, i) => {
+                  const d = new Date();
+                  d.setDate(d.getDate() + i);
+                  const label = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' });
+                  const iso = d.toISOString().split('T')[0];
+                  return (
+                    <button key={i} onClick={() => { setTransitData({...transitData, scheduledDate: iso}); setShowDatePicker(false); }} className={`w-full py-5 rounded-[25px] border-2 transition-all font-bold text-sm capitalize ${transitData.scheduledDate === iso ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-900 text-zinc-400 hover:border-zinc-800"}`}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <button onClick={() => setShowDatePicker(false)} className="mt-8 w-full py-4 text-zinc-500 font-black uppercase text-[10px] tracking-widest ring-1 ring-zinc-800 rounded-[20px]">Fechar</button>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {showTimePicker && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
+              <div className="text-center mb-8">
+                <h3 className="text-xl font-black text-white">Horário</h3>
+                <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Das 08:00 às 22:00</p>
+              </div>
+              <div className="grid grid-cols-3 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
+                {["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"].map((h) => (
+                  <button key={h} onClick={() => { setTransitData({...transitData, scheduledTime: h}); setShowTimePicker(false); }} className={`py-4 rounded-[20px] border-2 transition-all font-black text-xs ${transitData.scheduledTime === h ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-900 text-zinc-400 hover:border-zinc-800"}`}>
+                    {h}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setShowTimePicker(false)} className="mt-8 w-full py-4 text-zinc-500 font-black uppercase text-[10px] tracking-widest ring-1 ring-zinc-800 rounded-[20px]">Fechar</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

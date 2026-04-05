@@ -14,6 +14,8 @@ interface FreightWizardProps {
   routePolyline: string;
   driverLocation: any;
   distancePrices: Record<string, number>;
+  setShowDatePicker: (val: boolean) => void;
+  setShowTimePicker: (val: boolean) => void;
   setPaymentsOrigin: (origin: any) => void;
   setSubView: (view: any) => void;
   navigateSubView: (view: any) => void;
@@ -30,6 +32,8 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
   routePolyline,
   driverLocation,
   distancePrices,
+  setShowDatePicker,
+  setShowTimePicker,
   setPaymentsOrigin,
   setSubView,
   navigateSubView,
@@ -214,8 +218,60 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
           {mobilityStep === 2 && (
             <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
               <div className="space-y-2">
+                <h3 className="text-xl font-black text-white tracking-tight uppercase italic">Data e Horário</h3>
+                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest italic">Fretes são realizados apenas por agendamento.</p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
+                 <motion.div 
+                   whileTap={{ scale: 0.98 }}
+                   onClick={() => setShowDatePicker(true)}
+                   className="bg-zinc-900/50 rounded-[35px] p-8 border border-white/5 shadow-xl flex items-center justify-between group cursor-pointer"
+                 >
+                    <div className="flex items-center gap-5">
+                       <div className="size-14 rounded-2xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                          <Icon name="calendar_month" className="text-purple-400" />
+                       </div>
+                       <div>
+                          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Data da Coleta</p>
+                          <p className="text-base font-black text-white italic">{transitData.scheduledDate || "Escolher Data"}</p>
+                       </div>
+                    </div>
+                    <span className="material-symbols-outlined text-zinc-700 group-hover:text-purple-400 transition-colors">edit_calendar</span>
+                 </motion.div>
+
+                 <motion.div 
+                   whileTap={{ scale: 0.98 }}
+                   onClick={() => setShowTimePicker(true)}
+                   className="bg-zinc-900/50 rounded-[35px] p-8 border border-white/5 shadow-xl flex items-center justify-between group cursor-pointer"
+                 >
+                    <div className="flex items-center gap-5">
+                       <div className="size-14 rounded-2xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                          <Icon name="schedule" className="text-purple-400" />
+                       </div>
+                       <div>
+                          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Horário Previsto</p>
+                          <p className="text-base font-black text-white italic">{transitData.scheduledTime || "Escolher Horário"}</p>
+                       </div>
+                    </div>
+                    <span className="material-symbols-outlined text-zinc-700 group-hover:text-purple-400 transition-colors">history_toggle_off</span>
+                 </motion.div>
+              </div>
+
+              <div className="p-6 rounded-[30px] bg-white/5 border border-white/10 flex items-start gap-4">
+                 <Icon name="info" className="text-zinc-500 scale-75" />
+                 <p className="text-[10px] font-bold text-zinc-500 italic leading-relaxed uppercase tracking-wider">
+                   Nossos motoristas de frete precisam de antecedência para organizar a logística e ajudantes.
+                 </p>
+              </div>
+            </motion.section>
+          )}
+
+          {mobilityStep === 3 && (
+            <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
+              <div className="space-y-2">
                 <h3 className="text-xl font-black text-white tracking-tight uppercase italic">Resumo do Frete</h3>
-                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest italic">Ajudas extras e escadas podem alterar o valor.</p>
+                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest italic">Confira todos os detalhes antes de solicitar.</p>
               </div>
 
               <div className="bg-zinc-900 border border-white/5 p-8 rounded-[45px] shadow-[25px_25px_50px_rgba(0,0,0,0.6),inset_4px_4px_10px_rgba(255,255,255,0.05)]">
@@ -239,18 +295,28 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                     <div className="flex-1">
                       <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] leading-none mb-2">Valor Estimado</p>
                       <p className="text-4xl font-black text-yellow-400 tracking-tighter italic">
-                        R$ {distancePrices['transporte_carga']?.toFixed(2).replace(".", ",") || "---"}
+                        R$ {distancePrices['logistica']?.toFixed(2).replace(".", ",") || "---"}
                       </p>
-                      <div className="flex flex-wrap gap-2 mt-4">
-                         <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/5 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-xs text-zinc-500">groups</span>
-                            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Ajudantes: {transitData.helpers || 0}</span>
-                         </div>
-                         <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/5 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-xs text-zinc-500">stairs</span>
-                            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Escadas: {transitData.accessibility?.stairsAtOrigin ? 'Sim' : 'Não'}</span>
-                         </div>
-                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-white/5" />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-3xl bg-white/5 border border-white/5">
+                       <p className="text-[8px] font-black text-zinc-600 uppercase mb-1">Agendado para</p>
+                       <p className="text-[11px] font-black text-white italic">{transitData.scheduledDate || 'N/A'}</p>
+                       <p className="text-[11px] font-black text-purple-400 italic">{transitData.scheduledTime || 'N/A'}</p>
+                    </div>
+                    <div className="p-4 rounded-3xl bg-white/5 border border-white/5 flex flex-col justify-center gap-1">
+                       <div className="flex items-center gap-2">
+                          <Icon name="groups" className="text-[12px] text-zinc-500" />
+                          <span className="text-[9px] font-black text-zinc-400 uppercase">Ajudantes: {transitData.helpers || 0}</span>
+                       </div>
+                       <div className="flex items-center gap-2">
+                          <Icon name="stairs" className="text-[12px] text-zinc-500" />
+                          <span className="text-[9px] font-black text-zinc-400 uppercase">Escadas: {transitData.accessibility?.stairsAtOrigin ? 'Sim' : 'Não'}</span>
+                       </div>
                     </div>
                   </div>
                 </div>
@@ -263,7 +329,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
           <motion.button 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.95 }}
-            className="pointer-events-auto"
+            className="pointer-events-auto w-full"
             onClick={() => {
               if (mobilityStep === 1) {
                 if (!transitData.origin || !transitData.destination) {
@@ -271,6 +337,12 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                   return;
                 }
                 setMobilityStep(2);
+              } else if (mobilityStep === 2) {
+                if (!transitData.scheduledDate || !transitData.scheduledTime) {
+                  showToast("Selecione data e horário", "warning");
+                  return;
+                }
+                setMobilityStep(3);
               } else {
                 setPaymentsOrigin("checkout");
                 navigateSubView("mobility_payment");
@@ -278,8 +350,12 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
             }}
           >
             <div className="w-full bg-purple-500 text-white font-black text-lg py-6 px-12 rounded-[35px] shadow-[0_20px_40px_rgba(168,85,247,0.2),inset_4px_4px_8px_rgba(255,255,255,0.2)] active:grayscale transition-all flex items-center justify-center gap-4 group disabled:opacity-50 disabled:grayscale overflow-hidden relative">
-              <span className="uppercase tracking-[0.3em] text-[13px] italic">{mobilityStep === 1 ? "Próximo Passo" : "Confirmar Frete"}</span>
-              <span className="material-symbols-outlined font-black group-hover:translate-x-2 transition-transform text-2xl">{mobilityStep === 1 ? 'arrow_forward' : 'bolt'}</span>
+              <span className="uppercase tracking-[0.3em] text-[13px] italic">
+                {mobilityStep === 1 ? "Ir para Agendamento" : mobilityStep === 2 ? "Revisar Pedido" : "Confirmar Frete"}
+              </span>
+              <span className="material-symbols-outlined font-black group-hover:translate-x-2 transition-transform text-2xl">
+                {mobilityStep === 3 ? 'bolt' : 'arrow_forward'}
+              </span>
             </div>
           </motion.button>
         </div>
