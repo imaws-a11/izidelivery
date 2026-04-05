@@ -227,9 +227,10 @@ export const AddressSearchInput = ({
             }}
           >
             {/* Header da lista */}
-            <div style={{ padding: "10px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              <span style={{ fontSize: "9px", fontWeight: 900, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.2em" }}>
-                {userCoords ? "📍 Sugestões próximas à sua localização" : "Sugestões de endereço"}
+            <div style={{ padding: "12px 18px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ width: "4px", height: "12px", background: "#ffd900", borderRadius: "10px" }} />
+              <span style={{ fontSize: "9px", fontWeight: 900, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.2em" }}>
+                {userCoords ? "📍 Sugestões por proximidade" : "💡 Sugestões de endereço"}
               </span>
             </div>
 

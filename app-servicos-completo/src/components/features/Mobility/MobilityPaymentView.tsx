@@ -1,6 +1,4 @@
-import React from "react";
 import { motion } from "framer-motion";
-import { Icon } from "../../common/Icon";
 
 interface MobilityPaymentViewProps {
   paymentMethod: string;
@@ -27,16 +25,17 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
   marketConditions,
   calculateDynamicPrice,
 }) => {
-  const bv = marketConditions.settings.baseValues;
+  const bv = marketConditions?.settings?.baseValues || {};
   const basePrices: Record<string, number> = { 
-    mototaxi: bv.mototaxi_min, 
-    carro: bv.carro_min, 
-    van: bv.van_min, 
-    utilitario: bv.utilitario_min 
+    mototaxi: bv.mototaxi_min || 0, 
+    carro: bv.carro_min || 0, 
+    van: bv.van_min || 0, 
+    utilitario: bv.utilitario_min || 0,
+    logistica: bv.logistica_min || 0
   };
   
-  const isShippingService = ['utilitario', 'van', 'frete'].includes(transitData.type);
-  const rawPrice = (transitData.estPrice > 0 ? transitData.estPrice : calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min)) ?? 0;
+  const isShippingService = ['utilitario', 'van', 'frete', 'logistica'].includes(transitData.type);
+  const rawPrice = (transitData.estPrice > 0 ? transitData.estPrice : calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min || 0)) ?? 0;
   const price = (isIziBlackMembership && isShippingService) ? 0 : rawPrice;
 
   const PaymentMethodButton = ({ id, icon, label, sub, colorClass, disabled = false }: any) => {
@@ -75,7 +74,7 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
           onClick={() => {
             if (transitData.type === 'van') navigateSubView("van_wizard");
             else if (transitData.type === 'utilitario') navigateSubView("shipping_details");
-            else if (transitData.type === 'frete') navigateSubView("freight_wizard");
+            else if (transitData.type === 'frete' || transitData.type === 'logistica') navigateSubView("freight_wizard");
             else navigateSubView("taxi_wizard");
           }} 
           className="size-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-white shadow-xl active:scale-90 transition-all"
@@ -102,14 +101,14 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
              <div className="flex items-center gap-5">
                 <div className="size-16 rounded-3xl bg-zinc-800 flex items-center justify-center border border-white/5 shadow-inner">
                   <span className="material-symbols-outlined text-yellow-400 text-3xl font-black">
-                    {transitData.type === 'mototaxi' ? 'motorcycle' : transitData.type === 'carro' ? 'directions_car' : transitData.type === 'van' ? 'airport_shuttle' : 'local_shipping'}
+                    {transitData.type === 'mototaxi' ? 'motorcycle' : (transitData.type === 'carro' ? 'directions_car' : (transitData.type === 'van' ? 'airport_shuttle' : 'local_shipping'))}
                   </span>
                 </div>
                 <div>
                   <h4 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none">
-                    {transitData.type === 'mototaxi' ? 'MotoTáxi IZI' : transitData.type === 'carro' ? 'Particular' : transitData.type === 'van' ? 'Van IZI Express' : 'Caminhão Frete'}
+                    {transitData.type === 'mototaxi' ? 'MotoTáxi IZI' : (transitData.type === 'carro' ? 'Particular' : (transitData.type === 'van' ? 'Van IZI Express' : 'Logística / Frete'))}
                   </h4>
-                  <p className="text-[9px] font-black text-yellow-400/60 uppercase tracking-[0.3em] mt-2">{transitData.vehicleCategory || 'Serviço sob demanda'}</p>
+                  <p className="text-[9px] font-black text-yellow-400/60 uppercase tracking-[0.3em] mt-2">{transitData.subService || transitData.vehicleCategory || 'Serviço Agendado'}</p>
                 </div>
              </div>
           </div>
@@ -166,7 +165,7 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
         </section>
 
         {/* Footer info */}
-        <div className="flex flex-col items-center gap-6 pt-6 pb-28">
+        <div className="flex flex-col items-center gap-6 pt-6 pb-20">
            <div className="flex items-center gap-4 group">
              <div className="size-10 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-700 shadow-inner group-hover:text-yellow-400 transition-all">
                 <span className="material-symbols-outlined text-base">enhanced_encryption</span>

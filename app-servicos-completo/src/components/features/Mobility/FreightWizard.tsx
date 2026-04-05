@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "../../common/Icon";
 import { AddressSearchInput } from "../Address/AddressSearchInput";
 import { IziTrackingMap } from "../Map/IziTrackingMap";
+import { calculateFreightPrice } from "../../../lib/pricing_engine";
 
 interface FreightWizardProps {
   transitData: any;
@@ -14,6 +15,8 @@ interface FreightWizardProps {
   routePolyline: string;
   driverLocation: any;
   distancePrices: Record<string, number>;
+  distanceValueKm?: number;
+  marketConditions?: any;
   setShowDatePicker: (val: boolean) => void;
   setShowTimePicker: (val: boolean) => void;
   setPaymentsOrigin: (origin: any) => void;
@@ -32,6 +35,8 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
   routePolyline,
   driverLocation,
   distancePrices,
+  distanceValueKm = 0,
+  marketConditions,
   setShowDatePicker,
   setShowTimePicker,
   setPaymentsOrigin,
@@ -39,6 +44,28 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
   navigateSubView,
   showToast,
 }) => {
+  // CÁLCULO DINÂMICO DE FRETE
+  const getEstimatedTotal = () => {
+    if (!marketConditions?.settings?.baseValues) return 0;
+    const bv = marketConditions.settings.baseValues;
+    
+    try {
+      const calculation = calculateFreightPrice({
+        baseFare: parseFloat(String(bv.logistica_min || 45)),
+        distanceInKm: distanceValueKm || 0,
+        distanceRate: parseFloat(String(bv.logistica_km || 3)),
+        helperCount: transitData.helpers || 0,
+        helperRate: 35,
+        hasStairs: transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination
+      });
+      return calculation.totalPrice;
+    } catch (e) {
+      return 0;
+    }
+  };
+
+  const estimatedTotal = getEstimatedTotal();
+
   React.useEffect(() => {
     console.log("FreightWizard TransitData Updated:", {
       helpers: transitData.helpers,
@@ -117,9 +144,13 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                     placeholder="Local de coleta"
                     className="w-full bg-transparent border-none p-0 text-base font-black text-white focus:ring-0 placeholder:text-zinc-700 italic"
                     userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                    onSelect={(p) => {
+                    onSelect={(p: any) => {
                       const ori = p.formatted_address || "";
-                      setTransitData((prev: any) => ({...prev, origin: ori}));
+                      setTransitData((prev: any) => ({
+                        ...prev, 
+                        origin: ori,
+                        originCoords: p.lat ? { lat: p.lat, lng: p.lng } : null
+                      }));
                     }}
                   />
                 </motion.div>
@@ -133,10 +164,14 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                     initialValue={transitData.destination}
                     placeholder="Local de destino"
                     className="w-full bg-transparent border-none p-0 text-base font-black text-white focus:ring-0 placeholder:text-zinc-700 italic"
-                    userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                    onSelect={(p) => {
+                    userCoords={transitData.originCoords || (userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null)}
+                    onSelect={(p: any) => {
                       const dest = p.formatted_address || "";
-                      setTransitData((prev: any) => ({...prev, destination: dest}));
+                      setTransitData((prev: any) => ({
+                        ...prev, 
+                        destination: dest,
+                        destinationCoords: p.lat ? { lat: p.lat, lng: p.lng } : null
+                      }));
                     }}
                   />
                 </motion.div>
@@ -295,7 +330,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                     <div className="flex-1">
                       <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] leading-none mb-2">Valor Estimado</p>
                       <p className="text-4xl font-black text-yellow-400 tracking-tighter italic">
-                        R$ {distancePrices['logistica']?.toFixed(2).replace(".", ",") || "---"}
+                        R$ {estimatedTotal > 0 ? estimatedTotal.toFixed(2).replace(".", ",") : (distancePrices['logistica']?.toFixed(2).replace(".", ",") || "---")}
                       </p>
                     </div>
                   </div>
@@ -344,6 +379,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                 }
                 setMobilityStep(3);
               } else {
+                setTransitData((prev: any) => ({ ...prev, estPrice: estimatedTotal }));
                 setPaymentsOrigin("checkout");
                 navigateSubView("mobility_payment");
               }

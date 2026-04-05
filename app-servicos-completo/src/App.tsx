@@ -5705,6 +5705,8 @@ const navigateSubView = (target: string) => {
         routePolyline={routePolyline}
         driverLocation={driverLocation}
         distancePrices={distancePrices}
+        distanceValueKm={distanceValueKm}
+        marketConditions={marketConditions}
         setShowDatePicker={setShowDatePicker}
         setShowTimePicker={setShowTimePicker}
         setPaymentsOrigin={setPaymentsOrigin}
