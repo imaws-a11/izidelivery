@@ -85,6 +85,18 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       logistica_km: '8,00',
       logistica_stairs: '30,00',
       logistica_helper: '35,00',
+      fiorino_min: '40,00',
+      fiorino_km: '4,00',
+      caminhonete_min: '50,00',
+      caminhonete_km: '5,00',
+      bau_p_min: '60,00',
+      bau_p_km: '6,00',
+      bau_m_min: '80,00',
+      bau_m_km: '8,00',
+      bau_g_min: '100,00',
+      bau_g_km: '10,00',
+      aberto_min: '50,00',
+      aberto_km: '5,00',
       isDynamicActive: true
     },
     flowControl: { mode: 'manual', highDemandActive: false },
@@ -250,7 +262,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.log('Erro ao buscar tipos de estabelecimento ou tabela inexistente');
     }
   }, []);
-
   const handleUpdateEstablishmentType = useCallback(async (type: any) => {
     setIsSaving(true);
     try {
@@ -260,18 +271,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         delete dataToSave.id;
       }
 
-      const { data, error } = await supabase.from('establishment_types').upsert(dataToSave).select().single();
-      
-      if (error) {
-        console.error('Erro ao salvar taxonomia:', error);
-        throw new Error(`Falha ao salvar: ${error.message}`);
-      }
-
-      toastSuccess('Tipo de estabelecimento salvo com sucesso!');
+      const { error } = await supabase.from('establishment_types').upsert(dataToSave);
+      if (error) throw error;
+      toastSuccess('Categoria atualizada na matriz!');
       fetchEstablishmentTypes();
     } catch (err: any) {
-      toastError(err.message || 'Erro inesperado ao salvar taxonomia');
-      console.error(err);
+      toastError('Erro ao atualizar taxonomia: ' + err.message);
     } finally {
       setIsSaving(false);
     }
@@ -359,7 +364,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setMerchantProfile(profile);
           localStorage.setItem('izi_admin_profile', JSON.stringify(profile));
           
-          // Only reset to 'orders' if the current tab is invalid for a merchant or not set
           setActiveTab(prev => {
             const validMerchantTabs = ['orders', 'my_studio', 'my_drivers', 'promotions', 'financial', 'settings', 'support'];
             if (!prev || !validMerchantTabs.includes(prev)) {
@@ -369,7 +373,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           });
         } else {
           setMerchantProfile(null);
-          // Only reset to 'dashboard' if the current tab is invalid for an admin
           setActiveTab(prev => {
             const merchantOnlyTabs = ['my_studio', 'my_drivers', 'financial'];
             if (merchantOnlyTabs.includes(prev)) {
@@ -409,7 +412,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [session]);
 
   // Data Fetchers
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (silent = false) => {
+    if (!silent) setIsLoadingList(true);
     try {
       const { data: userData } = await supabase.from('users_delivery').select('id');
       const { data: driverData } = await supabase.from('drivers_delivery').select('id');
@@ -423,7 +427,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const coupons = promoData?.filter(p => p.type === 'coupon') || [];
 
       if (orderData) {
-        // Filtra ordens para o dashboard
         let filtered = orderData as Order[];
         if (userRole === 'merchant' && merchantProfile?.merchant_id) {
           filtered = filtered.filter(o => o.merchant_id === merchantProfile.merchant_id);
@@ -450,13 +453,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         activeOffers: activeOffers,
         couponInvestment: totalCouponsValue
       });
-    } catch (err) {
-      console.error('Erro ao buscar estatísticas:', err);
+    } finally {
+      if (!silent) setIsLoadingList(false);
     }
   }, [userRole, merchantProfile]);
 
-  const fetchUsers = useCallback(async () => {
-    setIsLoadingList(true);
+  const fetchUsers = useCallback(async (silent = false) => {
+    if (!silent) setIsLoadingList(true);
     try {
       let query = supabase.from('users_delivery').select('*').eq('is_deleted', false).order('created_at', { ascending: false });
       if (userStatusFilter !== 'all') {
@@ -466,40 +469,40 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { data } = await query;
       if (data) setUsersList(data as User[]);
     } finally {
-      setIsLoadingList(false);
+      if (!silent) setIsLoadingList(false);
     }
   }, [userStatusFilter]);
 
-  const fetchDrivers = useCallback(async () => {
-    setIsLoadingList(true);
+  const fetchDrivers = useCallback(async (silent = false) => {
+    if (!silent) setIsLoadingList(true);
     try {
       const { data } = await supabase.from('drivers_delivery').select('*').eq('is_deleted', false).order('name', { ascending: true });
       if (data) setDriversList(data as Driver[]);
     } finally {
-      setIsLoadingList(false);
+      if (!silent) setIsLoadingList(false);
     }
   }, []);
 
-  const fetchMyDrivers = useCallback(async () => {
+  const fetchMyDrivers = useCallback(async (silent = false) => {
     if (!merchantProfile?.merchant_id) return;
-    setIsLoadingList(true);
+    if (!silent) setIsLoadingList(true);
     try {
       const { data } = await supabase.from('drivers_delivery').select('*').eq('merchant_id', merchantProfile.merchant_id).eq('is_deleted', false);
       if (data) setMyDriversList(data as Driver[]);
     } finally {
-      setIsLoadingList(false);
+      if (!silent) setIsLoadingList(false);
     }
   }, [merchantProfile]);
 
-  const fetchProducts = useCallback(async (explicitMerchantId?: string) => {
+  const fetchProducts = useCallback(async (explicitMerchantId?: string, silent = false) => {
     const idToUse = explicitMerchantId || merchantProfile?.merchant_id;
     if (!idToUse) return;
-    setIsLoadingList(true);
+    if (!silent) setIsLoadingList(true);
     try {
       const { data } = await supabase.from('products_delivery').select('*').eq('merchant_id', idToUse);
       if (data) setProductsList(data as Product[]);
     } finally {
-      setIsLoadingList(false);
+      if (!silent) setIsLoadingList(false);
     }
   }, [merchantProfile]);
 
@@ -519,10 +522,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [merchantProfile]);
 
-  const fetchAllOrders = useCallback(async (page = 1) => {
-    setIsLoadingList(true);
+  const fetchAllOrders = useCallback(async (page?: number, silent = false) => {
+    const targetPage = page !== undefined ? page : (userRole === 'merchant' ? merchantOrdersPage : ordersPage);
+    if (!silent) setIsLoadingList(true);
     try {
-      const from = (page - 1) * ORDERS_PER_PAGE;
+      const from = (targetPage - 1) * ORDERS_PER_PAGE;
       const to = from + ORDERS_PER_PAGE - 1;
 
       if (userRole === 'merchant' && merchantProfile?.merchant_id) {
@@ -536,7 +540,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (error) throw error;
         if (data) setAllOrders(data as Order[]);
         if (count !== null) setMerchantOrdersTotalCount(count);
-        setMerchantOrdersPage(page);
+        setMerchantOrdersPage(targetPage);
       } else {
         const { data, error, count } = await supabase
           .from('orders_delivery')
@@ -548,107 +552,94 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (error) throw error;
         if (data) setAllOrders(data as Order[]);
         if (count !== null) setOrdersTotalCount(count);
-        setOrdersPage(page);
+        setOrdersPage(targetPage);
       }
     } catch (err: any) {
       console.error('Erro ao carregar pedidos:', err.message);
     } finally {
       setIsLoadingList(false);
     }
-  }, [userRole, merchantProfile]);
+  }, [userRole, merchantProfile, merchantOrdersPage, ordersPage]);
 
-  // Realtime Listeners for Merchant
+  // Canal Global de Tempo Real (Admin e Lojista)
   useEffect(() => {
-    if (userRole !== 'merchant' || !merchantProfile?.merchant_id) return;
+    if (!session?.user?.id || !userRole) return;
 
-    const channel = supabase
-      .channel('merchant_orders_realtime')
+    const channelName = `admin_sync_${userRole}`;
+    console.log(`[REALTIME] Ativando subscrição: ${channelName}`);
+    
+    const channel = supabase.channel(channelName)
       .on(
         'postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'orders_delivery',
-          filter: `merchant_id=eq.${merchantProfile.merchant_id}`
-        },
+        { event: '*', schema: 'public', table: 'orders_delivery' },
         (payload) => {
-          console.log('Evento de pedido em tempo real:', payload.eventType, payload);
+          console.log('⚡ PEDIDO REALTIME:', payload.eventType, payload);
+          fetchStats(true);
+          fetchAllOrders(undefined, true);
           
           if (payload.eventType === 'INSERT') {
-            // Se o pedido for inserido como pendente_pagamento, não notifica o lojista ainda
-            if (payload.new.status !== 'pendente_pagamento') {
-              playIziSound('merchant');
-              setNewOrderNotification({ show: true, orderId: payload.new.id });
-            }
-          } else if (payload.eventType === 'UPDATE') {
-            // Se o status mudou de pendente_pagamento para um status que o lojista deva agir (novo ou waiting_merchant)
-            const wasPending = payload.old?.status === 'pendente_pagamento';
-            const isNowActionable = payload.new.status === 'novo' || payload.new.status === 'waiting_merchant';
-            
-            if (wasPending && isNowActionable) {
-              playIziSound('merchant');
-              setNewOrderNotification({ show: true, orderId: payload.new.id });
-            }
+            const newOrder = payload.new as Order;
+            if (userRole === 'merchant' && newOrder.merchant_id !== merchantProfile?.merchant_id) return;
+            setNewOrderNotification({ show: true, orderId: newOrder.id });
+            playIziSound('merchant');
           }
-
-          // Atualizar lista e estatísticas em qualquer mudança relevante
-          fetchAllOrders(merchantOrdersPage);
-          fetchStats();
         }
       )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userRole, merchantProfile, merchantOrdersPage, fetchAllOrders]);
-
-  // Realtime Listeners for Drivers (Admin & Merchant)
-  useEffect(() => {
-    if (!userRole) return;
-
-    const channel = supabase
-      .channel('drivers_realtime')
       .on(
         'postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'drivers_delivery'
-        },
+        { event: '*', schema: 'public', table: 'drivers_delivery' },
         (payload) => {
-          console.log('Driver Realtime Event:', payload.eventType, payload);
+          console.log('⚡ ENTREGADOR REALTIME:', payload.eventType, payload);
           
-          if (userRole === 'admin') {
-            // Update the general list
-            setDriversList(prev => {
-              if (payload.eventType === 'INSERT') return [...prev, payload.new as Driver];
-              if (payload.eventType === 'UPDATE') return prev.map(d => d.id === payload.new.id ? { ...d, ...payload.new } : d);
-              if (payload.eventType === 'DELETE') return prev.filter(d => d.id !== payload.old.id);
-              return prev;
-            });
-            fetchStats();
-          } else if (userRole === 'merchant' && merchantProfile?.merchant_id) {
-            // Update only if it belongs to the merchant
-            const driver = payload.eventType === 'DELETE' ? payload.old : payload.new;
-            if (driver.merchant_id === merchantProfile.merchant_id) {
-              setMyDriversList(prev => {
-                if (payload.eventType === 'INSERT') return [...prev, payload.new as Driver];
-                if (payload.eventType === 'UPDATE') return prev.map(d => d.id === payload.new.id ? { ...d, ...payload.new } : d);
-                if (payload.eventType === 'DELETE') return prev.filter(d => d.id !== payload.old.id);
-                return prev;
-              });
-              fetchStats();
+          let shouldRefreshFull = true;
+
+          if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as Driver;
+            const old = payload.old as Driver;
+
+            const latChanged = old?.lat !== updated.lat;
+            const lngChanged = old?.lng !== updated.lng;
+            const statusChanged = old?.is_online !== updated.is_online || old?.is_active !== updated.is_active || old?.status !== updated.status;
+            
+            if ((latChanged || lngChanged) && !statusChanged) {
+              shouldRefreshFull = false;
+            }
+
+            setDriversList(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d));
+            if (userRole === 'merchant') {
+              setMyDriversList(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d));
+            }
+          } else if (payload.eventType === 'INSERT') {
+            const newItem = payload.new as Driver;
+            setDriversList(prev => [newItem, ...prev]);
+            if (userRole === 'merchant' && newItem.merchant_id === merchantProfile?.merchant_id) {
+              setMyDriversList(prev => [newItem, ...prev]);
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const oldId = (payload.old as any).id;
+            setDriversList(prev => prev.filter(d => d.id !== oldId));
+            setMyDriversList(prev => prev.filter(d => d.id !== oldId));
+          }
+
+          if (shouldRefreshFull) {
+            fetchStats(true);
+            if (userRole === 'merchant') {
+              fetchMyDrivers(true);
+            } else {
+              fetchDrivers(true);
             }
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`📡 Status Realtime [${channelName}]:`, status);
+      });
 
     return () => {
+      console.log(`[REALTIME] Fechando canal: ${channelName}`);
       supabase.removeChannel(channel);
     };
-  }, [userRole, merchantProfile, fetchStats]);
+  }, [session?.user?.id, userRole, merchantProfile?.merchant_id, fetchAllOrders, fetchStats, fetchDrivers, fetchMyDrivers]);
 
   const fetchSubscriptionOrders = useCallback(async (page = 1) => {
     setIsLoadingList(true);
@@ -716,6 +707,18 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             logistica_km: (baseValuesRow.metadata as any).logistica_km?.toString().replace('.', ',') || '8,00',
             logistica_stairs: (baseValuesRow.metadata as any).logistica_stairs?.toString().replace('.', ',') || '30,00',
             logistica_helper: (baseValuesRow.metadata as any).logistica_helper?.toString().replace('.', ',') || '35,00',
+            fiorino_min: (baseValuesRow.metadata as any).fiorino_min?.toString().replace('.', ',') || '40,00',
+            fiorino_km: (baseValuesRow.metadata as any).fiorino_km?.toString().replace('.', ',') || '4,00',
+            caminhonete_min: (baseValuesRow.metadata as any).caminhonete_min?.toString().replace('.', ',') || '50,00',
+            caminhonete_km: (baseValuesRow.metadata as any).caminhonete_km?.toString().replace('.', ',') || '5,00',
+            bau_p_min: (baseValuesRow.metadata as any).bau_p_min?.toString().replace('.', ',') || '60,00',
+            bau_p_km: (baseValuesRow.metadata as any).bau_p_km?.toString().replace('.', ',') || '6,00',
+            bau_m_min: (baseValuesRow.metadata as any).bau_m_min?.toString().replace('.', ',') || '80,00',
+            bau_m_km: (baseValuesRow.metadata as any).bau_m_km?.toString().replace('.', ',') || '8,00',
+            bau_g_min: (baseValuesRow.metadata as any).bau_g_min?.toString().replace('.', ',') || '100,00',
+            bau_g_km: (baseValuesRow.metadata as any).bau_g_km?.toString().replace('.', ',') || '10,00',
+            aberto_min: (baseValuesRow.metadata as any).aberto_min?.toString().replace('.', ',') || '50,00',
+            aberto_km: (baseValuesRow.metadata as any).aberto_km?.toString().replace('.', ',') || '5,00',
             isDynamicActive: (baseValuesRow.metadata as any).isDynamicActive ?? true
           } : prev.baseValues
         }));
@@ -789,7 +792,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const openMerchantPreview = useCallback(async (merchant: any) => {
     setSelectedMerchantPreview(merchant);
     setActivePreviewTab('info');
-    // Fetch related data
     try {
       const { data: prods } = await supabase.from('products_delivery').select('*').eq('merchant_id', merchant.id);
       setPreviewProducts(prods || []);
@@ -800,11 +802,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Global data loading once userRole is determined
   useEffect(() => {
     if (!userRole) return;
 
-    // Common fetches
     fetchAppSettings();
     fetchEstablishmentTypes();
     
@@ -830,7 +830,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [userRole, fetchAppSettings, fetchStats, fetchUsers, fetchDrivers, fetchMerchants, fetchCategories, fetchPromotions, fetchDynamicRates, fetchAllOrders, fetchSubscriptionOrders, fetchMyDrivers, fetchProducts, fetchMenuCategories, fetchMyDedicatedSlots]);
 
 
-  // Handlers
   const handleAddCredit = async () => {
     setShowAddCreditModal(true);
   };
@@ -992,7 +991,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         merchant_id: targetMerchantId
       };
       
-      // Mapear is_available se necessário
       if ('is_active' in productData) {
         productData.is_available = productData.is_active;
         delete productData.is_active;
@@ -1009,7 +1007,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setIsSaving(false);
     }
-  }, [editingItem, merchantProfile, fetchProducts]);
+  }, [editingItem, merchantProfile, fetchProducts, userRole, selectedMerchantPreview]);
 
   const handleUpdateMenuCategory = useCallback(async (cat: any) => {
     try {
@@ -1211,7 +1209,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fetchDrivers]);
 
   const handleExportDrivers = useCallback(() => {
-    // CSV Export Logic
     const headers = ['Nome', 'Status', 'Telefone', 'Veículo', 'Placa'];
     const rows = driversList.map(d => [d.name, d.status, d.phone, d.vehicle_type, d.license_plate]);
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");
@@ -1368,16 +1365,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         { type: 'flow_control', metadata: dynamicRatesState.flowControl }
       ];
 
-      // Upsert multiple configurations
       const { error: batchError } = await supabase
         .from('dynamic_rates_delivery')
         .upsert(rows.map(r => ({ ...r, updated_at: new Date().toISOString() })), { onConflict: 'type' });
 
       if (batchError) throw batchError;
 
-      // Handle Peak Hours and Zones (They are multiple rows)
-      // For simplicity, we just hope they are handled by their own handlers or we can batch them too if they had IDs.
-      // Actually peakHours and Zones usually have IDs, so we can upsert them directly.
       if (dynamicRatesState.peakHours.length > 0) {
         await supabase.from('dynamic_rates_delivery').upsert(
           dynamicRatesState.peakHours.map(r => ({ ...r, type: 'peak_hour', updated_at: new Date().toISOString() }))
@@ -1401,12 +1394,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const handleAddPeakRule = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from('dynamic_rates_delivery').insert({
+      const { error } = await supabase.from('dynamic_rates_delivery').insert({
         type: 'peak_hour',
         label: newPeakRule.label || 'Novo Horário',
         multiplier: newPeakRule.multiplier,
         is_active: true
-      }).select().single();
+      });
       
       if (error) throw error;
       toastSuccess('Regra adicionada!');
@@ -1428,7 +1421,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fetchDynamicRates]);
 
   const handleAddZone = useCallback(async () => {
-    // Basic zone adding logic
   }, []);
 
   const handleRemoveZone = useCallback(async (id: string) => {
@@ -1463,7 +1455,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
 
-  const handleUpdateDispatchSettings = async (field: string, value: string) => {};
+  const handleUpdateDispatchSettings = async (_field: string, _value: string) => {};
   const handleSeedCategories = async () => {};
 
   const handleSaveAppSettings = useCallback(async () => {
@@ -1522,12 +1514,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fetchPromotions]);
 
   const autoSavePromo = (updatedPromo: any) => {
-    // Apenas atualiza o estado local do formulário para persistência durante a edição
     setPromoForm(updatedPromo);
   };
 
   const dashboardData = useMemo(() => {
-    // Se não há pedidos, retorna zerado
     if (!dashboardOrders || dashboardOrders.length === 0) {
       return {
         totalRevenue: 0,
@@ -1553,18 +1543,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const avgTicket = completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0;
     const deliverySuccessRate = totalOrders > 0 ? (completedOrdersCount / totalOrders) * 100 : 0;
 
-    // Cálculo de Lucro / Comissão
-    // Se for Lojista, o "Lucro Líquido" é o que sobra após a comissão da IZI
-    // Se for Admin, o Lucro Líquido é a soma das comissões
     let netProfit = 0;
     let totalCommission = 0;
 
-    // Receita diária dos últimos 7 dias baseada no Lucro Líquido / Receita
     const dailyRev = [0, 0, 0, 0, 0, 0, 0];
     const today = new Date();
 
     completed.forEach(order => {
-      // Tenta achar o merchant específico pra pegar a taxa dele
       const m = merchantsList.find(ml => ml.id === order.merchant_id);
       const commissionRate = m?.commission_percent ?? appSettings.appCommission ?? 12;
       const commission = (order.total_price || 0) * (commissionRate / 100);
@@ -1576,29 +1561,22 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         orderNetProfit = (order.total_price || 0) - commission;
         netProfit += orderNetProfit;
       } else {
-        orderNetProfit = commission; // Lucro do Admin é a comissão
+        orderNetProfit = commission;
         netProfit += orderNetProfit;
       }
 
       const orderDate = new Date(order.created_at);
       const diffDays = Math.floor((today.getTime() - orderDate.getTime()) / (1000 * 3600 * 24));
       if (diffDays >= 0 && diffDays < 7) {
-        // Daily revenue chart shows the 'net profit' (revenue for admin, profit for merchant)
-        // or we can show total gross revenue. As it's "Receita" usually Admin wants to see his commission daily.
-        // E lojista sua receita liquida ou bruta. Vamos colocar o orderNetProfit para ser mais condizente com o "Lucro" no chart.
-        // Wait, for merchant, let's keep it as total_price (faturamento bruto) because usually daily revenue is gross.
-        // And for Admin, maybe also gross? Let's use order.total_price for Merchant, and commission for Admin.
         dailyRev[6 - diffDays] += userRole === 'merchant' ? (order.total_price || 0) : commission;
       }
     });
 
-    // Pedidos de hoje
     const totalOrdersToday = dashboardOrders.filter(o => {
       const d = new Date(o.created_at);
       return d.toDateString() === today.toDateString();
     }).length;
 
-    // Categorias (Desempenho)
     const categoryMap: Record<string, { label: string, val: number, revenue: number }> = {};
     completed.forEach(o => {
       const cat = o.service_type || 'Geral';
@@ -1629,45 +1607,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [dashboardOrders, merchantsList, appSettings, userRole]);
 
-  // Sincronização Realtime de Pedidos para Admin/Lojista
-  useEffect(() => {
-    if (!session?.user?.id) return;
 
-    console.log('[REALTIME] Monitorando pedidos...');
-    
-    const channel = supabase
-      .channel('admin_orders_sync')
-      .on(
-        'postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'orders_delivery' 
-        },
-        async (payload) => {
-          console.log('[REALTIME] Alteração em pedidos detectada:', payload.eventType);
-          
-          // Recarregar estatísticas e listas de pedidos
-          fetchStats();
-          fetchAllOrders(ordersPage);
-          
-          // Se for um novo pedido e estivermos na aba de pedidos ou dashboard, notificar
-          if (payload.eventType === 'INSERT') {
-            const newOrder = payload.new as Order;
-            // Se for lojista, só notifica se for o pedido dele
-            if (userRole === 'merchant' && newOrder.merchant_id !== merchantProfile?.merchant_id) return;
-            
-            setNewOrderNotification({ show: true, orderId: newOrder.id });
-            playIziSound('new_order');
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [session, ordersPage, fetchAllOrders, fetchStats, userRole, merchantProfile]);
 
   const value: AdminContextType = {
     session,
