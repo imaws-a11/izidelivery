@@ -488,6 +488,7 @@ function App() {
                 }
                 
                 fetchFinanceData();
+                fetchMissionHistory();
             } else {
                 setDriverId(null);
                 setIsAuthenticated(false);
@@ -503,6 +504,7 @@ function App() {
     useEffect(() => {
         if (activeTab === 'earnings' || activeTab === 'history') {
             fetchFinanceData();
+            fetchMissionHistory();
         }
     }, [activeTab]);
 
@@ -891,21 +893,28 @@ function App() {
                         fetchFinanceData();
                     });
 
-                    // Atualizar estatísticas locais imediatamente
-                    setHistory(prev => [{ ...activeMission, id: (activeMission.realId || activeMission.id).slice(0, 8).toUpperCase() }, ...prev]);
-                    setStats(prev => ({ ...prev, balance: prev.balance + earnings, today: prev.today + earnings, count: prev.count + 1 }));
-                }
+                    // Recarregar dados reais do servidor
+                    fetchMissionHistory();
+                    fetchFinanceData();
 
-                // Limpeza e retorno ao Dashboard
-                setActiveMission(null);
-                localStorage.removeItem('Izi_active_mission');
-                setActiveTab('dashboard');
-                toastSuccess(newStatus === 'concluido' ? 'Entrega concluída! 🎉' : 'Missão encerrada.');
+                    // Limpar missão ativa
+                    setActiveMission(null);
+                    localStorage.removeItem('Izi_active_mission');
+                    setActiveTab('dashboard');
+                } else {
+                    // Limpar se foi cancelado
+                    setActiveMission(null);
+                    localStorage.removeItem('Izi_active_mission');
+                    setActiveTab('dashboard');
+                }
             } else {
+                const updatedMission = { ...activeMission, status: newStatus };
+                setActiveMission(updatedMission);
+                localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
                 toastSuccess('Status atualizado!');
             }
         } catch (e: any) {
-            toastError('Erro ao atualizar status: ' + e.message);
+            toastError('Erro ao atualizar status: ' + (e.message || 'Tente novamente.'));
             if (e.message?.includes('not found') || e.message?.includes('invalid input syntax for type uuid')) {
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
@@ -913,6 +922,35 @@ function App() {
             }
         } finally {
             setIsAccepting(false);
+        }
+    };
+
+    const fetchMissionHistory = async () => {
+        if (!driverId) return;
+        try {
+            const { data, error } = await supabase
+                .from('orders_delivery')
+                .select('*')
+                .eq('driver_id', driverId)
+                .in('status', ['concluido', 'finalizado', 'entregue'])
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            if (data) {
+                const formatted = data.map(o => ({
+                    ...o,
+                    price: Number(o.total_price || 0),
+                    type: o.service_type || 'package',
+                    // Fallback para nomes de destino se estiver vazio
+                    destination: o.delivery_address || o.destination || 'Destino ignorado',
+                    // Formato estético para ID na lista
+                    displayId: (o.id || "").slice(0, 8).toUpperCase()
+                }));
+                setHistory(formatted);
+            }
+        } catch (e) {
+            console.error("History fetch error:", e);
         }
     };
 
@@ -1392,11 +1430,25 @@ function App() {
                 <div className="space-y-3">
                     {history.map((order: any, i: number) => {
                         const details = getTypeDetails(order.type);
+                        const dateObj = new Date(order.created_at);
+                        const formattedDate = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                        const formattedTime = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
                         return (
-                            <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-white/[0.03] border border-white/5 rounded-[24px] p-5 flex items-center gap-4">
+                            <motion.div key={order.id || i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-white/[0.03] border border-white/5 rounded-[24px] p-5 flex items-center gap-4">
                                 <div className={`size-12 rounded-[18px] ${details.bg} ${details.color} flex items-center justify-center border border-current/10 shrink-0`}><Icon name={details.icon} className="text-2xl" /></div>
-                                <div className="flex-1 min-w-0"><p className="text-sm font-black text-white truncate">{order.destination.split(',')[0]}</p><div className="flex items-center gap-1.5 mt-0.5"><Icon name="verified" className="text-emerald-400 text-xs" /><span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Concluída</span></div></div>
-                                <div className="text-right shrink-0"><p className="text-lg font-black text-white">R$ {order.price.toFixed(0)}</p><p className="text-[8px] font-black text-white/20 uppercase">#{order.id}</p></div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-black text-white truncate">{order.destination.split(',')[0]}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <span className="text-[8px] font-black text-white/30 uppercase">{formattedDate} às {formattedTime}</span>
+                                        <div className="size-1 rounded-full bg-emerald-400/30" />
+                                        <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Concluída</span>
+                                    </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <p className="text-lg font-black text-white">R$ {order.price.toFixed(2).replace('.', ',')}</p>
+                                    <p className="text-[8px] font-black text-white/20 uppercase">#{order.displayId || order.id?.slice(0,8)}</p>
+                                </div>
                             </motion.div>
                         );
                     })}
