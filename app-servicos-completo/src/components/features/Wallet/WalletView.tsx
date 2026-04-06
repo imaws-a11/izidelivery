@@ -95,6 +95,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
   userXP = 0,
   savedCards = [],
   userId,
+  userName,
   iziCoinValue = 1.0,
   iziCoinRate = 1.0,
   paymentMethod,

@@ -204,28 +204,31 @@ export default function CategoriesTab() {
                           </div>
                           
                           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                             {getMainCategories().map(t => (
-                               <button
-                                 key={t.id}
-                                 onClick={() => {
-                                   setTempStoreType(t.value);
-                                   setTempFoodCategory('all');
-                                 }}
-                                 className={`flex flex-col items-center gap-4 p-8 rounded-[32px] border-2 transition-all group relative overflow-hidden ${tempStoreType === t.value ? 'bg-primary border-primary text-slate-900 shadow-2xl shadow-primary/20 scale-[1.05]' : 'bg-slate-50 dark:bg-slate-800/50 border-transparent text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                               >
-                                  {tempStoreType === t.value && (
-                                     <motion.div layoutId="main-cat-bg" className="absolute inset-0 bg-primary pointer-events-none" />
-                                  )}
-                                  <span className={`material-symbols-outlined text-4xl relative z-10 transition-transform group-hover:scale-110 ${tempStoreType === t.value ? 'text-slate-900' : 'text-slate-300 dark:text-slate-600'}`}>{t.icon}</span>
-                                  <span className="font-black text-[10px] uppercase tracking-widest relative z-10">{t.name}</span>
-                                  
-                                  {tempStoreType === t.value && (
-                                     <div className="absolute top-4 right-4 z-10">
-                                        <span className="material-symbols-outlined text-lg">check_circle</span>
-                                     </div>
-                                  )}
-                                </button>
-                             ))}
+                             {getMainCategories().map(t => {
+                               const isSelected = tempStoreType === t.value && t.value !== undefined && t.value !== null;
+                               return (
+                                <button
+                                  key={t.id}
+                                  onClick={() => {
+                                    setTempStoreType(t.value);
+                                    setTempFoodCategory('all');
+                                  }}
+                                  className={`flex flex-col items-center gap-4 p-8 rounded-[32px] border-2 transition-all group relative overflow-hidden ${isSelected ? 'bg-primary border-primary text-slate-900 shadow-2xl shadow-primary/20 scale-[1.05]' : 'bg-slate-50 dark:bg-slate-800/50 border-transparent text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                >
+                                   {isSelected && (
+                                      <motion.div layoutId={`main-cat-bg-${t.id}`} className="absolute inset-0 bg-primary pointer-events-none" />
+                                   )}
+                                   <span className={`material-symbols-outlined text-4xl relative z-10 transition-transform group-hover:scale-110 ${isSelected ? 'text-slate-900' : 'text-slate-300 dark:text-slate-600'}`}>{t.icon}</span>
+                                   <span className="font-black text-[10px] uppercase tracking-widest relative z-10">{t.name}</span>
+                                   
+                                   {isSelected && (
+                                      <div className="absolute top-4 right-4 z-10">
+                                         <span className="material-symbols-outlined text-lg">check_circle</span>
+                                      </div>
+                                   )}
+                                 </button>
+                               );
+                             })}
                           </div>
                        </div>
 
@@ -252,22 +255,28 @@ export default function CategoriesTab() {
                                      <span className="font-black text-[10px] uppercase tracking-widest relative z-10">Lojista Geral</span>
                                   </button>
 
-                                  {getSubcategories(tempStoreType).map(t => (
-                                    <button
-                                      key={t.id}
-                                      onClick={() => setTempFoodCategory(t.value)}
-                                      className={`flex flex-col items-center gap-4 p-8 rounded-[32px] border-2 transition-all group relative overflow-hidden ${tempFoodCategory === t.value ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xl shadow-emerald-500/20 scale-[1.05]' : 'bg-slate-50 dark:bg-slate-800/50 border-transparent text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                                    >
-                                       <span className="material-symbols-outlined text-4xl relative z-10">{t.icon}</span>
-                                       <span className="font-black text-[10px] uppercase tracking-widest relative z-10">{t.name}</span>
-                                       
-                                       {tempFoodCategory === t.value && (
-                                          <div className="absolute top-4 right-4 z-10">
-                                             <span className="material-symbols-outlined text-lg">verified</span>
-                                          </div>
-                                       )}
-                                    </button>
-                                  ))}
+                                  {getSubcategories(tempStoreType).map(t => {
+                                     const isSubSelected = tempFoodCategory === t.value && t.value !== undefined && t.value !== null;
+                                     return (
+                                       <button
+                                         key={t.id}
+                                         onClick={() => setTempFoodCategory(t.value)}
+                                         className={`flex flex-col items-center gap-4 p-8 rounded-[32px] border-2 transition-all group relative overflow-hidden ${isSubSelected ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xl shadow-emerald-500/20 scale-[1.05]' : 'bg-slate-50 dark:bg-slate-800/50 border-transparent text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                       >
+                                          {isSubSelected && (
+                                             <motion.div layoutId={`sub-cat-bg-${t.id}`} className="absolute inset-0 bg-emerald-500 pointer-events-none" />
+                                          )}
+                                          <span className={`material-symbols-outlined text-4xl relative z-10 ${isSubSelected ? 'text-white' : 'text-slate-300 dark:text-slate-600'}`}>{t.icon}</span>
+                                          <span className="font-black text-[10px] uppercase tracking-widest relative z-10">{t.name}</span>
+                                          
+                                          {isSubSelected && (
+                                             <div className="absolute top-4 right-4 z-10">
+                                                <span className="material-symbols-outlined text-lg">verified</span>
+                                             </div>
+                                          )}
+                                       </button>
+                                     );
+                                   })}
                                   
                                   {getSubcategories(tempStoreType).length === 0 && (
                                     <div className="col-span-full py-16 flex flex-col items-center gap-4 bg-slate-50 dark:bg-slate-800/50 rounded-[40px] border-2 border-dashed border-slate-200 dark:border-slate-800">
