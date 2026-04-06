@@ -83,7 +83,7 @@ function App() {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
   const [depositPixCode, setDepositPixCode] = useState("");
-  const [depositPaymentMethod, setDepositPaymentMethod] = useState<"cartao" | "lightning">("cartao");
+  const [depositPaymentMethod, setDepositPaymentMethod] = useState<"cartao" | "lightning" | "pix">("cartao");
   const [cartAnimations, setCartAnimations] = useState<{id: string, x: number, y: number, img: string}[]>([]);
 
   const triggerCartAnimation = (e: React.MouseEvent, img: string) => {
@@ -3149,13 +3149,11 @@ const navigateSubView = (target: string) => {
     );
   };
 
-
-
   const renderPixPayment = () => {
     const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
     const discount = appliedCoupon ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100) : 0;
     const cartTotal = Math.max(0, subtotal - discount);
-    const total = (pixConfirmed && selectedItem?.total_price) ? Number(selectedItem.total_price) : cartTotal;
+    const total = (selectedItem?.total_price) ? Number(selectedItem.total_price) : cartTotal;
 
     const formatCpf = (v: string) => v.replace(/\D/g,"").slice(0,11)
       .replace(/(\d{3})(\d)/,"$1.$2")
@@ -3240,6 +3238,7 @@ const navigateSubView = (target: string) => {
               cpf: cleanCpf,
               name: userName || "Cliente IziDelivery",
             },
+            description: selectedItem?.service_type === 'coin_purchase' ? `Compra de IZI Coins - R$ ${total.toFixed(2)}` : undefined
           },
         });
 
@@ -4236,7 +4235,7 @@ const navigateSubView = (target: string) => {
             </div>
             
             <h3 className="text-2xl font-black text-white tracking-tight mb-2 uppercase">Meu IZI Code</h3>
-            <p className="text-zinc-500 text-xs font-medium mb-10 leading-relaxed px-4">Compartilhe para receber transferências instantÃÂ¢neas de IZI Coins.</p>
+            <p className="text-zinc-500 text-xs font-medium mb-10 leading-relaxed px-4">Compartilhe para receber transferências instantâneas de IZI Coins.</p>
 
             <div className="p-6 bg-white rounded-[40px] shadow-inner mb-10 relative group">
               <img 
@@ -4293,7 +4292,7 @@ const navigateSubView = (target: string) => {
             </div>
 
             <button className="w-full bg-yellow-400 text-black font-black text-sm uppercase tracking-widest py-6 rounded-3xl shadow-xl shadow-yellow-400/20 active:scale-95 transition-all">
-              Confirmar Envio InstantÃÂ¢neo
+              Confirmar Envio Instantâneo
             </button>
           </motion.div>
         </motion.div>
@@ -4327,6 +4326,7 @@ const navigateSubView = (target: string) => {
   );
 
   const renderWallet = () => {
+    const coinRate = appSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0;
     const walletBalance = walletTransactions.reduce((acc: number, t: any) =>
       ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
 
@@ -4384,14 +4384,14 @@ const navigateSubView = (target: string) => {
             
             <div className="mt-4 flex items-center gap-2 px-4 py-2 bg-zinc-900/30 rounded-2xl border border-white/5 w-fit">
               <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Reserva em Reais</span>
-              <span className="text-sm font-black text-white">R$ {Math.abs(walletBalance).toFixed(2).replace(".", ",")}</span>
+              <span className="text-sm font-black text-white">R$ {(iziCoins * coinRate).toFixed(2).replace(".", ",")}</span>
             </div>
           </div>
 
-          {/* AÃÆ’ââ‚¬Â¡ÃÆ’ââ‚¬Â¢ES RÃÆ’ÂPIDAS */}
+          {/* AÇÕES RÁPIDAS */}
           <div className="grid grid-cols-4 gap-2">
             {[
-              { icon: "add",           label: "Adicionar" },
+              { icon: "add",           label: "Adicionar", action: () => setShowDepositModal(true) },
               { icon: "arrow_outward", label: "Transferir", action: () => setIsScanningQR(true) },
               { icon: "history",       label: "Extrato" },
               { icon: "qr_code_2", label: "Meu QR", action: () => setIsShowingMyQR(true) },
@@ -4423,10 +4423,10 @@ const navigateSubView = (target: string) => {
             ))}
           </div>
 
-          {/* CARTÃÆ’ââ‚¬Â¢ES */}
+          {/* CARTÕES */}
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Meus CartÃÆ’Âµes</h2>
+              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Meus Cartões</h2>
               <button onClick={() => { setPaymentsOrigin("profile"); setSubView("mobility_payment"); }}
                 className="text-yellow-400 text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity">
                 Gerenciar
@@ -4443,7 +4443,7 @@ const navigateSubView = (target: string) => {
                 </div>
                 <div>
                   <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Digital</p>
-                  <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ÃÂ¢ââ€šÂ¬Â¢ 8820</p>
+                  <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">•••• •••• •••• 8820</p>
                   <div className="flex justify-between items-center">
                     <p className="text-[8px] text-zinc-700 uppercase tracking-widest">Val. 12/28</p>
                     <div className="size-7 rounded-full bg-yellow-400/10 flex items-center justify-center">
@@ -4460,7 +4460,7 @@ const navigateSubView = (target: string) => {
                   </div>
                   <div>
                     <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Físico</p>
-                    <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ {card.last4}</p>
+                    <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">•••• •••• •••• {card.last4}</p>
                     <div className="flex justify-between items-center">
                       <p className="text-[8px] text-zinc-700 uppercase">{card.brand}</p>
                       <p className="text-[9px] text-zinc-600">Val. {card.expiry}</p>
@@ -4952,6 +4952,9 @@ const navigateSubView = (target: string) => {
           btc_price_brl: lnData.btc_price_brl 
         });
         setSubView("lightning_payment");
+      } else if (method === "pix") {
+        setSelectedItem(orderData);
+        setSubView("pix_payment");
       }
     } catch (e: any) {
       toastError("Erro ao processar recarga: " + e.message);
@@ -4961,11 +4964,12 @@ const navigateSubView = (target: string) => {
   };
 
   const renderDepositModal = () => {
+    const coinRate = globalSettings?.izi_coin_rate || 1.0;
     const depositPackages = [
-      { amount: 10, coins: 10, label: "R$ 10" },
-      { amount: 20, coins: 20, label: "R$ 20" },
-      { amount: 50, coins: 50, label: "R$ 50" },
-      { amount: 100, coins: 100, label: "R$ 100" },
+      { amount: 10, coins: Math.floor(10 / coinRate), label: "R$ 10" },
+      { amount: 20, coins: Math.floor(20 / coinRate), label: "R$ 20" },
+      { amount: 50, coins: Math.floor(50 / coinRate), label: "R$ 50" },
+      { amount: 100, coins: Math.floor(100 / coinRate), label: "R$ 100" },
     ];
 
     return (
@@ -5039,28 +5043,39 @@ const navigateSubView = (target: string) => {
 
                 <div>
                   <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4 block ml-1">Método de Pagamento</label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       onClick={() => setDepositPaymentMethod("cartao")}
-                      className={`p-5 rounded-[28px] border-2 transition-all flex items-center justify-center gap-4 ${
+                      className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${
                         depositPaymentMethod === "cartao" 
-                          ? "bg-white/10 border-white/20 text-white" 
-                          : "bg-black/20 border-zinc-900 text-zinc-500"
+                          ? "bg-white/10 border-white/20 text-white shadow-lg" 
+                          : "bg-black/20 border-zinc-900 text-zinc-600"
                       }`}
                     >
-                      <Icon name="credit_card" />
-                      <span className="text-[11px] font-black uppercase tracking-widest leading-none">Cartão</span>
+                      <Icon name="credit_card" size={20} />
+                      <span className="text-[9px] font-black uppercase tracking-widest leading-none">Cartão</span>
+                    </button>
+                    <button
+                      onClick={() => setDepositPaymentMethod("pix")}
+                      className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${
+                        depositPaymentMethod === "pix" 
+                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 shadow-lg" 
+                          : "bg-black/20 border-zinc-900 text-zinc-600"
+                      }`}
+                    >
+                      <Icon name="payments" size={20} />
+                      <span className="text-[9px] font-black uppercase tracking-widest leading-none">Pix</span>
                     </button>
                     <button
                       onClick={() => setDepositPaymentMethod("lightning")}
-                      className={`p-5 rounded-[28px] border-2 transition-all flex items-center justify-center gap-4 ${
+                      className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${
                         depositPaymentMethod === "lightning" 
-                          ? "bg-orange-500/10 border-orange-500/20 text-orange-400" 
-                          : "bg-black/20 border-zinc-900 text-zinc-500"
+                          ? "bg-orange-500/10 border-orange-500/20 text-orange-400 shadow-lg" 
+                          : "bg-black/20 border-zinc-900 text-zinc-600"
                       }`}
                     >
-                      <Icon name="bolt" />
-                      <span className="text-[11px] font-black uppercase tracking-widest leading-none">Bitcoin</span>
+                      <Icon name="bolt" size={20} />
+                      <span className="text-[9px] font-black uppercase tracking-widest leading-none">Bitcoin</span>
                     </button>
                   </div>
                 </div>
