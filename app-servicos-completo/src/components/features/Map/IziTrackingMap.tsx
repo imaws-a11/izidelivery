@@ -1,4 +1,4 @@
-import { GoogleMap, Marker, Polyline } from '@react-google-maps/api';
+import { GoogleMap, Marker, Polyline, OverlayView } from '@react-google-maps/api';
 import { useGoogleMapsLoader } from '../../../hooks/useGoogleMapsLoader';
 import { useRef, useCallback, useState, useMemo, useEffect } from 'react';
 
@@ -34,6 +34,8 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
   const { isLoaded, loadError } = useGoogleMapsLoader();
   const mapRef = useRef<google.maps.Map | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [initialLoaded, setInitialLoaded] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(true);
 
   // Decodifica a polilinha para o formato legível pelo Google Maps
   const path = useMemo(() => {
@@ -53,10 +55,11 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
       const bounds = new google.maps.LatLngBounds();
       path.forEach(p => bounds.extend(p));
       map.fitBounds(bounds, 80);
+      setIsFollowing(false);
+    } else {
+      setInitialLoaded(true);
     }
   }, [path]);
-
-  const [isFollowing, setIsFollowing] = useState(true);
 
   // Auto-fit bounds quando o path muda dinamicamente
   useEffect(() => {
@@ -64,7 +67,7 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
       const bounds = new google.maps.LatLngBounds();
       path.forEach(p => bounds.extend(p));
       mapRef.current.fitBounds(bounds, { top: 120, bottom: 250, right: 50, left: 50 });
-      setIsFollowing(false); // Quando ajustamos o zoom para a rota toda, paramos de seguir o ponto fixo
+      setIsFollowing(false); 
     }
   }, [path]);
 
@@ -139,11 +142,11 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
     <div className="w-full h-full relative z-0 overflow-hidden rounded-[inherit]">
       <GoogleMap
         mapContainerStyle={{ width: '100%', height: '100%' }}
-        center={initialCenter}
+        center={!initialLoaded ? initialCenter : undefined}
         zoom={path.length > 0 ? 14 : 15}
         onLoad={onLoad}
         onUnmount={onUnmount}
-        onDragStart={() => setIsFollowing(false)} // PARA DE SEGUIR QUANDO O USUÁRIO ARRASTA
+        onDragStart={() => setIsFollowing(false)}
         options={{
           disableDefaultUI: true,
           zoomControl: false,
@@ -166,7 +169,7 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
           />
         )}
 
-        {driverLoc && window.google?.maps?.marker?.AdvancedMarkerElement && (
+        {driverLoc && (
           <Marker
             position={driverLoc}
             options={{
@@ -180,18 +183,14 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
           />
         )}
 
-        {userLoc && window.google?.maps?.marker?.AdvancedMarkerElement && (
-           <Marker
+        {/* MARCADOR PULSANTE DO USUÁRIO - AMARELO IZI */}
+        {userLoc && (
+           <OverlayView
             position={userLoc}
-            options={{
-              icon: {
-                url: 'https://cdn-icons-png.flaticon.com/128/484/484167.png',
-                scaledSize: new window.google.maps.Size(34, 34),
-                anchor: new window.google.maps.Point(17, 34),
-              }
-            }}
-            zIndex={90}
-          />
+            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+           >
+             <div className="marker-user-pulse" style={{ transform: 'translate(-50%, -50%)' }} />
+           </OverlayView>
         )}
       </GoogleMap>
 
