@@ -1920,7 +1920,7 @@ function App() {
                         {/* Seção 4: Botões de Ação */}
                         <div className="pt-4 space-y-4">
                             {/* Aceite -> No Local de Coleta */}
-                            {(['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando'].includes(activeMission.status || '')) && (
+                            {(['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando', 'aceito', 'atribuido'].includes(activeMission.status || '')) && (
                                 <div className="space-y-4">
                                     <button 
                                         onClick={() => handleUpdateStatus('chegou_coleta')} 
@@ -1947,7 +1947,7 @@ function App() {
                             )}
 
                             {/* Chegou Coleta -> Coletado */}
-                            {(['chegou_coleta', 'no_local_coleta'].includes(activeMission.status || '') || activeMission.status === 'pronto') && (
+                            {(['chegou_coleta', 'no_local_coleta', 'waiting_driver'].includes(activeMission.status || '') || activeMission.status === 'pronto') && (
                                 <button 
                                     onClick={() => handleUpdateStatus('picked_up')} 
                                     disabled={isAccepting}
