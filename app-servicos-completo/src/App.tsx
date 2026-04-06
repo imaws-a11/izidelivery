@@ -23,6 +23,7 @@ import { WalletView } from "./components/features/Wallet/WalletView";
 import { CartView } from "./components/features/Cart/CartView";
 import { CheckoutView } from "./components/features/Checkout/CheckoutView";
 import { ActiveOrderView } from "./components/features/Order/ActiveOrderView";
+import { IziCoinTrackingView } from "./components/features/Order/IziCoinTrackingView";
 import { EstablishmentListView } from "./components/features/Establishment/EstablishmentListView";
 import { ExploreRestaurantsView } from "./components/features/Home/ExploreRestaurantsView";
 import { BeverageOffersView } from "./components/features/Home/BeverageOffersView";
@@ -138,6 +139,7 @@ function App() {
     | "shipping_priority"
     | "izi_black_purchase"
     | "card_payment"
+    | "izi_coin_tracking"
   >("none");
   const previousSubViewRef = useRef<string>("none");
   const [iziBlackOrigin, setIziBlackOrigin] = useState<"home" | "checkout">("home");
@@ -582,11 +584,16 @@ function App() {
           const isPaid = newOrder.payment_status === 'paid' || (newOrder.status === 'novo' && oldOrder?.status === 'pendente_pagamento');
           
           if (isPaid) {
-            const isPaymentSubView = ["lightning_payment", "pix_payment", "payment_processing"].includes(subViewRef.current);
+            const isPaymentSubView = ["lightning_payment", "pix_payment", "payment_processing", "card_payment"].includes(subViewRef.current);
             if (isPaymentSubView) {
               console.log("[REALTIME] Sucesso detectado para pedido:", newOrder.id);
-              clearCart(newOrder.id);
-              setSubView("payment_success");
+              if (newOrder.service_type === 'coin_purchase') {
+                setSelectedItem(newOrder);
+                setSubView("izi_coin_tracking");
+              } else {
+                clearCart(newOrder.id);
+                setSubView("payment_success");
+              }
             }
           }
 
@@ -600,7 +607,7 @@ function App() {
               } else if (newOrder.service_type === 'coin_purchase') {
                 showToast("IZI Coins adicionados com sucesso!", "success");
                 setShowDepositModal(false);
-                setSubView("none");
+                setSubView("izi_coin_tracking");
                 if (userIdRef.current) fetchWalletBalance(userIdRef.current);
               } else {
                 setSubView("order_feedback");
@@ -7280,6 +7287,16 @@ const navigateSubView = (target: string) => {
               {subView === "active_order" && (
                 <motion.div key="aorder" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[100]">
                   <ActiveOrderView selectedItem={selectedItem} driverLocation={driverLocation} userLocation={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} routePolyline={routePolyline || selectedItem?.route_polyline} onMyLocationClick={updateLocation} setSubView={setSubView} onCancelOrder={handleCancelOrder} />
+                </motion.div>
+              )}
+              {subView === "izi_coin_tracking" && (
+                <motion.div key="izi_coin_tracking" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[100]">
+                  <IziCoinTrackingView 
+                    order={selectedItem} 
+                    onClose={() => setSubView("none")} 
+                    onGoToWallet={() => { setTab("wallet"); setSubView("none"); }} 
+                    onSupport={() => setSubView("order_support")} 
+                  />
                 </motion.div>
               )}
               {subView === "payment_processing" && (

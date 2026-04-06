@@ -145,7 +145,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                         <button
                           onClick={() => {
                             setSelectedItem(order);
-                            setSubView("active_order");
+                            setSubView(order.service_type === "coin_purchase" ? "izi_coin_tracking" : "active_order");
                           }}
                           className="bg-yellow-400 text-black font-black px-6 py-3 rounded-xl shadow-[0_0_20px_rgba(255,215,9,0.25)] hover:opacity-90 active:scale-95 transition-all text-xs uppercase tracking-wider"
                         >

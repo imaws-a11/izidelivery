@@ -115,17 +115,18 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
 
   // Configurações do Bottom Sheet para framer-motion (Sincronizado com feedback de UI Premium)
   const sheetVariants = {
-    collapsed: { y: "82%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
-    half: { y: "50%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
-    expanded: { y: "15%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } }
+    collapsed: { y: "76%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
+    half: { y: "45%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
+    expanded: { y: "10%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } }
   };
   const [sheetState, setSheetState] = React.useState<"collapsed" | "half" | "expanded">("collapsed");
 
   const handleDragEnd = (_: any, info: any) => {
-    if (info.offset.y > 100) {
+    const threshold = 100;
+    if (info.offset.y > threshold) {
       if (sheetState === "expanded") setSheetState("half");
       else setSheetState("collapsed");
-    } else if (info.offset.y < -100) {
+    } else if (info.offset.y < -threshold) {
       if (sheetState === "collapsed") setSheetState("half");
       else setSheetState("expanded");
     }
@@ -161,8 +162,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
         initial="collapsed"
         animate={sheetState}
         drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={0.05}
+        dragElastic={0.7}
         onDragEnd={handleDragEnd}
         className="absolute inset-x-0 bottom-0 z-40 bg-zinc-900 border-t-4 border-white/5 rounded-t-[60px] shadow-[-20px_-20px_60px_rgba(255,255,255,0.02),20px_20px_60px_rgba(0,0,0,0.8),inset_4px_4px_12px_rgba(255,255,255,0.05),inset_-4px_-4px_12px_rgba(0,0,0,0.3)] flex flex-col cursor-grab active:cursor-grabbing"
         style={{ height: "100vh" }}
