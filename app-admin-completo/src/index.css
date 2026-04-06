@@ -45,4 +45,12 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  .izi-coin-symbol {
+    @apply relative inline-flex items-center justify-center font-black italic mr-0.5;
+  }
+  .izi-coin-symbol::after {
+    content: "";
+    @apply absolute inset-y-0.5 left-1/2 w-[1.5px] -ml-[0.75px] bg-current opacity-70;
+  }
 }

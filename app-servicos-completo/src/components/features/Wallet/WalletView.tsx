@@ -326,7 +326,10 @@ export const WalletView: React.FC<WalletViewProps> = ({
                     className="bg-transparent text-5xl font-black text-white outline-none w-40 text-center placeholder:text-zinc-800"
                   />
                 </div>
-                <p className="text-center text-xs text-zinc-700">Saldo disponível: {iziCoins.toLocaleString("pt-BR")} IZI Coins</p>
+                <p className="text-center text-xs text-zinc-700 flex items-center justify-center gap-1">
+                  Saldo disponível: <span className="izi-coin-symbol">Z</span> {iziCoins.toLocaleString("pt-BR")}
+                  {((iziCoins || 0) % 1 > 0) && <span className="opacity-40 text-[10px]">,{(iziCoins % 1).toFixed(8).split('.')[1]}</span>}
+                </p>
               </div>
 
               <button 
@@ -459,35 +462,67 @@ export const WalletView: React.FC<WalletViewProps> = ({
           <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
         </div>
         
-        <div className="flex flex-col items-center justify-center mt-2 mb-10 w-full">
-          <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-4">Saldo Oficial IZI</p>
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-4">
-              <span
-                className="font-extrabold text-7xl tracking-tighter text-white"
-                style={{ textShadow: "0 0 30px rgba(255,215,9,0.4)" }}
-              >
-                {iziCoins.toLocaleString("pt-BR")}
-              </span>
-              <div className="flex flex-col justify-center">
-                <span className="text-yellow-400 font-black text-sm uppercase italic leading-none">Coins</span>
-                <span className="text-yellow-400/40 text-[10px] font-bold uppercase leading-none mt-1">Acumulados</span>
+        <div className="flex flex-col items-center justify-center mt-2 mb-10 w-full relative">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-64 bg-yellow-400/5 blur-[80px] rounded-full pointer-events-none" />
+          
+          <div className="relative flex flex-col items-center">
+            <p className="text-zinc-600 text-[9px] font-black tracking-[0.4em] uppercase mb-8 opacity-60">Sua Carteira Digital Oficial</p>
+            
+            <div className="flex items-center justify-center gap-4">
+              <span className="izi-coin-symbol text-4xl text-yellow-400 opacity-90">Z</span>
+              <div className="flex items-baseline">
+                <h3 className="text-7xl font-black tracking-tighter text-white tabular-nums drop-shadow-2xl">
+                  {(iziCoins || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </h3>
+                {((iziCoins || 0) % 1 > 0) && (
+                  <span className="text-2xl font-black text-yellow-400/60 ml-1 tabular-nums">
+                    ,{(iziCoins % 1).toFixed(8).split('.')[1]}
+                  </span>
+                )}
               </div>
             </div>
             
-            <motion.div 
-               initial={{ opacity: 0 }} 
-               animate={{ opacity: 1 }}
-               className="mt-6 px-4 py-2 bg-zinc-900/40 rounded-full border border-white/5 flex items-center gap-3"
-            >
-              <p className="text-zinc-500 text-[9px] font-black uppercase tracking-widest italic">
-                Reserva em Reais: 
-                <span className="text-emerald-400 ml-2">
-                  R$ {(iziCoins * iziCoinValue).toFixed(2).replace(".", ",")}
-                </span>
-              </p>
-            </motion.div>
+            <div className="mt-5 flex items-center gap-3">
+              <div className="h-[1px] w-8 bg-gradient-to-r from-transparent to-yellow-400/30" />
+              <span className="text-yellow-400 font-extrabold text-[11px] tracking-[0.2em] uppercase italic">Izicoins</span>
+              <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-yellow-400/30" />
+            </div>
           </div>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-12 w-full max-w-[300px] bg-gradient-to-b from-zinc-900/60 to-zinc-950/80 backdrop-blur-xl rounded-[32px] p-6 border border-white/5 relative group shadow-2xl"
+          >
+            <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-40 transition-opacity">
+              <span className="text-[8px] font-black uppercase text-white">Garantia Izi</span>
+              <span className="material-symbols-outlined text-[10px] text-yellow-400">verified_user</span>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col">
+                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 flex items-center gap-2">
+                  Reserva em Reais
+                  <span className="size-1 rounded-full bg-emerald-500 animate-pulse" />
+                </p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-emerald-400 font-black text-2xl drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">R$</span>
+                  <span className="text-3xl font-black text-white tracking-tight">
+                    {(iziCoins * iziCoinValue).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="h-[1px] w-full bg-white/5" />
+              
+              <div className="flex justify-between items-center">
+                <p className="text-[8px] text-zinc-600 uppercase font-bold tracking-wider italic">Liquidez imediata para pagamentos</p>
+                <div className="size-6 rounded-full bg-zinc-900 flex items-center justify-center">
+                   <span className="text-[10px] font-black text-emerald-500">1:1</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
 
         {/* AÇÕES RÁPIDAS - GRID DE 5 COLUNAS */}
@@ -536,22 +571,6 @@ export const WalletView: React.FC<WalletViewProps> = ({
           ))}
         </div>
 
-        {/* PONTOS E CASHBACK - BORDERLESS */}
-        <div className="flex flex-col gap-1 p-5 bg-zinc-900/40 rounded-[24px]">
-          <div className="flex items-center gap-1.5 mb-2">
-            <span
-              className="material-symbols-outlined text-yellow-400 text-base"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              monetization_on
-            </span>
-            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">IZI Coins (Cashback Integrado)</span>
-          </div>
-          <p className="text-3xl font-extrabold text-white">{iziCoins.toLocaleString("pt-BR")}</p>
-          <p className="text-[10px] text-yellow-400/50 mt-1 uppercase font-bold tracking-widest">
-            ≈ R$ {(iziCoins * iziCoinValue).toFixed(2).replace(".", ",")} em Poder de Compra
-          </p>
-        </div>
 
         {/* CARTÕES - BORDERLESS */}
         <section>

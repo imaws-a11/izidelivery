@@ -71,8 +71,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <h1 className="text-xl font-black text-white">{userName || "Usuário"}</h1>
             <p className="text-zinc-600 text-xs mt-1">Nível {userLevel} • {userXP} XP</p>
             <div className="mt-2 flex items-center gap-2">
-               <span className="text-[10px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase">
-                R$ {walletBalance.toFixed(2)}
+               <span className="text-[10px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-full uppercase flex items-center gap-1">
+                <span className="izi-coin-symbol">Z</span> {walletBalance.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                {((walletBalance || 0) % 1 > 0) && <span className="opacity-60 text-[8px]">,{(walletBalance % 1).toFixed(8).split('.')[1]}</span>}
               </span>
             </div>
           </div>

@@ -69,6 +69,7 @@ export interface User {
   cashback_earned?: number;
   is_izi_black?: boolean;
   izi_coins?: number;
+  avatar_url?: string;
   created_at: string;
 }
 
