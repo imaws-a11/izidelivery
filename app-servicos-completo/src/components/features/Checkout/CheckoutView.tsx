@@ -25,6 +25,7 @@ interface CheckoutViewProps {
   iziCoinValue?: number;
   iziCoinRate?: number;
   deliveryFee: number;
+  serviceFee?: number;
   isIziBlack?: boolean;
 }
 
@@ -50,6 +51,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   iziCoinValue = 0.01,
   iziCoinRate = 1,
   deliveryFee = 0,
+  serviceFee = 0,
   isIziBlack = false,
 }) => {
   const [useCoins, setUseCoins] = React.useState(false);
@@ -73,7 +75,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     : 0;
   
   const coinDiscount = useCoins ? iziCoins * iziCoinValue : 0;
-  const total = Math.max(0, subtotal + deliveryFee - couponDiscount - coinDiscount);
+  const serviceFeeAmount = (subtotal * serviceFee) / 100;
+  const total = Math.max(0, subtotal + deliveryFee + serviceFeeAmount - couponDiscount - coinDiscount);
 
   const paymentOptions = [
     {
@@ -379,6 +382,12 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   )}
                 </div>
               </div>
+              {serviceFee > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.2em] italic text-blue-400">Taxa de Serviço ({serviceFee}%)</span>
+                  <span className="text-white font-black text-sm">R$ {serviceFeeAmount.toFixed(2).replace(".", ",")}</span>
+                </div>
+              )}
               {couponDiscount > 0 && (
                 <div className="flex justify-between items-center text-emerald-400">
                   <span className="text-[11px] font-black uppercase tracking-[0.2em] italic">Desconto Cupom</span>

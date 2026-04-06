@@ -11,6 +11,7 @@ interface MobilityPaymentViewProps {
   navigateSubView: (view: any) => void;
   marketConditions: any;
   calculateDynamicPrice: (base: number) => number;
+  serviceFee?: number;
 }
 
 export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
@@ -24,6 +25,7 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
   navigateSubView,
   marketConditions,
   calculateDynamicPrice,
+  serviceFee = 0,
 }) => {
   const bv = marketConditions?.settings?.baseValues || {};
   const basePrices: Record<string, number> = { 
@@ -35,8 +37,12 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
   };
   
   const isShippingService = ['utilitario', 'van', 'frete', 'logistica'].includes(transitData.type);
-  const rawPrice = (transitData.estPrice > 0 ? transitData.estPrice : calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min || 0)) ?? 0;
-  const price = (isIziBlackMembership && isShippingService) ? 0 : rawPrice;
+  const rawBase = (transitData.estPrice > 0 ? transitData.estPrice : calculateDynamicPrice(basePrices[transitData.type] || bv.mototaxi_min || 0)) ?? 0;
+  
+  const serviceFeeAmount = (rawBase * serviceFee) / 100;
+  const rawPriceWithFee = rawBase + serviceFeeAmount;
+  
+  const price = (isIziBlackMembership && isShippingService) ? 0 : rawPriceWithFee;
 
   const PaymentMethodButton = ({ id, icon, label, sub, colorClass, disabled = false }: any) => {
     const isSelected = paymentMethod === id;
@@ -111,6 +117,18 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
                   <p className="text-[9px] font-black text-yellow-400/60 uppercase tracking-[0.3em] mt-2">{transitData.subService || transitData.vehicleCategory || 'Serviço Agendado'}</p>
                 </div>
              </div>
+             
+             {serviceFee > 0 && !isIziBlackMembership && (
+               <div className="mt-8 pt-6 border-t border-white/5 flex justify-between items-center bg-zinc-800 p-4 rounded-2xl">
+                 <div>
+                    <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Base + Taxa Administr.</p>
+                    <p className="text-[7px] text-blue-400 font-bold uppercase tracking-widest">Taxa de Serviço: {serviceFee}%</p>
+                 </div>
+                 <div className="text-right">
+                    <p className="text-xs font-black text-white italic">R$ {price.toFixed(2).replace(".", ",")} Total</p>
+                 </div>
+               </div>
+             )}
           </div>
         </section>
 
