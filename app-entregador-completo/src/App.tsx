@@ -138,43 +138,48 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
     if (!isLoaded || !validDriverCoords || !resolvedDest) return;
     
     const calcRoute = async () => {
+      if (!isLoaded || !validDriverCoords || !resolvedDest) return;
       try {
-        const originObj = typeof validDriverCoords === 'string' ? { address: validDriverCoords } : { location: { latLng: validDriverCoords } };
-        const destObj = typeof resolvedDest === 'string' ? { address: resolvedDest } : { location: { latLng: resolvedDest } };
+        const origin = { location: { latLng: { latitude: validDriverCoords.lat, longitude: validDriverCoords.lng } } };
+        const destin = typeof resolvedDest === 'string' 
+          ? { address: resolvedDest }
+          : { location: { latLng: { latitude: resolvedDest.lat, longitude: resolvedDest.lng } } };
 
-        const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
-          method: "POST",
+        const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+          method: 'POST',
           headers: {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": mapsKey,
             "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline",
           },
           body: JSON.stringify({
-            origin: originObj,
-            destination: destObj,
-            travelMode: "DRIVE",
-            languageCode: "pt-BR",
-            routingPreference: "TRAFFIC_AWARE"
-          }),
+            origin,
+            destination: destin,
+            travelMode: 'DRIVE',
+            routingPreference: 'TRAFFIC_AWARE',
+            computeAlternativeRoutes: false,
+            routeModifiers: { avoidTolls: false, avoidHighways: false, avoidFerries: false },
+            languageCode: 'pt-BR',
+            units: 'METRIC'
+          })
         });
 
-        const data = await res.json();
-        
-        if (data.error) {
-          console.error('ERRO ROUTES API:', data.error);
-          return;
+        if (res.status === 403) {
+           console.error('⚠️ ERRO DE PERMISSÃO GOOGLE MAPS (403): Verifique se a "Routes API" está ATIVADA no Google Cloud Console e se o seu domínio está permitido.');
+           return;
         }
 
-        if (data?.routes?.[0]) {
+        const data = await res.json();
+        if (data.routes && data.routes[0]) {
           const route = data.routes[0];
           setRouteData({
             polyline: route.polyline.encodedPolyline,
-            distance: route.distanceMeters > 1000 ? `${(route.distanceMeters / 1000).toFixed(1)} km` : `${route.distanceMeters} m`,
-            duration: route.duration.replace('s', 's').replace('s', ' seg').replace('min', ' min'),
+            distance: (route.distanceMeters / 1000).toFixed(1) + ' km',
+            duration: Math.ceil(parseInt(route.duration) / 60) + ' min'
           });
         }
-      } catch (err) {
-        console.error('Falha ao calcular rota (REST):', err);
+      } catch (e) {
+        console.error('ERRO ROUTES API:', e);
       }
     };
 
@@ -553,19 +558,22 @@ function App() {
     };
 
     useEffect(() => {
-        if (activeMission) { localStorage.setItem('Izi_active_mission', JSON.stringify(activeMission)); }
-        else { localStorage.removeItem('Izi_active_mission'); }
-    }, [activeMission]);
-
-    useEffect(() => {
         if (!driverId || !isAuthenticated) return;
-        const savedOnline = localStorage.getItem('Izi_online') === 'true';
-        if (savedOnline !== isOnline) setIsOnline(savedOnline);
+        
+        // Sincronização inicial: Buscar status Online direto do banco de dados para evitar conflitos de localStorage entre dispositivos
+        supabase.from('drivers_delivery').select('is_online').eq('id', driverId).single()
+            .then(({ data }) => {
+                if (data && data.is_online !== isOnline) {
+                    setIsOnline(data.is_online);
+                    localStorage.setItem('Izi_online', data.is_online.toString());
+                }
+            });
     }, [driverId, isAuthenticated]);
 
     useEffect(() => {
         if (!driverId || !isAuthenticated) return;
         localStorage.setItem('Izi_online', isOnline.toString());
+        // Atualizar banco APENAS se houver mudança de estado manual no dispositivo atual
         supabase.from('drivers_delivery').update({ is_online: isOnline }).eq('id', driverId);
     }, [isOnline, isAuthenticated, driverId]);
 
@@ -859,56 +867,46 @@ function App() {
 
     const handleUpdateStatus = async (newStatus: string) => {
         if (!activeMission) return;
-        setIsAccepting(true); // Reusando loading state
+        setIsAccepting(true);
         try {
-            const { error } = await supabase.from('orders_delivery').update({ status: newStatus }).eq('id', activeMission.id);
+            // 1. Atualizar o pedido no banco de dados primeiro
+            const { error } = await supabase.from('orders_delivery').update({ status: newStatus }).eq('id', activeMission.realId || activeMission.id);
             if (error) throw error;
             
             const updatedMission = { ...activeMission, status: newStatus };
             setActiveMission(updatedMission);
             localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
             
-            if (newStatus === 'concluido' || newStatus === 'cancelado') {
-                if (newStatus === 'concluido' && driverId) {
+            if (['concluido', 'cancelado', 'finalizado', 'entregue'].includes(newStatus)) {
+                // Registrar ganho Financeiro em processo separado para não bloquear o fluxo da UI em caso de erro financeiro
+                if (['concluido', 'entregue', 'finalizado'].includes(newStatus) && driverId) {
                     const earnings = activeMission.price || activeMission.total_price || 0;
-                    // Persistir ganho na carteira universal
-                    await supabase.from('wallet_transactions_delivery').insert({
+                    supabase.from('wallet_transactions_delivery').insert({
                         user_id: driverId,
                         amount: earnings,
                         type: 'deposito',
-                        description: `Ganhos: Missão #${activeMission.id.slice(0, 8).toUpperCase()}`
+                        description: `Ganhos: Missão #${(activeMission.realId || activeMission.id).slice(0, 8).toUpperCase()}`
+                    }).then(({ error: wErr }) => {
+                        if (wErr) console.error("Erro ao registrar ganho na carteira:", wErr);
+                        fetchFinanceData();
                     });
 
-                    setHistory(prev => [{ ...activeMission, id: activeMission.id.slice(0, 8).toUpperCase() }, ...prev]);
-                    setStats(prev => {
-                        const bonusXp = 25 + (prev.level * 5); 
-                        const newXp = prev.xp + bonusXp; 
-                        const levelUp = newXp >= prev.nextXp;
-                        if (levelUp) setTimeout(() => toast(`🎉 Nível ${prev.level + 1} desbloqueado!`), 500);
-                        return { 
-                            ...prev, 
-                            balance: prev.balance + earnings, 
-                            today: prev.today + earnings, 
-                            count: prev.count + 1, 
-                            xp: levelUp ? newXp - prev.nextXp : newXp, 
-                            level: levelUp ? prev.level + 1 : prev.level, 
-                            nextXp: levelUp ? prev.nextXp + 50 : prev.nextXp 
-                        };
-                    });
-                    // Atualizar dados financeiros reais
-                    fetchFinanceData();
+                    // Atualizar estatísticas locais imediatamente
+                    setHistory(prev => [{ ...activeMission, id: (activeMission.realId || activeMission.id).slice(0, 8).toUpperCase() }, ...prev]);
+                    setStats(prev => ({ ...prev, balance: prev.balance + earnings, today: prev.today + earnings, count: prev.count + 1 }));
                 }
+
+                // Limpeza e retorno ao Dashboard
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
                 setActiveTab('dashboard');
-                toastSuccess(newStatus === 'concluido' ? 'Entrega concluída! 🎉' : 'Missão cancelada.');
+                toastSuccess(newStatus === 'concluido' ? 'Entrega concluída! 🎉' : 'Missão encerrada.');
             } else {
                 toastSuccess('Status atualizado!');
             }
         } catch (e: any) {
             toastError('Erro ao atualizar status: ' + e.message);
-            // Se o erro for de registro não encontrado, podemos oferecer limpar o estado local
-            if (e.message?.includes('not found')) {
+            if (e.message?.includes('not found') || e.message?.includes('invalid input syntax for type uuid')) {
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
                 setActiveTab('dashboard');
