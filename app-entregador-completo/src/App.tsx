@@ -4,7 +4,7 @@ import { supabase } from './lib/supabase';
 import { playIziSound } from './lib/iziSounds';
 import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
-import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView } from '@react-google-maps/api';
 
 const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 const GOOGLE_MAPS_ID = 'izi-pilot-map';
@@ -118,16 +118,15 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
 
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [isNavMode, setIsNavMode] = useState(true);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
   const lastDestRef = useRef<string>('');
 
-  // Validar coordenadas: garantir que lat e lng são números válidos
+  // Validar coordenadas
   const isValidCoord = (c: any): c is { lat: number; lng: number } =>
     c && typeof c.lat === 'number' && typeof c.lng === 'number' && isFinite(c.lat) && isFinite(c.lng);
 
   const validDriverCoords = isValidCoord(driverCoords) ? driverCoords : null;
   const validDestCoords = isValidCoord(destCoords) ? destCoords : null;
-
-  // Resolver destino: coordenadas OU endereço texto
   const resolvedDest = validDestCoords ? validDestCoords : (destAddress || null);
 
   // Calcular rota: imediato na 1a vez e ao mudar destino, depois a cada 30s
@@ -135,6 +134,9 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
     if (!isLoaded || !validDriverCoords || !resolvedDest) return;
     
     const calcRoute = () => {
+      // DirectionsService ainda é o padrão no JS SDK para renderização simples.
+      // A recomendação 'computeRoutes' refere-se à Routes API v1, que geralmente é usada via REST ou Bibliotecas v1.
+      // Manteremos DirectionsService aqui para compatibilidade com DirectionsRenderer, mas adicionando tratamento robusto.
       const service = new google.maps.DirectionsService();
       service.route(
         {
@@ -147,26 +149,30 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
             setDirections(result);
           } else {
             console.error('FALHA ROTA:', status, result);
-            // Se for negado na 1a vez, tenta fallback se tivermos texto mas não coords
             if (status === 'REQUEST_DENIED') {
-              console.warn('Acesso negado ao Directions API. Verifique se o Billing e Directions API estão ativos no Google Console.');
+              console.warn('DIRECTIONS API: Acesso negado. Por favor, ative a "Directions API" e o Faturamento (Billing) no Google Cloud Console para o projeto da chave fornecida.');
             }
           }
         }
       );
     };
 
-    // Recalcular imediatamente se o destino mudou
     const destKey = typeof resolvedDest === 'string' ? resolvedDest : `${resolvedDest.lat},${resolvedDest.lng}`;
     if (destKey !== lastDestRef.current) {
       lastDestRef.current = destKey;
       calcRoute();
     }
 
-    // Recalcular a cada 30s para atualizar com a posição do motorista
     const interval = setInterval(calcRoute, 30000);
     return () => clearInterval(interval);
   }, [isLoaded, validDriverCoords, resolvedDest]);
+
+  // Centralização suave
+  useEffect(() => {
+    if (map && isNavMode && validDriverCoords) {
+      map.panTo(validDriverCoords);
+    }
+  }, [map, isNavMode, validDriverCoords]);
 
   if (loadError) return (
     <div className="absolute inset-0 bg-red-950 flex flex-col items-center justify-center p-8 text-center z-50">
@@ -190,25 +196,20 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
     <div className="absolute inset-0 z-0">
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
-        center={isNavMode ? validDriverCoords : undefined}
+        onLoad={setMap}
+        center={validDriverCoords}
         zoom={16}
         options={mapOptions}
       >
-        {window.google?.maps?.marker?.AdvancedMarkerElement && (
-           <Marker 
-            position={validDriverCoords} 
-            options={{
-              icon: {
-                url: 'https://cdn-icons-png.flaticon.com/512/2965/2965319.png', // Motociclista Premium Amarelo
-                scaledSize: new window.google.maps.Size(48, 48),
-                anchor: new window.google.maps.Point(24, 24)
-              }
-            }}
-            zIndex={1000} // Sempre no topo
-          />
-        )}
-        
-        {validDestCoords && window.google?.maps?.marker?.AdvancedMarkerElement && (
+        {/* Marcador de Pulso do Usuário (Waze Style) */}
+        <OverlayView
+            position={validDriverCoords}
+            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+        >
+            <div className="marker-user-pulse" />
+        </OverlayView>
+
+        {validDestCoords && (
           <Marker 
             position={validDestCoords}
             options={{
@@ -231,21 +232,23 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
                 strokeWeight: 6,
                 strokeOpacity: 0.8
               },
-              suppressMarkers: true // Usamos nossos próprios marcadores customizados
+              suppressMarkers: true
             }}
           />
         )}
       </GoogleMap>
 
-      <button 
-        onClick={() => setIsNavMode(!isNavMode)}
-        className={`absolute bottom-6 right-6 z-50 size-14 rounded-2xl flex items-center justify-center border shadow-2xl transition-all active:scale-90 ${isNavMode ? 'bg-primary text-slate-950 border-white/20' : 'bg-slate-900/80 text-white border-white/10 backdrop-blur-md'}`}
-        title={isNavMode ? 'Mudar para Mapa Livre' : 'Voltar para Navegação'}
-      >
-        <span className="material-symbols-outlined text-2xl">
-          {isNavMode ? 'explore' : 'near_me'}
-        </span>
-      </button>
+      <div className="absolute bottom-6 right-6 z-50 flex flex-col gap-3">
+        <button 
+                onClick={() => setIsNavMode(!isNavMode)}
+                className={`size-14 rounded-2xl flex items-center justify-center border shadow-2xl transition-all active:scale-90 ${isNavMode ? 'bg-primary text-slate-950 border-white/20' : 'bg-slate-900/80 text-white border-white/10 backdrop-blur-md'}`}
+                title={isNavMode ? 'Mudar para Mapa Livre' : 'Voltar para Navegação'}
+            >
+                <span className="material-symbols-outlined text-2xl">
+                {isNavMode ? 'explore' : 'near_me'}
+                </span>
+        </button>
+      </div>
 
       {directions && directions.routes[0].legs[0] && (
         <div className="absolute top-6 left-6 z-[60] bg-slate-900/90 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-left-4">
@@ -263,7 +266,7 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
       )}
 
       {!isNavMode && (
-        <div className="absolute bottom-24 right-6 z-50 px-4 py-2 bg-slate-900/80 backdrop-blur-md rounded-xl border border-white/10 text-[8px] font-black text-white uppercase tracking-[0.2em] shadow-2xl animate-in fade-in slide-in-from-right-4">
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-slate-900/80 backdrop-blur-md rounded-xl border border-white/10 text-[8px] font-black text-white uppercase tracking-[0.2em] shadow-2xl animate-in fade-in slide-in-from-bottom-4">
           Modo Mapa Livre Ativo
         </div>
       )}
@@ -1216,13 +1219,13 @@ function App() {
             </div>
 
             {/* Filtros de Categorias */}
-            <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-2 -mx-1 px-1">
+            <div className="flex gap-4 overflow-x-auto no-scrollbar py-4 -mx-1 px-1">
                 {[
-                    { id: 'all', label: 'Todos', icon: 'grid_view' },
-                    { id: 'motoboy', label: 'Entregas', icon: 'package_2' },
-                    { id: 'car_ride', label: 'Viagens', icon: 'directions_car' },
-                    { id: 'frete', label: 'Fretes', icon: 'local_shipping' },
-                    { id: 'motorista_particular', label: 'VIP', icon: 'military_tech' }
+                    { id: 'all', label: 'Todos', icon: 'grid_view', color: 'text-primary' },
+                    { id: 'motoboy', label: 'Entregas', icon: 'package_2', color: 'text-emerald-400' },
+                    { id: 'car_ride', label: 'Viagens', icon: 'directions_car', color: 'text-blue-400' },
+                    { id: 'frete', label: 'Fretes', icon: 'local_shipping', color: 'text-orange-400' },
+                    { id: 'motorista_particular', label: 'VIP', icon: 'military_tech', color: 'text-yellow-400' }
                 ].map(item => {
                     const isActive = filter === item.id;
                     const count = item.id === 'all' 
@@ -1233,19 +1236,20 @@ function App() {
                         <button 
                             key={item.id} 
                             onClick={() => setFilter(item.id as any)} 
-                            className={`flex flex-col items-start gap-4 px-5 py-4 rounded-[28px] min-w-[120px] transition-all shrink-0 border ${
+                            className={`flex flex-col items-start gap-5 p-6 rounded-[36px] min-w-[140px] transition-all shrink-0 border relative overflow-hidden ${
                                 isActive 
-                                    ? 'bg-primary border-primary shadow-xl shadow-primary/20 text-slate-900' 
+                                    ? 'bg-primary border-primary shadow-2xl shadow-primary/30 text-slate-900 scale-105 z-10' 
                                     : 'bg-white/[0.03] border-white/5 text-white/40 hover:bg-white/[0.06]'
                             }`}
                         >
-                            <div className={`p-2 rounded-xl ${isActive ? 'bg-black/10' : 'bg-white/5'}`}>
-                                <Icon name={item.icon} size={20} />
+                            {isActive && <div className="absolute top-0 right-0 p-4 opacity-10"><Icon name={item.icon} size={64} /></div>}
+                            <div className={`size-12 rounded-[18px] flex items-center justify-center shadow-inner ${isActive ? 'bg-black/10' : 'bg-white/5 ' + item.color}`}>
+                                <Icon name={item.icon} size={24} />
                             </div>
-                            <div className="space-y-0.5">
-                                <p className="text-[10px] font-black uppercase tracking-widest">{item.label}</p>
-                                <p className={`text-[9px] font-bold ${isActive ? 'text-slate-900/60' : 'text-white/20'}`}>
-                                    {count} {count === 1 ? 'disponível' : 'disponíveis'}
+                            <div className="space-y-1 text-left">
+                                <p className="text-[11px] font-black uppercase tracking-widest">{item.label}</p>
+                                <p className={`text-[9px] font-black ${isActive ? 'text-slate-900/40' : 'text-white/10'} uppercase tracking-tight`}>
+                                    {count} {count === 1 ? 'Job' : 'Jobs'}
                                 </p>
                             </div>
                         </button>
@@ -1721,10 +1725,10 @@ function App() {
                     {/* Botão flutuante para alternar modo mapa / painel completo */}
                     <button 
                         onClick={() => setIsMapOnly(!isMapOnly)}
-                        className={`absolute bottom-6 left-6 z-50 h-12 px-5 rounded-xl flex items-center justify-center gap-2.5 border shadow-2xl transition-all active:scale-90 ${isMapOnly ? 'bg-primary text-slate-950 border-primary/50 shadow-primary/30' : 'bg-slate-900/80 text-white border-white/10 backdrop-blur-md shadow-black/30'}`}
+                        className={`absolute bottom-6 left-6 z-50 h-14 px-6 rounded-2xl flex items-center justify-center gap-3 border shadow-2xl transition-all active:scale-90 ${isMapOnly ? 'bg-primary text-slate-950 border-primary/50 shadow-primary/30' : 'bg-slate-900/90 text-white border-white/10 backdrop-blur-xl shadow-black/50'}`}
                     >
-                        <span className="material-symbols-outlined text-xl">{isMapOnly ? 'expand_less' : 'expand_more'}</span>
-                        <span className="text-[10px] font-black uppercase tracking-widest">{isMapOnly ? 'Abrir Painel' : 'Recolher'}</span>
+                        <Icon name={isMapOnly ? 'expand_less' : 'expand_more'} size={20} />
+                        <span className="text-[11px] font-black uppercase tracking-widest">{isMapOnly ? 'Abrir Painel' : 'Recolher'}</span>
                     </button>
 
                     {/* Navegação Rápida no Mapa */}
@@ -1739,9 +1743,9 @@ function App() {
                             else if (addressText) destination = encodeURIComponent(addressText);
                             if (destination) window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
                         }}
-                        className="absolute bottom-24 right-6 z-50 size-12 bg-blue-600/90 text-white rounded-xl flex items-center justify-center border border-white/10 shadow-2xl active:scale-90 transition-all"
+                        className="absolute bottom-6 right-24 z-50 size-14 bg-blue-600/90 text-white rounded-2xl flex items-center justify-center border border-white/10 shadow-2xl active:scale-90 transition-all"
                     >
-                        <Icon name="navigation" size={20} />
+                        <Icon name="navigation" size={24} />
                     </button>
                 </div>
 
