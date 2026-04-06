@@ -21,6 +21,8 @@ export default function UsersTab() {
   const [isEditingWallet, setIsEditingWallet] = useState(false);
   const [walletType, setWalletType] = useState('add');
   const [walletAmount, setWalletAmount] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [activeTab, setActiveTab] = useState('settings');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync edit form and fetch extra data when user is selected
