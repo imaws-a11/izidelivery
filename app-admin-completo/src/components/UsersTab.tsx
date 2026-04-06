@@ -72,8 +72,12 @@ export default function UsersTab() {
     if (!selectedUser || !walletAmount) return;
     
     try {
-      const amount = parseFloat(walletAmount);
-      let newBalance = selectedUser.izi_coins || 0;
+      const amount = Math.floor(parseFloat(walletAmount));
+      if (isNaN(amount)) {
+         throw new Error("O valor inserido é inválido.");
+      }
+
+      let newBalance = selectedUser.izi_coins ? Math.floor(Number(selectedUser.izi_coins)) : 0;
       let diff = amount;
       
       if (walletType === 'add') {
@@ -89,15 +93,23 @@ export default function UsersTab() {
         .update({ izi_coins: newBalance })
         .eq('id', selectedUser.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+         console.error('DB Update Error:', updateError);
+         throw new Error(`DB Update: ${updateError.message || updateError.details}`);
+      }
 
       // 2. Log Transaction for Audit
-      await supabase.from('wallet_transactions').insert({
+      const { error: insertError } = await supabase.from('wallet_transactions').insert({
         user_id: selectedUser.id,
         amount: diff,
         type: diff >= 0 ? 'deposito' : 'saque',
         description: `Ajuste manual via Painel Admin (${walletType === 'add' ? 'Adição' : 'Definição'})`
       });
+      
+      if (insertError) {
+         console.error('DB Insert Error:', insertError);
+         throw new Error(`Auditoria falhou: ${insertError.message || insertError.details}`);
+      }
       
       toastSuccess('Carteira atualizada e registrada com sucesso!');
       setSelectedUser({ ...selectedUser, izi_coins: newBalance });
@@ -105,9 +117,9 @@ export default function UsersTab() {
       setIsEditingWallet(false);
       fetchUsers();
       fetchUserExtraData(selectedUser.id);
-    } catch (err) {
-      console.error(err);
-      toastError('Erro ao atualizar carteira e registrar log');
+    } catch (err: any) {
+      console.error('Wallet Update Error:', err);
+      toastError(`Falha na atualização: ${err?.message || JSON.stringify(err)}`);
     }
   };
 
