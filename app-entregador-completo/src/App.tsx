@@ -442,14 +442,30 @@ function App() {
             if (user) {
                 setDriverId(user.id);
                 setIsAuthenticated(true);
-                const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
-                setDriverName(name);
-                ensureDriverRecord(user.id, user.email || '', name);
+                
+                // Buscar perfil completo do banco para sincronizar entre dispositivos
+                const { data: profile } = await supabase
+                    .from('drivers_delivery')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile) {
+                    setDriverName(profile.name || 'Entregador');
+                    setIsOnline(profile.is_online || false);
+                    setPixKey(profile.bank_info?.pix_key || '');
+                } else {
+                    const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
+                    setDriverName(name);
+                    ensureDriverRecord(user.id, user.email || '', name);
+                }
+                
                 fetchFinanceData();
             } else {
                 setDriverId(null);
                 setIsAuthenticated(false);
                 setDriverName('Entregador');
+                setIsOnline(false);
             }
             setAuthInitLoading(false);
         });
@@ -533,8 +549,8 @@ function App() {
 
     useEffect(() => {
         if (!driverId || !isAuthenticated) return;
-        const savedMission = localStorage.getItem('Izi_active_mission');
-        if (savedMission) { setActiveTab('active_mission'); return; }
+        
+        // Sincronização de missão ativa: sempre verificar o banco para garantir consistência entre aparelhos
         supabase.from('orders_delivery').select('*')
             .eq('driver_id', driverId).order('created_at', { ascending: false }).limit(10)
             .then(({ data: orders, error: qErr }) => {
@@ -555,6 +571,11 @@ function App() {
                     setActiveMission(mission);
                     localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                     setActiveTab('active_mission');
+                } else {
+                    // Se não houver missão ativa no banco, limpar o estado local (caso estivesse preso no localStorage de outro dispositivo)
+                    setActiveMission(null);
+                    localStorage.removeItem('Izi_active_mission');
+                    if (activeTab === 'active_mission') setActiveTab('dashboard');
                 }
             });
     }, [driverId, isAuthenticated]);
@@ -1437,7 +1458,24 @@ function App() {
                                 const val = (document.getElementById('pix_input') as HTMLInputElement).value;
                                 if (val) {
                                     setPixKey(val);
-                                    localStorage.setItem('izi_driver_pix', val);
+                                    const savePixKey = async () => {
+                                        if (!driverId) return;
+                                        try {
+                                            // Salvar no banco para sincronizar entre aparelhos
+                                            const { error } = await supabase
+                                                .from('drivers_delivery')
+                                                .update({ bank_info: { pix_key: val } })
+                                                .eq('id', driverId);
+                                            
+                                            if (error) throw error;
+                                            
+                                            localStorage.setItem('izi_driver_pix', val);
+                                            setShowPixModal(false);
+                                        } catch (e: any) {
+                                            alert('Erro ao salvar chave PIX: ' + e.message);
+                                        }
+                                    };
+                                    savePixKey();
                                     toastSuccess('Chave PIX salva!');
                                 }
                             }}

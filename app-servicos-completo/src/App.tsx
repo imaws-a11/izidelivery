@@ -652,16 +652,28 @@ function App() {
   useEffect(() => {
     if (!userId) return;
 
-    // Sincronização em tempo real de Perfil (Saldo, XP, Coins, Izi Black)
+    // Sincronização em tempo real de Perfil (Saldo, XP, Coins, Izi Black, Carrinho)
     const userSub = supabase
       .channel(`user_sync_${userId}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "users_delivery", filter: `id=eq.${userId}` },
-        () => {
-          console.log("[SYNC] Perfil do usuário atualizado, sincronizando...");
+        (payload: any) => {
+          console.log("[SYNC] Perfil do usuário atualizado remotamente.");
           fetchWalletBalance(userId);
-          // O fetchCartData(userId) foi removido daqui para evitar 'ressurreição' da sacola após limpeza
+          
+          // Sincronizar carrinho se a mudança veio de outro dispositivo
+          const remoteCart = payload.new?.cart_data;
+          if (Array.isArray(remoteCart)) {
+            // Verificar se o carrinho local é diferente para evitar loops infinitos ou 'ressurreição' indesejada
+            const localCartStr = JSON.stringify(cartRef.current);
+            const remoteCartStr = JSON.stringify(remoteCart);
+            
+            if (localCartStr !== remoteCartStr) {
+               console.log("[SYNC] Sincronizando sacola entre dispositivos...");
+               setCart(remoteCart);
+            }
+          }
         }
       )
       .subscribe();
@@ -706,7 +718,22 @@ function App() {
       .select("*")
       .eq("user_id", uid)
       .order("created_at", { ascending: false });
-    if (data) setMyOrders(data);
+    
+    if (data) {
+      setMyOrders(data);
+      
+      // PERSISTÊNCIA DE ESTADO: Se houver um pedido ATIVO e não estivermos rastreando, levar o usuário para lá
+      const activeOrder = data.find(o => 
+        ["novo", "aceito", "confirmado", "preparando", "no_preparo", "pronto", "waiting_driver", "a_caminho", "em_rota", "saiu_para_entrega", "no_local"].includes(o.status)
+      );
+      
+      if (activeOrder && subViewRef.current === "none") {
+        console.log("[PERSISTENCE] Detectado pedido ativo remotamente:", activeOrder.id);
+        setSelectedItem(activeOrder);
+        setSubView("active_order");
+        setTab("orders");
+      }
+    }
   };
 
   const handleCancelOrder = async (orderId: string) => {
@@ -1248,6 +1275,12 @@ function App() {
   const userIdRef = useRef(userId);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const selectedItemRef = useRef(selectedItem);
+  const cartRef = useRef(cart);
+
+  useEffect(() => { subViewRef.current = subView; }, [subView]);
+  useEffect(() => { userIdRef.current = userId; }, [userId]);
+  useEffect(() => { selectedItemRef.current = selectedItem; }, [selectedItem]);
+  useEffect(() => { cartRef.current = cart; }, [cart]);
 
   const orderStatusLabels: Record<string, string> = {
     pending: "Aguardando",
