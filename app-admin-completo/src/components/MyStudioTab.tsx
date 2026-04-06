@@ -108,8 +108,6 @@ export default function MyStudioTab() {
   const [tempTime, setTempTime] = React.useState('');
   const [selectedProductStudio, setSelectedProductStudio] = React.useState<any>(null);
   const [productSearch, setProductSearch] = React.useState('');
-  const [showEstablishmentModal, setShowEstablishmentModal] = React.useState(false);
-  const [editingType, setEditingTypeLocal] = React.useState<any>(null);
 
 
   const targetMerchantId = userRole === 'merchant' ? merchantProfile?.merchant_id : selectedMerchantPreview?.id;
@@ -330,31 +328,7 @@ export default function MyStudioTab() {
                         {userRole === 'admin' && (
                           <>
                              <div className="space-y-2">
-                               <div className="flex items-center justify-between ml-4 gap-4">
-                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tipo de Estabelecimento</label>
-                                 <div className="flex gap-3">
-                                   <button 
-                                     onClick={() => {
-                                       setEditingTypeLocal({ name: '', value: '', icon: 'category', is_active: true });
-                                       setShowEstablishmentModal(true);
-                                     }}
-                                     className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline flex items-center gap-1.5"
-                                   >
-                                     <span className="material-symbols-outlined text-[16px]">add_circle</span>
-                                     Novo
-                                   </button>
-                                   <button 
-                                     onClick={() => {
-                                       setEditingTypeLocal(null);
-                                       setShowEstablishmentModal(true);
-                                     }}
-                                     className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:underline flex items-center gap-1.5"
-                                   >
-                                     <span className="material-symbols-outlined text-[16px]">settings</span>
-                                     Gerenciar
-                                   </button>
-                                 </div>
-                               </div>
+                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Tipo de Estabelecimento</label>
                                <select 
                                  className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm appearance-none"
                                  value={targetItem.store_type || 'restaurant'}
@@ -367,34 +341,22 @@ export default function MyStudioTab() {
                              </div>
 
                              <div className="space-y-2">
-                               <div className="flex items-center justify-between ml-4 gap-4">
-                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Subcategoria / Especialidade</label>
-                                 <button 
-                                   onClick={() => {
-                                     const parent = establishmentTypes.find(p => p.value === targetItem.store_type);
-                                     setEditingTypeLocal({ name: '', value: '', icon: 'subdirectory_arrow_right', parent_id: parent?.id, is_active: true });
-                                     setShowEstablishmentModal(true);
-                                   }}
-                                   className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline flex items-center gap-1.5"
-                                 >
-                                   <span className="material-symbols-outlined text-[16px]">add_circle</span>
-                                   Criar Especialidade
-                                 </button>
-                               </div>
+                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Subcategoria / Especialidade</label>
                                <select 
                                  className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm appearance-none"
                                  value={targetItem.food_category || 'all'}
                                  onChange={e => updateItem({...targetItem, food_category: e.target.value})}
                                >
-                                 <option value="all">Selecione Especialidade...</option>
-                                 {establishmentTypes.filter(t => {
+                                 <option value="all">Loja Geral (Todas)</option>
+                                 {(() => {
                                    const parent = establishmentTypes.find(p => p.value === targetItem.store_type);
-                                   return t.parent_id === parent?.id;
-                                 }).map(t => (
-                                   <option key={t.id} value={t.value}>{t.name}</option>
-                                 ))}
+                                   return establishmentTypes.filter(t => t.parent_id === parent?.id).map(t => (
+                                     <option key={t.id} value={t.value}>{t.name}</option>
+                                   ));
+                                 })()}
                                </select>
                              </div>
+
 
 
                             <div className="space-y-2">
@@ -3712,181 +3674,8 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
 </motion.div>
             )}
           </AnimatePresence>
-          {/* Modal Gerenciar Tipos de Estabelecimento */}
-          <AnimatePresence>
-            {showEstablishmentModal && (
-              <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setShowEstablishmentModal(false)}></div>
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -20 }}
-                  className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[48px] overflow-hidden shadow-2xl relative z-10 border border-white/10 flex flex-col max-h-[85vh] font-display"
-                >
-                  <div className="p-10 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 flex justify-between items-center shrink-0">
-                    <div>
-                      <h3 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3 italic uppercase tracking-tighter">
-                        <span className="material-symbols-outlined text-primary text-3xl font-fill">category</span>
-                        Tipos de Estabelecimento
-                      </h3>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">Personalize as categorias principais da plataforma</p>
-                    </div>
-                    <button onClick={() => setShowEstablishmentModal(false)} className="size-12 rounded-2xl bg-white dark:bg-slate-800 text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-100 dark:border-slate-700 flex items-center justify-center transition-all shadow-sm hover:rotate-90">
-                      <span className="material-symbols-outlined">close</span>
-                    </button>
-                  </div>
+          {/* As especialidades sumiram todas, implemenatr edicao de especialidades */}
 
-                  <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar bg-white dark:bg-slate-900">
-                    {/* Add/Edit Form */}
-                    <div className="p-8 rounded-[32px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-6">
-                      <div className="flex items-center justify-between">
-                         <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em]">
-                           {editingType?.id ? 'Editando Categoria' : 'Nova Categoria'}
-                         </h4>
-                         {editingType?.id && (
-                           <button onClick={() => setEditingTypeLocal(null)} className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline flex items-center gap-1">
-                             <span className="material-symbols-outlined text-sm">add_circle</span>
-                             Adicionar Novo
-                           </button>
-                         )}
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nome da Categoria</label>
-                          <input 
-                            type="text" 
-                            placeholder="Ex: Pet Shop"
-                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
-                            value={editingType?.name || ''}
-                            onChange={e => setEditingTypeLocal({...editingType, name: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Slug / Valor (Único)</label>
-                          <input 
-                            type="text" 
-                            placeholder="Ex: petshop"
-                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
-                            value={editingType?.value || ''}
-                            onChange={e => setEditingTypeLocal({...editingType, value: e.target.value.toLowerCase().replace(/\s+/g, '_')})}
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Ícone (Material Symbols)</label>
-                          <input 
-                            type="text" 
-                            placeholder="Ex: pet_supplies"
-                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
-                            value={editingType?.icon || ''}
-                            onChange={e => setEditingTypeLocal({...editingType, icon: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Pertence a (Categoria Pai)</label>
-                          <select 
-                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm appearance-none"
-                            value={editingType?.parent_id || ''}
-                            onChange={e => setEditingTypeLocal({...editingType, parent_id: e.target.value || undefined})}
-                          >
-                            <option value="">Nenhuma (Esta é Principal)</option>
-                            {establishmentTypes.filter(t => !t.parent_id && t.id !== editingType?.id).map(t => (
-                              <option key={t.id} value={t.id}>{t.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="flex gap-4 md:col-span-2">
-                          {editingType?.id && (
-                             <button 
-                               onClick={() => setEditingTypeLocal(null)}
-                               className="flex-1 h-[52px] bg-slate-100 dark:bg-slate-800 text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-slate-200 transition-all"
-                             >
-                               Cancelar
-                             </button>
-                          )}
-                          <button 
-                            onClick={() => {
-                              if(!editingType?.name || !editingType?.value) return toastError("Preencha nome e slug!");
-                              handleUpdateEstablishmentType(editingType?.id ? editingType : { ...editingType, id: `type-${Date.now()}`, is_active: true });
-                              setEditingTypeLocal(null);
-                            }}
-                            className={`flex-[2] h-[52px] bg-primary text-slate-900 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2`}
-                          >
-                            <span className="material-symbols-outlined text-lg">{editingType?.id ? 'save' : 'add_circle'}</span>
-                            {editingType?.id ? 'Salvar Alterações' : 'Adicionar Categoria'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* List */}
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Categorias Atuais</h4>
-                        <button 
-                          onClick={() => setEditingTypeLocal(null)}
-                          className="px-4 py-2 bg-primary/10 text-primary rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all flex items-center gap-2"
-                        >
-                          <span className="material-symbols-outlined text-sm">add_circle</span>
-                          Nova Categoria
-                        </button>
-                      </div>
-                      <div className="space-y-4">
-                        {establishmentTypes.filter(p => !p.parent_id).map(parent => (
-                          <React.Fragment key={parent.id}>
-                            <div className="group flex items-center justify-between p-6 bg-slate-50/50 dark:bg-slate-800/30 rounded-[32px] border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-all shadow-sm">
-                              <div className="flex items-center gap-5">
-                                <div className="size-14 rounded-2xl bg-white dark:bg-slate-900 flex items-center justify-center text-slate-500 shadow-sm border border-slate-100 dark:border-slate-800 group-hover:scale-110 transition-transform">
-                                  <span className="material-symbols-outlined text-2xl">{parent.icon || 'category'}</span>
-                                </div>
-                                <div>
-                                  <p className="text-base font-black text-slate-900 dark:text-white tracking-tight italic uppercase">{parent.name}</p>
-                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">PRINCIPAL • Slug: {parent.value}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                                <button onClick={() => setEditingTypeLocal(parent)} className="size-10 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-primary transition-all flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-700">
-                                  <span className="material-symbols-outlined text-lg">edit</span>
-                                </button>
-                                <button onClick={() => handleDeleteEstablishmentType(parent.id)} className="size-10 rounded-xl bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500 transition-all flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-700">
-                                  <span className="material-symbols-outlined text-lg">delete</span>
-                                </button>
-                              </div>
-                            </div>
-                            
-                            {/* Subcategorias Recuadas */}
-                            {establishmentTypes.filter(child => child.parent_id === parent.id).map(child => (
-                              <div key={child.id} className="ml-12 group flex items-center justify-between p-5 bg-white dark:bg-slate-900/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 hover:border-primary/20 transition-all">
-                                <div className="flex items-center gap-4">
-                                  <div className="size-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-                                    <span className="material-symbols-outlined text-xl">{child.icon || 'subdirectory_arrow_right'}</span>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight">{child.name}</p>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">SUB • {child.value}</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <button onClick={() => setEditingTypeLocal(child)} className="size-8 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-all flex items-center justify-center border border-slate-100 dark:border-slate-700">
-                                    <span className="material-symbols-outlined text-base">edit</span>
-                                  </button>
-                                  <button onClick={() => handleDeleteEstablishmentType(child.id)} className="size-8 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-red-500 transition-all flex items-center justify-center border border-slate-100 dark:border-slate-700">
-                                    <span className="material-symbols-outlined text-base">delete</span>
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </React.Fragment>
-                        ))}
-                      </div>
-                  </div>
-                </div>
-                </motion.div>
-              </div>
-            )}
-          </AnimatePresence>
 
           {selectedProductStudio && (
             <ProductStudio
