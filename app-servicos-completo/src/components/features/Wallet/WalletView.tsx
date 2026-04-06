@@ -95,9 +95,12 @@ export const WalletView: React.FC<WalletViewProps> = ({
   userXP = 0,
   savedCards = [],
   userId,
-  userName,
-  showToast,
-  iziCoinValue = 0.01,
+  iziCoinValue = 1.0,
+  iziCoinRate = 1.0,
+  paymentMethod,
+  setShowDepositModal,
+  setPaymentsOrigin,
+  setSubView,
 }) => {
   const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr" | "scan" | "add_card">("main");
   const [showAllHistory, setShowAllHistory] = useState(false);
@@ -480,19 +483,20 @@ export const WalletView: React.FC<WalletViewProps> = ({
               <p className="text-zinc-500 text-[9px] font-black uppercase tracking-widest italic">
                 Reserva em Reais: 
                 <span className="text-emerald-400 ml-2">
-                  R$ {walletBalance.toFixed(2).replace(".", ",")}
+                  R$ {(iziCoins * iziCoinValue).toFixed(2).replace(".", ",")}
                 </span>
               </p>
             </motion.div>
           </div>
         </div>
 
-        {/* AÇÕES RÁPIDAS - SEM GRID SQUARE, NOVO FORMATO MODERNO E CLEAN */}
-        <div className="grid grid-cols-4 gap-2 w-full max-w-sm mx-auto">
+        {/* AÇÕES RÁPIDAS - GRID DE 5 COLUNAS */}
+        <div className="grid grid-cols-5 gap-1 w-full max-w-sm mx-auto">
           {[
             { icon: "add_circle", label: "Comprar", action: () => setShowDepositModal(true) },
             { icon: "arrow_outward", label: "Enviar", action: () => setWalletMode("transfer") },
             { icon: "qr_code_scanner", label: "Escanear", action: () => setWalletMode("scan") },
+            { icon: "qr_code", label: "Meu QR", action: () => setWalletMode("my_qr") },
             { icon: "history", label: "Extrato", action: () => historyRef.current?.scrollIntoView({ behavior: 'smooth' }) },
           ].map((a) => (
             <button
@@ -500,12 +504,12 @@ export const WalletView: React.FC<WalletViewProps> = ({
               onClick={a.action}
               className="flex flex-col items-center gap-2.5 py-4 active:scale-95 transition-all group"
             >
-              <div className="size-14 rounded-full bg-zinc-900/60 flex items-center justify-center group-hover:bg-yellow-400/10 transition-all">
-                <span className="material-symbols-outlined text-zinc-400 group-hover:text-yellow-400 transition-colors text-xl">
+              <div className="size-12 rounded-full bg-zinc-900/60 flex items-center justify-center group-hover:bg-yellow-400/10 transition-all">
+                <span className="material-symbols-outlined text-zinc-400 group-hover:text-yellow-400 transition-colors text-lg">
                   {a.icon}
                 </span>
               </div>
-              <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest group-hover:text-zinc-300 transition-colors">
+              <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest group-hover:text-zinc-300 transition-colors text-center">
                 {a.label}
               </span>
             </button>
