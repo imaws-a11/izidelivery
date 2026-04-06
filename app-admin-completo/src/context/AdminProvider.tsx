@@ -402,6 +402,46 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [MASTER_ADMIN_EMAIL, handleLogout]);
 
+  // Sincronização Realtime de Pedidos para Admin/Lojista
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    console.log('[REALTIME] Monitorando pedidos...');
+    
+    const channel = supabase
+      .channel('admin_orders_sync')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'orders_delivery' 
+        },
+        async (payload) => {
+          console.log('[REALTIME] Alteração em pedidos detectada:', payload.eventType);
+          
+          // Recarregar estatísticas e listas de pedidos
+          fetchStats();
+          fetchAllOrders(ordersPage);
+          
+          // Se for um novo pedido e estivermos na aba de pedidos ou dashboard, notificar
+          if (payload.eventType === 'INSERT') {
+            const newOrder = payload.new as Order;
+            // Se for lojista, só notifica se for o pedido dele
+            if (userRole === 'merchant' && newOrder.merchant_id !== merchantProfile?.merchant_id) return;
+            
+            setNewOrderNotification({ show: true, orderId: newOrder.id });
+            playIziSound('new_order');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session, ordersPage, fetchAllOrders, fetchStats, userRole, merchantProfile]);
+
   useEffect(() => {
     if (session?.user?.email) {
       fetchUserRole(session.user.email);
