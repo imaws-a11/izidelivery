@@ -72,12 +72,12 @@ export default function UsersTab() {
     if (!selectedUser || !walletAmount) return;
     
     try {
-      const amount = Math.floor(parseFloat(walletAmount));
+      const amount = parseFloat(walletAmount);
       if (isNaN(amount)) {
          throw new Error("O valor inserido é inválido.");
       }
 
-      let newBalance = selectedUser.izi_coins ? Math.floor(Number(selectedUser.izi_coins)) : 0;
+      let newBalance = selectedUser.izi_coins ? Number(selectedUser.izi_coins) : 0;
       let diff = amount;
       
       if (walletType === 'add') {
@@ -363,9 +363,9 @@ export default function UsersTab() {
                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Crédito em IZI Coins</p>
                              <div className="flex flex-col md:flex-row md:items-baseline gap-2">
                                  <h4 className="text-6xl font-black text-slate-900 dark:text-white italic tracking-tighter">
-                                     <span className="izi-coin-symbol">Z</span> {(selectedUser.izi_coins || 0).toLocaleString('pt-BR')}
+                                     <span className="izi-coin-symbol">Z</span> {Number(selectedUser.izi_coins || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 8 })}
                                  </h4>
-                                 <p className="text-sm font-black text-emerald-500 italic opacity-80">~ R$ {((selectedUser.izi_coins || 0) * iziCoinRate).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                 <p className="text-sm font-black text-emerald-500 italic opacity-80">~ R$ {(Number(selectedUser.izi_coins || 0) * iziCoinRate).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                              </div>
                          </div>
 
@@ -385,7 +385,7 @@ export default function UsersTab() {
                                              </div>
                                          </div>
                                          <span className={`text-xs font-black italic ${tx.amount >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                             {tx.amount >= 0 ? '+' : ''}{tx.amount.toLocaleString('pt-BR')}
+                                             {tx.amount >= 0 ? '+' : ''}{Number(tx.amount).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 8 })}
                                          </span>
                                      </div>
                                  ))
@@ -406,6 +406,7 @@ export default function UsersTab() {
                                       <div className="relative group">
                                           <input 
                                              type="number" 
+                                             step="any"
                                              value={walletAmount}
                                              onChange={e => setWalletAmount(e.target.value)}
                                              placeholder="0,00"

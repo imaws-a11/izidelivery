@@ -4953,7 +4953,7 @@ const navigateSubView = (target: string) => {
           delivery_address: "Recarga de Carteira",
           service_type: "coin_purchase",
           payment_method: method === "lightning" ? "bitcoin_lightning" : "cartao",
-          delivery_fees: 0
+          delivery_fee: 0
         })
         .select()
         .single();
