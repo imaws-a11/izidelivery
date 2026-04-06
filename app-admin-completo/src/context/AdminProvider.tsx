@@ -239,22 +239,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [previewCategories, setPreviewCategories] = useState<MenuCategory[]>([]);
 
   // Establishment Types
-  const [establishmentTypes, setEstablishmentTypes] = useState<EstablishmentType[]>([
-    { id: '1', name: 'Restaurante / Lanchonete', value: 'restaurant', icon: 'restaurant', is_active: true },
-    { id: '2', name: 'Farmácia', value: 'pharmacy', icon: 'medical_services', is_active: true },
-    { id: '3', name: 'Mercado / Conveniência', value: 'market', icon: 'shopping_cart', is_active: true },
-    { id: '4', name: 'Bebidas', value: 'beverages', icon: 'liquor', is_active: true },
-    { id: '5', name: 'Pet Shop', value: 'pet', icon: 'pets', is_active: true },
-    { id: '6', name: 'Suplementos / Fitness', value: 'fitness', icon: 'fitness_center', is_active: true },
-    { id: '7', name: 'Presentes / Variedades', value: 'gift', icon: 'featured_seasonal', is_active: true },
-    
-    // Sub-categorias embutidas para exemplo/teste
-    { id: 'sub-1', name: 'Hambúrguer', value: 'burguer', icon: 'lunch_dining', is_active: true, parent_id: '1' },
-    { id: 'sub-2', name: 'Pizza', value: 'pizza', icon: 'local_pizza', is_active: true, parent_id: '1' },
-    { id: 'sub-3', name: 'Japonesa', value: 'japonesa', icon: 'set_meal', is_active: true, parent_id: '1' },
-    { id: 'sub-4', name: 'Açaí', value: 'acai', icon: 'icecream', is_active: true, parent_id: '1' },
-    { id: 'sub-5', name: 'Saúde & Bem Estar', value: 'health', icon: 'health_and_safety', is_active: true, parent_id: '2' },
-  ]);
+   const [establishmentTypes, setEstablishmentTypes] = useState<EstablishmentType[]>([]);
 
   const fetchEstablishmentTypes = useCallback(async () => {
     try {
