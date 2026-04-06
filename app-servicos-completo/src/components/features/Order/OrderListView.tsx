@@ -112,11 +112,13 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                           fontVariationSettings: "'FILL' 1",
                         }}
                       >
-                        {isMobility(order)
-                          ? order.service_type === "mototaxi"
-                            ? "two_wheeler"
-                            : "directions_car"
-                          : "restaurant"}
+                        {order.service_type === "coin_purchase"
+                          ? "payments"
+                          : isMobility(order)
+                            ? order.service_type === "mototaxi"
+                              ? "two_wheeler"
+                              : "directions_car"
+                            : "restaurant"}
                       </span>
                     </div>
                     <div className="flex-1 space-y-2">
@@ -126,12 +128,14 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                             {statusLabel[order.status] || order.status}
                           </span>
                           <h3 className="font-extrabold text-xl text-white tracking-tight">
-                            {order.merchant_name ||
-                              (isMobility(order)
-                                ? order.service_type === "mototaxi"
-                                  ? "Izi Moto"
-                                  : "Izi Car"
-                                : "Pedido")}
+                            {order.service_type === "coin_purchase"
+                              ? "Compra de IZI Coins"
+                              : order.merchant_name ||
+                                (isMobility(order)
+                                  ? order.service_type === "mototaxi"
+                                    ? "Izi Moto"
+                                    : "Izi Car"
+                                  : "Pedido")}
                           </h3>
                         </div>
                         <span className="text-yellow-400 text-[10px] font-black bg-yellow-400/10 px-3 py-1 rounded-full uppercase tracking-widest whitespace-nowrap">
@@ -139,7 +143,9 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                         </span>
                       </div>
                       <p className="text-zinc-400 text-sm max-w-xs">
-                        {order.delivery_address || "Endereço de entrega"}
+                        {order.service_type === "coin_purchase"
+                          ? "Recarga Digital Instantânea"
+                          : order.delivery_address || "Endereço de entrega"}
                       </p>
                       <div className="pt-3 flex items-center gap-3">
                         <button
@@ -244,15 +250,19 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                         className="material-symbols-outlined text-2xl text-zinc-500 group-hover:text-yellow-400 transition-colors"
                         style={{ fontVariationSettings: "'FILL' 1" }}
                       >
-                        {isMobility(order)
-                          ? order.service_type === "mototaxi"
-                            ? "two_wheeler"
-                            : "directions_car"
-                          : "restaurant"}
+                        {order.service_type === "coin_purchase"
+                          ? "payments"
+                          : isMobility(order)
+                            ? order.service_type === "mototaxi"
+                              ? "two_wheeler"
+                              : "directions_car"
+                            : "restaurant"}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-black text-sm text-white truncate">{order.merchant_name || "Pedido"}</h4>
+                      <h4 className="font-black text-sm text-white truncate">
+                        {order.service_type === "coin_purchase" ? "Recarga IZI Coins" : order.merchant_name || "Pedido"}
+                      </h4>
                       <p className="text-zinc-500 text-xs mt-0.5">
                         {new Date(order.created_at).toLocaleDateString("pt-BR")} • R$ {Number(order.total_price || 0).toFixed(2).replace(".", ",")}
                       </p>
