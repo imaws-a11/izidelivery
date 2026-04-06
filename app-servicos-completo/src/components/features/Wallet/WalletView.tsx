@@ -528,7 +528,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
         {/* AÇÕES RÁPIDAS - GRID DE 5 COLUNAS */}
         <div className="grid grid-cols-5 gap-1 w-full max-w-sm mx-auto">
           {[
-            { icon: "add_circle", label: "Comprar", action: () => setShowDepositModal(true) },
+            { icon: "add_circle", label: "Depositar", action: () => setShowDepositModal(true) },
             { icon: "arrow_outward", label: "Enviar", action: () => setWalletMode("transfer") },
             { icon: "qr_code_scanner", label: "Escanear", action: () => setWalletMode("scan") },
             { icon: "qr_code", label: "Meu QR", action: () => setWalletMode("my_qr") },
