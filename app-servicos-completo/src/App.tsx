@@ -1531,7 +1531,9 @@ function App() {
     const coinValue = globalSettings?.izi_coin_value || 0.01;
     const coinDiscount = useCoins ? (iziCoins || 0) * coinValue : 0;
     const deliveryFee = calculateDeliveryFee();
-    const totalRaw = subtotal + deliveryFee - couponDiscount - coinDiscount;
+    const serviceFeePercent = appSettings?.serviceFee || 0;
+    const serviceFeeAmount = (subtotal * serviceFeePercent) / 100;
+    const totalRaw = subtotal + deliveryFee + serviceFeeAmount - couponDiscount - coinDiscount;
     const total = Math.max(0, Number(totalRaw.toFixed(2)));
 
     const shopId = selectedShop?.id || cart[0]?.merchant_id || null;
@@ -2390,6 +2392,10 @@ const navigateSubView = (target: string) => {
       // [Comentario Limpo pelo Sistema]
     if (isIziBlackMembership && isShipping) {
       finalPrice = 0;
+    } else {
+      const serviceFeePercent = appSettings?.serviceFee || 0;
+      const serviceFeeAmount = (finalPrice * serviceFeePercent) / 100;
+      finalPrice += serviceFeeAmount;
     }
 
     setIsLoading(true);
@@ -4368,23 +4374,44 @@ const navigateSubView = (target: string) => {
           </div>
 
           <div className="flex flex-col gap-1">
-            <p className="text-zinc-600 text-[10px] font-black tracking-[0.3em] uppercase">Saldo Oficial</p>
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-yellow-400 flex items-center justify-center shadow-[0_0_20px_rgba(250,204,21,0.2)]">
-                <span className="material-symbols-outlined text-black font-black">currency_bitcoin</span>
+            <p className="text-zinc-600 text-[10px] font-black tracking-[0.3em] uppercase">Saldo Disponível</p>
+            <div className="flex items-center gap-4 mt-1">
+              <div className="size-12 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-[0_0_30px_rgba(250,204,21,0.3)] relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
+                <span className="material-symbols-outlined text-black font-black text-2xl relative z-10 transition-transform group-hover:scale-110">currency_bitcoin</span>
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="font-extrabold text-5xl tracking-tighter text-white"
-                  style={{ textShadow: "0 0 30px rgba(255,215,9,0.2)" }}>
-                  {iziCoins.toLocaleString("pt-BR")}
-                </span>
-                <span className="font-black text-xl text-yellow-400 italic">coins</span>
+              <div className="flex flex-col">
+                <div className="flex items-baseline gap-1">
+                  <span className="font-extrabold text-5xl tracking-tighter text-white"
+                    style={{ textShadow: "0 0 40px rgba(255,215,9,0.15)" }}>
+                    {Math.floor(iziCoins).toLocaleString("pt-BR")}
+                  </span>
+                  {iziCoins % 1 !== 0 && (
+                    <span className="font-bold text-2xl text-yellow-400/80 tracking-tighter">
+                      ,{iziCoins.toFixed(8).split(".")[1]}
+                    </span>
+                  )}
+                  <span className="text-[10px] font-black text-yellow-400/50 uppercase tracking-[0.2em] ml-2 italic">IZI</span>
+                </div>
               </div>
             </div>
             
-            <div className="mt-4 flex items-center gap-2 px-4 py-2 bg-zinc-900/30 rounded-2xl border border-white/5 w-fit">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Reserva em Reais</span>
-              <span className="text-sm font-black text-white">R$ {(iziCoins * coinRate).toFixed(2).replace(".", ",")}</span>
+            <div className="mt-6 p-4 bg-zinc-900/40 rounded-[24px] border border-white/5 backdrop-blur-md flex items-center justify-between group hover:border-yellow-400/20 transition-all">
+              <div className="flex items-center gap-3">
+                <div className="size-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-emerald-400 text-lg">account_balance_wallet</span>
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest leading-tight">Valor em Reais</p>
+                  <p className="text-lg font-black text-white leading-tight">
+                    R$ {(iziCoins * coinRate).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest leading-tight">Cotação Atual</p>
+                <p className="text-[10px] font-bold text-yellow-400/60 leading-tight">1 IZI = R$ {coinRate.toFixed(4).replace(".", ",")}</p>
+              </div>
             </div>
           </div>
 
@@ -4986,27 +5013,27 @@ const navigateSubView = (target: string) => {
               animate={{ scale: 1, opacity: 1, y: 0 }} 
               exit={{ scale: 0.9, opacity: 0, y: 20 }} 
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="w-full max-w-lg bg-zinc-900 border border-white/10 rounded-[50px] shadow-[20px_20px_40px_rgba(0,0,0,0.4),inset_4px_4px_10px_rgba(255,255,255,0.05)] relative max-h-[90vh] flex flex-col overflow-hidden"
+              className="w-full max-w-lg bg-[#222222] border-[3px] border-white/10 rounded-[50px] shadow-[15px_15px_35px_rgba(0,0,0,0.4),-10px_-10px_20px_rgba(255,255,255,0.05),inset_6px_6px_15px_rgba(255,255,255,0.05),inset_-6px_-6px_15px_rgba(0,0,0,0.5)] relative max-h-[90vh] flex flex-col overflow-hidden"
             >
               {/* Claymorphism Accent */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 blur-[100px] rounded-full -mr-32 -mt-32 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/10 blur-[100px] rounded-full -mr-32 -mt-32 pointer-events-none" />
               
-              <header className="shrink-0 px-8 pt-10 pb-6 flex items-center justify-between border-b border-white/5 relative z-10">
+              <header className="shrink-0 px-8 pt-8 pb-4 flex items-center justify-between border-b border-black/20 shadow-[0_5px_15px_rgba(0,0,0,0.1)] relative z-50 bg-[#222222]">
                 <div className="flex flex-col">
-                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none italic">IZI Coin Store</h3>
-                  <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.4em] mt-2 opacity-80">Slider de Recarga Express</p>
+                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none italic drop-shadow-md">IZI Coin Store</h3>
+                  <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.4em] mt-2 shadow-[0_2px_4px_rgba(0,0,0,0.5)] bg-black/20 w-fit px-2 py-1 rounded-full">Recarga Express</p>
                 </div>
                 <motion.button 
                   whileHover={{ scale: 1.1, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setShowDepositModal(false)}
-                  className="size-12 rounded-[22px] bg-zinc-800 border border-white/5 flex items-center justify-center text-white shadow-[8px_8px_16px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.05)]"
+                  className="size-12 rounded-[22px] bg-[#333333] border-2 border-white/5 flex items-center justify-center text-white shadow-[8px_8px_16px_rgba(0,0,0,0.4),-4px_-4px_8px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.1)]"
                 >
                   <span className="material-symbols-outlined font-black text-xl">close</span>
                 </motion.button>
               </header>
 
-              <div className="flex-1 overflow-y-auto px-8 py-10 space-y-12 hide-scrollbar pb-12 relative z-10">
+              <div className="flex-1 overflow-y-auto px-8 py-8 space-y-12 pb-12 relative z-10 custom-scrollbar">
                 {/* Hero Conversion Display */}
                 <section className="text-center space-y-4">
                    <div className="inline-flex flex-col items-center">
