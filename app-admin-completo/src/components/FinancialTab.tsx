@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
+import { supabase } from '../lib/supabase';
+import { toastSuccess, toastError } from '../lib/useToast';
 import type { DashboardData } from '../lib/types';
 
 // Relatórios Financeiros
@@ -196,6 +198,9 @@ export default function FinancialTab() {
         </div>
       </div>
 
+      {/* Withdrawal Requests Logic */}
+      <WithdrawalRequestsSection />
+
       {/* Transactions Table */}
       <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/20">
@@ -255,6 +260,143 @@ export default function FinancialTab() {
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function WithdrawalRequestsSection() {
+  const [requests, setRequests] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [processingId, setProcessingId] = React.useState<string | null>(null);
+
+  const fetchWithdrawals = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      // 1. Get all pending 'saque' transactions
+      const { data: txs, error } = await supabase
+        .from('wallet_transactions')
+        .select('*')
+        .eq('type', 'saque')
+        .eq('status', 'pendente')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // 2. Map driver names
+      if (txs && txs.length > 0) {
+        const uids = txs.map(t => t.user_id);
+        const { data: drivers } = await supabase
+          .from('drivers_delivery')
+          .select('id, name')
+          .in('id', uids);
+        
+        const mapped = txs.map(t => ({
+          ...t,
+          driver_name: drivers?.find(d => d.id === t.user_id)?.name || 'Piloto IZI'
+        }));
+        setRequests(mapped);
+      } else {
+        setRequests([]);
+      }
+    } catch (e) {
+      console.error("Error fetching withdrawals:", e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchWithdrawals();
+  }, [fetchWithdrawals]);
+
+  const handleProcessPayment = async (id: string) => {
+    setProcessingId(id);
+    try {
+      const { error } = await supabase
+        .from('wallet_transactions')
+        .update({ status: 'concluido' })
+        .eq('id', id);
+
+      if (error) throw error;
+      toastSuccess('Pagamento confirmado com sucesso!');
+      fetchWithdrawals();
+    } catch (e: any) {
+      toastError('Erro ao processar pagamento: ' + e.message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  if (!loading && requests.length === 0) return null;
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mb-10">
+      <div className="p-8 border-b border-slate-50 dark:border-slate-800 bg-amber-50/20 dark:bg-amber-900/10 flex justify-between items-center">
+         <div>
+          <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+            <span className="material-symbols-outlined text-amber-500 font-fill">payouts</span>
+            Saques Pendentes (Pilotos)
+          </h4>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+            {requests.length} solicitações aguardando transferência PIX
+          </p>
+         </div>
+         <button onClick={fetchWithdrawals} className="size-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm">
+            <span className={`material-symbols-outlined ${loading ? 'animate-spin' : ''}`}>sync</span>
+         </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="bg-slate-50 dark:bg-slate-800/50">
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitado em</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Entregador</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Chave PIX / Descrição</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ação</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            {requests.map((r) => (
+              <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                <td className="px-8 py-6 text-xs text-slate-500 font-bold">
+                  {new Date(r.created_at).toLocaleString('pt-BR')}
+                </td>
+                <td className="px-8 py-6">
+                  <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{r.driver_name}</p>
+                </td>
+                <td className="px-8 py-6">
+                  <p className="text-lg font-black text-red-500">R$ {parseFloat(r.amount).toFixed(2)}</p>
+                </td>
+                <td className="px-8 py-6">
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                    {r.description || 'N/A'}
+                  </p>
+                </td>
+                <td className="px-8 py-6 text-right">
+                  <button 
+                    disabled={processingId === r.id}
+                    onClick={() => handleProcessPayment(r.id)}
+                    className="h-10 px-6 rounded-2xl bg-primary text-slate-900 font-black text-[9px] uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50"
+                  >
+                    {processingId === r.id ? 'Processando...' : 'Confirmar Pagamento'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {loading && requests.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-8 py-20 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Buscando solicitações...</p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
