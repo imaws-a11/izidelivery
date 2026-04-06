@@ -371,7 +371,8 @@ function App() {
         const saved = localStorage.getItem('Izi_active_mission');
         return saved ? 'active_mission' : 'dashboard';
     });
-    const [isOnline, setIsOnline] = useState(false);
+    const [isOnline, setIsOnline] = useState(() => localStorage.getItem('Izi_online') === 'true');
+    const isFirstRender = useRef(true);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSOSActive, setIsSOSActive] = useState(false);
     const [isAccepting, setIsAccepting] = useState(false);
@@ -574,7 +575,15 @@ function App() {
 
     useEffect(() => {
         if (!driverId || !isAuthenticated) return;
+        
         localStorage.setItem('Izi_online', isOnline.toString());
+
+        // Evitar que o estado inicial (padrão false) sobrescreva o banco na montagem se o motorista deveria estar online
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+
         // Atualizar banco APENAS se houver mudança de estado manual no dispositivo atual
         supabase.from('drivers_delivery').update({ is_online: isOnline }).eq('id', driverId);
     }, [isOnline, isAuthenticated, driverId]);
