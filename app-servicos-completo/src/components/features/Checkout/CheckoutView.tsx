@@ -74,11 +74,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   
   const coinDiscount = useCoins ? iziCoins * iziCoinValue : 0;
   const total = Math.max(0, subtotal + deliveryFee - couponDiscount - coinDiscount);
-  const walletBal = walletTransactions.reduce(
-    (acc: number, t: any) =>
-      ["deposito", "reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount),
-    0
-  );
 
   const paymentOptions = [
     {
@@ -91,11 +86,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     { id: "pix", icon: "pix", label: "PIX", sub: "Instantâneo", color: "text-emerald-400" },
     {
       id: "saldo",
-      icon: "account_balance_wallet",
-      label: "Saldo IZI",
-      sub: `R$ ${walletBal.toFixed(0)}`,
-      disabled: walletBal < total,
-      color: "text-purple-400"
+      icon: "currency_bitcoin",
+      label: "Saldo em IZI Coins",
+      sub: `${iziCoins.toLocaleString("pt-BR")} coins`,
+      disabled: (iziCoins * iziCoinValue) < total,
+      color: "text-yellow-400"
     },
     { id: "dinheiro", icon: "payments", label: "Dinheiro", sub: "Na entrega", color: "text-green-400" },
     {
