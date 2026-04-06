@@ -388,6 +388,9 @@ function App() {
     });
     const activeMissionRef = useRef(activeMission);
     useEffect(() => { activeMissionRef.current = activeMission; }, [activeMission]);
+    
+    const activeTabRef = useRef(activeTab);
+    useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
     // Sistema de Monitoramento de GPS em Tempo Real
     useEffect(() => {
@@ -724,21 +727,41 @@ function App() {
                 const o = payload.new as any;
                 const currentMission = activeMissionRef.current;
                 
-                // Se a missão ativa recebeu uma atualização do servidor, sincronizar o status e a preparação
-                if (currentMission && o.id === currentMission.id) {
-                    const wasPreparing = currentMission.preparation_status !== 'pronto';
-                    const isNowReady = o.preparation_status === 'pronto';
+                // Sincronização Global de Missão Ativa (Multi-dispositivos)
+                // Se o pedido for atribuído a MIM e eu não tiver missão ativa, ou se a minha missão ativa mudou no servidor
+                if (o.driver_id === driverId) {
+                    console.log('[REALTIME] Sincronizando mudança de status da minha missão:', o.status);
+                    
+                    if (!currentMission || o.id === currentMission.id) {
+                        const wasPreparing = currentMission?.preparation_status !== 'pronto';
+                        const isNowReady = o.preparation_status === 'pronto';
 
-                    if (wasPreparing && isNowReady) {
-                        playIziSound('driver');
-                        toastSuccess('🔥 O Pedido está PRONTO para coleta!');
-                        if (Notification.permission === 'granted') new Notification('📦 Pedido Pronto!', { body: 'O estabelecimento finalizou o preparo. Pode coletar!' });
+                        if (wasPreparing && isNowReady) {
+                            playIziSound('driver');
+                            toastSuccess('🔥 O Pedido está PRONTO para coleta!');
+                            if (Notification.permission === 'granted') new Notification('📦 Pedido Pronto!', { body: 'O estabelecimento finalizou o preparo. Pode coletar!' });
+                        }
+
+                        // Sincronizar o status da missão ativa com o servidor
+                        const mission: any = { 
+                            ...o, 
+                            realId: o.id, 
+                            type: o.service_type || 'delivery', 
+                            origin: o.pickup_address || 'Origem', 
+                            destination: o.delivery_address || 'Destino', 
+                            price: o.total_price || 0, 
+                            customer: o.user_name || 'Cliente Izi' 
+                        };
+                        
+                        setActiveMission(mission);
+                        localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
+                        
+                        // Se não estivermos na tela de missão, mudar para lá automaticamente
+                        if (activeTabRef.current !== 'active_mission' && !['concluido', 'cancelado'].includes(o.status)) {
+                            setActiveTab('active_mission');
+                        }
+                        return;
                     }
-                    // Sincronizar o status da missão ativa com o servidor
-                    const updatedMission = { ...currentMission, ...o };
-                    setActiveMission(updatedMission);
-                    localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
-                    return;
                 }
 
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
