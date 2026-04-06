@@ -307,8 +307,8 @@ export default function CategoriesTab() {
                           <div className="flex gap-4">
                              <button 
                                onClick={() => {
-                                 setTempStoreType(selectedMerchant.store_type);
-                                 setTempFoodCategory(selectedMerchant.food_category);
+                                 setTempStoreType(selectedMerchant.store_type || null);
+                                 setTempFoodCategory(selectedMerchant.food_category || null);
                                }}
                                className="px-8 py-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-slate-400 font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all"
                              >
@@ -514,6 +514,22 @@ export default function CategoriesTab() {
                          </div>
                       </div>
                    </div>
+
+                   <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Disponibilidade</label>
+                      <button 
+                        onClick={() => setEditingType({...editingType, is_active: !editingType.is_active})}
+                        className={`w-full flex items-center justify-between p-6 rounded-[32px] border-2 transition-all ${editingType.is_active ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-rose-500/10 border-rose-500/20 text-rose-600'}`}
+                      >
+                         <div className="flex items-center gap-4">
+                            <span className="material-symbols-outlined">{editingType.is_active ? 'check_circle' : 'block'}</span>
+                            <span className="font-black text-[10px] uppercase tracking-widest">Categoria {editingType.is_active ? 'Ativa' : 'Inativa'}</span>
+                         </div>
+                         <div className={`w-14 h-8 rounded-full relative transition-all ${editingType.is_active ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                            <div className={`absolute top-1 size-6 rounded-full bg-white shadow-lg transition-all ${editingType.is_active ? 'right-1' : 'left-1'}`} />
+                          </div>
+                       </button>
+                    </div>
 
                    <div className="pt-10 flex gap-4">
                       <button onClick={() => setEditingType(null)} className="flex-1 py-5 rounded-[24px] bg-slate-100 dark:bg-slate-800 font-black text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">Descartar</button>

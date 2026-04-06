@@ -96,11 +96,21 @@ export default function DriversTab() {
                 <tr key={d.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">
-                      <div className="size-10 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-400 grayscale">
-                         {d.name?.charAt(0) || 'D'}
+                      <div className="relative">
+                        <div className={`size-10 rounded-full flex items-center justify-center font-black text-white ${d.is_online ? 'bg-emerald-500 shadow-lg shadow-emerald-500/20' : 'bg-slate-100 text-slate-400 grayscale'}`}>
+                           {d.name?.charAt(0) || 'D'}
+                        </div>
+                        {d.is_online && (
+                          <span className="absolute -top-0.5 -right-0.5 size-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></span>
+                        )}
                       </div>
                       <div>
-                        <p className="font-black text-sm dark:text-white uppercase tracking-tight">{d.name || 'Sem Nome'}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-black text-sm dark:text-white uppercase tracking-tight">{d.name || 'Sem Nome'}</p>
+                          {d.is_online && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest hidden sm:inline-block">Online</span>
+                          )}
+                        </div>
                         <p className="text-[10px] font-bold text-slate-400 truncate">{d.phone}</p>
                       </div>
                     </div>

@@ -245,31 +245,33 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const { data, error } = await supabase.from('establishment_types').select('*').order('name');
       if (error) throw error;
-      if (data && data.length > 0) setEstablishmentTypes(data as EstablishmentType[]);
+      if (data) setEstablishmentTypes(data as EstablishmentType[]);
     } catch (err) {
-      console.log('Usando tipos de estabelecimento padrão');
+      console.log('Erro ao buscar tipos de estabelecimento ou tabela inexistente');
     }
   }, []);
 
   const handleUpdateEstablishmentType = useCallback(async (type: any) => {
     setIsSaving(true);
     try {
-      // Tentar salvar no banco, se falhar (tabela não existe), apenas atualiza localmente para esta sessão
-      const { error } = await supabase.from('establishment_types').upsert(type);
-      if (error) {
-        console.warn('Erro ao salvar no banco (tabela pode não existir):', error);
-        // Atualização otimista local
-        setEstablishmentTypes(prev => {
-          const exists = prev.find(p => p.id === type.id);
-          if (exists) return prev.map(p => p.id === type.id ? type : p);
-          return [...prev, type];
-        });
-      } else {
-        toastSuccess('Tipo de estabelecimento salvo!');
-        fetchEstablishmentTypes();
+      // Remover campos temporários se existirem (ex: se for um novo item sem ID real)
+      const dataToSave = { ...type };
+      if (typeof dataToSave.id === 'string' && dataToSave.id.startsWith('new-')) {
+        delete dataToSave.id;
       }
+
+      const { data, error } = await supabase.from('establishment_types').upsert(dataToSave).select().single();
+      
+      if (error) {
+        console.error('Erro ao salvar taxonomia:', error);
+        throw new Error(`Falha ao salvar: ${error.message}`);
+      }
+
+      toastSuccess('Tipo de estabelecimento salvo com sucesso!');
+      fetchEstablishmentTypes();
     } catch (err: any) {
-      toastError(err.message);
+      toastError(err.message || 'Erro inesperado ao salvar taxonomia');
+      console.error(err);
     } finally {
       setIsSaving(false);
     }
@@ -600,6 +602,53 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       supabase.removeChannel(channel);
     };
   }, [userRole, merchantProfile, merchantOrdersPage, fetchAllOrders]);
+
+  // Realtime Listeners for Drivers (Admin & Merchant)
+  useEffect(() => {
+    if (!userRole) return;
+
+    const channel = supabase
+      .channel('drivers_realtime')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'drivers_delivery'
+        },
+        (payload) => {
+          console.log('Driver Realtime Event:', payload.eventType, payload);
+          
+          if (userRole === 'admin') {
+            // Update the general list
+            setDriversList(prev => {
+              if (payload.eventType === 'INSERT') return [...prev, payload.new as Driver];
+              if (payload.eventType === 'UPDATE') return prev.map(d => d.id === payload.new.id ? { ...d, ...payload.new } : d);
+              if (payload.eventType === 'DELETE') return prev.filter(d => d.id !== payload.old.id);
+              return prev;
+            });
+            fetchStats();
+          } else if (userRole === 'merchant' && merchantProfile?.merchant_id) {
+            // Update only if it belongs to the merchant
+            const driver = payload.eventType === 'DELETE' ? payload.old : payload.new;
+            if (driver.merchant_id === merchantProfile.merchant_id) {
+              setMyDriversList(prev => {
+                if (payload.eventType === 'INSERT') return [...prev, payload.new as Driver];
+                if (payload.eventType === 'UPDATE') return prev.map(d => d.id === payload.new.id ? { ...d, ...payload.new } : d);
+                if (payload.eventType === 'DELETE') return prev.filter(d => d.id !== payload.old.id);
+                return prev;
+              });
+              fetchStats();
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userRole, merchantProfile, fetchStats]);
 
   const fetchSubscriptionOrders = useCallback(async (page = 1) => {
     setIsLoadingList(true);
@@ -1130,7 +1179,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const handleUpdateDriverStatus = useCallback(async (id: string, newStatus: any) => {
     try {
-      const { error } = await supabase.from('drivers_delivery').update({ is_active: newStatus === 'active' }).eq('id', id);
+      const { error } = await supabase.from('drivers_delivery').update({ 
+        is_active: newStatus === 'active',
+        status: newStatus 
+      }).eq('id', id);
       if (error) throw error;
       fetchDrivers();
     } catch (err: any) {
