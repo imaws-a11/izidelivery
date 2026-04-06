@@ -1739,7 +1739,7 @@ function App() {
                             else if (addressText) destination = encodeURIComponent(addressText);
                             if (destination) window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
                         }}
-                        className="absolute bottom-6 right-6 z-50 size-12 bg-blue-600/90 text-white rounded-xl flex items-center justify-center border border-white/10 shadow-2xl active:scale-90 transition-all"
+                        className="absolute bottom-24 right-6 z-50 size-12 bg-blue-600/90 text-white rounded-xl flex items-center justify-center border border-white/10 shadow-2xl active:scale-90 transition-all"
                     >
                         <Icon name="navigation" size={20} />
                     </button>
