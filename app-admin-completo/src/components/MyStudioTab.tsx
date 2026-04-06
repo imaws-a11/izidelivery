@@ -2691,8 +2691,8 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
           <div className="relative z-10">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80 mb-4">Saldo Disponível na Carteira</p>
             <h3 className="text-6xl font-black tracking-tighter mb-4 flex items-baseline gap-2">
-              <span className="text-2xl font-bold opacity-60">R$</span>
-              {selectedUserStudio.wallet_balance?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0,00'}
+              <span className="izi-coin-symbol">Z</span>
+              {selectedUserStudio.izi_coins?.toLocaleString('pt-BR') || '0'}
             </h3>
             <div className="flex gap-4">
                <button onClick={() => setShowAddCreditModal(true)} className="px-6 py-3 bg-white/20 backdrop-blur-md rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/30 transition-all border border-white/20">Adicionar Créditos</button>
@@ -2732,7 +2732,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                         </div>
                      </div>
                      <span className={`text-sm font-black ${!isPositive ? 'text-red-500' : 'text-emerald-500'}`}>
-                       {!isPositive ? '- ' : '+ '}R$ {Number(tx.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                       {!isPositive ? '- ' : '+ '}<span className="izi-coin-symbol">Z</span> {Number(tx.amount).toLocaleString('pt-BR')}
                      </span>
                   </div>
                 )})

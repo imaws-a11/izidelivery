@@ -803,11 +803,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (amount <= 0) return toastError('O valor deve ser positivo.');
     setIsSaving(true);
     try {
-      const { data: user, error: fetchErr } = await supabase.from('users_delivery').select('wallet_balance').eq('id', userId).single();
+      const { data: user, error: fetchErr } = await supabase.from('users_delivery').select('izi_coins').eq('id', userId).single();
       if (fetchErr) throw fetchErr;
 
-      const newBalance = (user?.wallet_balance || 0) + amount;
-      const { error: updateErr } = await supabase.from('users_delivery').update({ wallet_balance: newBalance }).eq('id', userId);
+      const newBalance = (user?.izi_coins || 0) + amount;
+      const { error: updateErr } = await supabase.from('users_delivery').update({ izi_coins: newBalance }).eq('id', userId);
       if (updateErr) throw updateErr;
 
       await supabase.from('wallet_transactions_delivery').insert({
@@ -818,7 +818,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         status: 'completed'
       });
 
-      toastSuccess(`Crédito de R$ ${amount.toFixed(2)} aplicado!`);
+      toastSuccess(`Crédito de ${amount} IZI Coins aplicado!`);
       fetchUsers();
       logAction('Apply Credit', 'Wallet', { userId, amount });
     } catch (err: any) {

@@ -45,20 +45,20 @@ export default function UsersTab() {
     
     try {
       const amount = parseFloat(walletAmount);
-      let newBalance = selectedUser.wallet_balance || 0;
+      let newBalance = selectedUser.izi_coins || 0;
       
       if (walletType === 'add') newBalance += amount;
       else newBalance = amount;
 
       const { error } = await supabase
         .from('users_delivery')
-        .update({ wallet_balance: newBalance })
+        .update({ izi_coins: newBalance })
         .eq('id', selectedUser.id);
 
       if (error) throw error;
       
       toastSuccess('Carteira atualizada com sucesso!');
-      setSelectedUser({ ...selectedUser, wallet_balance: newBalance });
+      setSelectedUser({ ...selectedUser, izi_coins: newBalance });
       setWalletAmount('');
       setIsEditingWallet(false);
       fetchUsers();
@@ -201,8 +201,8 @@ export default function UsersTab() {
 
               <div className="grid grid-cols-2 gap-4 mb-8">
                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Carteira</p>
-                        <p className="text-sm font-black text-slate-900 dark:text-white italic">R$ {(user.wallet_balance || 0).toLocaleString('pt-BR')}</p>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Carteira IZI</p>
+                        <p className="text-sm font-black text-slate-900 dark:text-white italic"><span className="izi-coin-symbol">Z</span> {(user.izi_coins || 0).toLocaleString('pt-BR')}</p>
                    </div>
                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Pedidos</p>
@@ -372,7 +372,7 @@ export default function UsersTab() {
                              <span className="material-symbols-outlined text-primary font-black">wallet</span>
                         </div>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Crédito Disponível</p>
-                        <h4 className="text-5xl font-black text-slate-900 dark:text-white italic tracking-tighter mb-10">R$ {(selectedUser.wallet_balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h4>
+                        <h4 className="text-5xl font-black text-slate-900 dark:text-white italic tracking-tighter mb-10"><span className="izi-coin-symbol">Z</span> {(selectedUser.izi_coins || 0).toLocaleString('pt-BR')}</h4>
                         
                         <div className="flex flex-col gap-4">
                              {isEditingWallet ? (

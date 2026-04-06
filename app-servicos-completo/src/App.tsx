@@ -6999,12 +6999,12 @@ const navigateSubView = (target: string) => {
               )}
               {tab === "wallet" && (
                 <motion.div key="wallet-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                   <WalletView walletTransactions={walletTransactions} myOrders={myOrders} userXP={userXP} savedCards={savedCards} paymentMethod={paymentMethod} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} showToast={showToast} userId={userId} userName={userName} iziCoins={iziCoins} iziCashback={iziCashbackEarned} setShowDepositModal={setShowDepositModal} iziCoinValue={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0} iziCoinRate={globalSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0} />
+                   <WalletView walletTransactions={walletTransactions} myOrders={myOrders} userXP={userXP} savedCards={savedCards} paymentMethod={paymentMethod} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} showToast={showToast} userId={userId} userName={userName} iziCoins={iziCoins} iziCashback={iziCashbackEarned} setShowDepositModal={setShowDepositModal} iziCoinValue={appSettings?.iziCoinRate || 1.0} iziCoinRate={appSettings?.iziCoinRate || 1.0} />
                 </motion.div>
               )}
               {tab === "profile" && (
                 <motion.div key="profile-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full bg-black">
-                   <ProfileView userId={userId} userName={userName} userLevel={userLevel} userXP={userXP} walletBalance={walletBalance} setSubView={setSubView} logout={logout} setTab={setTab} isIziBlackMembership={isIziBlackMembership} />
+                   <ProfileView userId={userId} userName={userName} userLevel={userLevel} userXP={userXP} walletBalance={iziCoins} setSubView={setSubView} logout={logout} setTab={setTab} isIziBlackMembership={isIziBlackMembership} />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -7021,7 +7021,7 @@ const navigateSubView = (target: string) => {
                     merchantProducts={selectedShop?.products || []}
                     merchantName={selectedShop?.name || ""}
                     handleAddToCart={handleAddToCart}
-                    iziCoinRate={globalSettings?.izi_coin_rate || 1}
+                    iziCoinRate={appSettings?.iziCoinRate || 1}
                     isIziBlack={isIziBlackMembership} 
                     deliveryFee={calculateDeliveryFee()} 
                   />
@@ -7050,8 +7050,8 @@ const navigateSubView = (target: string) => {
                     setPaymentsOrigin={setPaymentsOrigin} 
                     setSubView={(v: any) => setSubView(v)} 
                     iziCoins={iziCoins} 
-                    iziCoinValue={globalSettings?.izi_coin_value || 0.01} 
-                    iziCoinRate={globalSettings?.izi_coin_rate || 1}
+                    iziCoinValue={appSettings?.iziCoinRate || 1.0} 
+                    iziCoinRate={appSettings?.iziCoinRate || 1}
                     deliveryFee={calculateDeliveryFee()} 
                     isIziBlack={isIziBlackMembership}
                   />

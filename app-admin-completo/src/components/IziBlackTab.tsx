@@ -548,7 +548,7 @@ export default function IziBlackTab() {
                                           <span className="material-symbols-outlined text-sm font-black italic">payments</span>
                                        </div>
                                        <div>
-                                          <p className="text-sm font-black text-slate-900 dark:text-white tracking-tighter italic">{(user.izi_coins || 0).toLocaleString('pt-BR')}</p>
+                                          <p className="text-sm font-black text-slate-900 dark:text-white tracking-tighter italic"><span className="izi-coin-symbol">Z</span> {(user.izi_coins || 0).toLocaleString('pt-BR')}</p>
                                           <p className="text-[8px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">Izi Coins</p>
                                        </div>
                                     </div>
