@@ -66,7 +66,7 @@ serve(async (req) => {
         updated_at: new Date().toISOString()
       })
       .eq('payment_intent_id', chargeId)
-      .select()
+      .select('id, service_type, user_id')
 
     if (updateError) {
       console.error('Erro ao atualizar pedido:', updateError)

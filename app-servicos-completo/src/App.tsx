@@ -83,6 +83,7 @@ function App() {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
   const [depositPixCode, setDepositPixCode] = useState("");
+  const [depositPaymentMethod, setDepositPaymentMethod] = useState<"cartao" | "lightning">("cartao");
   const [cartAnimations, setCartAnimations] = useState<{id: string, x: number, y: number, img: string}[]>([]);
 
   const triggerCartAnimation = (e: React.MouseEvent, img: string) => {
@@ -596,6 +597,11 @@ function App() {
               if (newOrder.service_type === 'subscription') {
                 setShowIziBlackWelcome(true);
                 setSubView("none");
+              } else if (newOrder.service_type === 'coin_purchase') {
+                showToast("IZI Coins adicionados com sucesso!", "success");
+                setShowDepositModal(false);
+                setSubView("none");
+                if (userIdRef.current) fetchWalletBalance(userIdRef.current);
               } else {
                 setSubView("order_feedback");
               }
@@ -1630,9 +1636,35 @@ function App() {
       }
 
       if (paymentMethod === "saldo") {
-        const { data: order } = await supabase.from("orders_delivery").insert({ ...orderBase, status: "waiting_merchant", payment_status: "paid" }).select().single();
+        const coinValue = globalSettings?.izi_coin_value || 0.01;
+        const requiredCoins = Math.ceil(total / coinValue);
+
+        if (iziCoins < requiredCoins) {
+          toastError("Saldo de IZI Coins insuficiente.");
+          setIsLoading(false);
+          return;
+        }
+
+        const { data: order, error: orderErr } = await supabase.from("orders_delivery")
+          .insert({ ...orderBase, status: "waiting_merchant", payment_status: "paid" })
+          .select().single();
+
+        if (orderErr) throw orderErr;
+
         if (order) {
-          await supabase.from("wallet_transactions").insert({ user_id: userId, type: "pagamento", amount: total });
+          // Debitar coins
+          await supabase.from("users_delivery").update({ 
+            izi_coins: iziCoins - requiredCoins 
+          }).eq("id", userId);
+
+          // Registrar transacao (valor unitario em coins para o historico)
+          await supabase.from("wallet_transactions").insert({ 
+            user_id: userId, 
+            type: "pagamento", 
+            amount: requiredCoins,
+            description: `Pagamento Pedido #${order.id.slice(0,6)}` 
+          });
+
           setSelectedItem(order);
           if (cart.length > 0) await clearCart(order.id);
           navigateSubView("waiting_merchant");
@@ -4323,18 +4355,37 @@ const navigateSubView = (target: string) => {
       <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32">
 
         {/* HERO SALDO */}
-        <div className="px-5 pt-14 pb-8 border-b border-zinc-900">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-yellow-400 font-extrabold italic tracking-widest text-xs">IZI PAY</span>
-            <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
+        <div className="px-5 pt-14 pb-8 border-b border-zinc-900 bg-gradient-to-b from-yellow-400/5 to-transparent">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <span className="text-yellow-400 font-black italic tracking-widest text-xs">IZI PAY</span>
+              <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1 bg-zinc-900/50 rounded-full border border-white/5">
+              <span className="text-[10px] font-bold text-zinc-500 uppercase">Status</span>
+              <span className="text-[10px] font-black text-emerald-400 uppercase">Ativo</span>
+            </div>
           </div>
-          <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-1">Saldo Disponível</p>
-          <div className="flex items-baseline gap-2 mb-6">
-            <span className="font-extrabold text-2xl text-yellow-400 opacity-60">R$</span>
-            <span className="font-extrabold text-5xl tracking-tighter text-white"
-              style={{ textShadow: "0 0 20px rgba(255,215,9,0.3)" }}>
-              {Math.abs(walletBalance).toFixed(2).replace(".", ",")}
-            </span>
+
+          <div className="flex flex-col gap-1">
+            <p className="text-zinc-600 text-[10px] font-black tracking-[0.3em] uppercase">Saldo Oficial</p>
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-yellow-400 flex items-center justify-center shadow-[0_0_20px_rgba(250,204,21,0.2)]">
+                <span className="material-symbols-outlined text-black font-black">currency_bitcoin</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="font-extrabold text-5xl tracking-tighter text-white"
+                  style={{ textShadow: "0 0 30px rgba(255,215,9,0.2)" }}>
+                  {iziCoins.toLocaleString("pt-BR")}
+                </span>
+                <span className="font-black text-xl text-yellow-400 italic">coins</span>
+              </div>
+            </div>
+            
+            <div className="mt-4 flex items-center gap-2 px-4 py-2 bg-zinc-900/30 rounded-2xl border border-white/5 w-fit">
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Reserva em Reais</span>
+              <span className="text-sm font-black text-white">R$ {Math.abs(walletBalance).toFixed(2).replace(".", ",")}</span>
+            </div>
           </div>
 
           {/* AÃÆ’ââ‚¬Â¡ÃÆ’ââ‚¬Â¢ES RÃÆ’ÂPIDAS */}
@@ -4358,16 +4409,16 @@ const navigateSubView = (target: string) => {
         <main className="px-5 py-8 space-y-10">
 
           {/* STATS */}
-          <div className="grid grid-cols-3 gap-0 border border-zinc-900 rounded-2xl overflow-hidden">
+          <div className="grid grid-cols-3 gap-0 bg-zinc-900/30 border border-zinc-900 rounded-[32px] overflow-hidden backdrop-blur-md">
             {[
-              { label: "Gasto total",  value: `R$ ${totalGasto.toFixed(0)}`,    icon: "shopping_bag" },
-              { label: "Recebido",     value: `R$ ${totalRecebido.toFixed(0)}`, icon: "add_circle" },
-              { label: "Pedidos/mês",  value: `${pedidosMes}`,                  icon: "receipt_long" },
+              { label: "Coins Gastos",  value: `${(totalGasto * 1).toFixed(0)}`,    icon: "shopping_bag", color: "text-zinc-500" },
+              { label: "Cashback Rec.", value: `${(iziCashbackEarned * 1).toFixed(0)}`, icon: "stars", color: "text-yellow-400" },
+              { label: "Nível Izi",     value: `${userLevel}`,                  icon: "verified", color: "text-blue-400" },
             ].map((s, i) => (
-              <div key={i} className={`flex flex-col items-center py-5 gap-1 ${i < 2 ? "border-r border-zinc-900" : ""}`}>
-                <span className="material-symbols-outlined text-zinc-700 text-lg">{s.icon}</span>
-                <p className="font-extrabold text-sm text-white">{s.value}</p>
-                <p className="text-[9px] text-zinc-700 uppercase tracking-widest">{s.label}</p>
+              <div key={i} className={`flex flex-col items-center py-6 gap-1 ${i < 2 ? "border-r border-zinc-900/50" : ""}`}>
+                <span className={`material-symbols-outlined ${s.color} text-lg`}>{s.icon}</span>
+                <p className="font-black text-base text-white">{s.value}</p>
+                <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.2em]">{s.label}</p>
               </div>
             ))}
           </div>
@@ -4425,23 +4476,35 @@ const navigateSubView = (target: string) => {
             </div>
           </section>
 
-          {/* PONTOS E CASHBACK */}
-          <div className="grid grid-cols-2 gap-0 border border-zinc-900 rounded-2xl overflow-hidden">
-            <div className="flex flex-col gap-1 p-5 border-r border-zinc-900">
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="material-symbols-outlined text-yellow-400 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
-                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">IZI Points</span>
-              </div>
-              <p className="text-2xl font-extrabold text-white">{(userXP * 10).toLocaleString("pt-BR")}</p>
-              <p className="text-[9px] text-yellow-400/50">ÃÂ¢ââ‚¬Â°Ã‹â€  R$ {(userXP * 0.1).toFixed(2).replace(".",",")} em descontos</p>
+          {/* PONTOS E CASHBACK (MODIFICADO PARA CONSOLIDAR EM COINS) */}
+          <div className="p-6 rounded-[32px] bg-gradient-to-br from-yellow-400/10 via-zinc-900 to-zinc-900 border border-yellow-400/10 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
+              <span className="material-symbols-outlined text-6xl text-yellow-400">currency_bitcoin</span>
             </div>
-            <div className="flex flex-col gap-1 p-5">
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="material-symbols-outlined text-emerald-400 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
-                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Cashback</span>
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="material-symbols-outlined text-yellow-400 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
+                <h3 className="text-xs font-black text-white uppercase tracking-widest">Programa de Cashback</h3>
               </div>
-              <p className="text-2xl font-extrabold text-white">R$ 42,10</p>
-              <p className="text-[9px] text-zinc-700">Disponível para usar</p>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Acumulado em Coins</p>
+                  <p className="text-3xl font-black text-white">{iziCoins.toLocaleString("pt-BR")} <span className="text-sm text-yellow-400 italic">coins</span></p>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-1 p-3 rounded-2xl bg-black/40 border border-white/5">
+                    <p className="text-[8px] font-black text-zinc-500 uppercase mb-1">Meta Mensal</p>
+                    <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden mb-2">
+                       <div className="h-full bg-yellow-400 w-[65%]" />
+                    </div>
+                    <p className="text-[9px] font-bold text-white">650 / 1000 coins</p>
+                  </div>
+                  <div className="flex-1 p-3 rounded-2xl bg-black/40 border border-white/5">
+                    <p className="text-[8px] font-black text-zinc-500 uppercase mb-1">Nível Multiplicador</p>
+                    <p className="text-xs font-black text-emerald-400">2.5x Ativo</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -4453,9 +4516,10 @@ const navigateSubView = (target: string) => {
                 { icon: "pix",                    label: "PIX",             desc: "Mercado Pago ÃÂ¢ââ€šÂ¬Â¢ InstantÃÂ¢neo",    id: "pix" },
                 { icon: "bolt",                   label: "Bitcoin Lightning", desc: "LNbits ÃÂ¢ââ€šÂ¬Â¢ Satoshis",           id: "bitcoin_lightning" },
                 { icon: "payments",               label: "Dinheiro",        desc: "Pague na entrega",              id: "dinheiro" },
-                { icon: "account_balance_wallet", label: "Saldo IZI",       desc: `R$ ${Math.abs(walletBalance).toFixed(2).replace(".",",")} disponível`, id: "saldo" },
+                { icon: "currency_bitcoin",       label: "Saldo em IZI Coins",  desc: `${iziCoins.toLocaleString("pt-BR")} coins disponíveis`, id: "saldo" },
               ].map((m) => (
-                <div key={m.id} className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0">
+                <div key={m.id} className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0 group active:scale-98 transition-transform cursor-pointer"
+                  onClick={() => setPaymentMethod(m.id)}>
                   <span className="material-symbols-outlined text-zinc-600 text-xl">{m.icon}</span>
                   <div className="flex-1">
                     <p className="font-black text-sm text-white">{m.label}</p>
@@ -4493,10 +4557,10 @@ const navigateSubView = (target: string) => {
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className={`font-extrabold text-sm ${["deposito","reembolso"].includes(t.type) ? "text-emerald-400" : "text-zinc-300"}`}>
-                        {["deposito","reembolso"].includes(t.type) ? "+" : "-"} R$ {Number(t.amount).toFixed(2).replace(".",",")}
+                      <p className={`font-black text-sm ${["deposito","reembolso"].includes(t.type) ? "text-emerald-400" : "text-zinc-300"}`}>
+                        {["deposito","reembolso"].includes(t.type) ? "+" : "-"} {Number(t.amount).toFixed(0)} <span className="text-[8px] uppercase tracking-tighter italic">coins</span>
                       </p>
-                      <p className="text-[9px] text-zinc-700 capitalize">{t.type}</p>
+                      <p className="text-[9px] text-zinc-700 font-bold uppercase tracking-widest">{t.type}</p>
                     </div>
                   </div>
                 );
@@ -4844,6 +4908,182 @@ const navigateSubView = (target: string) => {
 
         </main>
       </div>
+    );
+  };
+
+  const handlePurchaseCoins = async (amount: number, method: string) => {
+    if (!userId) return;
+    setIsLoading(true);
+    try {
+      // 1. Criar um "pedido" de compra de moedas
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders_delivery")
+        .insert({
+          user_id: userId,
+          status: "pendente_pagamento",
+          total_price: amount,
+          pickup_address: `Compra de ${amount} IZI Coins`,
+          delivery_address: "Recarga de Carteira",
+          service_type: "coin_purchase",
+          payment_method: method === "lightning" ? "bitcoin_lightning" : "cartao",
+          delivery_fees: 0
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      setShowDepositModal(false);
+
+      if (method === "cartao") {
+        setSelectedItem(orderData);
+        setPaymentsOrigin("profile");
+        setSubView("card_payment");
+      } else if (method === "lightning") {
+        setSubView("payment_processing");
+        const { data: lnData, error: lnErr } = await supabase.functions.invoke("create-lightning-invoice", {
+          body: { amount, orderId: orderData.id, memo: `IZI Coin Deposit - R$ ${amount}` },
+        });
+        if (lnErr) throw lnErr;
+        setSelectedItem({ 
+          ...orderData, 
+          lightningInvoice: lnData.payment_request, 
+          satoshis: lnData.satoshis, 
+          btc_price_brl: lnData.btc_price_brl 
+        });
+        setSubView("lightning_payment");
+      }
+    } catch (e: any) {
+      toastError("Erro ao processar recarga: " + e.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderDepositModal = () => {
+    const depositPackages = [
+      { amount: 10, coins: 10, label: "R$ 10" },
+      { amount: 20, coins: 20, label: "R$ 20" },
+      { amount: 50, coins: 50, label: "R$ 50" },
+      { amount: 100, coins: 100, label: "R$ 100" },
+    ];
+
+    return (
+      <AnimatePresence>
+        {showDepositModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-2xl flex items-end justify-center p-0 sm:p-6"
+          >
+            <motion.div 
+              initial={{ y: "100%" }} 
+              animate={{ y: 0 }} 
+              exit={{ y: "100%" }} 
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="w-full max-w-lg bg-zinc-950 border-t sm:border border-zinc-800 rounded-t-[40px] sm:rounded-[56px] p-8 pb-12 overflow-hidden shadow-2xl relative"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-400/30 to-transparent" />
+              
+              <header className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-xl font-black text-white italic uppercase tracking-tight leading-none mb-1">Comprar IZI Coins</h3>
+                  <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em]">Recarregue sua carteira agora</p>
+                </div>
+                <button 
+                  onClick={() => setShowDepositModal(false)}
+                  className="size-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white transition-colors"
+                >
+                  <Icon name="close" />
+                </button>
+              </header>
+
+              <div className="space-y-8">
+                <div>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4 block ml-1">Selecione um Pacote</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {depositPackages.map((pkg) => (
+                      <button
+                        key={pkg.amount}
+                        onClick={() => setDepositAmount(pkg.amount.toString())}
+                        className={`p-6 rounded-[32px] border-2 transition-all flex flex-col items-center gap-2 group ${
+                          depositAmount === pkg.amount.toString() 
+                            ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" 
+                            : "bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                        }`}
+                      >
+                        <span className="text-xl font-black italic">{pkg.label}</span>
+                        <div className="flex items-center gap-1 opacity-60">
+                          <Icon name="bolt" size={14} />
+                          <span className="text-[10px] font-black uppercase tracking-widest">{pkg.coins} Coins</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4 block ml-1">Ou digite um valor</label>
+                  <div className="relative">
+                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-500 font-black text-lg">R$</span>
+                    <input 
+                      type="number"
+                      value={depositAmount}
+                      onChange={(e) => setDepositAmount(e.target.value)}
+                      placeholder="0,00"
+                      className="w-full bg-zinc-900/50 border border-zinc-800 rounded-[32px] py-6 pl-16 pr-8 text-2xl font-black text-white focus:ring-2 focus:ring-yellow-400/30 transition-all outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4 block ml-1">Método de Pagamento</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => setDepositPaymentMethod("cartao")}
+                      className={`p-5 rounded-[28px] border-2 transition-all flex items-center justify-center gap-4 ${
+                        depositPaymentMethod === "cartao" 
+                          ? "bg-white/10 border-white/20 text-white" 
+                          : "bg-black/20 border-zinc-900 text-zinc-500"
+                      }`}
+                    >
+                      <Icon name="credit_card" />
+                      <span className="text-[11px] font-black uppercase tracking-widest leading-none">Cartão</span>
+                    </button>
+                    <button
+                      onClick={() => setDepositPaymentMethod("lightning")}
+                      className={`p-5 rounded-[28px] border-2 transition-all flex items-center justify-center gap-4 ${
+                        depositPaymentMethod === "lightning" 
+                          ? "bg-orange-500/10 border-orange-500/20 text-orange-400" 
+                          : "bg-black/20 border-zinc-900 text-zinc-500"
+                      }`}
+                    >
+                      <Icon name="bolt" />
+                      <span className="text-[11px] font-black uppercase tracking-widest leading-none">Bitcoin</span>
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  disabled={!depositAmount || Number(depositAmount) <= 0 || isLoading}
+                  onClick={() => handlePurchaseCoins(Number(depositAmount), depositPaymentMethod)}
+                  className="w-full bg-yellow-400 text-black font-black text-lg py-7 rounded-[32px] shadow-[0_20px_40px_rgba(255,215,9,0.2)] active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed flex justify-center items-center gap-4 group mt-4 h-[84px]"
+                >
+                  {isLoading ? (
+                    <div className="size-6 border-4 border-black/30 border-t-black rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span className="uppercase tracking-[0.1em]">Confirmar Recarga</span>
+                      <Icon name="arrow_forward" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     );
   };
 
@@ -7074,6 +7314,7 @@ const navigateSubView = (target: string) => {
       {renderMyQRModal()}
       {renderTransferModal()}
       {renderScanQRModal()}
+      {renderDepositModal()}
 
       {toast && (
         <motion.div

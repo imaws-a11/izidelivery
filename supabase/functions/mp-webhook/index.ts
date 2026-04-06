@@ -46,7 +46,7 @@ serve(async (req) => {
     // Busca o status atual do pedido para evitar retroceder status
     const { data: order } = await supabaseAdmin
       .from('orders_delivery')
-      .select('status')
+      .select('status, service_type')
       .eq('id', orderId)
       .single()
 

@@ -92,14 +92,11 @@ export const WalletView: React.FC<WalletViewProps> = ({
   myOrders = [],
   iziCoins = 0,
   iziCashback = 0,
+  userXP = 0,
   savedCards = [],
-  paymentMethod = "cartao",
-  setPaymentsOrigin,
-  setSubView,
   userId,
   userName,
   showToast,
-  setShowDepositModal,
   iziCoinValue = 0.01,
 }) => {
   const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr" | "scan" | "add_card">("main");
@@ -109,11 +106,11 @@ export const WalletView: React.FC<WalletViewProps> = ({
   const historyRef = useRef<HTMLElement>(null);
 
   // Estados para Transferência
-  const [searchTarget, setSearchTarget] = useState("");
-  const [recipient, setRecipient] = useState<any>(null);
   const [amount, setAmount] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
+  const [searchTarget, setSearchTarget] = useState("");
+  const [recipient, setRecipient] = useState<any>(null);
 
   const walletBalance = walletTransactions.reduce(
     (acc: number, t: any) =>
@@ -133,15 +130,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
     .filter((t: any) => t.type === "pagamento")
     .reduce((a: number, t: any) => a + Number(t.amount), 0);
 
-  const totalRecebido = walletTransactions
-    .filter((t: any) => ["deposito", "reembolso"].includes(t.type))
-    .reduce((a: number, t: any) => a + Number(t.amount), 0);
 
-  const pedidosMes = myOrders.filter((o: any) => {
-    const d = new Date(o.created_at);
-    const now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  }).length;
 
   const handleSearchRecipient = async (query = searchTarget) => {
     if (!query.trim()) return;
@@ -169,36 +158,45 @@ export const WalletView: React.FC<WalletViewProps> = ({
   };
 
   const handleTransfer = async () => {
-    const val = Number(amount.replace(",", "."));
+    const val = parseInt(amount);
     if (isNaN(val) || val <= 0) return showToast?.("Valor inválido", "error");
-    if (val > walletBalance) return showToast?.("Saldo insuficiente", "error");
+    if (val > iziCoins) return showToast?.("Saldo de coins insuficiente", "error");
     if (!recipient) return;
 
     setIsTransferring(true);
     try {
-      // 1. Débito no remetente
-      const { error: err1 } = await supabase
-        .from("wallet_transactions")
-        .insert({
-          user_id: userId,
-          amount: val,
-          type: "pagamento",
-          description: `Transferência enviada para ${recipient.name}`
-        });
+      // 1. Débito no remetente (Coins)
+      const { error: err1 } = await supabase.from("users_delivery").update({
+        izi_coins: iziCoins - val
+      }).eq("id", userId);
 
       if (err1) throw err1;
 
-      // 2. Crédito no destinatário
-      const { error: err2 } = await supabase
-        .from("wallet_transactions")
-        .insert({
-          user_id: recipient.id,
-          amount: val,
-          type: "deposito",
-          description: `Transferência IZI de ${userName}`
-        });
+      // 2. Registro da transação
+      await supabase.from("wallet_transactions").insert({
+        user_id: userId,
+        amount: val,
+        type: "transferencia",
+        description: `Transferência enviada para ${recipient.name}`
+      });
 
-      if (err2) throw err2;
+      // 3. Crédito no destinatário (Buscar saldo atual do destinatário primeiro)
+      const { data: destUser } = await supabase.from("users_delivery").select("izi_coins").eq("id", recipient.id).single();
+      const destCoins = destUser?.izi_coins || 0;
+
+      await supabase.from("users_delivery").update({
+        izi_coins: Number(destCoins) + val
+      }).eq("id", recipient.id);
+
+      // 4. Registro da transação pro destinatário
+      await supabase.from("wallet_transactions").insert({
+        user_id: recipient.id,
+        amount: val,
+        type: "deposito",
+        description: `Transferência IZI recebida de ${userName}`
+      });
+
+
 
       showToast?.("Transferência realizada com sucesso!", "success");
       setWalletMode("main");
@@ -315,17 +313,17 @@ export const WalletView: React.FC<WalletViewProps> = ({
               <div className="space-y-4 pt-10">
                 <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest text-center block">Quanto deseja enviar?</label>
                 <div className="flex items-center justify-center gap-2">
-                  <span className="text-2xl font-black text-yellow-400">R$</span>
+                  <span className="text-2xl font-black text-yellow-400">IZI</span>
                   <input 
                     type="text" 
                     autoFocus
-                    placeholder="0,00"
+                    placeholder="0"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => setAmount(e.target.value.replace(/\D/g, ""))}
                     className="bg-transparent text-5xl font-black text-white outline-none w-40 text-center placeholder:text-zinc-800"
                   />
                 </div>
-                <p className="text-center text-xs text-zinc-700">Saldo disponível: R$ {walletBalance.toFixed(2).replace(".", ",")}</p>
+                <p className="text-center text-xs text-zinc-700">Saldo disponível: {iziCoins.toLocaleString("pt-BR")} IZI Coins</p>
               </div>
 
               <button 
@@ -459,25 +457,43 @@ export const WalletView: React.FC<WalletViewProps> = ({
         </div>
         
         <div className="flex flex-col items-center justify-center mt-2 mb-10 w-full">
-          <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-2">Seu Saldo IZI</p>
-          <div className="flex items-baseline gap-2">
-            <span className="font-extrabold text-2xl text-yellow-400 opacity-60">R$</span>
-            <span
-              className="font-extrabold text-6xl tracking-tighter text-white"
-              style={{ textShadow: "0 0 20px rgba(255,215,9,0.3)" }}
+          <p className="text-zinc-600 text-[10px] tracking-[0.3em] uppercase mb-4">Saldo Oficial IZI</p>
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center gap-4">
+              <span
+                className="font-extrabold text-7xl tracking-tighter text-white"
+                style={{ textShadow: "0 0 30px rgba(255,215,9,0.4)" }}
+              >
+                {iziCoins.toLocaleString("pt-BR")}
+              </span>
+              <div className="flex flex-col justify-center">
+                <span className="text-yellow-400 font-black text-sm uppercase italic leading-none">Coins</span>
+                <span className="text-yellow-400/40 text-[10px] font-bold uppercase leading-none mt-1">Acumulados</span>
+              </div>
+            </div>
+            
+            <motion.div 
+               initial={{ opacity: 0 }} 
+               animate={{ opacity: 1 }}
+               className="mt-6 px-4 py-2 bg-zinc-900/40 rounded-full border border-white/5 flex items-center gap-3"
             >
-              {Math.abs(walletBalance).toFixed(2).replace(".", ",")}
-            </span>
+              <p className="text-zinc-500 text-[9px] font-black uppercase tracking-widest italic">
+                Reserva em Reais: 
+                <span className="text-emerald-400 ml-2">
+                  R$ {walletBalance.toFixed(2).replace(".", ",")}
+                </span>
+              </p>
+            </motion.div>
           </div>
         </div>
 
         {/* AÇÕES RÁPIDAS - SEM GRID SQUARE, NOVO FORMATO MODERNO E CLEAN */}
         <div className="grid grid-cols-4 gap-2 w-full max-w-sm mx-auto">
           {[
-            { icon: "qr_code_scanner", label: "Escanear", action: () => setWalletMode("scan") },
+            { icon: "add_circle", label: "Comprar", action: () => setShowDepositModal(true) },
             { icon: "arrow_outward", label: "Enviar", action: () => setWalletMode("transfer") },
+            { icon: "qr_code_scanner", label: "Escanear", action: () => setWalletMode("scan") },
             { icon: "history", label: "Extrato", action: () => historyRef.current?.scrollIntoView({ behavior: 'smooth' }) },
-            { icon: "qr_code_2", label: "Meu QR", action: () => setWalletMode("my_qr") },
           ].map((a) => (
             <button
               key={a.label}
@@ -501,9 +517,9 @@ export const WalletView: React.FC<WalletViewProps> = ({
         {/* STATS - BORDERLESS */}
         <div className="flex gap-2">
           {[
-            { label: "Gasto", value: `R$ ${totalGasto.toFixed(0)}`, icon: "shopping_bag" },
-            { label: "Recebido", value: `R$ ${totalRecebido.toFixed(0)}`, icon: "add_circle" },
-            { label: "Pedidos/mês", value: `${pedidosMes}`, icon: "receipt_long" },
+            { label: "Moedas Gastas", value: `${totalGasto.toFixed(0)}`, icon: "shopping_bag" },
+            { label: "Cashback Ganho", value: `${iziCashback.toFixed(0)}`, icon: "add_circle" },
+            { label: "Nível Izi", value: `Nível ${Math.floor(userXP/1000) + 1}`, icon: "verified" },
           ].map((s, i) => (
             <div
               key={i}
@@ -652,10 +668,9 @@ export const WalletView: React.FC<WalletViewProps> = ({
                       <p
                         className={`font-extrabold text-sm ${["deposito", "reembolso"].includes(t.type) ? "text-emerald-400" : "text-white"}`}
                       >
-                        {["deposito", "reembolso"].includes(t.type) ? "+" : "-"} R${" "}
-                        {Number(t.amount).toFixed(2).replace(".", ",")}
+                        {["deposito", "reembolso"].includes(t.type) ? "+" : "-"} {Number(t.amount).toLocaleString("pt-BR")} IZI
                       </p>
-                      <p className="text-[9px] text-zinc-600 capitalize mt-1">{t.type}</p>
+                      <p className="text-[9px] text-zinc-600 uppercase mt-1">Moeda Digital</p>
                     </div>
                   </div>
                 );
