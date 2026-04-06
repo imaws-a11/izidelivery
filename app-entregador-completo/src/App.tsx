@@ -354,6 +354,11 @@ function App() {
     const [scheduledOrders, setScheduledOrders] = useState<any[]>([]);
     const [history, setHistory] = useState<Order[]>([]);
     const [stats, setStats] = useState({ balance: 0, today: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
+    const [earningsHistory, setEarningsHistory] = useState<Order[]>([]);
+    const [withdrawHistory, setWithdrawHistory] = useState<any[]>([]);
+    const [isFinanceLoading, setIsFinanceLoading] = useState(false);
+    const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+    const [pixKey, setPixKey] = useState(() => localStorage.getItem('izi_driver_pix') || '');
 
     const [activeMission, setActiveMission] = useState<Order | null>(() => {
         const saved = localStorage.getItem('Izi_active_mission');
@@ -437,6 +442,7 @@ function App() {
                 const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
                 setDriverName(name);
                 ensureDriverRecord(user.id, user.email || '', name);
+                fetchFinanceData();
             } else {
                 setDriverId(null);
                 setIsAuthenticated(false);
@@ -447,6 +453,12 @@ function App() {
 
         return () => subscription.unsubscribe();
     }, []);
+
+    useEffect(() => {
+        if (activeTab === 'earnings' || activeTab === 'history') {
+            fetchFinanceData();
+        }
+    }, [activeTab]);
 
 
     const handleAuthLogin = async () => {
@@ -791,13 +803,34 @@ function App() {
             localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
             
             if (newStatus === 'concluido' || newStatus === 'cancelado') {
-                if (newStatus === 'concluido') {
+                if (newStatus === 'concluido' && driverId) {
+                    const earnings = activeMission.price || activeMission.total_price || 0;
+                    // Persistir ganho na carteira universal
+                    await supabase.from('wallet_transactions').insert({
+                        user_id: driverId,
+                        amount: earnings,
+                        type: 'deposito',
+                        description: `Ganhos: Missão #${activeMission.id.slice(0, 8).toUpperCase()}`
+                    });
+
                     setHistory(prev => [{ ...activeMission, id: activeMission.id.slice(0, 8).toUpperCase() }, ...prev]);
                     setStats(prev => {
-                        const bonusXp = 25 + (prev.level * 5); const newXp = prev.xp + bonusXp; const levelUp = newXp >= prev.nextXp;
+                        const bonusXp = 25 + (prev.level * 5); 
+                        const newXp = prev.xp + bonusXp; 
+                        const levelUp = newXp >= prev.nextXp;
                         if (levelUp) setTimeout(() => toast(`🎉 Nível ${prev.level + 1} desbloqueado!`), 500);
-                        return { ...prev, balance: prev.balance + activeMission.price, today: prev.today + (activeMission.price || 0), count: prev.count + 1, xp: levelUp ? newXp - prev.nextXp : newXp, level: levelUp ? prev.level + 1 : prev.level, nextXp: levelUp ? prev.nextXp + 50 : prev.nextXp };
+                        return { 
+                            ...prev, 
+                            balance: prev.balance + earnings, 
+                            today: prev.today + earnings, 
+                            count: prev.count + 1, 
+                            xp: levelUp ? newXp - prev.nextXp : newXp, 
+                            level: levelUp ? prev.level + 1 : prev.level, 
+                            nextXp: levelUp ? prev.nextXp + 50 : prev.nextXp 
+                        };
                     });
+                    // Atualizar dados financeiros reais
+                    fetchFinanceData();
                 }
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
@@ -819,6 +852,74 @@ function App() {
         }
     };
 
+    const fetchFinanceData = async () => {
+        if (!driverId) return;
+        setIsFinanceLoading(true);
+        try {
+            // Unidade de conta central: wallet_transactions
+            const { data: txs } = await supabase
+                .from('wallet_transactions')
+                .select('*')
+                .eq('user_id', driverId)
+                .order('created_at', { ascending: false });
+
+            if (txs) {
+                const balance = txs.reduce((acc, t) => 
+                    ['deposito', 'reembolso'].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 
+                    0
+                );
+                
+                const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+                const todaySum = txs
+                    .filter(t => t.type === 'deposito' && new Date(t.created_at) >= startOfDay)
+                    .reduce((acc, t) => acc + Number(t.amount), 0);
+                
+                const missionCount = txs.filter(t => t.type === 'deposito' && t.description?.includes('Missão')).length;
+
+                setStats(prev => ({
+                    ...prev,
+                    balance: Math.max(0, balance),
+                    today: todaySum,
+                    count: missionCount,
+                    level: Math.floor(missionCount / 10) + 1
+                }));
+
+                setEarningsHistory(txs.filter(t => t.type === 'deposito') as any);
+                setWithdrawHistory(txs.filter(t => t.type === 'saque'));
+            }
+        } catch (e) {
+            console.error("Finance fetch error:", e);
+        } finally {
+            setIsFinanceLoading(false);
+        }
+    };
+
+    const handleWithdrawRequest = async () => {
+        if (stats.balance < 10) return toastError('O saldo mínimo para saque é R$ 10,00');
+        if (!pixKey) return toastError('Por favor, informe uma chave PIX antes de sacar.');
+
+        if (!await showConfirm({ message: `Confirmar solicitação de saque de R$ ${stats.balance.toFixed(2)} para a chave PIX: ${pixKey}?` })) return;
+
+        setIsFinanceLoading(true);
+        try {
+            // Registrar saída na carteira digital
+            const { error } = await supabase.from('wallet_transactions').insert({
+                user_id: driverId,
+                amount: stats.balance,
+                type: 'saque',
+                description: `Saque solicitado via PIX: ${pixKey}`,
+                status: 'pendente'
+            });
+
+            if (error) throw error;
+            toastSuccess('Solicitação de transferência enviada! 🎉');
+            fetchFinanceData();
+        } catch (e: any) {
+            toastError('Falha ao processar saque. Tente novamente.');
+        } finally {
+            setIsFinanceLoading(false);
+        }
+    };
     const handleLogout = async () => {
         if (!await showConfirm({ message: 'Deseja encerrar a sessão?' })) return;
         if (driverId) await supabase.from('drivers_delivery').update({ is_online: false }).eq('id', driverId);
@@ -907,19 +1008,35 @@ function App() {
 
     const renderDashboard = () => (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-24 pt-2">
-            <div className="bg-white/[0.03] border border-white/5 rounded-[32px] p-6 flex items-center justify-between">
-                <div>
-                    <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em] mb-1">Nível Operacional</p>
-                    <h3 className="text-2xl font-black text-white tracking-tight">{stats.level >= 10 ? 'Comandante' : stats.level >= 5 ? 'Veterano' : 'Soldado'}<span className="text-xs text-primary ml-2">Nív. {stats.level}</span></h3>
-                    <div className="mt-3 h-1.5 w-40 bg-white/5 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${(stats.xp / stats.nextXp) * 100}%` }} className="h-full bg-gradient-to-r from-primary to-emerald-400 rounded-full" />
+            {/* Card de Identidade e Nível */}
+            <div className="bg-gradient-to-br from-white/5 to-transparent border border-white/10 rounded-[32px] p-6 space-y-6">
+                <div className="flex items-center gap-4 pb-4 border-b border-white/5">
+                    <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-lg shadow-primary/5">
+                        <Icon name="person" size={28} className="text-primary" />
                     </div>
-                    <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mt-1">{stats.xp}/{stats.nextXp} XP</p>
+                    <div>
+                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em] mb-0.5">Piloto Parceiro Izi</p>
+                        <h3 className="text-xl font-black text-white tracking-tight">{driverName}</h3>
+                    </div>
                 </div>
-                <div className="text-right space-y-2">
-                    <div className="flex items-center gap-3 justify-end">
-                        <div><p className="text-[8px] text-white/20 uppercase tracking-widest">Hoje</p><p className="text-sm font-black text-white">R$ {stats.today.toFixed(0)}</p></div>
-                        <div><p className="text-[8px] text-white/20 uppercase tracking-widest">Corridas</p><p className="text-sm font-black text-primary">{stats.count}</p></div>
+                
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.4em] mb-1">Nível Operacional</p>
+                        <h3 className="text-xl font-black text-white tracking-tight">
+                            {stats.level >= 10 ? 'Comandante' : stats.level >= 5 ? 'Veterano' : 'Soldado'}
+                            <span className="text-xs text-primary ml-2 italic">Nív. {stats.level}</span>
+                        </h3>
+                        <div className="mt-3 h-1.5 w-40 bg-white/5 rounded-full overflow-hidden">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${(stats.xp / stats.nextXp) * 100}%` }} className="h-full bg-gradient-to-r from-primary to-emerald-400 rounded-full" />
+                        </div>
+                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mt-1">{stats.xp}/{stats.nextXp} XP</p>
+                    </div>
+                    <div className="text-right space-y-2">
+                        <div className="flex items-center gap-3 justify-end">
+                            <div><p className="text-[8px] text-white/20 uppercase tracking-widest">Hoje</p><p className="text-sm font-black text-white font-mono">R$ {stats.today.toFixed(0)}</p></div>
+                            <div><p className="text-[8px] text-white/20 uppercase tracking-widest">Métricas</p><p className="text-sm font-black text-primary font-mono">{stats.count} ⚡</p></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1098,18 +1215,42 @@ function App() {
                 )}
             </div>
 
-            <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+            {/* Filtros de Categorias */}
+            <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-2 -mx-1 px-1">
                 {[
                     { id: 'all', label: 'Todos', icon: 'grid_view' },
-                    { id: 'motoboy', label: 'Entregas', icon: 'moped' },
+                    { id: 'motoboy', label: 'Entregas', icon: 'package_2' },
+                    { id: 'car_ride', label: 'Viagens', icon: 'directions_car' },
                     { id: 'frete', label: 'Fretes', icon: 'local_shipping' },
-                    { id: 'car_ride', label: 'Corridas', icon: 'directions_car' },
                     { id: 'motorista_particular', label: 'VIP', icon: 'military_tech' }
-                ].map(item => (
-                    <button key={item.id} onClick={() => setFilter(item.id as any)} className={`flex items-center gap-2 px-5 py-3 rounded-2xl whitespace-nowrap transition-all shrink-0 ${filter === item.id ? 'bg-primary text-slate-900 font-black shadow-lg shadow-primary/20' : 'bg-white/[0.03] text-white/40 border border-white/5'}`}>
-                        <Icon name={item.icon} className="text-base" /><span className="text-[11px] font-black uppercase tracking-widest">{item.label}</span>
-                    </button>
-                ))}
+                ].map(item => {
+                    const isActive = filter === item.id;
+                    const count = item.id === 'all' 
+                        ? orders.length 
+                        : orders.filter(o => getCategory(o.type) === item.id).length;
+
+                    return (
+                        <button 
+                            key={item.id} 
+                            onClick={() => setFilter(item.id as any)} 
+                            className={`flex flex-col items-start gap-4 px-5 py-4 rounded-[28px] min-w-[120px] transition-all shrink-0 border ${
+                                isActive 
+                                    ? 'bg-primary border-primary shadow-xl shadow-primary/20 text-slate-900' 
+                                    : 'bg-white/[0.03] border-white/5 text-white/40 hover:bg-white/[0.06]'
+                            }`}
+                        >
+                            <div className={`p-2 rounded-xl ${isActive ? 'bg-black/10' : 'bg-white/5'}`}>
+                                <Icon name={item.icon} size={20} />
+                            </div>
+                            <div className="space-y-0.5">
+                                <p className="text-[10px] font-black uppercase tracking-widest">{item.label}</p>
+                                <p className={`text-[9px] font-bold ${isActive ? 'text-slate-900/60' : 'text-white/20'}`}>
+                                    {count} {count === 1 ? 'disponível' : 'disponíveis'}
+                                </p>
+                            </div>
+                        </button>
+                    );
+                })}
             </div>
 
             <div className="space-y-4">
@@ -1200,35 +1341,107 @@ function App() {
     );
 
     const renderEarningsView = () => (
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-10 pt-4">
-            <div><p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Financeiro</p><h2 className="text-3xl font-black text-white tracking-tight mt-1">Rendimentos</h2></div>
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-24 pt-4">
+            <div className="flex items-center justify-between">
+                <div><p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Financeiro</p><h2 className="text-3xl font-black text-white tracking-tight mt-1">Rendimentos</h2></div>
+                <button onClick={fetchFinanceData} disabled={isFinanceLoading} className="size-10 bg-white/5 rounded-2xl flex items-center justify-center active:rotate-180 transition-all duration-500">
+                    <Icon name="refresh" className={`text-white/40 ${isFinanceLoading ? 'animate-spin' : ''}`} />
+                </button>
+            </div>
+            
             <div className="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-[40px] p-8 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-6 opacity-5"><Icon name="account_balance_wallet" className="text-[120px] text-primary -rotate-12" /></div>
                 <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.5em]">Saldo Disponível</p>
-                <p className="text-5xl font-black text-white tracking-tight mt-2">R$ {stats.balance.toFixed(2).replace('.', ',')}</p>
-                <div className="flex gap-4 mt-6">
-                    <button className="flex-1 bg-primary text-slate-900 font-black rounded-2xl text-[11px] uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-95 transition-all py-3">Sacar via PIX</button>
-                    <button className="bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center active:scale-90 transition-all py-3 px-4"><Icon name="analytics" className="text-white/40 text-xl" /></button>
+                <div className="flex items-baseline gap-2 mt-2">
+                    <span className="text-2xl font-black text-primary opacity-50">R$</span>
+                    <p className="text-5xl font-black text-white tracking-tight">{stats.balance.toFixed(2).replace('.', ',')}</p>
+                </div>
+                <div className="flex gap-4 mt-8">
+                    <button 
+                        onClick={handleWithdrawRequest}
+                        disabled={isFinanceLoading || stats.balance < 10}
+                        className="flex-1 bg-primary text-slate-900 font-black rounded-2xl text-[11px] uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-95 transition-all py-4 disabled:opacity-50"
+                    >
+                        {isFinanceLoading ? 'Processando...' : 'Sacar via PIX'}
+                    </button>
                 </div>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
-                {[{ label: 'Hoje', value: `R$ ${stats.today.toFixed(0)}`, icon: 'today', color: 'text-primary' }, { label: 'Corridas', value: stats.count.toString(), icon: 'route', color: 'text-emerald-400' }, { label: 'Nível', value: stats.level.toString(), icon: 'military_tech', color: 'text-blue-400' }, { label: 'Avaliação', value: '4.98', icon: 'star', color: 'text-yellow-400' }].map((stat, i) => (
+                {[{ label: 'Hoje', value: `R$ ${stats.today.toFixed(0)}`, icon: 'today', color: 'text-primary' }, { label: 'Total Ganhos', value: `R$ ${(stats.balance + withdrawHistory.filter(w => w.status === 'concluido').reduce((a,b) => a + b.amount, 0)).toFixed(0)}`, icon: 'account_balance', color: 'text-emerald-400' }, { label: 'Corridas', value: stats.count.toString(), icon: 'route', color: 'text-blue-400' }, { label: 'Nível', value: stats.level.toString(), icon: 'military_tech', color: 'text-yellow-400' }].map((stat, i) => (
                     <div key={i} className="bg-white/[0.03] border border-white/5 rounded-[24px] p-5 space-y-2">
                         <Icon name={stat.icon} className={`${stat.color} text-xl`} /><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">{stat.label}</p><p className="text-xl font-black text-white">{stat.value}</p>
                     </div>
                 ))}
             </div>
-            <div className="bg-white/[0.03] border border-white/5 rounded-[32px] p-6">
-                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-5">Desempenho Semanal</p>
-                <div className="flex items-end gap-3 h-28 justify-between">
-                    {[35, 65, 45, 85, 55, 120, 95].map((h, i) => (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                            <motion.div initial={{ height: 0 }} animate={{ height: `${(h / 120) * 100}%` }} transition={{ delay: i * 0.1, duration: 0.6 }} className={`w-full rounded-xl ${i === 5 ? 'bg-primary' : 'bg-white/10'}`} />
-                            <span className={`text-[8px] font-black ${i === 5 ? 'text-primary' : 'text-white/20'}`}>{['D','S','T','Q','Q','S','S'][i]}</span>
-                        </div>
-                    ))}
+
+            {/* Extrato Recente */}
+            <div className="bg-white/[0.03] border border-white/5 rounded-[32px] p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                    <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Extrato Recente</p>
+                    <Icon name="history" className="text-white/10" size={16} />
+                </div>
+                <div className="space-y-4">
+                    {[...earningsHistory.slice(0, 3), ...withdrawHistory.slice(0, 3)]
+                        .sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                        .map((item: any, i: number) => {
+                            const isWithdraw = item.amount !== undefined && item.pix_key !== undefined;
+                            return (
+                                <div key={i} className="flex items-center justify-between pb-4 border-b border-white/5 last:border-0 last:pb-0">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`size-10 rounded-xl flex items-center justify-center ${isWithdraw ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                                            <Icon name={isWithdraw ? 'arrow_outward' : 'add_circle'} size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-black text-white">{isWithdraw ? 'Saque PIX' : (item.type === 'package' ? 'Entrega' : 'Corrida')}</p>
+                                            <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">{new Date(item.created_at).toLocaleDateString('pt-BR')}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className={`text-sm font-black ${isWithdraw ? 'text-red-400' : 'text-emerald-400'}`}>
+                                            {isWithdraw ? '-' : '+'} R$ {(item.price || item.amount || 0).toFixed(2)}
+                                        </p>
+                                        {isWithdraw && <p className={`text-[7px] font-black uppercase tracking-widest ${item.status === 'concluido' ? 'text-emerald-400' : 'text-yellow-400'}`}>{item.status}</p>}
+                                    </div>
+                                </div>
+                            );
+                        })
+                    }
+                    {earningsHistory.length === 0 && withdrawHistory.length === 0 && (
+                        <p className="text-[10px] text-white/20 text-center py-4">Nenhuma transação registrada</p>
+                    )}
                 </div>
             </div>
+
+            {/* Gestão de Chave PIX */}
+            {!pixKey && (
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-[32px] p-6 space-y-4">
+                    <div className="flex items-center gap-3">
+                        <Icon name="account_balance" className="text-emerald-400" />
+                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Configurar Saque</p>
+                    </div>
+                    <p className="text-[10px] text-white/40 leading-relaxed">Cadastre sua chave PIX para habilitar os saques automáticos de seus rendimentos.</p>
+                    <div className="flex gap-2">
+                        <input 
+                            type="text" 
+                            placeholder="Sua chave PIX (CPF, E-mail ou Telefone)"
+                            id="pix_input"
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:border-primary outline-none"
+                        />
+                        <button 
+                            onClick={() => {
+                                const val = (document.getElementById('pix_input') as HTMLInputElement).value;
+                                if (val) {
+                                    setPixKey(val);
+                                    localStorage.setItem('izi_driver_pix', val);
+                                    toastSuccess('Chave PIX salva!');
+                                }
+                            }}
+                            className="bg-primary text-slate-900 px-4 py-3 rounded-xl text-[10px] font-black uppercase"
+                        >Salvar</button>
+                    </div>
+                </div>
+            )}
         </motion.div>
     );
 
