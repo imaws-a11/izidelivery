@@ -806,7 +806,7 @@ function App() {
                 if (newStatus === 'concluido' && driverId) {
                     const earnings = activeMission.price || activeMission.total_price || 0;
                     // Persistir ganho na carteira universal
-                    await supabase.from('wallet_transactions').insert({
+                    await supabase.from('wallet_transactions_delivery').insert({
                         user_id: driverId,
                         amount: earnings,
                         type: 'deposito',
@@ -856,9 +856,9 @@ function App() {
         if (!driverId) return;
         setIsFinanceLoading(true);
         try {
-            // Unidade de conta central: wallet_transactions
+            // Unidade de conta central: wallet_transactions_delivery
             const { data: txs } = await supabase
-                .from('wallet_transactions')
+                .from('wallet_transactions_delivery')
                 .select('*')
                 .eq('user_id', driverId)
                 .order('created_at', { ascending: false });
@@ -903,7 +903,7 @@ function App() {
         setIsFinanceLoading(true);
         try {
             // Registrar saída na carteira digital
-            const { error } = await supabase.from('wallet_transactions').insert({
+            const { error } = await supabase.from('wallet_transactions_delivery').insert({
                 user_id: driverId,
                 amount: stats.balance,
                 type: 'saque',
