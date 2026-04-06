@@ -473,8 +473,13 @@ export default function CategoriesTab() {
                         value={editingType.name}
                         onChange={e => {
                            const name = e.target.value;
-                           const slug = name.toLowerCase().replace(/\s+/g, '_').normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_]/g, '');
-                           setEditingType({...editingType, name, value: slug});
+                           // Só gera novo slug/value se for item novo (sem ID)
+                           if (!editingType.id) {
+                             const slug = name.toLowerCase().replace(/\s+/g, '_').normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_]/g, '');
+                             setEditingType({...editingType, name, value: slug});
+                           } else {
+                             setEditingType({...editingType, name});
+                           }
                         }}
                         placeholder="Ex: Açaí & Shakes"
                       />
