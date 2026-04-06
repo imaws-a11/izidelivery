@@ -116,7 +116,11 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
     region: 'BR',
   });
 
-  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
+  const [routeData, setRouteData] = useState<{
+    polyline: string;
+    distance: string;
+    duration: string;
+  } | null>(null);
   const [isNavMode, setIsNavMode] = useState(true);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const lastDestRef = useRef<string>('');
@@ -133,28 +137,45 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
   useEffect(() => {
     if (!isLoaded || !validDriverCoords || !resolvedDest) return;
     
-    const calcRoute = () => {
-      // DirectionsService ainda é o padrão no JS SDK para renderização simples.
-      // A recomendação 'computeRoutes' refere-se à Routes API v1, que geralmente é usada via REST ou Bibliotecas v1.
-      // Manteremos DirectionsService aqui para compatibilidade com DirectionsRenderer, mas adicionando tratamento robusto.
-      const service = new google.maps.DirectionsService();
-      service.route(
-        {
-          origin: validDriverCoords,
-          destination: resolvedDest,
-          travelMode: google.maps.TravelMode.DRIVING,
-        },
-        (result, status) => {
-          if (status === google.maps.DirectionsStatus.OK && result) {
-            setDirections(result);
-          } else {
-            console.error('FALHA ROTA:', status, result);
-            if (status === 'REQUEST_DENIED') {
-              console.warn('DIRECTIONS API: Acesso negado. Por favor, ative a "Directions API" e o Faturamento (Billing) no Google Cloud Console para o projeto da chave fornecida.');
-            }
-          }
+    const calcRoute = async () => {
+      try {
+        const originObj = typeof validDriverCoords === 'string' ? { address: validDriverCoords } : { location: { latLng: validDriverCoords } };
+        const destObj = typeof resolvedDest === 'string' ? { address: resolvedDest } : { location: { latLng: resolvedDest } };
+
+        const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": mapsKey,
+            "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline",
+          },
+          body: JSON.stringify({
+            origin: originObj,
+            destination: destObj,
+            travelMode: "DRIVE",
+            languageCode: "pt-BR",
+            routingPreference: "TRAFFIC_AWARE"
+          }),
+        });
+
+        const data = await res.json();
+        
+        if (data.error) {
+          console.error('ERRO ROUTES API:', data.error);
+          return;
         }
-      );
+
+        if (data?.routes?.[0]) {
+          const route = data.routes[0];
+          setRouteData({
+            polyline: route.polyline.encodedPolyline,
+            distance: route.distanceMeters > 1000 ? `${(route.distanceMeters / 1000).toFixed(1)} km` : `${route.distanceMeters} m`,
+            duration: route.duration.replace('s', 's').replace('s', ' seg').replace('min', ' min'),
+          });
+        }
+      } catch (err) {
+        console.error('Falha ao calcular rota (REST):', err);
+      }
     };
 
     const destKey = typeof resolvedDest === 'string' ? resolvedDest : `${resolvedDest.lat},${resolvedDest.lng}`;
@@ -223,16 +244,14 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
           />
         )}
 
-        {directions && (
-          <DirectionsRenderer
-            directions={directions}
+        {routeData?.polyline && isLoaded && (
+          <google.maps.Polyline 
+            path={google.maps.geometry.encoding.decodePath(routeData.polyline)}
             options={{
-              polylineOptions: {
-                strokeColor: "#ffd700",
-                strokeWeight: 6,
-                strokeOpacity: 0.8
-              },
-              suppressMarkers: true
+              strokeColor: "#ffd700",
+              strokeWeight: 6,
+              strokeOpacity: 0.8,
+              zIndex: 100
             }}
           />
         )}
@@ -250,7 +269,7 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
         </button>
       </div>
 
-      {directions && directions.routes[0].legs[0] && (
+      {routeData && (
         <div className="absolute top-6 left-6 z-[60] bg-slate-900/90 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-left-4">
           <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
             <Icon name="navigation" size={20} />
@@ -258,8 +277,8 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
           <div className="flex flex-col">
             <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Tempo Estimado</span>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-xl font-black text-white tracking-tight">{directions.routes[0].legs[0].duration?.text}</span>
-              <span className="text-[10px] font-black text-primary">{directions.routes[0].legs[0].distance?.text}</span>
+              <span className="text-xl font-black text-white tracking-tight">{routeData.duration.replace('s', ' min')}</span>
+              <span className="text-[10px] font-black text-primary">{routeData.distance}</span>
             </div>
           </div>
         </div>
