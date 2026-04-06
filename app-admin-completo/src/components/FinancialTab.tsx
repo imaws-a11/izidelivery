@@ -275,8 +275,11 @@ function WithdrawalRequestsSection() {
     try {
       // 1. Get all pending 'saque' transactions
       const { data: txs, error } = await supabase
-        .from('wallet_transactions')
-        .select('*')
+        .from('wallet_transactions_delivery')
+        .select(`
+          *,
+          driver:drivers_delivery ( name )
+        `)
         .eq('type', 'saque')
         .eq('status', 'pendente')
         .order('created_at', { ascending: false });
@@ -314,7 +317,7 @@ function WithdrawalRequestsSection() {
     setProcessingId(id);
     try {
       const { error } = await supabase
-        .from('wallet_transactions')
+        .from('wallet_transactions_delivery')
         .update({ status: 'concluido' })
         .eq('id', id);
 
@@ -328,7 +331,14 @@ function WithdrawalRequestsSection() {
     }
   };
 
-  if (!loading && requests.length === 0) return null;
+  if (loading && requests.length === 0) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm p-20 flex flex-col items-center justify-center gap-4 mb-10">
+        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando Fluxo de Saques...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mb-10">
@@ -385,6 +395,16 @@ function WithdrawalRequestsSection() {
                 </td>
               </tr>
             ))}
+            {requests.length === 0 && !loading && (
+              <tr>
+                <td colSpan={5} className="px-8 py-20 text-center">
+                  <div className="flex flex-col items-center gap-2 opacity-30">
+                    <span className="material-symbols-outlined text-4xl">inventory_2</span>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Nenhum saque pendente no momento</p>
+                  </div>
+                </td>
+              </tr>
+            )}
             {loading && requests.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-8 py-20 text-center">
