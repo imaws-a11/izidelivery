@@ -1248,6 +1248,44 @@ function App() {
     if (data) setFlashOffers(data);
   };
 
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [couponInput, setCouponInput] = useState("");
+  const [, setCouponError] = useState("");
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+
+  const [cart, setCart] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem("izi_cart");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  // Evitar sobrescrever a nuvem com carrinho vazio de um novo aparelho (Race condition do Login)
+  const isFirstEmptySync = useRef(cart.length === 0);
+
+  // Persistir carrinho no localStorage e Supabase sempre que mudar
+  useEffect(() => {
+    try {
+      localStorage.setItem("izi_cart", JSON.stringify(cart));
+      
+      // Sincronizar com o banco se estiver logado
+      if (userId) {
+        if (isFirstEmptySync.current && cart.length === 0) {
+            return;
+        }
+        
+        isFirstEmptySync.current = false;
+
+        supabase.from("users_delivery")
+          .update({ cart_data: cart })
+          .eq("id", userId)
+          .then(({ error }) => {
+            if (error) console.error("Erro ao sincronizar sacola na nuvem:", error);
+          });
+      }
+    } catch {}
+  }, [cart, userId]);
+
   const [rating, setRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState("");
   const [chatMessages, setChatMessages] = useState<{id: string, sender: string, text: string, time: string}[]>([]);
@@ -2047,44 +2085,7 @@ const navigateSubView = (target: string) => {
   }, [myOrders, subView, selectedItem?.id]); // selectedItem.id previne loop
   const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
   const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-  const [couponInput, setCouponInput] = useState("");
-  const [, setCouponError] = useState("");
-  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
-  const [cart, setCart] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem("izi_cart");
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  });
-
-  // Evitar sobrescrever a nuvem com carrinho vazio de um novo aparelho (Race condition do Login)
-  const isFirstEmptySync = useRef(cart.length === 0);
-
-  // Persistir carrinho no localStorage e Supabase sempre que mudar
-  useEffect(() => {
-    try {
-      localStorage.setItem("izi_cart", JSON.stringify(cart));
-      
-      // Sincronizar com o banco se estiver logado
-      if (userId) {
-        // [Comentario Limpo pelo Sistema]
-        if (isFirstEmptySync.current && cart.length === 0) {
-            return;
-        }
-        
-        isFirstEmptySync.current = false;
-
-        supabase.from("users_delivery")
-          .update({ cart_data: cart })
-          .eq("id", userId)
-          .then(({ error }) => {
-            if (error) console.error("Erro ao sincronizar sacola na nuvem:", error);
-          });
-      }
-    } catch {}
-  }, [cart, userId]);
 
   const handleClearCart = async () => {
     setCart([]);
