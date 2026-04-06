@@ -372,7 +372,7 @@ export default function CategoriesTab() {
                      </div>
                      <button 
                        onClick={() => {
-                         setEditingType({ name: '', value: '', icon: 'category', is_active: true });
+                         setEditingType({ name: '', value: '', icon: 'category', is_active: true, parent_id: null });
                        }}
                        className="px-8 py-4 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/30 flex items-center gap-3 hover:scale-105 active:scale-95 transition-all"
                      >
@@ -514,6 +514,10 @@ export default function CategoriesTab() {
                       <button onClick={() => setEditingType(null)} className="flex-1 py-5 rounded-[24px] bg-slate-100 dark:bg-slate-800 font-black text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">Descartar</button>
                       <button 
                          onClick={async () => {
+                           if (!editingType.name || !editingType.value) {
+                             alert('Por favor, preencha o nome da categoria.');
+                             return;
+                           }
                            await handleUpdateEstablishmentType(editingType);
                            setEditingType(null);
                            fetchEstablishmentTypes();
