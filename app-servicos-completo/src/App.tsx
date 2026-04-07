@@ -455,7 +455,7 @@ function App() {
         setIziCashbackEarned(data.cashback_earned || 0);
         setUserXP(Number(data.user_xp || 0));
         setIziCoins(Number(data.izi_coins || 0));
-        setUserCPF(data.cpf || "");
+        setProfileCpf(data.cpf || "");
       } else {
         console.log("[SYNC] Perfil não encontrado. Criando registro inicial...");
         await supabase.from("users_delivery").insert({
