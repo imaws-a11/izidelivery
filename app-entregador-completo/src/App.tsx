@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from './lib/supabase';
 import { playIziSound } from './lib/iziSounds';
@@ -806,11 +806,36 @@ function App() {
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 const o = payload.new;
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
-                if (!['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver'].includes(o.status) || (Date.now() - (declinedMap[o.id] || 0) < 5000)) return;
-                playIziSound('driver');
-                if (Notification.permission === 'granted') new Notification('🚀 Nova Missão Izi!', { body: `Coleta: ${o.pickup_address}`, icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' });
+                
+                // Filtros de segurança e status
+                if (!['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver'].includes(o.status)) return;
+                if (Date.now() - (declinedMap[o.id] || 0) < 5000) return;
+                
+                // Ignorar transações financeiras (Izi Coin, Assinatura) que não são missões
+                const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
+                if (financialTypes.includes(o.service_type)) return;
+
+                // Restringir sons por categoria e status (Evitar barulho precoce em Food)
+                const isMobility = ['mototaxi', 'car_ride', 'frete', 'motorista_particular', 'package'].includes(o.service_type);
+                const isFoodReady = ['pronto', 'waiting_driver'].includes(o.status);
+                
+                // Só toca som se: (É Mobilidade e status inicial OK) OU (É Food e já está pronto)
+                const shouldSound = isMobility || isFoodReady;
+
                 setOrders(prev => {
                     if (prev.find(x => x.realId === o.id)) return prev;
+                    
+                    // Só toca som se estiver online e passar no filtro de categoria
+                    if (isOnline && shouldSound) {
+                        playIziSound('driver');
+                        if (Notification.permission === 'granted') {
+                            new Notification('🚀 Nova Missão Izi!', { 
+                                body: `Coleta: ${o.pickup_address}`, 
+                                icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
+                            });
+                        }
+                    }
+
                     const mapped = { 
                         id: o.id.slice(0, 8).toUpperCase(), 
                         realId: o.id, 
@@ -874,9 +899,24 @@ function App() {
                     setOrders(prev => {
                         const isNew = !prev.find(x => x.realId === o.id);
                         if (isNew) {
-                            // Tocar som quando um pedido novo aparece na lista (ex: lojista marcou como pronto)
-                            playIziSound('driver');
-                            if (Notification.permission === 'granted') new Notification('📦 Pedido Disponível!', { body: `Coleta: ${o.pickup_address}`, icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' });
+                            // Ignorar transações financeiras
+                            const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
+                            if (financialTypes.includes(o.service_type)) return prev;
+
+                            // Mesma lógica de filtro de som: Food só quando pronto, Mobilidade sempre que novo
+                            const isMobility = ['mototaxi', 'car_ride', 'frete', 'motorista_particular', 'package'].includes(o.service_type);
+                            const isFoodReady = ['pronto', 'waiting_driver'].includes(o.status);
+                            const shouldSound = isMobility || isFoodReady;
+
+                            if (isOnline && shouldSound) {
+                                playIziSound('driver');
+                                if (Notification.permission === 'granted') {
+                                    new Notification('📦 Pedido Disponível!', { 
+                                        body: `Coleta: ${o.pickup_address}`, 
+                                        icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
+                                    });
+                                }
+                            }
                             return [{ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev];
                         }
                         return prev;
