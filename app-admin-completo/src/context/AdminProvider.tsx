@@ -476,7 +476,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchDrivers = useCallback(async (silent = false) => {
     if (!silent) setIsLoadingList(true);
     try {
-      const { data } = await supabase.from('drivers_delivery').select('*').eq('is_deleted', false).order('name', { ascending: true });
+      const { data } = await supabase
+        .from('drivers_delivery')
+        .select('*')
+        .eq('is_deleted', false)
+        .order('is_online', { ascending: false })
+        .order('name', { ascending: true });
       if (data) setDriversList(data as Driver[]);
     } finally {
       if (!silent) setIsLoadingList(false);
@@ -622,6 +627,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
 
           if (shouldRefreshFull) {
+            console.log('[REALTIME] Status mudou: Atualizando métricas globais...');
             fetchStats(true);
             if (userRole === 'merchant') {
               fetchMyDrivers(true);
