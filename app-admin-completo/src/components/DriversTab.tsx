@@ -1,27 +1,58 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { supabase } from '../lib/supabase';
 import { toastSuccess, toastError } from '../lib/useToast';
+import type { Driver } from '../lib/types';
 
 export default function DriversTab() {
   const {
-    driversList, isLoadingList, setSelectedDriverStudio, handleUpdateDriverStatus, handleDeleteDriver, 
-    stats, fetchDrivers, selectedDriverStudio, activeStudioTab, setActiveStudioTab, 
+    setSelectedDriverStudio, handleUpdateDriverStatus, handleDeleteDriver, 
+    selectedDriverStudio, activeStudioTab, setActiveStudioTab, 
     isSaving, setIsSaving, session, fetchMyDrivers
   } = useAdmin();
 
-  React.useEffect(() => {
-    fetchDrivers();
-  }, [fetchDrivers]);
+  // Estado próprio — não depende do AdminProvider para o status online
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadDrivers = async () => {
+    const { data } = await supabase
+      .from('drivers_delivery')
+      .select('*')
+      .eq('is_deleted', false)
+      .order('is_online', { ascending: false })
+      .order('name', { ascending: true });
+    if (data) setDrivers(data as Driver[]);
+    setIsLoading(false);
+  };
+
+  // Busca inicial + polling a cada 5 segundos (direto no banco, sem intermediários)
+  useEffect(() => {
+    loadDrivers();
+    const interval = setInterval(loadDrivers, 5_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Subscription Realtime própria — independente do AdminProvider
+  useEffect(() => {
+    const channel = supabase
+      .channel('drivers_tab_live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers_delivery' }, () => {
+        // Qualquer mudança na tabela → rebusca imediatamente
+        loadDrivers();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const metrics = useMemo(() => {
-    const total = driversList.length;
-    const online = driversList.filter(d => d.is_online && d.is_active).length;
-    const blocked = driversList.filter(d => d.is_active === false && d.status !== 'inactive').length;
-    const inactive = driversList.filter(d => d.status === 'inactive' || (!d.is_active && !d.status)).length;
+    const total = drivers.filter(d => !d.is_deleted).length;
+    const online = drivers.filter(d => d.is_online && d.is_active).length;
+    const blocked = drivers.filter(d => d.is_active === false && d.status !== 'inactive').length;
+    const inactive = drivers.filter(d => d.status === 'inactive' || (!d.is_active && !d.status)).length;
     return { total, online, blocked, inactive };
-  }, [driversList]);
+  }, [drivers]);
 
   return (
     <div className="space-y-8">
@@ -76,7 +107,7 @@ export default function DriversTab() {
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative">
-        {isLoadingList && (
+        {isLoading && (
           <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm z-10 flex items-center justify-center">
             <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
           </div>
@@ -92,7 +123,7 @@ export default function DriversTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {driversList.map(d => (
+              {drivers.map(d => (
                 <tr key={d.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">
@@ -552,7 +583,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
          if (error) throw error;
          toastSuccess('Dados do entregador salvos com sucesso!');
          setSelectedDriverStudio(null);
-         fetchDrivers();
+         loadDrivers();
          fetchMyDrivers();
        } catch (err: any) {
          toastError('Erro ao salvar entregador: ' + err.message);
