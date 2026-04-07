@@ -572,29 +572,54 @@ function App() {
 
 
 
+    // Sincronização entre múltiplos dispositivos (Online status, Carteira, Perfil)
+    useEffect(() => {
+        if (!driverId || !isAuthenticated) return;
+        const dId = String(driverId).trim();
+
+        const channel = supabase.channel('my_driver_data')
+            .on('postgres_changes', { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'drivers_delivery', 
+                filter: `id=eq.${dId}` 
+            }, (payload) => {
+                const updated = payload.new;
+                console.log('[REALTIME] Sincronização multi-dispositivo:', updated);
+                
+                // Sincronizar Online status
+                if (updated.is_online !== undefined && updated.is_online !== isOnline) {
+                    setIsOnline(updated.is_online);
+                    localStorage.setItem('Izi_online', String(updated.is_online));
+                }
+                
+                // Recarregar dados financeiros se o saldo mudou por outro dispositivo
+                fetchFinanceData();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [driverId, isAuthenticated, isOnline]);
+
     // Heartbeat: enquanto online, atualiza last_seen_at a cada 5 segundos
-    // O painel admin usa isso para detectar entregadores que fecharam o app sem fazer logout
     useEffect(() => {
         if (!driverId || !isAuthenticated || !isOnline) return;
+        const dId = String(driverId).trim();
 
         const sendHeartbeat = async () => {
             try {
-                // Ao reiniciar, enviamos tanto o is_online true (se estiver localmente online) 
-                // quanto o last_seen_at para reativar no painel admin imediatamente
                 await supabase
                     .from('drivers_delivery')
                     .update({ 
                         last_seen_at: new Date().toISOString(),
-                        is_online: true // Garante que o banco saiba que ainda estamos aqui
+                        is_online: true 
                     })
-                    .eq('id', driverId);
-            } catch (err) {
-                // silencioso - não impacta o UX
-            }
+                    .eq('id', dId);
+            } catch (err) {}
         };
 
-        sendHeartbeat(); // imediato ao ficar online
-        const interval = setInterval(sendHeartbeat, 5 * 1000); // a cada 5 segundos
+        sendHeartbeat();
+        const interval = setInterval(sendHeartbeat, 5 * 1000);
         return () => clearInterval(interval);
     }, [driverId, isAuthenticated, isOnline]);
 
@@ -867,10 +892,19 @@ function App() {
                 const currentMission = activeMissionRef.current;
                 
                 // Sincronização Global de Missão Ativa (Multi-dispositivos)
-                // Se o pedido for atribuído a MIM e eu não tiver missão ativa, ou se a minha missão ativa mudou no servidor
-                if (o.driver_id === driverId) {
+                const dId = String(driverId).trim();
+                if (o.driver_id === dId) {
                     console.log('[REALTIME] Sincronizando mudança de status da minha missão:', o.status);
                     
+                    // Lógica de Limpeza: Se o pedido foi cancelado ou concluído em outro dispositivo
+                    if (['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)) {
+                        console.log('[REALTIME] Missão finalizada detectada. Limpando estado local.');
+                        setActiveMission(null);
+                        localStorage.removeItem('Izi_active_mission');
+                        if (activeTabRef.current === 'active_mission') setActiveTab('dashboard');
+                        return;
+                    }
+
                     if (!currentMission || o.id === currentMission.id) {
                         const wasPreparing = currentMission?.preparation_status !== 'pronto';
                         const isNowReady = o.preparation_status === 'pronto';
@@ -896,7 +930,7 @@ function App() {
                         localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                         
                         // Se não estivermos na tela de missão, mudar para lá automaticamente
-                        if (activeTabRef.current !== 'active_mission' && !['concluido', 'cancelado'].includes(o.status)) {
+                        if (activeTabRef.current !== 'active_mission') {
                             setActiveTab('active_mission');
                         }
                         return;
