@@ -452,7 +452,7 @@ function App() {
       if (data) {
         setWalletBalance(data.wallet_balance || 0);
         setIsIziBlackMembership(data.is_izi_black || false);
-        setCashbackEarned(data.cashback_earned || 0);
+        setIziCashbackEarned(data.cashback_earned || 0);
         setUserXP(Number(data.user_xp || 0));
         setIziCoins(Number(data.izi_coins || 0));
         setUserCPF(data.cpf || "");
@@ -1696,7 +1696,7 @@ function App() {
       if (paymentMethod === "pix") {
         setPixConfirmed(false);
         setPixCpf("");
-        setSelectedItem({ id: "temp", total_price: total, merchant_id: shopId, merchant_name: shopName });
+        setSelectedItem({ id: "temp", ...orderBase });
         navigateSubView("pix_payment");
         return;
       }
@@ -3269,8 +3269,8 @@ const navigateSubView = (target: string) => {
         const isSubscription = paymentsOrigin === "izi_black";
 
         // Se o pedido ainda não existe, precisamos criá-lo
-        if (!orderId) {
-          if (!isSubscription && !selectedShop?.id) { 
+        if (!orderId || orderId === "temp") {
+          if (!isSubscription && !selectedShop?.id && !selectedItem?.merchant_id) { 
             console.error("Erro: Estabelecimento não selecionado durante criação de pedido PIX.");
             alert("Erro: Estabelecimento não identificado. Por favor, volte e selecione a loja novamente."); 
             setPixConfirmed(false); 
@@ -3280,18 +3280,19 @@ const navigateSubView = (target: string) => {
           console.log("Criando pedido inicial 'pendente_pagamento' para " + (isSubscription ? "assinatura" : "delivery") + "...");
           const orderPayload = {
               user_id: userId,
-              merchant_id: isSubscription ? null : selectedShop.id,
+              merchant_id: isSubscription ? null : (selectedShop?.id || selectedItem?.merchant_id),
               status: "pendente_pagamento",
               total_price: Number(total.toFixed(2)),
-              pickup_address: isSubscription ? "Assinatura Izi Black" : (selectedShop.name || "Endereço do Estabelecimento"),
-              delivery_address: isSubscription ? "Serviço Digital" : `${userLocation.address || "Endereço não informado"} | ITENS: ${cart.map((i: any) => formatCartItemSummary(i)).join(', ')}`,
-              items: cart, // Adicionado para exibição no ActiveOrderView
+              pickup_address: isSubscription ? "Assinatura Izi Black" : (selectedShop?.name || selectedItem?.pickup_address || "Endereço do Estabelecimento"),
+              delivery_address: isSubscription ? "Serviço Digital" : (selectedItem?.delivery_address || `${userLocation.address || "Endereço não informado"}`),
+              items: selectedItem?.items || cart,
               payment_method: "pix",
-              service_type: isSubscription ? "subscription" : (selectedShop.type || "restaurant"),
+              service_type: isSubscription ? "subscription" : (selectedItem?.service_type || selectedShop?.type || "restaurant"),
+              delivery_fee: selectedItem?.delivery_fee || 0,
+              notes: selectedItem?.notes || "",
             };
 
           console.log("[DIAG] Payload PIX preparado:", orderPayload);
-          // alert(`Enviando PIX: Status=${orderPayload.status}`);
 
           const { data: order, error: orderErr } = await supabase
             .from("orders_delivery")
