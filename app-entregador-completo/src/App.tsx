@@ -650,16 +650,19 @@ function App() {
         if (!driverId || !isAuthenticated) return;
         try {
             console.log('[SYNC] Sincronizando missão ativa do banco...');
+            const dId = String(driverId).trim();
             const { data: orders, error: qErr } = await supabase.from('orders_delivery')
                 .select('*')
-                .eq('driver_id', driverId)
+                .eq('driver_id', dId)
                 .order('created_at', { ascending: false })
-                .limit(5);
+                .limit(10);
 
             if (qErr) throw qErr;
 
+            const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
             const activeOrder = orders?.find((o: any) => 
-                ['saiu_para_coleta', 'a_caminho_coleta', 'no_local_coleta', 'chegou_coleta', 'picked_up', 'a_caminho', 'em_rota', 'saiu_para_entrega', 'no_local'].includes(o.status)
+                !['concluido', 'cancelado', 'pendente_pagamento', 'finalizado', 'entregue'].includes(o.status) &&
+                !financialTypes.includes(o.service_type)
             );
 
             if (activeOrder) {
@@ -676,9 +679,15 @@ function App() {
                 };
                 setActiveMission(mission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
+                setActiveTab('active_mission');
+                toastSuccess('Missão recuperada!');
                 console.log('[SYNC] Missão restaurada do banco:', mission.realId);
             } else {
-                console.log('[SYNC] Nenhuma missão ativa no banco.');
+                console.log('[SYNC] Nenhuma missão ativa no banco para o motorista:', driverId);
+                if (orders && orders.length > 0) {
+                    console.log('[SYNC] Pedidos recentes encontrados mas nenhum ativo:', orders.map(o => o.status));
+                }
+                toastError('Nenhuma missão ativa encontrada no servidor.');
             }
         } catch (err: any) {
             console.error('[SYNC] Falha ao sincronizar missão:', err.message);
