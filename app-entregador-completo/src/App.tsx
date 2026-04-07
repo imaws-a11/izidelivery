@@ -428,7 +428,12 @@ function App() {
 
     useEffect(() => {
         const ensureDriverRecord = async (userId: string, email: string, name: string) => {
-            const { data } = await supabase.from('drivers_delivery').select('name, lat, lng').eq('id', userId).maybeSingle();
+            // Busca o registro atual, mesmo que esteja marcado como deletado
+            // Nota: Se houver RLS impedindo a leitura de is_deleted=true, o data virá null
+            const { data } = await supabase.from('drivers_delivery').select('id, name, lat, lng, is_deleted').eq('id', userId).maybeSingle();
+            
+            // Se NÃO existe o ID no banco OU se o registro existe mas foi deletado, NÃO recriamos se o objetivo for deletar
+            // Mas aqui, só criamos se for um usuário COMPLETAMENTE novo (sem registro nenhum)
             if (!data) {
                 await supabase.from('drivers_delivery').upsert({
                     id: userId, 
@@ -436,9 +441,11 @@ function App() {
                     email: email, 
                     is_online: true, 
                     is_active: true, 
+                    is_deleted: false,
                     vehicle_type: 'mototaxi'
                 });
             } else {
+                // Se o registro existe (mesmo que excluído pelo admin), não fazemos o upsert para não "ressuscitar"
                 if (data.name) {
                     setDriverName(data.name);
                     localStorage.setItem('izi_driver_name', data.name);
@@ -494,7 +501,8 @@ function App() {
                 setDriverId(null);
                 setIsAuthenticated(false);
                 setDriverName('Entregador');
-                setIsOnline(false);
+                // REMOVIDO: setIsOnline(false); 
+                // Não limpamos o status online aqui pois ele deve persistir do localStorage ao reiniciar
             }
             setAuthInitLoading(false);
         });
@@ -571,9 +579,14 @@ function App() {
 
         const sendHeartbeat = async () => {
             try {
+                // Ao reiniciar, enviamos tanto o is_online true (se estiver localmente online) 
+                // quanto o last_seen_at para reativar no painel admin imediatamente
                 await supabase
                     .from('drivers_delivery')
-                    .update({ last_seen_at: new Date().toISOString() })
+                    .update({ 
+                        last_seen_at: new Date().toISOString(),
+                        is_online: true // Garante que o banco saiba que ainda estamos aqui
+                    })
                     .eq('id', driverId);
             } catch (err) {
                 // silencioso - não impacta o UX
@@ -1168,7 +1181,7 @@ function App() {
                         <div className="pt-10 border-t border-white/5 space-y-6 mt-8">
                             <div className="flex items-center justify-between">
                                 <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">Status Operacional</span>
-                                <button onClick={() => setIsOnline(!isOnline)} className={`h-8 w-14 rounded-full relative transition-all duration-500 ${isOnline ? 'bg-emerald-500 ring-4 ring-emerald-500/20' : 'bg-white/10'}`}>
+                                <button onClick={handleToggleOnline} className={`h-8 w-14 rounded-full relative transition-all duration-500 ${isOnline ? 'bg-emerald-500 ring-4 ring-emerald-500/20' : 'bg-white/10'}`}>
                                     <motion.div animate={{ x: isOnline ? 28 : 4 }} className="absolute top-1 size-6 bg-white rounded-full shadow-xl" />
                                 </button>
                             </div>
@@ -1444,7 +1457,7 @@ function App() {
                     <div className="py-16 bg-white/[0.02] border border-white/5 border-dashed rounded-[32px] flex flex-col items-center gap-5 text-center">
                         <div className="size-16 rounded-[24px] bg-red-500/5 border border-red-500/10 flex items-center justify-center"><Icon name="power_off" className="text-red-400/40 text-3xl" /></div>
                         <div><p className="text-sm font-black text-white/30 uppercase tracking-widest">Você está offline</p><p className="text-[10px] text-white/20 uppercase tracking-widest mt-1">Ative o status para receber chamadas</p></div>
-                        <button onClick={() => setIsOnline(true)} className="bg-primary text-slate-900 font-black px-8 py-3.5 rounded-2xl text-[11px] uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-95 transition-all">Ficar Online</button>
+                        <button onClick={handleToggleOnline} className="bg-primary text-slate-900 font-black px-8 py-3.5 rounded-2xl text-[11px] uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-95 transition-all">Ficar Online</button>
                     </div>
                 ) : filteredOrders.length === 0 ? (
                     <div className="py-16 bg-white/[0.02] border border-white/5 rounded-[32px] flex flex-col items-center gap-4 text-center">
