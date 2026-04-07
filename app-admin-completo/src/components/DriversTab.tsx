@@ -17,7 +17,7 @@ export default function DriversTab() {
 
   const metrics = useMemo(() => {
     const total = driversList.length;
-    const online = driversList.filter(d => d.is_online).length;
+    const online = driversList.filter(d => d.is_online && d.is_active).length;
     const blocked = driversList.filter(d => d.is_active === false && d.status !== 'inactive').length;
     const inactive = driversList.filter(d => d.status === 'inactive' || (!d.is_active && !d.status)).length;
     return { total, online, blocked, inactive };

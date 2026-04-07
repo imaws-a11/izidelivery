@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useJsApiLoader } from '@react-google-maps/api';
 import { supabase } from '../lib/supabase';
 import { AdminContext } from './AdminContext';
@@ -410,6 +410,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       metadata: details
     });
   }, [session]);
+  
 
   // Data Fetchers
   const fetchStats = useCallback(async (silent = false) => {
@@ -418,7 +419,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { data: userData } = await supabase.from('users_delivery').select('id');
       const { data: driverData } = await supabase.from('drivers_delivery').select('id');
       const { data: orderData } = await supabase.from('orders_delivery').select('total_price, status, merchant_id, created_at, service_type');
-      const { data: onlineData } = await supabase.from('drivers_delivery').select('id').eq('is_online', true);
+      const { data: onlineData } = await supabase.from('drivers_delivery').select('id').eq('is_online', true).eq('is_active', true);
       const { data: merchantData } = await supabase.from('admin_users').select('id').eq('role', 'merchant');
       const { data: promoData } = await supabase.from('promotions_delivery').select('*');
 
@@ -566,6 +567,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [userRole, merchantProfile, merchantOrdersPage, ordersPage]);
 
+  // Mapeamento de refs para funções voláteis usadas no Realtime (evita reconnect do canal)
+  const fetchAllOrdersRef = useRef(fetchAllOrders);
+  const fetchStatsRef = useRef(fetchStats);
+  const fetchDriversRef = useRef(fetchDrivers);
+  const fetchMyDriversRef = useRef(fetchMyDrivers);
+
+  useEffect(() => { fetchAllOrdersRef.current = fetchAllOrders; }, [fetchAllOrders]);
+  useEffect(() => { fetchStatsRef.current = fetchStats; }, [fetchStats]);
+  useEffect(() => { fetchDriversRef.current = fetchDrivers; }, [fetchDrivers]);
+  useEffect(() => { fetchMyDriversRef.current = fetchMyDrivers; }, [fetchMyDrivers]);
+
   // Canal Global de Tempo Real (Admin e Lojista)
   useEffect(() => {
     if (!session?.user?.id || !userRole) return;
@@ -579,8 +591,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         { event: '*', schema: 'public', table: 'orders_delivery' },
         (payload) => {
           console.log('⚡ PEDIDO REALTIME:', payload.eventType, payload);
-          fetchStats(true);
-          fetchAllOrders(undefined, true);
+          fetchStatsRef.current(true);
+          fetchAllOrdersRef.current(undefined, true);
           
           if (payload.eventType === 'INSERT') {
             const newOrder = payload.new as Order;
@@ -601,38 +613,32 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (payload.eventType === 'UPDATE') {
             const updated = payload.new as Driver;
             const old = payload.old as Driver;
-
             const latChanged = old?.lat !== updated.lat;
             const lngChanged = old?.lng !== updated.lng;
             const statusChanged = old?.is_online !== updated.is_online || old?.is_active !== updated.is_active || old?.status !== updated.status;
-            
-            if ((latChanged || lngChanged) && !statusChanged) {
-              shouldRefreshFull = false;
-            }
 
             setDriversList(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d));
             if (userRole === 'merchant') {
               setMyDriversList(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d));
             }
-          } else if (payload.eventType === 'INSERT') {
-            const newItem = payload.new as Driver;
-            setDriversList(prev => [newItem, ...prev]);
-            if (userRole === 'merchant' && newItem.merchant_id === merchantProfile?.merchant_id) {
-              setMyDriversList(prev => [newItem, ...prev]);
+
+            if ((latChanged || lngChanged) && !statusChanged) {
+              shouldRefreshFull = false;
             }
+          } else if (payload.eventType === 'INSERT') {
+            fetchAllOrdersRef.current(undefined, true);
           } else if (payload.eventType === 'DELETE') {
-            const oldId = (payload.old as any).id;
-            setDriversList(prev => prev.filter(d => d.id !== oldId));
-            setMyDriversList(prev => prev.filter(d => d.id !== oldId));
+            const deletedId = (payload.old as any).id;
+            setDriversList(prev => prev.filter(d => d.id !== deletedId));
           }
 
           if (shouldRefreshFull) {
             console.log('[REALTIME] Status mudou: Atualizando métricas globais...');
-            fetchStats(true);
+            fetchStatsRef.current(true);
             if (userRole === 'merchant') {
-              fetchMyDrivers(true);
+              fetchMyDriversRef.current(true);
             } else {
-              fetchDrivers(true);
+              fetchDriversRef.current(true);
             }
           }
         }
@@ -645,7 +651,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.log(`[REALTIME] Fechando canal: ${channelName}`);
       supabase.removeChannel(channel);
     };
-  }, [session?.user?.id, userRole, merchantProfile?.merchant_id, fetchAllOrders, fetchStats, fetchDrivers, fetchMyDrivers]);
+  }, [session?.user?.id, userRole, merchantProfile?.merchant_id]); // Removidas as funções voláteis das dependências
 
   const fetchSubscriptionOrders = useCallback(async (page = 1) => {
     setIsLoadingList(true);
@@ -834,6 +840,25 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       fetchMyDedicatedSlots();
     }
   }, [userRole, fetchAppSettings, fetchStats, fetchUsers, fetchDrivers, fetchMerchants, fetchCategories, fetchPromotions, fetchDynamicRates, fetchAllOrders, fetchSubscriptionOrders, fetchMyDrivers, fetchProducts, fetchMenuCategories, fetchMyDedicatedSlots]);
+
+  // Polling: a cada 30s limpa entregadores ausentes e atualiza a lista
+  useEffect(() => {
+    if (!userRole || !session?.user?.id) return;
+
+    const runDriverSync = async () => {
+      // Chama a função SQL que força offline entregadores sem heartbeat há +5min
+      try { await supabase.rpc('auto_offline_absent_drivers'); } catch (_) {}
+      // Atualiza a lista local silenciosamente
+      fetchDriversRef.current(true);
+      fetchStatsRef.current(true);
+    };
+
+    // Roda imediatamente ao montar
+    runDriverSync();
+
+    const interval = setInterval(runDriverSync, 30_000); // a cada 30 segundos
+    return () => clearInterval(interval);
+  }, [userRole, session?.user?.id]);
 
 
   const handleAddCredit = async () => {

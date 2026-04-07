@@ -576,30 +576,62 @@ function App() {
     useEffect(() => {
         if (!driverId || !isAuthenticated) return;
         
-        localStorage.setItem('Izi_online', isOnline.toString());
-
-        // Evitar que o estado inicial (padrão false) sobrescreva o banco na montagem se o motorista deveria estar online
-        if (isFirstRender.current) {
-            isFirstRender.current = false;
-            return;
-        }
-
-        // Atualizar banco APENAS se houver mudança de estado manual no dispositivo atual
-        const updateStatus = async () => {
-            try {
-                const { error } = await supabase.from('drivers_delivery').update({ is_online: isOnline }).eq('id', driverId);
-                if (error) {
-                    console.error('Erro ao atualizar status online:', error.message);
-                    // Opcional: reverter estado local se falhar? Melhor manter p/ tentar dnv dps
-                } else {
-                    console.log(`[STATUS] Entregador ${isOnline ? 'ONLINE' : 'OFFLINE'} no banco.`);
-                }
-            } catch (err) {
-                console.error('Erro persistência status:', err);
+        // Listener para quando o usuário fecha a aba ou recarrega a página
+        const handleBeforeUnload = () => {
+            if (isOnline && driverId) {
+                // Tenta avisar o banco (melhor esforço síncrono com o unbind/unload)
+                // Nota: O Beacon API é perfeito para enviar dados ao fechar a aba sem travar a navegação
+                const blob = new Blob([JSON.stringify({ is_online: false })], { type: 'application/json' });
+                // Aqui usamos o endpoint REST direto do Supabase via cURL-like beacon
+                // O driverId deve estar no URL ou ser passado no body se o RLS permitir
+                const url = `https://mbqmyozgwpxwxrdwwkwn.supabase.co/rest/v1/drivers_delivery?id=eq.${driverId}`;
+                // API keys (anon) são necessárias se não estiver autenticado via cookies (o que o beacon não garante 100% no cross-origin dependendo das configs)
+                // Por segurança, apenas confiamos no beacon se o banco estiver aberto para updates de status via ID (comum em Izi)
+                navigator.sendBeacon(url, blob);
             }
         };
-        updateStatus();
-    }, [isOnline, isAuthenticated, driverId]);
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [isOnline, driverId, isAuthenticated]);
+
+    // Heartbeat: enquanto online, atualiza last_seen_at a cada 2 minutos
+    // O painel admin usa isso para detectar entregadores que fecharam o app sem fazer logout
+    useEffect(() => {
+        if (!driverId || !isAuthenticated || !isOnline) return;
+
+        const sendHeartbeat = async () => {
+            await supabase
+                .from('drivers_delivery')
+                .update({ last_seen_at: new Date().toISOString() })
+                .eq('id', driverId)
+                .catch(() => {}); // silencioso - não impacta o UX
+        };
+
+        sendHeartbeat(); // imediato ao ficar online
+        const interval = setInterval(sendHeartbeat, 2 * 60 * 1000); // a cada 2 minutos
+        return () => clearInterval(interval);
+    }, [driverId, isAuthenticated, isOnline]);
+
+    const handleToggleOnline = async () => {
+        const nextState = !isOnline;
+        setIsOnline(nextState); // Mudança visual imediata
+        
+        if (driverId) {
+            try {
+                // Atualizar banco
+                const { error } = await supabase.from('drivers_delivery').update({ is_online: nextState }).eq('id', driverId);
+                if (error) throw error;
+                localStorage.setItem('Izi_online', nextState.toString());
+                console.log(`[STATUS] Mudou para ${nextState ? 'ONLINE' : 'OFFLINE'}`);
+            } catch (e: any) {
+                console.error('Erro ao atualizar banco:', e);
+                // Reverter se der erro crítico no banco
+                setIsOnline(!nextState);
+                toastError('Falha ao comunicar com o servidor. Tente novamente.');
+            }
+        }
+    };
 
     useEffect(() => {
         if (!driverId || !isAuthenticated) return;
@@ -1045,12 +1077,34 @@ function App() {
         }
     };
     const handleLogout = async () => {
-        if (!await showConfirm({ message: 'Deseja encerrar a sessão?' })) return;
-        if (driverId) await supabase.from('drivers_delivery').update({ is_online: false }).eq('id', driverId);
-        await supabase.auth.signOut();
-        setIsMenuOpen(false); setIsOnline(false);
-        localStorage.removeItem('Izi_online'); localStorage.removeItem('Izi_declined'); localStorage.removeItem('Izi_declined_timed'); localStorage.removeItem('Izi_active_mission');
+        // Primeiro: forçar offline no banco ANTES de limpar o estado
+        if (driverId) {
+            try {
+                await supabase.from('drivers_delivery').update({ is_online: false }).eq('id', driverId);
+            } catch (e) {
+                console.warn('[LOGOUT] Não foi possível atualizar status no banco, continuando...', e);
+            }
+        }
+        // Depois: limpar tudo localmente
+        localStorage.clear();
+        sessionStorage.clear();
+        setIsAuthenticated(false);
+        setIsOnline(false);
+        setDriverId('');
+        setSession(null);
+        window.location.href = '/'; 
     };
+
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (isOnline) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [isOnline]);
 
 
     const renderHeader = () => (
@@ -1062,7 +1116,7 @@ function App() {
                 <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.5em] mb-0.5">Terminal Operacional</span>
                 <h1 className="text-xl font-black text-white tracking-tighter uppercase leading-none">Izi <span className="text-primary italic">Pilot</span></h1>
             </div>
-            <button onClick={() => setIsOnline(!isOnline)} className={`flex items-center gap-2.5 px-4 py-2.5 rounded-[20px] border transition-all active:scale-90 ${isOnline ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10' : 'bg-red-500/10 border-red-500/20 text-red-400 shadow-lg shadow-red-500/10'}`}>
+            <button onClick={handleToggleOnline} className={`flex items-center gap-2.5 px-4 py-2.5 rounded-[20px] border transition-all active:scale-90 ${isOnline ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10' : 'bg-red-500/10 border-red-500/20 text-red-400 shadow-lg shadow-red-500/10'}`}>
                 <div className={`size-2 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
                 <span className="text-[10px] font-black uppercase tracking-widest">{isOnline ? 'Online' : 'Offline'}</span>
             </button>
