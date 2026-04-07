@@ -22,7 +22,6 @@ export default function UsersTab() {
   const [walletType, setWalletType] = useState('add');
   const [walletAmount, setWalletAmount] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [activeTab, setActiveTab] = useState('settings');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync edit form and fetch extra data when user is selected
@@ -34,7 +33,9 @@ export default function UsersTab() {
         phone: selectedUser.phone || '',
         cpf: selectedUser.cpf || '',
         password: selectedUser.password || '',
-        avatar_url: selectedUser.avatar_url || ''
+        avatar_url: selectedUser.avatar_url || '',
+        status: selectedUser.status || 'active',
+        is_izi_black: selectedUser.is_izi_black || false
       });
       fetchUserExtraData(selectedUser.id);
     } else {
@@ -128,22 +129,41 @@ export default function UsersTab() {
     setIsSavingProfile(true);
     
     try {
-      const { error } = await supabase
-        .from('users_delivery')
-        .update({
-          name: editForm.name,
-          email: editForm.email,
-          phone: editForm.phone,
-          cpf: editForm.cpf,
-          password: editForm.password,
-          avatar_url: editForm.avatar_url
-        })
-        .eq('id', selectedUser.id);
+      const isNew = selectedUser.id === 'new';
+      const userData = {
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone,
+        cpf: editForm.cpf,
+        password: editForm.password,
+        avatar_url: editForm.avatar_url,
+        status: editForm.status || 'active',
+        is_izi_black: editForm.is_izi_black || false
+      };
+
+      let error;
+      if (isNew) {
+        const { error: insError, data: insData } = await supabase
+          .from('users_delivery')
+          .insert([userData])
+          .select()
+          .single();
+        error = insError;
+        if (insData) {
+          setSelectedUser(insData);
+        }
+      } else {
+        const { error: updError } = await supabase
+          .from('users_delivery')
+          .update(userData)
+          .eq('id', selectedUser.id);
+        error = updError;
+      }
 
       if (error) throw error;
       
-      toastSuccess('Perfil do cliente atualizado com sucesso!');
-      setSelectedUser({ ...selectedUser, ...editForm });
+      toastSuccess(isNew ? 'Usuário criado com sucesso!' : 'Perfil do cliente atualizado com sucesso!');
+      if (!isNew) setSelectedUser({ ...selectedUser, ...editForm });
       fetchUsers();
     } catch (err: any) {
       toastError('Erro ao salvar perfil: ' + err.message);
@@ -200,20 +220,63 @@ export default function UsersTab() {
             Gerenciamento avançado de comportamento e fidelidade
           </p>
         </div>
-        <div className="flex items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-             <div className="text-center px-4">
-                 <p className="text-[9px] font-black text-slate-400 uppercase">Total Base</p>
-                 <p className="text-lg font-black text-slate-900 dark:text-white">{stats.users}</p>
-             </div>
-             <div className="w-[1px] h-8 bg-slate-200 dark:bg-slate-800" />
-             <div className="text-center px-4">
-                 <p className="text-[9px] font-black text-slate-400 uppercase">VIP Black</p>
-                 <p className="text-lg font-black text-primary">{usersList.filter(u => u.is_izi_black).length}</p>
-             </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+               <div className="text-center px-4">
+                   <p className="text-[9px] font-black text-slate-400 uppercase">Total Base</p>
+                   <p className="text-lg font-black text-slate-900 dark:text-white">{stats.users}</p>
+               </div>
+               <div className="w-[1px] h-8 bg-slate-200 dark:bg-slate-800" />
+               <div className="text-center px-4">
+                   <p className="text-[9px] font-black text-slate-400 uppercase">VIP Black</p>
+                   <p className="text-lg font-black text-primary">{usersList.filter(u => u.is_izi_black).length}</p>
+               </div>
+          </div>
+          <button 
+            onClick={() => {
+              setSelectedUser({ id: 'new', name: '', email: '', phone: '', cpf: '', izi_coins: 0, status: 'active', is_izi_black: false });
+              setActiveTab('settings');
+            }}
+            className="h-[72px] px-8 bg-primary hover:bg-primary/90 text-slate-900 rounded-3xl font-black text-[12px] uppercase tracking-widest transition-all shadow-xl shadow-primary/20 flex items-center gap-3 active:scale-95"
+          >
+            <span className="material-symbols-outlined text-2xl">person_add</span>
+            Novo Usuário
+          </button>
         </div>
       </div>
 
       {/* Grid de Clientes con Design Visual */}
+      {/* Filtros e Busca */}
+      <div className="flex flex-col md:flex-row gap-6 mb-10">
+          <div className="flex-1 relative group">
+              <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+              <input 
+                type="text" 
+                placeholder="Pesquisar por nome, email ou CPF..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-[28px] py-6 pl-16 pr-8 font-black text-sm italic focus:ring-4 ring-primary/10 transition-all shadow-sm"
+              />
+          </div>
+          <div className="flex gap-2 p-2 bg-white dark:bg-slate-900 rounded-[30px] border border-slate-200 dark:border-slate-800 shadow-sm">
+              {[
+                  { id: 'all', label: 'Todos', icon: 'groups' },
+                  { id: 'izi_black', label: 'Black', icon: 'workspace_premium' },
+                  { id: 'active', label: 'Ativos', icon: 'check_circle' },
+                  { id: 'suspended', label: 'Suspensos', icon: 'block' },
+              ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setFilterType(f.id)}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${filterType === f.id ? 'bg-primary text-slate-900 shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <span className="material-symbols-outlined text-lg">{f.icon}</span>
+                    {f.label}
+                  </button>
+              ))}
+          </div>
+      </div>
+
       <div className="relative">
         {isLoadingList && (
           <div className="absolute inset-x-0 -top-4 flex justify-center z-10">
@@ -225,7 +288,19 @@ export default function UsersTab() {
         )}
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {usersList.map((user, i) => (
+          {usersList
+            .filter(u => {
+                const matchesSearch = !searchTerm || 
+                    u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    u.cpf?.includes(searchTerm);
+                
+                if (filterType === 'izi_black') return matchesSearch && u.is_izi_black;
+                if (filterType === 'active') return matchesSearch && u.status === 'active';
+                if (filterType === 'suspended') return matchesSearch && u.status === 'suspended';
+                return matchesSearch;
+            })
+            .map((user, i) => (
             <motion.div
               key={user.id}
               initial={{ opacity: 0, y: 20 }}
