@@ -572,7 +572,7 @@ function App() {
 
 
 
-    // Heartbeat: enquanto online, atualiza last_seen_at a cada 2 minutos
+    // Heartbeat: enquanto online, atualiza last_seen_at a cada 5 segundos
     // O painel admin usa isso para detectar entregadores que fecharam o app sem fazer logout
     useEffect(() => {
         if (!driverId || !isAuthenticated || !isOnline) return;
@@ -594,7 +594,7 @@ function App() {
         };
 
         sendHeartbeat(); // imediato ao ficar online
-        const interval = setInterval(sendHeartbeat, 2 * 60 * 1000); // a cada 2 minutos
+        const interval = setInterval(sendHeartbeat, 5 * 1000); // a cada 5 segundos
         return () => clearInterval(interval);
     }, [driverId, isAuthenticated, isOnline]);
 
@@ -1125,10 +1125,13 @@ function App() {
                 <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.5em] mb-0.5">Terminal Operacional</span>
                 <h1 className="text-xl font-black text-white tracking-tighter uppercase leading-none">Izi <span className="text-primary italic">Pilot</span></h1>
             </div>
-            <button onClick={handleToggleOnline} className={`flex items-center gap-2.5 px-4 py-2.5 rounded-[20px] border transition-all active:scale-90 ${isOnline ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10' : 'bg-red-500/10 border-red-500/20 text-red-400 shadow-lg shadow-red-500/10'}`}>
-                <div className={`size-2 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
-                <span className="text-[10px] font-black uppercase tracking-widest">{isOnline ? 'Online' : 'Offline'}</span>
-            </button>
+            <div className="flex flex-col items-end">
+                <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.5em] mb-0.5">Status Rede</span>
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${isOnline ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-500'} transition-all`}>
+                    <div className={`size-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{isOnline ? 'Ativo' : 'Inativo'}</span>
+                </div>
+            </div>
         </header>
     );
 
@@ -1158,7 +1161,7 @@ function App() {
                                 { id: 'history', label: 'Histórico', icon: 'history' },
                                 { id: 'earnings', label: 'Financeiro', icon: 'payments' },
                                 { id: 'suporte', label: 'Suporte Izi', icon: 'support_agent', onClick: () => { setActiveTab('profile'); setIsMenuOpen(false); } },
-                                { id: 'sos', label: 'Emergência (SOS)', icon: 'emergency', onClick: () => { setIsSOSActive(true); setIsMenuOpen(false); } },
+                                { id: 'support', label: 'Suporte Izi', icon: 'support_agent', onClick: () => { window.open('https://wa.me/55...', '_blank'); setIsMenuOpen(false); } },
                                 { id: 'profile', label: 'Meu Perfil', icon: 'person' }
                             ].map(item => (
                                 <button 
@@ -1916,9 +1919,7 @@ function App() {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button onClick={() => setIsSOSActive(true)} className="size-11 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center text-red-500 active:scale-90 transition-all shadow-lg shadow-red-500/5">
-                                <Icon name="emergency" size={20} />
-                            </button>
+                            {/* SOS Removido por solicitação */}
                         </div>
                     </div>
                 )}
@@ -2223,8 +2224,24 @@ function App() {
                                 )}
                             </AnimatePresence>
                             {!activeMission && (
-                                <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.85 }} onClick={() => setIsSOSActive(true)} className="fixed bottom-8 right-5 size-14 bg-red-600 rounded-full flex items-center justify-center shadow-[0_0_24px_rgba(220,38,38,0.4)] z-[60] border-2 border-red-900">
-                                    <Icon name="emergency" className="text-white text-2xl" />
+                                <motion.button 
+                                    initial={{ scale: 0, y: 50 }} 
+                                    animate={{ scale: 1, y: 0 }} 
+                                    whileTap={{ scale: 0.9 }} 
+                                    onClick={handleToggleOnline} 
+                                    className={`fixed bottom-8 right-6 h-16 px-8 rounded-[30px] flex items-center justify-center gap-4 z-[90] shadow-2xl transition-all duration-500 border-2 ${
+                                        isOnline 
+                                        ? 'bg-emerald-500 border-emerald-400 text-slate-900 shadow-emerald-500/40' 
+                                        : 'bg-slate-900/90 backdrop-blur-xl border-white/10 text-white shadow-black/60'
+                                    }`}
+                                >
+                                    <div className={`size-10 rounded-2xl flex items-center justify-center ${isOnline ? 'bg-slate-900/10' : 'bg-white/5'}`}>
+                                        <Icon name={isOnline ? 'wifi_tethering' : 'wifi_tethering_off'} size={24} className={isOnline ? 'animate-pulse' : ''} />
+                                    </div>
+                                    <div className="flex flex-col items-start">
+                                        <span className={`text-[9px] font-black uppercase tracking-[0.2em] opacity-40`}>Modo Piloto</span>
+                                        <span className="text-sm font-black uppercase tracking-widest">{isOnline ? 'Ficar Offline' : 'Ficar Online'}</span>
+                                    </div>
                                 </motion.button>
                             )}
                             <main className="flex-1 overflow-y-auto no-scrollbar">

@@ -402,6 +402,24 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [session, fetchUserRole]);
 
+  // Sincronização em tempo real "mão-dupla" absoluta (Auto-refresh de stats)
+  useEffect(() => {
+    if (!driversList.length) return;
+    const interval = setInterval(() => {
+      setStats(prev => {
+        const currentOnline = driversList.filter(d => {
+          if (!d.is_online || d.is_deleted) return false;
+          if (!d.last_seen_at) return true;
+          const lastSeen = new Date(d.last_seen_at).getTime();
+          return (new Date().getTime() - lastSeen) < 15_000;
+        }).length;
+        if (prev.onlineDrivers === currentOnline) return prev;
+        return { ...prev, onlineDrivers: currentOnline };
+      });
+    }, 2000); // Super agressivo: 2s para ser "instantâneo"
+    return () => clearInterval(interval);
+  }, [driversList]);
+
   const logAction = useCallback(async (action: string, module: string, details: any = {}) => {
     await supabase.from('audit_logs_delivery').insert({
       user_id: session?.user?.id,
@@ -419,7 +437,18 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { data: userData } = await supabase.from('users_delivery').select('id').eq('is_deleted', false);
       const { data: driverData } = await supabase.from('drivers_delivery').select('id').eq('is_deleted', false);
       const { data: orderData } = await supabase.from('orders_delivery').select('total_price, status, merchant_id, created_at, service_type');
-      const { data: onlineData } = await supabase.from('drivers_delivery').select('id').eq('is_online', true).eq('is_active', true).eq('is_deleted', false);
+      const { data: onlineData } = await supabase.from('drivers_delivery').select('id, last_seen_at').eq('is_online', true).eq('is_deleted', false);
+      const onlineDriversCount = (onlineData || []).filter(d => {
+        if (!d.last_seen_at) return true;
+        const lastSeen = new Date(d.last_seen_at).getTime();
+        return (new Date().getTime() - lastSeen) < 15_000; // 15s de tolerância
+      }).length;
+
+      // Garantir que a driversList esteja populada para que o Realtime funcione no Dashboard
+      if (!driversList.length) {
+        fetchDrivers(true);
+      }
+
       const { data: merchantData } = await supabase.from('admin_users').select('id').eq('role', 'merchant');
       const { data: promoData } = await supabase.from('promotions_delivery').select('*');
 
@@ -444,7 +473,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         users: userData?.length || 0,
         drivers: driverData?.length || 0,
         orders: orderData?.length || 0,
-        onlineDrivers: onlineData?.length || 0,
+        onlineDrivers: onlineDriversCount,
         revenue: totalRevenue,
         merchants: merchantData?.length || 0,
         promotions: promoData?.length || 0,
@@ -613,17 +642,34 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const old = payload.old as Driver;
             
             // Atualizar listas na memória IMEDIATAMENTE
-            setDriversList(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d));
+            setDriversList(prev => {
+              // Se a lista estiver vazia (ainda carregando), apenas ignoramos a atualização parcial
+              // já que o fetchDrivers(true) resolverá em breve.
+              if (prev.length === 0) return prev;
+
+              const exists = prev.some(d => d.id === updated.id);
+              let newList;
+              if (exists) {
+                newList = prev.map(d => d.id === updated.id ? { ...d, ...updated } : d);
+              } else {
+                // Se não existir, adicionamos (novo entregador online?)
+                newList = [...prev, updated as Driver];
+              }
+              
+              // Forçar atualização do Online Count no stats
+              const onlineCount = newList.filter(d => {
+                if (!d.is_online || d.is_deleted) return false;
+                if (!d.last_seen_at) return true;
+                const lastSeen = new Date(d.last_seen_at).getTime();
+                return (new Date().getTime() - lastSeen) < 15_000;
+              }).length;
+              
+              setStats(s => ({ ...s, onlineDrivers: onlineCount, drivers: newList.length }));
+              return newList;
+            });
+
             if (userRole === 'merchant') {
               setMyDriversList(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d));
-            }
-
-            // Se o status online mudou, atualizar as estatísticas locais sem buscar no banco (Speed!)
-            if (old?.is_online !== updated.is_online) {
-              setStats(prev => ({
-                ...prev,
-                onlineDrivers: updated.is_online ? prev.onlineDrivers + 1 : Math.max(0, prev.onlineDrivers - 1)
-              }));
             }
 
             // Só re-busca pesado se houver mudança de cadastro ou ativação
@@ -633,8 +679,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }
           } else {
             // Inserções ou deletações re-buscam tudo por segurança
-            fetchDriversRef.current(true);
             fetchStatsRef.current(true);
+            fetchDriversRef.current(true);
           }
         }
       )
