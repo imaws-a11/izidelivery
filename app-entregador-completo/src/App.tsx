@@ -373,6 +373,7 @@ function App() {
     });
     const [isOnline, setIsOnline] = useState(() => localStorage.getItem('Izi_online') === 'true');
     const isFirstRender = useRef(true);
+    const hasLoadedOnlineStatus = useRef(false); // Impede que refreshes de token sobrescrevam o status
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSOSActive, setIsSOSActive] = useState(false);
     const [isAccepting, setIsAccepting] = useState(false);
@@ -480,7 +481,6 @@ function App() {
 
                 if (profile) {
                     setDriverName(profile.name || 'Entregador');
-                    setIsOnline(profile.is_online || false);
                     setPixKey(profile.bank_info?.pix_key || '');
                 } else {
                     const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
@@ -560,40 +560,9 @@ function App() {
         } finally { setAuthLoading(false); }
     };
 
-    useEffect(() => {
-        if (!driverId || !isAuthenticated) return;
-        
-        // Sincronização inicial: Buscar status Online direto do banco de dados para evitar conflitos de localStorage entre dispositivos
-        supabase.from('drivers_delivery').select('is_online').eq('id', driverId).single()
-            .then(({ data }) => {
-                if (data && data.is_online !== isOnline) {
-                    setIsOnline(data.is_online);
-                    localStorage.setItem('Izi_online', data.is_online.toString());
-                }
-            });
-    }, [driverId, isAuthenticated]);
 
-    useEffect(() => {
-        if (!driverId || !isAuthenticated) return;
-        
-        // Listener para quando o usuário fecha a aba ou recarrega a página
-        const handleBeforeUnload = () => {
-            if (isOnline && driverId) {
-                // Tenta avisar o banco (melhor esforço síncrono com o unbind/unload)
-                // Nota: O Beacon API é perfeito para enviar dados ao fechar a aba sem travar a navegação
-                const blob = new Blob([JSON.stringify({ is_online: false })], { type: 'application/json' });
-                // Aqui usamos o endpoint REST direto do Supabase via cURL-like beacon
-                // O driverId deve estar no URL ou ser passado no body se o RLS permitir
-                const url = `https://mbqmyozgwpxwxrdwwkwn.supabase.co/rest/v1/drivers_delivery?id=eq.${driverId}`;
-                // API keys (anon) são necessárias se não estiver autenticado via cookies (o que o beacon não garante 100% no cross-origin dependendo das configs)
-                // Por segurança, apenas confiamos no beacon se o banco estiver aberto para updates de status via ID (comum em Izi)
-                navigator.sendBeacon(url, blob);
-            }
-        };
 
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [isOnline, driverId, isAuthenticated]);
+
 
     // Heartbeat: enquanto online, atualiza last_seen_at a cada 2 minutos
     // O painel admin usa isso para detectar entregadores que fecharam o app sem fazer logout
@@ -601,11 +570,14 @@ function App() {
         if (!driverId || !isAuthenticated || !isOnline) return;
 
         const sendHeartbeat = async () => {
-            await supabase
-                .from('drivers_delivery')
-                .update({ last_seen_at: new Date().toISOString() })
-                .eq('id', driverId)
-                .catch(() => {}); // silencioso - não impacta o UX
+            try {
+                await supabase
+                    .from('drivers_delivery')
+                    .update({ last_seen_at: new Date().toISOString() })
+                    .eq('id', driverId);
+            } catch (err) {
+                // silencioso - não impacta o UX
+            }
         };
 
         sendHeartbeat(); // imediato ao ficar online
@@ -619,8 +591,11 @@ function App() {
         
         if (driverId) {
             try {
-                // Atualizar banco
-                const { error } = await supabase.from('drivers_delivery').update({ is_online: nextState }).eq('id', driverId);
+                // Atualizar banco (ao ficar online, atualiza last_seen_at para evitar auto-offline imediato)
+                const updatePayload = nextState 
+                    ? { is_online: true, last_seen_at: new Date().toISOString() }
+                    : { is_online: false };
+                const { error } = await supabase.from('drivers_delivery').update(updatePayload).eq('id', driverId);
                 if (error) throw error;
                 localStorage.setItem('Izi_online', nextState.toString());
                 console.log(`[STATUS] Mudou para ${nextState ? 'ONLINE' : 'OFFLINE'}`);
@@ -632,6 +607,31 @@ function App() {
             }
         }
     };
+
+
+    // Remote Eject Listener (Kill Switch)
+    // Monitora se o entregador foi desativado/ejetado pelo admin
+    useEffect(() => {
+        if (!driverId || !isAuthenticated) return;
+
+        const channel = supabase
+            .channel(`remote_eject_${driverId}`)
+            .on('postgres_changes', { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'drivers_delivery',
+                filter: `id=eq.${driverId}`
+            }, (payload) => {
+                // Se is_active mudar para false, ejeta na hora
+                if (payload.new && payload.new.is_active === false) {
+                    console.log('[EJECT] Sessão ejetada remotamente!');
+                    handleLogout();
+                }
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [driverId, isAuthenticated]);
 
     useEffect(() => {
         if (!driverId || !isAuthenticated) return;
@@ -1077,34 +1077,30 @@ function App() {
         }
     };
     const handleLogout = async () => {
-        // Primeiro: forçar offline no banco ANTES de limpar o estado
-        if (driverId) {
-            try {
-                await supabase.from('drivers_delivery').update({ is_online: false }).eq('id', driverId);
-            } catch (e) {
-                console.warn('[LOGOUT] Não foi possível atualizar status no banco, continuando...', e);
+        try {
+            // Tenta avisar o banco por 500ms no máximo
+            if (driverId) {
+                await Promise.race([
+                    supabase.from('drivers_delivery').update({ is_online: false }).eq('id', driverId),
+                    new Promise((resolve) => setTimeout(resolve, 500))
+                ]);
             }
+        } catch (e) {
+            console.error('[LOGOUT] Erro BD:', e);
         }
-        // Depois: limpar tudo localmente
+
+        // Logout real no Supabase
+        await supabase.auth.signOut().catch(() => {});
+
+        // Limpar TUDO e forçar recarregamento para a raiz
         localStorage.clear();
         sessionStorage.clear();
-        setIsAuthenticated(false);
-        setIsOnline(false);
-        setDriverId('');
-        setSession(null);
-        window.location.href = '/'; 
+        
+        // Redirecionamento forçado
+        window.location.replace('/');
     };
 
-    useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (isOnline) {
-                e.preventDefault();
-                e.returnValue = '';
-            }
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [isOnline]);
+
 
 
     const renderHeader = () => (
