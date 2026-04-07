@@ -37,13 +37,19 @@ const playTone = (
   osc.stop(ctx.currentTime + startOffset + duration);
 };
 
-export const playIziSound = (role: 'merchant' | 'driver') => {
+export const playIziSound = (role: 'merchant' | 'driver' | 'success') => {
   const ctx = getAudioContext();
   if (ctx && ctx.state === 'suspended') ctx.resume();
 
   try {
-    // 1. Tentar tocar o som personalizado do Pixabay
-    const audio = new Audio('https://cdn.pixabay.com/audio/2022/10/04/audio_79bd7a4d75.mp3');
+    // 1. Tentar tocar o som personalizado (Uber Eats para motorista)
+    const soundUrl = role === 'driver' 
+      ? 'https://www.myinstants.com/media/sounds/uber_driver_2019-99d7bb65-f449-4a38-b010-1ff9ff0454f2.mp3'
+      : role === 'success'
+      ? 'https://cdn.pixabay.com/audio/2021/08/04/audio_346b0a6e0e.mp3' // Success chime
+      : 'https://cdn.pixabay.com/audio/2022/10/04/audio_79bd7a4d75.mp3';
+
+    const audio = new Audio(soundUrl);
     audio.play().catch(err => {
        console.warn('Erro ao tocar áudio personalizado, tentando sintetizador:', err);
        playSyntheticRing(ctx);

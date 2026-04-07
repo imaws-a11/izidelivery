@@ -646,38 +646,48 @@ function App() {
         return () => { supabase.removeChannel(channel); };
     }, [driverId, isAuthenticated]);
 
-    useEffect(() => {
+    const syncMissionWithDB = useCallback(async () => {
         if (!driverId || !isAuthenticated) return;
-        
-        // Sincronização de missão ativa: sempre verificar o banco para garantir consistência entre aparelhos
-        supabase.from('orders_delivery').select('*')
-            .eq('driver_id', driverId).order('created_at', { ascending: false }).limit(10)
-            .then(({ data: orders, error: qErr }) => {
-                if (qErr) { console.error('Erro busca missão:', qErr.message); return; }
-                const activeOrder = orders?.find((o: any) => ['saiu_para_coleta', 'a_caminho_coleta', 'no_local', 'chegou_coleta', 'picked_up', 'a_caminho', 'em_rota', 'saiu_para_entrega', 'waiting_driver'].includes(o.status));
-                if (activeOrder) {
-                    const mission: any = { 
-                        ...activeOrder, 
-                        realId: activeOrder.id, 
-                        type: activeOrder.service_type || 'delivery', 
-                        origin: activeOrder.pickup_address || 'Origem', 
-                        destination: activeOrder.delivery_address || 'Destino', 
-                        price: activeOrder.total_price || 0, 
-                        status: activeOrder.status, 
-                        preparation_status: activeOrder.preparation_status || 'preparando',
-                        customer: activeOrder.user_name || 'Cliente Izi' 
-                    };
-                    setActiveMission(mission);
-                    localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
-                    setActiveTab('active_mission');
-                } else {
-                    // Se não houver missão ativa no banco, limpar o estado local (caso estivesse preso no localStorage de outro dispositivo)
-                    setActiveMission(null);
-                    localStorage.removeItem('Izi_active_mission');
-                    if (activeTab === 'active_mission') setActiveTab('dashboard');
-                }
-            });
+        try {
+            console.log('[SYNC] Sincronizando missão ativa do banco...');
+            const { data: orders, error: qErr } = await supabase.from('orders_delivery')
+                .select('*')
+                .eq('driver_id', driverId)
+                .order('created_at', { ascending: false })
+                .limit(5);
+
+            if (qErr) throw qErr;
+
+            const activeOrder = orders?.find((o: any) => 
+                ['saiu_para_coleta', 'a_caminho_coleta', 'no_local_coleta', 'chegou_coleta', 'picked_up', 'a_caminho', 'em_rota', 'saiu_para_entrega', 'no_local'].includes(o.status)
+            );
+
+            if (activeOrder) {
+                const mission: any = { 
+                    ...activeOrder, 
+                    realId: activeOrder.id, 
+                    type: activeOrder.service_type || 'delivery', 
+                    origin: activeOrder.pickup_address || 'Origem', 
+                    destination: activeOrder.delivery_address || 'Destino', 
+                    price: activeOrder.total_price || 0, 
+                    status: activeOrder.status, 
+                    preparation_status: activeOrder.preparation_status || 'preparando',
+                    customer: activeOrder.user_name || 'Cliente Izi' 
+                };
+                setActiveMission(mission);
+                localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
+                console.log('[SYNC] Missão restaurada do banco:', mission.realId);
+            } else {
+                console.log('[SYNC] Nenhuma missão ativa no banco.');
+            }
+        } catch (err: any) {
+            console.error('[SYNC] Falha ao sincronizar missão:', err.message);
+        }
     }, [driverId, isAuthenticated]);
+
+    useEffect(() => {
+        syncMissionWithDB();
+    }, [driverId, isAuthenticated, syncMissionWithDB]);
 
     // Canal separado para vagas dedicadas — funciona independente do status online
     useEffect(() => {
@@ -1854,27 +1864,36 @@ function App() {
                 </div>
             </div>
 
-            {activeMission && (
-                <div className="bg-red-500/5 border border-red-500/10 rounded-[32px] p-6 space-y-4">
-                    <div>
-                        <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">Zona de Recuperação</p>
-                        <p className="text-[11px] text-white/40 leading-relaxed">Se o app estiver travado em uma missão que já terminou no sistema, use o botão abaixo para limpar seu estado local.</p>
-                    </div>
-                    <button 
-                        onClick={() => {
-                            if (confirm('Deseja forçar a limpeza da missão atual do seu celular?')) {
-                                setActiveMission(null);
-                                localStorage.removeItem('Izi_active_mission');
-                                setActiveTab('dashboard');
-                                toastSuccess('Sincronizado com sucesso!');
-                            }
-                        }}
-                        className="w-full h-12 bg-red-500/10 border border-red-500/20 text-red-500 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
-                    >
-                        Limpar Missão Local (Forçar)
-                    </button>
+            <div className="bg-red-500/5 border border-red-500/10 rounded-[32px] p-6 space-y-4">
+                <div>
+                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1">Zona de Recuperação</p>
+                    <p className="text-[11px] text-white/40 leading-relaxed">Se o app estiver travado em uma missão antiga ou invisível, use os botões abaixo para sincronizar ou forçar limpeza.</p>
                 </div>
-            )}
+                <div className="flex gap-2">
+                  <button 
+                      onClick={() => {
+                          syncMissionWithDB();
+                          toastSuccess('Sincronizando...');
+                      }}
+                      className="flex-1 h-12 bg-white/5 border border-white/10 text-white/70 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
+                  >
+                      Sincronizar Missão
+                  </button>
+                  <button 
+                      onClick={() => {
+                          if (confirm('Deseja forçar a limpeza da missão atual do seu celular?')) {
+                              setActiveMission(null);
+                              localStorage.removeItem('Izi_active_mission');
+                              setActiveTab('dashboard');
+                              toastSuccess('Limpeza concluída!');
+                          }
+                      }}
+                      className="flex-1 h-12 bg-red-500/10 border border-red-500/20 text-red-500 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
+                  >
+                      Forçar Finalização
+                  </button>
+                </div>
+            </div>
 
             <div className="space-y-3">
                 {[{ label: 'Dados do Veículo', icon: 'directions_car', color: 'text-primary' }, { label: 'Documentos e CNH', icon: 'badge', color: 'text-blue-400' }, { label: 'Suporte Izi', icon: 'support_agent', color: 'text-emerald-400' }, { label: 'Configurações', icon: 'settings', color: 'text-white/40' }].map((item, i) => (
