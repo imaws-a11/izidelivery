@@ -756,7 +756,7 @@ function App() {
         if (!isAuthenticated || !driverId) return;
 
         const fetchOrders = async () => {
-            const { data, error } = await supabase.from('orders_delivery').select('*').in('status', ['pendente', 'pronto', 'waiting_driver']);
+            const { data, error } = await supabase.from('orders_delivery').select('*').in('status', ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver']);
             if (error || !data) return;
             // Filtrar somente rejeições com menos de 5 segundos
             const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
@@ -773,7 +773,11 @@ function App() {
               type: o.service_type as ServiceType, 
               origin: o.pickup_address, 
               destination: o.delivery_address, 
-              price: o.total_price, 
+              price: o.total_price,
+              pickup_lat: o.pickup_lat,
+              pickup_lng: o.pickup_lng,
+              delivery_lat: o.delivery_lat,
+              delivery_lng: o.delivery_lng,
               preparation_status: o.preparation_status || 'preparando',
               customer: 'Cliente Izi' 
             })).filter((o: any) => !cleanDeclined[o.realId]));
@@ -792,12 +796,26 @@ function App() {
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 const o = payload.new;
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
-                if (!['pendente', 'pronto', 'waiting_driver'].includes(o.status) || (Date.now() - (declinedMap[o.id] || 0) < 5000)) return;
+                if (!['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver'].includes(o.status) || (Date.now() - (declinedMap[o.id] || 0) < 5000)) return;
                 playIziSound('driver');
                 if (Notification.permission === 'granted') new Notification('🚀 Nova Missão Izi!', { body: `Coleta: ${o.pickup_address}`, icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' });
                 setOrders(prev => {
                     if (prev.find(x => x.realId === o.id)) return prev;
-                    return [{ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev];
+                    const mapped = { 
+                        id: o.id.slice(0, 8).toUpperCase(), 
+                        realId: o.id, 
+                        type: o.service_type, 
+                        origin: o.pickup_address, 
+                        destination: o.delivery_address, 
+                        price: o.total_price, 
+                        customer: 'Cliente Izi',
+                        pickup_lat: o.pickup_lat,
+                        pickup_lng: o.pickup_lng,
+                        delivery_lat: o.delivery_lat,
+                        delivery_lng: o.delivery_lng,
+                        preparation_status: o.preparation_status
+                    };
+                    return [mapped, ...prev];
                 });
             })
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders_delivery' }, (payload) => {
@@ -842,7 +860,7 @@ function App() {
                 }
 
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
-                if (['pendente', 'pronto', 'waiting_driver'].includes(o.status) && !(Date.now() - (declinedMap[o.id] || 0) < 5000)) {
+                if (['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver'].includes(o.status) && !(Date.now() - (declinedMap[o.id] || 0) < 5000)) {
                     setOrders(prev => {
                         const isNew = !prev.find(x => x.realId === o.id);
                         if (isNew) {
@@ -853,7 +871,7 @@ function App() {
                         }
                         return prev;
                     });
-                } else if (!['pendente', 'pronto', 'waiting_driver'].includes(o.status) && (!currentMission || o.id !== currentMission.id)) {
+                } else if (!['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver'].includes(o.status) && (!currentMission || o.id !== currentMission.id)) {
                     setOrders(prev => prev.filter((order: any) => order.realId !== o.id));
                 }
             })
@@ -869,9 +887,22 @@ function App() {
         try {
             // Limpar todas as rejeições para forçar pedidos a aparecerem
             localStorage.removeItem('Izi_declined_timed');
-            const { data } = await supabase.from('orders_delivery').select('*').in('status', ['pendente', 'pronto', 'waiting_driver']);
+            const { data } = await supabase.from('orders_delivery').select('*').in('status', ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver']);
             if (data) {
-                setOrders(data.map((o: any) => ({ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type as ServiceType, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' })));
+                setOrders(data.map((o: any) => ({ 
+                id: o.id.slice(0, 8).toUpperCase(), 
+                realId: o.id, 
+                type: o.service_type as ServiceType, 
+                origin: o.pickup_address, 
+                destination: o.delivery_address, 
+                price: o.total_price, 
+                customer: 'Cliente Izi',
+                pickup_lat: o.pickup_lat,
+                pickup_lng: o.pickup_lng,
+                delivery_lat: o.delivery_lat,
+                delivery_lng: o.delivery_lng,
+                preparation_status: o.preparation_status
+            })));
             }
             toastSuccess('Sincronizado! ' + (data?.length || 0) + ' pedidos encontrados.');
         } catch { toastError('Erro ao sincronizar.'); }
@@ -909,7 +940,7 @@ function App() {
             }
 
             const { data: realOrder, error: findError } = await supabase.from('orders_delivery').select('*').eq('id', targetId).single();
-            if (findError || !realOrder || !['pendente', 'pronto', 'waiting_driver'].includes(realOrder.status)) {
+            if (findError || !realOrder || !['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver'].includes(realOrder.status)) {
                 toastError('Pedido indisponível ou já aceito por outro entregador.');
                 setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
                 return;
@@ -917,6 +948,7 @@ function App() {
             if (!driverId) { toastError('Sessão expirada. Faça login novamente.'); return; }
             const { error } = await supabase.from('orders_delivery').update({ status: 'a_caminho_coleta', driver_id: driverId }).eq('id', realOrder.id);
             if (error) { toastError('Erro ao aceitar corrida.'); return; }
+            playIziSound('success');
             const mission = { ...order, ...realOrder, id: realOrder.id, realId: realOrder.id, status: 'a_caminho_coleta' };
             setActiveMission(mission);
             localStorage.setItem('Izi_active_mission', JSON.stringify(mission));

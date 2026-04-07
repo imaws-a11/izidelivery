@@ -7206,10 +7206,10 @@ const navigateSubView = (target: string) => {
                     setPaymentsOrigin={setPaymentsOrigin} 
                     setSubView={(v: any) => setSubView(v)} 
                     iziCoins={iziCoins} 
-                    iziCoinValue={appSettings?.iziCoinRate || 1.0} 
-                    iziCoinRate={appSettings?.iziCoinRate || 1}
+                    iziCoinValue={globalSettings?.izi_coin_value || 0.01} 
+                    iziCoinRate={globalSettings?.izi_coin_rate || 5}
                     deliveryFee={calculateDeliveryFee()} 
-                    serviceFee={appSettings?.serviceFee || 0}
+                    serviceFee={globalSettings?.service_fee_percent || appSettings?.serviceFee || 0}
                     isIziBlack={isIziBlackMembership}
                   />
                 </motion.div>

@@ -413,7 +413,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                     </span>
                     <div className="bg-yellow-400/10 px-3 py-1.5 rounded-full border border-yellow-400/10">
                        <span className="text-yellow-400 font-black text-[9px] uppercase tracking-widest italic">
-                          + {Math.floor(total * (isIziBlack ? (iziCoinRate * 2) : iziCoinRate))} Coins
+                          + {((total * (isIziBlack ? (iziCoinRate * 2) : iziCoinRate)) / 100).toFixed(2).replace(".", ",")} Coins
                        </span>
                     </div>
                  </div>
