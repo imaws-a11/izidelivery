@@ -193,7 +193,7 @@ function App() {
         .from('admin_settings_delivery')
         .select('*')
         .eq('id', '00000000-0000-0000-0000-000000000000')
-        .single();
+        .maybeSingle();
       if (data) setGlobalSettings(data);
 
       const { data: appData } = await supabase
@@ -440,28 +440,44 @@ function App() {
 
   const fetchWalletBalance = async (uid: string) => {
     if (!uid) return;
-    const { data } = await supabase
-      .from("users_delivery")
-      .select("wallet_balance, is_izi_black, cashback_earned, user_xp, izi_coins, cpf")
-      .eq("id", uid)
-      .single();
-    if (data) {
-      setWalletBalance(data.wallet_balance || 0);
-      setIsIziBlackMembership(data.is_izi_black || false);
-      setIziCashbackEarned(data.cashback_earned || 0);
-      setUserXP(data.user_xp || 0);
-      setIziCoins(data.izi_coins || 0);
-      setProfileCpf(data.cpf || "");
-    }
+    try {
+      const { data, error } = await supabase
+        .from("users_delivery")
+        .select("wallet_balance, is_izi_black, cashback_earned, user_xp, izi_coins, cpf")
+        .eq("id", uid)
+        .maybeSingle();
 
-    // Buscar transacoes reais
-    const { data: txData } = await supabase
-      .from("wallet_transactions")
-      .select("*")
-      .eq("user_id", uid)
-      .order("created_at", { ascending: false })
-      .limit(20);
-    if (txData) setWalletTransactions(txData);
+      if (error) throw error;
+
+      if (data) {
+        setWalletBalance(data.wallet_balance || 0);
+        setIsIziBlackMembership(data.is_izi_black || false);
+        setCashbackEarned(data.cashback_earned || 0);
+        setUserXP(Number(data.user_xp || 0));
+        setIziCoins(Number(data.izi_coins || 0));
+        setUserCPF(data.cpf || "");
+      } else {
+        console.log("[SYNC] Perfil não encontrado. Criando registro inicial...");
+        await supabase.from("users_delivery").insert({
+          id: uid,
+          name: userName || "Usuário Izi",
+          wallet_balance: 0,
+          izi_coins: 0,
+          user_xp: 0
+        });
+      }
+
+      // Buscar transacoes reais
+      const { data: txData } = await supabase
+        .from("wallet_transactions")
+        .select("*")
+        .eq("user_id", uid)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (txData) setWalletTransactions(txData);
+    } catch (err) {
+      console.error("Erro ao buscar carteira:", err);
+    }
   };
 
   const fetchCartData = async (uid: string) => {
@@ -471,7 +487,7 @@ function App() {
         .from("users_delivery")
         .select("cart_data")
         .eq("id", uid)
-        .single();
+        .maybeSingle();
       
       if (!error && data && Array.isArray(data.cart_data)) {
         // [Comentario Limpo pelo Sistema]
