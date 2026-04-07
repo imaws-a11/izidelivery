@@ -401,11 +401,42 @@ function App() {
     const flashChannel = supabase.channel('flash_offers_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'flash_offers' }, fetchFlashOffers)
       .subscribe();
+
+    // Sincronização em tempo real do Perfil do Usuário (Wallet, IZI Black, etc)
+    let userProfileSub: any = null;
+    if (userId) {
+      userProfileSub = supabase
+        .channel(`user_sync_${userId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'users_delivery', filter: `id=eq.${userId}` },
+          (payload) => {
+            console.log("[REALTIME] Perfil do usuário atualizado:", payload.new);
+            const data = payload.new as any;
+            if (data) {
+              setWalletBalance(data.wallet_balance || 0);
+              setIsIziBlackMembership(data.is_izi_black || false);
+              setIziCashbackEarned(data.cashback_earned || 0);
+              setUserXP(data.user_xp || 0);
+              setIziCoins(data.izi_coins || 0);
+              setProfileCpf(data.cpf || "");
+            }
+          }
+        )
+        .subscribe();
+    }
+
+    const settingsChannel = supabase.channel('settings_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings_delivery' }, fetchGlobalSettings)
+      .subscribe();
+
     return () => {
       clearInterval(interval);
       supabase.removeChannel(flashChannel);
+      supabase.removeChannel(settingsChannel);
+      if (userProfileSub) supabase.removeChannel(userProfileSub);
     };
-  }, []);
+  }, [userId]);
 
   const fetchWalletBalance = async (uid: string) => {
     if (!uid) return;
@@ -1559,8 +1590,12 @@ function App() {
     // 2. IZI Black (Benefício do Usuário)
     // Verificamos se o usuário é IZI Black e se atingiu o pedido mínimo (se houver)
     if (isIziBlackMembership) {
-       const minOrderIziBlack = Number(globalSettings?.izi_black_min_order || 0);
-       const subtotal = cart.reduce((a, b: any) => a + (Number(b.price) || 0), 0);
+       const minOrderIziBlack = Number(appSettings?.iziBlackMinOrderFreeShipping || 0);
+       const subtotal = cart.reduce((sum, item: any) => {
+         const itemTotal = (Number(item.price) || 0) * (item.quantity || 1);
+         const addonsTotal = (item.addonDetails || []).reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0) * (item.quantity || 1);
+         return sum + itemTotal + addonsTotal;
+       }, 0);
        
        if (minOrderIziBlack === 0 || subtotal >= minOrderIziBlack) {
          return 0;
