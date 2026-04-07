@@ -130,7 +130,30 @@ export default function UsersTab() {
     
     try {
       const isNew = selectedUser.id === 'new';
+      
+      // 1. Sincronizar com Supabase Auth via Edge Function
+      // Isso é necessário para que o usuário consiga fazer login
+      const { data: authResult, error: authFuncError } = await supabase.functions.invoke('manage-user-auth', {
+        body: {
+          targetEmail: editForm.email,
+          targetPassword: editForm.password, // Pode ser enviado ou gerado na função
+          name: editForm.name,
+          phone: editForm.phone,
+          callerEmail: session?.user?.email,
+          authId: isNew ? null : selectedUser.id
+        }
+      });
+
+      if (authFuncError || (authResult && !authResult.success)) {
+        throw new Error(authResult?.error || authFuncError?.message || 'Erro ao sincronizar autenticação');
+      }
+
+      const authUser = authResult.user;
+      
+      // 2. Persistir no Banco de Dados (users_delivery)
+      // Usamos o ID retornado pelo Auth para garantir consistência
       const userData = {
+        id: isNew ? authUser.id : selectedUser.id,
         name: editForm.name,
         email: editForm.email,
         phone: editForm.phone,
@@ -141,29 +164,21 @@ export default function UsersTab() {
         is_izi_black: editForm.is_izi_black || false
       };
 
-      let error;
-      if (isNew) {
-        const { error: insError, data: insData } = await supabase
-          .from('users_delivery')
-          .insert([userData])
-          .select()
-          .single();
-        error = insError;
-        if (insData) {
-          setSelectedUser(insData);
-        }
-      } else {
-        const { error: updError } = await supabase
-          .from('users_delivery')
-          .update(userData)
-          .eq('id', selectedUser.id);
-        error = updError;
-      }
+      const { error } = await supabase
+        .from('users_delivery')
+        .upsert([userData]);
 
       if (error) throw error;
       
-      toastSuccess(isNew ? 'Usuário criado com sucesso!' : 'Perfil do cliente atualizado com sucesso!');
-      if (!isNew) setSelectedUser({ ...selectedUser, ...editForm });
+      toastSuccess(isNew ? 'Usuário e conta de acesso criados com sucesso!' : 'Perfil do cliente atualizado com sucesso!');
+      
+      // Se era novo, seleciona o recém criado com o ID real
+      if (isNew) {
+        setSelectedUser({ ...userData });
+      } else {
+        setSelectedUser({ ...selectedUser, ...editForm });
+      }
+      
       fetchUsers();
     } catch (err: any) {
       toastError('Erro ao salvar perfil: ' + err.message);
