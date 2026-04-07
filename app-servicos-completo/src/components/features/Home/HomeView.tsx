@@ -248,8 +248,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   <img className="w-full h-full object-cover" src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "default"}`} alt="User" />
                 </div>
                 {isIziBlackMembership && (
-                  <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black w-3 h-3 rounded-full flex items-center justify-center shadow-lg border border-black z-10">
-                    <span className="material-symbols-outlined text-[8px] font-black" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+                  <div className="absolute -bottom-1.5 -right-1.5 bg-gradient-to-tr from-yellow-600 via-yellow-400 to-yellow-200 text-black w-5 h-5 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(250,204,21,0.5)] border-2 border-black z-10 animate-pulse">
+                    <span className="material-symbols-outlined text-[12px] font-black" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
                   </div>
                 )}
               </button>

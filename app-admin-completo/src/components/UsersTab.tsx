@@ -7,7 +7,7 @@ import { uploadToCloudinary } from '../lib/cloudinary';
 
 export default function UsersTab() {
   const {
-    usersList, stats, fetchUsers, handleUpdateUserStatus, handleDeleteUser, isLoadingList
+    usersList, stats, fetchUsers, handleUpdateUserStatus, handleDeleteUser, isLoadingList, session
   } = useAdmin();
 
   const [iziCoinRate, setIziCoinRate] = useState(1.0);
@@ -131,12 +131,10 @@ export default function UsersTab() {
     try {
       const isNew = selectedUser.id === 'new';
       
-      // 1. Sincronizar com Supabase Auth via Edge Function
-      // Isso é necessário para que o usuário consiga fazer login
       const { data: authResult, error: authFuncError } = await supabase.functions.invoke('manage-user-auth', {
         body: {
           targetEmail: editForm.email,
-          targetPassword: editForm.password, // Pode ser enviado ou gerado na função
+          targetPassword: editForm.password,
           name: editForm.name,
           phone: editForm.phone,
           callerEmail: session?.user?.email,
@@ -144,25 +142,35 @@ export default function UsersTab() {
         }
       });
 
-      if (authFuncError || (authResult && !authResult.success)) {
+      // Se a função retornar erro de "já existe", não travamos o salvamento dos outros dados (CPF, Black, etc)
+      let authUser = authResult?.user;
+      let finalUserId = isNew ? (authUser?.id) : selectedUser.id;
+
+      if (!finalUserId && authResult?.error?.includes('already been registered')) {
+         // Tentamos buscar o usuário no banco local pelo e-mail se o AuthId falhou
+         const { data: localUser } = await supabase.from('users_delivery').select('id').eq('email', editForm.email).maybeSingle();
+         if (localUser) finalUserId = localUser.id;
+      }
+
+      if (!finalUserId && !isNew) finalUserId = selectedUser.id;
+
+      if (!finalUserId && (authFuncError || (authResult && !authResult.success))) {
         throw new Error(authResult?.error || authFuncError?.message || 'Erro ao sincronizar autenticação');
       }
 
-      const authUser = authResult.user;
-      
       // 2. Persistir no Banco de Dados (users_delivery)
-      // Usamos o ID retornado pelo Auth para garantir consistência
-      const userData = {
-        id: isNew ? authUser.id : selectedUser.id,
+      const userData: any = {
         name: editForm.name,
         email: editForm.email,
         phone: editForm.phone,
         cpf: editForm.cpf,
-        password: editForm.password,
-        avatar_url: editForm.avatar_url,
         status: editForm.status || 'active',
-        is_izi_black: editForm.is_izi_black || false
+        is_izi_black: editForm.is_izi_black || false,
+        avatar_url: editForm.avatar_url,
       };
+
+      if (finalUserId) userData.id = finalUserId;
+      if (editForm.password) userData.password = editForm.password;
 
       const { error } = await supabase
         .from('users_delivery')
@@ -341,7 +349,12 @@ export default function UsersTab() {
                         <div className={`absolute bottom-0 right-0 size-5 rounded-full border-4 border-white dark:border-slate-900 ${user.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                    </div>
                    <div>
-                        <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight italic uppercase truncate max-w-[150px]">{user.name || 'Sem Nome'}</h3>
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight italic uppercase truncate max-w-[150px] flex items-center gap-2">
+                              {user.name || 'Sem Nome'}
+                              {user.is_izi_black && (
+                                   <span className="inline-flex px-1.5 py-0.5 bg-primary text-slate-900 text-[8px] font-black uppercase rounded-lg shadow-sm">BLACK</span>
+                              )}
+                         </h3>
                         <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{user.phone || 'Sem telefone'}</p>
                    </div>
               </div>
