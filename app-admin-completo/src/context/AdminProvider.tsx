@@ -416,10 +416,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchStats = useCallback(async (silent = false) => {
     if (!silent) setIsLoadingList(true);
     try {
-      const { data: userData } = await supabase.from('users_delivery').select('id');
-      const { data: driverData } = await supabase.from('drivers_delivery').select('id');
+      const { data: userData } = await supabase.from('users_delivery').select('id').eq('is_deleted', false);
+      const { data: driverData } = await supabase.from('drivers_delivery').select('id').eq('is_deleted', false);
       const { data: orderData } = await supabase.from('orders_delivery').select('total_price, status, merchant_id, created_at, service_type');
-      const { data: onlineData } = await supabase.from('drivers_delivery').select('id').eq('is_online', true).eq('is_active', true);
+      const { data: onlineData } = await supabase.from('drivers_delivery').select('id').eq('is_online', true).eq('is_active', true).eq('is_deleted', false);
       const { data: merchantData } = await supabase.from('admin_users').select('id').eq('role', 'merchant');
       const { data: promoData } = await supabase.from('promotions_delivery').select('*');
 
@@ -608,38 +608,33 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         (payload) => {
           console.log('⚡ ENTREGADOR REALTIME:', payload.eventType, payload);
           
-          let shouldRefreshFull = true;
-
           if (payload.eventType === 'UPDATE') {
             const updated = payload.new as Driver;
             const old = payload.old as Driver;
-            const latChanged = old?.lat !== updated.lat;
-            const lngChanged = old?.lng !== updated.lng;
-            const statusChanged = old?.is_online !== updated.is_online || old?.is_active !== updated.is_active || old?.status !== updated.status;
-
+            
+            // Atualizar listas na memória IMEDIATAMENTE
             setDriversList(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d));
             if (userRole === 'merchant') {
               setMyDriversList(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d));
             }
 
-            if ((latChanged || lngChanged) && !statusChanged) {
-              shouldRefreshFull = false;
+            // Se o status online mudou, atualizar as estatísticas locais sem buscar no banco (Speed!)
+            if (old?.is_online !== updated.is_online) {
+              setStats(prev => ({
+                ...prev,
+                onlineDrivers: updated.is_online ? prev.onlineDrivers + 1 : Math.max(0, prev.onlineDrivers - 1)
+              }));
             }
-          } else if (payload.eventType === 'INSERT') {
-            fetchAllOrdersRef.current(undefined, true);
-          } else if (payload.eventType === 'DELETE') {
-            const deletedId = (payload.old as any).id;
-            setDriversList(prev => prev.filter(d => d.id !== deletedId));
-          }
 
-          if (shouldRefreshFull) {
-            console.log('[REALTIME] Status mudou: Atualizando métricas globais...');
-            fetchStatsRef.current(true);
-            if (userRole === 'merchant') {
-              fetchMyDriversRef.current(true);
-            } else {
+            // Só re-busca pesado se houver mudança de cadastro ou ativação
+            if (old?.is_active !== updated.is_active || old?.is_deleted !== updated.is_deleted) {
+              fetchStatsRef.current(true);
               fetchDriversRef.current(true);
             }
+          } else {
+            // Inserções ou deletações re-buscam tudo por segurança
+            fetchDriversRef.current(true);
+            fetchStatsRef.current(true);
           }
         }
       )

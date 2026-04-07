@@ -31,6 +31,7 @@ export interface Driver {
   is_active: boolean;
   password?: string;
   is_online?: boolean;
+  is_deleted?: boolean;
   status?: 'active' | 'inactive' | 'suspended';
   rating?: number;
   merchant_id?: string;
