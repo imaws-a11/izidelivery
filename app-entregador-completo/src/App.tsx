@@ -585,7 +585,20 @@ function App() {
         }
 
         // Atualizar banco APENAS se houver mudança de estado manual no dispositivo atual
-        supabase.from('drivers_delivery').update({ is_online: isOnline }).eq('id', driverId);
+        const updateStatus = async () => {
+            try {
+                const { error } = await supabase.from('drivers_delivery').update({ is_online: isOnline }).eq('id', driverId);
+                if (error) {
+                    console.error('Erro ao atualizar status online:', error.message);
+                    // Opcional: reverter estado local se falhar? Melhor manter p/ tentar dnv dps
+                } else {
+                    console.log(`[STATUS] Entregador ${isOnline ? 'ONLINE' : 'OFFLINE'} no banco.`);
+                }
+            } catch (err) {
+                console.error('Erro persistência status:', err);
+            }
+        };
+        updateStatus();
     }, [isOnline, isAuthenticated, driverId]);
 
     useEffect(() => {
