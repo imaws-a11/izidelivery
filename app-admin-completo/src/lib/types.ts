@@ -46,6 +46,7 @@ export interface Driver {
   document_number?: string;
   address?: string;
   created_at: string;
+  last_seen_at?: string;
 }
 
 export interface User {

@@ -15,9 +15,9 @@ export default function DashboardTab() {
   // Transformar stats em cards amigáveis
   const mainStats = [
     { label: 'Faturamento Global', val: `R$ ${stats.revenue.toLocaleString('pt-BR')}`, icon: 'payments', info: 'Vendas concluídas', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: 'Entregadores Online', val: stats.onlineDrivers, icon: 'wifi_tethering', info: `${stats.drivers} no total`, color: 'text-primary', bg: 'bg-primary/10' },
     { label: 'Total de Pedidos', val: stats.orders, icon: 'shopping_cart', info: `${stats.canceledOrders} cancelados`, color: 'text-primary', bg: 'bg-primary/10' },
     { label: 'Impacto Cancelamentos', val: `R$ ${stats.cancelationImpact.toLocaleString('pt-BR')}`, icon: 'error', info: 'Receita perdida', color: 'text-rose-500', bg: 'bg-rose-500/10' },
-    { label: 'Tickets de Suporte', val: '12', icon: 'support_agent', info: '3 urgentes', color: 'text-blue-500', bg: 'bg-blue-500/10' },
   ];
 
   const businessStats = [

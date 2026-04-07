@@ -46,13 +46,34 @@ export default function DriversTab() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  // Timer para forçar re-render e recálculo de online status a cada 5s sem depender de DB
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 5000);
+    return () => clearInterval(timer);
+  }, []);
+
   const metrics = useMemo(() => {
     const total = drivers.filter(d => !d.is_deleted).length;
-    const online = drivers.filter(d => d.is_online && d.is_active).length;
+    const now = new Date().getTime();
+    const online = drivers.filter(d => {
+      if (!d.is_online || d.is_deleted) return false;
+      if (!d.last_seen_at) return true; // Fallback se não houver timestamp
+      const lastSeen = new Date(d.last_seen_at).getTime();
+      return (now - lastSeen) < 15_000; // 15 segundos de tolerância (agressivo)
+    }).length;
     const blocked = drivers.filter(d => d.is_active === false && d.status !== 'inactive').length;
     const inactive = drivers.filter(d => d.status === 'inactive' || (!d.is_active && !d.status)).length;
     return { total, online, blocked, inactive };
-  }, [drivers]);
+  }, [drivers, tick]);
+
+  const isDriverTrulyOnline = (d: Driver) => {
+    if (!d.is_online || d.is_deleted) return false;
+    if (!d.last_seen_at) return true;
+    const now = new Date().getTime();
+    const lastSeen = new Date(d.last_seen_at).getTime();
+    return (now - lastSeen) < 15_000; // 15s de tolerância
+  };
 
   return (
     <div className="space-y-8">
@@ -67,41 +88,56 @@ export default function DriversTab() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-6 bg-white dark:bg-slate-900 rounded-[32px] border border-slate-200 dark:border-slate-800 flex items-center gap-4">
-           <div className="size-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-             <span className="material-symbols-outlined text-2xl font-bold">sports_motorsports</span>
-           </div>
-           <div>
-             <p className="text-3xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">{metrics.total}</p>
-             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Total da Base</p>
-           </div>
-        </div>
-        <div className="p-6 bg-emerald-50 dark:bg-emerald-500/10 rounded-[32px] border border-emerald-100 dark:border-emerald-500/20 flex items-center gap-4">
-           <div className="size-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-600">
-             <span className="material-symbols-outlined text-2xl font-bold">wifi_tethering</span>
-           </div>
-           <div>
-             <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 leading-none tracking-tighter">{metrics.online}</p>
-             <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600/60 mt-1">Online Agora</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card Online - Claymorphism */}
+        <div className="relative group bg-emerald-500/10 dark:bg-emerald-500/10 p-5 rounded-[48px] border border-emerald-500/10 shadow-[8px_8px_16px_rgba(0,0,0,0.05),-8px_-8px_16px_rgba(255,255,255,0.8),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(16,185,129,0.1)] transition-all hover:scale-[1.02]">
+           <div className="flex items-center gap-4">
+              <div className="size-12 bg-white/40 dark:bg-slate-900/40 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm border border-white/50 backdrop-blur-sm">
+                <span className="material-symbols-outlined text-2xl font-black animate-pulse">wifi_tethering</span>
+              </div>
+              <div className="flex flex-col">
+                 <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tighter leading-none">{metrics.online}</h3>
+                 <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600/50 mt-1">Online</p>
+              </div>
            </div>
         </div>
-        <div className="p-6 bg-amber-50 dark:bg-amber-500/10 rounded-[32px] border border-amber-100 dark:border-amber-500/20 flex items-center gap-4">
-           <div className="size-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-600">
-             <span className="material-symbols-outlined text-2xl font-bold">bedtime</span>
-           </div>
-           <div>
-             <p className="text-3xl font-black text-amber-600 dark:text-amber-400 leading-none tracking-tighter">{metrics.inactive}</p>
-             <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/60 mt-1">Inativos Temp.</p>
+
+        {/* Card Offline - Claymorphism */}
+        <div className="relative group bg-slate-500/10 dark:bg-slate-500/10 p-5 rounded-[48px] border border-slate-500/10 shadow-[8px_8px_16px_rgba(0,0,0,0.05),-8px_-8px_16px_rgba(255,255,255,0.8),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(71,85,105,0.1)] transition-all hover:scale-[1.02]">
+           <div className="flex items-center gap-4">
+              <div className="size-12 bg-white/40 dark:bg-slate-900/40 rounded-2xl flex items-center justify-center text-slate-500 shadow-sm border border-white/50 backdrop-blur-sm">
+                <span className="material-symbols-outlined text-2xl font-black">wifi_tethering_off</span>
+              </div>
+              <div className="flex flex-col">
+                 <h3 className="text-2xl font-black text-slate-700 dark:text-slate-300 tracking-tighter leading-none">{metrics.total - metrics.online}</h3>
+                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500/50 mt-1">Offline</p>
+              </div>
            </div>
         </div>
-        <div className="p-6 bg-red-50 dark:bg-red-500/10 rounded-[32px] border border-red-100 dark:border-red-500/20 flex items-center gap-4">
-           <div className="size-12 rounded-2xl bg-red-500/20 flex items-center justify-center text-red-600">
-             <span className="material-symbols-outlined text-2xl font-bold">block</span>
+
+        {/* Card Bloqueados - Claymorphism */}
+        <div className="relative group bg-red-500/10 dark:bg-red-500/10 p-5 rounded-[48px] border border-red-500/10 shadow-[8px_8px_16px_rgba(0,0,0,0.05),-8px_-8px_16px_rgba(255,255,255,0.8),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(239,68,68,0.1)] transition-all hover:scale-[1.02]">
+           <div className="flex items-center gap-4">
+              <div className="size-12 bg-white/40 dark:bg-slate-900/40 rounded-2xl flex items-center justify-center text-red-500 shadow-sm border border-white/50 backdrop-blur-sm">
+                <span className="material-symbols-outlined text-2xl font-black">block</span>
+              </div>
+              <div className="flex flex-col">
+                 <h3 className="text-2xl font-black text-red-600 dark:text-red-400 tracking-tighter leading-none">{metrics.blocked}</h3>
+                 <p className="text-[10px] font-black uppercase tracking-widest text-red-600/50 mt-1">Bloqueados</p>
+              </div>
            </div>
-           <div>
-             <p className="text-3xl font-black text-red-600 dark:text-red-400 leading-none tracking-tighter">{metrics.blocked}</p>
-             <p className="text-[10px] font-black uppercase tracking-widest text-red-600/60 mt-1">Bloqueados</p>
+        </div>
+
+        {/* Card Base Total - Claymorphism (Primary Accent) */}
+        <div className="relative group bg-primary/20 dark:bg-primary/20 p-5 rounded-[48px] border border-primary/20 shadow-[8px_8px_16px_rgba(0,0,0,0.05),-8px_-8px_16px_rgba(255,255,255,0.8),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(255,217,0,0.1)] transition-all hover:scale-[1.02]">
+           <div className="flex items-center gap-4">
+              <div className="size-12 bg-white/40 dark:bg-slate-900/40 rounded-2xl flex items-center justify-center text-slate-900 shadow-sm border border-white/50 backdrop-blur-sm font-black">
+                <span className="material-symbols-outlined text-2xl font-black">groups</span>
+              </div>
+              <div className="flex flex-col">
+                 <h3 className="text-2xl font-black text-slate-900 dark:text-primary tracking-tighter leading-none">{metrics.total}</h3>
+                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-800/50 mt-1">Base Global</p>
+              </div>
            </div>
         </div>
       </div>
@@ -123,22 +159,24 @@ export default function DriversTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {drivers.map(d => (
+              {drivers.map(d => {
+                const isOnline = isDriverTrulyOnline(d);
+                return (
                 <tr key={d.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">
                       <div className="relative">
-                        <div className={`size-10 rounded-full flex items-center justify-center font-black text-white ${d.is_online ? 'bg-emerald-500 shadow-lg shadow-emerald-500/20' : 'bg-slate-100 text-slate-400 grayscale'}`}>
+                        <div className={`size-10 rounded-full flex items-center justify-center font-black text-white ${isOnline ? 'bg-emerald-500 shadow-lg shadow-emerald-500/20' : 'bg-slate-100 text-slate-400 grayscale'}`}>
                            {d.name?.charAt(0) || 'D'}
                         </div>
-                        {d.is_online && (
+                        {isOnline && (
                           <span className="absolute -top-0.5 -right-0.5 size-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></span>
                         )}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-black text-sm dark:text-white uppercase tracking-tight">{d.name || 'Sem Nome'}</p>
-                          {d.is_online && (
+                          {isOnline && (
                             <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest hidden sm:inline-block">Online</span>
                           )}
                         </div>
@@ -168,7 +206,7 @@ export default function DriversTab() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
