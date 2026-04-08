@@ -535,7 +535,66 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </AnimatePresence>
 
           {/* ACOMPANHAMENTO EM TEMPO REAL - LIVE ACTIVITY STYLE */}
-          {activeOrder && (
+          {activeOrder && activeOrder.service_type === 'coin_purchase' ? (
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => { setSelectedItem(activeOrder); setSubView("izi_coin_tracking"); }}
+              className="relative overflow-hidden bg-zinc-900 border border-blue-400/30 rounded-[32px] p-6 shadow-[0_20px_50px_rgba(59,130,246,0.15)] group cursor-pointer"
+            >
+              {/* Background Glow */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 blur-[60px] -mr-16 -mt-16 group-hover:bg-blue-400/20 transition-all duration-700" />
+              
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <span className="material-symbols-outlined text-white text-2xl font-black animate-pulse">
+                      payments
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-black text-sm uppercase tracking-tight italic">Recarga de IZI Coins</h4>
+                    <p className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">Processamento Instantâneo</p>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                   <span className="text-blue-400 text-[10px] font-black uppercase tracking-widest bg-blue-400/10 px-3 py-1.5 rounded-full border border-blue-400/20">
+                     {activeOrder.status === 'pendente_pagamento' ? "Aguardando" : 
+                      activeOrder.payment_status === 'paid' || ['novo', 'aceito', 'confirmado'].includes(activeOrder.status) ? "Processando" :
+                      activeOrder.status}
+                   </span>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                 <div className="flex flex-col gap-2">
+                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                      <span>Valor: R$ {Number(activeOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                      <span className="text-white italic">Confirmando Transação...</span>
+                    </div>
+                    {/* Progress Bar Dinâmica */}
+                    <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: "10%" }}
+                        animate={{ width: activeOrder.payment_status === 'paid' ? "75%" : "30%" }}
+                        transition={{ duration: 1, repeat: Infinity, repeatType: "reverse" }}
+                        className="h-full bg-blue-400 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.4)]"
+                      />
+                    </div>
+                 </div>
+                 
+                 <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                    <p className="text-zinc-500 text-[9px] font-medium">
+                      Suas moedas estarão disponíveis em instantes.
+                    </p>
+                    <div className="text-white text-[10px] font-black flex items-center gap-1 group-hover:gap-2 transition-all">
+                       VER DETALHES <span className="material-symbols-outlined text-sm text-blue-400">arrow_forward</span>
+                    </div>
+                 </div>
+              </div>
+            </motion.div>
+          ) : activeOrder && (
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

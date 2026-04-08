@@ -2122,8 +2122,12 @@ const navigateSubView = (target: string) => {
       console.log("[SYNC] Pagamento aprovado detectado, finalizando fluxo...");
       if (cart.length > 0) clearCart(liveOrder.id);
       setSelectedItem(liveOrder);
-      setSubView("none");
-      setTab("orders");
+      if (liveOrder.service_type === "coin_purchase") {
+        setSubView("izi_coin_tracking");
+      } else {
+        setSubView("none");
+        setTab("orders");
+      }
       toastSuccess("Pagamento Confirmado! 🎉");
       return; // Sair imediatamente para não processar o bloco abaixo
     }
@@ -7337,6 +7341,10 @@ const navigateSubView = (target: string) => {
                     onClose={() => setSubView("none")} 
                     onGoToWallet={() => { setTab("wallet"); setSubView("none"); }} 
                     onSupport={() => setSubView("order_support")} 
+                    onReturnToPayment={() => {
+                      setShowDepositModal(true);
+                      setSubView("none");
+                    }}
                   />
                 </motion.div>
               )}
