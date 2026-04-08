@@ -7,6 +7,7 @@ interface IziCoinTrackingViewProps {
   onClose: () => void;
   onGoToWallet: () => void;
   onSupport: () => void;
+  onReturnToPayment: () => void;
 }
 
 export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
@@ -14,6 +15,7 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
   onClose,
   onGoToWallet,
   onSupport,
+  onReturnToPayment,
 }) => {
   const [status, setStatus] = useState(order?.status || "pendente_pagamento");
 
@@ -138,6 +140,15 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
 
         {/* Footer Actions */}
         <div className="w-full pt-4 space-y-4">
+          {!isConfirmed && (
+            <button
+               onClick={onReturnToPayment}
+               className="w-full py-4 rounded-[28px] bg-zinc-800 text-yellow-400 font-black text-xs uppercase tracking-widest border border-yellow-400/20 active:scale-95 transition-all shadow-lg"
+            >
+              Voltar ao Pagamento
+            </button>
+          )}
+
           <button
             onClick={isConfirmed ? onGoToWallet : onSupport}
             className={`w-full py-6 rounded-[35px] font-black text-sm uppercase tracking-[0.25em] italic transition-all active:scale-95 shadow-[0_15px_35px_rgba(0,0,0,0.3)] flex items-center justify-center gap-4 group h-[88px] 
