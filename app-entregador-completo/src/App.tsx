@@ -321,7 +321,11 @@ const normalizeServiceType = (raw: string | undefined | null): string => {
     if (['car_ride', 'carro', 'taxi', 'car', 'ride'].includes(t)) return 'car_ride';
     if (['motorista_particular', 'motorista particular', 'chauffeur'].includes(t)) return 'motorista_particular';
     // Logística
-    if (['frete', 'carreto', 'freight', 'van', 'mudanca', 'mudança'].includes(t)) return 'frete';
+    if (['van'].includes(t)) return 'van';
+    if (['utilitario', 'utilitario leve', 'utility'].includes(t)) return 'utilitario';
+    if (['logistica', 'logistics'].includes(t)) return 'logistica';
+    if (['frete', 'carreto', 'freight', 'mudanca', 'mudança'].includes(t)) return 'frete';
+    if (['motoboy', 'courier'].includes(t)) return 'motoboy';
     if (['package', 'pacote', 'encomenda', 'express', 'delivery'].includes(t)) return 'package';
     return t; // retorna o tipo original se não houver mapeamento
 };
@@ -329,18 +333,170 @@ const normalizeServiceType = (raw: string | undefined | null): string => {
 const getTypeDetails = (rawType: string) => {
     const type = normalizeServiceType(rawType);
     switch (type) {
-        case 'package': return { icon: 'package_2', color: 'text-primary', bg: 'bg-primary/10', label: 'Encomenda', isFood: false };
+        case 'package': return { icon: 'package_2', color: 'text-primary', bg: 'bg-primary/10', label: 'Envio Express', isFood: false };
         case 'mototaxi': return { icon: 'two_wheeler', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'MotoTaxi', isFood: false };
         case 'car_ride': return { icon: 'directions_car', color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'Carro', isFood: false };
         case 'frete': return { icon: 'local_shipping', color: 'text-orange-400', bg: 'bg-orange-400/10', label: 'Frete/Carreto', isFood: false };
-        case 'restaurant': return { icon: 'restaurant', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Restaurante', isFood: true };
-        case 'market': return { icon: 'local_mall', color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'Mercado', isFood: false };
-        case 'pharmacy': return { icon: 'medication', color: 'text-rose-400', bg: 'bg-rose-400/10', label: 'Farmácia', isFood: false };
-        case 'beverages': return { icon: 'local_bar', color: 'text-purple-400', bg: 'bg-purple-400/10', label: 'Bebidas', isFood: false };
+        case 'van': return { icon: 'local_shipping', color: 'text-sky-400', bg: 'bg-sky-400/10', label: 'Van', isFood: false };
+        case 'utilitario': return { icon: 'local_shipping', color: 'text-indigo-400', bg: 'bg-indigo-400/10', label: 'Utilitario', isFood: false };
+        case 'logistica': return { icon: 'local_shipping', color: 'text-orange-400', bg: 'bg-orange-400/10', label: 'Logistica', isFood: false };
+        case 'restaurant': return { icon: 'package_2', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Comida', isFood: true };
+        case 'market': return { icon: 'package_2', color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'Mercado', isFood: false };
+        case 'pharmacy': return { icon: 'package_2', color: 'text-rose-400', bg: 'bg-rose-400/10', label: 'Farmacia', isFood: false };
+        case 'beverages': return { icon: 'package_2', color: 'text-purple-400', bg: 'bg-purple-400/10', label: 'Bebidas', isFood: false };
         case 'motorista_particular': return { icon: 'military_tech', color: 'text-yellow-400', bg: 'bg-yellow-400/10', label: 'Motorista Particular', isFood: false };
         case 'motoboy': return { icon: 'moped', color: 'text-emerald-400', bg: 'bg-emerald-400/10', label: 'Motoboy', isFood: false };
-        default: return { icon: 'local_shipping', color: 'text-primary', bg: 'bg-primary/10', label: 'Serviço Express', isFood: false };
+        default: return { icon: 'local_shipping', color: 'text-primary', bg: 'bg-primary/10', label: 'Servico Express', isFood: false };
     }
+};
+
+const normalizeLookupText = (value: unknown): string =>
+    String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+
+const includesAny = (text: string, terms: string[]) => terms.some(term => text.includes(term));
+
+const cleanAddressText = (value: string | undefined | null): string =>
+    String(value || '').split('| OBS:')[0].trim();
+
+const getAddressMeta = (value: string | undefined | null): string => {
+    const raw = String(value || '');
+    const parts = raw.split('| OBS:');
+    return parts.length > 1 ? parts.slice(1).join('| OBS:').trim() : '';
+};
+
+const getServicePresentation = (order: any) => {
+    const rawType = String(order?.service_type || order?.type || '');
+    const normalizedType = normalizeServiceType(rawType);
+    const merchantName = String(order?.merchant_name || '').trim();
+    const notes = String(order?.notes || order?.order_notes || '').trim();
+    const title = String(order?.title || '').trim();
+    const pickupText = cleanAddressText(order?.pickup_address || order?.origin || '');
+    const destinationText = cleanAddressText(order?.delivery_address || order?.destination || '');
+    const addressMeta = getAddressMeta(order?.delivery_address || order?.destination || '');
+    const itemNames = Array.isArray(order?.items)
+        ? order.items.map((item: any) => String(item?.name || '').trim()).filter(Boolean)
+        : [];
+    const itemCount = itemNames.length;
+    const lookupText = normalizeLookupText([
+        rawType,
+        merchantName,
+        title,
+        notes,
+        addressMeta,
+        pickupText,
+        destinationText,
+        itemNames.join(' ')
+    ].join(' | '));
+
+    const restaurantTerms = ['pizza', 'hamburg', 'burger', 'lanche', 'sushi', 'temaki', 'marmita', 'acai', 'restaurante', 'refeicao', 'pastel'];
+    const marketTerms = ['mercado', 'supermercado', 'hortifruti', 'mercearia', 'atacadao', 'sacolao', 'feira'];
+    const pharmacyTerms = ['farmacia', 'drogaria', 'medicamento', 'remedio', 'dipirona', 'paracetamol', 'receita', 'saude'];
+    const beverageTerms = ['bebida', 'cerveja', 'refrigerante', 'agua', 'suco', 'whisky', 'vinho', 'adega', 'drink'];
+
+    let detectedType = normalizedType;
+
+    if (includesAny(lookupText, ['viagem:', 'passageiro'])) {
+        if (includesAny(lookupText, ['mototaxi', 'moto taxi', 'moto'])) detectedType = 'mototaxi';
+        else if (includesAny(lookupText, ['motorista particular', 'executivo', 'chauffeur'])) detectedType = 'motorista_particular';
+        else detectedType = 'car_ride';
+    } else if (includesAny(lookupText, ['frete:', 'carreto', 'mudanca', 'ajudante', 'escada']) || ['frete', 'logistica', 'van', 'utilitario'].includes(normalizedType)) {
+        if (includesAny(lookupText, ['van']) || normalizedType === 'van') detectedType = 'van';
+        else if (includesAny(lookupText, ['utilitario', 'fiorino', 'saveiro', 'strada']) || normalizedType === 'utilitario') detectedType = 'utilitario';
+        else if (normalizedType === 'logistica') detectedType = 'logistica';
+        else detectedType = 'frete';
+    } else if (normalizedType === 'delivery' || normalizedType === 'package' || normalizedType === 'motoboy' || normalizedType === rawType || !rawType) {
+        if (includesAny(lookupText, pharmacyTerms)) detectedType = 'pharmacy';
+        else if (includesAny(lookupText, marketTerms)) detectedType = 'market';
+        else if (includesAny(lookupText, beverageTerms)) detectedType = 'beverages';
+        else if (includesAny(lookupText, restaurantTerms) || itemCount > 0) detectedType = 'restaurant';
+        else if (includesAny(lookupText, ['envio:', 'documento', 'encomenda', 'objeto', 'pacote']) || normalizedType === 'motoboy') {
+            detectedType = normalizedType === 'motoboy' ? 'motoboy' : 'package';
+        }
+    }
+
+    if (['restaurant', 'market', 'pharmacy', 'beverages'].includes(normalizedType)) {
+        detectedType = normalizedType;
+    }
+
+    const details = getTypeDetails(detectedType);
+    const isMobility = ['mototaxi', 'car_ride', 'motorista_particular'].includes(detectedType);
+    const isFreight = ['frete', 'van', 'utilitario', 'logistica'].includes(detectedType);
+
+    let headline = 'Servico de entrega';
+    if (detectedType === 'restaurant') {
+        if (includesAny(lookupText, ['pizza', 'pizzaria'])) headline = 'Pedido de pizza';
+        else if (includesAny(lookupText, ['hamburg', 'burger', 'lanche'])) headline = 'Pedido de lanche';
+        else if (includesAny(lookupText, ['sushi', 'temaki', 'japa'])) headline = 'Pedido de sushi';
+        else headline = 'Pedido de comida';
+    } else if (detectedType === 'market') {
+        headline = 'Compra de mercado';
+    } else if (detectedType === 'pharmacy') {
+        headline = 'Entrega de farmacia';
+    } else if (detectedType === 'beverages') {
+        headline = 'Entrega de bebidas';
+    } else if (detectedType === 'mototaxi') {
+        headline = 'Corrida de mototaxi';
+    } else if (detectedType === 'car_ride') {
+        headline = 'Corrida particular';
+    } else if (detectedType === 'motorista_particular') {
+        headline = 'Motorista particular';
+    } else if (detectedType === 'van') {
+        headline = 'Frete com van';
+    } else if (detectedType === 'utilitario') {
+        headline = 'Envio utilitario';
+    } else if (detectedType === 'logistica' || detectedType === 'frete') {
+        headline = 'Frete / carreto';
+    } else if (detectedType === 'motoboy') {
+        headline = 'Servico de motoboy';
+    } else if (detectedType === 'package') {
+        headline = 'Envio express';
+    }
+
+    const badges: string[] = [];
+    if (merchantName && !isMobility) badges.push(merchantName);
+    if (itemCount > 0) badges.push(`${itemCount} ${itemCount === 1 ? 'item' : 'itens'}`);
+    if (order?.preparation_status === 'pronto') badges.push('Pronto para coleta');
+    if (includesAny(normalizeLookupText(addressMeta), ['recebedor'])) badges.push('Com recebedor');
+    if (includesAny(normalizeLookupText(addressMeta), ['ajudante'])) badges.push('Com ajudantes');
+    if (includesAny(normalizeLookupText(addressMeta), ['escada'])) badges.push('Possui escadas');
+
+    let summary = '';
+    if (itemCount > 0) {
+        summary = itemNames.slice(0, 2).join(' • ');
+        if (itemCount > 2) summary += ` +${itemCount - 2}`;
+    } else if (addressMeta) {
+        summary = addressMeta
+            .replace(/^ENVIO:\s*/i, '')
+            .replace(/^FRETE:\s*/i, '')
+            .replace(/^VIAGEM:\s*/i, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    } else if (merchantName) {
+        summary = `Coleta em ${merchantName}`;
+    } else if (isMobility) {
+        summary = 'Passageiro aguardando embarque';
+    } else if (isFreight) {
+        summary = 'Carga com coleta e entrega definidas';
+    } else {
+        summary = 'Entrega com retirada e destino confirmados';
+    }
+
+    return {
+        details,
+        isMobility,
+        headline,
+        summary,
+        badges: badges.slice(0, 3),
+        ctaLabel: isMobility ? 'Aceitar corrida' : isFreight ? 'Aceitar frete' : 'Aceitar entrega',
+        pickupLabel: isMobility ? 'Embarque' : isFreight ? 'Origem' : 'Coleta',
+        destinationLabel: isMobility ? 'Destino' : isFreight ? 'Descarga' : 'Entrega',
+        pickupText,
+        destinationText,
+    };
 };
 
 function App() {
@@ -903,8 +1059,10 @@ function App() {
                 if (financialTypes.includes(o.service_type)) return;
 
                 // Restringir sons por categoria e status (Evitar barulho precoce em Food)
-                const isMobility = ['mototaxi', 'car_ride', 'frete', 'motorista_particular', 'package'].includes(o.service_type);
+                const availabilityType = normalizeServiceType(o.service_type);
+                const isMobility = ['mototaxi', 'car_ride', 'frete', 'van', 'utilitario', 'logistica', 'motorista_particular', 'package', 'motoboy'].includes(availabilityType);
                 const isFoodReady = ['pronto', 'waiting_driver'].includes(o.status);
+                const servicePreview = getServicePresentation(o);
                 
                 // Só toca som se: (É Mobilidade e status inicial OK) OU (É Food e já está pronto)
                 // E também semente se o pagamento já foi aprovado ou é em dinheiro
@@ -919,7 +1077,7 @@ function App() {
                         playIziSound('driver');
                         if (Notification.permission === 'granted') {
                             new Notification('🚀 Nova Missão Izi!', { 
-                                body: `Coleta: ${o.pickup_address}`, 
+                                body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
                                 icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
                             });
                         }
@@ -1002,16 +1160,18 @@ function App() {
                             if (financialTypes.includes(o.service_type)) return prev;
 
                             // Mesma lógica de filtro de som: Food só quando pronto, Mobilidade sempre que novo, e Pago/Dinheiro
-                            const isMobility = ['mototaxi', 'car_ride', 'frete', 'motorista_particular', 'package'].includes(o.service_type);
+                            const availabilityType = normalizeServiceType(o.service_type);
+                            const isMobility = ['mototaxi', 'car_ride', 'frete', 'van', 'utilitario', 'logistica', 'motorista_particular', 'package', 'motoboy'].includes(availabilityType);
                             const isFoodReady = ['pronto', 'waiting_driver'].includes(o.status);
                             const isPaidOrCash = o.payment_method === 'cash' || o.payment_status === 'paid' || o.payment_method === 'dinheiro';
                             const shouldSound = (isMobility || isFoodReady) && isPaidOrCash;
+                            const servicePreview = getServicePresentation(o);
 
                             if (isOnline && shouldSound) {
                                 playIziSound('driver');
                                 if (Notification.permission === 'granted') {
                                     new Notification('📦 Pedido Disponível!', { 
-                                        body: `Coleta: ${o.pickup_address}`, 
+                                        body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
                                         icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
                                     });
                                 }
@@ -1773,15 +1933,28 @@ function App() {
                         <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Aguardando novas chamadas...</p>
                     </div>
                 ) : filteredOrders.map((order: any, i: number) => {
-                    const details = getTypeDetails(order.type);
-                    // isMobility é determinado pelo label normalizado, não pelo tipo bruto
-                    const isMobility = ['MotoTaxi', 'Carro', 'Motorista Particular', 'Motoboy'].includes(details.label);
+                    const service = getServicePresentation(order);
+                    const details = service.details;
+                    const isMobility = service.isMobility;
                     return (
                         <motion.div key={order.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }} className="bg-white/[0.03] border border-white/8 rounded-[32px] p-6 space-y-5">
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-4">
                                     <div className={`size-14 rounded-[20px] ${details.bg} ${details.color} flex items-center justify-center border border-current/10`}><Icon name={details.icon} className="text-3xl" /></div>
-                                    <div><p className={`text-[9px] font-black uppercase tracking-widest mb-0.5 ${details.color}`}>{details.label}</p><h3 className="text-base font-black text-white">{isMobility ? 'Corrida de Passageiro' : (details.isFood ? 'Entrega de Refeição' : 'Entrega de Pacote')}</h3></div>
+                                    <div className="space-y-1.5">
+                                        <p className={`text-[9px] font-black uppercase tracking-widest ${details.color}`}>{details.label}</p>
+                                        <h3 className="text-base font-black text-white">{service.headline}</h3>
+                                        <p className="text-[11px] font-bold text-white/45 max-w-[220px] leading-relaxed">{service.summary}</p>
+                                        {service.badges.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 pt-1">
+                                                {service.badges.map((badge, badgeIndex) => (
+                                                    <span key={`${badge}-${badgeIndex}`} className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[8px] font-black uppercase tracking-widest text-white/45">
+                                                        {badge}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-[8px] font-black text-primary uppercase tracking-widest mb-1">Ganho Líquido</p>
@@ -1795,13 +1968,13 @@ function App() {
                                 </div>
                             </div>
                             <div className="bg-black/20 rounded-[20px] p-4 space-y-3">
-                                <div className="flex items-start gap-3"><div className="mt-1.5 size-2 rounded-full bg-white/30 shrink-0" /><div><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Coleta</p><p className="text-xs font-bold text-white/70 leading-tight">{order.origin}</p></div></div>
+                                <div className="flex items-start gap-3"><div className="mt-1.5 size-2 rounded-full bg-white/30 shrink-0" /><div><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">{service.pickupLabel}</p><p className="text-xs font-bold text-white/70 leading-tight">{service.pickupText || order.origin}</p></div></div>
                                 <div className="ml-[3px] h-4 w-[1px] bg-white/10" />
-                                <div className="flex items-start gap-3"><div className="mt-1.5 size-2 rounded-full bg-primary shrink-0 shadow-[0_0_8px_rgba(255,217,0,0.6)]" /><div><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Entrega</p><p className="text-xs font-black text-white leading-tight">{order.destination}</p></div></div>
+                                <div className="flex items-start gap-3"><div className="mt-1.5 size-2 rounded-full bg-primary shrink-0 shadow-[0_0_8px_rgba(255,217,0,0.6)]" /><div><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">{service.destinationLabel}</p><p className="text-xs font-black text-white leading-tight">{service.destinationText || order.destination}</p></div></div>
                             </div>
                             <div className="flex gap-3">
                                 <button onClick={() => handleAccept(order)} disabled={isAccepting} className="flex-1 h-14 bg-primary text-slate-900 font-black text-[11px] uppercase tracking-widest rounded-2xl shadow-lg shadow-primary/20 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                                    {isAccepting ? <div className="size-4 border-2 border-slate-900/20 border-t-slate-900 rounded-full animate-spin" /> : <><Icon name="check" className="text-lg" />{isMobility ? 'Aceitar Corrida' : 'Aceitar Coleta'}</>}
+                                    {isAccepting ? <div className="size-4 border-2 border-slate-900/20 border-t-slate-900 rounded-full animate-spin" /> : <><Icon name="check" className="text-lg" />{service.ctaLabel}</>}
                                 </button>
                                 <button onClick={() => handleDecline(order)} className="size-14 bg-white/5 text-red-400 border border-red-500/10 rounded-2xl flex items-center justify-center active:scale-95 transition-all"><Icon name="close" className="text-xl" /></button>
                             </div>

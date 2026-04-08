@@ -120,7 +120,7 @@ export default function OrdersAdminTab() {
         </div>
         <div className="flex items-center gap-4">
           <div className="flex bg-white dark:bg-slate-800 rounded-2xl p-1 border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto">
-            {['todos', 'pendente_pagamento', 'novo', 'cancelado'].map((s) => (
+            {['todos', 'novo', 'cancelado'].map((s) => (
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}

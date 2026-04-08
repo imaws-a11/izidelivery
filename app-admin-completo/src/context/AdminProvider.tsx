@@ -452,12 +452,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { data: merchantData } = await supabase.from('admin_users').select('id').eq('role', 'merchant');
       const { data: promoData } = await supabase.from('promotions_delivery').select('*');
 
-      const completedOrders = orderData?.filter(o => o.status === 'concluido') || [];
-      const canceledOrders = orderData?.filter(o => o.status === 'cancelado') || [];
+      const visibleOrders = (orderData || []).filter(o => o.status !== 'pendente_pagamento');
+      const completedOrders = visibleOrders.filter(o => o.status === 'concluido');
+      const canceledOrders = visibleOrders.filter(o => o.status === 'cancelado');
       const coupons = promoData?.filter(p => p.type === 'coupon') || [];
 
       if (orderData) {
-        let filtered = orderData as Order[];
+        let filtered = visibleOrders as Order[];
         if (userRole === 'merchant' && merchantProfile?.merchant_id) {
           filtered = filtered.filter(o => o.merchant_id === merchantProfile.merchant_id);
         }
@@ -472,7 +473,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setStats({
         users: userData?.length || 0,
         drivers: driverData?.length || 0,
-        orders: orderData?.length || 0,
+        orders: visibleOrders.length,
         onlineDrivers: onlineDriversCount,
         revenue: totalRevenue,
         merchants: merchantData?.length || 0,
@@ -569,6 +570,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .from('orders_delivery')
           .select('*, user:users_delivery(*)', { count: 'exact' })
           .eq('merchant_id', merchantProfile.merchant_id)
+          .neq('status', 'pendente_pagamento')
           .order('created_at', { ascending: false })
           .range(from, to);
 
@@ -581,6 +583,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .from('orders_delivery')
           .select('*, user:users_delivery(*)', { count: 'exact' })
           .neq('service_type', 'subscription')
+          .neq('status', 'pendente_pagamento')
           .order('created_at', { ascending: false })
           .range(from, to);
 
@@ -623,9 +626,32 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           fetchStatsRef.current(true);
           fetchAllOrdersRef.current(undefined, true);
           
-          if (payload.eventType === 'INSERT') {
-            const newOrder = payload.new as Order;
-            if (userRole === 'merchant' && newOrder.merchant_id !== merchantProfile?.merchant_id) return;
+          const newOrder = payload.new as Order | undefined;
+          const oldOrder = payload.old as Order | undefined;
+
+          if (!newOrder) return;
+
+          // Para lojistas, ignorar pedidos de outros merchants
+          if (userRole === 'merchant' && newOrder.merchant_id !== merchantProfile?.merchant_id) return;
+
+          const isPendingPayment = newOrder.status === 'pendente_pagamento';
+          const isCoinPurchase = newOrder.service_type === 'coin_purchase';
+
+          // Notificar na criaÃ§Ã£o somente se nÃ£o estiver aguardando pagamento
+          const shouldNotifyOnInsert = payload.eventType === 'INSERT' && !isPendingPayment;
+
+          // Notificar quando um pedido sai de "pendente_pagamento" para "novo" (pagamento aprovado)
+          const shouldNotifyOnPaymentApproval =
+            payload.eventType === 'UPDATE' &&
+            oldOrder?.status === 'pendente_pagamento' &&
+            newOrder.status === 'novo';
+
+          // Para recargas, sÃ³ notificar quando o pagamento for aprovado
+          const shouldNotify = isCoinPurchase
+            ? shouldNotifyOnPaymentApproval
+            : (shouldNotifyOnInsert || shouldNotifyOnPaymentApproval);
+
+          if (shouldNotify) {
             setNewOrderNotification({ show: true, orderId: newOrder.id });
             playIziSound('merchant');
           }
