@@ -4,7 +4,7 @@ import { supabase } from './lib/supabase';
 import { playIziSound } from './lib/iziSounds';
 import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
-import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline } from '@react-google-maps/api';
 
 const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 const GOOGLE_MAPS_ID = 'izi-pilot-map';
@@ -98,12 +98,16 @@ interface Order {
     pickup_lng? : number;
     delivery_lat? : number;
     delivery_lng? : number;
-    user_name?: string;
-    delivery_address?: string;
     pickup_address?: string;
-    items?: any;
-    payment_method?: string;
+    delivery_address?: string;
+    preparation_status?: string;
     merchant_name?: string;
+    user_name?: string;
+    delivery_fee?: number;
+    total_price?: number;
+    payment_method?: string;
+    displayId?: string;
+    items?: any[];
     notes?: string;
 }
 function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
@@ -250,7 +254,7 @@ function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
         )}
 
         {routeData?.polyline && isLoaded && (
-          <google.maps.Polyline 
+          <Polyline 
             path={google.maps.geometry.encoding.decodePath(routeData.polyline)}
             options={{
               strokeColor: "#ffd700",
@@ -353,6 +357,16 @@ function App() {
     const [authLoading, setAuthLoading] = useState(false);
     const [authError, setAuthError] = useState('');
     const [authInitLoading, setAuthInitLoading] = useState(true);
+    const [appSettings, setAppSettings] = useState<any>(null);
+
+    const fetchGlobalSettings = useCallback(async () => {
+        try {
+            const { data } = await supabase.from('app_settings_delivery').select('*').single();
+            if (data) setAppSettings(data);
+        } catch (e) {
+            console.error('[SETTINGS] Erro ao buscar configurações:', e);
+        }
+    }, []);
 
     // Efeito para persistir dados básicos de autenticação no localStorage
     useEffect(() => {
@@ -360,6 +374,7 @@ function App() {
             localStorage.setItem('izi_driver_authenticated', 'true');
             localStorage.setItem('izi_driver_uid', driverId);
             localStorage.setItem('izi_driver_name', driverName);
+            fetchGlobalSettings();
         } else if (!authInitLoading) {
             localStorage.removeItem('izi_driver_authenticated');
             localStorage.removeItem('izi_driver_uid');
@@ -399,7 +414,43 @@ function App() {
     const activeTabRef = useRef(activeTab);
     useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
-    // Sistema de Monitoramento de GPS em Tempo Real
+    const getNetEarnings = useCallback((order: any) => {
+        if (!order) return 0;
+        
+        // Configurações globais com valores padrão seguros
+        const commission = appSettings?.appCommission ?? 7;
+        const defaultBaseFee = appSettings?.baseFee ?? 8;
+        
+        const rawType = order.service_type || order.type || 'generic';
+        const type = normalizeServiceType(rawType);
+        
+        // Categorias de serviço
+        const isMobility = ['mototaxi', 'car_ride', 'frete', 'motorista_particular', 'van', 'utilitario'].includes(type);
+        const isErrand = ['package', 'motoboy', 'generic'].includes(type);
+        
+        let driverBaseAmount = 0;
+        
+        if (isMobility) {
+            // Em mobilidade, o valor base é o total da corrida
+            driverBaseAmount = Number(order.total_price || order.price || 0);
+        } else if (isErrand) {
+            // Em entregas de encomendas/avulsas, o total costuma ser o próprio frete
+            driverBaseAmount = Number(order.delivery_fee || order.total_price || order.price || 0);
+        } else {
+            // Em restaurante/mercado, usamos a delivery_fee ou o baseFee como fallback
+            const deliveryFee = Number(order.delivery_fee || 0);
+            driverBaseAmount = deliveryFee > 0 ? deliveryFee : defaultBaseFee;
+        }
+
+        // Se mesmo assim for zero, tentamos o total_price como última instância (limitado a um teto razoável se não for mobilidade)
+        if (driverBaseAmount <= 0) {
+            driverBaseAmount = Number(order.total_price || order.price || 0);
+        }
+
+        const net = driverBaseAmount * (1 - (commission / 100));
+        return Number(net.toFixed(2));
+    }, [appSettings]);
+
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
         // Permite GPS se estiver ONLINE ou em uma MISSÃO ATIVA
@@ -812,6 +863,7 @@ function App() {
             });
             localStorage.setItem('Izi_declined_timed', JSON.stringify(cleanDeclined));
             setOrders(data.map((o: any) => ({ 
+              ...o,
               id: o.id.slice(0, 8).toUpperCase(), 
               realId: o.id, 
               type: o.service_type as ServiceType, 
@@ -822,6 +874,7 @@ function App() {
               pickup_lng: o.pickup_lng,
               delivery_lat: o.delivery_lat,
               delivery_lng: o.delivery_lng,
+              status: o.status,
               preparation_status: o.preparation_status || 'preparando',
               customer: 'Cliente Izi' 
             })).filter((o: any) => !cleanDeclined[o.realId]));
@@ -854,7 +907,9 @@ function App() {
                 const isFoodReady = ['pronto', 'waiting_driver'].includes(o.status);
                 
                 // Só toca som se: (É Mobilidade e status inicial OK) OU (É Food e já está pronto)
-                const shouldSound = isMobility || isFoodReady;
+                // E também semente se o pagamento já foi aprovado ou é em dinheiro
+                const isPaidOrCash = o.payment_method === 'cash' || o.payment_status === 'paid' || o.payment_method === 'dinheiro';
+                const shouldSound = (isMobility || isFoodReady) && isPaidOrCash;
 
                 setOrders(prev => {
                     if (prev.find(x => x.realId === o.id)) return prev;
@@ -946,10 +1001,11 @@ function App() {
                             const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
                             if (financialTypes.includes(o.service_type)) return prev;
 
-                            // Mesma lógica de filtro de som: Food só quando pronto, Mobilidade sempre que novo
+                            // Mesma lógica de filtro de som: Food só quando pronto, Mobilidade sempre que novo, e Pago/Dinheiro
                             const isMobility = ['mototaxi', 'car_ride', 'frete', 'motorista_particular', 'package'].includes(o.service_type);
                             const isFoodReady = ['pronto', 'waiting_driver'].includes(o.status);
-                            const shouldSound = isMobility || isFoodReady;
+                            const isPaidOrCash = o.payment_method === 'cash' || o.payment_status === 'paid' || o.payment_method === 'dinheiro';
+                            const shouldSound = (isMobility || isFoodReady) && isPaidOrCash;
 
                             if (isOnline && shouldSound) {
                                 playIziSound('driver');
@@ -960,7 +1016,7 @@ function App() {
                                     });
                                 }
                             }
-                            return [{ id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev];
+                            return [{ ...o, id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev];
                         }
                         return prev;
                     });
@@ -980,27 +1036,95 @@ function App() {
         try {
             // Limpar todas as rejeições para forçar pedidos a aparecerem
             localStorage.removeItem('Izi_declined_timed');
+            
+            // 1. Buscar pedidos disponíveis
             const { data } = await supabase.from('orders_delivery').select('*').in('status', ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver']);
             if (data) {
                 setOrders(data.map((o: any) => ({ 
-                id: o.id.slice(0, 8).toUpperCase(), 
-                realId: o.id, 
-                type: o.service_type as ServiceType, 
-                origin: o.pickup_address, 
-                destination: o.delivery_address, 
-                price: o.total_price, 
-                customer: 'Cliente Izi',
-                pickup_lat: o.pickup_lat,
-                pickup_lng: o.pickup_lng,
-                delivery_lat: o.delivery_lat,
-                delivery_lng: o.delivery_lng,
-                preparation_status: o.preparation_status
-            })));
+                    ...o,
+                    id: o.id.slice(0, 8).toUpperCase(), 
+                    realId: o.id, 
+                    type: o.service_type as ServiceType, 
+                    origin: o.pickup_address, 
+                    destination: o.delivery_address, 
+                    price: o.total_price, 
+                    customer: 'Cliente Izi',
+                    pickup_lat: o.pickup_lat,
+                    pickup_lng: o.pickup_lng,
+                    delivery_lat: o.delivery_lat,
+                    delivery_lng: o.delivery_lng,
+                    preparation_status: o.preparation_status
+                })));
             }
-            toastSuccess('Sincronizado! ' + (data?.length || 0) + ' pedidos encontrados.');
-        } catch { toastError('Erro ao sincronizar.'); }
-        finally { setTimeout(() => setIsSyncing(false), 1000); }
+
+            // 2. Buscar Missão Ativa (Se o app perdeu o estado mas o banco ainda tem)
+            if (driverId) {
+                const { data: myActive } = await supabase
+                    .from('orders_delivery')
+                    .select('*')
+                    .eq('driver_id', driverId)
+                    .not('status', 'in', '("concluido", "cancelado", "finalizado", "entregue")')
+                    .maybeSingle();
+                
+                if (myActive) {
+                    console.log('[SYNC] Missão ativa recuperada do banco:', myActive.id);
+                    const mission = { 
+                        ...myActive, 
+                        realId: myActive.id, 
+                        type: myActive.service_type, 
+                        origin: myActive.pickup_address, 
+                        destination: myActive.delivery_address, 
+                        price: myActive.total_price,
+                        customer: myActive.user_name || 'Cliente Izi'
+                    };
+                    setActiveMission(mission);
+                    localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
+                    setActiveTab('active_mission');
+                    toastSuccess('Sincronizado! Missão ativa recuperada.');
+                } else {
+                    toastSuccess('Sincronizado! ' + (data?.length || 0) + ' pedidos encontrados.');
+                }
+            } else {
+                toastSuccess('Sincronizado! ' + (data?.length || 0) + ' pedidos encontrados.');
+            }
+        } catch (err) { 
+            console.error('[SYNC] Erro:', err);
+            toastError('Erro ao sincronizar.'); 
+        } finally { 
+            setTimeout(() => setIsSyncing(false), 1000); 
+        }
     };
+
+    // Startup / Session Recovery: Buscar missão ativa no banco se o driverId estiver presente
+    useEffect(() => {
+        const recoverActiveMission = async () => {
+            if (!driverId || activeMission) return;
+            
+            console.log('[RECOVERY] Buscando missão ativa no servidor...');
+            const { data, error } = await supabase
+                .from('orders_delivery')
+                .select('*')
+                .eq('driver_id', driverId)
+                .not('status', 'in', '("concluido", "cancelado", "finalizado", "entregue")')
+                .maybeSingle();
+
+            if (data && !error) {
+                console.log('[RECOVERY] Missão encontrada:', data.id);
+                const mission = { 
+                    ...data, 
+                    realId: data.id, 
+                    type: data.service_type, 
+                    origin: data.pickup_address, 
+                    destination: data.delivery_address, 
+                    price: data.total_price,
+                    customer: data.user_name || 'Cliente Izi'
+                };
+                setActiveMission(mission);
+                localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
+            }
+        };
+        recoverActiveMission();
+    }, [driverId, isAuthenticated]);
 
 
 
@@ -1063,51 +1187,76 @@ function App() {
         if (!activeMission) return;
         setIsAccepting(true);
         try {
+            const missionId = activeMission.realId || activeMission.id;
+            
             // 1. Atualizar o pedido no banco de dados primeiro
-            const { error } = await supabase.from('orders_delivery').update({ status: newStatus }).eq('id', activeMission.realId || activeMission.id);
+            const { error } = await supabase.from('orders_delivery')
+                .update({ status: newStatus })
+                .eq('id', missionId);
+            
             if (error) throw error;
-            
-            const updatedMission = { ...activeMission, status: newStatus };
-            setActiveMission(updatedMission);
-            localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
-            
-            if (['concluido', 'cancelado', 'finalizado', 'entregue'].includes(newStatus)) {
-                // Registrar ganho Financeiro em processo separado para não bloquear o fluxo da UI em caso de erro financeiro
-                if (['concluido', 'entregue', 'finalizado'].includes(newStatus) && driverId) {
-                    const earnings = activeMission.price || activeMission.total_price || 0;
-                    supabase.from('wallet_transactions_delivery').insert({
-                        user_id: driverId,
-                        amount: earnings,
-                        type: 'deposito',
-                        description: `Ganhos: Missão #${(activeMission.realId || activeMission.id).slice(0, 8).toUpperCase()}`
-                    }).then(({ error: wErr }) => {
-                        if (wErr) console.error("Erro ao registrar ganho na carteira:", wErr);
-                        fetchFinanceData();
-                    });
 
-                    // Recarregar dados reais do servidor
-                    fetchMissionHistory();
-                    fetchFinanceData();
-
-                    // Limpar missão ativa
-                    setActiveMission(null);
-                    localStorage.removeItem('Izi_active_mission');
-                    setActiveTab('dashboard');
+            // 2. Se for um status de FINALIZAÇÃO (Sucesso)
+            if (['concluido', 'entregue', 'finalizado'].includes(newStatus)) {
+                const netEarnings = getNetEarnings(activeMission);
+                
+                // Registrar ganho Financeiro (Líquido)
+                console.log('[FINALIZE] Recording transaction for driver:', driverId, 'Amount:', netEarnings);
+                
+                if (!driverId) {
+                    console.error('[FINALIZE] CRITICAL: driverId is missing during transaction recording!');
+                    toastError('Erro: Sua ID de motorista não foi encontrada.');
                 } else {
-                    // Limpar se foi cancelado
-                    setActiveMission(null);
-                    localStorage.removeItem('Izi_active_mission');
-                    setActiveTab('dashboard');
+                    try {
+                        const { error: wErr } = await supabase.from('wallet_transactions_delivery').insert({
+                            user_id: driverId,
+                            amount: netEarnings,
+                            type: 'deposito',
+                            description: `Ganhos: Missão #${missionId.slice(0, 8).toUpperCase()} (Líquido)`
+                        });
+
+                        if (wErr) {
+                            console.error('[FINALIZE] Wallet insert error:', wErr);
+                            toastError('Erro ao creditar saldo: ' + wErr.message);
+                        } else {
+                            console.log('[FINALIZE] Wallet transaction recorded successfully. Fetching finance updates...');
+                            // Forçar atualização imediata do estado de finanças
+                            await fetchFinanceData();
+                        }
+                    } catch (txErr: any) {
+                        console.error('[FINALIZE] Transaction exception:', txErr);
+                        toastError('Erro ao registrar transação.');
+                    }
                 }
-            } else {
+
+                toastSuccess('Missão concluída com sucesso!');
+
+                // Limpar missão ativa e atualizar histórico
+                setActiveMission(null);
+                localStorage.removeItem('Izi_active_mission');
+                setActiveTab('dashboard');
+                fetchMissionHistory();
+            } 
+            // 3. Se for CANCELAMENTO
+            else if (['cancelado'].includes(newStatus)) {
+                setActiveMission(null);
+                localStorage.removeItem('Izi_active_mission');
+                setActiveTab('dashboard');
+                toastSuccess('Pedido cancelado.');
+            }
+            // 4. Status intermediário (A caminho, etc)
+            else {
                 const updatedMission = { ...activeMission, status: newStatus };
                 setActiveMission(updatedMission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
                 toastSuccess('Status atualizado!');
             }
         } catch (e: any) {
+            console.error('[STATUS] Erro ao atualizar:', e);
             toastError('Erro ao atualizar status: ' + (e.message || 'Tente novamente.'));
-            if (e.message?.includes('not found') || e.message?.includes('invalid input syntax for type uuid')) {
+            
+            // Se o erro for que o pedido não existe mais ou algo fatal, limpa a tela
+            if (e.message?.includes('not found') || e.message?.includes('invalid input syntax')) {
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
                 setActiveTab('dashboard');
@@ -1483,7 +1632,7 @@ function App() {
                                             <p className="text-[10px] text-white/30 truncate mt-0.5">{order.pickup_address}</p>
                                         </div>
                                         <div className="text-right shrink-0 ml-3">
-                                            <p className="text-base font-black text-primary">R$ {(order.total_price || 0).toFixed(2).replace('.', ',')}</p>
+                                            <p className="text-base font-black text-primary">R$ {getNetEarnings(order).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                             <p className="text-[9px] text-white/30 uppercase">{order.service_type}</p>
                                         </div>
                                     </div>
@@ -1604,8 +1753,8 @@ function App() {
                                     <div><p className={`text-[9px] font-black uppercase tracking-widest mb-0.5 ${details.color}`}>{details.label}</p><h3 className="text-base font-black text-white">{isMobility ? 'Corrida de Passageiro' : (details.isFood ? 'Entrega de Refeição' : 'Entrega de Pacote')}</h3></div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-2xl font-black text-primary">R$ {order.price.toFixed(0)}</p>
-                                    <p className="text-[8px] text-white/20 uppercase tracking-widest">Ganho estimado</p>
+                                    <p className="text-[8px] font-black text-primary uppercase tracking-widest mb-1">Ganho Líquido</p>
+                                    <p className="text-2xl font-black text-primary">R$ {getNetEarnings(order).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                     {order.preparation_status === 'pronto' && (
                                         <div className="mt-2 flex items-center justify-end gap-1 text-emerald-400">
                                             <span className="material-symbols-outlined text-[10px]">check_circle</span>
@@ -1659,7 +1808,7 @@ function App() {
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <p className="text-lg font-black text-white">R$ {order.price.toFixed(2).replace('.', ',')}</p>
+                                    <p className="text-lg font-black text-white">R$ {getNetEarnings(order).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                     <p className="text-[8px] font-black text-white/20 uppercase">#{order.displayId || order.id?.slice(0,8)}</p>
                                 </div>
                             </motion.div>
@@ -2115,8 +2264,8 @@ function App() {
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-[8px] font-black text-primary uppercase tracking-widest">Valor a Receber</p>
-                                <p className="text-2xl font-black text-primary">R$ {activeMission.price?.toFixed(2).replace('.', ',')}</p>
+                                <p className="text-[8px] font-black text-primary uppercase tracking-widest">Valor Líquido a Receber</p>
+                                <p className="text-2xl font-black text-primary">R$ {getNetEarnings(activeMission).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                 <p className="text-[8px] text-white/30 uppercase font-black">{activeMission.payment_method === 'dinheiro' ? 'Dinheiro (Na Entrega)' : 'Pago pelo App'}</p>
                             </div>
                         </div>
