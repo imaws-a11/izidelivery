@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { supabase } from '../lib/supabase';
+import { countOnlineDrivers, isDriverOnline, sortDriversByPresence } from '../lib/driverPresence';
 import { toastSuccess, toastError } from '../lib/useToast';
 import type { Driver } from '../lib/types';
 
@@ -23,7 +24,7 @@ export default function DriversTab() {
       .eq('is_deleted', false)
       .order('is_online', { ascending: false })
       .order('name', { ascending: true });
-    if (data) setDrivers(data as Driver[]);
+    if (data) setDrivers(sortDriversByPresence(data as Driver[]));
     setIsLoading(false);
   };
 
@@ -55,25 +56,25 @@ export default function DriversTab() {
 
   const metrics = useMemo(() => {
     const total = drivers.filter(d => !d.is_deleted).length;
-    const now = new Date().getTime();
-    const online = drivers.filter(d => {
-      if (!d.is_online || d.is_deleted) return false;
+    const now = Date.now() + (tick * 0);
+    const online = countOnlineDrivers(drivers, now);
+    /*
       if (!d.last_seen_at) return true; // Fallback se não houver timestamp
-      const lastSeen = new Date(d.last_seen_at).getTime();
       return (now - lastSeen) < 15_000; // 15 segundos de tolerância (agressivo)
-    }).length;
+    */
     const blocked = drivers.filter(d => d.is_active === false && d.status !== 'inactive').length;
     const inactive = drivers.filter(d => d.status === 'inactive' || (!d.is_active && !d.status)).length;
     return { total, online, blocked, inactive };
   }, [drivers, tick]);
 
-  const isDriverTrulyOnline = (d: Driver) => {
+  const isDriverTrulyOnline = (d: Driver) => isDriverOnline(d);
+  /*
     if (!d.is_online || d.is_deleted) return false;
     if (!d.last_seen_at) return true;
     const now = new Date().getTime();
     const lastSeen = new Date(d.last_seen_at).getTime();
     return (now - lastSeen) < 15_000; // 15s de tolerância
-  };
+  */
 
   return (
     <div className="space-y-8">

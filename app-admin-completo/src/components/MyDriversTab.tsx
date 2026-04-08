@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAdmin } from '../context/AdminContext';
+import { isDriverOnline } from '../lib/driverPresence';
 
 export default function MyDriversTab() {
   const {
@@ -77,8 +78,11 @@ export default function MyDriversTab() {
             
             <div className="divide-y divide-slate-50 dark:divide-slate-800">
               {myDriversList.length > 0 ? (
-                myDriversList.map((driver, index) => (
-                  <div key={driver.id || index} className="flex items-center justify-between px-8 py-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                myDriversList.map((driver, index) => {
+                  const isOnline = isDriverOnline(driver);
+
+                  return (
+                    <div key={driver.id || index} className="flex items-center justify-between px-8 py-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                     <div className="flex items-center gap-4">
                       <div className="size-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700">
                         <span className="material-symbols-outlined text-slate-400 text-2xl">person</span>
@@ -87,8 +91,8 @@ export default function MyDriversTab() {
                         <h4 className="text-sm font-black text-slate-900 dark:text-white tracking-tight">{driver.name}</h4>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{driver.vehicle_type} • {driver.license_plate}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className={`size-1.5 rounded-full ${driver.is_online ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
-                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{driver.is_online ? 'Online' : 'Offline'}</span>
+                          <span className={`size-1.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{isOnline ? 'Online' : 'Offline'}</span>
                         </div>
                       </div>
                     </div>
@@ -109,8 +113,9 @@ export default function MyDriversTab() {
                         <span className="material-symbols-outlined text-lg">delete</span>
                       </button>
                     </div>
-                  </div>
-                ))
+                    </div>
+                  );
+                })
               ) : (
                 <div className="p-20 text-center">
                   <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-[32px] flex items-center justify-center mx-auto mb-6">

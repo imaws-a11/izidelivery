@@ -12,6 +12,7 @@ import type {
 import { useAuth } from './AuthContext';
 import { toastSuccess, toastError, toastWarning, showConfirm } from '../lib/useToast';
 import { playIziSound } from '../lib/iziSounds';
+import { countOnlineDrivers, removeDriverFromList, sortDriversByPresence, upsertDriverInList } from '../lib/driverPresence';
 
 
 
@@ -109,6 +110,21 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     peakHours: [],
     zones: []
   });
+
+  const syncDriverStats = useCallback((drivers: Driver[]) => {
+    setStats(prev => {
+      const nextOnlineDrivers = countOnlineDrivers(drivers);
+      const nextDrivers = drivers.filter(driver => !driver.is_deleted).length;
+
+      if (prev.onlineDrivers === nextOnlineDrivers && prev.drivers === nextDrivers) return prev;
+
+      return {
+        ...prev,
+        onlineDrivers: nextOnlineDrivers,
+        drivers: nextDrivers
+      };
+    });
+  }, []);
 
   // Pagination
   const [ordersPage, setOrdersPage] = useState(1);
@@ -410,19 +426,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!driversList.length) return;
     const interval = setInterval(() => {
-      setStats(prev => {
-        const currentOnline = driversList.filter(d => {
-          if (!d.is_online || d.is_deleted) return false;
-          if (!d.last_seen_at) return true;
-          const lastSeen = new Date(d.last_seen_at).getTime();
-          return (new Date().getTime() - lastSeen) < 15_000;
-        }).length;
-        if (prev.onlineDrivers === currentOnline) return prev;
-        return { ...prev, onlineDrivers: currentOnline };
-      });
+      syncDriverStats(driversList);
     }, 2000); // Super agressivo: 2s para ser "instantâneo"
     return () => clearInterval(interval);
-  }, [driversList]);
+  }, [driversList, syncDriverStats]);
 
   const logAction = useCallback(async (action: string, module: string, details: any = {}) => {
     await supabase.from('audit_logs_delivery').insert({
@@ -441,16 +448,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { data: userData } = await supabase.from('users_delivery').select('id').eq('is_deleted', false);
       const { data: driverData } = await supabase.from('drivers_delivery').select('id').eq('is_deleted', false);
       const { data: orderData } = await supabase.from('orders_delivery').select('total_price, status, merchant_id, created_at, service_type');
-      const { data: onlineData } = await supabase.from('drivers_delivery').select('id, last_seen_at').eq('is_online', true).eq('is_deleted', false);
-      const onlineDriversCount = (onlineData || []).filter(d => {
-        if (!d.last_seen_at) return true;
-        const lastSeen = new Date(d.last_seen_at).getTime();
-        return (new Date().getTime() - lastSeen) < 15_000; // 15s de tolerância
-      }).length;
+      const { data: onlineData } = await supabase.from('drivers_delivery').select('id, is_online, last_seen_at').eq('is_online', true).eq('is_deleted', false);
+      const onlineDriversCount = countOnlineDrivers((onlineData || []) as Driver[]);
 
       // Garantir que a driversList esteja populada para que o Realtime funcione no Dashboard
       if (!driversList.length) {
-        fetchDrivers(true);
+        void fetchDriversRef.current(true);
       }
 
       const { data: merchantData } = await supabase.from('admin_users').select('id').eq('role', 'merchant');
@@ -491,7 +494,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       if (!silent) setIsLoadingList(false);
     }
-  }, [userRole, merchantProfile]);
+  }, [userRole, merchantProfile, driversList.length]);
 
   const fetchUsers = useCallback(async (silent = false) => {
     if (!silent) setIsLoadingList(true);
@@ -517,18 +520,22 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .eq('is_deleted', false)
         .order('is_online', { ascending: false })
         .order('name', { ascending: true });
-      if (data) setDriversList(data as Driver[]);
+      if (data) {
+        const sortedDrivers = sortDriversByPresence(data as Driver[]);
+        setDriversList(sortedDrivers);
+        syncDriverStats(sortedDrivers);
+      }
     } finally {
       if (!silent) setIsLoadingList(false);
     }
-  }, []);
+  }, [syncDriverStats]);
 
   const fetchMyDrivers = useCallback(async (silent = false) => {
     if (!merchantProfile?.merchant_id) return;
     if (!silent) setIsLoadingList(true);
     try {
       const { data } = await supabase.from('drivers_delivery').select('*').eq('merchant_id', merchantProfile.merchant_id).eq('is_deleted', false);
-      if (data) setMyDriversList(data as Driver[]);
+      if (data) setMyDriversList(sortDriversByPresence(data as Driver[]));
     } finally {
       if (!silent) setIsLoadingList(false);
     }
@@ -670,47 +677,58 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (payload.eventType === 'UPDATE') {
             const updated = payload.new as Driver;
             const old = payload.old as Driver;
-            
-            // Atualizar listas na memória IMEDIATAMENTE
-            setDriversList(prev => {
-              // Se a lista estiver vazia (ainda carregando), apenas ignoramos a atualização parcial
-              // já que o fetchDrivers(true) resolverá em breve.
-              if (prev.length === 0) return prev;
 
-              const exists = prev.some(d => d.id === updated.id);
-              let newList;
-              if (exists) {
-                newList = prev.map(d => d.id === updated.id ? { ...d, ...updated } : d);
-              } else {
-                // Se não existir, adicionamos (novo entregador online?)
-                newList = [...prev, updated as Driver];
-              }
-              
-              // Forçar atualização do Online Count no stats
-              const onlineCount = newList.filter(d => {
-                if (!d.is_online || d.is_deleted) return false;
-                if (!d.last_seen_at) return true;
-                const lastSeen = new Date(d.last_seen_at).getTime();
-                return (new Date().getTime() - lastSeen) < 15_000;
-              }).length;
-              
-              setStats(s => ({ ...s, onlineDrivers: onlineCount, drivers: newList.length }));
-              return newList;
+            setDriversList(prev => {
+              const nextDrivers = upsertDriverInList(prev, updated);
+              syncDriverStats(nextDrivers);
+              return nextDrivers;
             });
 
             if (userRole === 'merchant') {
-              setMyDriversList(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d));
+              const belongsToMerchant = updated.merchant_id === merchantProfile?.merchant_id && !updated.is_deleted;
+              const belongedToMerchant = old?.merchant_id === merchantProfile?.merchant_id;
+
+              if (belongsToMerchant) {
+                setMyDriversList(prev => upsertDriverInList(prev, updated));
+              } else if (belongedToMerchant) {
+                setMyDriversList(prev => removeDriverFromList(prev, updated.id));
+              }
             }
 
-            // Só re-busca pesado se houver mudança de cadastro ou ativação
-            if (old?.is_active !== updated.is_active || old?.is_deleted !== updated.is_deleted) {
+            // Só re-busca pesado se houver mudança estrutural/cadastral
+            if (
+              old?.is_active !== updated.is_active ||
+              old?.is_deleted !== updated.is_deleted ||
+              old?.merchant_id !== updated.merchant_id
+            ) {
               fetchStatsRef.current(true);
               fetchDriversRef.current(true);
+              if (userRole === 'merchant') fetchMyDriversRef.current(true);
             }
-          } else {
-            // Inserções ou deletações re-buscam tudo por segurança
-            fetchStatsRef.current(true);
-            fetchDriversRef.current(true);
+          } else if (payload.eventType === 'INSERT') {
+            const inserted = payload.new as Driver;
+
+            setDriversList(prev => {
+              const nextDrivers = upsertDriverInList(prev, inserted);
+              syncDriverStats(nextDrivers);
+              return nextDrivers;
+            });
+
+            if (userRole === 'merchant' && inserted.merchant_id === merchantProfile?.merchant_id && !inserted.is_deleted) {
+              setMyDriversList(prev => upsertDriverInList(prev, inserted));
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const removed = payload.old as Driver;
+
+            setDriversList(prev => {
+              const nextDrivers = removeDriverFromList(prev, removed.id);
+              syncDriverStats(nextDrivers);
+              return nextDrivers;
+            });
+
+            if (userRole === 'merchant' && removed.merchant_id === merchantProfile?.merchant_id) {
+              setMyDriversList(prev => removeDriverFromList(prev, removed.id));
+            }
           }
         }
       )

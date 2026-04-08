@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { mapContainerStyle, darkMapStyle, wazeMapStyle } from '../constants/mapStyles';
 import { GoogleMap, Marker } from '@react-google-maps/api';
+import { isDriverOnline } from '../lib/driverPresence';
 
 // Rastreamento em Tempo Real
 export default function TrackingTab() {
@@ -10,6 +11,16 @@ export default function TrackingTab() {
     allOrders, driversList, selectedTrackingItem, setSelectedTrackingItem, 
     trackingListTab, setTrackingListTab, isLoaded, mapsLoadError, mapCenterView
   } = useAdmin();
+
+  const onlineDrivers = useMemo(
+    () => driversList.filter(driver => isDriverOnline(driver)),
+    [driversList]
+  );
+
+  const onlineDriversWithCoords = useMemo(
+    () => onlineDrivers.filter(driver => driver.lat && driver.lng),
+    [onlineDrivers]
+  );
 
   return (
     <>
@@ -20,7 +31,7 @@ export default function TrackingTab() {
     </div>
 
     {/* Driver Markers */}
-    {driversList.filter(d => d.is_online && d.lat && d.lng).map((d) => (
+    {onlineDriversWithCoords.map((d) => (
       <motion.div
         key={d.id}
         onClick={() => setSelectedTrackingItem({ type: 'driver', ...d })}
@@ -43,7 +54,7 @@ export default function TrackingTab() {
           <div className={`size-12 rounded-[20px] flex items-center justify-center shadow-2xl border-4 transition-all duration-500 ${selectedTrackingItem?.id === d.id ? 'bg-primary text-slate-900 border-primary shadow-primary/40 scale-110' : 'bg-slate-900 text-primary border-slate-800 group-hover:border-primary/50'}`}>
             <span className="material-symbols-outlined text-2xl font-bold">sports_motorsports</span>
           </div>
-          {d.is_online && <div className="absolute -inset-2 bg-primary/20 rounded-full blur-xl animate-pulse -z-10"></div>}
+          <div className="absolute -inset-2 bg-primary/20 rounded-full blur-xl animate-pulse -z-10"></div>
         </div>
       </motion.div>
     ))}
@@ -66,7 +77,7 @@ export default function TrackingTab() {
           zoomControl: false,
         }}
       >
-        {driversList.filter(d => d.is_online).map((driver, i) => (
+        {onlineDrivers.map((driver, i) => (
           window.google?.maps?.marker?.AdvancedMarkerElement && (
             <Marker
               key={driver.id}
@@ -232,7 +243,7 @@ export default function TrackingTab() {
           );
         })
       ) : (
-        driversList.filter(d => d.is_online).map((d, i) => (
+        onlineDrivers.map((d, i) => (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
