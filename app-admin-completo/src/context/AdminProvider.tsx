@@ -192,8 +192,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
            radius: Number(appSettings.radius || 0),
            baseFee: Number(appSettings.baseFee || 0),
            appCommission: Number(appSettings.appCommission || 0),
-           driverFreightCommission: Number((appSettings.driverFreightCommission ?? appSettings.appCommission) || 0),
-           privateDriverCommission: Number((appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission) || 0),
+           driverFreightCommission: Number(appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
+           privateDriverCommission: Number(appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
            serviceFee: Number(appSettings.serviceFee || 0),
            flashOfferDiscount: Number(appSettings.flashOfferDiscount || 0),
            iziCoinRate: Number(appSettings.iziCoinRate || 0),
@@ -1595,11 +1595,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
          radius: Number(appSettings.radius || 0),
          baseFee: Number(appSettings.baseFee || 0),
          appCommission: Number(appSettings.appCommission || 0),
-         driverFreightCommission: Number((appSettings.driverFreightCommission ?? appSettings.appCommission) || 0),
-         privateDriverCommission: Number((appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission) || 0),
+         driverFreightCommission: Number(appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
+         privateDriverCommission: Number(appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
          serviceFee: Number(appSettings.serviceFee || 0),
          flashOfferDiscount: Number(appSettings.flashOfferDiscount || 0),
-         iziCoinRate: Number(appSettings.iziCoinRate || 0)
+         iziCoinRate: Number(appSettings.iziCoinRate || 0),
+         updated_at: new Date().toISOString()
       };
 
       const { error } = await supabase
@@ -1608,9 +1609,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       if (error) throw error;
       setAppSettings(cleanSettings as AppSettings);
+      setLastSavedHash(JSON.stringify(cleanSettings));
+      setAutoSaveStatus('saved');
       toastSuccess('Configurações salvas com sucesso!');
       logAction('Update Settings', 'System', cleanSettings);
+      setTimeout(() => setAutoSaveStatus('idle'), 2000);
     } catch (err: any) {
+      setAutoSaveStatus('error');
       toastError(err.message);
     } finally {
       setIsSaving(false);
