@@ -1059,13 +1059,16 @@ function App() {
 
             // 2. Buscar Missão Ativa (Se o app perdeu o estado mas o banco ainda tem)
             if (driverId) {
-                const { data: myActive } = await supabase
+                console.log('[SYNC] Verificando missões ativas no banco para driver:', driverId);
+                const { data: myActive, error: syncError } = await supabase
                     .from('orders_delivery')
                     .select('*')
                     .eq('driver_id', driverId)
-                    .not('status', 'in', '("concluido", "cancelado", "finalizado", "entregue")')
+                    .not('status', 'in', '(concluido,cancelado,finalizado,entregue)')
                     .maybeSingle();
                 
+                if (syncError) console.error('[SYNC] Erro ao buscar missão ativa:', syncError);
+
                 if (myActive) {
                     console.log('[SYNC] Missão ativa recuperada do banco:', myActive.id);
                     const mission = { 
@@ -1105,8 +1108,10 @@ function App() {
                 .from('orders_delivery')
                 .select('*')
                 .eq('driver_id', driverId)
-                .not('status', 'in', '("concluido", "cancelado", "finalizado", "entregue")')
+                .not('status', 'in', ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'])
                 .maybeSingle();
+
+            if (error) console.error('[RECOVERY] Erro na query:', error);
 
             if (data && !error) {
                 console.log('[RECOVERY] Missão encontrada:', data.id);
@@ -1148,23 +1153,44 @@ function App() {
         try {
             // Validar UUID — order.id é o ID curto (8 chars), order.realId é o UUID completo
             const targetId = order.realId ?? order.id;
-            const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(targetId));
-            if (!isValidUUID) {
-                console.error('[handleAccept] ID inválido (não é UUID):', targetId, '| order:', order);
-                toastError('Pedido com ID inválido. Sincronize a lista e tente novamente.');
+            // Validação de ID mais flexível
+            if (!targetId || String(targetId).length < 5) {
+                console.error('[handleAccept] ID inválido:', targetId, '| order:', order);
+                toastError('ID do pedido inválido. Tente sincronizar a lista.');
                 setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
                 return;
             }
 
+            console.log('[handleAccept] Tentando aceitar:', targetId);
             const { data: realOrder, error: findError } = await supabase.from('orders_delivery').select('*').eq('id', targetId).single();
-            if (findError || !realOrder || !['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver'].includes(realOrder.status)) {
-                toastError('Pedido indisponível ou já aceito por outro entregador.');
+            
+            if (findError || !realOrder) {
+                console.error('[handleAccept] Pedido não encontrado no banco:', targetId, findError);
+                toastError('Pedido não encontrado ou já aceito por outro.');
                 setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
                 return;
             }
-            if (!driverId) { toastError('Sessão expirada. Faça login novamente.'); return; }
-            const { error } = await supabase.from('orders_delivery').update({ status: 'a_caminho_coleta', driver_id: driverId }).eq('id', realOrder.id);
-            if (error) { toastError('Erro ao aceitar corrida.'); return; }
+
+            if (!['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'a_caminho_coleta'].includes(realOrder.status)) {
+                toastError('Este pedido já foi processado ou cancelado.');
+                setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
+                return;
+            }
+            if (!driverId) { 
+                console.error('[handleAccept] driverId is missing!');
+                toastError('Sessão expirada. Faça login novamente.'); 
+                return; 
+            }
+
+            console.log('[handleAccept] Salvando no banco:', { orderId: realOrder.id, driverId });
+            const { error: updError } = await supabase.from('orders_delivery')
+                .update({ status: 'a_caminho_coleta', driver_id: driverId })
+                .eq('id', realOrder.id);
+            
+            if (updError) {
+                console.error('[handleAccept] Erro no update do banco:', updError);
+                throw updError;
+            }
             playIziSound('success');
             const mission = { ...order, ...realOrder, id: realOrder.id, realId: realOrder.id, status: 'a_caminho_coleta' };
             setActiveMission(mission);
@@ -1190,14 +1216,19 @@ function App() {
             const missionId = activeMission.realId || activeMission.id;
             
             // 1. Atualizar o pedido no banco de dados primeiro
-            const { error } = await supabase.from('orders_delivery')
+            console.log('[STATUS UPDATE] Changing mission status:', { missionId, newStatus });
+            const { error: statusError } = await supabase.from('orders_delivery')
                 .update({ status: newStatus })
                 .eq('id', missionId);
             
-            if (error) throw error;
+            if (statusError) {
+                console.error('[STATUS UPDATE] DB update error:', statusError);
+                throw statusError;
+            }
 
             // 2. Se for um status de FINALIZAÇÃO (Sucesso)
-            if (['concluido', 'entregue', 'finalizado'].includes(newStatus)) {
+            const finishStatus = ['concluido', 'entregue', 'finalizado', 'delivered'];
+            if (finishStatus.includes(newStatus.toLowerCase())) {
                 const netEarnings = getNetEarnings(activeMission);
                 
                 // Registrar ganho Financeiro (Líquido)
