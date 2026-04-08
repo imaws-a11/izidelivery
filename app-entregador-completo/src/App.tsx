@@ -674,7 +674,7 @@ function App() {
         const ensureDriverRecord = async (userId: string, email: string, name: string) => {
             // Busca o registro atual, mesmo que esteja marcado como deletado
             // Nota: Se houver RLS impedindo a leitura de is_deleted=true, o data virá null
-            const { data } = await supabase.from('drivers_delivery').select('id, name, lat, lng, is_deleted').eq('id', userId).maybeSingle();
+            const { data } = await supabase.from('drivers_delivery').select('id, name, lat, lng, is_deleted, is_online').eq('id', userId).maybeSingle();
             
             // Se NÃO existe o ID no banco OU se o registro existe mas foi deletado, NÃO recriamos se o objetivo for deletar
             // Mas aqui, só criamos se for um usuário COMPLETAMENTE novo (sem registro nenhum)
@@ -693,6 +693,10 @@ function App() {
                 if (data.name) {
                     setDriverName(data.name);
                     localStorage.setItem('izi_driver_name', data.name);
+                }
+                if (data.is_online !== undefined) {
+                    setIsOnline(data.is_online);
+                    localStorage.setItem('Izi_online', String(data.is_online));
                 }
                 const lat = Number(data.lat);
                 const lng = Number(data.lng);
@@ -739,6 +743,8 @@ function App() {
                 if (profile) {
                     setDriverName(profile.name || 'Entregador');
                     setPixKey(profile.bank_info?.pix_key || '');
+                    setIsOnline(profile.is_online || false);
+                    localStorage.setItem('Izi_online', String(profile.is_online || false));
                 } else {
                     const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
                     setDriverName(name);
@@ -1134,13 +1140,22 @@ function App() {
                         origin: o.pickup_address, 
                         destination: o.delivery_address, 
                         price: o.total_price, 
-                        customer: 'Cliente Izi',
+                        customer: o.user_name || 'Cliente Izi',
                         pickup_lat: o.pickup_lat,
                         pickup_lng: o.pickup_lng,
                         delivery_lat: o.delivery_lat,
                         delivery_lng: o.delivery_lng,
                         preparation_status: o.preparation_status
                     };
+
+                    // Se o pedido já veio atribuído a mim (ex: admin atribuiu), define como missão ativa na hora
+                    if (o.driver_id === String(driverId).trim()) {
+                        setActiveMission(mapped);
+                        localStorage.setItem('Izi_active_mission', JSON.stringify(mapped));
+                        setActiveTab('active_mission');
+                        return prev;
+                    }
+
                     return [mapped, ...prev];
                 });
             })
