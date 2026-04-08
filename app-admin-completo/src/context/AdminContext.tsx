@@ -119,8 +119,8 @@ export interface AdminContextType {
   setIsSaving: (s: boolean) => void;
 
   // UI state
-  activePreviewTab: 'info' | 'products' | 'categories' | 'sales' | 'dedicated_slots' | 'promotions';
-  setActivePreviewTab: (t: 'info' | 'products' | 'categories' | 'sales' | 'dedicated_slots' | 'promotions') => void;
+  activePreviewTab: 'info' | 'products' | 'categories' | 'sales' | 'dedicated_slots' | 'promotions' | 'financial';
+  setActivePreviewTab: (t: 'info' | 'products' | 'categories' | 'sales' | 'dedicated_slots' | 'promotions' | 'financial') => void;
   activeStudioTab: 'personal' | 'vehicle' | 'finance' | 'documents' | 'wallet' | 'security' | 'general' | 'subcategories';
   setActiveStudioTab: (t: 'personal' | 'vehicle' | 'finance' | 'documents' | 'wallet' | 'security' | 'general' | 'subcategories') => void;
   trackingListTab: 'orders' | 'drivers';
@@ -146,6 +146,8 @@ export interface AdminContextType {
 
   // Wallet
   walletTransactions: WalletTransaction[];
+  merchantTransactions: WalletTransaction[];
+  merchantBalance: number;
   isWalletLoading: boolean;
   showAddCreditModal: boolean;
   setShowAddCreditModal: (s: boolean) => void;
@@ -154,6 +156,12 @@ export interface AdminContextType {
   isAddingCredit: boolean;
   showWalletStatementModal: boolean;
   setShowWalletStatementModal: (s: boolean) => void;
+
+  // Wallet Handlers
+  fetchMerchantFinance: () => Promise<void>;
+  handleRequestWithdrawal: (amount: number, pixKey: string) => Promise<void>;
+  handleUpdateMerchantBankInfo: (bankInfo: any) => Promise<void>;
+  handleSyncMerchantBalance: () => Promise<void>;
 
   // Dynamic rates / map
   isAddingPeakRule: boolean;

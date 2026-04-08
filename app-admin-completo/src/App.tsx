@@ -141,7 +141,6 @@ function App() {
                  <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
                  <NavTab id="my_studio" icon="inventory_2" label="Minha Loja" />
                  <NavTab id="my_drivers" icon="delivery_dining" label="Motoboys" />
-                 <NavTab id="financial" icon="bar_chart" label="Financeiro" />
                  <NavTab id="settings" icon="settings" label="Config" />
                </>
              ) : (
