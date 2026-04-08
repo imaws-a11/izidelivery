@@ -132,6 +132,16 @@ function App() {
                   {userRole === 'merchant' ? (merchantProfile?.store_name || 'Lojista') : 'Administrador'}
                 </h1>
              </div>
+             {userRole === 'merchant' && (
+               <div className="ml-4 pl-4 border-l border-slate-100 dark:border-slate-800">
+                 <button 
+                   className="size-11 rounded-2xl bg-primary text-slate-900 flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-105 transition-all"
+                   title="Meu QR Code"
+                 >
+                   <span className="material-symbols-outlined text-2xl">qr_code_2</span>
+                 </button>
+               </div>
+             )}
           </div>
 
           <div className="flex-1 flex items-center overflow-x-auto scrollbar-hide gap-1">

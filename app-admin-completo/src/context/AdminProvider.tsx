@@ -738,6 +738,22 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'wallet_transactions_delivery' },
+        (payload) => {
+          const newTx = payload.new as any;
+          const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
+          
+          if (newTx.user_id === idToUse) {
+            if (newTx.type === 'deposito' || newTx.type === 'venda') {
+              toastSuccess(`Pagamento Recebido: R$ ${parseFloat(newTx.amount).toFixed(2)} - ${newTx.description}`);
+              fetchMerchantFinance();
+              playIziSound('merchant');
+            }
+          }
+        }
+      )
       .subscribe((status) => {
         console.log(`📡 Status Realtime [${channelName}]:`, status);
       });
