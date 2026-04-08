@@ -12,15 +12,16 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
       try {
         qrRef.current = new Html5Qrcode("reader");
         await qrRef.current.start(
-          { facingMode: "environment" },
+          { 
+            facingMode: "environment",
+            // @ts-ignore - focusMode é suportado em navegadores modernos mas não no tipo padrão
+            focusMode: "continuous",
+            advanced: [{ focusMode: "continuous" }] as any
+          },
           {
-            fps: 15,
-            qrbox: (viewfinderWidth, viewfinderHeight) => {
-              const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-              const qrboxSize = Math.floor(minEdge * 0.7);
-              return { width: qrboxSize, height: qrboxSize };
-            },
-            aspectRatio: 1.0,
+            fps: 30,
+            // Não passamos qrbox para evitar que a biblioteca desenhe qualquer overlay ou quadrado
+            aspectRatio: window.innerHeight / window.innerWidth,
           },
           (decodedText: string) => {
             onResult(decodedText);
@@ -43,48 +44,78 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
   }, [onResult]);
 
   return (
-    <div className="fixed inset-0 z-[500] bg-black flex flex-col items-center justify-center">
+    <div className="fixed inset-0 z-[500] bg-black flex flex-col items-center justify-center overflow-hidden">
       {/* Camada da Câmera - Full Screen */}
-      <div id="reader" className="absolute inset-0 w-full h-full [&_video]:object-cover" />
+      <div 
+        id="reader" 
+        className="absolute inset-0 w-full h-full bg-black"
+        style={{
+          // Forçamos o vídeo a ocupar TUDO e escondemos qualquer canvas interno que a lib tente desenhar
+          zIndex: 1
+        }}
+      />
       
-      {/* Overlay de Proteção/Design */}
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-between py-24 pointer-events-none">
-        <div className="px-6 py-2 bg-black/20 backdrop-blur-md rounded-full border border-white/5 flex items-center gap-2">
+      {/* CSS Injetado para forçar o vídeo e esconder o resto da lib */}
+      <style>{`
+        #reader video {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: cover !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+        }
+        #reader canvas {
+          display: none !important;
+        }
+        #reader__scan_region {
+           display: none !important;
+        }
+        #reader__dashboard {
+           display: none !important;
+        }
+      `}</style>
+      
+      {/* UI Overlay IZI - Super Minimalista e Premium */}
+      <div className="relative z-20 w-full h-full flex flex-col items-center justify-between py-24 pointer-events-none">
+        <div className="px-6 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 flex items-center gap-2">
            <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
-           <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] opacity-80">IZI Pay Scan</span>
+           <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] opacity-80">Câmera Ativa</span>
         </div>
 
+        {/* Guia de Enquadramento - Opcional, se o usuário quiser 100% limpo posso tirar, mas ajuda a saber onde mirar */}
         <div className="relative">
           <motion.div 
-            animate={{ top: ["0%", "100%", "0%"] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="absolute left-0 right-0 h-1 bg-yellow-400/50 blur-[2px] z-20"
-          />
-          <div className="w-64 h-64 border border-white/20 rounded-[40px] relative overflow-hidden">
-            <div className="absolute top-0 left-0 size-8 border-t-4 border-l-4 border-yellow-400 rounded-tl-2xl" />
-            <div className="absolute top-0 right-0 size-8 border-t-4 border-r-4 border-yellow-400 rounded-tr-2xl" />
-            <div className="absolute bottom-0 left-0 size-8 border-b-4 border-l-4 border-yellow-400 rounded-bl-2xl" />
-            <div className="absolute bottom-0 right-0 size-8 border-b-4 border-r-4 border-yellow-400 rounded-br-2xl" />
-          </div>
+            animate={{ opacity: [0.2, 0.5, 0.2] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="w-72 h-72 border border-white/10 rounded-[48px] relative"
+          >
+            <div className="absolute top-0 left-0 size-8 border-t-2 border-l-2 border-yellow-400/50 rounded-tl-3xl" />
+            <div className="absolute top-0 right-0 size-8 border-t-2 border-r-2 border-yellow-400/50 rounded-tr-3xl" />
+            <div className="absolute bottom-0 left-0 size-8 border-b-2 border-l-2 border-yellow-400/50 rounded-bl-3xl" />
+            <div className="absolute bottom-0 right-0 size-8 border-b-2 border-r-2 border-yellow-400/50 rounded-br-3xl" />
+          </motion.div>
         </div>
 
-        <div className="text-center space-y-2 px-10">
-          <p className="text-white font-black text-[11px] uppercase tracking-widest leading-relaxed">
-            Posicione o QR Code no centro
+        <div className="bg-black/60 backdrop-blur-3xl px-8 py-5 rounded-[32px] border border-white/5 text-center min-w-[280px] shadow-2xl">
+          <p className="text-white font-black text-xs uppercase tracking-widest">
+            Aponte para o QR Code
           </p>
-          <p className="text-white/40 font-bold text-[9px] uppercase tracking-widest">
-            Usuários ou Estabelecimentos
+          <p className="text-white/40 font-bold text-[9px] uppercase tracking-widest mt-1">
+            Reconhecimento Instantâneo Izi
           </p>
         </div>
       </div>
       
       {/* Botão de Fechar */}
-      <button 
-        onClick={onCancel}
-        className="absolute top-12 right-6 size-12 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white z-30 active:scale-95 transition-all"
-      >
-        <span className="material-symbols-outlined">close</span>
-      </button>
+      <div className="absolute top-12 right-6 z-[600]">
+        <button 
+          onClick={onCancel}
+          className="size-14 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-all shadow-2xl"
+        >
+          <span className="material-symbols-outlined text-2xl">close</span>
+        </button>
+      </div>
     </div>
   );
 };
