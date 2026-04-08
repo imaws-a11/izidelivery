@@ -363,19 +363,6 @@ export const WalletView: React.FC<WalletViewProps> = ({
 
 
 
-      showToast?.("Transferência realizada com sucesso!", "success");
-      setWalletMode("main");
-      // Limpar estados
-      setRecipient(null);
-      setSearchTarget("");
-      setAmount("");
-    } catch (err) {
-      showToast?.("Erro ao realizar transferência", "error");
-    } finally {
-      setIsTransferring(false);
-    }
-  };
-
   if (walletMode === "scan") {
     return (
       <ScannerWrapper 
