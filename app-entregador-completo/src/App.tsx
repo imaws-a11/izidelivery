@@ -570,6 +570,40 @@ function App() {
     const activeTabRef = useRef(activeTab);
     useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
+    const clearDriverSessionState = useCallback(() => {
+        setIsMenuOpen(false);
+        setIsAuthenticated(false);
+        setDriverId(null);
+        setDriverCoords(null);
+        setDriverName('Entregador');
+        setIsOnline(false);
+        setActiveMission(null);
+        setActiveTab('dashboard');
+        setOrders([]);
+        setDedicatedSlots([]);
+        setScheduledOrders([]);
+        setHistory([]);
+        setEarningsHistory([]);
+        setWithdrawHistory([]);
+        setPixKey('');
+        setShowWithdrawModal(false);
+        setAuthPassword('');
+        setAuthError('');
+
+        [
+            'izi_driver_authenticated',
+            'izi_driver_uid',
+            'izi_driver_name',
+            'izi_driver_pix',
+            'Izi_online',
+            'Izi_active_mission',
+            'Izi_declined_timed',
+            'Izi_declined_slots'
+        ].forEach((key) => localStorage.removeItem(key));
+
+        sessionStorage.clear();
+    }, []);
+
     const getNetEarnings = useCallback((order: any) => {
         if (!order) return 0;
         
@@ -680,8 +714,14 @@ function App() {
                 setIsAuthenticated(false);
                 setDriverName('Entregador');
             }
+        }).catch(err => {
+            console.error('[AUTH] Erro Session:', err);
+        }).finally(() => {
             setAuthInitLoading(false);
         });
+
+        // Timeout de segurança: garante que o app saia da tela de boot mesmo se houver erro de rede/supabase
+        const authTimeout = setTimeout(() => setAuthInitLoading(false), 5000);
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             const user = session?.user;
@@ -711,13 +751,14 @@ function App() {
                 setDriverId(null);
                 setIsAuthenticated(false);
                 setDriverName('Entregador');
-                // REMOVIDO: setIsOnline(false); 
-                // Não limpamos o status online aqui pois ele deve persistir do localStorage ao reiniciar
             }
             setAuthInitLoading(false);
         });
 
-        return () => subscription.unsubscribe();
+        return () => {
+            subscription.unsubscribe();
+            clearTimeout(authTimeout);
+        };
     }, []);
 
     useEffect(() => {
@@ -1557,29 +1598,31 @@ function App() {
             setIsFinanceLoading(false);
         }
     };
-    const handleLogout = async () => {
+    const handleLogout = useCallback(async () => {
+        const dId = driverId ? String(driverId).trim() : null;
+
         try {
-            // Tenta avisar o banco por 500ms no máximo
-            if (driverId) {
-                await Promise.race([
-                    supabase.from('drivers_delivery').update({ is_online: false }).eq('id', driverId),
-                    new Promise((resolve) => setTimeout(resolve, 500))
-                ]);
+            // Tenta avisar o banco que ficou offline, mas não bloqueia se falhar/demorar
+            if (dId) {
+                supabase.from('drivers_delivery').update({ is_online: false }).eq('id', dId).then();
             }
         } catch (e) {
-            console.error('[LOGOUT] Erro BD:', e);
+            console.error('[LOGOUT] Erro status:', e);
         }
 
-        // Logout real no Supabase
-        await supabase.auth.signOut().catch(() => {});
+        // Limpa TUDO do localStorage imediatamente
+        clearDriverSessionState();
 
-        // Limpar TUDO e forçar recarregamento para a raiz
-        localStorage.clear();
-        sessionStorage.clear();
-        
-        // Redirecionamento forçado
-        window.location.replace('/');
-    };
+        try {
+            // SignOut local é rápido e não requer rede obrigatoriamente
+            await supabase.auth.signOut({ scope: 'local' });
+        } catch (e) {
+            console.error('[LOGOUT] Erro ao encerrar sessão:', e);
+        } finally {
+            // Força um recarregamento total da página para garantir estado limpo
+            window.location.href = window.location.pathname || '/';
+        }
+    }, [clearDriverSessionState, driverId]);
 
 
 
@@ -1656,7 +1699,7 @@ function App() {
                                     <motion.div animate={{ x: isOnline ? 28 : 4 }} className="absolute top-1 size-6 bg-white rounded-full shadow-xl" />
                                 </button>
                             </div>
-                            <button onClick={handleLogout} className="w-full py-4.5 border border-red-500/20 text-red-500/60 rounded-[22px] text-[10px] font-black uppercase tracking-[0.3em] hover:bg-red-500/5 transition-all active:scale-95">Ejetar Sessão</button>
+                            <button onClick={handleLogout} className="w-full py-4.5 border border-red-500/20 text-red-500/60 rounded-[22px] text-[10px] font-black uppercase tracking-[0.3em] hover:bg-red-500/5 transition-all active:scale-95">Sair</button>
                         </div>
                     </motion.div>
                 </>
@@ -2342,7 +2385,7 @@ function App() {
                     </button>
                 ))}
             </div>
-            <button onClick={handleLogout} className="w-full py-5 border border-red-500/20 text-red-400 rounded-[24px] font-black text-[11px] uppercase tracking-widest hover:bg-red-500/5 transition-all active:scale-[0.98] mt-4">Encerrar Sessão</button>
+            <button onClick={handleLogout} className="w-full py-5 border border-red-500/20 text-red-400 rounded-[24px] font-black text-[11px] uppercase tracking-widest hover:bg-red-500/5 transition-all active:scale-[0.98] mt-4">Sair</button>
         </motion.div>
     );
 
