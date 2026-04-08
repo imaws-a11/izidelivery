@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { QRCodeSVG } from 'qrcode.react';
 import { useAdmin } from '../context/AdminContext';
 import type { Merchant, MerchantProfile, Product, MenuCategory } from '../lib/types';
 
@@ -531,6 +532,72 @@ export default function MyStudioTab() {
                     <button className="h-10 px-4 bg-slate-100 dark:bg-slate-800 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center gap-2">
                       <span className="material-symbols-outlined text-sm">download</span> Exportar
                     </button>
+                  </div>
+                </div>
+
+                {/* QR Code Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="lg:col-span-1 bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group border-b-4 border-b-primary">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="p-4 bg-primary/10 rounded-3xl mb-6 ring-8 ring-primary/5">
+                        <QRCodeSVG 
+                          value={`izipay:merchant:${merchantProfile?.id}`}
+                          size={180}
+                          level="H"
+                          includeMargin={false}
+                          className="rounded-lg"
+                        />
+                      </div>
+                      <h4 className="text-xl font-black text-slate-900 dark:text-white mb-2">Seu QR Code IZI</h4>
+                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed px-4">
+                        Apresente este código para que o cliente realize o pagamento instantâneo via App IZI Customer.
+                      </p>
+                      
+                      <div className="mt-8 grid grid-cols-2 gap-3 w-full">
+                        <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-center">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Taxa</p>
+                          <p className="text-sm font-black text-emerald-500">0%</p>
+                        </div>
+                        <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-center">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Prazo</p>
+                          <p className="text-sm font-black text-primary">Na Hora</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-2 bg-slate-900 p-8 rounded-[40px] shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-10 opacity-10">
+                      <span className="material-symbols-outlined text-[120px] text-white">contactless</span>
+                    </div>
+                    
+                    <div className="relative z-10 h-full flex flex-col justify-between">
+                      <div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary text-slate-900 rounded-full text-[10px] font-black uppercase tracking-widest mb-6">
+                           <span className="material-symbols-outlined text-xs">bolt</span> Novo Recurso
+                        </div>
+                        <h3 className="text-3xl font-black text-white leading-tight mb-4">
+                          Receba Pagamentos <br/> Sem Maquininha.
+                        </h3>
+                        <p className="text-slate-400 text-sm leading-relaxed max-w-md">
+                          Utilize o saldo do cliente ou cartões cadastrados no App IZI para receber pagamentos presenciais de forma rápida, segura e com taxas reduzidas.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-10">
+                        {[
+                          { icon: 'qr_code_scanner', title: 'Cliente Escaneia', desc: 'No App Customer' },
+                          { icon: 'ads_click', title: 'Digita o Valor', desc: 'E confirma senha' },
+                          { icon: 'account_balance_wallet', title: 'Você Recebe', desc: 'Saldo instantâneo' },
+                        ].map((step, idx) => (
+                          <div key={idx} className="flex flex-col gap-2">
+                            <span className="material-symbols-outlined text-primary">{step.icon}</span>
+                            <p className="text-xs font-black text-white uppercase tracking-tight">{step.title}</p>
+                            <p className="text-[10px] text-slate-500 font-bold">{step.desc}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
