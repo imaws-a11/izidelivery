@@ -2638,39 +2638,8 @@ const navigateSubView = (target: string) => {
   }, [subView]);
 
     
-  useEffect(() => {
-    let html5QrCode: any = null;
-    if (isScanningQR) {
-      setTimeout(() => {
-        const reader = document.getElementById('reader');
-        if (reader && typeof (window as any).Html5Qrcode !== 'undefined') {
-          html5QrCode = new (window as any).Html5Qrcode("reader");
-          html5QrCode.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            (decodedText: string) => {
-              if (decodedText.startsWith("izi:transfer:")) {
-                const parts = decodedText.split(":");
-                const targetId = parts[2];
-                const targetEmail = parts[3];
-                const targetPhone = parts[4];
-                setTransferTarget({ id: targetId, email: targetEmail, phone: targetPhone });
-                setIsScanningQR(false);
-                html5QrCode.stop();
-                toastSuccess("Usuário Identificado!");
-              }
-            },
-            () => {}
-          ).catch((e: any) => console.error(e));
-        }
-      }, 500);
-    }
-    return () => {
-      if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().catch((e: any) => console.error(e));
-      }
-    };
-  }, [isScanningQR]);
+  // Scanner logic moved to modular components
+
 
 
 
@@ -3547,9 +3516,17 @@ const navigateSubView = (target: string) => {
   };
 
   const renderCardPayment = () => {
-    const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
-    const discount = appliedCoupon ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100) : 0;
-    const total = Math.max(0, subtotal - discount);
+    const isCoinPurchase = selectedItem?.service_type === 'coin_purchase';
+    const isSubscription = paymentsOrigin === "izi_black";
+    
+    let total = 0;
+    if (isCoinPurchase || isSubscription) {
+      total = selectedItem?.total_price || 0;
+    } else {
+      const subtotal = cart.reduce((a: number, b: any) => a + (b.price || 0), 0);
+      const discountValue = appliedCoupon ? (appliedCoupon.discount_type === "fixed" ? appliedCoupon.discount_value : (subtotal * appliedCoupon.discount_value) / 100) : 0;
+      total = Math.max(0, subtotal - discountValue);
+    }
 
     const handleConfirmCard = async (token: string, _issuer: string, _installments: number, brand: string, _last4: string) => {
         setIsLoading(true);
@@ -4399,30 +4376,7 @@ const navigateSubView = (target: string) => {
     </AnimatePresence>
   );
 
-  const renderScanQRModal = () => (
-    <AnimatePresence>
-      {isScanningQR && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center">
-          
-          <div className="absolute top-10 left-6 right-6 flex items-center justify-between z-10">
-            <button onClick={() => setIsScanningQR(false)} className="size-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white">
-              <span className="material-symbols-outlined">close</span>
-            </button>
-            <h3 className="text-white font-black uppercase tracking-widest text-[10px]">Escanear IZI Code</h3>
-            <div className="size-12" />
-          </div>
 
-          <div id="reader" className="w-[85vw] h-[85vw] max-w-sm max-h-[400px] border-4 border-yellow-400/30 rounded-[40px] overflow-hidden relative shadow-[0_0_80px_rgba(255,184,0,0.1)]">
-            <div className="absolute inset-0 border-2 border-yellow-400/10 rounded-[40px] pointer-events-none" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-48 border-2 border-white/20 border-dashed rounded-3xl animate-pulse" />
-          </div>
-
-          <p className="mt-12 text-zinc-500 font-bold text-xs animate-pulse">Aponte para o QR Code de um amigo</p>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
 
   const renderWallet = () => {
     const coinRate = appSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0;
@@ -5291,6 +5245,7 @@ const navigateSubView = (target: string) => {
 
         // 2. Disparar o fluxo de pagamento correto
         if (paymentMethod === "cartao") {
+          setSelectedItem(orderData);
           setIsLoading(false);
           setPaymentsOrigin("izi_black");
           setSubView("card_payment");
@@ -7495,7 +7450,7 @@ const navigateSubView = (target: string) => {
 
       {renderMyQRModal()}
       {renderTransferModal()}
-      {renderScanQRModal()}
+
       {renderDepositModal()}
 
       {toast && (
