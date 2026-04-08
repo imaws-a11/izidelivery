@@ -136,6 +136,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     radius: 15,
     baseFee: 7.50,
     appCommission: 12,
+    driverFreightCommission: 12,
+    privateDriverCommission: 12,
     serviceFee: 2,
     smsNotifications: true,
     emailNotifications: true,
@@ -174,6 +176,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
            radius: Number(appSettings.radius || 0),
            baseFee: Number(appSettings.baseFee || 0),
            appCommission: Number(appSettings.appCommission || 0),
+           driverFreightCommission: Number((appSettings.driverFreightCommission ?? appSettings.appCommission) || 0),
+           privateDriverCommission: Number((appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission) || 0),
            serviceFee: Number(appSettings.serviceFee || 0),
            flashOfferDiscount: Number(appSettings.flashOfferDiscount || 0),
            iziCoinRate: Number(appSettings.iziCoinRate || 0),
@@ -848,8 +852,14 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const { data } = await supabase.from('app_settings_delivery').select('*').single();
       if (data) {
-        setAppSettings(data as AppSettings);
-        setLastSavedHash(JSON.stringify(data));
+        const mergedSettings = {
+          ...appSettings,
+          ...data,
+          driverFreightCommission: Number((data as any).driverFreightCommission ?? (data as any).appCommission ?? appSettings.driverFreightCommission),
+          privateDriverCommission: Number((data as any).privateDriverCommission ?? (data as any).driverFreightCommission ?? (data as any).appCommission ?? appSettings.privateDriverCommission),
+        } as AppSettings;
+        setAppSettings(mergedSettings);
+        setLastSavedHash(JSON.stringify(mergedSettings));
       }
     } catch (err) {
       console.error('Erro ao buscar configurações:', err);
@@ -1567,6 +1577,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
          radius: Number(appSettings.radius || 0),
          baseFee: Number(appSettings.baseFee || 0),
          appCommission: Number(appSettings.appCommission || 0),
+         driverFreightCommission: Number((appSettings.driverFreightCommission ?? appSettings.appCommission) || 0),
+         privateDriverCommission: Number((appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission) || 0),
          serviceFee: Number(appSettings.serviceFee || 0),
          flashOfferDiscount: Number(appSettings.flashOfferDiscount || 0),
          iziCoinRate: Number(appSettings.iziCoinRate || 0)

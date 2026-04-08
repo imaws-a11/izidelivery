@@ -342,6 +342,8 @@ export interface AppSettings {
   radius: number;
   baseFee: number;
   appCommission: number;
+  driverFreightCommission: number;
+  privateDriverCommission: number;
   serviceFee: number;
   smsNotifications: boolean;
   emailNotifications: boolean;

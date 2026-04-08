@@ -177,7 +177,7 @@ export default function SettingsTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-6">
           <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-[28px] p-6 space-y-3">
             <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Taxa Base de Entrega</label>
             <div className="relative">
@@ -203,6 +203,34 @@ export default function SettingsTab() {
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-primary font-black text-sm">%</span>
             </div>
+          </div>
+
+          <div className="bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-100 dark:border-cyan-500/20 rounded-[28px] p-6 space-y-3">
+            <label className="block text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-1">ComissÃ£o Entregador sobre Frete (%)</label>
+            <div className="relative">
+              <input
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-cyan-600 focus:ring-2 focus:ring-cyan-300 shadow-inner"
+                type="number" min="0" max="50" step="0.01"
+                value={appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0}
+                onChange={(e) => setAppSettings({ ...appSettings, driverFreightCommission: parseFloat(e.target.value) || 0 })}
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-cyan-500 font-black text-sm">%</span>
+            </div>
+            <p className="text-[9px] font-bold text-cyan-700/70 uppercase tracking-widest">Aplicada sobre o valor do frete do entregador</p>
+          </div>
+
+          <div className="bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-100 dark:border-fuchsia-500/20 rounded-[28px] p-6 space-y-3">
+            <label className="block text-[10px] font-black text-fuchsia-600 uppercase tracking-widest mb-1">ComissÃ£o Motorista Particular (%)</label>
+            <div className="relative">
+              <input
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-fuchsia-600 focus:ring-2 focus:ring-fuchsia-300 shadow-inner"
+                type="number" min="0" max="50" step="0.01"
+                value={appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0}
+                onChange={(e) => setAppSettings({ ...appSettings, privateDriverCommission: parseFloat(e.target.value) || 0 })}
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-fuchsia-500 font-black text-sm">%</span>
+            </div>
+            <p className="text-[9px] font-bold text-fuchsia-700/70 uppercase tracking-widest">Aplicada sobre o valor do frete/corrida do motorista</p>
           </div>
 
           <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-[28px] p-6 space-y-3">
