@@ -185,8 +185,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const timer = setTimeout(async () => {
       try {
         const cleanSettings = {
-           ...appSettings,
-           iziBlackFee: Number(appSettings.iziBlackFee || 0),
+          ...appSettings,
+          id: appSettings.id || '00000000-0000-0000-0000-000000000000',
+          iziBlackFee: Number(appSettings.iziBlackFee || 0),
            iziBlackCashback: Number(appSettings.iziBlackCashback || 0),
            iziBlackMinOrderFreeShipping: Number(appSettings.iziBlackMinOrderFreeShipping || 0),
            radius: Number(appSettings.radius || 0),
@@ -204,13 +205,18 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .from('app_settings_delivery')
           .upsert(cleanSettings);
         
-        if (error) throw error;
+        if (error) {
+          toastError('Erro ao salvar configurações automáticas: ' + error.message);
+          throw error;
+        }
+        
         setLastSavedHash(JSON.stringify(appSettings));
         setAutoSaveStatus('saved');
         setTimeout(() => setAutoSaveStatus('idle'), 2000);
-      } catch (err) {
+      } catch (err: any) {
         console.error('AutoSave Error:', err);
         setAutoSaveStatus('error');
+        toastError('Falha na persistência: As alterações podem não ter sido salvas.');
       }
     }, 2000);
 
@@ -459,9 +465,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { data: merchantData } = await supabase.from('admin_users').select('id').eq('role', 'merchant');
       const { data: promoData } = await supabase.from('promotions_delivery').select('*');
 
-      const visibleOrders = (orderData || []).filter(o => o.status !== 'pendente_pagamento');
-      const completedOrders = visibleOrders.filter(o => o.status === 'concluido');
-      const canceledOrders = visibleOrders.filter(o => o.status === 'cancelado');
+      const visibleOrders = orderData || [];
+      const completedOrders = (orderData || []).filter(o => o.status === 'concluido' || o.status === 'delivered');
+      const canceledOrders = (orderData || []).filter(o => o.status === 'cancelado');
       const coupons = promoData?.filter(p => p.type === 'coupon') || [];
 
       if (orderData) {
@@ -581,7 +587,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .from('orders_delivery')
           .select('*, user:users_delivery(*)', { count: 'exact' })
           .eq('merchant_id', merchantProfile.merchant_id)
-          .neq('status', 'pendente_pagamento')
           .order('created_at', { ascending: false })
           .range(from, to);
 
@@ -594,7 +599,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .from('orders_delivery')
           .select('*, user:users_delivery(*)', { count: 'exact' })
           .neq('service_type', 'subscription')
-          .neq('status', 'pendente_pagamento')
           .order('created_at', { ascending: false })
           .range(from, to);
 
