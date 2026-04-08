@@ -2262,7 +2262,7 @@ function App() {
                                 <span className="text-[9px] font-black text-white/20 uppercase bg-white/5 px-3 py-1 rounded-full">{order.service_type}</span>
                                 {order.order_notes && <span className="text-[9px] text-white/20 truncate max-w-[120px]">{order.order_notes}</span>}
                             </div>
-                            <span className="text-lg font-black text-primary">R$ {(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                            <span className="text-lg font-black text-primary">R$ {getNetEarnings(order).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
 
                         {/* Botao aceitar */}

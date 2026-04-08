@@ -4,26 +4,36 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Html5Qrcode } from "html5-qrcode";
 
 // Componente para o Leitor de QR Code usando a câmera nativa (Html5Qrcode)
-const ScannerWrapper = ({ onResult }: { onResult: (text: string) => void }) => {
+const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => void; onCancel: () => void }) => {
   const qrRef = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
-    qrRef.current = new Html5Qrcode("reader");
-    
-    qrRef.current.start(
-      { facingMode: "environment" }, // Usa a câmera traseira
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-      },
-      (decodedText: string) => {
-        onResult(decodedText);
-        qrRef.current?.stop().catch(() => {});
-      },
-      () => { /* logs freq - ignorar */ }
-    ).catch(err => {
-      console.error("Erro ao iniciar câmera:", err);
-    });
+    const startScanner = async () => {
+      try {
+        qrRef.current = new Html5Qrcode("reader");
+        await qrRef.current.start(
+          { facingMode: "environment" },
+          {
+            fps: 15,
+            qrbox: (viewfinderWidth, viewfinderHeight) => {
+              const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+              const qrboxSize = Math.floor(minEdge * 0.7);
+              return { width: qrboxSize, height: qrboxSize };
+            },
+            aspectRatio: 1.0,
+          },
+          (decodedText: string) => {
+            onResult(decodedText);
+            qrRef.current?.stop().catch(() => {});
+          },
+          () => {} 
+        );
+      } catch (err) {
+        console.error("Erro ao iniciar câmera:", err);
+      }
+    };
+
+    startScanner();
 
     return () => {
       if (qrRef.current?.isScanning) {
@@ -33,34 +43,45 @@ const ScannerWrapper = ({ onResult }: { onResult: (text: string) => void }) => {
   }, [onResult]);
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center">
-      {/* Camada da Câmera */}
-      <div id="reader" className="absolute inset-0 w-full h-full object-cover" />
+    <div className="fixed inset-0 z-[500] bg-black flex flex-col items-center justify-center">
+      {/* Camada da Câmera - Full Screen */}
+      <div id="reader" className="absolute inset-0 w-full h-full [&_video]:object-cover" />
       
-      {/* Overlay de Target */}
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
-        <div className="w-64 h-64 border-2 border-yellow-400 rounded-[40px] relative">
-          <div className="absolute -top-1 -left-1 w-12 h-12 border-t-4 border-l-4 border-yellow-400 rounded-tl-2xl animate-pulse" />
-          <div className="absolute -top-1 -right-1 w-12 h-12 border-t-4 border-r-4 border-yellow-400 rounded-tr-2xl animate-pulse" />
-          <div className="absolute -bottom-1 -left-1 w-12 h-12 border-b-4 border-l-4 border-yellow-400 rounded-bl-2xl animate-pulse" />
-          <div className="absolute -bottom-1 -right-1 w-12 h-12 border-b-4 border-r-4 border-yellow-400 rounded-br-2xl animate-pulse" />
+      {/* Overlay de Proteção/Design */}
+      <div className="relative z-10 w-full h-full flex flex-col items-center justify-between py-24 pointer-events-none">
+        <div className="px-6 py-2 bg-black/20 backdrop-blur-md rounded-full border border-white/5 flex items-center gap-2">
+           <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
+           <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] opacity-80">IZI Pay Scan</span>
         </div>
-        
-        <div className="mt-12 text-center space-y-4 px-10">
-          <div className="inline-flex items-center gap-2 px-6 py-2 bg-yellow-400 rounded-full shadow-lg">
-            <span className="material-symbols-outlined text-black text-lg animate-pulse">qr_code_scanner</span>
-            <span className="text-[10px] font-black text-black uppercase tracking-widest">Escaneando IZI Pay</span>
+
+        <div className="relative">
+          <motion.div 
+            animate={{ top: ["0%", "100%", "0%"] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="absolute left-0 right-0 h-1 bg-yellow-400/50 blur-[2px] z-20"
+          />
+          <div className="w-64 h-64 border border-white/20 rounded-[40px] relative overflow-hidden">
+            <div className="absolute top-0 left-0 size-8 border-t-4 border-l-4 border-yellow-400 rounded-tl-2xl" />
+            <div className="absolute top-0 right-0 size-8 border-t-4 border-r-4 border-yellow-400 rounded-tr-2xl" />
+            <div className="absolute bottom-0 left-0 size-8 border-b-4 border-l-4 border-yellow-400 rounded-bl-2xl" />
+            <div className="absolute bottom-0 right-0 size-8 border-b-4 border-r-4 border-yellow-400 rounded-br-2xl" />
           </div>
-          <p className="text-white/60 text-xs font-bold uppercase tracking-widest leading-relaxed">
-            Centralize o QR Code no quadro acima para autenticação instantânea
+        </div>
+
+        <div className="text-center space-y-2 px-10">
+          <p className="text-white font-black text-[11px] uppercase tracking-widest leading-relaxed">
+            Posicione o QR Code no centro
+          </p>
+          <p className="text-white/40 font-bold text-[9px] uppercase tracking-widest">
+            Usuários ou Estabelecimentos
           </p>
         </div>
       </div>
       
-      {/* Botão de Fechar no Overlay */}
+      {/* Botão de Fechar */}
       <button 
-        onClick={() => window.location.reload()} // Forçar reset do fluxo se necessário ou usar state
-        className="absolute top-12 right-6 size-12 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white z-20"
+        onClick={onCancel}
+        className="absolute top-12 right-6 size-12 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white z-30 active:scale-95 transition-all"
       >
         <span className="material-symbols-outlined">close</span>
       </button>
@@ -96,13 +117,14 @@ export const WalletView: React.FC<WalletViewProps> = ({
   savedCards = [],
   userId,
   userName,
-  iziCoinValue = 1.0,
-  iziCoinRate = 1.0,
-  paymentMethod,
-  setShowDepositModal,
-  setPaymentsOrigin,
-  setSubView,
-}) => {
+   iziCoinValue = 1.0,
+   iziCoinRate = 1.0,
+   paymentMethod,
+   setShowDepositModal,
+   showToast,
+   setPaymentsOrigin,
+   setSubView,
+ }) => {
   const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr" | "scan" | "add_card">("main");
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [newCard, setNewCard] = useState({ number: "", holder: "", expiry: "", cvv: "" });
@@ -141,21 +163,41 @@ export const WalletView: React.FC<WalletViewProps> = ({
     setIsSearching(true);
     setSearchTarget(query);
     try {
-      const { data, error } = await supabase
+      // 1. Tenta buscar em usuários comuns
+      const { data: userData } = await supabase
         .from("users_delivery")
         .select("id, name, email, phone")
         .or(`email.eq.${query},phone.eq.${query},id.eq.${query}`)
         .not("id", "eq", userId)
         .single();
 
-      if (error || !data) {
-        showToast?.("Usuário não encontrado, Tente usar o código identificador", "warning");
-        setRecipient(null);
+      if (userData) {
+        setRecipient({ ...userData, type: 'user' });
+        return;
+      }
+
+      // 2. Se não achou, tenta buscar em estabelecimentos (admin_users com role merchant)
+      const { data: merchantData } = await supabase
+        .from("admin_users")
+        .select("id, store_name, email, store_phone")
+        .or(`email.eq.${query},store_phone.eq.${query},id.eq.${query}`)
+        .eq("role", "merchant")
+        .single();
+
+      if (merchantData) {
+        setRecipient({ 
+          id: merchantData.id, 
+          name: merchantData.store_name, 
+          email: merchantData.email, 
+          phone: merchantData.store_phone,
+          type: 'merchant' 
+        });
       } else {
-        setRecipient(data);
+        showToast?.("Destinatário não encontrado", "warning");
+        setRecipient(null);
       }
     } catch (err) {
-      showToast?.("Erro ao buscar usuário", "error");
+      showToast?.("Erro ao buscar destinatário", "error");
     } finally {
       setIsSearching(false);
     }
@@ -217,27 +259,14 @@ export const WalletView: React.FC<WalletViewProps> = ({
 
   if (walletMode === "scan") {
     return (
-      <div className="flex flex-col h-full bg-black text-white p-6 pt-12 items-center text-center gap-10">
-        <header className="w-full flex items-center justify-between mb-4">
-          <button onClick={() => setWalletMode("main")} className="size-10 rounded-full bg-zinc-900 flex items-center justify-center">
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
-          <h1 className="font-extrabold text-base uppercase tracking-widest">Escanear QR</h1>
-          <div className="size-10" />
-        </header>
-
-        <ScannerWrapper 
-          onResult={(text) => {
-             // O QR Code pode vir "izipay:ID_DO_USUARIO_OU_LOJISTA" ou o id puro
-             const idText = text.replace("izipay:", "").trim();
-             // Pula pro transfer com busca ativada
-             setWalletMode("transfer");
-             handleSearchRecipient(idText); // Automaticamente processa a string recebida via camera
-          }} 
-        />
-        
-        <button onClick={() => setWalletMode("main")} className="w-full py-4 bg-zinc-900 rounded-2xl font-black uppercase text-sm mt-auto max-w-xs">Cancelar Leitura</button>
-      </div>
+      <ScannerWrapper 
+        onCancel={() => setWalletMode("main")}
+        onResult={(text) => {
+           const idText = text.replace("izipay:", "").trim();
+           setWalletMode("transfer");
+           handleSearchRecipient(idText);
+        }} 
+      />
     );
   }
 
