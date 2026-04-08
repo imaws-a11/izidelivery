@@ -93,6 +93,73 @@ export default function OrdersAdminTab() {
     };
   };
 
+  const normalizeServiceType = (raw?: string | null) => {
+    const type = String(raw || '').toLowerCase().trim();
+    if (['carro', 'car_ride', 'taxi', 'ride'].includes(type)) return 'car_ride';
+    if (['mototaxi', 'moto_taxi', 'motortaxi'].includes(type)) return 'mototaxi';
+    if (['motorista_particular', 'motorista particular', 'chauffeur'].includes(type)) return 'motorista_particular';
+    if (['logistica', 'logistics'].includes(type)) return 'logistica';
+    return type || 'generic';
+  };
+
+  const formatCurrency = (value: number) => `R$ ${Number(value || 0).toFixed(2).replace('.', ',')}`;
+
+  const getMerchantFinancialSummary = (order: any) => {
+    if (!order?.merchant_id) return null;
+    const merchant = merchantsList.find(m => m.id === order.merchant_id);
+    const rate = Number(merchant?.commission_percent ?? appSettings?.appCommission ?? 12);
+    const gross = Number(order.total_price || 0);
+    const commissionAmount = gross * (rate / 100);
+    return {
+      label: 'Taxa Plataforma Loja',
+      rate,
+      gross,
+      commissionAmount,
+      netAmount: gross - commissionAmount,
+      netLabel: 'Líquido Loja'
+    };
+  };
+
+  const getDriverFinancialSummary = (order: any) => {
+    if (!order) return null;
+
+    const type = normalizeServiceType(order.service_type);
+    const isPrivateDriver = ['car_ride', 'motorista_particular'].includes(type);
+    const isMobilityOrFreight = ['mototaxi', 'car_ride', 'motorista_particular', 'frete', 'logistica', 'van', 'utilitario'].includes(type);
+    const isErrand = ['package', 'motoboy', 'generic'].includes(type);
+
+    let baseAmount = 0;
+    if (isMobilityOrFreight) {
+      baseAmount = Number(order.total_price || 0);
+    } else if (isErrand) {
+      baseAmount = Number(order.delivery_fee || order.total_price || 0);
+    } else {
+      const freightValue = Number(order.delivery_fee || 0);
+      baseAmount = freightValue > 0 ? freightValue : Number(appSettings?.baseFee || 0);
+    }
+
+    if (baseAmount <= 0) return null;
+
+    const rate = Number(
+      isPrivateDriver
+        ? (appSettings?.privateDriverCommission ?? appSettings?.driverFreightCommission ?? appSettings?.appCommission ?? 12)
+        : (appSettings?.driverFreightCommission ?? appSettings?.appCommission ?? 12)
+    );
+
+    return {
+      label: isPrivateDriver ? 'Comissão Motorista Particular' : 'Comissão Entregador',
+      baseLabel: isPrivateDriver ? 'Base Corrida' : 'Base Frete',
+      netLabel: isPrivateDriver ? 'Líquido Motorista' : 'Líquido Entregador',
+      rate,
+      baseAmount,
+      commissionAmount: baseAmount * (rate / 100),
+      netAmount: baseAmount * (1 - rate / 100)
+    };
+  };
+
+  const selectedMerchantFinancial = selectedOrderDetails ? getMerchantFinancialSummary(selectedOrderDetails) : null;
+  const selectedDriverFinancial = selectedOrderDetails ? getDriverFinancialSummary(selectedOrderDetails) : null;
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative">
       {isLoadingList && (
@@ -376,21 +443,27 @@ export default function OrdersAdminTab() {
                                                    </div>
                                                )}
                                                <div className="pt-3 border-t border-slate-200 dark:border-slate-700 space-y-2">
-                                                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                                       <span>Taxa Plataforma ({(() => {
-                                                           const merchant = merchantsList.find(m => m.id === selectedOrderDetails.merchant_id);
-                                                           return merchant?.commission_percent ?? appSettings?.appCommission ?? 12;
-                                                       })()}%)</span>
-                                                       <span className="text-amber-600">
-                                                           R$ {(() => {
-                                                               const rate = merchantsList.find(m => m.id === selectedOrderDetails.merchant_id)?.commission_percent ?? appSettings?.appCommission ?? 12;
-                                                               return ((selectedOrderDetails.total_price || 0) * (rate / 100)).toFixed(2).replace('.', ',');
-                                                           })()}
-                                                       </span>
-                                                   </div>
+                                                   {selectedMerchantFinancial && (
+                                                     <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                         <span>{selectedMerchantFinancial.label} ({selectedMerchantFinancial.rate}%)</span>
+                                                         <span className="text-amber-600">{formatCurrency(selectedMerchantFinancial.commissionAmount)}</span>
+                                                     </div>
+                                                   )}
+                                                   {selectedDriverFinancial && (
+                                                     <>
+                                                       <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                           <span>{selectedDriverFinancial.baseLabel}</span>
+                                                           <span className="text-sky-600">{formatCurrency(selectedDriverFinancial.baseAmount)}</span>
+                                                       </div>
+                                                       <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                           <span>{selectedDriverFinancial.label} ({selectedDriverFinancial.rate}%)</span>
+                                                           <span className="text-fuchsia-600">{formatCurrency(selectedDriverFinancial.commissionAmount)}</span>
+                                                       </div>
+                                                     </>
+                                                   )}
                                                    <div className="flex justify-between items-center pt-2">
                                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-display">Resumo Total</span>
-                                                       <span className="text-xl font-black text-primary italic">R$ {Number(selectedOrderDetails.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                                       <span className="text-xl font-black text-primary italic">{formatCurrency(selectedOrderDetails.total_price || 0)}</span>
                                                    </div>
                                                 </div>
                                           </div>
@@ -430,21 +503,27 @@ export default function OrdersAdminTab() {
                                                    </div>
                                                )}
                                                <div className="pt-3 border-t border-slate-200 dark:border-slate-700 space-y-2">
-                                                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                                       <span>Taxa Plataforma ({(() => {
-                                                           const merchant = merchantsList.find(m => m.id === selectedOrderDetails.merchant_id);
-                                                           return merchant?.commission_percent ?? appSettings?.appCommission ?? 12;
-                                                       })()}%)</span>
-                                                       <span className="text-amber-600">
-                                                           R$ {(() => {
-                                                               const rate = merchantsList.find(m => m.id === selectedOrderDetails.merchant_id)?.commission_percent ?? appSettings?.appCommission ?? 12;
-                                                               return ((selectedOrderDetails.total_price || 0) * (rate / 100)).toFixed(2).replace('.', ',');
-                                                           })()}
-                                                       </span>
-                                                   </div>
+                                                   {selectedMerchantFinancial && (
+                                                     <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                         <span>{selectedMerchantFinancial.label} ({selectedMerchantFinancial.rate}%)</span>
+                                                         <span className="text-amber-600">{formatCurrency(selectedMerchantFinancial.commissionAmount)}</span>
+                                                     </div>
+                                                   )}
+                                                   {selectedDriverFinancial && (
+                                                     <>
+                                                       <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                           <span>{selectedDriverFinancial.baseLabel}</span>
+                                                           <span className="text-sky-600">{formatCurrency(selectedDriverFinancial.baseAmount)}</span>
+                                                       </div>
+                                                       <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                           <span>{selectedDriverFinancial.label} ({selectedDriverFinancial.rate}%)</span>
+                                                           <span className="text-fuchsia-600">{formatCurrency(selectedDriverFinancial.commissionAmount)}</span>
+                                                       </div>
+                                                     </>
+                                                   )}
                                                    <div className="flex justify-between items-center pt-2">
                                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-display">Valor Total</span>
-                                                       <span className="text-xl font-black text-primary italic">R$ {Number(selectedOrderDetails.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                                       <span className="text-xl font-black text-primary italic">{formatCurrency(selectedOrderDetails.total_price || 0)}</span>
                                                    </div>
                                                 </div>
                                           </div>
@@ -511,28 +590,27 @@ export default function OrdersAdminTab() {
                                           )}
                                       </div>
 
-                                      <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                                          <div>
-                                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Comissão App ({(() => {
-                                                  const merchant = merchantsList.find(m => m.id === selectedOrderDetails.merchant_id);
-                                                  return merchant?.commission_percent ?? appSettings?.appCommission ?? 12;
-                                              })()}%)</p>
-                                              <p className="text-sm font-black text-amber-600">
-                                                  R$ {(() => {
-                                                      const rate = merchantsList.find(m => m.id === selectedOrderDetails.merchant_id)?.commission_percent ?? appSettings?.appCommission ?? 12;
-                                                      return ((selectedOrderDetails.total_price || 0) * (rate / 100)).toFixed(2).replace('.', ',');
-                                                  })()}
-                                              </p>
-                                          </div>
-                                          <div className="text-right">
-                                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Líquido Loja</p>
-                                              <p className="text-sm font-black text-emerald-600">
-                                                  R$ {(() => {
-                                                      const rate = merchantsList.find(m => m.id === selectedOrderDetails.merchant_id)?.commission_percent ?? appSettings?.appCommission ?? 12;
-                                                      return ((selectedOrderDetails.total_price || 0) * (1 - rate / 100)).toFixed(2).replace('.', ',');
-                                                  })()}
-                                              </p>
-                                          </div>
+                                      <div className="pt-4 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                          {selectedMerchantFinancial && (
+                                            <>
+                                              <div>
+                                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{selectedMerchantFinancial.label} ({selectedMerchantFinancial.rate}%)</p>
+                                                  <p className="text-sm font-black text-amber-600">{formatCurrency(selectedMerchantFinancial.commissionAmount)}</p>
+                                              </div>
+                                              <div className="text-right sm:text-left lg:text-right">
+                                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{selectedMerchantFinancial.netLabel}</p>
+                                                  <p className="text-sm font-black text-emerald-600">{formatCurrency(selectedMerchantFinancial.netAmount)}</p>
+                                              </div>
+                                            </>
+                                          )}
+                                          {selectedDriverFinancial && (
+                                            <div className={`${selectedMerchantFinancial ? 'lg:text-right' : 'text-right'}`}>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{selectedDriverFinancial.label} ({selectedDriverFinancial.rate}%)</p>
+                                                <p className="text-sm font-black text-fuchsia-600">{formatCurrency(selectedDriverFinancial.commissionAmount)}</p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">{selectedDriverFinancial.netLabel}</p>
+                                                <p className="text-sm font-black text-sky-600">{formatCurrency(selectedDriverFinancial.netAmount)}</p>
+                                            </div>
+                                          )}
                                       </div>
                                   </div>
                               </div>

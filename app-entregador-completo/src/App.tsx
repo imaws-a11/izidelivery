@@ -574,15 +574,17 @@ function App() {
         if (!order) return 0;
         
         // Configurações globais com valores padrão seguros
-        const commission = appSettings?.appCommission ?? 7;
         const defaultBaseFee = appSettings?.baseFee ?? 8;
         
         const rawType = order.service_type || order.type || 'generic';
         const type = normalizeServiceType(rawType);
+        const deliveryCommission = Number(appSettings?.driverFreightCommission ?? appSettings?.appCommission ?? 7);
+        const privateDriverCommission = Number(appSettings?.privateDriverCommission ?? appSettings?.driverFreightCommission ?? appSettings?.appCommission ?? 7);
         
         // Categorias de serviço
-        const isMobility = ['mototaxi', 'car_ride', 'frete', 'motorista_particular', 'van', 'utilitario'].includes(type);
+        const isMobility = ['mototaxi', 'car_ride', 'frete', 'logistica', 'motorista_particular', 'van', 'utilitario'].includes(type);
         const isErrand = ['package', 'motoboy', 'generic'].includes(type);
+        const isPrivateDriver = ['car_ride', 'motorista_particular'].includes(type);
         
         let driverBaseAmount = 0;
         
@@ -603,6 +605,7 @@ function App() {
             driverBaseAmount = Number(order.total_price || order.price || 0);
         }
 
+        const commission = isPrivateDriver ? privateDriverCommission : deliveryCommission;
         const net = driverBaseAmount * (1 - (commission / 100));
         return Number(net.toFixed(2));
     }, [appSettings]);
