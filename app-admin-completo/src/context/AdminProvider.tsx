@@ -238,7 +238,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [activePreviewTab, setActivePreviewTab] = useState<'info' | 'products' | 'categories' | 'sales' | 'dedicated_slots' | 'promotions'>('info');
+  const [activePreviewTab, setActivePreviewTab] = useState<'info' | 'products' | 'categories' | 'sales' | 'dedicated_slots' | 'promotions' | 'financial'>('info');
   const [activeStudioTab, setActiveStudioTab] = useState<'personal' | 'vehicle' | 'finance' | 'documents' | 'wallet' | 'security' | 'general' | 'subcategories'>('personal');
   const [trackingListTab, setTrackingListTab] = useState<'orders' | 'drivers'>('orders');
 
@@ -255,7 +255,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Wallet
   const [walletTransactions] = useState<WalletTransaction[]>([]);
-  const [isWalletLoading] = useState(false);
+  const [merchantTransactions, setMerchantTransactions] = useState<WalletTransaction[]>([]);
+  const [merchantBalance, setMerchantBalance] = useState(0);
+  const [isWalletLoading, setIsWalletLoading] = useState(false);
   const [showAddCreditModal, setShowAddCreditModal] = useState(false);
   const [creditToAdd, setCreditToAdd] = useState('');
   const [isAddingCredit] = useState(false);
@@ -472,8 +474,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (orderData) {
         let filtered = visibleOrders as Order[];
-        if (userRole === 'merchant' && merchantProfile?.merchant_id) {
-          filtered = filtered.filter(o => o.merchant_id === merchantProfile.merchant_id);
+        if (userRole === 'merchant' && merchantProfile?.id) {
+          filtered = filtered.filter(o => o.merchant_id === merchantProfile.id);
         }
         setDashboardOrders(filtered);
       }
@@ -537,10 +539,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [syncDriverStats]);
 
   const fetchMyDrivers = useCallback(async (silent = false) => {
-    if (!merchantProfile?.merchant_id) return;
+    if (!merchantProfile?.id) return;
     if (!silent) setIsLoadingList(true);
     try {
-      const { data } = await supabase.from('drivers_delivery').select('*').eq('merchant_id', merchantProfile.merchant_id).eq('is_deleted', false);
+      const { data } = await supabase.from('drivers_delivery').select('*').eq('merchant_id', merchantProfile.id).eq('is_deleted', false);
       if (data) setMyDriversList(sortDriversByPresence(data as Driver[]));
     } finally {
       if (!silent) setIsLoadingList(false);
@@ -548,7 +550,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [merchantProfile]);
 
   const fetchProducts = useCallback(async (explicitMerchantId?: string, silent = false) => {
-    const idToUse = explicitMerchantId || merchantProfile?.merchant_id;
+    const idToUse = explicitMerchantId || merchantProfile?.id;
     if (!idToUse) return;
     if (!silent) setIsLoadingList(true);
     try {
@@ -560,7 +562,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [merchantProfile]);
 
   const fetchMenuCategories = useCallback(async (explicitMerchantId?: string) => {
-    const idToUse = explicitMerchantId || merchantProfile?.merchant_id;
+    const idToUse = explicitMerchantId || merchantProfile?.id;
     if (!idToUse) return;
     try {
       const { data } = await supabase.from('merchant_categories_delivery').select('*').eq('merchant_id', idToUse).order('sort_order', { ascending: true });
@@ -582,11 +584,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const from = (targetPage - 1) * ORDERS_PER_PAGE;
       const to = from + ORDERS_PER_PAGE - 1;
 
-      if (userRole === 'merchant' && merchantProfile?.merchant_id) {
+      if (userRole === 'merchant' && merchantProfile?.id) {
         const { data, error, count } = await supabase
           .from('orders_delivery')
           .select('*, user:users_delivery(*)', { count: 'exact' })
-          .eq('merchant_id', merchantProfile.merchant_id)
+          .eq('merchant_id', merchantProfile.id)
           .order('created_at', { ascending: false })
           .range(from, to);
 
@@ -647,7 +649,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (!newOrder) return;
 
           // Para lojistas, ignorar pedidos de outros merchants
-          if (userRole === 'merchant' && newOrder.merchant_id !== merchantProfile?.merchant_id) return;
+          if (userRole === 'merchant' && newOrder.merchant_id !== merchantProfile?.id) return;
 
           const isPendingPayment = newOrder.status === 'pendente_pagamento';
           const isCoinPurchase = newOrder.service_type === 'coin_purchase';
@@ -689,8 +691,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             });
 
             if (userRole === 'merchant') {
-              const belongsToMerchant = updated.merchant_id === merchantProfile?.merchant_id && !updated.is_deleted;
-              const belongedToMerchant = old?.merchant_id === merchantProfile?.merchant_id;
+              const belongsToMerchant = updated.merchant_id === merchantProfile?.id && !updated.is_deleted;
+              const belongedToMerchant = old?.merchant_id === merchantProfile?.id;
 
               if (belongsToMerchant) {
                 setMyDriversList(prev => upsertDriverInList(prev, updated));
@@ -718,7 +720,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               return nextDrivers;
             });
 
-            if (userRole === 'merchant' && inserted.merchant_id === merchantProfile?.merchant_id && !inserted.is_deleted) {
+            if (userRole === 'merchant' && inserted.merchant_id === merchantProfile?.id && !inserted.is_deleted) {
               setMyDriversList(prev => upsertDriverInList(prev, inserted));
             }
           } else if (payload.eventType === 'DELETE') {
@@ -730,7 +732,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               return nextDrivers;
             });
 
-            if (userRole === 'merchant' && removed.merchant_id === merchantProfile?.merchant_id) {
+            if (userRole === 'merchant' && removed.merchant_id === merchantProfile?.id) {
               setMyDriversList(prev => removeDriverFromList(prev, removed.id));
             }
           }
@@ -744,7 +746,151 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.log(`[REALTIME] Fechando canal: ${channelName}`);
       supabase.removeChannel(channel);
     };
-  }, [session?.user?.id, userRole, merchantProfile?.merchant_id]); // Removidas as funções voláteis das dependências
+  }, [session?.user?.id, userRole, merchantProfile?.id]); // Removidas as funções voláteis das dependências
+
+  const fetchMerchantFinance = useCallback(async () => {
+    const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
+    if (!idToUse) return;
+    
+    setIsWalletLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('wallet_transactions_delivery')
+        .select('*')
+        .eq('user_id', idToUse)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      if (data) {
+        setMerchantTransactions(data as WalletTransaction[]);
+        const balance = data.reduce((acc, t) => acc + (t.type === 'saque' ? -Number(t.amount) : Number(t.amount)), 0);
+        setMerchantBalance(balance);
+      }
+    } catch (err: any) {
+      console.error('Error fetching merchant finance:', err);
+    } finally {
+      setIsWalletLoading(false);
+    }
+  }, [userRole, merchantProfile, selectedMerchantPreview]);
+
+  const handleRequestWithdrawal = useCallback(async (amount: number, pixKey: string) => {
+    const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
+    if (!idToUse) return;
+
+    if (amount < 10) return toastError('O valor mínimo para saque é R$ 10,00');
+    if (amount > merchantBalance) return toastError('Saldo insuficiente para este saque.');
+
+    if (!await showConfirm({ 
+      title: 'Confirmar Saque',
+      message: `Deseja solicitar o saque de R$ ${amount.toFixed(2)} para a chave PIX: ${pixKey}?` 
+    })) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase.from('wallet_transactions_delivery').insert({
+        user_id: idToUse,
+        amount,
+        type: 'saque',
+        description: `Saque solicitado via PIX: ${pixKey}`,
+        status: 'pendente',
+        balance_after: merchantBalance - amount
+      });
+
+      if (error) throw error;
+
+      toastSuccess('Solicitação de saque enviada com sucesso!');
+      fetchMerchantFinance();
+      logAction('Withdrawal Request', 'Wallet', { userId: idToUse, amount });
+    } catch (err: any) {
+      toastError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [userRole, merchantProfile, selectedMerchantPreview, merchantBalance, fetchMerchantFinance, logAction]);
+
+  const handleUpdateMerchantBankInfo = useCallback(async (bankInfo: any) => {
+    const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
+    if (!idToUse) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('admin_users')
+        .update({ bank_info: bankInfo })
+        .eq('id', idToUse);
+      
+      if (error) throw error;
+      toastSuccess('Dados bancários atualizados com sucesso!');
+      logAction('Update Bank Info', 'Merchant', { merchantId: idToUse });
+    } catch (err: any) {
+      toastError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [userRole, merchantProfile, selectedMerchantPreview, logAction]);
+  const handleSyncMerchantBalance = useCallback(async () => {
+    const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
+    if (!idToUse) return;
+
+    setIsWalletLoading(true);
+    try {
+      // 1. Buscar todos os pedidos concluídos do lojista
+      const { data: orders, error: ordersErr } = await supabase
+        .from('orders_delivery')
+        .select('*')
+        .eq('merchant_id', idToUse)
+        .eq('status', 'concluido');
+
+      if (ordersErr) throw ordersErr;
+
+      // 2. Buscar transações já existentes para evitar duplicidade
+      const { data: txs, error: txsErr } = await supabase
+        .from('wallet_transactions_delivery')
+        .select('description')
+        .eq('user_id', idToUse)
+        .eq('type', 'venda');
+
+      if (txsErr) throw txsErr;
+
+      const existingDescriptions = new Set(txs?.map(t => t.description) || []);
+      const commRate = merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12;
+
+      let syncedCount = 0;
+      let currentBalance = merchantBalance;
+
+      for (const order of (orders || [])) {
+        const desc = `Venda Pedido #${order.id.slice(0,8).toUpperCase()} (Líquido)`;
+        const legacyDesc = `Venda do Pedido #${order.id.slice(0,8).toUpperCase()}`; // Para compatibilidade com o que criei minutos atrás
+        
+        if (!existingDescriptions.has(desc) && !existingDescriptions.has(legacyDesc)) {
+          const netAmount = order.total_price - (order.total_price * (commRate / 100));
+          currentBalance += netAmount;
+
+          await supabase.from('wallet_transactions_delivery').insert({
+            user_id: idToUse,
+            amount: netAmount,
+            type: 'venda',
+            description: desc,
+            status: 'concluido',
+            balance_after: currentBalance,
+            created_at: order.created_at // Manter data original
+          });
+          syncedCount++;
+        }
+      }
+
+      if (syncedCount > 0) {
+        toastSuccess(`${syncedCount} transações sincronizadas!`);
+        fetchMerchantFinance();
+      } else {
+        toastSuccess('Seu saldo já está sincronizado.');
+      }
+    } catch (err: any) {
+      toastError('Erro na sincronização: ' + err.message);
+    } finally {
+      setIsWalletLoading(false);
+    }
+  }, [userRole, merchantProfile, selectedMerchantPreview, appSettings, merchantBalance, fetchMerchantFinance]);
 
   const fetchSubscriptionOrders = useCallback(async (page = 1) => {
     setIsLoadingList(true);
@@ -838,8 +984,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       let query = supabase.from('promotions_delivery').select('*').order('created_at', { ascending: false });
       
-      if (userRole === 'merchant' && merchantProfile?.merchant_id) {
-        query = query.eq('merchant_id', merchantProfile.merchant_id);
+      if (userRole === 'merchant' && merchantProfile?.id) {
+        query = query.eq('merchant_id', merchantProfile.id);
       }
 
       const { data } = await query;
@@ -891,9 +1037,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const fetchMyDedicatedSlots = useCallback(async () => {
-    if (!merchantProfile?.merchant_id) return;
+    if (!merchantProfile?.id) return;
     try {
-      const { data } = await supabase.from('dedicated_slots_delivery').select('*').eq('merchant_id', merchantProfile.merchant_id);
+      const { data } = await supabase.from('dedicated_slots_delivery').select('*').eq('merchant_id', merchantProfile.id);
       if (data) setMyDedicatedSlots(data as DedicatedSlot[]);
     } catch (err) {
       console.error('Erro ao buscar vagas dedicadas:', err);
@@ -937,8 +1083,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       fetchAllOrders();
       fetchPromotions();
       fetchMyDedicatedSlots();
+      fetchMerchantFinance();
     }
-  }, [userRole, fetchAppSettings, fetchStats, fetchUsers, fetchDrivers, fetchMerchants, fetchCategories, fetchPromotions, fetchDynamicRates, fetchAllOrders, fetchSubscriptionOrders, fetchMyDrivers, fetchProducts, fetchMenuCategories, fetchMyDedicatedSlots]);
+  }, [userRole, fetchAppSettings, fetchStats, fetchUsers, fetchDrivers, fetchMerchants, fetchCategories, fetchPromotions, fetchDynamicRates, fetchAllOrders, fetchSubscriptionOrders, fetchMyDrivers, fetchProducts, fetchMenuCategories, fetchMyDedicatedSlots, fetchMerchantFinance]);
 
   // Polling: a cada 30s limpa entregadores ausentes e atualiza a lista
   useEffect(() => {
@@ -992,6 +1139,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsSaving(false);
     }
   }, [fetchUsers, logAction]);
+  
 
   const handleUpdateDriver = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1044,7 +1192,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const { error } = await supabase.from('drivers_delivery').upsert({
         ...editingItem,
-        merchant_id: merchantProfile.merchant_id
+        merchant_id: merchantProfile.id
       });
       if (error) throw error;
       toastSuccess('Seu entregador foi salvo!');
@@ -1108,7 +1256,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     e.preventDefault();
     if (!editingItem) return;
     
-    const targetMerchantId = userRole === 'merchant' ? merchantProfile?.merchant_id : selectedMerchantPreview?.id;
+    const targetMerchantId = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
     if (!targetMerchantId) {
       toastError('Erro: Nenhum lojista identificado.');
       return;
@@ -1173,7 +1321,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fetchProducts]);
 
   const handleCreateNewProduct = useCallback(async () => {
-    const targetMerchantId = userRole === 'merchant' ? merchantProfile?.merchant_id : selectedMerchantPreview?.id;
+    const targetMerchantId = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
     
     setEditingItem({
       name: '',
@@ -1393,7 +1541,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const handleCreateDedicatedSlot = useCallback(() => {
     if (!merchantProfile) return;
     setEditingItem({
-      merchant_id: merchantProfile.merchant_id,
+      merchant_id: merchantProfile.id,
       label: 'Novo Slot',
       is_active: true
     });
@@ -1424,16 +1572,58 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const handleCompleteOrder = useCallback(async (orderId: string) => {
     setIsCompletingOrder(orderId);
     try {
-      const { error } = await supabase.from('orders_delivery').update({ status: 'concluido' }).eq('id', orderId);
-      if (error) throw error;
-      toastSuccess('Pedido concluído!');
+      // 1. Buscar detalhes do pedido para saber o valor e o lojista
+      const { data: order, error: fetchErr } = await supabase
+        .from('orders_delivery')
+        .select('*')
+        .eq('id', orderId)
+        .single();
+      
+      if (fetchErr) throw fetchErr;
+      if (order.status === 'concluido') return toastWarning('Este pedido já estava concluído.');
+
+      // 2. Atualizar status do pedido
+      const { error: updateErr } = await supabase.from('orders_delivery').update({ status: 'concluido' }).eq('id', orderId);
+      if (updateErr) throw updateErr;
+
+      // 3. Inserir transação na carteira do lojista (wallet_transactions_delivery)
+      if (order.merchant_id && order.total_price > 0) {
+        // Calcular comissão
+        const commRate = merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12;
+        const commissionAmount = order.total_price * (commRate / 100);
+        const netAmount = order.total_price - commissionAmount;
+
+        // Calcular saldo atual para registrar balance_after
+        const { data: currentWallet } = await supabase
+          .from('wallet_transactions_delivery')
+          .select('balance_after')
+          .eq('user_id', order.merchant_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        const currentBalance = currentWallet?.balance_after || 0;
+        const newBalance = currentBalance + netAmount;
+
+        await supabase.from('wallet_transactions_delivery').insert({
+          user_id: order.merchant_id,
+          amount: netAmount,
+          type: 'venda',
+          description: `Venda Pedido #${order.id.slice(0,8).toUpperCase()} (Líquido)`,
+          status: 'concluido',
+          balance_after: newBalance
+        });
+      }
+
+      toastSuccess('Pedido concluído e saldo creditado!');
       fetchAllOrders(ordersPage);
+      fetchMerchantFinance(); // Atualiza o saldo global do contexto
     } catch (err: any) {
       toastError(err.message);
     } finally {
       setIsCompletingOrder(null);
     }
-  }, [ordersPage, fetchAllOrders]);
+  }, [ordersPage, fetchAllOrders, fetchMerchantFinance]);
 
   const handleDeleteOrder = useCallback(async (orderId: string) => {
     if (!await showConfirm({ message: 'Exclusão irreversível! Continuar?' })) return;
@@ -1777,6 +1967,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setPromoForm, promoSaving, promoSaveStatus, expandedLogId, setExpandedLogId, 
     isCompletingOrder, setIsCompletingOrder, newOrderNotification, setNewOrderNotification, 
     isWalletLoading, showAddCreditModal, setShowAddCreditModal, walletTransactions,
+    merchantTransactions, merchantBalance,
     isAddingCredit, creditToAdd, setCreditToAdd, showWalletStatementModal, 
     setShowWalletStatementModal, isAddingPeakRule, setIsAddingPeakRule, newPeakRule, 
     setNewPeakRule, newZoneData, setNewZoneData, mapSearch, setMapSearch, isGeolocating, 
@@ -1801,7 +1992,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     saveDynamicRates, saveSpecificRateMetadata, handleAddZone, handleRemoveZone, 
     handleFileUpload, handleUpdateDispatchSettings, handleSeedCategories, savePromotion, 
     autoSavePromo,
-    handleSaveAppSettings
+    handleSaveAppSettings,
+    fetchMerchantFinance, handleRequestWithdrawal, handleUpdateMerchantBankInfo, handleSyncMerchantBalance
   };
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

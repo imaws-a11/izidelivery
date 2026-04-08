@@ -104,6 +104,12 @@ export interface Merchant {
   latitude?: number;
   longitude?: number;
   google_place_id?: string;
+  bank_info?: {
+    bank?: string;
+    agency?: string;
+    account?: string;
+    pix_key?: string;
+  };
   created_at: string;
   updated_at?: string;
 }
@@ -130,6 +136,12 @@ export interface MerchantProfile {
   latitude?: number;
   longitude?: number;
   google_place_id?: string;
+  bank_info?: {
+    bank?: string;
+    agency?: string;
+    account?: string;
+    pix_key?: string;
+  };
 }
 
 export interface Product {
@@ -243,6 +255,7 @@ export interface WalletTransaction {
   type: 'deposito' | 'reembolso' | 'pagamento' | 'saque' | 'cashback' | 'recompensa';
   amount: number;
   description?: string;
+  status?: 'pendente' | 'concluido' | 'cancelado';
   created_at: string;
 }
 

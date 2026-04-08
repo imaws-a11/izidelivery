@@ -59,6 +59,9 @@ export default function MyStudioTab() {
     promoForm, setPromoForm, promoSaving, promoSaveStatus,
     savePromotion, autoSavePromo, fetchPromotions,
     establishmentTypes, fetchEstablishmentTypes, handleUpdateEstablishmentType, handleDeleteEstablishmentType,
+    merchantBalance, merchantTransactions, fetchMerchantFinance,
+    handleRequestWithdrawal, handleUpdateMerchantBankInfo, handleSyncMerchantBalance,
+    dashboardData, appSettings
   } = useAdmin();
 
   const [isLocating, setIsLocating] = React.useState(false);
@@ -120,9 +123,15 @@ export default function MyStudioTab() {
       fetchProducts();
       fetchMenuCategories();
       fetchPromotions();
+      fetchMerchantFinance();
     }
-  }, [userRole, fetchProducts, fetchMenuCategories, fetchPromotions]);
+  }, [userRole, fetchProducts, fetchMenuCategories, fetchPromotions, fetchMerchantFinance]);
 
+  React.useEffect(() => {
+    if (activePreviewTab === 'financial') {
+      fetchMerchantFinance();
+    }
+  }, [activePreviewTab, fetchMerchantFinance]);
 
   const renderStudioPanel = (targetItem: Merchant | MerchantProfile, updateItem: (updatedItem: Merchant | MerchantProfile) => void) => (
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-slate-900 overflow-hidden min-h-0">
@@ -132,6 +141,7 @@ export default function MyStudioTab() {
           { id: 'sales', label: 'Vendas & Performance', icon: 'monitoring' },
           { id: 'products', label: 'Cardápio Digital', icon: 'restaurant_menu' },
           { id: 'promotions', label: userRole === 'merchant' ? 'Promoções & Ofertas' : 'Promoções & Banners', icon: 'campaign' },
+          { id: 'financial', label: 'Financeiro & Saque', icon: 'payments' },
           { id: 'dedicated_slots', label: 'Vagas Dedicadas', icon: 'stars' },
         ].map(t => (
           <button
@@ -496,6 +506,236 @@ export default function MyStudioTab() {
                 </div>
               </div>
             )}
+
+            {activePreviewTab === 'financial' && (
+              <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
+                <div className="flex items-center justify-between gap-4 mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="size-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary">
+                      <span className="material-symbols-outlined text-2xl font-bold">payments</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Gestão Financeira</h4>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Saldo, saques e relatórios de desempenho</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={handleSyncMerchantBalance}
+                      disabled={isWalletLoading}
+                      className="h-10 px-4 bg-primary/10 hover:bg-primary text-primary hover:text-slate-900 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
+                    >
+                      <span className={`material-symbols-outlined text-sm ${isWalletLoading ? 'animate-spin' : ''}`}>sync</span> 
+                      {isWalletLoading ? 'Sincronizando...' : 'Sincronizar Saldo'}
+                    </button>
+                    <button className="h-10 px-4 bg-slate-100 dark:bg-slate-800 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center gap-2">
+                      <span className="material-symbols-outlined text-sm">download</span> Exportar
+                    </button>
+                  </div>
+                </div>
+
+                {/* KPI Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[
+                    { 
+                      label: 'Vendas Brutas', 
+                      val: `R$ ${(dashboardData.totalRevenue || 0).toFixed(2).replace('.', ',')}`, 
+                      trend: 'Total histórico', 
+                      icon: 'payments', 
+                      color: 'bg-primary/10 text-primary'
+                    },
+                    { 
+                      label: 'Pedidos Concluintes', 
+                      val: dashboardData.completedOrdersCount || 0, 
+                      trend: 'Total de vendas', 
+                      icon: 'check_circle', 
+                      color: 'bg-emerald-50 text-emerald-500' 
+                    },
+                    { 
+                      label: 'Comissão IZI', 
+                      val: `R$ ${(dashboardData.totalCommission || 0).toFixed(2).replace('.', ',')}`, 
+                      trend: `${(merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12)}% de taxa`, 
+                      icon: 'percent', 
+                      color: 'bg-red-50 text-red-500' 
+                    },
+                    { 
+                      label: 'Líquido Disponível', 
+                      val: `R$ ${merchantBalance.toFixed(2).replace('.', ',')}`, 
+                      trend: 'Pronto para saque', 
+                      icon: 'account_balance_wallet', 
+                      color: 'bg-blue-50 text-blue-500' 
+                    },
+                  ].map((kpi, i) => (
+                    <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className={`p-3 rounded-2xl ${kpi.color}`}>
+                          <span className="material-symbols-outlined">{kpi.icon}</span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{kpi.label}</p>
+                      <h3 className="text-xl font-black text-slate-900 dark:text-white mt-1 tracking-tight">{kpi.val}</h3>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Gráfico de Performance */}
+                <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                  <div className="flex justify-between items-center mb-8">
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-3 italic uppercase tracking-[0.1em]">
+                      <span className="material-symbols-outlined text-primary">insights</span>
+                      Tendência de Ganhos
+                    </h4>
+                  </div>
+                  <div className="h-48 flex items-end justify-between gap-2 px-2">
+                    {(dashboardData.dailyRevenue || [0,0,0,0,0,0,0]).map((val: number, i: number) => {
+                      const maxVal = Math.max(...(dashboardData.dailyRevenue || [1]), 1);
+                      const h = (val / maxVal) * 100;
+                      return (
+                        <div key={i} className="flex-1 bg-slate-50 dark:bg-slate-800/30 rounded-t-xl relative group">
+                          <motion.div 
+                            initial={{ height: 0 }}
+                            animate={{ height: `${Math.max(h, 5)}%` }}
+                            className="absolute bottom-0 left-0 right-0 bg-primary/40 group-hover:bg-primary transition-all rounded-t-xl" 
+                          />
+                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[8px] font-black px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                            R${val.toFixed(0)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="lg:col-span-2 space-y-8">
+                    <div className="bg-emerald-500 dark:bg-emerald-600 p-10 rounded-[48px] shadow-2xl shadow-emerald-500/20 relative overflow-hidden group">
+                      <div className="absolute -top-10 -right-10 size-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+                      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                        <div>
+                          <p className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-2">Saldo Disponível para Saque</p>
+                          <h2 className="text-5xl font-black text-white tracking-tighter">R$ {merchantBalance.toFixed(2).replace('.', ',')}</h2>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            const amountStr = prompt('Digite o valor do saque (ex: 10.00):');
+                            if (amountStr) {
+                              const amount = parseFloat(amountStr.replace(',', '.'));
+                              if (isNaN(amount)) return toastError('Valor inválido');
+                              handleRequestWithdrawal(amount, targetItem.bank_info?.pix_key || '');
+                            }
+                          }}
+                          className="bg-white text-emerald-600 px-10 h-16 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                        >
+                          <span className="material-symbols-outlined font-black">logout</span>
+                          Solicitar Saque
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+                      <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
+                        <h4 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Histórico de Transações</h4>
+                        {isWalletLoading && <div className="size-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>}
+                      </div>
+                      <div className="overflow-x-auto min-h-[150px]">
+                        <table className="w-full text-left">
+                          <thead>
+                            <tr className="bg-slate-50/50 dark:bg-slate-800/50">
+                              <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
+                              <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Descrição</th>
+                              <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</th>
+                              <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                            {merchantTransactions.map((tx) => (
+                              <tr key={tx.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                <td className="px-8 py-6 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                  {new Date(tx.created_at).toLocaleDateString('pt-BR')}
+                                </td>
+                                <td className="px-8 py-6">
+                                  <p className="text-xs font-black text-slate-700 dark:text-white uppercase tracking-tight">{tx.description}</p>
+                                  <p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">{tx.type}</p>
+                                </td>
+                                <td className={`px-8 py-6 font-black text-sm ${tx.type === 'saque' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                  {tx.type === 'saque' ? '-' : '+'} R$ {Number(tx.amount).toFixed(2).replace('.', ',')}
+                                </td>
+                                <td className="px-8 py-6">
+                                  <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
+                                    tx.status === 'concluido' ? 'bg-emerald-50 text-emerald-600' : 
+                                    tx.status === 'pendente' ? 'bg-amber-50 text-amber-600' : 
+                                    'bg-rose-50 text-rose-600'
+                                  }`}>
+                                    {tx.status || 'concluido'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                            {merchantTransactions.length === 0 && !isWalletLoading && (
+                              <tr>
+                                <td colSpan={4} className="px-8 py-20 text-center text-slate-300 font-bold uppercase tracking-widest text-[10px]">
+                                  Nenhuma transação encontrada
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-[48px] border border-slate-100 dark:border-slate-800 shadow-inner space-y-8">
+                      <div className="flex items-center gap-4">
+                        <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                          <span className="material-symbols-outlined text-lg font-black">account_balance</span>
+                        </div>
+                        <h4 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Dados Bancários</h4>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">Nome do Banco</label>
+                          <input 
+                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
+                            value={targetItem.bank_info?.bank || ''}
+                            onChange={e => updateItem({...targetItem, bank_info: { ...targetItem.bank_info, bank: e.target.value }})}
+                            placeholder="Ex: NuBank, Bradesco..."
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">Chave PIX (Principal)</label>
+                          <input 
+                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
+                            value={targetItem.bank_info?.pix_key || ''}
+                            onChange={e => updateItem({...targetItem, bank_info: { ...targetItem.bank_info, pix_key: e.target.value }})}
+                            placeholder="CPF, E-mail ou Telefone"
+                          />
+                        </div>
+
+                        <button 
+                          onClick={() => handleUpdateMerchantBankInfo(targetItem.bank_info)}
+                          disabled={isSaving}
+                          className="w-full bg-primary/10 hover:bg-primary text-primary hover:text-slate-900 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all border border-primary/20 flex items-center justify-center gap-2 group"
+                        >
+                          <span className="material-symbols-outlined text-lg group-hover:scale-110 transition-transform">check_circle</span>
+                          {isSaving ? 'Salvando...' : 'Salvar Dados de Saque'}
+                        </button>
+                      </div>
+
+                      <div className="p-6 bg-amber-500/5 rounded-3xl border border-amber-500/10">
+                        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500 mb-2">
+                          <span className="material-symbols-outlined text-lg">info</span>
+                          <span className="text-[9px] font-black uppercase tracking-widest">Regras de Saque</span>
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase italic">Os saques são processados em até 24h úteis. O valor mínimo é de R$ 10,00.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
 
             {activePreviewTab === 'products' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">

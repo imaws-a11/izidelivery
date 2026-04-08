@@ -196,6 +196,44 @@ export const WalletView: React.FC<WalletViewProps> = ({
   const [searchTarget, setSearchTarget] = useState("");
   const [recipient, setRecipient] = useState<any>(null);
 
+  // Estados de Animação Real-time
+  const [showAnimation, setShowAnimation] = useState(false);
+  const [animationType, setAnimationType] = useState<"sent" | "received">("sent");
+  const [doneTransferAmount, setDoneTransferAmount] = useState(0);
+  const lastCoinValue = useRef(iziCoins);
+
+  // Monitorar recebimento de moedas em tempo real para disparar animação
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase.channel('realtime_coins')
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'users_delivery', 
+        filter: `id=eq.${userId}` 
+      }, (payload) => {
+        const newBalance = Number(payload.new.izi_coins || 0);
+        const oldBalance = Number(lastCoinValue.current);
+
+        if (newBalance > oldBalance && !showAnimation) {
+          const diff = newBalance - oldBalance;
+          setDoneTransferAmount(diff);
+          setAnimationType("received");
+          setShowAnimation(true);
+        }
+        lastCoinValue.current = newBalance;
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [userId, showAnimation]);
+
+  // Atualizar o ref quando a prop mudar via fluxo normal (ex: compra)
+  useEffect(() => {
+    lastCoinValue.current = iziCoins;
+  }, [iziCoins]);
+
   const walletBalance = walletTransactions.reduce(
     (acc: number, t: any) =>
       ["deposito", "reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount),
@@ -262,34 +300,38 @@ export const WalletView: React.FC<WalletViewProps> = ({
   };
 
   const handleTransfer = async () => {
-    const val = parseInt(amount);
+    const val = Number(amount.replace(",", "."));
     if (isNaN(val) || val <= 0) return showToast?.("Valor inválido", "error");
     if (val > iziCoins) return showToast?.("Saldo de coins insuficiente", "error");
     if (!recipient) return;
 
     setIsTransferring(true);
     try {
+      const newBalanceSelf = Number((iziCoins - val).toFixed(8));
+      
       // 1. Débito no remetente (Coins)
       const { error: err1 } = await supabase.from("users_delivery").update({
-        izi_coins: iziCoins - val
+        izi_coins: newBalanceSelf
       }).eq("id", userId);
 
       if (err1) throw err1;
 
-      // 2. Registro da transação
+      // 2. Registro da transação remetente
       await supabase.from("wallet_transactions").insert({
         user_id: userId,
         amount: val,
         type: "transferencia",
-        description: `Transferência enviada para ${recipient.name}`
+        description: `Transferência enviada para ${recipient.name}`,
+        balance_after: newBalanceSelf
       });
 
       // 3. Crédito no destinatário (Buscar saldo atual do destinatário primeiro)
       const { data: destUser } = await supabase.from("users_delivery").select("izi_coins").eq("id", recipient.id).single();
-      const destCoins = destUser?.izi_coins || 0;
+      const destCoins = Number(destUser?.izi_coins || 0);
+      const newBalanceDest = Number((destCoins + val).toFixed(8));
 
       await supabase.from("users_delivery").update({
-        izi_coins: Number(destCoins) + val
+        izi_coins: newBalanceDest
       }).eq("id", recipient.id);
 
       // 4. Registro da transação pro destinatário
@@ -297,8 +339,27 @@ export const WalletView: React.FC<WalletViewProps> = ({
         user_id: recipient.id,
         amount: val,
         type: "deposito",
-        description: `Transferência IZI recebida de ${userName}`
+        description: `Transferência IZI recebida de ${userName}`,
+        balance_after: newBalanceDest
       });
+
+      showToast?.("Transferência realizada com sucesso!", "success");
+      
+      // Trigger animation state
+      setDoneTransferAmount(val);
+      setAnimationType("sent");
+      setShowAnimation(true);
+      
+      setWalletMode("main");
+      setRecipient(null);
+      setSearchTarget("");
+      setAmount("");
+    } catch (err) {
+      showToast?.("Erro ao realizar transferência", "error");
+    } finally {
+      setIsTransferring(false);
+    }
+  };
 
 
 
@@ -408,10 +469,14 @@ export const WalletView: React.FC<WalletViewProps> = ({
                   <input 
                     type="text" 
                     autoFocus
-                    placeholder="0"
+                    inputMode="decimal"
+                    placeholder="0.00"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value.replace(/\D/g, ""))}
-                    className="bg-transparent text-5xl font-black text-white outline-none w-40 text-center placeholder:text-zinc-800"
+                    onChange={(e) => {
+                      const val = e.target.value.replace(",", ".");
+                      if (/^\d*\.?\d{0,8}$/.test(val)) setAmount(val);
+                    }}
+                    className="bg-transparent text-5xl font-black text-white outline-none w-64 text-center placeholder:text-zinc-800"
                   />
                 </div>
                 <p className="text-center text-xs text-zinc-700 flex items-center justify-center gap-1">
@@ -716,6 +781,73 @@ export const WalletView: React.FC<WalletViewProps> = ({
           </div>
         </section>
       </main>
+
+      {/* ANIMAÇÃO PREMIUM DE MOEDAS VOANDO */}
+      <AnimatePresence>
+        {showAnimation && (
+          <div className="fixed inset-0 z-[1000] pointer-events-none flex items-center justify-center overflow-hidden">
+             <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+             />
+
+             {/* Partículas de Moedas */}
+             {[...Array(20)].map((_, i) => (
+               <motion.div
+                 key={i}
+                 initial={{ 
+                   x: animationType === "sent" ? 0 : (Math.random() - 0.5) * window.innerWidth * 1.5,
+                   y: animationType === "sent" ? 0 : window.innerHeight + 100,
+                   scale: 0,
+                   rotate: 0,
+                   opacity: 0
+                 }}
+                 animate={{ 
+                   x: animationType === "sent" ? (Math.random() - 0.5) * window.innerWidth * 1.5 : 0,
+                   y: animationType === "sent" ? -window.innerHeight - 100 : 0,
+                   scale: [0, 1, 1, 0.5],
+                   rotate: 720,
+                   opacity: [0, 1, 1, 0]
+                 }}
+                 transition={{ 
+                   duration: 2.5, 
+                   delay: i * 0.08,
+                   ease: "easeOut"
+                 }}
+                 className="absolute size-10 bg-yellow-400 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(250,204,21,0.6)] border-2 border-yellow-200"
+               >
+                 <span className="text-black font-black text-xl italic mt-0.5">Z</span>
+               </motion.div>
+             ))}
+
+             {/* Banner Informativo */}
+             <motion.div
+               initial={{ scale: 0.5, opacity: 0, y: 20 }}
+               animate={{ scale: 1, opacity: 1, y: 0 }}
+               exit={{ scale: 0.8, opacity: 0 }}
+               onAnimationComplete={() => setTimeout(() => setShowAnimation(false), 3500)}
+               className="relative bg-zinc-900/90 border border-yellow-400/30 backdrop-blur-3xl p-8 rounded-[40px] flex flex-col items-center gap-4 shadow-2xl"
+             >
+                <div className="size-20 rounded-full bg-yellow-400 flex items-center justify-center mb-2 shadow-[0_0_40px_rgba(250,204,21,0.4)]">
+                   <span className="material-symbols-outlined text-black text-4xl font-black">
+                     {animationType === "sent" ? "rocket_launch" : "account_balance_wallet"}
+                   </span>
+                </div>
+                <div className="text-center">
+                   <p className="text-yellow-400 font-black text-[10px] uppercase tracking-[0.3em] mb-1">
+                     {animationType === "sent" ? "Envio Concluído" : "Você Recebeu IZI"}
+                   </p>
+                   <h2 className="text-4xl font-black text-white italic tracking-tighter">
+                     <span className="text-yellow-400">Z</span> {doneTransferAmount.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 8 })}
+                   </h2>
+                </div>
+                <p className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest mt-2">{animationType === "sent" ? "Criptomoeda Izi Processada" : "Saldo Atualizado em Tempo Real"}</p>
+             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

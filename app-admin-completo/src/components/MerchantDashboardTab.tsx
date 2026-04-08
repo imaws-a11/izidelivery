@@ -4,8 +4,14 @@ import { useAdmin } from '../context/AdminContext';
 
 export default function MerchantDashboardTab() {
   const {
-    allOrders, merchantProfile, dashboardData, fetchAllOrders
+    allOrders, merchantProfile, dashboardData, fetchAllOrders,
+    merchantBalance, isWalletLoading, setActiveTab, setActivePreviewTab
   } = useAdmin();
+
+  const goToFinancial = () => {
+    setActiveTab('my_studio');
+    setActivePreviewTab('financial');
+  };
 
   React.useEffect(() => {
     fetchAllOrders(1);
@@ -30,34 +36,47 @@ export default function MerchantDashboardTab() {
             Dashboard de Resultados
           </h1>
           <p className="text-slate-500 font-bold text-sm mt-1">
-            Acompanhe o desempenho da sua loja em tempo real
+            {merchantProfile?.name || 'Sua Loja'} • Acompanhe seu desempenho
           </p>
         </div>
         <div className="flex items-center gap-3">
+            <button 
+              onClick={goToFinancial}
+              className="px-6 py-3 bg-emerald-500 text-slate-900 rounded-2xl shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform flex items-center gap-2 font-black text-[10px] uppercase tracking-widest"
+            >
+              <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+              Sacar Saldo
+            </button>
             <div className="px-6 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Meta Mensal</span>
                 <span className="text-lg font-black text-slate-900 dark:text-white italic">R$ {monthlyGoal.toLocaleString('pt-BR')}</span>
             </div>
-            <button className="size-14 bg-primary text-slate-900 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
-                <span className="material-symbols-outlined font-black">download</span>
-            </button>
         </div>
       </div>
 
       {/* Main Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Faturamento Total', val: `R$ ${totalRevenue.toFixed(2).replace('.', ',')}`, icon: 'payments', info: 'Vendas concluídas', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-          { label: 'Pedidos Realizados', val: merchantOrders.length, icon: 'shopping_basket', info: `Taxa de conversão: 12%`, color: 'text-primary', bg: 'bg-primary/10' },
-          { label: 'Ticket Médio', val: `R$ ${avgTicket.toFixed(2).replace('.', ',')}`, icon: 'confirmation_number', info: '+5.4% vs mês anterior', color: 'text-blue-500', bg: 'bg-blue-500/10' },
-          { label: 'Novos Clientes', val: '24', icon: 'person_add', info: 'Retenção de 68%', color: 'text-purple-500', bg: 'bg-purple-500/10' },
+          { 
+            label: 'Saldo Disponível', 
+            val: isWalletLoading ? '...' : `R$ ${merchantBalance.toFixed(2).replace('.', ',')}`, 
+            icon: 'account_balance_wallet', 
+            info: 'Saldo pronto para saque', 
+            color: 'text-emerald-500', 
+            bg: 'bg-emerald-500/10',
+            action: goToFinancial 
+          },
+          { label: 'Faturamento Total', val: `R$ ${totalRevenue.toFixed(2).replace('.', ',')}`, icon: 'payments', info: 'Vendas concluídas', color: 'text-primary', bg: 'bg-primary/10' },
+          { label: 'Pedidos Realizados', val: merchantOrders.length, icon: 'shopping_basket', info: `Taxa de conversão: 12%`, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+          { label: 'Ticket Médio', val: `R$ ${avgTicket.toFixed(2).replace('.', ',')}`, icon: 'confirmation_number', info: '+5.4% vs mês anterior', color: 'text-purple-500', bg: 'bg-purple-500/10' },
         ].map((item, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all"
+            onClick={item.action}
+            className={`bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all ${item.action ? 'cursor-pointer active:scale-95' : ''}`}
           >
             <div className={`absolute -right-4 -top-4 size-24 ${item.bg} rounded-full blur-2xl opacity-50 group-hover:scale-150 transition-transform duration-700`} />
             <div className="relative z-10">
