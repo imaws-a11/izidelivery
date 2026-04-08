@@ -103,8 +103,9 @@ export default function UsersTab() {
       const { error: insertError } = await supabase.from('wallet_transactions').insert({
         user_id: selectedUser.id,
         amount: diff,
-        type: diff >= 0 ? 'deposito' : 'saque',
-        description: `Ajuste manual via Painel Admin (${walletType === 'add' ? 'Adição' : 'Definição'})`
+        type: diff >= 0 ? 'credit' : 'debit',
+        description: `Ajuste manual via Painel Admin (${walletType === 'add' ? 'Adição' : 'Definição'})`,
+        balance_after: newBalance
       });
       
       if (insertError) {

@@ -56,14 +56,28 @@ serve(async (req) => {
     }
 
     if (payment.status === 'approved') {
-      await supabaseAdmin
-        .from('orders_delivery')
-        .update({ 
-          status: 'novo', 
-          paid_at: new Date().toISOString(),
-          payment_status: 'approved'
-        })
-        .eq('id', orderId)
+      // Se for compra de moedas, processa o crédito imediatamente
+      if (order?.service_type === 'coin_purchase') {
+        // O crédito de moedas é processado via trigger assim que o payment_status for 'approved'
+        await supabaseAdmin
+          .from('orders_delivery')
+          .update({ 
+            status: 'concluido',
+            paid_at: new Date().toISOString(),
+            payment_status: 'approved'
+          })
+          .eq('id', orderId)
+      } else {
+        // Fluxo normal de pedido de delivery
+        await supabaseAdmin
+          .from('orders_delivery')
+          .update({ 
+            status: 'novo', 
+            paid_at: new Date().toISOString(),
+            payment_status: 'approved'
+          })
+          .eq('id', orderId)
+      }
 
       await supabaseAdmin.from('audit_logs_delivery').insert({
         action: 'Pagamento Confirmado',

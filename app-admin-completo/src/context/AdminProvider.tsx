@@ -975,12 +975,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const { error: updateErr } = await supabase.from('users_delivery').update({ izi_coins: newBalance }).eq('id', userId);
       if (updateErr) throw updateErr;
 
-      await supabase.from('wallet_transactions_delivery').insert({
+      await supabase.from('wallet_transactions').insert({
         user_id: userId,
         amount,
         type: 'credit',
         description,
-        status: 'completed'
+        balance_after: newBalance
       });
 
       toastSuccess(`Crédito de ${amount} IZI Coins aplicado!`);
