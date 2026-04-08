@@ -335,6 +335,7 @@ export type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'f
 export type UserRole = 'admin' | 'merchant';
 
 export interface AppSettings {
+  id?: string;
   appName: string;
   supportEmail: string;
   openingTime: string;
@@ -354,6 +355,8 @@ export interface AppSettings {
   flashOfferDiscount: number;
   flashOfferExpiry: string;
   iziCoinRate: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface DashboardData {

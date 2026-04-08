@@ -3,7 +3,7 @@ import { useAdmin } from '../context/AdminContext';
 // Configurações do Sistema
 export default function SettingsTab() {
   const {
-    appSettings, setAppSettings, autoSaveStatus, fetchAppSettings
+    appSettings, setAppSettings, autoSaveStatus, fetchAppSettings, handleSaveAppSettings, isSaving
   } = useAdmin();
   return (
     <div className="space-y-8 pb-20">
@@ -206,7 +206,7 @@ export default function SettingsTab() {
           </div>
 
           <div className="bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-100 dark:border-cyan-500/20 rounded-[28px] p-6 space-y-3">
-            <label className="block text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-1">ComissÃ£o Entregador sobre Frete (%)</label>
+            <label className="block text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-1">Comissão Entregador sobre Frete (%)</label>
             <div className="relative">
               <input
                 className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-cyan-600 focus:ring-2 focus:ring-cyan-300 shadow-inner"
@@ -220,7 +220,7 @@ export default function SettingsTab() {
           </div>
 
           <div className="bg-fuchsia-50 dark:bg-fuchsia-500/10 border border-fuchsia-100 dark:border-fuchsia-500/20 rounded-[28px] p-6 space-y-3">
-            <label className="block text-[10px] font-black text-fuchsia-600 uppercase tracking-widest mb-1">ComissÃ£o Motorista Particular (%)</label>
+            <label className="block text-[10px] font-black text-fuchsia-600 uppercase tracking-widest mb-1">Comissão Motorista Particular (%)</label>
             <div className="relative">
               <input
                 className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-fuchsia-600 focus:ring-2 focus:ring-fuchsia-300 shadow-inner"
