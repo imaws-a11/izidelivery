@@ -12,16 +12,16 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
       try {
         qrRef.current = new Html5Qrcode("reader");
         await qrRef.current.start(
-          { 
-            facingMode: "environment",
-            // @ts-ignore - focusMode é suportado em navegadores modernos mas não no tipo padrão
-            focusMode: "continuous",
-            advanced: [{ focusMode: "continuous" }] as any
-          },
+          { facingMode: "environment" },
           {
             fps: 30,
             // Não passamos qrbox para evitar que a biblioteca desenhe qualquer overlay ou quadrado
             aspectRatio: window.innerHeight / window.innerWidth,
+            videoConstraints: {
+              facingMode: "environment",
+              // @ts-ignore
+              focusMode: "continuous"
+            }
           },
           (decodedText: string) => {
             onResult(decodedText);
