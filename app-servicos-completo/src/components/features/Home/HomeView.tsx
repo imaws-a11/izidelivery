@@ -59,10 +59,12 @@ interface HomeViewProps {
     | "lightning_payment"
     | "shipping_priority"
     | "izi_black_purchase"
-    | "card_payment";
+    | "card_payment"
+    | "izi_coin_tracking";
   searchQuery: string;
   setSearchQuery: (val: string) => void;
   setSelectedItem: (item: any) => void;
+  onOpenDepositModal?: () => void;
   availableCoupons: any[];
   copiedCoupon: string | null;
   setCopiedCoupon: (val: string | null) => void;
@@ -93,6 +95,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   searchQuery,
   setSearchQuery,
   setSelectedItem,
+  onOpenDepositModal,
   availableCoupons,
   copiedCoupon,
   setCopiedCoupon,
@@ -226,7 +229,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
     };
   });
 
-  const activeOrder = myOrders.find(o => !["concluido", "cancelado"].includes(o.status));
+  const activeOrder = myOrders.find(o => !["concluido", "cancelado"].includes(o.status) && o.service_type !== 'coin_purchase');
+  const coinOrder = myOrders.find(o => !["concluido", "cancelado"].includes(o.status) && o.service_type === 'coin_purchase');
 
   return (
     <div className="flex flex-col bg-black text-zinc-100 pb-32 overflow-y-auto no-scrollbar h-full">
@@ -534,20 +538,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
             )}
           </AnimatePresence>
 
-          {/* ACOMPANHAMENTO EM TEMPO REAL - LIVE ACTIVITY STYLE */}
-          {activeOrder && activeOrder.service_type === 'coin_purchase' ? (
+          {/* ACOMPANHAMENTO DE IZICOINS */}
+          {coinOrder && (
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => { setSelectedItem(activeOrder); setSubView("izi_coin_tracking"); }}
-              className="relative overflow-hidden bg-zinc-900 border border-blue-400/30 rounded-[32px] p-6 shadow-[0_20px_50px_rgba(59,130,246,0.15)] group cursor-pointer"
+              className="relative overflow-hidden bg-zinc-900 border border-blue-400/30 rounded-[32px] p-6 shadow-[0_20px_50px_rgba(59,130,246,0.15)] group mb-6 flex flex-col gap-4"
             >
               {/* Background Glow */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 blur-[60px] -mr-16 -mt-16 group-hover:bg-blue-400/20 transition-all duration-700" />
               
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between" onClick={() => { setSelectedItem(coinOrder); setSubView("izi_coin_tracking"); }}>
+                <div className="flex items-center gap-3 cursor-pointer">
                   <div className="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
                     <span className="material-symbols-outlined text-white text-2xl font-black animate-pulse">
                       payments
@@ -555,29 +558,29 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   </div>
                   <div>
                     <h4 className="text-white font-black text-sm uppercase tracking-tight italic">Recarga de IZI Coins</h4>
-                    <p className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">Processamento Instantâneo</p>
+                    <p className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">{coinOrder.status === 'pendente_pagamento' ? 'Aguardando Pagamento' : 'Processamento Instantâneo'}</p>
                   </div>
                 </div>
-                <div className="flex flex-col items-end">
+                <div className="flex flex-col items-end cursor-pointer">
                    <span className="text-blue-400 text-[10px] font-black uppercase tracking-widest bg-blue-400/10 px-3 py-1.5 rounded-full border border-blue-400/20">
-                     {activeOrder.status === 'pendente_pagamento' ? "Aguardando" : 
-                      activeOrder.payment_status === 'paid' || ['novo', 'aceito', 'confirmado'].includes(activeOrder.status) ? "Processando" :
-                      activeOrder.status}
+                     {coinOrder.status === 'pendente_pagamento' ? "Aguardando" : 
+                      coinOrder.payment_status === 'paid' || ['novo', 'aceito', 'confirmado'].includes(coinOrder.status) ? "Processando" :
+                      coinOrder.status}
                    </span>
                 </div>
               </div>
 
               <div className="space-y-4">
-                 <div className="flex flex-col gap-2">
-                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                      <span>Valor: R$ {Number(activeOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                 <div className="flex flex-col gap-2" onClick={() => { setSelectedItem(coinOrder); setSubView("izi_coin_tracking"); }}>
+                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-zinc-400 cursor-pointer">
+                      <span>Valor: R$ {Number(coinOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
                       <span className="text-white italic">Confirmando Transação...</span>
                     </div>
                     {/* Progress Bar Dinâmica */}
                     <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
                       <motion.div 
                         initial={{ width: "10%" }}
-                        animate={{ width: activeOrder.payment_status === 'paid' ? "75%" : "30%" }}
+                        animate={{ width: coinOrder.payment_status === 'paid' ? "75%" : "30%" }}
                         transition={{ duration: 1, repeat: Infinity, repeatType: "reverse" }}
                         className="h-full bg-blue-400 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.4)]"
                       />
@@ -585,16 +588,38 @@ export const HomeView: React.FC<HomeViewProps> = ({
                  </div>
                  
                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                    <p className="text-zinc-500 text-[9px] font-medium">
-                      Suas moedas estarão disponíveis em instantes.
-                    </p>
-                    <div className="text-white text-[10px] font-black flex items-center gap-1 group-hover:gap-2 transition-all">
+                    {coinOrder.status === 'pendente_pagamento' ? (
+                       <button
+                         onClick={(e) => { 
+                           e.stopPropagation(); 
+                           if(onOpenDepositModal) {
+                             onOpenDepositModal();
+                           } else {
+                             setSubView("card_payment");
+                           }
+                         }}
+                         className="flex-1 mr-2 px-4 py-2.5 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 font-black text-[10px] uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all text-center"
+                       >
+                         Voltar ao Pagamento
+                       </button>
+                    ) : (
+                       <p className="text-zinc-500 text-[9px] font-medium flex-1">
+                         Suas moedas estarão disponíveis em instantes.
+                       </p>
+                    )}
+                    <button 
+                       onClick={(e) => { e.stopPropagation(); setSelectedItem(coinOrder); setSubView("izi_coin_tracking"); }}
+                       className="text-white text-[10px] font-black flex items-center justify-end gap-1 hover:gap-2 transition-all p-2"
+                    >
                        VER DETALHES <span className="material-symbols-outlined text-sm text-blue-400">arrow_forward</span>
-                    </div>
+                    </button>
                  </div>
               </div>
             </motion.div>
-          ) : activeOrder && (
+          )}
+
+          {/* ACOMPANHAMENTO EM TEMPO REAL DE PEDIDOS NORMIAIS */}
+          {activeOrder && (
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

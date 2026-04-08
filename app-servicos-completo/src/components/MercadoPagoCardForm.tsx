@@ -78,7 +78,13 @@ export const MercadoPagoCardForm = ({ onConfirm }: MercadoPagoCardFormProps) => 
         return;
       }
 
-      const mp = new MercadoPago(mpPublicKey);
+      if (!mpPublicKey || mpPublicKey.includes("INSIRA_SUA_CHAVE")) {
+        toastError("Chave Pública do Mercado Pago não configurada no .env");
+        setLoading(false);
+        return;
+      }
+
+      const mp = new MercadoPago(mpPublicKey.trim());
       
       const cardToken = await mp.createCardToken({
         cardNumber: formData.cardNumber.replace(/\s/g, ''),
@@ -98,8 +104,9 @@ export const MercadoPagoCardForm = ({ onConfirm }: MercadoPagoCardFormProps) => 
       }
     } catch (err: any) {
       console.error("MP Token Error:", err);
-      if (err?.message?.includes('404')) {
-        toastError("Chave de Integração MP inválida ou não configurada.");
+      const isKeyError = err?.message?.includes('404') || err?.message?.includes('public_key');
+      if (isKeyError) {
+        toastError("Chave de Integração MP (Public Key) inválida ou inativa.");
       } else {
         toastError("Erro ao processar dados do cartão. Verifique os campos.");
       }

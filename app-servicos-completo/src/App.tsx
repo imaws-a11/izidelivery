@@ -3536,29 +3536,41 @@ const navigateSubView = (target: string) => {
         setIsLoading(true);
         try {
             const isSubscription = paymentsOrigin === "izi_black";
-            const orderBase = {
-                user_id: userId,
-                merchant_id: isSubscription ? null : (selectedShop?.id || null),
-                total_price: total,
-                status: "pendente_pagamento",
-                pickup_address: isSubscription ? "Assinatura Izi Black" : (selectedShop?.name || "Estabelecimento"),
-                delivery_address: isSubscription ? "Serviço Digital" : (userLocation.address || "Endereço não informado"),
-                items: cart, // Adicionado para exibição no ActiveOrderView
-                payment_method: "cartao",
-                service_type: isSubscription ? "subscription" : "restaurant",
-            };
+            const isCoinPurchase = selectedItem?.service_type === 'coin_purchase';
+            
+            let orderId = selectedItem?.id;
 
-            console.log("[DIAG] Payload Cartão preparado:", orderBase);
-            // alert(`Enviando Cartão: Status=${orderBase.status}`);
+            if (!isCoinPurchase) {
+              const orderBase = {
+                  user_id: userId,
+                  merchant_id: isSubscription ? null : (selectedShop?.id || null),
+                  total_price: total,
+                  status: "pendente_pagamento",
+                  pickup_address: isSubscription ? "Assinatura Izi Black" : (selectedShop?.name || "Estabelecimento"),
+                  delivery_address: isSubscription ? "Serviço Digital" : (userLocation.address || "Endereço não informado"),
+                  items: cart,
+                  payment_method: "cartao",
+                  service_type: isSubscription ? "subscription" : "restaurant",
+              };
 
-            const { data: order } = await supabase.from("orders_delivery").insert(orderBase).select().single();
-            if (!order) { toastError("Erro ao criar pedido."); return; }
+              console.log("[DIAG] Payload Cartão preparado:", orderBase);
+              const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(orderBase).select().single();
+              
+              if (insertError || !order) { 
+                toastError("Erro ao criar pedido: " + (insertError?.message || "Erro desconhecido")); 
+                return; 
+              }
+              orderId = order.id;
+            } else {
+              // Se for compra de moedas, apenas garante que o status está correto
+              await supabase.from("orders_delivery").update({ status: "pendente_pagamento" }).eq("id", orderId);
+            }
 
             const cleanEmail = (user?.email || loginEmail || "cliente@izidelivery.com").trim().toLowerCase();
             const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
                 body: {
                     amount: Number(total.toFixed(2)),
-                    orderId: order.id,
+                    orderId: orderId,
                     payment_method_id: brand.toLowerCase().includes('visa') ? 'visa' : 'master',
                     token: token,
                     email: cleanEmail,
@@ -3569,7 +3581,14 @@ const navigateSubView = (target: string) => {
             if (fnErr || (fnData && fnData.status !== 'approved')) {
                 const mpMsg = fnData?.details?.cause?.[0]?.description || fnData?.error || fnErr?.message || "O cartão foi recusado pela operadora.";
                 toastError(`Pagamento não aprovado: ${mpMsg}`);
-                setSubView(isSubscription ? "izi_black_purchase" : "checkout");
+                if (isSubscription) {
+                  setSubView("izi_black_purchase");
+                } else if (isCoinPurchase) {
+                  setShowDepositModal(true);
+                  setSubView("none");
+                } else {
+                  setSubView("checkout");
+                }
                 return;
             }
 
@@ -3578,9 +3597,12 @@ const navigateSubView = (target: string) => {
                 setIsIziBlackMembership(true);
                 setIziBlackStep('success');
                 setSubView("izi_black_purchase");
+            } else if (isCoinPurchase) {
+                setSubView("izi_coin_tracking");
             } else {
-                setSelectedItem(order);
-                await clearCart(order.id);
+                const { data: updatedOrder } = await supabase.from("orders_delivery").select().eq("id", orderId).single();
+                setSelectedItem(updatedOrder || { id: orderId });
+                await clearCart(orderId);
                 setTab("orders");
                 setSubView("none");
             }
@@ -3589,7 +3611,14 @@ const navigateSubView = (target: string) => {
         } catch (err: any) {
             console.error("Card processing error:", err);
             toastError("Instabilidade na rede. Tente novamente.");
-            setSubView(paymentsOrigin === "izi_black" ? "izi_black_purchase" : "checkout");
+            if (isSubscription) {
+              setSubView("izi_black_purchase");
+            } else if (isCoinPurchase) {
+              setShowDepositModal(true);
+              setSubView("none");
+            } else {
+              setSubView("checkout");
+            }
         } finally {
             setIsLoading(false);
         }
@@ -3598,7 +3627,16 @@ const navigateSubView = (target: string) => {
     return (
       <div className="absolute inset-0 z-40 bg-black text-white flex flex-col overflow-y-auto no-scrollbar pb-10">
         <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-6 border-b border-zinc-900 text-white">
-          <button onClick={() => setSubView("checkout")}
+          <button onClick={() => {
+              if (selectedItem?.service_type === 'coin_purchase') {
+                setShowDepositModal(true);
+                setSubView("none");
+              } else if (paymentsOrigin === "izi_black") {
+                setSubView("izi_black_purchase");
+              } else {
+                setSubView("checkout");
+              }
+            }}
             className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
             <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
           </button>
@@ -7104,7 +7142,7 @@ const navigateSubView = (target: string) => {
             <AnimatePresence mode="wait">
               {tab === "home" && (
                 <motion.div key="home-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                  <HomeView userLevel={userLevel} userId={userId} userLocation={userLocation} isIziBlackMembership={isIziBlackMembership} cart={cart} myOrders={myOrders} navigateSubView={navigateSubView} setSubView={setSubView} subView={subView} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSelectedItem={setSelectedItem} availableCoupons={availableCoupons.filter((c: any) => c.coupon_code)} banners={availableCoupons.filter((c: any) => !c.coupon_code)} copiedCoupon={copiedCoupon} setCopiedCoupon={setCopiedCoupon} showToast={showToast} setShowMasterPerks={setShowMasterPerks} ESTABLISHMENTS={ESTABLISHMENTS} handleShopClick={handleShopClick} flashOffers={flashOffers} setActiveService={setActiveService} transitData={transitData} setTransitData={setTransitData} setExploreCategoryState={setExploreCategoryState} setRestaurantInitialCategory={setRestaurantInitialCategory} setTab={setTab} />
+                  <HomeView userLevel={userLevel} userId={userId} userLocation={userLocation} isIziBlackMembership={isIziBlackMembership} cart={cart} myOrders={myOrders} navigateSubView={navigateSubView} setSubView={setSubView} subView={subView} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSelectedItem={setSelectedItem} onOpenDepositModal={() => setShowDepositModal(true)} availableCoupons={availableCoupons.filter((c: any) => c.coupon_code)} banners={availableCoupons.filter((c: any) => !c.coupon_code)} copiedCoupon={copiedCoupon} setCopiedCoupon={setCopiedCoupon} showToast={showToast} setShowMasterPerks={setShowMasterPerks} ESTABLISHMENTS={ESTABLISHMENTS} handleShopClick={handleShopClick} flashOffers={flashOffers} setActiveService={setActiveService} transitData={transitData} setTransitData={setTransitData} setExploreCategoryState={setExploreCategoryState} setRestaurantInitialCategory={setRestaurantInitialCategory} setTab={setTab} />
                 </motion.div>
               )}
               {tab === "orders" && (
