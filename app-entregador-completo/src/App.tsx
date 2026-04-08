@@ -590,17 +590,8 @@ function App() {
         setAuthPassword('');
         setAuthError('');
 
-        [
-            'izi_driver_authenticated',
-            'izi_driver_uid',
-            'izi_driver_name',
-            'izi_driver_pix',
-            'Izi_online',
-            'Izi_active_mission',
-            'Izi_declined_timed',
-            'Izi_declined_slots'
-        ].forEach((key) => localStorage.removeItem(key));
-
+        // Limpa TUDO do storage para garantir que o token do Supabase também suma
+        localStorage.clear();
         sessionStorage.clear();
     }, []);
 
