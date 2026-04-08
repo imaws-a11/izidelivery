@@ -67,6 +67,31 @@ export default function OrdersAdminTab() {
         else toastSuccess('Status do pedido atualizado.');
       }
 
+      // Se for confirmação de coin_purchase, creditar IZI Coins automaticamente
+      if (newStatus === 'novo' && data && data.length > 0) {
+        const order = data[0];
+        if (order.service_type === 'coin_purchase' && order.user_id) {
+          try {
+            const amountPaid = Number(order.total_price || 0);
+            const coinRate = Number(appSettings?.iziCoinRate || 1);
+            const coinsToCredit = amountPaid / coinRate;
+            const { data: userRecord } = await supabase.from('users_delivery').select('izi_coins').eq('id', order.user_id).single();
+            const currentCoins = Number((userRecord as any)?.izi_coins || 0);
+            const newBalance = currentCoins + coinsToCredit;
+            await supabase.from('users_delivery').update({ izi_coins: newBalance }).eq('id', order.user_id);
+            await supabase.from('wallet_transactions_delivery').insert({
+              user_id: order.user_id, type: 'credit', amount: coinsToCredit,
+              description: `Recarga manual de ${coinsToCredit.toFixed(2)} IZI Coins pelo Admin`,
+              order_id: id, balance_after: newBalance,
+            });
+            await supabase.from('orders_delivery').update({ status: 'concluido' }).eq('id', id);
+            toastSuccess(`✅ ${coinsToCredit.toFixed(2)} IZI Coins creditados!`);
+          } catch (coinErr: any) {
+            toastError('Erro ao creditar coins: ' + coinErr.message);
+          }
+        }
+      }
+
       await fetchAllOrders(ordersPage);
       if (selectedOrderDetails?.id === id) {
           setSelectedOrderDetails(data?.[0]);

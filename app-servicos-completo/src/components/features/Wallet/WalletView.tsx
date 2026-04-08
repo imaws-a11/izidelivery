@@ -11,24 +11,43 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
     const startScanner = async () => {
       try {
         qrRef.current = new Html5Qrcode("reader");
-        await qrRef.current.start(
-          { facingMode: "environment" },
-          {
-            fps: 30,
-            // Não passamos qrbox para evitar que a biblioteca desenhe qualquer overlay ou quadrado
-            aspectRatio: window.innerHeight / window.innerWidth,
-            videoConstraints: {
-              facingMode: "environment",
-              // @ts-ignore
-              focusMode: "continuous"
-            }
-          },
-          (decodedText: string) => {
-            onResult(decodedText);
-            qrRef.current?.stop().catch(() => {});
-          },
-          () => {} 
-        );
+        // Tenta obter as câmeras disponíveis para escolher a traseira de forma mais robusta
+        const cameras = await Html5Qrcode.getCameras();
+        
+        if (cameras && cameras.length > 0) {
+          // Busca a câmera traseira (back/environment)
+          const backCamera = cameras.find(c => c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('traseira')) || cameras[0];
+          
+          await qrRef.current.start(
+            backCamera.id,
+            {
+              fps: 30,
+              aspectRatio: window.innerHeight / window.innerWidth,
+              videoConstraints: {
+                focusMode: "continuous"
+              }
+            },
+            (decodedText: string) => {
+              onResult(decodedText);
+              qrRef.current?.stop().catch(() => {});
+            },
+            () => {} 
+          );
+        } else {
+          // Fallback para facingMode se não conseguir listar câmeras
+          await qrRef.current.start(
+            { facingMode: "environment" },
+            {
+              fps: 30,
+              aspectRatio: window.innerHeight / window.innerWidth
+            },
+            (decodedText: string) => {
+              onResult(decodedText);
+              qrRef.current?.stop().catch(() => {});
+            },
+            () => {}
+          );
+        }
       } catch (err) {
         console.error("Erro ao iniciar câmera:", err);
       }
@@ -57,6 +76,11 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
       
       {/* CSS Injetado para forçar o vídeo e esconder o resto da lib */}
       <style>{`
+        #reader {
+          width: 100vw !important;
+          height: 100vh !important;
+          border: none !important;
+        }
         #reader video {
           width: 100% !important;
           height: 100% !important;
@@ -72,6 +96,9 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
            display: none !important;
         }
         #reader__dashboard {
+           display: none !important;
+        }
+        #reader img {
            display: none !important;
         }
       `}</style>
