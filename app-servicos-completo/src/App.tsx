@@ -2255,7 +2255,9 @@ const navigateSubView = (target: string) => {
       const config = {
         equilibrium: ratesData?.find(r => r.type === 'equilibrium')?.metadata || marketConditions.settings.equilibrium,
         weather: ratesData?.find(r => r.type === 'weather_rules')?.metadata || marketConditions.settings.weather,
-        baseValues: ratesData?.find(r => r.type === 'base_values')?.metadata || marketConditions.settings.baseValues
+        baseValues: ratesData?.find(r => r.type === 'base_values')?.metadata || marketConditions.settings.baseValues,
+        flowControl: ratesData?.find(r => r.type === 'flow_control')?.metadata || marketConditions.settings.flowControl,
+        peakHours: ratesData?.filter(r => r.type === 'peak_hour') || []
       };
 
       // 2. Contagem de Motoristas On-line (Oferta Real)
@@ -2270,37 +2272,49 @@ const navigateSubView = (target: string) => {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending');
 
-      // [Comentario Limpo pelo Sistema]
       const weathers = ["Ensolarado", "Nublado", "Chuva Leve", "Tempestade"];
-      const hour = new Date().getHours();
+      const now = new Date();
+      const hour = now.getHours();
       const currentWeather = (hour > 18 || hour < 6) ? "Nublado" : weathers[Math.floor(Math.random() * 2)];
 
-      // [Comentario Limpo pelo Sistema]
-      const drivers = onlineDrivers || 5; 
+      const drivers = onlineDrivers || 1; 
       const orders = pendingOrders || 0;
       const ratio = orders / drivers;
 
-      // [Comentario Limpo pelo Sistema]
+      // --- LOGICA DE SURGE (%) ---
       let surge = 1.0;
+
+      // 1. Modo Inteligente (Algoritmo de Equilíbrio)
       const { threshold, sensitivity, maxSurge } = config.equilibrium;
-      
-      if (ratio > threshold) {
-        surge = 1.0 + (ratio - threshold) * sensitivity;
+      if (config.flowControl?.mode === 'auto') {
+        if (ratio > threshold) {
+          surge = 1.0 + (ratio - threshold) * sensitivity;
+        }
       }
 
-      // [Comentario Limpo pelo Sistema]
-      if (currentWeather === "Tempestade" && config.weather.storm.active) surge += (config.weather.storm.multiplier - 1);
-      if (currentWeather === "Chuva Leve" && config.weather.rain.active) surge += (config.weather.rain.multiplier - 1);
+      // 2. Regras de Clima
+      if (currentWeather === "Tempestade" && config.weather?.storm?.active) surge += (config.weather.storm.multiplier - 1);
+      if (currentWeather === "Chuva Leve" && config.weather?.rain?.active) surge += (config.weather.rain.multiplier - 1);
       
-      // [Comentario Limpo pelo Sistema]
-      if (hour >= 18 && hour <= 21) surge += 0.3; 
+      // 3. Regras de Horário de Pico (Peak Hours do Admin)
+      config.peakHours.forEach((rule: any) => {
+        if (rule.active) {
+            // No momento usamos apenas multiplicador global se houver, mas podemos expandir para labels
+            // Ex: "Acréscimo Noturno"
+            surge += (rule.multiplier - 1);
+        }
+      });
 
-      // [Comentario Limpo pelo Sistema]
-      const finalSurge = Math.max(1.0, Math.min(maxSurge, surge));
+      // 4. Overrides do Admin (Surge Crítico)
+      if (config.flowControl?.highDemandActive) {
+        surge = Math.max(surge, 1.5); // Força pelo menos 1.5x
+      }
+
+      const finalSurge = Math.max(1.0, Math.min(maxSurge || 4.0, surge));
 
       setMarketConditions({
         demand: parseFloat(ratio.toFixed(2)),
-        traffic: ratio > 1.5 ? "Congestionado" : "Normal",
+        traffic: ratio > 1.5 ? "Congestionado" : (ratio > 1 ? "Moderado" : "Normal"),
         weather: currentWeather,
         surgeMultiplier: parseFloat(finalSurge.toFixed(2)),
         settings: config as any

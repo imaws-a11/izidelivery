@@ -1707,14 +1707,23 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (batchError) throw batchError;
 
+      // Deletar regras antigas para evitar duplicidade
+      await supabase.from('dynamic_rates_delivery').delete().in('type', ['peak_hour', 'zone']);
+
       if (dynamicRatesState.peakHours.length > 0) {
-        await supabase.from('dynamic_rates_delivery').upsert(
-          dynamicRatesState.peakHours.map(r => ({ ...r, type: 'peak_hour', updated_at: new Date().toISOString() }))
+        await supabase.from('dynamic_rates_delivery').insert(
+          dynamicRatesState.peakHours.map(r => {
+            const { id, ...rest } = r; // Remover ID se existir para deixar o DB gerar um novo ou manter limpo
+            return { ...rest, type: 'peak_hour', updated_at: new Date().toISOString() };
+          })
         );
       }
       if (dynamicRatesState.zones.length > 0) {
-        await supabase.from('dynamic_rates_delivery').upsert(
-          dynamicRatesState.zones.map(r => ({ ...r, type: 'zone', updated_at: new Date().toISOString() }))
+        await supabase.from('dynamic_rates_delivery').insert(
+          dynamicRatesState.zones.map(r => {
+            const { id, ...rest } = r;
+            return { ...rest, type: 'zone', updated_at: new Date().toISOString() };
+          })
         );
       }
 
