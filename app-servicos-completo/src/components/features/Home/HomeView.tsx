@@ -65,6 +65,7 @@ interface HomeViewProps {
   setSearchQuery: (val: string) => void;
   setSelectedItem: (item: any) => void;
   onOpenDepositModal?: () => void;
+  onReturnToPayment?: (order: any) => void;
   availableCoupons: any[];
   copiedCoupon: string | null;
   setCopiedCoupon: (val: string | null) => void;
@@ -112,6 +113,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   setRestaurantInitialCategory,
   isIziBlackMembership,
   setTab,
+  onReturnToPayment,
 }) => {
   const [activeBannerIndex, setActiveBannerIndex] = React.useState(0);
   const [isSearching, setIsSearching] = useState(false);
@@ -592,7 +594,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                        <button
                          onClick={(e) => { 
                            e.stopPropagation(); 
-                           if(onOpenDepositModal) {
+                           if(onReturnToPayment) {
+                             onReturnToPayment(coinOrder);
+                           } else if(onOpenDepositModal) {
                              onOpenDepositModal();
                            } else {
                              setSubView("card_payment");
