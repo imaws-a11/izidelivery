@@ -2257,7 +2257,7 @@ const navigateSubView = (target: string) => {
         weather: ratesData?.find(r => r.type === 'weather_rules')?.metadata || marketConditions.settings.weather,
         baseValues: ratesData?.find(r => r.type === 'base_values')?.metadata || marketConditions.settings.baseValues,
         flowControl: ratesData?.find(r => r.type === 'flow_control')?.metadata || marketConditions.settings.flowControl,
-        peakHours: ratesData?.filter(r => r.type === 'peak_hour') || []
+        peakHours: (ratesData?.find(r => r.type === 'peak_hour')?.metadata as any)?.rules || []
       };
 
       // 2. Contagem de Motoristas On-line (Oferta Real)
@@ -2275,7 +2275,12 @@ const navigateSubView = (target: string) => {
       const weathers = ["Ensolarado", "Nublado", "Chuva Leve", "Tempestade"];
       const now = new Date();
       const hour = now.getHours();
-      const currentWeather = (hour > 18 || hour < 6) ? "Nublado" : weathers[Math.floor(Math.random() * 2)];
+      
+      // Sincronização Real: O clima é definido pelo Admin. Se nenhum estiver ativo, usa lógica temporal.
+      let currentWeather = (hour > 18 || hour < 6) ? "Nublado" : "Ensolarado";
+      if (config.weather?.storm?.active) currentWeather = "Tempestade";
+      else if (config.weather?.rain?.active) currentWeather = "Chuva Leve";
+      else if (config.weather?.snow?.active) currentWeather = "Nublado"; // Neve mapeado para nublado visualmente aqui
 
       const drivers = onlineDrivers || 1; 
       const orders = pendingOrders || 0;

@@ -11,6 +11,42 @@ export default function DynamicRatesTab() {
 
   const headerRef = useRef<HTMLDivElement>(null);
 
+  const onlineDrivers = stats?.onlineDrivers || 0;
+  const activeOrders = (allOrders?.filter(o => ['pendente', 'aceito', 'preparando', 'novo', 'waiting_driver', 'picked_up', 'em_rota'].includes(o.status)).length) || 0;
+  const ratio = activeOrders / (onlineDrivers || 1);
+
+  // Simular o cálculo do surge atual com base nas regras do Algoritmo
+  const threshold = dynamicRatesState.equilibrium?.threshold || 1.2;
+  const sensitivity = dynamicRatesState.equilibrium?.sensitivity || 2.0;
+  const maxSurge = dynamicRatesState.equilibrium?.maxSurge || 4.0;
+
+  let simulatedSurge = 1.0;
+  if (dynamicRatesState.flowControl?.mode === 'auto') {
+    if (ratio > threshold) {
+      simulatedSurge = 1.0 + (ratio - threshold) * sensitivity;
+    }
+  }
+  
+  // Clima
+  const anyWeatherActive = Object.values(dynamicRatesState.weather || {}).find((w: any) => w.active);
+  if (anyWeatherActive) simulatedSurge += (anyWeatherActive.multiplier - 1);
+  
+  if (dynamicRatesState.flowControl?.highDemandActive) {
+    simulatedSurge = Math.max(simulatedSurge, 1.5);
+  }
+  
+  const finalSurgeDisplay = Math.max(1.0, Math.min(maxSurge, simulatedSurge));
+
+  // Saúde da Malha (%)
+  // Saúde é a disponibilidade de drivers vs demanda. 
+  // Se drivers > orders, saúde é 100%. Se orders > drivers, a saúde decai.
+  const healthPercent = Math.max(1, onlineDrivers === 0 ? 0 : Math.min(100, Math.round((onlineDrivers / (activeOrders || onlineDrivers)) * 100)));
+  const healthLabel = healthPercent > 80 ? 'Excelente' : (healthPercent > 50 ? 'Estável' : 'Crítica');
+  const healthColor = healthPercent > 80 ? 'bg-emerald-500' : (healthPercent > 50 ? 'bg-amber-500' : 'bg-red-500');
+
+  // Tempo Médio (Estimativa baseada em volume)
+  const avgPickup = ratio > 1.5 ? '15-20' : (ratio > 1 ? '10-12' : '5-8');
+
   return (
     <>
       {/* Header de Comando Financeiro */}
@@ -58,7 +94,6 @@ export default function DynamicRatesTab() {
               </>
             )}
             
-            {/* Brilho interno no hover */}
             {!isSaving && <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>}
           </button>
         </div>
@@ -67,7 +102,6 @@ export default function DynamicRatesTab() {
       {/* Market Pulse & Quick Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-10">
         <div className="lg:col-span-2 bg-slate-950 rounded-[48px] p-10 text-white relative overflow-hidden flex flex-col justify-between shadow-2xl border border-white/5 group">
-           {/* Background decorativo */}
            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/20 -mr-48 -mt-48 rounded-full blur-[120px] transition-all group-hover:bg-primary/30"></div>
            <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 -ml-32 -mb-32 rounded-full blur-[100px]"></div>
            
@@ -87,8 +121,8 @@ export default function DynamicRatesTab() {
                     <div className="flex flex-col">
                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 italic">Entregadores Online</span>
                        <div className="flex items-center gap-2">
-                          <div className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-                          <span className="text-2xl font-black">{stats?.onlineDrivers || 0}</span>
+                          <div className={`size-2 rounded-full ${onlineDrivers > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'} shadow-[0_0_10px_rgba(16,185,129,0.5)]`}></div>
+                          <span className="text-2xl font-black">{onlineDrivers}</span>
                        </div>
                     </div>
                     <div className="w-px h-10 bg-white/10"></div>
@@ -96,7 +130,7 @@ export default function DynamicRatesTab() {
                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 italic">Pedidos Ativos</span>
                        <div className="flex items-center gap-2 text-primary">
                           <span className="material-symbols-outlined text-sm">shopping_bag</span>
-                          <span className="text-2xl font-black">{(allOrders?.filter(o => ['pendente', 'aceito', 'preparando', 'novo', 'waiting_driver'].includes(o.status)).length) || 0}</span>
+                          <span className="text-2xl font-black">{activeOrders}</span>
                        </div>
                     </div>
                  </div>
@@ -104,8 +138,12 @@ export default function DynamicRatesTab() {
 
               <div className="bg-white/5 backdrop-blur-2xl px-8 py-6 rounded-[35px] border border-white/10 shadow-lg flex flex-col items-center gap-3">
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Indice de Surge</p>
-                 <div className="text-4xl font-black text-primary drop-shadow-[0_0_15px_rgba(255,217,0,0.3)] italic">1,25x</div>
-                 <div className="px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[9px] font-black uppercase tracking-widest border border-emerald-500/20">Saudável</div>
+                 <div className="text-4xl font-black text-primary drop-shadow-[0_0_15px_rgba(255,217,0,0.3)] italic">
+                   {finalSurgeDisplay.toFixed(2).replace('.', ',')}x
+                 </div>
+                 <div className={`px-3 py-1.5 rounded-full ${finalSurgeDisplay > 1.2 ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'} text-[9px] font-black uppercase tracking-widest border border-current/20`}>
+                   {finalSurgeDisplay > 1.5 ? 'Alta Demanda' : (finalSurgeDisplay > 1.0 ? 'Moderado' : 'Estável')}
+                 </div>
               </div>
            </div>
 
@@ -113,18 +151,20 @@ export default function DynamicRatesTab() {
               <div className="bg-white/5 rounded-3xl p-6 border border-white/5 space-y-4">
                  <div className="flex justify-between items-center">
                     <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Saúde da Malha</span>
-                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Excelente</span>
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${healthPercent > 80 ? 'text-emerald-400' : (healthPercent > 50 ? 'text-amber-400' : 'text-red-400')}`}>
+                      {healthLabel}
+                    </span>
                  </div>
                  <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden flex">
-                    <div className="w-4/5 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]"></div>
+                    <div className={`h-full ${healthColor} shadow-[0_0_10px_rgba(16,185,129,0.3)]`} style={{ width: `${healthPercent}%` }}></div>
                  </div>
-                 <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em]">Sua capacidade de atendimento é de 92%</p>
+                 <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em]">Disponibilidade de atendimento: {healthPercent}%</p>
               </div>
 
               <div className="bg-white/5 rounded-3xl p-6 border border-white/5 flex items-center justify-between group-hover:border-primary/20 transition-all">
                  <div className="space-y-1">
                     <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Tempo Médio Pickup</span>
-                    <p className="text-xl font-black text-white italic">8.5 min</p>
+                    <p className="text-xl font-black text-white italic">{avgPickup} min</p>
                  </div>
                  <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20">
                     <span className="material-symbols-outlined text-lg">avg_time</span>
@@ -546,7 +586,12 @@ export default function DynamicRatesTab() {
               { key: 'storm', label: 'Tempestade Severa', icon: 'thunderstorm', color: 'text-amber-500', bg: 'bg-amber-50' },
               { key: 'snow', label: 'Neve / Gelo', icon: 'ac_unit', color: 'text-indigo-500', bg: 'bg-indigo-50' }
             ].map((weather) => (
-              <div key={weather.key} className="group p-10 rounded-[48px] bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50 flex flex-col items-center gap-8 hover:bg-white dark:hover:bg-slate-900 hover:shadow-2xl transition-all relative overflow-hidden">
+              <div key={weather.key} className={`group p-10 rounded-[48px] ${dynamicRatesState.weather?.[weather.key]?.active ? 'bg-white dark:bg-slate-900 border-primary ring-1 ring-primary/20 shadow-2xl scale-105' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-700/50'} border flex flex-col items-center gap-8 hover:bg-white dark:hover:bg-slate-900 hover:shadow-2xl transition-all relative overflow-hidden`}>
+                {dynamicRatesState.weather?.[weather.key]?.active && (
+                   <div className="absolute top-6 right-6 px-3 py-1 bg-primary text-slate-900 text-[8px] font-black uppercase tracking-widest rounded-full animate-pulse shadow-lg z-20">
+                      Em Vigor
+                   </div>
+                )}
                 <div className={`p-6 rounded-[32px] ${weather.bg} ${weather.color} border border-current/10 shadow-lg group-hover:scale-110 transition-transform relative z-10`}>
                   <span className="material-symbols-outlined text-4xl">{weather.icon}</span>
                 </div>
