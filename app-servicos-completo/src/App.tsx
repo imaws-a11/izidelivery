@@ -6526,7 +6526,15 @@ const navigateSubView = (target: string) => {
                     placeholder="Endereço de partida..."
                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white placeholder:text-zinc-600"
                     userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                    onSelect={(place) => setTransitData(prev => ({ ...prev, origin: place.formatted_address || "" }))}
+                    onSelect={(place) => {
+                      const ori = place.formatted_address || "";
+                      setTransitData(prev => ({ ...prev, origin: ori }));
+                      if (ori && transitData.destination) {
+                        setDistancePrices({});
+                        setRouteDistance("");
+                        calculateDistancePrices(ori, transitData.destination);
+                      }
+                    }}
                   />
                 </div>
 
@@ -6772,6 +6780,39 @@ const navigateSubView = (target: string) => {
                Certifique-se de que o objeto esteja bem embalado. Não transportamos itens proibidos por lei ou inflamáveis.
              </p>
           </div>
+
+          {transitData.origin && transitData.destination && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-zinc-900/60 backdrop-blur-2xl border border-white/10 p-8 rounded-[40px] shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 size-32 bg-yellow-400/5 blur-[50px] -mr-16 -mt-16 pointer-events-none" />
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="material-symbols-outlined text-yellow-400 text-sm">distance</span>
+                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{routeDistance || 'Calculando rota...'}</p>
+                  </div>
+                  <h4 className="text-3xl font-black text-white tracking-tighter italic">
+                    {isCalculatingPrice ? (
+                      <span className="animate-pulse opacity-50">Calculando...</span>
+                    ) : (
+                      <>R$ {(distancePrices[transitData.type] || 0).toFixed(2).replace(".", ",")}</>
+                    )}
+                  </h4>
+                </div>
+                <div className="size-14 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20">
+                  <span className="material-symbols-outlined text-yellow-400 text-2xl">receipt_long</span>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-6 border-t border-white/5 flex items-center gap-3">
+                 <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                 <p className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.2em] italic">Preço Izi Garantido • Inclui Taxas</p>
+              </div>
+            </motion.div>
+          )}
         </main>
 
         <div className="fixed bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-black via-black/90 to-transparent z-50">
@@ -7142,7 +7183,12 @@ const navigateSubView = (target: string) => {
             <AnimatePresence mode="wait">
               {tab === "home" && (
                 <motion.div key="home-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                  <HomeView userLevel={userLevel} userId={userId} userLocation={userLocation} isIziBlackMembership={isIziBlackMembership} cart={cart} myOrders={myOrders} navigateSubView={navigateSubView} setSubView={setSubView} subView={subView} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSelectedItem={setSelectedItem} onOpenDepositModal={() => setShowDepositModal(true)} availableCoupons={availableCoupons.filter((c: any) => c.coupon_code)} banners={availableCoupons.filter((c: any) => !c.coupon_code)} copiedCoupon={copiedCoupon} setCopiedCoupon={setCopiedCoupon} showToast={showToast} setShowMasterPerks={setShowMasterPerks} ESTABLISHMENTS={ESTABLISHMENTS} handleShopClick={handleShopClick} flashOffers={flashOffers} setActiveService={setActiveService} transitData={transitData} setTransitData={setTransitData} setExploreCategoryState={setExploreCategoryState} setRestaurantInitialCategory={setRestaurantInitialCategory} setTab={setTab} />
+                  <HomeView userLevel={userLevel} userId={userId} userLocation={userLocation} isIziBlackMembership={isIziBlackMembership} cart={cart} myOrders={myOrders} navigateSubView={navigateSubView} setSubView={setSubView} subView={subView} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSelectedItem={setSelectedItem} onOpenDepositModal={() => setShowDepositModal(true)} onReturnToPayment={(order) => {
+                    setSelectedItem(order);
+                    if (order?.payment_method === 'pix') setSubView("pix_payment");
+                    else if (order?.payment_method === 'lightning') setSubView("lightning_payment");
+                    else setSubView("card_payment");
+                  }} availableCoupons={availableCoupons.filter((c: any) => c.coupon_code)} banners={availableCoupons.filter((c: any) => !c.coupon_code)} copiedCoupon={copiedCoupon} setCopiedCoupon={setCopiedCoupon} showToast={showToast} setShowMasterPerks={setShowMasterPerks} ESTABLISHMENTS={ESTABLISHMENTS} handleShopClick={handleShopClick} flashOffers={flashOffers} setActiveService={setActiveService} transitData={transitData} setTransitData={setTransitData} setExploreCategoryState={setExploreCategoryState} setRestaurantInitialCategory={setRestaurantInitialCategory} setTab={setTab} />
                 </motion.div>
               )}
               {tab === "orders" && (
@@ -7380,8 +7426,9 @@ const navigateSubView = (target: string) => {
                     onGoToWallet={() => { setTab("wallet"); setSubView("none"); }} 
                     onSupport={() => setSubView("order_support")} 
                     onReturnToPayment={() => {
-                      setShowDepositModal(true);
-                      setSubView("none");
+                      if (selectedItem?.payment_method === 'pix') setSubView("pix_payment");
+                      else if (selectedItem?.payment_method === 'lightning') setSubView("lightning_payment");
+                      else setSubView("card_payment");
                     }}
                   />
                 </motion.div>
