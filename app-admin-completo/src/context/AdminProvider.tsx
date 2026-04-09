@@ -947,8 +947,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const { data } = await supabase.from('dynamic_rates_delivery').select('*');
       if (data) {
-        const peakHours = data.filter(r => r.type === 'peak_hour');
-        const zones = data.filter(r => r.type === 'zone');
+        const peakHoursRow = data.find(r => r.type === 'peak_hour');
+        const zonesRow = data.find(r => r.type === 'zone');
         const equilibriumRow = data.find(r => r.type === 'equilibrium');
         const baseValuesRow = data.find(r => r.type === 'base_values');
         const weatherRulesRow = data.find(r => r.type === 'weather_rules');
@@ -956,8 +956,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         setDynamicRatesState(prev => ({
           ...prev,
-          peakHours,
-          zones,
+          peakHours: (peakHoursRow?.metadata as any)?.rules || [],
+          zones: (zonesRow?.metadata as any)?.rules || [],
           weather: weatherRulesRow?.metadata ? (weatherRulesRow.metadata as any) : prev.weather,
           equilibrium: equilibriumRow?.metadata ? (equilibriumRow.metadata as any) : prev.equilibrium,
           flowControl: flowControlRow?.metadata ? (flowControlRow.metadata as any) : prev.flowControl,
@@ -1698,7 +1698,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         { type: 'base_values', metadata: cleanBaseValues },
         { type: 'equilibrium', metadata: dynamicRatesState.equilibrium },
         { type: 'weather_rules', metadata: dynamicRatesState.weather },
-        { type: 'flow_control', metadata: dynamicRatesState.flowControl }
+        { type: 'flow_control', metadata: dynamicRatesState.flowControl },
+        { type: 'peak_hour', metadata: { rules: dynamicRatesState.peakHours } },
+        { type: 'zone', metadata: { rules: dynamicRatesState.zones } }
       ];
 
       const { error: batchError } = await supabase
@@ -1706,26 +1708,6 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         .upsert(rows.map(r => ({ ...r, updated_at: new Date().toISOString() })), { onConflict: 'type' });
 
       if (batchError) throw batchError;
-
-      // Deletar regras antigas para evitar duplicidade
-      await supabase.from('dynamic_rates_delivery').delete().in('type', ['peak_hour', 'zone']);
-
-      if (dynamicRatesState.peakHours.length > 0) {
-        await supabase.from('dynamic_rates_delivery').insert(
-          dynamicRatesState.peakHours.map(r => {
-            const { id, ...rest } = r; // Remover ID se existir para deixar o DB gerar um novo ou manter limpo
-            return { ...rest, type: 'peak_hour', updated_at: new Date().toISOString() };
-          })
-        );
-      }
-      if (dynamicRatesState.zones.length > 0) {
-        await supabase.from('dynamic_rates_delivery').insert(
-          dynamicRatesState.zones.map(r => {
-            const { id, ...rest } = r;
-            return { ...rest, type: 'zone', updated_at: new Date().toISOString() };
-          })
-        );
-      }
 
       toastSuccess('Taxas publicadas com sucesso!');
       logAction('Update Dynamic Rates', 'System', dynamicRatesState);
