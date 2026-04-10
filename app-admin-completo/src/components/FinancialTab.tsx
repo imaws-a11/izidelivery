@@ -201,6 +201,9 @@ export default function FinancialTab() {
       {/* Withdrawal Requests Logic */}
       <WithdrawalRequestsSection />
 
+      {/* Loans Management Section */}
+      {userRole === 'admin' && <ManageLoansSection />}
+
       {/* Transactions Table */}
       <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/20">
@@ -418,6 +421,345 @@ function WithdrawalRequestsSection() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function ManageLoansSection() {
+  const [loans, setLoans] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [selectedLoan, setSelectedLoan] = React.useState<any | null>(null);
+
+  const fetchLoans = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('loans_delivery')
+        .select(`
+          *,
+          user:users_delivery ( name, phone )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setLoans(data || []);
+    } catch (e) {
+      console.error("Error fetching loans:", e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchLoans();
+  }, [fetchLoans]);
+
+  if (loading && loans.length === 0) return null;
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mb-10">
+      <div className="p-8 border-b border-slate-50 dark:border-slate-800 bg-emerald-50/10 dark:bg-emerald-900/10 flex justify-between items-center">
+         <div>
+          <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+            <span className="material-symbols-outlined text-emerald-500 font-fill">account_balance</span>
+            Gestão de Empréstimos (Izi Coins)
+          </h4>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+            {loans.filter(l => l.status === 'active').length} empréstimos ativos • Taxa Global: 10% am
+          </p>
+         </div>
+         <button onClick={fetchLoans} className="size-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm">
+            <span className={`material-symbols-outlined ${loading ? 'animate-spin' : ''}`}>sync</span>
+         </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="bg-slate-50 dark:bg-slate-800/50">
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Concedido</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">A Pagar</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Parcelas</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Vencimento</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            {loans.map((l) => (
+              <tr 
+                key={l.id} 
+                onClick={() => setSelectedLoan(l)}
+                className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer"
+              >
+                <td className="px-8 py-6 text-xs text-slate-500 font-bold whitespace-nowrap">
+                  {new Date(l.created_at).toLocaleDateString('pt-BR')}
+                </td>
+                <td className="px-8 py-6">
+                  <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{l.user?.name || 'Cliente Izi'}</p>
+                  <p className="text-[9px] font-bold text-slate-400">{l.user?.phone || ''}</p>
+                </td>
+                <td className="px-8 py-6">
+                  <p className="text-sm font-black text-emerald-500">Z {parseFloat(l.amount).toLocaleString('pt-BR')}</p>
+                </td>
+                <td className="px-8 py-6">
+                  <p className="text-sm font-black text-slate-900 dark:text-white">Z {parseFloat(l.total_payable).toLocaleString('pt-BR')}</p>
+                </td>
+                <td className="px-8 py-6">
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300">{l.installments_count || l.requested_installments || 1}x</p>
+                </td>
+                <td className="px-8 py-6">
+                  <p className={`text-xs font-bold ${l.status === 'active' && new Date(l.due_date) < new Date() ? 'text-red-500' : 'text-slate-600 dark:text-slate-300'}`}>
+                    {l.status === 'pending' ? 'Sob Análise' : new Date(l.due_date).toLocaleDateString('pt-BR')}
+                  </p>
+                </td>
+                <td className="px-8 py-6 text-right">
+                   <span className={`inline-flex px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                        l.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                        l.status === 'pending' ? 'bg-indigo-50 text-indigo-600 border-indigo-100 animate-pulse' :
+                        l.status === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' :
+                        'bg-amber-50 text-amber-600 border-amber-100'
+                      }`}>
+                    {l.status === 'paid' ? 'Liquidado' : l.status === 'pending' ? 'Pendente' : l.status === 'rejected' ? 'Recusado' : 'Em Aberto'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+            {loans.length === 0 && !loading && (
+              <tr>
+                <td colSpan={6} className="px-8 py-20 text-center">
+                  <div className="flex flex-col items-center gap-2 opacity-30">
+                    <span className="material-symbols-outlined text-4xl">account_balance</span>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Nenhum empréstimo ativo</p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {selectedLoan && (
+        <LoanDetailModal 
+          loan={selectedLoan} 
+          onClose={() => setSelectedLoan(null)} 
+          onUpdate={fetchLoans}
+        />
+      )}
+    </div>
+  );
+}
+
+function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () => void, onUpdate: () => void }) {
+  const [isProcessing, setIsProcessing] = React.useState(false);
+
+  const handleApprove = async () => {
+    if (!window.confirm("Deseja aprovar este crédito? As moedas serão enviadas ao cliente imediatamente.")) return;
+    
+    setIsProcessing(true);
+    try {
+      const amount = Number(loan.requested_amount || loan.amount);
+      
+      const { data: userData } = await supabase.from('users_delivery').select('izi_coins').eq('id', loan.user_id).single();
+      const currentCoins = Number(userData?.izi_coins || 0);
+      const newBalance = Number((currentCoins + amount).toFixed(8));
+
+      // 1. Atualizar carteira
+      const { error: walletErr } = await supabase.from('users_delivery').update({ izi_coins: newBalance }).eq('id', loan.user_id);
+      if (walletErr) throw walletErr;
+
+      // 2. Transação
+      await supabase.from('wallet_transactions').insert({
+        user_id: loan.user_id,
+        amount: amount,
+        type: 'deposito',
+        description: 'Crédito de Empréstimo Izi Pay',
+        balance_after: newBalance
+      });
+
+      // 3. Loan Status
+      const dueDate = new Date();
+      dueDate.setMonth(dueDate.getMonth() + 1);
+
+      const { error: loanErr } = await supabase.from('loans_delivery').update({
+        status: 'active',
+        approved_at: new Date().toISOString(),
+        due_date: dueDate.toISOString(),
+        amount: amount,
+        total_payable: amount * 1.1
+      }).eq('id', loan.id);
+      
+      if (loanErr) throw loanErr;
+
+      toastSuccess("Empréstimo aprovado e creditado!");
+      onUpdate();
+      onClose();
+    } catch (e: any) {
+      toastError("Erro ao aprovar: " + e.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!window.confirm("Deseja recusar este pedido de empréstimo?")) return;
+    
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('loans_delivery')
+        .update({ status: 'rejected' })
+        .eq('id', loan.id);
+      
+      if (error) throw error;
+      toastSuccess("Pedido recusado.");
+      onUpdate();
+      onClose();
+    } catch (e: any) {
+      toastError("Erro ao recusar: " + e.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleLiquidate = async () => {
+    if (!window.confirm("Deseja liquidar este empréstimo manualmente? Isso marcará como Pago no sistema.")) return;
+    
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('loans_delivery')
+        .update({ status: 'paid' })
+        .eq('id', loan.id);
+      
+      if (error) throw error;
+      toastSuccess("Empréstimo liquidado com sucesso!");
+      onUpdate();
+      onClose();
+    } catch (e: any) {
+      toastError("Erro ao liquidar: " + e.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-[40px] shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800"
+      >
+        <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+          <div className="flex items-center gap-4">
+            <div className="size-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+              <span className="material-symbols-outlined font-fill">account_balance</span>
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Detalhamento do Crédito</h2>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: #{loan.id.slice(0,8)}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="size-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 transition-colors">
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div className="p-10 space-y-8">
+          <div className="grid grid-cols-2 gap-8">
+             <div className="space-y-1">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cliente</p>
+                <p className="text-sm font-black text-slate-900 dark:text-white">{loan.user?.name}</p>
+                <p className="text-xs font-bold text-slate-500">{loan.user?.phone}</p>
+             </div>
+             <div className="space-y-1">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status Atual</p>
+                <span className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                  loan.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                  loan.status === 'pending' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                  loan.status === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' :
+                  'bg-amber-50 text-amber-600 border-amber-100'
+                }`}>
+                  {loan.status === 'paid' ? 'Liquidado' : loan.status === 'pending' ? 'Pendente' : loan.status === 'rejected' ? 'Recusado' : 'Em Aberto'}
+                </span>
+             </div>
+          </div>
+
+          <div className="p-8 rounded-[32px] bg-slate-900 text-white relative overflow-hidden">
+            <div className="relative z-10 grid grid-cols-2 gap-6">
+               <div>
+                  <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">Valor Concedido</p>
+                  <p className="text-3xl font-black italic">Z {parseFloat(loan.amount).toLocaleString('pt-BR')}</p>
+               </div>
+               <div className="text-right">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Montante Devido (10%)</p>
+                  <p className="text-3xl font-black italic text-emerald-400">Z {parseFloat(loan.total_payable).toLocaleString('pt-BR')}</p>
+               </div>
+            </div>
+            <div className="absolute top-0 right-1/2 w-px h-full bg-white/5" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-6 pb-6 border-b border-slate-50 dark:border-slate-800">
+             <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                  <span className="material-symbols-outlined text-lg">calendar_today</span>
+                </div>
+                <div>
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Contratação</p>
+                   <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{new Date(loan.created_at).toLocaleString('pt-BR')}</p>
+                </div>
+             </div>
+             <div className="flex items-center gap-3">
+                <div className={`size-10 rounded-xl flex items-center justify-center ${new Date(loan.due_date) < new Date() && loan.status === 'active' ? 'bg-red-50 text-red-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                  <span className="material-symbols-outlined text-lg">event_busy</span>
+                </div>
+                <div>
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Vencimento</p>
+                   <p className={`text-xs font-bold ${new Date(loan.due_date) < new Date() && loan.status === 'active' ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'}`}>{new Date(loan.due_date).toLocaleDateString('pt-BR')}</p>
+                </div>
+             </div>
+          </div>
+
+          <div className="flex gap-4">
+             {loan.status === 'pending' ? (
+                <>
+                  <button 
+                    onClick={handleReject}
+                    disabled={isProcessing}
+                    className="flex-1 h-14 rounded-2xl bg-red-500 text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-red-500/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {isProcessing ? '...' : 'Recusar'}
+                  </button>
+                   <button 
+                    onClick={handleApprove}
+                    disabled={isProcessing}
+                    className="flex-[2] h-14 rounded-2xl bg-indigo-600 text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {isProcessing ? 'Aprovando...' : 'Aprovar Crédito'}
+                  </button>
+                </>
+             ) : (
+                <>
+                  <button 
+                    onClick={onClose}
+                    className="flex-1 h-14 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                  >
+                    Fechar
+                  </button>
+                  {loan.status === 'active' && (
+                    <button 
+                      onClick={handleLiquidate}
+                      disabled={isProcessing}
+                      className="flex-[2] h-14 rounded-2xl bg-emerald-500 text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      {isProcessing ? 'Liquidando...' : 'Liquidar Manualmente'}
+                    </button>
+                  )}
+                </>
+             )}
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
