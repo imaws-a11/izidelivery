@@ -11,6 +11,7 @@ import { ProductStudio } from './ProductStudio';
 import FlashOffersSection from './FlashOffersSection';
 import PromotionStudio from './PromotionStudio';
 import { AddressSearchInput } from './AddressSearchInput';
+import PartnerStudio from './PartnerStudio';
 import { GMAPS_KEY } from '../config';
 
 
@@ -48,6 +49,7 @@ export default function MyStudioTab() {
     handleCompleteOrder, handleDeleteOrder,
     handleUpdateCategory, handleSeedCategories,
     handleUpdatePromotion, handleUpdateDriverStatus, handleDeleteDriver,
+    handleUpdatePartner, handleUpdatePartnerStatus, handleDeletePartner,
     handleAddCredit, fetchUsers, fetchDrivers, fetchMyDrivers,
     fetchCategories, fetchProducts, fetchMenuCategories,
     isAddingPeakRule, setIsAddingPeakRule, newPeakRule, setNewPeakRule,
@@ -1591,7 +1593,13 @@ export default function MyStudioTab() {
 
       {/* Edit Modals */}
       {
-        editingItem && (
+        editingItem && editType === 'partner' && (
+          <PartnerStudio onClose={() => { setEditingItem(null); setEditType(null); }} />
+        )
+      }
+
+      {
+        editingItem && editType !== 'partner' && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 text-slate-900">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setEditingItem(null)}></div>
             <motion.div
