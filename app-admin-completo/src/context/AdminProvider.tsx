@@ -100,6 +100,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       aberto_km: '5,00',
       isDynamicActive: true
     },
+    shippingPriorities: {
+      turbo: { multiplier: 1.5, min_fee: 12.00, active: true },
+      light: { multiplier: 1.2, min_fee: 9.00, active: true },
+      normal: { multiplier: 1.0, min_fee: 6.00, active: true },
+      scheduled: { multiplier: 1.1, min_fee: 15.00, active: true }
+    },
     flowControl: { mode: 'manual', highDemandActive: false },
     equilibrium: { threshold: 1.2, sensitivity: 0.5, maxSurge: 2.5 },
     weather: { 
@@ -110,6 +116,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     peakHours: [],
     zones: []
   });
+
+  const [partnersList, setPartnersList] = useState<PartnerStore[]>([]);
 
   const syncDriverStats = useCallback((drivers: Driver[]) => {
     setStats(prev => {
@@ -234,7 +242,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [selectedMenuCategory, setSelectedMenuCategory] = useState<string>('all');
 
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [editType, setEditType] = useState<'user' | 'driver' | 'my_driver' | 'my_product' | 'category' | 'promotion' | 'merchant' | null>(null);
+  const [editType, setEditType] = useState<'user' | 'driver' | 'my_driver' | 'my_product' | 'category' | 'promotion' | 'merchant' | 'partner' | null>(null);
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -953,6 +961,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const baseValuesRow = data.find(r => r.type === 'base_values');
         const weatherRulesRow = data.find(r => r.type === 'weather_rules');
         const flowControlRow = data.find(r => r.type === 'flow_control');
+        const shippingPrioritiesRow = data.find(r => r.type === 'shipping_priorities');
 
         setDynamicRatesState(prev => ({
           ...prev,
@@ -987,7 +996,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             aberto_min: (baseValuesRow.metadata as any).aberto_min?.toString().replace('.', ',') || '50,00',
             aberto_km: (baseValuesRow.metadata as any).aberto_km?.toString().replace('.', ',') || '5,00',
             isDynamicActive: (baseValuesRow.metadata as any).isDynamicActive ?? true
-          } : prev.baseValues
+          } : prev.baseValues,
+          shippingPriorities: shippingPrioritiesRow?.metadata ? (shippingPrioritiesRow.metadata as any) : prev.shippingPriorities,
         }));
       }
     } finally {
@@ -1026,6 +1036,22 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const { data } = await supabase.from('admin_users').select('*').eq('role', 'merchant').eq('is_deleted', false).order('store_name', { ascending: true });
       if (data) setMerchantsList(data as Merchant[]);
+    } finally {
+      setIsLoadingList(false);
+    }
+  }, []);
+
+  const fetchPartners = useCallback(async () => {
+    setIsLoadingList(true);
+    try {
+      const { data, error } = await supabase
+        .from('partner_stores_delivery')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      setPartnersList(data || []);
+    } catch (err: any) {
+      toastError('Erro ao buscar parceiros: ' + err.message);
     } finally {
       setIsLoadingList(false);
     }
@@ -1502,6 +1528,60 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [fetchDrivers]);
 
+  const handleUpdatePartnerStatus = useCallback(async (id: string, active: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('partner_stores_delivery')
+        .update({ is_active: active })
+        .eq('id', id);
+      if (error) throw error;
+      toastSuccess(`Status do parceiro atualizado!`);
+      fetchPartners();
+    } catch (err: any) {
+      toastError('Erro ao atualizar status: ' + err.message);
+    }
+  }, [fetchPartners]);
+
+  const handleDeletePartner = useCallback(async (id: string) => {
+    if (!await showConfirm({ message: 'Excluir este parceiro da rede click & retire?' })) return;
+    try {
+      const { error } = await supabase
+        .from('partner_stores_delivery')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      toastSuccess('Parceiro removido com sucesso!');
+      fetchPartners();
+    } catch (err: any) {
+      toastError('Erro ao remover parceiro: ' + err.message);
+    }
+  }, [fetchPartners]);
+
+  const handleUpdatePartner = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const { id, created_at, ...cleanItem } = editingItem;
+      const { error } = await supabase
+        .from('partner_stores_delivery')
+        .upsert({
+          ...(id ? { id } : {}),
+          ...cleanItem,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+      toastSuccess(id ? 'Parceiro atualizado!' : 'Novo parceiro adicionado!');
+      setEditingItem(null);
+      setEditType(null);
+      fetchPartners();
+    } catch (err: any) {
+      toastError('Erro ao salvar parceiro: ' + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [editingItem, fetchPartners]);
+
   const handleExportDrivers = useCallback(() => {
     const headers = ['Nome', 'Status', 'Telefone', 'Veículo', 'Placa'];
     const rows = driversList.map(d => [d.name, d.status, d.phone, d.vehicle_type, d.license_plate]);
@@ -1699,6 +1779,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         { type: 'equilibrium', metadata: dynamicRatesState.equilibrium },
         { type: 'weather_rules', metadata: dynamicRatesState.weather },
         { type: 'flow_control', metadata: dynamicRatesState.flowControl },
+        { type: 'shipping_priorities', metadata: dynamicRatesState.shippingPriorities },
         { type: 'peak_hour', metadata: { rules: dynamicRatesState.peakHours } },
         { type: 'zone', metadata: { rules: dynamicRatesState.zones } }
       ];
@@ -1952,7 +2033,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setMerchantProfile,
     handleLogout,
     isLoadingList, isInitialLoading, stats, recentOrders, usersList, driversList, 
-    allOrders, dashboardOrders, setDashboardOrders, myDriversList, merchantsList, productsList, menuCategoriesList, 
+    allOrders, dashboardOrders, setDashboardOrders, myDriversList, merchantsList, partnersList, productsList, menuCategoriesList, 
     categoriesState, setCategoriesState, promotionsList, auditLogsList, myDedicatedSlots, 
     subscriptionOrders, dynamicRatesState, setDynamicRatesState, ordersPage, setOrdersPage, 
     ordersTotalCount, merchantOrdersPage, setMerchantOrdersPage, merchantOrdersTotalCount, 
@@ -1987,11 +2068,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isLoaded,
     fetchStats, fetchUsers, fetchDrivers, fetchMyDrivers, fetchProducts, fetchMenuCategories, 
     fetchAllOrders, fetchSubscriptionOrders, fetchCategories, fetchDynamicRates, 
-    fetchPromotions, fetchAuditLogs, fetchMerchants, fetchAppSettings, fetchMyDedicatedSlots, 
+    fetchPromotions, fetchAuditLogs, fetchMerchants, fetchPartners, fetchAppSettings, fetchMyDedicatedSlots, 
     openMerchantPreview, handleAddCredit, handleApplyCredit, handleUpdateDriver, 
     handleUpdateCategory, handleUpdateMyDriver, handleDeleteMyDriver, handleUpdateUser, 
     handleUpdateMyProduct, handleUpdateMenuCategory, handleDeleteMenuCategory, handleDeleteProduct, handleCreateNewProduct, 
     handleUpdatePromotion, handleUpdateMerchant, handleUpdateMerchantStatus, handleDeleteMerchant, 
+    handleUpdatePartnerStatus, handleDeletePartner, handleUpdatePartner, 
     handleUpdateDriverStatus, handleDeleteDriver, handleExportDrivers, handleUpdateUserStatus, 
     handleDeleteUser, handleUpdateDedicatedSlot, handleCreateDedicatedSlot, handleDeleteDedicatedSlot, 
     handleNotifyUser, handleResetPassword, handleCompleteOrder, handleDeleteOrder, 

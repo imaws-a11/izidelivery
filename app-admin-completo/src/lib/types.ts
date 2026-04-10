@@ -261,7 +261,7 @@ export interface WalletTransaction {
 
 export interface DynamicRate {
   id: string;
-  type: 'peak_hour' | 'zone' | 'equilibrium' | 'base_values' | 'weather_rules' | 'flow_control';
+  type: 'peak_hour' | 'zone' | 'equilibrium' | 'base_values' | 'weather_rules' | 'flow_control' | 'shipping_priorities';
   label?: string;
   multiplier?: number;
   fee?: number;
@@ -322,6 +322,12 @@ export interface DynamicRatesState {
     aberto_km: string;
     isDynamicActive: boolean;
   };
+  shippingPriorities: {
+    turbo: { multiplier: number; min_fee: number; active: boolean };
+    light: { multiplier: number; min_fee: number; active: boolean };
+    normal: { multiplier: number; min_fee: number; active: boolean };
+    scheduled: { multiplier: number; min_fee: number; active: boolean };
+  };
   flowControl: {
     mode: 'auto' | 'manual';
     highDemandActive: boolean;
@@ -336,9 +342,14 @@ export interface PartnerStore {
   address?: string;
   city?: string;
   category?: string;
+  type?: string;
+  hours?: string;
+  latitude?: number;
+  longitude?: number;
   logo_url?: string;
   is_active: boolean;
   created_at: string;
+  updated_at?: string;
 }
 
 export type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'financial' |

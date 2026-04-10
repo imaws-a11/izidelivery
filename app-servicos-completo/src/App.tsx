@@ -1525,11 +1525,16 @@ function App() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showLojistasModal, setShowLojistasModal] = useState(false);
-  const partnerStores = [
-    { id: 'izi_paulista', name: "Izi Hub Central - Paulista", address: "Av. Paulista, 1000, Bela Vista, São Paulo - SP", phone: "(11) 98888-7777", hours: "08h - 22h", type: "Hub Logístico" },
-    { id: 'posto_augusta', name: "Izi Posto Shell - Augusta", address: "Rua Augusta, 500, Consolação, São Paulo - SP", phone: "(11) 97777-6666", hours: "24h", type: "Ponto de Retirada" },
-    { id: 'loja_oscar', name: "Izi Express - Oscar Freire", address: "Rua Oscar Freire, 300, Jardins, São Paulo - SP", phone: "(11) 96666-5555", hours: "07h - 23h", type: "Loja Parceira" }
-  ];
+  const [partnerStores, setPartnerStores] = useState<any[]>([]);
+  useEffect(() => {
+    const fetchPartners = async () => {
+      try {
+        const { data } = await supabase.from('partner_stores_delivery').select('*').eq('is_active', true);
+        if (data) setPartnerStores(data);
+      } catch (err) { console.error('Error fetching partners:', err); }
+    };
+    fetchPartners();
+  }, []);
   useEffect(() => { subViewRef.current = subView; }, [subView]);
 
       // [Comentario Limpo pelo Sistema]
@@ -2486,10 +2491,21 @@ const navigateSubView = (target: string) => {
           hourlyRate: 45
        }).totalPrice;
     } else {
-       // Para outros tipos (mototaxi, carro, utilitario), usamos o preço já calculado no preview
-       // que agora também é aditivo por padrão.
-       const rawP = distancePrices[transitData.type];
-       finalPrice = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || 6.90) : rawP;
+      // Para outros tipos (mototaxi, carro, utilitario), usamos o preço já calculado no preview
+      // que agora também é aditivo por padrão.
+      const rawP = distancePrices[transitData.type];
+      finalPrice = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || 6.90) : rawP;
+    }
+    
+    // Inserindo lógica de prioridade de envio (Turbo, Light, etc)
+    const priorityId = transitData.priority;
+    const priorityConfig = marketConditions.settings?.shippingPriorities?.[priorityId as keyof typeof marketConditions.settings.shippingPriorities];
+    
+    if (priorityConfig && priorityConfig.active) {
+      finalPrice *= (priorityConfig.multiplier || 1.0);
+      if (finalPrice < (priorityConfig.min_fee || 0)) {
+        finalPrice = priorityConfig.min_fee;
+      }
     }
 
       // [Comentario Limpo pelo Sistema]
@@ -6332,8 +6348,13 @@ const navigateSubView = (target: string) => {
       { id: "coleta",  name: "Click e Retire Izi", desc: "Retirada rápida em lojas parceiras", icon: "inventory_2", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "coleta" }); navigateSubView("shipping_details"); } },
     ];
     return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
-        <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-6 py-6 border-b border-zinc-900/50 backdrop-blur-xl">
+      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
+        <div className="fixed inset-0 pointer-events-none opacity-20">
+           <div className="absolute bottom-0 right-0 w-80 h-80 bg-yellow-400/20 rounded-full blur-[120px]" />
+           <div className="absolute top-40 left-0 w-60 h-60 bg-yellow-400/10 rounded-full blur-[100px]" />
+        </div>
+
+        <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-between px-6 py-6 border-b border-zinc-900/50">
           <div className="flex items-center gap-5">
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => setSubView("none")} className="size-11 rounded-2xl bg-zinc-900/50 border border-white/10 flex items-center justify-center shadow-lg transition-all">
               <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
@@ -6345,44 +6366,62 @@ const navigateSubView = (target: string) => {
           </div>
         </header>
 
-        <main className="px-6 pt-10 flex flex-col gap-6">
+        <main className="px-6 pt-10 flex flex-col gap-6 relative z-10">
           {services.map((svc, i) => (
             <motion.div 
               key={svc.id} 
-              initial={{ opacity: 0, y: 30 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ delay: i * 0.1, type: "spring", stiffness: 100 }}
-              whileHover={{ scale: 1.02, translateY: -4 }}
+              initial={{ opacity: 0, scale: 0.9 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              transition={{ delay: i * 0.1 }}
+              whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={svc.action} 
-              className="relative group bg-zinc-900/30 backdrop-blur-3xl border border-white/10 rounded-[35px] p-7 cursor-pointer shadow-xl shadow-black/40 transition-all hover:border-yellow-400/30"
+              className="relative group bg-zinc-900/40 border border-white/5 rounded-[35px] p-7 cursor-pointer shadow-2xl transition-all"
             >
               <div className="flex items-center gap-6">
-                <div className="size-16 rounded-[22px] bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center shrink-0 group-hover:bg-yellow-400/20 transition-all duration-500 shadow-inner">
-                  <span className="material-symbols-outlined text-3xl text-yellow-400 transition-transform group-hover:scale-110">{svc.icon}</span>
+                <div className="size-16 rounded-[22px] bg-yellow-400 flex items-center justify-center shrink-0 shadow-lg shadow-yellow-400/20">
+                  <span className="material-symbols-outlined text-3xl text-black font-black">{svc.icon}</span>
                 </div>
                 <div className="flex-1">
                   <h3 className="font-black text-lg text-white group-hover:text-yellow-400 transition-all duration-300 tracking-tight">{svc.name}</h3>
                   <p className="text-zinc-500 text-[11px] mt-1 font-medium leading-tight">{svc.desc}</p>
                 </div>
-                <div className="size-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-yellow-400 group-hover:text-black transition-all duration-500">
+                <div className="size-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-yellow-400 group-hover:text-black transition-all">
                   <span className="material-symbols-outlined text-xl">chevron_right</span>
                 </div>
               </div>
             </motion.div>
           ))}
 
-          <div className="mt-8 p-8 rounded-[40px] bg-gradient-to-br from-yellow-400/20 to-amber-500/5 border border-yellow-400/10 relative overflow-hidden group">
+          <div className="mt-4 p-8 rounded-[45px] bg-gradient-to-br from-zinc-900/40 to-black border border-white/5 relative overflow-hidden group">
              <div className="relative z-10">
-                <h4 className="text-white font-black text-lg tracking-tight mb-2">Transporte Local</h4>
-                <p className="text-zinc-400 text-xs leading-relaxed max-w-[200px]">Precisa de algo maior? Confira nossas vans e caminhões para frete.</p>
-                <div className="mt-5 flex gap-3">
-                   <button onClick={() => { setTransitData({ ...transitData, type: "van", scheduled: true }); setSubView("van_wizard"); setMobilityStep(1); }} className="px-4 py-2 bg-yellow-400 text-black text-[10px] font-black rounded-xl uppercase tracking-widest shadow-lg shadow-yellow-400/20">Vans</button>
-                   <button onClick={() => { setTransitData({ ...transitData, type: "logistica", scheduled: true }); setSubView("freight_wizard"); setMobilityStep(1); }} className="px-4 py-2 bg-white/10 text-white text-[10px] font-black rounded-xl uppercase tracking-widest border border-white/10">Fretes</button>
+                <h4 className="text-white font-black text-lg tracking-tight mb-2">Izi Versátil</h4>
+                <p className="text-zinc-500 text-xs leading-relaxed max-w-[200px]">Transporte de cargas pesadas, utilitários e vans para empresas ou particulares.</p>
+                <div className="mt-6 flex gap-3">
+                   <button onClick={() => { setTransitData({ ...transitData, type: "van", scheduled: true }); setSubView("van_wizard"); setMobilityStep(1); }} className="px-5 py-3 bg-yellow-400 text-black text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-yellow-400/20 active:scale-95 transition-all">Vans e Fretes</button>
+                   <button onClick={() => setShowLojistasModal(true)} className="px-5 py-3 bg-white/5 text-white text-[10px] font-black rounded-xl uppercase tracking-widest border border-white/5 active:scale-95 transition-all">Ver Parceiros</button>
                 </div>
              </div>
-             <span className="material-symbols-outlined absolute -right-6 -bottom-6 text-[120px] text-yellow-400/10 rotate-12 group-hover:rotate-0 transition-transform duration-700">local_shipping</span>
+             <span className="material-symbols-outlined absolute -right-4 -bottom-4 text-[130px] text-yellow-400/5 rotate-12">local_shipping</span>
           </div>
+
+          <section className="mt-8 space-y-4">
+             <h5 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em] px-2">Diferenciais Izi</h5>
+             <div className="grid grid-cols-2 gap-4">
+                {[
+                  { icon: 'verified_user', label: 'Seguro Total', desc: 'Sua carga protegida' },
+                  { icon: 'speed', label: 'Entrega Real', desc: 'Tempo recorde' },
+                  { icon: 'share_location', label: 'Real-time', desc: 'Rastreio preciso' },
+                  { icon: 'support_agent', label: 'Suporte 24h', desc: 'Fale com humanos' }
+                ].map((item, i) => (
+                  <div key={i} className="bg-zinc-900/20 p-5 rounded-[30px] border border-white/5">
+                     <span className="material-symbols-outlined text-yellow-400 text-xl mb-3">{item.icon}</span>
+                     <p className="text-[10px] font-black text-white uppercase tracking-tight">{item.label}</p>
+                     <p className="text-[9px] text-zinc-500 font-medium mt-1">{item.desc}</p>
+                  </div>
+                ))}
+             </div>
+          </section>
         </main>
       </div>
     );
@@ -6396,8 +6435,21 @@ const navigateSubView = (target: string) => {
       { id: "scheduled", name: "Izi Agendado", desc: "Você escolhe data e horário", time: "Agendar", icon: "event", color: "text-blue-400", bg: "bg-blue-400/10" },
     ];
 
+    const getPriorityPrice = (priorityId: string) => {
+      const basePrice = distancePrices[transitData.type as keyof typeof distancePrices] || distancePrices.mototaxi || 0;
+      const settings = marketConditions.settings;
+      if (!settings || !settings.shippingPriorities) return basePrice;
+      
+      const config = settings.shippingPriorities[priorityId as keyof typeof settings.shippingPriorities];
+      if (!config) return basePrice;
+      
+      let price = basePrice * (config.multiplier || 1.0);
+      if (price < (config.min_fee || 0)) price = config.min_fee;
+      return price;
+    };
+
     return (
-      <div className="absolute inset-0 z-40 bg-black text-white flex flex-col hide-scrollbar overflow-y-auto pb-40">
+      <div className="absolute inset-0 z-40 bg-black text-white flex flex-col hide-scrollbar overflow-y-auto pb-10">
         <header className="px-6 py-8 flex items-center justify-between gap-4 sticky top-0 bg-black/80 backdrop-blur-xl z-50 border-b border-white/5">
           <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigateSubView("explore_envios")} className="size-12 rounded-2xl bg-zinc-900/50 backdrop-blur-xl border border-white/10 shadow-xl flex items-center justify-center text-white active:scale-90 transition-all leading-none">
             <span className="material-symbols-outlined">arrow_back</span>
@@ -6418,7 +6470,7 @@ const navigateSubView = (target: string) => {
               <span className="material-symbols-outlined text-5xl text-yellow-400 drop-shadow-[0_0_15px_rgba(255,215,9,0.5)]">speed</span>
             </motion.div>
             <h3 className="text-xl font-black text-white tracking-tight">Qual a sua urgência?</h3>
-            <p className="text-zinc-500 text-xs font-semibold mt-2 max-w-[240px] mx-auto opacity-80">Oferecemos diferentes níveis de prioridade de acordo com sua necessidade</p>
+            <p className="text-zinc-500 text-xs font-semibold mt-2 max-w-[240px] mx-auto opacity-80">Diferentes níveis de prioridade para sua necessidade</p>
           </div>
 
           <div className="grid grid-cols-1 gap-5">
@@ -6433,10 +6485,12 @@ const navigateSubView = (target: string) => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
+                    const finalPrice = getPriorityPrice(p.id);
                     setTransitData({ 
                       ...transitData, 
                       priority: p.id as any,
-                      scheduled: p.id === "scheduled"
+                      scheduled: p.id === "scheduled",
+                      estPrice: finalPrice
                     });
                     navigateSubView("shipping_details");
                   }}
@@ -6452,7 +6506,12 @@ const navigateSubView = (target: string) => {
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
                       <h4 className={`font-black text-lg tracking-tight ${isSelected ? 'text-black' : 'text-white'}`}>{p.name}</h4>
-                      <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${isSelected ? 'text-black/60' : p.color}`}>{p.time}</span>
+                      <div className="flex flex-col items-end">
+                         <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${isSelected ? 'text-black/60' : p.color}`}>{p.time}</span>
+                         <span className={`text-xs font-black mt-0.5 ${isSelected ? 'text-black' : 'text-white'}`}>
+                            R$ {getPriorityPrice(p.id).toFixed(2).replace('.', ',')}
+                         </span>
+                      </div>
                     </div>
                     <p className={`text-[11px] font-medium leading-tight ${isSelected ? 'text-black/50' : 'text-zinc-500 opacity-80'}`}>{p.desc}</p>
                   </div>

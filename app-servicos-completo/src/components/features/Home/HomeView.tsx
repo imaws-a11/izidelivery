@@ -690,27 +690,35 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </motion.div>
           )}
 
-          {/* IZI FLASH HIGHLIGHTS */}
+          {/* IZI FLASH HIGHLIGHTS - REDESIGN PREMIUM */}
           {activeStories.length > 0 && (
-            <section className="space-y-6">
-              <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-3">
-                  <div className="flex flex-col">
-                    <h3 className="text-xl font-black text-white uppercase tracking-tighter italic leading-none">Izi Flash</h3>
-                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mt-1">Ofertas Instantâneas</p>
+            <section className="space-y-8">
+              <div className="flex items-center justify-between px-2">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-yellow-400 text-2xl fill-1 animate-pulse">bolt</span>
+                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic leading-none">Izi Flash</h3>
                   </div>
+                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] mt-2 pl-8">Ofertas que desaparecem</p>
                 </div>
-                <div className="flex items-center gap-2 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
-                  <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">LIVE</span>
+                
+                <div className="flex items-center gap-3 bg-zinc-900/50 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/5">
+                   <div className="flex -space-x-2">
+                      {[1,2,3].map(i => (
+                        <div key={i} className="size-5 rounded-full border-2 border-black bg-zinc-800 flex items-center justify-center overflow-hidden">
+                           <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i*77}`} className="size-full object-cover" alt="user" />
+                        </div>
+                      ))}
+                   </div>
+                   <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">+1k vendo</span>
                 </div>
               </div>
               
-              <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-4 -mx-5 px-5 h-[154px]">
+              <div className="flex gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-6 -mx-5 px-5">
                 {activeStories.map(story => (
                   <motion.div 
                     key={story.id} 
-                    whileTap={{ scale: 0.95 }}
+                    whileTap={{ scale: 0.96 }}
                     onClick={() => {
                       if (story.isMaster && userLevel < 10) showToast("Esta oferta é exclusiva para membros Tier MASTER.", "info");
                       else if (story.isMaster) setShowMasterPerks(true);
@@ -735,51 +743,75 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         navigateSubView("exclusive_offer");
                       }
                     }}
-                    className={`relative flex-shrink-0 w-[240px] h-[110px] snap-center rounded-[28px] overflow-hidden group cursor-pointer transition-all ${story.isMaster ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-black" : "border border-white/5 shadow-2xl"} shadow-black/50`}
+                    className={`relative flex-shrink-0 w-[280px] h-[160px] snap-center rounded-[40px] overflow-hidden group cursor-pointer border-[3px] ${story.isMaster ? "border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.2)]" : "border-white/5"} transition-all duration-500`}
                   >
+                    {/* Imagem de Fundo com Overlay Gradiente Pesado */}
                     <img 
                       src={story.img} 
-                      className="absolute inset-0 size-full object-cover group-hover:scale-110 transition-transform duration-1000 brightness-[0.8] saturate-[1.2]" 
+                      className="absolute inset-0 size-full object-cover group-hover:scale-110 transition-transform duration-[2s] brightness-[0.7] saturate-[1.1]" 
                       alt={story.name}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
                     
-                    {/* Floating Info - Minimalist */}
-                    <div className="absolute top-3 left-3 right-3 flex justify-between items-start pointer-events-none">
-                      <div className="bg-black/40 backdrop-blur-xl px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[12px] text-white/70">storefront</span>
-                        <span className="text-[10px] font-black text-white uppercase tracking-tight truncate max-w-[80px]">
-                          {story.merchant}
-                        </span>
-                      </div>
-                      <div className="bg-yellow-400 px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-lg shadow-yellow-400/20">
-                        <span className="material-symbols-outlined text-[12px] font-black text-black">timer</span>
-                        <span className="text-[10px] font-black text-black tracking-tighter">
-                          {story.timeLeft}
-                        </span>
-                      </div>
+                    {/* Badge de Tempo - Design "Relógio de Pulso" */}
+                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-xl border border-white/10 px-3 py-2 rounded-2xl flex items-center gap-2 shadow-2xl z-20">
+                      <div className="size-2 rounded-full bg-red-500 animate-ping" />
+                      <span className="text-[10px] font-black text-white tracking-widest">
+                        {story.timeLeft}
+                      </span>
                     </div>
 
-                    <div className="absolute inset-x-0 bottom-0 p-5 flex flex-col justify-end">
-                      <h5 className="text-base font-black text-white leading-none tracking-tight uppercase italic drop-shadow-2xl line-clamp-1">
+                    {/* Badge de Loja */}
+                    <div className="absolute top-4 left-4 z-20">
+                       <div className="bg-white/10 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2">
+                          <img src={`https://api.dicebear.com/7.x/identicon/svg?seed=${story.merchant}`} className="size-4 rounded-md" alt="shop" />
+                          <span className="text-[9px] font-black text-white/90 uppercase truncate max-w-[80px]">{story.merchant}</span>
+                       </div>
+                    </div>
+
+                    {/* Conteúdo Principal */}
+                    <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col justify-end z-10">
+                      <h5 className="text-lg font-black text-white leading-tight tracking-tighter uppercase italic drop-shadow-2xl line-clamp-1 group-hover:text-yellow-400 transition-colors">
                         {story.name}
                       </h5>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <h6 className="text-xl font-black text-yellow-400 leading-none italic tracking-tight drop-shadow-2xl">
-                          R$ {story.finalPrice}
-                        </h6>
-                        {story.originalPrice && (
-                          <p className="text-[10px] text-white/40 line-through font-black italic tracking-tight">
-                            R$ {story.originalPrice}
-                          </p>
-                        )}
+                      
+                      <div className="flex items-end justify-between mt-2">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-3xl font-black text-white italic tracking-tighter drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]">
+                            R$ {story.finalPrice}
+                          </span>
+                          {story.originalPrice && (
+                            <span className="text-[10px] text-white/30 line-through font-bold italic">
+                              R$ {story.originalPrice}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="size-10 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-[0_5px_15px_rgba(250,204,21,0.3)] group-hover:scale-110 group-hover:rotate-12 transition-all">
+                           <span className="material-symbols-outlined text-black font-black text-xl">bolt</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Infinite Border Glow Effect */}
-                    <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-yellow-400/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {/* Barra de Progresso de Escassez (Simulada) */}
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-800/50 overflow-hidden">
+                       <motion.div 
+                         initial={{ width: "100%" }}
+                         animate={{ width: "15%" }}
+                         transition={{ duration: 60, repeat: Infinity, repeatType: "reverse" }}
+                         className="h-full bg-yellow-400"
+                       />
+                    </div>
                   </motion.div>
                 ))}
+
+                {/* Card de "Ver Mais" minimalista */}
+                <div className="flex-shrink-0 w-24 h-[160px] flex flex-col items-center justify-center gap-3 bg-zinc-900/40 rounded-[40px] border border-white/5 cursor-pointer hover:bg-zinc-800 transition-all">
+                   <div className="size-10 rounded-full border border-white/10 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-zinc-500">add</span>
+                   </div>
+                   <span className="text-[10px] font-black text-zinc-600 uppercase vertical-text tracking-widest">Ver Tudo</span>
+                </div>
               </div>
             </section>
           )}
