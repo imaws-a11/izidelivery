@@ -552,17 +552,26 @@ function ManageLoansSection() {
 
 function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () => void, onUpdate: () => void }) {
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [approvedAmount, setApprovedAmount] = React.useState(loan.requested_amount || loan.amount || 0);
+  const [approvedInstallments, setApprovedInstallments] = React.useState(loan.requested_installments || loan.installments_count || 1);
+  const [interestRate, setInterestRate] = React.useState(10);
+  const [approvedDueDate, setApprovedDueDate] = React.useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    return d.toISOString().split('T')[0];
+  });
 
   const handleApprove = async () => {
-    if (!window.confirm("Deseja aprovar este crédito? As moedas serão enviadas ao cliente imediatamente.")) return;
+    const finalAmount = Number(approvedAmount);
+    if (!finalAmount || finalAmount <= 0) return toastError("Defina um valor válido para liberação.");
+
+    if (!window.confirm(`Deseja aprovar este crédito? Z ${finalAmount.toLocaleString('pt-BR')} serão enviados ao cliente imediatamente.`)) return;
     
     setIsProcessing(true);
     try {
-      const amount = Number(loan.requested_amount || loan.amount);
-      
       const { data: userData } = await supabase.from('users_delivery').select('izi_coins').eq('id', loan.user_id).single();
       const currentCoins = Number(userData?.izi_coins || 0);
-      const newBalance = Number((currentCoins + amount).toFixed(8));
+      const newBalance = Number((currentCoins + finalAmount).toFixed(8));
 
       // 1. Atualizar carteira
       const { error: walletErr } = await supabase.from('users_delivery').update({ izi_coins: newBalance }).eq('id', loan.user_id);
@@ -571,27 +580,26 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
       // 2. Transação
       await supabase.from('wallet_transactions').insert({
         user_id: loan.user_id,
-        amount: amount,
+        amount: finalAmount,
         type: 'deposito',
         description: 'Crédito de Empréstimo Izi Pay',
         balance_after: newBalance
       });
 
-      // 3. Loan Status
-      const dueDate = new Date();
-      dueDate.setMonth(dueDate.getMonth() + 1);
-
+      // 3. Atualizar Empréstimo com as condições determinadas pelo Admin
       const { error: loanErr } = await supabase.from('loans_delivery').update({
         status: 'active',
         approved_at: new Date().toISOString(),
-        due_date: dueDate.toISOString(),
-        amount: amount,
-        total_payable: amount * 1.1
+        due_date: new Date(approvedDueDate).toISOString(),
+        amount: finalAmount,
+        total_payable: finalAmount * (1 + (interestRate / 100)),
+        interest_rate: interestRate,
+        installments_count: approvedInstallments
       }).eq('id', loan.id);
       
       if (loanErr) throw loanErr;
 
-      toastSuccess("Empréstimo aprovado e creditado!");
+      toastSuccess("Empréstimo configurado e creditado!");
       onUpdate();
       onClose();
     } catch (e: any) {
@@ -685,40 +693,98 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
              </div>
           </div>
 
-          <div className="p-8 rounded-[32px] bg-slate-900 text-white relative overflow-hidden">
-            <div className="relative z-10 grid grid-cols-2 gap-6">
-               <div>
-                  <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">Valor Concedido</p>
-                  <p className="text-3xl font-black italic">Z {parseFloat(loan.amount).toLocaleString('pt-BR')}</p>
-               </div>
-               <div className="text-right">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Montante Devido (10%)</p>
-                  <p className="text-3xl font-black italic text-emerald-400">Z {parseFloat(loan.total_payable).toLocaleString('pt-BR')}</p>
-               </div>
-            </div>
-            <div className="absolute top-0 right-1/2 w-px h-full bg-white/5" />
-          </div>
+          {loan.status === 'pending' ? (
+            <section className="space-y-6">
+               <div className="p-6 rounded-[32px] bg-slate-900 border border-white/5 space-y-6">
+                  <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Configuração da Liberação (Aprovação)</p>
+                  
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Valor a Liberar (Z)</label>
+                       <input 
+                         type="number"
+                         value={approvedAmount}
+                         onChange={(e) => setApprovedAmount(e.target.value)}
+                         className="w-full bg-slate-800 border border-white/5 rounded-2xl px-5 py-4 text-white font-black text-lg outline-none focus:border-primary/50 transition-all"
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Taxa de Juros (%)</label>
+                       <input 
+                         type="number"
+                         value={interestRate}
+                         onChange={(e) => setInterestRate(Number(e.target.value))}
+                         className="w-full bg-slate-800 border border-white/5 rounded-2xl px-5 py-4 text-white font-black text-lg outline-none focus:border-primary/50 transition-all"
+                       />
+                    </div>
+                  </div>
 
-          <div className="grid grid-cols-2 gap-6 pb-6 border-b border-slate-50 dark:border-slate-800">
-             <div className="flex items-center gap-3">
-                <div className="size-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-                  <span className="material-symbols-outlined text-lg">calendar_today</span>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Parcelas</label>
+                       <select 
+                         value={approvedInstallments}
+                         onChange={(e) => setApprovedInstallments(Number(e.target.value))}
+                         className="w-full bg-slate-800 border border-white/5 rounded-2xl px-5 py-4 text-white font-black text-lg outline-none focus:border-primary/50 transition-all appearance-none"
+                       >
+                         {[1, 3, 6, 12, 18, 24].map(v => <option key={v} value={v}>{v}x</option>)}
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Vencimento Inicial</label>
+                       <input 
+                         type="date"
+                         value={approvedDueDate}
+                         onChange={(e) => setApprovedDueDate(e.target.value)}
+                         className="w-full bg-slate-800 border border-white/5 rounded-2xl px-5 py-4 text-white font-bold text-sm outline-none focus:border-primary/50 transition-all"
+                       />
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-white/5 flex justify-between items-center px-2">
+                     <p className="text-[10px] font-black text-slate-400 uppercase">Projeção de Dívida:</p>
+                     <p className="text-xl font-black text-emerald-400 italic">Z {(Number(approvedAmount) * (1 + (interestRate / 100))).toLocaleString('pt-BR')}</p>
+                  </div>
+               </div>
+            </section>
+          ) : (
+            <>
+              <div className="p-8 rounded-[32px] bg-slate-900 text-white relative overflow-hidden">
+                <div className="relative z-10 grid grid-cols-2 gap-6">
+                   <div>
+                      <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">Valor Concedido</p>
+                      <p className="text-3xl font-black italic">Z {parseFloat(loan.amount).toLocaleString('pt-BR')}</p>
+                   </div>
+                   <div className="text-right">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Montante Devido ({loan.interest_rate || 10}%)</p>
+                      <p className="text-3xl font-black italic text-emerald-400">Z {parseFloat(loan.total_payable).toLocaleString('pt-BR')}</p>
+                   </div>
                 </div>
-                <div>
-                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Contratação</p>
-                   <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{new Date(loan.created_at).toLocaleString('pt-BR')}</p>
-                </div>
-             </div>
-             <div className="flex items-center gap-3">
-                <div className={`size-10 rounded-xl flex items-center justify-center ${new Date(loan.due_date) < new Date() && loan.status === 'active' ? 'bg-red-50 text-red-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
-                  <span className="material-symbols-outlined text-lg">event_busy</span>
-                </div>
-                <div>
-                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Vencimento</p>
-                   <p className={`text-xs font-bold ${new Date(loan.due_date) < new Date() && loan.status === 'active' ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'}`}>{new Date(loan.due_date).toLocaleDateString('pt-BR')}</p>
-                </div>
-             </div>
-          </div>
+                <div className="absolute top-0 right-1/2 w-px h-full bg-white/5" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-6 pb-6 border-b border-slate-50 dark:border-slate-800">
+                 <div className="flex items-center gap-3">
+                    <div className="size-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                      <span className="material-symbols-outlined text-lg">calendar_today</span>
+                    </div>
+                    <div>
+                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Contratação</p>
+                       <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{new Date(loan.created_at).toLocaleString('pt-BR')}</p>
+                    </div>
+                 </div>
+                 <div className="flex items-center gap-3">
+                    <div className={`size-10 rounded-xl flex items-center justify-center ${new Date(loan.due_date) < new Date() && loan.status === 'active' ? 'bg-red-50 text-red-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                      <span className="material-symbols-outlined text-lg">event_busy</span>
+                    </div>
+                    <div>
+                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Vencimento</p>
+                       <p className={`text-xs font-bold ${new Date(loan.due_date) < new Date() && loan.status === 'active' ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'}`}>{new Date(loan.due_date).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                 </div>
+              </div>
+            </>
+          )}
 
           <div className="flex gap-4">
              {loan.status === 'pending' ? (
