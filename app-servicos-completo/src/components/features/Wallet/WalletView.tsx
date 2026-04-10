@@ -6,48 +6,50 @@ import { Html5Qrcode } from "html5-qrcode";
 // Componente para o Leitor de QR Code usando a câmera nativa (Html5Qrcode)
 const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => void; onCancel: () => void }) => {
   const qrRef = useRef<Html5Qrcode | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const startScanner = async () => {
       try {
+        // Limpa qualquer resíduo anterior no container
+        const container = document.getElementById("reader");
+        if (container) container.innerHTML = "";
+
         qrRef.current = new Html5Qrcode("reader");
-        // Tenta obter as câmeras disponíveis para escolher a traseira de forma mais robusta
         const cameras = await Html5Qrcode.getCameras();
         
+        // Ajuste no Aspect Ratio: para mobile (portrait) o ideal é que seja largura/altura < 1
+        // Se for 100vh/100vw na verdade queremos que ele preencha, então o object-fit cuidará disso.
+        // Vamos usar um valor padrão de mobile ou 1.0 para flexibilidade.
+        const config = {
+          fps: 24,
+          qrbox: { width: 250, height: 250 }, // Ajuda a lib a focar no centro
+          aspectRatio: 1.0,
+          videoConstraints: {
+            facingMode: "environment",
+            focusMode: "continuous"
+          }
+        };
+
+        const successCallback = (decodedText: string) => {
+          onResult(decodedText);
+          qrRef.current?.stop().catch(() => {});
+        };
+
         if (cameras && cameras.length > 0) {
-          // Busca a câmera traseira (back/environment)
-          const backCamera = cameras.find(c => c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('traseira')) || cameras[0];
+          const backCamera = cameras.find(c => 
+            c.label.toLowerCase().includes('back') || 
+            c.label.toLowerCase().includes('traseira') ||
+            c.label.toLowerCase().includes('rear')
+          ) || cameras[0];
           
-          await qrRef.current.start(
-            backCamera.id,
-            {
-              fps: 30,
-              aspectRatio: window.innerHeight / window.innerWidth,
-              videoConstraints: {
-                focusMode: "continuous"
-              }
-            },
-            (decodedText: string) => {
-              onResult(decodedText);
-              qrRef.current?.stop().catch(() => {});
-            },
-            () => {} 
-          );
+          await qrRef.current.start(backCamera.id, config, successCallback, () => {});
         } else {
-          // Fallback para facingMode se não conseguir listar câmeras
-          await qrRef.current.start(
-            { facingMode: "environment" },
-            {
-              fps: 30,
-              aspectRatio: window.innerHeight / window.innerWidth
-            },
-            (decodedText: string) => {
-              onResult(decodedText);
-              qrRef.current?.stop().catch(() => {});
-            },
-            () => {}
-          );
+          await qrRef.current.start({ facingMode: "environment" }, config, successCallback, () => {});
         }
+        
+        // Pequeno delay para garantir que o vídeo foi injetado e o CSS aplicado
+        setTimeout(() => setIsReady(true), 500);
       } catch (err) {
         console.error("Erro ao iniciar câmera:", err);
       }
@@ -63,85 +65,135 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
   }, [onResult]);
 
   return (
-    <div className="fixed inset-0 z-[500] bg-black flex flex-col items-center justify-center overflow-hidden">
-      {/* Camada da Câmera - Full Screen */}
+    <div className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center overflow-hidden">
+      {/* Camada da Câmera - Forçada para ocupar TUDO */}
       <div 
         id="reader" 
-        className="absolute inset-0 w-full h-full bg-black"
-        style={{
-          // Forçamos o vídeo a ocupar TUDO e escondemos qualquer canvas interno que a lib tente desenhar
-          zIndex: 1
-        }}
+        className={`fixed inset-0 w-full h-full bg-black transition-opacity duration-1000 ${isReady ? 'opacity-100' : 'opacity-0'}`}
+        style={{ zIndex: 1 }}
       />
+
+      {/* Background de Loading */}
+      {!isReady && (
+        <div className="absolute inset-0 z-[2] bg-zinc-950 flex flex-col items-center justify-center">
+           <div className="size-16 border-4 border-yellow-400/20 border-t-yellow-400 animate-spin rounded-full" />
+           <p className="mt-6 text-zinc-500 font-black text-[10px] uppercase tracking-[0.3em] animate-pulse">Sincronizando Óptico</p>
+        </div>
+      )}
       
-      {/* CSS Injetado para forçar o vídeo e esconder o resto da lib */}
+      {/* CSS Ultra Agressivo para aniquilar qualquer layout split da lib */}
       <style>{`
         #reader {
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
           width: 100vw !important;
           height: 100vh !important;
           border: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #000 !important;
+          display: block !important;
         }
         #reader video {
-          width: 100% !important;
-          height: 100% !important;
-          object-fit: cover !important;
-          position: absolute !important;
+          position: fixed !important;
           top: 0 !important;
           left: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          object-fit: cover !important;
+          z-index: 1 !important;
         }
+        /* Esconde rigorosamente qualquer elemento que não seja o vídeo */
+        #reader > *:not(video) {
+          display: none !important;
+          visibility: hidden !important;
+          height: 0 !important;
+          width: 0 !important;
+          opacity: 0 !important;
+        }
+        /* Seletores específicos da lib que costumam aparecer */
+        #reader__scan_region, 
+        #reader__dashboard, 
+        #reader__camera_selection,
+        #reader__header_message,
+        #reader img, 
         #reader canvas {
           display: none !important;
         }
-        #reader__scan_region {
-           display: none !important;
-        }
-        #reader__dashboard {
-           display: none !important;
-        }
-        #reader img {
-           display: none !important;
-        }
       `}</style>
       
-      {/* UI Overlay IZI - Super Minimalista e Premium */}
-      <div className="relative z-20 w-full h-full flex flex-col items-center justify-between py-24 pointer-events-none">
-        <div className="px-6 py-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 flex items-center gap-2">
-           <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
-           <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] opacity-80">Câmera Ativa</span>
-        </div>
+      {/* UI Overlay Realmente Premium */}
+      <div className="relative z-20 w-full h-full flex flex-col items-center justify-between pb-24 pt-16 pointer-events-none px-6">
+        
+        {/* Header Overlay */}
+        <motion.div 
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="flex flex-col items-center gap-4"
+        >
+          <div className="px-6 py-2.5 bg-black/40 backdrop-blur-xl rounded-full border border-white/10 flex items-center gap-3">
+             <div className="size-2 rounded-full bg-yellow-400 shadow-[0_0_10px_#facc15]" />
+             <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Scanner Ativo</span>
+          </div>
+        </motion.div>
 
-        {/* Guia de Enquadramento - Opcional, se o usuário quiser 100% limpo posso tirar, mas ajuda a saber onde mirar */}
-        <div className="relative">
+        {/* Framing Guide + Scanner Effect */}
+        <div className="relative flex flex-col items-center justify-center">
+          <div className="relative size-72 flex items-center justify-center">
+            {/* Cantoneiras Futuristas */}
+            <div className="absolute top-0 left-0 size-12 border-t-4 border-l-4 border-yellow-400 rounded-tl-[40px]" />
+            <div className="absolute top-0 right-0 size-12 border-t-4 border-r-4 border-yellow-400 rounded-tr-[40px]" />
+            <div className="absolute bottom-0 left-0 size-12 border-b-4 border-l-4 border-yellow-400 rounded-bl-[40px]" />
+            <div className="absolute bottom-0 right-0 size-12 border-b-4 border-r-4 border-yellow-400 rounded-br-[40px]" />
+            
+            {/* Laser Line Animation */}
+            <motion.div 
+              animate={{ 
+                top: ["10%", "90%", "10%"],
+                opacity: [0.3, 0.8, 0.3]
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              className="absolute left-6 right-6 h-[2.5px] bg-gradient-to-r from-transparent via-yellow-400 to-transparent shadow-[0_0_15px_#facc15] z-30"
+            />
+
+            {/* Subtle Inner Glow */}
+            <div className="absolute inset-4 rounded-[32px] bg-yellow-400/5 backdrop-blur-[1px] border border-white/5" />
+          </div>
+
           <motion.div 
-            animate={{ opacity: [0.2, 0.5, 0.2] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="w-72 h-72 border border-white/10 rounded-[48px] relative"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="mt-12 text-center"
           >
-            <div className="absolute top-0 left-0 size-8 border-t-2 border-l-2 border-yellow-400/50 rounded-tl-3xl" />
-            <div className="absolute top-0 right-0 size-8 border-t-2 border-r-2 border-yellow-400/50 rounded-tr-3xl" />
-            <div className="absolute bottom-0 left-0 size-8 border-b-2 border-l-2 border-yellow-400/50 rounded-bl-3xl" />
-            <div className="absolute bottom-0 right-0 size-8 border-b-2 border-r-2 border-yellow-400/50 rounded-br-3xl" />
+            <h2 className="text-white font-black text-sm uppercase tracking-[0.1em] drop-shadow-lg">Aponte para o QR Code</h2>
+            <p className="text-white/40 text-[10px] font-medium mt-2 leading-relaxed max-w-[200px] mx-auto opacity-60">
+              Mantenha o código dentro das molduras para validação imediata.
+            </p>
           </motion.div>
         </div>
 
-        <div className="bg-black/60 backdrop-blur-3xl px-8 py-5 rounded-[32px] border border-white/5 text-center min-w-[280px] shadow-2xl">
-          <p className="text-white font-black text-xs uppercase tracking-widest">
-            Aponte para o QR Code
-          </p>
-          <p className="text-white/40 font-bold text-[9px] uppercase tracking-widest mt-1">
-            Reconhecimento Instantâneo Izi
-          </p>
+        {/* Botão de Fechar Customizado */}
+        <div className="pointer-events-auto">
+          <button 
+            onClick={onCancel}
+            className="group relative flex flex-col items-center gap-3"
+          >
+            <div className="size-16 rounded-full bg-white/5 backdrop-blur-2xl border border-white/10 flex items-center justify-center text-white transition-all group-active:scale-90 overflow-hidden shadow-2xl">
+               <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+               <span className="material-symbols-outlined text-2xl relative z-10">close</span>
+            </div>
+          </button>
         </div>
       </div>
       
-      {/* Botão de Fechar */}
-      <div className="absolute top-12 right-6 z-[600]">
-        <button 
-          onClick={onCancel}
-          className="size-14 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-all shadow-2xl"
-        >
-          <span className="material-symbols-outlined text-2xl">close</span>
-        </button>
+      {/* Decorative Side Elements */}
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-8 opacity-20 pointer-events-none">
+         {[...Array(5)].map((_, i) => <div key={i} className="w-[1px] h-4 bg-white" />)}
+      </div>
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-8 opacity-20 pointer-events-none">
+         {[...Array(5)].map((_, i) => <div key={i} className="w-[1px] h-4 bg-white" />)}
       </div>
     </div>
   );
