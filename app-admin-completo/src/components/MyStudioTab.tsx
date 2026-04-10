@@ -48,7 +48,7 @@ export default function MyStudioTab() {
     handleNotifyUser, handleResetPassword,
     handleCompleteOrder, handleDeleteOrder,
     handleUpdateCategory, handleSeedCategories,
-    handleUpdatePromotion, handleUpdateDriverStatus, handleDeleteDriver,
+    handleUpdatePromotion, handleUpdateDriver, handleUpdateDriverStatus, handleDeleteDriver,
     handleUpdatePartner, handleUpdatePartnerStatus, handleDeletePartner,
     handleAddCredit, fetchUsers, fetchDrivers, fetchMyDrivers,
     fetchCategories, fetchProducts, fetchMenuCategories,

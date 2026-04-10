@@ -149,6 +149,8 @@ export interface AdminContextType {
   walletTransactions: WalletTransaction[];
   merchantTransactions: WalletTransaction[];
   merchantBalance: number;
+  partnerTransactions: WalletTransaction[];
+  partnerBalance: number;
   isWalletLoading: boolean;
   showAddCreditModal: boolean;
   setShowAddCreditModal: (s: boolean) => void;
@@ -160,7 +162,9 @@ export interface AdminContextType {
 
   // Wallet Handlers
   fetchMerchantFinance: () => Promise<void>;
+  fetchPartnerFinance: (partnerId: string) => Promise<void>;
   handleRequestWithdrawal: (amount: number, pixKey: string) => Promise<void>;
+  handleRequestPartnerWithdrawal: (partnerId: string, amount: number, pixKey: string) => Promise<void>;
   handleUpdateMerchantBankInfo: (bankInfo: any) => Promise<void>;
   handleSyncMerchantBalance: () => Promise<void>;
 

@@ -2412,8 +2412,20 @@ const navigateSubView = (target: string) => {
   };
 
   const handleRequestTransit = () => {
-    if (!transitData.origin || !transitData.destination) {
-      toastError("Defina origem e destino");
+    if (!transitData.origin) {
+      toastError("Selecione um ponto de coleta/parceiro");
+      return;
+    }
+    if (!transitData.destination) {
+      toastError("Defina o endereço de entrega");
+      return;
+    }
+    if (!transitData.receiverName) {
+      toastError("Informe o nome do destinatário");
+      return;
+    }
+    if (!transitData.receiverPhone) {
+      toastError("Informe o telefone de contato");
       return;
     }
     setSubView("mobility_payment");
@@ -6630,7 +6642,9 @@ const navigateSubView = (target: string) => {
           <section className="space-y-6">
             <div className="flex items-center gap-4 px-2">
               <Icon name="swap_horiz" />
-              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Enviar ou Receber?</h3>
+              <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+                {transitData.subService === 'coleta' ? 'selecionar ponto de retirada' : 'Enviar ou Receber?'}
+              </h3>
             </div>
             
             <div className="space-y-4">
@@ -6755,27 +6769,15 @@ const navigateSubView = (target: string) => {
                    />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nota Fiscal (NF)</p>
-                     <input 
-                       type="text" 
-                       value={transitData.invoiceNumber}
-                       onChange={(e) => setTransitData({...transitData, invoiceNumber: e.target.value})}
-                       placeholder="Opcional"
-                       className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
-                     />
-                  </div>
-                  <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
-                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Setor / Guichê</p>
-                     <input 
-                       type="text" 
-                       value={transitData.pickupSector}
-                       onChange={(e) => setTransitData({...transitData, pickupSector: e.target.value})}
-                       placeholder="Piso / Corredor"
-                       className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
-                     />
-                  </div>
+                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Setor / Guichê</p>
+                   <input 
+                     type="text" 
+                     value={transitData.pickupSector}
+                     onChange={(e) => setTransitData({...transitData, pickupSector: e.target.value})}
+                     placeholder="Piso / Corredor"
+                     className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                   />
                 </div>
               </div>
             </motion.section>
@@ -6883,7 +6885,7 @@ const navigateSubView = (target: string) => {
 
         <div className="fixed bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-black via-black/90 to-transparent z-50">
           <button
-            disabled={!transitData.origin || !transitData.destination || !transitData.receiverName || !transitData.receiverPhone || isLoading}
+            disabled={isLoading}
             onClick={handleRequestTransit}
             className="w-full bg-yellow-400 text-black font-black text-xl py-6 rounded-[32px] shadow-[0_20px_40px_rgba(255,215,9,0.2)] active:scale-[0.98] transition-all disabled:opacity-30 flex justify-center items-center gap-4 group"
           >
