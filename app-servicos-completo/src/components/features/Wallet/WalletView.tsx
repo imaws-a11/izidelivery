@@ -4,86 +4,74 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Html5Qrcode } from "html5-qrcode";
 
 // Componente para o Leitor de QR Code usando a câmera nativa (Html5Qrcode)
-// Versão Minimalista: Somente Câmera, sem overlays de scanner.
+// Versão Final: Tratamento silencioso de AbortError e foco em estabilidade.
 const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => void; onCancel: () => void }) => {
-  const qrRef = useRef<Html5Qrcode | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
-    let isMounted = true;
+    let active = true;
 
-    const startScanner = async () => {
+    const start = async () => {
+      // Delay para estabilidade
+      await new Promise(r => setTimeout(r, 500));
+      if (!active) return;
+
       try {
-        await new Promise(r => setTimeout(r, 200));
-        const container = document.getElementById("reader");
-        if (!container || !isMounted) return;
-        container.innerHTML = "";
-
-        qrRef.current = new Html5Qrcode("reader");
-        const cameras = await Html5Qrcode.getCameras();
-        if (!isMounted) return;
+        if (!scannerRef.current) {
+          scannerRef.current = new Html5Qrcode("reader");
+        }
 
         const config = {
-          fps: 24,
-          aspectRatio: 1.0, 
+          fps: 15, // FPS menor para estabilidade em dispositivos mais lentos
+          aspectRatio: 1.0,
           videoConstraints: { facingMode: "environment" }
         };
 
-        if (cameras && cameras.length > 0) {
-          const backCamera = cameras.find(c => 
-            c.label.toLowerCase().includes('back') || 
-            c.label.toLowerCase().includes('traseira') ||
-            c.label.toLowerCase().includes('rear')
-          ) || cameras[cameras.length - 1];
-          await qrRef.current.start(backCamera.id, config, onResult, () => {});
+        const cameras = await Html5Qrcode.getCameras();
+        if (!active) return;
+
+        const back = cameras.find(c => 
+          c.label.toLowerCase().includes('back') || 
+          c.label.toLowerCase().includes('traseira') ||
+          c.label.toLowerCase().includes('rear')
+        ) || cameras[cameras.length - 1];
+
+        if (back) {
+          await scannerRef.current.start(back.id, config, onResult, () => {});
         } else {
-          await qrRef.current.start({ facingMode: "environment" }, config, onResult, () => {});
+          await scannerRef.current.start({ facingMode: "environment" }, config, onResult, () => {});
         }
-        
-        if (isMounted) setIsReady(true);
       } catch (err) {
-        if (isMounted) {
-          try {
-            await qrRef.current?.start({ facingMode: "environment" }, { fps: 15 }, onResult, () => {});
-            setIsReady(true);
-          } catch(e) {}
-        }
+        // Silencia AbortError (comum em React 18 e navegação rápida)
+        if (err instanceof Error && err.name === 'AbortError') return;
+        console.warn("Scanner Status:", err);
       }
     };
 
-    startScanner();
+    start();
 
     return () => {
-      isMounted = false;
-      if (qrRef.current?.isScanning) {
-        qrRef.current.stop().catch(() => {});
+      active = false;
+      if (scannerRef.current) {
+        if (scannerRef.current.isScanning) {
+          scannerRef.current.stop().catch(() => {});
+        }
+        scannerRef.current = null;
       }
     };
   }, [onResult]);
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-black overflow-hidden">
-      {/* Câmera em Tela Cheia */}
-      <div 
-        id="reader" 
-        className={`fixed inset-0 w-full h-full bg-black transition-opacity duration-300 ${isReady ? 'opacity-100' : 'opacity-0'}`}
-        style={{ zIndex: 1 }}
-      />
+    <div className="fixed inset-0 z-[1000] bg-black overflow-hidden flex items-center justify-center">
+      <div id="reader" className="fixed inset-0 w-full h-full bg-black" />
 
-      {/* Loader Minimalista - Só aparece durante o setup */}
-      {!isReady && (
-        <div className="absolute inset-0 z-10 bg-black flex items-center justify-center">
-           <div className="size-8 border-2 border-white/20 border-t-white animate-spin rounded-full" />
-        </div>
-      )}
-      
-      {/* Botão de Fechar Minimalista (Essencial para não travar o usuário) */}
-      <div className="absolute top-6 right-6 z-50">
+      {/* Botão de Fechar */}
+      <div className="absolute top-10 right-10 z-[1001]">
         <button 
           onClick={onCancel}
-          className="size-12 rounded-full bg-black/20 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-90"
+          className="size-14 rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 flex items-center justify-center text-white active:scale-90 shadow-2xl"
         >
-           <span className="material-symbols-outlined">close</span>
+           <span className="material-symbols-outlined text-3xl">close</span>
         </button>
       </div>
 
@@ -94,7 +82,6 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
           left: 0 !important;
           width: 100vw !important;
           height: 100vh !important;
-          display: block !important;
         }
         #reader video {
           position: fixed !important;
@@ -104,7 +91,6 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
           height: 100vh !important;
           object-fit: cover !important;
         }
-        /* Esconde todos os elementos de UI da biblioteca */
         #reader__scan_region, #reader__dashboard, #reader__camera_selection, #reader__header_message, #reader canvas, #reader img, #reader > *:not(video) {
           display: none !important;
         }
@@ -335,10 +321,14 @@ export const WalletView: React.FC<WalletViewProps> = ({
     handleSearchRecipient(idText);
   }, [handleSearchRecipient]);
 
+  const handleCancelScan = useCallback(() => {
+    setWalletMode("main");
+  }, []);
+
   if (walletMode === "scan") {
     return (
       <ScannerWrapper 
-        onCancel={() => setWalletMode("main")}
+        onCancel={handleCancelScan}
         onResult={handleScanResult} 
       />
     );
