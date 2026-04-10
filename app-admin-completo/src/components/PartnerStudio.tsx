@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { toastSuccess, toastError, showConfirm } from '../lib/useToast';
 import { AddressSearchInput } from './AddressSearchInput';
+import { supabase } from '../lib/supabase';
 
 interface PartnerStudioProps {
   onClose: () => void;
@@ -10,11 +11,21 @@ interface PartnerStudioProps {
 
 export default function PartnerStudio({ onClose }: PartnerStudioProps) {
   const { 
-    editingItem, setEditingItem, handleUpdatePartner, isSaving, handleFileUpload
+    editingItem, setEditingItem, handleUpdatePartner, isSaving, handleFileUpload,
+    partnerBalance, partnerTransactions, fetchPartnerFinance, handleRequestPartnerWithdrawal
   } = useAdmin();
 
-  const [activeTab, setActiveTab] = useState<'geral' | 'imagens' | 'localizacao'>('geral');
+  const [activeTab, setActiveTab] = useState<'geral' | 'imagens' | 'localizacao' | 'access' | 'financial'>('geral');
   const [isUploading, setIsUploading] = useState<'logo' | 'banner' | null>(null);
+  const [showPayoutDetails, setShowPayoutDetails] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+
+  React.useEffect(() => {
+    if (activeTab === 'financial' && editingItem?.id && !editingItem.id.toString().startsWith('new-')) {
+      fetchPartnerFinance(editingItem.id);
+    }
+  }, [activeTab, editingItem?.id, fetchPartnerFinance]);
 
   if (!editingItem) return null;
 
@@ -416,10 +427,52 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
                   className="space-y-8"
                 >
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-emerald-50 dark:bg-emerald-950/20 p-8 rounded-[40px] border border-emerald-100 dark:border-emerald-500/20">
+                    <div className="bg-emerald-50 dark:bg-emerald-950/20 p-8 rounded-[40px] border border-emerald-100 dark:border-emerald-500/20 relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-all">
+                        <span className="material-symbols-outlined text-6xl">payments</span>
+                      </div>
                       <span className="material-symbols-outlined text-emerald-500 text-3xl mb-4">account_balance_wallet</span>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo de Repasse</p>
-                      <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic">R$ 0,00</h3>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo Disponível</p>
+                      <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic flex items-center justify-between">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(partnerBalance)}
+                        <button 
+                          type="button"
+                          disabled={!editingItem.id || editingItem.id.toString().startsWith('new-')}
+                          onClick={async () => {
+                            const amount = prompt("Quanto deseja simular (R$)?", "50");
+                            if (amount && !isNaN(parseFloat(amount))) {
+                               // Simulação direta para fins de teste do desenvolvedor
+                               const { error } = await supabase.from('wallet_transactions_delivery').insert({
+                                  user_id: editingItem.id,
+                                  amount: parseFloat(amount),
+                                  type: 'credito',
+                                  description: 'Simulação de Recebimento de Pacote',
+                                  status: 'concluido',
+                                  balance_after: partnerBalance + parseFloat(amount)
+                               });
+                               if (!error) {
+                                  toastSuccess("Crédito simulado com sucesso!");
+                                  fetchPartnerFinance(editingItem.id);
+                               }
+                            }
+                          }}
+                          className="size-8 rounded-lg bg-emerald-500/20 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all ml-2"
+                        >
+                          <span className="material-symbols-outlined text-sm">add</span>
+                        </button>
+                      </h3>
+                      <button 
+                        type="button"
+                        disabled={partnerBalance <= 0 || !editingItem.bank_info?.pix_key}
+                        onClick={() => setShowWithdrawModal(true)}
+                        className={`mt-6 w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
+                          partnerBalance > 0 && editingItem.bank_info?.pix_key
+                          ? 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95' 
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                        }`}
+                      >
+                        {partnerBalance <= 0 ? 'Saldo Insuficiente' : !editingItem.bank_info?.pix_key ? 'Cadastre sua Chave PIX' : 'Solicitar Saque'}
+                      </button>
                     </div>
                     <div className="bg-indigo-50 dark:bg-indigo-950/20 p-8 rounded-[40px] border border-indigo-100 dark:border-indigo-500/20">
                       <span className="material-symbols-outlined text-indigo-500 text-3xl mb-4">package_2</span>
@@ -475,8 +528,213 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
                          <p className="text-sm font-bold">Repasse Semanal (Toda Terça-feira)</p>
                        </div>
                     </div>
-                    <button type="button" className="bg-white/20 hover:bg-white/30 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Ver Detalhes</button>
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPayoutDetails(true)}
+                      className="bg-white/20 hover:bg-white/30 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                    >
+                      Ver Detalhes
+                    </button>
                   </div>
+
+                  {/* Histórico de Transações */}
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                          <span className="material-symbols-outlined text-indigo-500">history</span>
+                          <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest italic">Histórico de Movimentações</h4>
+                       </div>
+                       <div className="h-px flex-1 bg-slate-100 dark:bg-white/5 mx-6" />
+                    </div>
+
+                    <div className="space-y-3">
+                      {partnerTransactions.length > 0 ? partnerTransactions.map((t, idx) => (
+                        <div key={idx} className="bg-slate-50 dark:bg-slate-800/40 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:bg-white transition-all">
+                           <div className="flex items-center gap-5">
+                              <div className={`size-12 rounded-2xl flex items-center justify-center ${t.type === 'saque' ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                 <span className="material-symbols-outlined">{t.type === 'saque' ? 'upload_file' : 'download_done'}</span>
+                              </div>
+                              <div>
+                                 <p className="font-black text-sm dark:text-white uppercase italic tracking-tight">{t.description || (t.type === 'saque' ? 'Saque Solicitado' : 'Comissão Recebida')}</p>
+                                 <p className="text-[10px] font-bold text-slate-400 mt-0.5">{new Date(t.created_at).toLocaleDateString()} às {new Date(t.created_at).toLocaleTimeString()}</p>
+                              </div>
+                           </div>
+                           <div className="text-right">
+                              <p className={`text-lg font-black tracking-tighter italic ${t.type === 'saque' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                 {t.type === 'saque' ? '-' : '+'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(t.amount))}
+                              </p>
+                              <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${t.status === 'pendente' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                 {t.status || 'concluído'}
+                              </span>
+                           </div>
+                        </div>
+                      )) : (
+                        <div className="py-12 flex flex-col items-center gap-4 opacity-20">
+                           <span className="material-symbols-outlined text-6xl">query_stats</span>
+                           <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma transação registrada</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Modal de Detalhes de Repasse */}
+                  <AnimatePresence>
+                    {showPayoutDetails && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] flex items-center justify-center p-6"
+                      >
+                        <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-md" onClick={() => setShowPayoutDetails(false)} />
+                        
+                        <motion.div
+                          initial={{ scale: 0.9, y: 20 }}
+                          animate={{ scale: 1, y: 0 }}
+                          exit={{ scale: 0.9, y: 20 }}
+                          className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[40px] shadow-2xl border border-white/10 overflow-hidden"
+                        >
+                          <div className="p-8 bg-indigo-600 text-white flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <span className="material-symbols-outlined text-3xl">policy</span>
+                              <h4 className="text-xl font-black italic uppercase tracking-tighter">Regras de Repasse</h4>
+                            </div>
+                            <button onClick={() => setShowPayoutDetails(false)} className="size-10 rounded-xl bg-white/20 flex items-center justify-center hover:bg-white/30 transition-all">
+                              <span className="material-symbols-outlined">close</span>
+                            </button>
+                          </div>
+
+                          <div className="p-10 space-y-8">
+                             <div className="space-y-4">
+                                <div className="flex items-start gap-4">
+                                   <div className="size-8 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 shrink-0">
+                                      <span className="material-symbols-outlined text-xl">event_repeat</span>
+                                   </div>
+                                   <div>
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ciclo de Pagamento</p>
+                                      <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Semanal, toda terça-feira referente aos pacotes do ciclo anterior (Segunda a Domingo).</p>
+                                   </div>
+                                </div>
+
+                                <div className="flex items-start gap-4">
+                                   <div className="size-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 shrink-0">
+                                      <span className="material-symbols-outlined text-xl">account_balance_wallet</span>
+                                   </div>
+                                   <div>
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Taxas Aplicáveis</p>
+                                      <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Comissão de {editingItem.commission_percent || 10}% sobre o valor do manuseio + Taxa de Serviço fixa de R$ {editingItem.service_fee || '0,00'}.</p>
+                                   </div>
+                                </div>
+
+                                <div className="flex items-start gap-4">
+                                   <div className="size-8 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 shrink-0">
+                                      <span className="material-symbols-outlined text-xl">verified_user</span>
+                                   </div>
+                                   <div>
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Método de Transferência</p>
+                                      <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Depósito automático via PIX na chave cadastrada no perfil do parceiro.</p>
+                                   </div>
+                                </div>
+                             </div>
+
+                             <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
+                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
+                                   * Os valores são auditados automaticamente pelo sistema IZI Delivery. Em caso de divergências nos pacotes (danos ou extravios no ponto), descontos proporcionais podem ser aplicados conforme contrato.
+                                </p>
+                             </div>
+
+                             <button 
+                                onClick={() => setShowPayoutDetails(false)}
+                                className="w-full py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[24px] font-black text-[11px] uppercase tracking-widest hover:scale-[1.02] transition-all"
+                             >
+                                Entendi as Regras
+                             </button>
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Modal de Saque */}
+                  <AnimatePresence>
+                    {showWithdrawModal && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] flex items-center justify-center p-6"
+                      >
+                        <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-md" onClick={() => setShowWithdrawModal(false)} />
+                        
+                        <motion.div
+                          initial={{ scale: 0.9, y: 20 }}
+                          animate={{ scale: 1, y: 0 }}
+                          exit={{ scale: 0.9, y: 20 }}
+                          className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[40px] shadow-2xl border border-white/10 overflow-hidden"
+                        >
+                          <div className="p-8 bg-emerald-600 text-white flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <span className="material-symbols-outlined text-3xl">account_balance_wallet</span>
+                              <h4 className="text-xl font-black italic uppercase tracking-tighter">Solicitar Saque</h4>
+                            </div>
+                            <button onClick={() => setShowWithdrawModal(false)} className="size-10 rounded-xl bg-white/20 flex items-center justify-center hover:bg-white/30 transition-all">
+                              <span className="material-symbols-outlined">close</span>
+                            </button>
+                          </div>
+
+                          <div className="p-10 space-y-8">
+                             <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 text-center">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo Disponível</p>
+                                <p className="text-3xl font-black text-emerald-600 italic">
+                                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(partnerBalance)}
+                                </p>
+                             </div>
+
+                             <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Quanto deseja sacar?</label>
+                                <div className="relative">
+                                   <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-slate-400">R$</span>
+                                   <input
+                                      type="number"
+                                      value={withdrawAmount}
+                                      onChange={e => setWithdrawAmount(e.target.value)}
+                                      className="w-full pl-14 pr-8 py-5 bg-slate-100 dark:bg-slate-800 border-none rounded-2xl font-black text-lg focus:ring-2 focus:ring-emerald-500 dark:text-white"
+                                      placeholder="0,00"
+                                   />
+                                </div>
+                             </div>
+
+                             <div className="bg-amber-500/10 p-5 rounded-2xl border border-amber-500/20 flex gap-4">
+                                <span className="material-symbols-outlined text-amber-500">warning</span>
+                                <p className="text-[10px] font-bold text-amber-700 dark:text-amber-400 leading-relaxed uppercase">
+                                   O valor será transferido para a chave PIX: <span className="font-black underline">{editingItem.bank_info?.pix_key || 'NÃO CADASTRADA'}</span>. Certifique-se de que os dados estão corretos.
+                                </p>
+                             </div>
+
+                             <div className="flex gap-4">
+                                <button 
+                                   onClick={() => setShowWithdrawModal(false)}
+                                   className="flex-1 py-5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"
+                                >
+                                   Cancelar
+                                </button>
+                                <button 
+                                   disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > partnerBalance || !editingItem.bank_info?.pix_key}
+                                   onClick={async () => {
+                                      await handleRequestPartnerWithdrawal(editingItem.id, parseFloat(withdrawAmount), editingItem.bank_info.pix_key);
+                                      setShowWithdrawModal(false);
+                                      setWithdrawAmount('');
+                                   }}
+                                   className="flex-[2] py-5 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                                >
+                                   Confirmar Saque
+                                </button>
+                             </div>
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               )}
             </AnimatePresence>

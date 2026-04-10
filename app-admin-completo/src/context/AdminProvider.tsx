@@ -265,6 +265,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [walletTransactions] = useState<WalletTransaction[]>([]);
   const [merchantTransactions, setMerchantTransactions] = useState<WalletTransaction[]>([]);
   const [merchantBalance, setMerchantBalance] = useState(0);
+  const [partnerTransactions, setPartnerTransactions] = useState<WalletTransaction[]>([]);
+  const [partnerBalance, setPartnerBalance] = useState(0);
   const [isWalletLoading, setIsWalletLoading] = useState(false);
   const [showAddCreditModal, setShowAddCreditModal] = useState(false);
   const [creditToAdd, setCreditToAdd] = useState('');
@@ -797,6 +799,30 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [userRole, merchantProfile, selectedMerchantPreview]);
 
+  const fetchPartnerFinance = useCallback(async (partnerId: string) => {
+    if (!partnerId) return;
+    
+    setIsWalletLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('wallet_transactions_delivery')
+        .select('*')
+        .eq('user_id', partnerId)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      if (data) {
+        setPartnerTransactions(data as WalletTransaction[]);
+        const balance = data.reduce((acc, t) => acc + (t.type === 'saque' ? -Number(t.amount) : Number(t.amount)), 0);
+        setPartnerBalance(balance);
+      }
+    } catch (err: any) {
+      console.error('Error fetching partner finance:', err);
+    } finally {
+      setIsWalletLoading(false);
+    }
+  }, []);
+
   const handleRequestWithdrawal = useCallback(async (amount: number, pixKey: string) => {
     const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
     if (!idToUse) return;
@@ -831,6 +857,40 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsSaving(false);
     }
   }, [userRole, merchantProfile, selectedMerchantPreview, merchantBalance, fetchMerchantFinance, logAction]);
+
+  const handleRequestPartnerWithdrawal = useCallback(async (partnerId: string, amount: number, pixKey: string) => {
+    if (!partnerId) return;
+
+    if (amount < 1) return toastError('O valor mínimo para saque é R$ 1,00');
+    if (amount > partnerBalance) return toastError('Saldo insuficiente.');
+
+    if (!await showConfirm({ 
+      title: 'Confirmar Saque de Parceiro',
+      message: `Deseja solicitar o saque de R$ ${amount.toFixed(2)} para a chave PIX: ${pixKey}?` 
+    })) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase.from('wallet_transactions_delivery').insert({
+        user_id: partnerId,
+        amount,
+        type: 'saque',
+        description: `Saque de Parceiro solicitado via PIX: ${pixKey}`,
+        status: 'pendente',
+        balance_after: partnerBalance - amount
+      });
+
+      if (error) throw error;
+
+      toastSuccess('Solicitação enviada!');
+      fetchPartnerFinance(partnerId);
+      logAction('Partner Withdrawal Request', 'Wallet', { partnerId, amount });
+    } catch (err: any) {
+      toastError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [partnerBalance, fetchPartnerFinance, logAction]);
 
   const handleUpdateMerchantBankInfo = useCallback(async (bankInfo: any) => {
     const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
@@ -1559,6 +1619,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const handleUpdatePartner = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editingItem) return;
     setIsSaving(true);
     try {
       const { id, created_at, ...cleanItem } = editingItem;
@@ -2082,7 +2143,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     handleFileUpload, handleUpdateDispatchSettings, handleSeedCategories, savePromotion, 
     autoSavePromo,
     handleSaveAppSettings,
-    fetchMerchantFinance, handleRequestWithdrawal, handleUpdateMerchantBankInfo, handleSyncMerchantBalance
+    fetchMerchantFinance, handleRequestWithdrawal, handleUpdateMerchantBankInfo, handleSyncMerchantBalance,
+    partnerTransactions, partnerBalance, fetchPartnerFinance, handleRequestPartnerWithdrawal
   };
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
