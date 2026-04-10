@@ -185,6 +185,12 @@ export const WalletView: React.FC<WalletViewProps> = ({
   const [loanAmount, setLoanAmount] = useState("");
   const [loanInstallments, setLoanInstallments] = useState(1);
   const [isTakingLoan, setIsTakingLoan] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState<any>(null);
+  const [showLoanDetails, setShowLoanDetails] = useState(false);
+  const [selectedInstallments, setSelectedInstallments] = useState<number[]>([]);
+  const [isPayingInstallments, setIsPayingInstallments] = useState(false);
+  const [loanPaymentStep, setLoanPaymentStep] = useState<'details' | 'method' | 'pix' | 'card'>('details');
+  const [selectedMethod, setSelectedMethod] = useState<'pix' | 'card' | null>(null);
 
   // Estados de Animação Real-time
   const [showAnimation, setShowAnimation] = useState(false);
@@ -336,6 +342,38 @@ export const WalletView: React.FC<WalletViewProps> = ({
       setIsTakingLoan(false);
     }
   };
+
+  const handlePaySelectedInstallments = async (method: 'pix' | 'card') => {
+    if (!selectedLoan || selectedInstallments.length === 0) return;
+    
+    setIsPayingInstallments(true);
+    try {
+      const installmentVal = Number(selectedLoan.installment_value || (selectedLoan.total_payable / selectedLoan.installments_count));
+      const totalToPay = installmentVal * selectedInstallments.length;
+      
+      const { data, error } = await supabase.rpc('record_loan_payment_v1', {
+        p_loan_id: selectedLoan.id,
+        p_user_id: userId,
+        p_installments_count: selectedInstallments.length,
+        p_total_amount: totalToPay,
+        p_payment_method: method
+      });
+
+      if (error) throw error;
+      if (data && !data.success) throw new Error(data.error);
+
+      showToast?.(`Pagamento via ${method.toUpperCase()} recebido com sucesso!`, "success");
+      setShowLoanDetails(false);
+      setLoanPaymentStep('details');
+      fetchLoans();
+    } catch (err: any) {
+      showToast?.(err.message || "Erro ao processar pagamento", "error");
+    } finally {
+      setIsPayingInstallments(false);
+    }
+  };
+
+
 
 
 
@@ -689,7 +727,12 @@ export const WalletView: React.FC<WalletViewProps> = ({
               </div>
             ) : (
               loans.map((loan) => (
-                <div key={loan.id} className="bg-zinc-900 p-5 rounded-[24px] border border-white/5 flex flex-col gap-4">
+                <motion.div 
+                  key={loan.id} 
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => { setSelectedLoan(loan); setShowLoanDetails(true); setSelectedInstallments([]); }}
+                  className="bg-zinc-900 p-5 rounded-[24px] border border-white/5 flex flex-col gap-4 cursor-pointer active:bg-zinc-800 transition-colors"
+                >
                   <div className="flex justify-between items-start">
                     <div>
                        <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Dívida Total</p>
@@ -707,8 +750,8 @@ export const WalletView: React.FC<WalletViewProps> = ({
                   
                   <div className="grid grid-cols-2 gap-4 text-[10px]">
                     <div>
-                       <p className="text-zinc-600 uppercase font-black tracking-tight">Vencimento</p>
-                       <p className="text-white font-bold">{loan.status === 'pending' ? 'A definir' : new Date(loan.due_date).toLocaleDateString('pt-BR')}</p>
+                       <p className="text-zinc-600 uppercase font-black tracking-tight">Status de Pagamento</p>
+                       <p className="text-white font-bold">{loan.paid_installments || 0} de {loan.installments_count} parcelas pagas</p>
                     </div>
                     <div>
                       <p className="text-zinc-600 uppercase font-black tracking-tight">Valor Original</p>
@@ -716,19 +759,291 @@ export const WalletView: React.FC<WalletViewProps> = ({
                     </div>
                   </div>
 
-                  {loan.status === 'active' && (
-                    <button 
-                      onClick={() => handlePayLoan(loan)}
-                      className="w-full py-3 bg-white text-black rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-yellow-400 transition-colors"
-                    >
-                      Quitar Empréstimo
-                    </button>
-                  )}
-                </div>
+                  <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                    <span className="text-[8px] font-black text-zinc-600 uppercase">Clique para ver detalhes</span>
+                    <span className="material-symbols-outlined text-xs text-zinc-600">chevron_right</span>
+                  </div>
+                </motion.div>
               ))
             )}
           </div>
         </section>
+
+        <AnimatePresence>
+          {showLoanDetails && selectedLoan && (
+            <div className="fixed inset-0 z-[1100] flex items-end justify-center">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowLoanDetails(false)}
+                className="absolute inset-0 bg-black/80 backdrop-blur-md"
+              />
+              <motion.div 
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="relative w-full max-w-xl bg-zinc-900 rounded-t-[40px] p-8 pb-12 flex flex-col gap-8 h-[85vh] overflow-y-auto no-scrollbar"
+              >
+                <div className="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto" onClick={() => { setShowLoanDetails(false); setLoanPaymentStep('details'); }} />
+                
+                <header className="flex justify-between items-start">
+                   <div>
+                     <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                       {loanPaymentStep === 'details' ? 'Detalhes do Empréstimo' : 
+                        loanPaymentStep === 'method' ? 'Forma de Pagamento' :
+                        loanPaymentStep === 'pix' ? 'Pagamento via PIX' : 'Cartão de Crédito'}
+                     </p>
+                     <h2 className="text-3xl font-black text-white italic">Z {Number(selectedLoan.total_payable).toLocaleString('pt-BR')}</h2>
+                   </div>
+                   <button 
+                    onClick={() => {
+                      if (loanPaymentStep !== 'details') {
+                        setLoanPaymentStep('details');
+                      } else {
+                        setShowLoanDetails(false);
+                      }
+                    }}
+                    className="size-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-white"
+                   >
+                     <span className="material-symbols-outlined">{loanPaymentStep === 'details' ? 'close' : 'arrow_back'}</span>
+                   </button>
+                </header>
+
+                <AnimatePresence mode="wait">
+                  {loanPaymentStep === 'details' && (
+                    <motion.div 
+                      key="details"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="space-y-8"
+                    >
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-white/5 p-4 rounded-3xl border border-white/5">
+                           <p className="text-[9px] font-bold text-zinc-500 uppercase">Juros</p>
+                           <p className="font-black text-white">{selectedLoan.interest_rate}% ao mês</p>
+                        </div>
+                        <div className="bg-white/5 p-4 rounded-3xl border border-white/5">
+                           <p className="text-[9px] font-bold text-zinc-500 uppercase">Parcelas Pagas</p>
+                           <p className="font-black text-white">{selectedLoan.paid_installments || 0} de {selectedLoan.installments_count}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h3 className="font-black text-xs uppercase tracking-widest text-zinc-400">Plano de Parcelamento</h3>
+                          <p className="text-[9px] font-bold text-zinc-600 uppercase">Selecione para pagar</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          {Array.from({ length: selectedLoan.installments_count }).map((_, i) => {
+                            const installmentNumber = i + 1;
+                            const isPaid = installmentNumber <= (selectedLoan.paid_installments || 0);
+                            const isSelected = selectedInstallments.includes(installmentNumber);
+                            const isSelectable = !isPaid && (installmentNumber === (selectedLoan.paid_installments || 0) + 1 || selectedInstallments.includes(installmentNumber - 1));
+
+                            return (
+                              <div 
+                                key={i}
+                                onClick={() => {
+                                  if (isPaid) return;
+                                  if (isSelected) {
+                                    setSelectedInstallments(prev => prev.filter(n => n < installmentNumber));
+                                  } else if (isSelectable) {
+                                    setSelectedInstallments(prev => [...prev, installmentNumber]);
+                                  }
+                                }}
+                                className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${
+                                  isPaid ? 'bg-emerald-500/5 border-emerald-500/20 opacity-50' : 
+                                  isSelected ? 'bg-yellow-400 border-yellow-400 text-black' : 
+                                  isSelectable ? 'bg-white/5 border-white/10' : 'bg-black/20 border-white/5 opacity-30'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                   <div className={`size-6 rounded-full flex items-center justify-center text-[10px] font-black ${
+                                     isPaid ? 'bg-emerald-500 text-black' : isSelected ? 'bg-black text-yellow-400' : 'bg-zinc-800 text-zinc-500'
+                                   }`}>
+                                     {isPaid ? <span className="material-symbols-outlined text-xs">check</span> : installmentNumber}
+                                   </div>
+                                   <div>
+                                     <p className="text-[10px] font-black uppercase">Parcela {installmentNumber}</p>
+                                     <p className={`text-[9px] font-bold ${isSelected ? 'text-black/60' : 'text-zinc-500'}`}>
+                                       {isPaid ? 'Paga com sucesso' : `Vencimento: ${new Date(new Date(selectedLoan.due_date || selectedLoan.created_at).setMonth(new Date(selectedLoan.due_date || selectedLoan.created_at).getMonth() + i)).toLocaleDateString('pt-BR')}`}
+                                     </p>
+                                   </div>
+                                </div>
+                                <p className="font-black text-xs">Z {(Number(selectedLoan.total_payable) / selectedLoan.installments_count).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {loanPaymentStep === 'method' && (
+                    <motion.div 
+                      key="method"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className="space-y-6"
+                    >
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase text-center">Selecione como deseja pagar as parcelas</p>
+                      
+                      <div className="grid grid-cols-1 gap-4">
+                        <button 
+                          onClick={() => setLoanPaymentStep('pix')}
+                          className="p-6 bg-white/5 border border-white/5 rounded-[32px] flex items-center justify-between group active:scale-95 transition-all"
+                        >
+                          <div className="flex items-center gap-4 text-left">
+                            <div className="size-14 rounded-3xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                              <span className="material-symbols-outlined text-3xl font-black">pix</span>
+                            </div>
+                            <div>
+                               <p className="font-black uppercase tracking-tight text-white">Pagamento via PIX</p>
+                               <p className="text-[9px] font-bold text-zinc-500 uppercase">Liberação instantânea</p>
+                            </div>
+                          </div>
+                          <span className="material-symbols-outlined text-zinc-700 group-hover:text-white transition-colors">chevron_right</span>
+                        </button>
+
+                        <button 
+                          onClick={() => setLoanPaymentStep('card')}
+                          className="p-6 bg-white/5 border border-white/5 rounded-[32px] flex items-center justify-between group active:scale-95 transition-all"
+                        >
+                          <div className="flex items-center gap-4 text-left">
+                            <div className="size-14 rounded-3xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                              <span className="material-symbols-outlined text-3xl font-black">credit_card</span>
+                            </div>
+                            <div>
+                               <p className="font-black uppercase tracking-tight text-white">Cartão de Crédito</p>
+                               <p className="text-[9px] font-bold text-zinc-500 uppercase">Até 12x c/ juros do cartão</p>
+                            </div>
+                          </div>
+                          <span className="material-symbols-outlined text-zinc-700 group-hover:text-white transition-colors">chevron_right</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {loanPaymentStep === 'pix' && (
+                    <motion.div 
+                      key="pix"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      className="flex flex-col items-center gap-8 text-center"
+                    >
+                      <div className="bg-white p-6 rounded-[40px] shadow-2xl shadow-emerald-500/10">
+                        <img 
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=izipay_loan_pix_${selectedLoan.id}_${selectedInstallments.length}`}
+                          alt="PIX QR"
+                          className="size-48"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="font-black text-emerald-500 uppercase tracking-widest text-[10px]">Copia e Cola Gerado</p>
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex items-center justify-between gap-4">
+                           <p className="text-[10px] text-zinc-500 font-mono truncate max-w-[200px]">00020126580014br.gov.bcb.pix0136izipayloan-9128-...</p>
+                           <button className="size-10 bg-zinc-800 rounded-xl flex items-center justify-center"><span className="material-symbols-outlined text-sm">content_copy</span></button>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handlePaySelectedInstallments('pix')}
+                        disabled={isPayingInstallments}
+                        className="w-full py-5 bg-emerald-500 rounded-2xl font-black text-black uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2"
+                      >
+                        {isPayingInstallments ? <div className="size-5 border-2 border-black border-t-transparent animate-spin rounded-full" /> : "Já paguei via PIX"}
+                      </button>
+                    </motion.div>
+                  )}
+
+                  {loanPaymentStep === 'card' && (
+                    <motion.div 
+                      key="card"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className="space-y-6"
+                    >
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase">Escolha um cartão salvo</p>
+                      <div className="space-y-3">
+                        {savedCards.length > 0 ? savedCards.map((card: any) => (
+                          <button 
+                            key={card.id}
+                            onClick={() => setSelectedMethod('card')}
+                            className={`w-full p-5 rounded-3xl border flex items-center justify-between transition-all ${
+                              selectedMethod === 'card' ? 'bg-blue-500/20 border-blue-500' : 'bg-white/5 border-white/5'
+                            }`}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="size-10 rounded-xl bg-zinc-800 flex items-center justify-center">
+                                 <span className="material-symbols-outlined text-xl">credit_card</span>
+                              </div>
+                              <div className="text-left">
+                                <p className="font-black text-xs uppercase">{card.brand} •••• {card.last_four}</p>
+                                <p className="text-[9px] font-bold text-zinc-500">CARTÃO PRINCIPAL</p>
+                              </div>
+                            </div>
+                            <div className={`size-5 rounded-full border-2 flex items-center justify-center ${selectedMethod === 'card' ? 'border-blue-500 bg-blue-500' : 'border-zinc-700'}`}>
+                              {selectedMethod === 'card' && <div className="size-2 bg-white rounded-full" />}
+                            </div>
+                          </button>
+                        )) : (
+                          <div className="p-8 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
+                             <p className="text-[10px] font-bold text-zinc-600 uppercase">Nenhum cartão cadastrado</p>
+                          </div>
+                        )}
+                        <button 
+                          onClick={() => setWalletMode('add_card')}
+                          className="w-full py-4 border border-dashed border-zinc-800 rounded-2xl text-[10px] font-black uppercase text-zinc-500 flex items-center justify-center gap-2"
+                        >
+                          <span className="material-symbols-outlined text-sm">add_circle</span>
+                          Novo Cartão
+                        </button>
+                      </div>
+
+                      <button 
+                        onClick={() => handlePaySelectedInstallments('card')}
+                        disabled={isPayingInstallments || (savedCards.length === 0)}
+                        className="w-full py-5 bg-blue-500 rounded-2xl font-black text-white uppercase tracking-widest active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {isPayingInstallments ? <div className="size-5 border-white border-t-transparent animate-spin rounded-full" /> : "Confirmar Pagamento"}
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="mt-auto pt-6 border-t border-white/5 space-y-4">
+                  <div className="flex justify-between items-center text-white">
+                     <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Total Selecionado</p>
+                     <p className="text-xl font-black italic">Z {((Number(selectedLoan.total_payable) / selectedLoan.installments_count) * selectedInstallments.length).toLocaleString('pt-BR')}</p>
+                  </div>
+                  
+                  {loanPaymentStep === 'details' && selectedLoan.status !== 'paid' && (
+                    <button 
+                      onClick={() => setLoanPaymentStep('method')}
+                      disabled={selectedInstallments.length === 0 || isPayingInstallments}
+                      className="w-full py-5 bg-yellow-400 rounded-2xl font-black text-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                    >
+                      {isPayingInstallments ? (
+                        <div className="size-5 border-2 border-black border-t-transparent animate-spin rounded-full" />
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined">payments</span>
+                          Pagar {selectedInstallments.length} Parcela(s)
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
