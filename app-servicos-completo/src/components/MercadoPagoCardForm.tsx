@@ -79,13 +79,27 @@ export const MercadoPagoCardForm = ({ onConfirm }: MercadoPagoCardFormProps) => 
       }
 
       if (!mpPublicKey || mpPublicKey.includes("INSIRA_SUA_CHAVE")) {
-        toastError("Chave Pública do Mercado Pago não configurada no .env");
+        toastError("Chave Pública do Mercado Pago não configurada.");
+        setLoading(false);
+        return;
+      }
+
+      // Validação básica manual antes de enviar
+      if (formData.cardNumber.replace(/\s/g, '').length < 15) {
+        toastError("Número do cartão incompleto.");
+        setLoading(false);
+        return;
+      }
+
+      if (!formData.cardholderName || formData.cardholderName.length < 5) {
+        toastError("Nome do titular inválido.");
         setLoading(false);
         return;
       }
 
       const mp = new MercadoPago(mpPublicKey.trim());
       
+      console.log("[MP] Criando token de cartão...");
       const cardToken = await mp.createCardToken({
         cardNumber: formData.cardNumber.replace(/\s/g, ''),
         cardExpirationMonth: formData.cardExpirationMonth.padStart(2, '0'),
@@ -96,20 +110,20 @@ export const MercadoPagoCardForm = ({ onConfirm }: MercadoPagoCardFormProps) => 
         identificationNumber: formData.identificationNumber,
       });
 
+      console.log("[MP] Resposta da Tokenização:", cardToken);
+
       if (cardToken && cardToken.id) {
         const last4 = formData.cardNumber.replace(/\s/g, '').slice(-4);
         onConfirm(cardToken.id, "1", 1, getCardBrand(), last4);
       } else {
-        toastError("Dados do cartão inválidos. Verifique e tente novamente.");
+        const firstError = cardToken?.cause?.[0]?.description || "Verifique os dados do cartão.";
+        toastError(`Erro MP: ${firstError}`);
       }
     } catch (err: any) {
-      console.error("MP Token Error:", err);
-      const isKeyError = err?.message?.includes('404') || err?.message?.includes('public_key');
-      if (isKeyError) {
-        toastError("Chave de Integração MP (Public Key) inválida ou inativa.");
-      } else {
-        toastError("Erro ao processar dados do cartão. Verifique os campos.");
-      }
+      console.error("MP Token Error Full Object:", err);
+      // Extrair mensagem de erro amigável se houver 'cause'
+      const cause = err?.cause?.[0]?.description || err?.message || "Erro desconhecido";
+      toastError(`Falha na validação: ${cause}`);
     } finally {
       setLoading(false);
     }
@@ -198,7 +212,7 @@ export const MercadoPagoCardForm = ({ onConfirm }: MercadoPagoCardFormProps) => 
               onBlur={() => setFocusedField(null)}
               placeholder="0000 0000 0000 0000" 
               maxLength={19}
-              className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 outline-none focus:border-yellow-400 transition-colors font-mono"
+              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 outline-none focus:border-yellow-400 transition-colors font-mono"
             />
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
               {BespokeIcons.CreditCard({ size: 20 })}
@@ -218,7 +232,7 @@ export const MercadoPagoCardForm = ({ onConfirm }: MercadoPagoCardFormProps) => 
                 onFocus={() => setFocusedField('cardExpirationMonth')}
                 onBlur={() => setFocusedField(null)}
                 placeholder="MM" 
-                className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 px-4 text-center dark:text-white font-mono focus:border-yellow-400 outline-none transition-colors" 
+                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 px-4 text-center text-zinc-900 dark:text-white font-mono focus:border-yellow-400 outline-none transition-colors" 
               />
               <input 
                 name="cardExpirationYear" 
@@ -228,7 +242,7 @@ export const MercadoPagoCardForm = ({ onConfirm }: MercadoPagoCardFormProps) => 
                 onFocus={() => setFocusedField('cardExpirationYear')}
                 onBlur={() => setFocusedField(null)}
                 placeholder="AA" 
-                className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 px-4 text-center dark:text-white font-mono focus:border-yellow-400 outline-none transition-colors" 
+                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 px-4 text-center text-zinc-900 dark:text-white font-mono focus:border-yellow-400 outline-none transition-colors" 
               />
             </div>
           </div>
@@ -243,7 +257,7 @@ export const MercadoPagoCardForm = ({ onConfirm }: MercadoPagoCardFormProps) => 
               onFocus={() => setFocusedField('securityCode')}
               onBlur={() => setFocusedField(null)}
               placeholder="•••" 
-              className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 px-5 text-center dark:text-white font-mono focus:border-yellow-400 outline-none transition-colors" 
+              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 px-5 text-center text-zinc-900 dark:text-white font-mono focus:border-yellow-400 outline-none transition-colors" 
             />
           </div>
         </div>
@@ -257,7 +271,7 @@ export const MercadoPagoCardForm = ({ onConfirm }: MercadoPagoCardFormProps) => 
             onFocus={() => setFocusedField('cardholderName')}
             onBlur={() => setFocusedField(null)}
             placeholder="COMO ESTÁ IMPRESSO" 
-            className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 px-5 dark:text-white uppercase focus:border-yellow-400 outline-none transition-colors" 
+            className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 px-5 text-zinc-900 dark:text-white uppercase focus:border-yellow-400 outline-none transition-colors" 
           />
         </div>
 
@@ -271,7 +285,7 @@ export const MercadoPagoCardForm = ({ onConfirm }: MercadoPagoCardFormProps) => 
             onBlur={() => setFocusedField(null)}
             placeholder="Apenas números" 
             maxLength={11}
-            className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 px-5 dark:text-white font-mono focus:border-yellow-400 outline-none transition-colors" 
+            className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl py-4 px-5 text-zinc-900 dark:text-white font-mono focus:border-yellow-400 outline-none transition-colors" 
           />
         </div>
 
