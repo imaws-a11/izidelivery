@@ -11,7 +11,7 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
   try {
-    const { amount, orderId, email, customer } = await req.json()
+    const { amount, orderId, email, customer, meta } = await req.json()
     if (!amount || !orderId) {
       return new Response(JSON.stringify({ error: 'amount e orderId obrigatorios' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
@@ -19,8 +19,9 @@ serve(async (req) => {
     const payload = {
       transaction_amount: Number(amount),
       payment_method_id: 'pix',
-      description: `Pedido IziDelivery #${orderId.slice(0,8).toUpperCase()}`,
+      description: meta?.type === 'loan_payment' ? `Parcela Empréstimo IziPay #${orderId.slice(0,8)}` : `Pedido IziDelivery #${orderId.slice(0,8).toUpperCase()}`,
       external_reference: orderId,
+      metadata: meta || { order_id: orderId },
       payer: {
         email: email || 'cliente@izidelivery.com',
         first_name: customer?.name?.split(' ')[0] || 'Cliente',
@@ -39,7 +40,7 @@ serve(async (req) => {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
-        'X-Idempotency-Key': orderId,
+        'X-Idempotency-Key': orderId + (meta?.type === 'loan_payment' ? '_' + Date.now() : ''),
       },
       body: JSON.stringify(payload),
     })
@@ -52,7 +53,10 @@ serve(async (req) => {
     const qrCode = data.point_of_interaction?.transaction_data?.qr_code
     const qrCodeBase64 = data.point_of_interaction?.transaction_data?.qr_code_base64
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { autoRefreshToken: false, persistSession: false } })
-    await supabaseAdmin.from('orders_delivery').update({ payment_intent_id: String(data.id) }).eq('id', orderId)
+    
+    if (meta?.type !== 'loan_payment') {
+      await supabaseAdmin.from('orders_delivery').update({ payment_intent_id: String(data.id) }).eq('id', orderId)
+    }
     return new Response(JSON.stringify({
       mpPaymentId: data.id,
       qrCode,

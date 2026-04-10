@@ -191,6 +191,8 @@ export const WalletView: React.FC<WalletViewProps> = ({
   const [isPayingInstallments, setIsPayingInstallments] = useState(false);
   const [loanPaymentStep, setLoanPaymentStep] = useState<'details' | 'method' | 'pix' | 'card'>('details');
   const [selectedMethod, setSelectedMethod] = useState<'pix' | 'card' | null>(null);
+  const [pixData, setPixData] = useState<any>(null);
+  const [isGeneratingPix, setIsGeneratingPix] = useState(false);
 
   // Estados de Animação Real-time
   const [showAnimation, setShowAnimation] = useState(false);
@@ -372,6 +374,38 @@ export const WalletView: React.FC<WalletViewProps> = ({
       setIsPayingInstallments(false);
     }
   };
+
+  const generateLoanPix = async () => {
+    if (!selectedLoan || selectedInstallments.length === 0) return;
+    setIsGeneratingPix(true);
+    try {
+      const installmentVal = Number(selectedLoan.installment_value || (selectedLoan.total_payable / selectedLoan.installments_count));
+      const totalToPay = installmentVal * selectedInstallments.length;
+
+      const { data, error } = await supabase.functions.invoke('create-mp-pix', {
+        body: {
+          amount: totalToPay,
+          orderId: selectedLoan.id,
+          userId: userId,
+          meta: {
+            type: 'loan_payment',
+            loan_id: selectedLoan.id,
+            user_id: userId,
+            installments_count: selectedInstallments.length
+          }
+        }
+      });
+
+      if (error) throw error;
+      setPixData(data);
+    } catch (err: any) {
+      showToast?.("Erro ao gerar QR Code real. Tente novamente.", "error");
+      setLoanPaymentStep('method');
+    } finally {
+      setIsGeneratingPix(false);
+    }
+  };
+
 
 
 
@@ -895,7 +929,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
                       
                       <div className="grid grid-cols-1 gap-4">
                         <button 
-                          onClick={() => setLoanPaymentStep('pix')}
+                          onClick={() => { setLoanPaymentStep('pix'); generateLoanPix(); }}
                           className="p-6 bg-white/5 border border-white/5 rounded-[32px] flex items-center justify-between group active:scale-95 transition-all"
                         >
                           <div className="flex items-center gap-4 text-left">
@@ -937,23 +971,47 @@ export const WalletView: React.FC<WalletViewProps> = ({
                       exit={{ opacity: 0, scale: 0.9 }}
                       className="flex flex-col items-center gap-8 text-center"
                     >
-                      <div className="bg-white p-6 rounded-[40px] shadow-2xl shadow-emerald-500/10">
-                        <img 
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=izipay_loan_pix_${selectedLoan.id}_${selectedInstallments.length}`}
-                          alt="PIX QR"
-                          className="size-48"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <p className="font-black text-emerald-500 uppercase tracking-widest text-[10px]">Copia e Cola Gerado</p>
-                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex items-center justify-between gap-4">
-                           <p className="text-[10px] text-zinc-500 font-mono truncate max-w-[200px]">00020126580014br.gov.bcb.pix0136izipayloan-9128-...</p>
-                           <button className="size-10 bg-zinc-800 rounded-xl flex items-center justify-center"><span className="material-symbols-outlined text-sm">content_copy</span></button>
+                      {isGeneratingPix ? (
+                        <div className="size-48 bg-white/5 rounded-[40px] flex flex-col items-center justify-center gap-4">
+                           <div className="size-8 border-2 border-emerald-500 border-t-transparent animate-spin rounded-full" />
+                           <p className="text-[10px] font-black uppercase text-zinc-500">Gerando QR Real...</p>
                         </div>
+                      ) : (
+                        <div className="bg-white p-6 rounded-[40px] shadow-2xl shadow-emerald-500/10">
+                          <img 
+                            src={pixData?.qrCodeBase64 ? `data:image/png;base64,${pixData.qrCodeBase64}` : `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=error`}
+                            alt="PIX QR"
+                            className="size-48"
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-2 w-full">
+                        <p className="font-black text-emerald-500 uppercase tracking-widest text-[10px]">Copia e Cola Oficial Mercado Pago</p>
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex items-center justify-between gap-4">
+                           <p className="text-[10px] text-zinc-500 font-mono truncate max-w-[200px]">
+                             {pixData?.copyPaste || "Gerando código..."}
+                           </p>
+                           <button 
+                             onClick={() => {
+                               if (pixData?.copyPaste) {
+                                  navigator.clipboard.writeText(pixData.copyPaste);
+                                  showToast?.("Código PIX copiado!", "success");
+                               }
+                             }}
+                             className="size-10 bg-zinc-800 rounded-xl flex items-center justify-center active:scale-95"
+                           >
+                             <span className="material-symbols-outlined text-sm">content_copy</span>
+                           </button>
+                        </div>
+                      </div>
+                      <div className="bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
+                         <p className="text-[9px] font-bold text-emerald-500 uppercase leading-relaxed">
+                           Após o pagamento, o sistema identificará automaticamente em até 30 segundos.
+                         </p>
                       </div>
                       <button 
                         onClick={() => handlePaySelectedInstallments('pix')}
-                        disabled={isPayingInstallments}
+                        disabled={isPayingInstallments || isGeneratingPix}
                         className="w-full py-5 bg-emerald-500 rounded-2xl font-black text-black uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2"
                       >
                         {isPayingInstallments ? <div className="size-5 border-2 border-black border-t-transparent animate-spin rounded-full" /> : "Já paguei via PIX"}
