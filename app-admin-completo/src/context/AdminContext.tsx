@@ -3,7 +3,7 @@ import type {
   Order, Driver, User, Merchant, MerchantProfile,
   Product, Category, Promotion, DedicatedSlot,
   AuditLog, WalletTransaction, MenuCategory, DynamicRatesState,
-  Tab, UserRole, AppSettings, DashboardData, EstablishmentType
+  Tab, UserRole, AppSettings, DashboardData, EstablishmentType, PartnerStore
 } from '../lib/types';
 
 export interface AdminContextType {
@@ -51,6 +51,7 @@ export interface AdminContextType {
   subscriptionOrders: Order[];
   dynamicRatesState: DynamicRatesState;
   setDynamicRatesState: (d: any) => void;
+  partnersList: PartnerStore[];
 
   // Loading
   isLoadingList: boolean;
@@ -111,8 +112,8 @@ export interface AdminContextType {
   // Edit state
   editingItem: any;
   setEditingItem: (i: any) => void;
-  editType: 'user' | 'driver' | 'my_driver' | 'my_product' | 'category' | 'promotion' | 'merchant' | null;
-  setEditType: (t: 'user' | 'driver' | 'my_driver' | 'my_product' | 'category' | 'promotion' | 'merchant' | null) => void;
+  editType: 'user' | 'driver' | 'my_driver' | 'my_product' | 'category' | 'promotion' | 'merchant' | 'partner' | null;
+  setEditType: (t: 'user' | 'driver' | 'my_driver' | 'my_product' | 'category' | 'promotion' | 'merchant' | 'partner' | null) => void;
   editingSlotId: string | null;
   setEditingSlotId: (id: string | null) => void;
   isSaving: boolean;
@@ -216,6 +217,7 @@ export interface AdminContextType {
   fetchPromotions: () => Promise<void>;
   fetchAuditLogs: () => Promise<void>;
   fetchMerchants: () => Promise<void>;
+  fetchPartners: () => Promise<void>;
   fetchAppSettings: () => Promise<void>;
   fetchMyDedicatedSlots: () => Promise<void>;
   openMerchantPreview: (merchant: any) => Promise<void>;
@@ -239,6 +241,9 @@ export interface AdminContextType {
   handleDeleteMerchant: (id: string) => Promise<void>;
   handleUpdateDriverStatus: (id: string, newStatus: 'active' | 'inactive' | 'suspended') => Promise<void>;
   handleDeleteDriver: (id: string) => Promise<void>;
+  handleUpdatePartnerStatus: (id: string, active: boolean) => Promise<void>;
+  handleDeletePartner: (id: string) => Promise<void>;
+  handleUpdatePartner: (e: React.FormEvent) => Promise<void>;
   handleExportDrivers: () => void;
   handleUpdateUserStatus: (id: string, newStatus: 'active' | 'inactive' | 'suspended') => Promise<void>;
   handleDeleteUser: (id: string) => Promise<void>;

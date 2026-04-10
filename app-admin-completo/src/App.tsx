@@ -15,6 +15,7 @@ import UsersTab from './components/UsersTab';
 import PromotionsTab from './components/PromotionsTab';
 
 import DynamicRatesTab from './components/DynamicRatesTab';
+import PartnersTab from './components/PartnersTab';
 import AuditLogsTab from './components/AuditLogsTab';
 import SettingsTab from './components/SettingsTab';
 import MyStoreTab from './components/MyStoreTab';
@@ -158,6 +159,7 @@ function App() {
                   <NavTab id="dashboard" icon="dashboard" label="Home" />
                    <NavTab id="orders" icon="shopping_cart" label="Pedidos" />
                   <NavTab id="merchants" icon="storefront" label="Lojistas" />
+                  <NavTab id="partners" icon="handshake" label="Parceiros Izi" />
                   <NavTab id="categories" icon="category" label="Taxonomia" />
                   <NavTab id="my_studio" icon="inventory_2" label="Estúdios" />
                   <NavTab id="drivers" icon="person_pin_circle" label="Entregadores" />
@@ -199,6 +201,7 @@ function App() {
               {activeTab === 'dashboard' && userRole === 'admin' && <DashboardTab />}
               {activeTab === 'dashboard' && userRole === 'merchant' && <MerchantDashboardTab />}
               {activeTab === 'merchants' && userRole !== 'merchant' && <MerchantsTab />}
+              {activeTab === 'partners' && userRole === 'admin' && <PartnersTab />}
               {activeTab === 'tracking' && userRole !== 'merchant' && <TrackingTab />}
               {activeTab === 'orders' && userRole === 'admin' && <OrdersAdminTab />}
               {activeTab === 'orders' && userRole === 'merchant' && <OrdersMerchantTab />}

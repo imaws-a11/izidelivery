@@ -1609,7 +1609,8 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
             editType === 'user' ? 'Cliente' :
               editType === 'category' ? 'Categoria' :
                 editType === 'merchant' ? 'Lojista' :
-              editType === 'my_product' ? 'Produto' : 'Promoção/Banner'
+                  editType === 'partner' ? 'Parceiro Click & Retire' :
+                    editType === 'my_product' ? 'Produto' : 'Promoção/Banner'
       }
     </h2>
   </div>
@@ -1624,11 +1625,12 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
       editType === 'user' ? handleUpdateUser :
         editType === 'category' ? handleUpdateCategory :
           editType === 'merchant' ? handleUpdateMerchant :
-            editType === 'my_product' ? handleUpdateMyProduct : handleUpdatePromotion
+            editType === 'partner' ? handleUpdatePartner :
+              editType === 'my_product' ? handleUpdateMyProduct : handleUpdatePromotion
 } className="space-y-6">
 
   {/* Common fields for User, Driver, Category */}
-  {(editType === 'user' || editType === 'driver' || editType === 'my_driver' || editType === 'category' || editType === 'promotion' || editType === 'merchant' || editType === 'my_product') && (
+  {(editType === 'user' || editType === 'driver' || editType === 'my_driver' || editType === 'category' || editType === 'promotion' || editType === 'merchant' || editType === 'partner' || editType === 'my_product') && (
     <div className="space-y-4">
       <div className="space-y-1">
         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">
@@ -2183,6 +2185,57 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
           placeholder="ABC-1234"
           className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
+      </div>
+    </div>
+  )}
+
+  {editType === 'partner' && (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Endereço do Ponto</label>
+          <AddressSearchInput
+            className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm"
+            initialValue={editingItem.address || ''}
+            onSelect={(addr) => setEditingItem({ ...editingItem, address: addr.formatted_address, latitude: addr.lat, longitude: addr.lng })}
+            placeholder="Rua, Número..."
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Telefone de Contato</label>
+          <input
+            type="text"
+            required
+            value={editingItem.phone || ''}
+            onChange={e => setEditingItem({ ...editingItem, phone: e.target.value })}
+            className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Horário de Funcionamento</label>
+          <input
+            type="text"
+            value={editingItem.hours || ''}
+            onChange={e => setEditingItem({ ...editingItem, hours: e.target.value })}
+            placeholder="Ex: 08h às 22h"
+            className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Tipo de Ponto</label>
+          <select
+            value={editingItem.type || 'Ponto de Retirada'}
+            onChange={e => setEditingItem({ ...editingItem, type: e.target.value })}
+            className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm"
+          >
+            <option value="Ponto de Retirada">Ponto de Retirada</option>
+            <option value="Hub Logístico">Hub Logístico</option>
+            <option value="Loja Parceira">Loja Parceira</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
       </div>
     </div>
   )}

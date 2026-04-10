@@ -439,6 +439,97 @@ export default function DynamicRatesTab() {
             </div>
           </div>
         </section>
+        
+        {/* Prioridades de Envios (NOVO) */}
+        <section className="bg-white dark:bg-slate-900 p-10 rounded-[56px] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+          <div className="flex items-center justify-between mb-10">
+            <div className="flex items-center gap-4">
+              <div className="p-4 rounded-3xl bg-amber-50 text-amber-500 border border-amber-100">
+                <span className="material-symbols-outlined font-black text-2xl">speed</span>
+              </div>
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Prioridades de Envios</h2>
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Urgência & Tarifação</p>
+              </div>
+            </div>
+            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-500 rounded-2xl flex items-center gap-2">
+               <span className="material-symbols-outlined text-sm">info</span>
+               <span className="text-[10px] font-black uppercase">Impacta Izi Express</span>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {[
+              { id: 'turbo', label: 'Izi Turbo Flash', icon: 'bolt', color: 'text-amber-500', bg: 'bg-amber-50' },
+              { id: 'light', label: 'Izi Light Flash', icon: 'electric_bolt', color: 'text-yellow-500', bg: 'bg-yellow-50' },
+              { id: 'normal', label: 'Izi Express', icon: 'moped', color: 'text-zinc-500', bg: 'bg-zinc-50' },
+              { id: 'scheduled', label: 'Izi Agendado', icon: 'event', color: 'text-blue-500', bg: 'bg-blue-50' }
+            ].map((p) => {
+              const config = dynamicRatesState.shippingPriorities?.[p.id as keyof DynamicRatesState['shippingPriorities']] || { multiplier: 1.0, min_fee: 0, active: true };
+              return (
+                <div key={p.id} className={`p-6 rounded-[32px] border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-6 ${config.active ? 'bg-white dark:bg-slate-800/40 border-slate-100 dark:border-slate-700' : 'bg-slate-50 dark:bg-slate-900 border-dashed border-slate-200 opacity-60'}`}>
+                   <div className="flex items-center gap-4">
+                      <div className={`size-14 rounded-2xl ${p.bg} ${p.color} flex items-center justify-center border border-current/10 shadow-sm`}>
+                         <span className="material-symbols-outlined font-black text-2xl">{p.icon}</span>
+                      </div>
+                      <div className="flex flex-col">
+                         <span className="font-black text-slate-900 dark:text-white uppercase tracking-tight italic">{p.label}</span>
+                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Ajuste de margem de urgência</span>
+                      </div>
+                   </div>
+
+                   <div className="flex items-center gap-6">
+                      <div className="flex flex-col gap-1.5 min-w-[100px]">
+                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Multiplicador</span>
+                         <div className="relative">
+                            <input 
+                              type="number" 
+                              step="0.1" 
+                              value={config.multiplier}
+                              onChange={(e) => {
+                                const newPriorities = { ...dynamicRatesState.shippingPriorities };
+                                (newPriorities as any)[p.id].multiplier = parseFloat(e.target.value);
+                                setDynamicRatesState({ ...dynamicRatesState, shippingPriorities: newPriorities });
+                              }}
+                              className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-xl py-2 px-3 font-black text-amber-500 text-sm shadow-inner focus:ring-1 focus:ring-amber-500/30 pr-10"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-400 uppercase">Surge</span>
+                         </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5 min-w-[100px]">
+                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Taxa Mínima</span>
+                         <div className="relative">
+                            <input 
+                              type="number" 
+                              value={config.min_fee}
+                              onChange={(e) => {
+                                const newPriorities = { ...dynamicRatesState.shippingPriorities };
+                                (newPriorities as any)[p.id].min_fee = parseFloat(e.target.value);
+                                setDynamicRatesState({ ...dynamicRatesState, shippingPriorities: newPriorities });
+                              }}
+                              className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-xl py-2 px-3 font-black text-emerald-500 text-sm shadow-inner focus:ring-1 focus:ring-emerald-500/30 pr-10"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-400 uppercase">R$</span>
+                         </div>
+                      </div>
+
+                      <button 
+                         onClick={() => {
+                            const newPriorities = { ...dynamicRatesState.shippingPriorities };
+                            (newPriorities as any)[p.id].active = !newPriorities[p.id].active;
+                            setDynamicRatesState({ ...dynamicRatesState, shippingPriorities: newPriorities });
+                         }}
+                         className={`w-12 h-7 rounded-full relative transition-all shadow-md ${config.active ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                      >
+                         <div className={`absolute top-0.5 size-6 bg-white rounded-full transition-all ${config.active ? 'right-0.5' : 'left-0.5'}`}></div>
+                      </button>
+                   </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
 
         {/* Horários de Pico */}
         <section className="bg-white dark:bg-slate-900 p-10 rounded-[56px] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-xl hover:shadow-primary/5">
