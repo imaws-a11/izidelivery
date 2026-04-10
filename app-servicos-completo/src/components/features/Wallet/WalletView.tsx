@@ -4,31 +4,44 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Html5Qrcode } from "html5-qrcode";
 
 // Componente para o Leitor de QR Code usando a câmera nativa (Html5Qrcode)
-// Versão Final: Tratamento silencioso de AbortError e foco em estabilidade.
+// Versão com Autofoco: Otimizada para leitura rápida e foco contínuo.
 const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => void; onCancel: () => void }) => {
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  
+  const resultRef = useRef(onResult);
+  const cancelRef = useRef(onCancel);
+  
+  useEffect(() => {
+    resultRef.current = onResult;
+    cancelRef.current = onCancel;
+  }, [onResult, onCancel]);
 
   useEffect(() => {
-    let active = true;
+    let isMounted = true;
 
-    const start = async () => {
-      // Delay para estabilidade
-      await new Promise(r => setTimeout(r, 500));
-      if (!active) return;
+    const startCamera = async () => {
+      await new Promise(r => setTimeout(r, 600));
+      if (!isMounted) return;
 
       try {
-        if (!scannerRef.current) {
-          scannerRef.current = new Html5Qrcode("reader");
-        }
+        const scanner = new Html5Qrcode("reader");
+        scannerRef.current = scanner;
 
         const config = {
-          fps: 15, // FPS menor para estabilidade em dispositivos mais lentos
+          fps: 20,
           aspectRatio: 1.0,
-          videoConstraints: { facingMode: "environment" }
+          // Configurações avançadas de vídeo para Autofoco e Nitidez
+          videoConstraints: { 
+            facingMode: "environment",
+            // @ts-ignore - focusMode é suportado em navegadores modernos mas pode não estar no Type padrão
+            focusMode: "continuous",
+            width: { min: 640, ideal: 1280 },
+            height: { min: 640, ideal: 1280 }
+          }
         };
 
         const cameras = await Html5Qrcode.getCameras();
-        if (!active) return;
+        if (!isMounted) return;
 
         const back = cameras.find(c => 
           c.label.toLowerCase().includes('back') || 
@@ -36,30 +49,45 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
           c.label.toLowerCase().includes('rear')
         ) || cameras[cameras.length - 1];
 
-        if (back) {
-          await scannerRef.current.start(back.id, config, onResult, () => {});
-        } else {
-          await scannerRef.current.start({ facingMode: "environment" }, config, onResult, () => {});
+        await scanner.start(
+          back ? back.id : { facingMode: "environment" }, 
+          config, 
+          (text) => resultRef.current(text), 
+          () => {}
+        );
+
+        // Tenta aplicar autofoco avançado se o hardware permitir após o início
+        const videoTrack = scanner.getVideoTrack();
+        if (videoTrack && videoTrack.applyConstraints) {
+          const capabilities = videoTrack.getCapabilities() as any;
+          if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+            await videoTrack.applyConstraints({
+              advanced: [{ focusMode: 'continuous' }]
+            } as any);
+          }
         }
+
       } catch (err) {
-        // Silencia AbortError (comum em React 18 e navegação rápida)
-        if (err instanceof Error && err.name === 'AbortError') return;
-        console.warn("Scanner Status:", err);
+        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('play()'))) {
+          return;
+        }
+        console.warn("Sensor Izi Status:", err);
       }
     };
 
-    start();
+    startCamera();
 
     return () => {
-      active = false;
-      if (scannerRef.current) {
-        if (scannerRef.current.isScanning) {
-          scannerRef.current.stop().catch(() => {});
+      isMounted = false;
+      const scanner = scannerRef.current;
+      if (scanner) {
+        if (scanner.isScanning) {
+          scanner.stop().catch(() => {});
         }
         scannerRef.current = null;
       }
     };
-  }, [onResult]);
+  }, []);
 
   return (
     <div className="fixed inset-0 z-[1000] bg-black overflow-hidden flex items-center justify-center">
@@ -69,7 +97,7 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
       <div className="absolute top-10 right-10 z-[1001]">
         <button 
           onClick={onCancel}
-          className="size-14 rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 flex items-center justify-center text-white active:scale-90 shadow-2xl"
+          className="size-14 rounded-full bg-white/10 backdrop-blur-3xl border border-white/20 flex items-center justify-center text-white active:scale-90 transition-transform shadow-2xl"
         >
            <span className="material-symbols-outlined text-3xl">close</span>
         </button>
@@ -82,6 +110,7 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
           left: 0 !important;
           width: 100vw !important;
           height: 100vh !important;
+          background: #000 !important;
         }
         #reader video {
           position: fixed !important;
@@ -90,9 +119,11 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
           width: 100vw !important;
           height: 100vh !important;
           object-fit: cover !important;
+          background: #000 !important;
         }
         #reader__scan_region, #reader__dashboard, #reader__camera_selection, #reader__header_message, #reader canvas, #reader img, #reader > *:not(video) {
           display: none !important;
+          visibility: hidden !important;
         }
       `}</style>
     </div>
