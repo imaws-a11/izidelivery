@@ -768,18 +768,6 @@ function App() {
     
     if (data) {
       setMyOrders(data);
-      
-      // PERSISTÊNCIA DE ESTADO: Se houver um pedido ATIVO e não estivermos rastreando, levar o usuário para lá
-      const activeOrder = data.find(o => 
-        ["novo", "aceito", "confirmado", "preparando", "no_preparo", "pronto", "waiting_driver", "a_caminho", "em_rota", "saiu_para_entrega", "no_local"].includes(o.status)
-      );
-      
-      if (activeOrder && subViewRef.current === "none") {
-        console.log("[PERSISTENCE] Detectado pedido ativo remotamente:", activeOrder.id);
-        setSelectedItem(activeOrder);
-        setSubView("active_order");
-        setTab("orders");
-      }
     }
   };
 
