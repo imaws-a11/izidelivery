@@ -44,7 +44,19 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
     { id: 'geral', label: 'Dados Gerais', icon: 'info' },
     { id: 'imagens', label: 'Identidade Visual', icon: 'image' },
     { id: 'localizacao', label: 'Localização', icon: 'distance' },
+    { id: 'access', label: 'Dados de Acesso', icon: 'lock_person' },
+    { id: 'financial', label: 'Repasses & Financeiro', icon: 'payments' },
   ];
+
+  const [passwordPreview, setPasswordPreview] = useState('');
+
+  const generateStrongPassword = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+    let pass = "";
+    for (let i = 0; i < 12; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    setEditingItem({ ...editingItem, password: pass });
+    setPasswordPreview(pass);
+  };
 
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 md:p-8 font-display">
@@ -125,12 +137,12 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="mt-20 px-12 pb-2 border-b border-slate-100 dark:border-slate-800/50 flex gap-8 shrink-0">
+        <div className="mt-20 px-12 pb-2 border-b border-slate-100 dark:border-slate-800/50 flex gap-8 shrink-0 overflow-x-auto scrollbar-hide">
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id as any)}
-              className={`flex items-center gap-2.5 py-4 px-2 border-b-4 transition-all ${activeTab === t.id ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+              className={`flex items-center gap-2.5 py-4 px-2 border-b-4 transition-all whitespace-nowrap ${activeTab === t.id ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
             >
               <span className="material-symbols-outlined text-xl">{t.icon}</span>
               <span className="text-[10px] font-black uppercase tracking-widest">{t.label}</span>
@@ -246,12 +258,6 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
                         </label>
                       </div>
                    </div>
-                   <div className="bg-amber-50 dark:bg-amber-500/10 p-6 rounded-[32px] border border-amber-200 dark:border-amber-500/20 flex items-center gap-4">
-                      <span className="material-symbols-outlined text-amber-500 text-3xl">lightbulb</span>
-                      <p className="text-[11px] font-medium text-amber-700 dark:text-amber-500/80 leading-relaxed">
-                        <b>Dica Extra:</b> Use imagens com fundo sólido ou gradientes suaves para garantir que os nomes fiquem legíveis nos banners. Recomendamos 800x400 para banners.
-                      </p>
-                   </div>
                 </motion.div>
               )}
 
@@ -299,6 +305,177 @@ export default function PartnerStudio({ onClose }: PartnerStudioProps) {
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Longitude</span>
                       <p className="font-mono text-xs dark:text-white">{editingItem.longitude || '---'}</p>
                     </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'access' && (
+                <motion.div
+                  key="access"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="space-y-10"
+                >
+                  <div className="bg-slate-50 dark:bg-slate-800/30 p-10 rounded-[40px] border border-slate-100 dark:border-slate-800 space-y-8">
+                    <div className="flex items-center gap-4">
+                      <div className="size-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-500">
+                        <span className="material-symbols-outlined text-2xl">account_circle</span>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Credenciais do Parceiro</h4>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Acesso do parceiro ao seu próprio terminal de retirada</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">E-mail de Login</label>
+                        <input
+                          type="email"
+                          value={editingItem.email || ''}
+                          onChange={e => setEditingItem({ ...editingItem, email: e.target.value })}
+                          className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-indigo-500 dark:text-white shadow-sm"
+                          placeholder="login@parceiro.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Senha Temporária</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={editingItem.password || ''}
+                            onChange={e => setEditingItem({ ...editingItem, password: e.target.value })}
+                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-indigo-500 dark:text-white shadow-sm"
+                            placeholder="Defina ou gere uma senha"
+                          />
+                          <button
+                            type="button"
+                            onClick={generateStrongPassword}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 bg-indigo-500 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                          >
+                            Gerar
+                          </button>
+                        </div>
+                        {passwordPreview && (
+                           <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-2 ml-4">Nova senha gerada com sucesso!</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900 dark:bg-slate-800 p-10 rounded-[40px] space-y-8 text-white">
+                    <div className="flex items-center gap-4">
+                      <div className="size-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary">
+                        <span className="material-symbols-outlined text-2xl">admin_panel_settings</span>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-white uppercase tracking-widest">Configurações de Rede</h4>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Parâmetros exclusivos da administração IZI</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                       <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Taxa de Manuseio (%)</label>
+                        <input
+                          type="number"
+                          value={editingItem.commission_percent || 10}
+                          onChange={e => setEditingItem({ ...editingItem, commission_percent: parseFloat(e.target.value) })}
+                          className="w-full bg-slate-800 dark:bg-slate-950 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary text-white shadow-sm"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Taxa Fixa IZI (R$)</label>
+                        <input
+                          type="number"
+                          value={editingItem.service_fee || 0}
+                          onChange={e => setEditingItem({ ...editingItem, service_fee: parseFloat(e.target.value) })}
+                          className="w-full bg-slate-800 dark:bg-slate-950 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary text-white shadow-sm"
+                        />
+                      </div>
+                      <div className="flex flex-col justify-center">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-2">Status da Operação</label>
+                        <button
+                          type="button"
+                          onClick={() => setEditingItem({ ...editingItem, is_active: !editingItem.is_active })}
+                          className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${editingItem.is_active ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}
+                        >
+                          {editingItem.is_active ? 'Ativo na Rede' : 'Suspenso'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'financial' && (
+                <motion.div
+                  key="financial"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-8"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-emerald-50 dark:bg-emerald-950/20 p-8 rounded-[40px] border border-emerald-100 dark:border-emerald-500/20">
+                      <span className="material-symbols-outlined text-emerald-500 text-3xl mb-4">account_balance_wallet</span>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo de Repasse</p>
+                      <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic">R$ 0,00</h3>
+                    </div>
+                    <div className="bg-indigo-50 dark:bg-indigo-950/20 p-8 rounded-[40px] border border-indigo-100 dark:border-indigo-500/20">
+                      <span className="material-symbols-outlined text-indigo-500 text-3xl mb-4">package_2</span>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pacotes Manuseados</p>
+                      <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic">0</h3>
+                    </div>
+                    <div className="bg-amber-50 dark:bg-amber-950/20 p-8 rounded-[40px] border border-amber-100 dark:border-amber-500/20">
+                      <span className="material-symbols-outlined text-amber-500 text-3xl mb-4">star</span>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nota do Ponto</p>
+                      <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic">5.0</h3>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800/30 p-10 rounded-[40px] border border-slate-100 dark:border-slate-800 space-y-8">
+                     <div className="flex items-center gap-4">
+                      <div className="size-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-500">
+                        <span className="material-symbols-outlined text-2xl">account_balance</span>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Dados Bancários para Repasse</h4>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Onde o parceiro receberá suas comissões por Click & Retire</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nome Completo / Razão Social</label>
+                        <input
+                          type="text"
+                          value={editingItem.bank_info?.holder_name || ''}
+                          onChange={e => setEditingItem({ ...editingItem, bank_info: { ...(editingItem.bank_info || {}), holder_name: e.target.value } })}
+                          className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-indigo-500 dark:text-white shadow-sm"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Chave PIX</label>
+                        <input
+                          type="text"
+                          value={editingItem.bank_info?.pix_key || ''}
+                          onChange={e => setEditingItem({ ...editingItem, bank_info: { ...(editingItem.bank_info || {}), pix_key: e.target.value } })}
+                          className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-indigo-500 dark:text-white shadow-sm"
+                          placeholder="CPF, E-mail ou Celular"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-indigo-600 p-8 rounded-[32px] text-white flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                       <span className="material-symbols-outlined text-3xl">currency_exchange</span>
+                       <div>
+                         <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Padrão de Repasse</p>
+                         <p className="text-sm font-bold">Repasse Semanal (Toda Terça-feira)</p>
+                       </div>
+                    </div>
+                    <button type="button" className="bg-white/20 hover:bg-white/30 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Ver Detalhes</button>
                   </div>
                 </motion.div>
               )}

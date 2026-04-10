@@ -63,9 +63,14 @@ export default function PartnersTab() {
                   name: '',
                   address: '',
                   phone: '',
+                  email: '',
+                  password: '',
                   hours: '08h - 22h',
                   type: 'Ponto de Retirada',
-                  is_active: true
+                  is_active: true,
+                  commission_percent: 10,
+                  service_fee: 0,
+                  bank_info: { holder_name: '', pix_key: '' }
                 });
                 setEditType('partner');
                 setActiveTab('my_studio');

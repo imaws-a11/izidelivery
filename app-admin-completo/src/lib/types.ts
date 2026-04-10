@@ -347,7 +347,15 @@ export interface PartnerStore {
   latitude?: number;
   longitude?: number;
   logo_url?: string;
+  banner_url?: string;
+  password?: string;
   is_active: boolean;
+  commission_percent?: number;
+  service_fee?: number;
+  bank_info?: {
+    holder_name?: string;
+    pix_key?: string;
+  };
   created_at: string;
   updated_at?: string;
 }
