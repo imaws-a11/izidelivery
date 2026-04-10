@@ -423,7 +423,7 @@ export default function MyStudioTab() {
                     <div className="flex flex-col items-center text-center">
                       <div className="p-4 bg-primary/10 rounded-3xl mb-6 ring-8 ring-primary/5">
                         <QRCodeSVG 
-                          value={`izipay:merchant:${merchantProfile?.id}`}
+                          value={`izipay:merchant:${merchantProfile?.merchant_id}`}
                           size={180}
                           level="H"
                           includeMargin={false}
