@@ -1,39 +1,32 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "../../../lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { Html5Qrcode } from "html5-qrcode";
 
 // Componente para o Leitor de QR Code usando a câmera nativa (Html5Qrcode)
+// Versão Minimalista: Somente Câmera, sem overlays de scanner.
 const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => void; onCancel: () => void }) => {
   const qrRef = useRef<Html5Qrcode | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     const startScanner = async () => {
       try {
-        // Limpa qualquer resíduo anterior no container
+        await new Promise(r => setTimeout(r, 200));
         const container = document.getElementById("reader");
-        if (container) container.innerHTML = "";
+        if (!container || !isMounted) return;
+        container.innerHTML = "";
 
         qrRef.current = new Html5Qrcode("reader");
         const cameras = await Html5Qrcode.getCameras();
-        
-        // Ajuste no Aspect Ratio: para mobile (portrait) o ideal é que seja largura/altura < 1
-        // Se for 100vh/100vw na verdade queremos que ele preencha, então o object-fit cuidará disso.
-        // Vamos usar um valor padrão de mobile ou 1.0 para flexibilidade.
+        if (!isMounted) return;
+
         const config = {
           fps: 24,
-          qrbox: { width: 250, height: 250 }, // Ajuda a lib a focar no centro
-          aspectRatio: 1.0,
-          videoConstraints: {
-            facingMode: "environment",
-            focusMode: "continuous"
-          }
-        };
-
-        const successCallback = (decodedText: string) => {
-          onResult(decodedText);
-          qrRef.current?.stop().catch(() => {});
+          aspectRatio: 1.0, 
+          videoConstraints: { facingMode: "environment" }
         };
 
         if (cameras && cameras.length > 0) {
@@ -41,23 +34,27 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
             c.label.toLowerCase().includes('back') || 
             c.label.toLowerCase().includes('traseira') ||
             c.label.toLowerCase().includes('rear')
-          ) || cameras[0];
-          
-          await qrRef.current.start(backCamera.id, config, successCallback, () => {});
+          ) || cameras[cameras.length - 1];
+          await qrRef.current.start(backCamera.id, config, onResult, () => {});
         } else {
-          await qrRef.current.start({ facingMode: "environment" }, config, successCallback, () => {});
+          await qrRef.current.start({ facingMode: "environment" }, config, onResult, () => {});
         }
         
-        // Pequeno delay para garantir que o vídeo foi injetado e o CSS aplicado
-        setTimeout(() => setIsReady(true), 500);
+        if (isMounted) setIsReady(true);
       } catch (err) {
-        console.error("Erro ao iniciar câmera:", err);
+        if (isMounted) {
+          try {
+            await qrRef.current?.start({ facingMode: "environment" }, { fps: 15 }, onResult, () => {});
+            setIsReady(true);
+          } catch(e) {}
+        }
       }
     };
 
     startScanner();
 
     return () => {
+      isMounted = false;
       if (qrRef.current?.isScanning) {
         qrRef.current.stop().catch(() => {});
       }
@@ -65,23 +62,31 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
   }, [onResult]);
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center overflow-hidden">
-      {/* Camada da Câmera - Forçada para ocupar TUDO */}
+    <div className="fixed inset-0 z-[1000] bg-black overflow-hidden">
+      {/* Câmera em Tela Cheia */}
       <div 
         id="reader" 
-        className={`fixed inset-0 w-full h-full bg-black transition-opacity duration-1000 ${isReady ? 'opacity-100' : 'opacity-0'}`}
+        className={`fixed inset-0 w-full h-full bg-black transition-opacity duration-300 ${isReady ? 'opacity-100' : 'opacity-0'}`}
         style={{ zIndex: 1 }}
       />
 
-      {/* Background de Loading */}
+      {/* Loader Minimalista - Só aparece durante o setup */}
       {!isReady && (
-        <div className="absolute inset-0 z-[2] bg-zinc-950 flex flex-col items-center justify-center">
-           <div className="size-16 border-4 border-yellow-400/20 border-t-yellow-400 animate-spin rounded-full" />
-           <p className="mt-6 text-zinc-500 font-black text-[10px] uppercase tracking-[0.3em] animate-pulse">Sincronizando Óptico</p>
+        <div className="absolute inset-0 z-10 bg-black flex items-center justify-center">
+           <div className="size-8 border-2 border-white/20 border-t-white animate-spin rounded-full" />
         </div>
       )}
       
-      {/* CSS Ultra Agressivo para aniquilar qualquer layout split da lib */}
+      {/* Botão de Fechar Minimalista (Essencial para não travar o usuário) */}
+      <div className="absolute top-6 right-6 z-50">
+        <button 
+          onClick={onCancel}
+          className="size-12 rounded-full bg-black/20 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-90"
+        >
+           <span className="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
       <style>{`
         #reader {
           position: fixed !important;
@@ -89,10 +94,6 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
           left: 0 !important;
           width: 100vw !important;
           height: 100vh !important;
-          border: none !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          background: #000 !important;
           display: block !important;
         }
         #reader video {
@@ -102,99 +103,12 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
           width: 100vw !important;
           height: 100vh !important;
           object-fit: cover !important;
-          z-index: 1 !important;
         }
-        /* Esconde rigorosamente qualquer elemento que não seja o vídeo */
-        #reader > *:not(video) {
-          display: none !important;
-          visibility: hidden !important;
-          height: 0 !important;
-          width: 0 !important;
-          opacity: 0 !important;
-        }
-        /* Seletores específicos da lib que costumam aparecer */
-        #reader__scan_region, 
-        #reader__dashboard, 
-        #reader__camera_selection,
-        #reader__header_message,
-        #reader img, 
-        #reader canvas {
+        /* Esconde todos os elementos de UI da biblioteca */
+        #reader__scan_region, #reader__dashboard, #reader__camera_selection, #reader__header_message, #reader canvas, #reader img, #reader > *:not(video) {
           display: none !important;
         }
       `}</style>
-      
-      {/* UI Overlay Realmente Premium */}
-      <div className="relative z-20 w-full h-full flex flex-col items-center justify-between pb-24 pt-16 pointer-events-none px-6">
-        
-        {/* Header Overlay */}
-        <motion.div 
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="flex flex-col items-center gap-4"
-        >
-          <div className="px-6 py-2.5 bg-black/40 backdrop-blur-xl rounded-full border border-white/10 flex items-center gap-3">
-             <div className="size-2 rounded-full bg-yellow-400 shadow-[0_0_10px_#facc15]" />
-             <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Scanner Ativo</span>
-          </div>
-        </motion.div>
-
-        {/* Framing Guide + Scanner Effect */}
-        <div className="relative flex flex-col items-center justify-center">
-          <div className="relative size-72 flex items-center justify-center">
-            {/* Cantoneiras Futuristas */}
-            <div className="absolute top-0 left-0 size-12 border-t-4 border-l-4 border-yellow-400 rounded-tl-[40px]" />
-            <div className="absolute top-0 right-0 size-12 border-t-4 border-r-4 border-yellow-400 rounded-tr-[40px]" />
-            <div className="absolute bottom-0 left-0 size-12 border-b-4 border-l-4 border-yellow-400 rounded-bl-[40px]" />
-            <div className="absolute bottom-0 right-0 size-12 border-b-4 border-r-4 border-yellow-400 rounded-br-[40px]" />
-            
-            {/* Laser Line Animation */}
-            <motion.div 
-              animate={{ 
-                top: ["10%", "90%", "10%"],
-                opacity: [0.3, 0.8, 0.3]
-              }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-              className="absolute left-6 right-6 h-[2.5px] bg-gradient-to-r from-transparent via-yellow-400 to-transparent shadow-[0_0_15px_#facc15] z-30"
-            />
-
-            {/* Subtle Inner Glow */}
-            <div className="absolute inset-4 rounded-[32px] bg-yellow-400/5 backdrop-blur-[1px] border border-white/5" />
-          </div>
-
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="mt-12 text-center"
-          >
-            <h2 className="text-white font-black text-sm uppercase tracking-[0.1em] drop-shadow-lg">Aponte para o QR Code</h2>
-            <p className="text-white/40 text-[10px] font-medium mt-2 leading-relaxed max-w-[200px] mx-auto opacity-60">
-              Mantenha o código dentro das molduras para validação imediata.
-            </p>
-          </motion.div>
-        </div>
-
-        {/* Botão de Fechar Customizado */}
-        <div className="pointer-events-auto">
-          <button 
-            onClick={onCancel}
-            className="group relative flex flex-col items-center gap-3"
-          >
-            <div className="size-16 rounded-full bg-white/5 backdrop-blur-2xl border border-white/10 flex items-center justify-center text-white transition-all group-active:scale-90 overflow-hidden shadow-2xl">
-               <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-               <span className="material-symbols-outlined text-2xl relative z-10">close</span>
-            </div>
-          </button>
-        </div>
-      </div>
-      
-      {/* Decorative Side Elements */}
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-8 opacity-20 pointer-events-none">
-         {[...Array(5)].map((_, i) => <div key={i} className="w-[1px] h-4 bg-white" />)}
-      </div>
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-8 opacity-20 pointer-events-none">
-         {[...Array(5)].map((_, i) => <div key={i} className="w-[1px] h-4 bg-white" />)}
-      </div>
     </div>
   );
 };
@@ -306,7 +220,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
 
 
 
-  const handleSearchRecipient = async (query = searchTarget) => {
+  const handleSearchRecipient = useCallback(async (query = searchTarget) => {
     if (!query.trim()) return;
     setIsSearching(true);
     setSearchTarget(query);
@@ -349,7 +263,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
     } finally {
       setIsSearching(false);
     }
-  };
+  }, [userId, searchTarget, showToast]);
 
   const handleTransfer = async () => {
     const val = Number(amount.replace(",", "."));
@@ -415,15 +329,17 @@ export const WalletView: React.FC<WalletViewProps> = ({
 
 
 
+  const handleScanResult = useCallback((text: string) => {
+    const idText = text.replace("izipay:", "").trim();
+    setWalletMode("transfer");
+    handleSearchRecipient(idText);
+  }, [handleSearchRecipient]);
+
   if (walletMode === "scan") {
     return (
       <ScannerWrapper 
         onCancel={() => setWalletMode("main")}
-        onResult={(text) => {
-           const idText = text.replace("izipay:", "").trim();
-           setWalletMode("transfer");
-           handleSearchRecipient(idText);
-        }} 
+        onResult={handleScanResult} 
       />
     );
   }
