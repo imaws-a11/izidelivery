@@ -141,10 +141,11 @@ export default function MyStudioTab() {
       <div className="px-8 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800 flex gap-6 overflow-x-auto scrollbar-hide">
         {[
           { id: 'info', label: 'Estande & Geral', icon: 'style' },
-          { id: 'sales', label: 'Vendas & Performance', icon: 'monitoring' },
           { id: 'products', label: 'Cardápio Digital', icon: 'restaurant_menu' },
-          { id: 'promotions', label: userRole === 'merchant' ? 'Promoções & Ofertas' : 'Promoções & Banners', icon: 'campaign' },
-          { id: 'financial', label: 'Financeiro & Saque', icon: 'payments' },
+          { id: 'promotions', label: userRole === 'merchant' ? 'Promoções & Ofertas' : 'Promoções & Banners' , icon: 'campaign' },
+          { id: 'sales', label: 'Vendas & Performance', icon: 'monitoring' },
+          { id: 'financial', label: 'Financeiro & Saque', icon: 'account_balance_wallet' },
+          { id: 'access', label: 'Dados de Acesso', icon: 'lock_person' },
           { id: 'dedicated_slots', label: 'Vagas Dedicadas', icon: 'stars' },
         ].map(t => (
           <button
@@ -287,127 +288,6 @@ export default function MyStudioTab() {
                        )}
                     </div>
                   </div>
-
-                  {/* BLOCO DE CREDENCIAIS (Sempre visível para Admin, ou se for o Lojista editando sua conta) */}
-                  {(userRole === 'admin' || userRole === 'merchant') && (
-                    <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-8">
-                      <div className="flex items-center gap-4">
-                        <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                          <span className="material-symbols-outlined text-2xl font-bold">admin_panel_settings</span>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Controles Administrativos</h4>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gestão exclusiva de taxas e acessos</p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">E-mail de Login</label>
-                          <input 
-                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
-                            type="email"
-                            value={(targetItem as any).email || ''}
-                            onChange={e => updateItem({...targetItem, email: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center ml-4">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-slate-500">Senha de Acesso</label>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
-                                let pass = "";
-                                for(let i=0; i<10; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
-                                updateItem({...targetItem, password: pass});
-                              }}
-                              className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
-                            >
-                              Gerar Aleatória
-                            </button>
-                          </div>
-                          <input
-                            type="text"
-                            value={(targetItem as any).password || ''}
-                            onChange={e => updateItem({...targetItem, password: e.target.value})}
-                            placeholder="Deixe em branco para não alterar"
-                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
-                          />
-                        </div>
-                        
-                        
-                        {/* CAMPOS ADMINISTRATIVOS EXCLUSIVOS */}
-                        {userRole === 'admin' && (
-                          <>
-                             <div className="space-y-2">
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Tipo de Estabelecimento</label>
-                               <select 
-                                 className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm appearance-none"
-                                 value={targetItem.store_type || 'restaurant'}
-                                 onChange={e => updateItem({...targetItem, store_type: e.target.value, food_category: 'all'})}
-                               >
-                                 {establishmentTypes.filter(t => !t.parent_id).map(t => (
-                                   <option key={t.id} value={t.value}>{t.name}</option>
-                                 ))}
-                               </select>
-                             </div>
-
-                             <div className="space-y-2">
-                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Subcategoria / Especialidade</label>
-                               <select 
-                                 className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm appearance-none"
-                                 value={targetItem.food_category || 'all'}
-                                 onChange={e => updateItem({...targetItem, food_category: e.target.value})}
-                               >
-                                 <option value="all">Loja Geral (Todas)</option>
-                                 {(() => {
-                                   const parent = establishmentTypes.find(p => p.value === targetItem.store_type);
-                                   return establishmentTypes.filter(t => t.parent_id === parent?.id).map(t => (
-                                     <option key={t.id} value={t.value}>{t.name}</option>
-                                   ));
-                                 })()}
-                               </select>
-                             </div>
-
-
-
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Comissão Base (%)</label>
-                              <input 
-                                type="number" step="0.1"
-                                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
-                                value={(targetItem as Merchant).commission_percent || 0}
-                                onChange={e => updateItem({...targetItem, commission_percent: parseFloat(e.target.value) || 0})}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Taxa Fixa IZI (R$)</label>
-                              <input 
-                                type="number" step="0.1"
-                                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
-                                value={(targetItem as Merchant).service_fee || 0}
-                                onChange={e => updateItem({...targetItem, service_fee: parseFloat(e.target.value) || 0})}
-                              />
-                            </div>
-                            <div className="space-y-2 flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus-within:border-primary/20">
-                              <div>
-                                <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Status da Loja</h4>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Acesso à plataforma</p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => updateItem({...targetItem, is_active: !(targetItem as Merchant).is_active})}
-                                className={`relative w-12 h-6 rounded-full transition-colors ${(targetItem as Merchant).is_active ? 'bg-green-500' : 'bg-red-500'}`}
-                              >
-                                <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${(targetItem as Merchant).is_active ? 'translate-x-6' : ''}`}></span>
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
 
                   <div className="pt-8 flex justify-end">
                     <button
@@ -804,6 +684,151 @@ export default function MyStudioTab() {
                 </div>
               </div>
             )}
+ 
+             {activePreviewTab === 'access' && (
+               <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
+                 <div className="flex items-center gap-4 mb-8">
+                    <div className="size-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20">
+                      <span className="material-symbols-outlined text-2xl font-bold">lock_person</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Segurança & Acesso</h4>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gerencie suas credenciais e permissões na plataforma</p>
+                    </div>
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                   <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="material-symbols-outlined text-primary">contact_mail</span>
+                        <h5 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Credenciais de Login</h5>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">E-mail de Acesso</label>
+                        <input 
+                          className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                          type="email"
+                          value={(targetItem as any).email || ''}
+                          onChange={e => updateItem({...targetItem, email: e.target.value})}
+                          placeholder="seu@email.com"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center ml-4">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-slate-500">Nova Senha</label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+                              let pass = "";
+                              for(let i=0; i<10; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+                              updateItem({...targetItem, password: pass});
+                            }}
+                            className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
+                          >
+                            Gerar Senha Forte
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={(targetItem as any).password || ''}
+                          onChange={e => updateItem({...targetItem, password: e.target.value})}
+                          placeholder="Deixe em branco para manter a atual"
+                          className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                        />
+                      </div>
+                   </div>
+
+                   {userRole === 'admin' && (
+                     <div className="bg-slate-900 p-8 rounded-[40px] shadow-2xl space-y-6 border border-white/5">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="material-symbols-outlined text-primary">admin_panel_settings</span>
+                          <h5 className="text-[11px] font-black text-white uppercase tracking-widest">Parâmetros de Sistema (Admin)</h5>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">Comissão (%)</label>
+                            <input 
+                              type="number" step="0.1"
+                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 font-black text-white text-sm focus:ring-2 focus:ring-primary"
+                              value={(targetItem as Merchant).commission_percent || 0}
+                              onChange={e => updateItem({...targetItem, commission_percent: parseFloat(e.target.value) || 0})}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">Taxa Fixa (R$)</label>
+                            <input 
+                              type="number" step="0.1"
+                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 font-black text-white text-sm focus:ring-2 focus:ring-primary"
+                              value={(targetItem as Merchant).service_fee || 0}
+                              onChange={e => updateItem({...targetItem, service_fee: parseFloat(e.target.value) || 0})}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">Tipo de Estabelecimento</label>
+                          <select 
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 font-bold text-white text-sm focus:ring-2 focus:ring-primary appearance-none"
+                            value={targetItem.store_type || 'restaurant'}
+                            onChange={e => updateItem({...targetItem, store_type: e.target.value})}
+                          >
+                            {establishmentTypes.filter(t => !t.parent_id).map(t => (
+                              <option key={t.id} value={t.value} className="bg-slate-900">{t.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="p-6 bg-white/5 rounded-3xl border border-white/10 flex items-center justify-between">
+                          <div>
+                            <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Status da Conta</h4>
+                            <p className="text-[9px] font-bold text-slate-500 uppercase">Habilitar/Desativar acesso</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => updateItem({...targetItem, is_active: !(targetItem as Merchant).is_active})}
+                            className={`relative w-12 h-6 rounded-full transition-colors ${(targetItem as Merchant).is_active ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                          >
+                            <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${(targetItem as Merchant).is_active ? 'translate-x-6' : ''}`}></span>
+                          </button>
+                        </div>
+                     </div>
+                   )}
+                 </div>
+
+                 <div className="pt-8 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                    <button 
+                      onClick={async () => {
+                         const confirm = await showConfirm({
+                           title: 'Salvar Acessos',
+                           message: 'Deseja confirmar a alteração das credenciais de segurança?',
+                           confirmLabel: 'Sim, Atualizar',
+                           cancelLabel: 'Cancelar'
+                         });
+                         if (confirm) {
+                            if (userRole === 'merchant') {
+                               // Handle saving as merchant
+                               const { id, ...cleanItem } = targetItem;
+                               const { error } = await supabase.from('admin_users').update(cleanItem).eq('id', id);
+                               if (error) toastError("Erro ao salvar: " + error.message);
+                               else toastSuccess("Credenciais atualizadas!");
+                            } else {
+                               // Handle saving will be done by the main 'Salvar' button of the modal if editing someone else
+                               toastSuccess("Acessos preparados para salvamento.");
+                            }
+                         }
+                      }}
+                      className="px-10 py-5 bg-primary text-slate-950 rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+                    >
+                      <span className="material-symbols-outlined">security</span>
+                      Confirmar Atualizações
+                    </button>
+                 </div>
+               </div>
+             )}
 
 
             {activePreviewTab === 'products' && (
