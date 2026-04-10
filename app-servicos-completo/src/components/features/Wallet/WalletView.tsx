@@ -166,7 +166,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
    setPaymentsOrigin,
    setSubView,
  }) => {
-  const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr" | "scan" | "add_card">("main");
+  const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr" | "scan" | "add_card" | "loans">("main");
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [newCard, setNewCard] = useState({ number: "", holder: "", expiry: "", cvv: "" });
   const [isSavingCard, setIsSavingCard] = useState(false);
@@ -178,6 +178,13 @@ export const WalletView: React.FC<WalletViewProps> = ({
   const [isTransferring, setIsTransferring] = useState(false);
   const [searchTarget, setSearchTarget] = useState("");
   const [recipient, setRecipient] = useState<any>(null);
+ 
+  // Estados para Empréstimos
+  const [loans, setLoans] = useState<any[]>([]);
+  const [isLoadingLoans, setIsLoadingLoans] = useState(false);
+  const [loanAmount, setLoanAmount] = useState("");
+  const [loanInstallments, setLoanInstallments] = useState(1);
+  const [isTakingLoan, setIsTakingLoan] = useState(false);
 
   // Estados de Animação Real-time
   const [showAnimation, setShowAnimation] = useState(false);
@@ -229,11 +236,106 @@ export const WalletView: React.FC<WalletViewProps> = ({
     pagamento: { icon: "shopping_bag", color: "text-zinc-400" },
     saque: { icon: "arrow_outward", color: "text-red-400" },
     transferencia: { icon: "swap_horiz", color: "text-blue-400" },
+    emprestimo: { icon: "account_balance", color: "text-yellow-400" },
+    venda: { icon: "store", color: "text-emerald-400" },
   };
 
   const totalGasto = walletTransactions
     .filter((t: any) => t.type === "pagamento")
     .reduce((a: number, t: any) => a + Number(t.amount), 0);
+
+  const fetchLoans = useCallback(async () => {
+    if (!userId) return;
+    setIsLoadingLoans(true);
+    const { data } = await supabase
+      .from("loans_delivery")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    
+    if (data) setLoans(data);
+    setIsLoadingLoans(false);
+  }, [userId]);
+
+  useEffect(() => {
+    if (walletMode === 'loans') fetchLoans();
+  }, [walletMode, fetchLoans]);
+
+  const handleTakeLoan = async () => {
+    const amountVal = Number(loanAmount);
+    if (!amountVal || amountVal <= 0) return showToast?.("Valor inválido", "error");
+    
+    setIsTakingLoan(true);
+    try {
+      const { error: loanErr } = await supabase
+        .from("loans_delivery")
+        .insert({
+          user_id: userId,
+          requested_amount: amountVal,
+          requested_installments: loanInstallments,
+          amount: amountVal,
+          total_payable: amountVal * 1.1,
+          installments_count: loanInstallments,
+          status: 'pending'
+        });
+      
+      if (loanErr) throw loanErr;
+
+      showToast?.("Solicitação enviada para análise!", "success");
+      setWalletMode("main");
+      setLoanAmount("");
+      setLoanInstallments(1);
+      fetchLoans();
+    } catch (err) {
+      showToast?.("Erro ao solicitar empréstimo", "error");
+    } finally {
+      setIsTakingLoan(false);
+    }
+  };
+
+  const handlePayLoan = async (loan: any) => {
+    const { data: currentUser } = await supabase.from("users_delivery").select("izi_coins").eq("id", userId).single();
+    const currentCoins = Number(currentUser?.izi_coins || 0);
+
+    if (currentCoins < loan.total_payable) return showToast?.("Saldo insuficiente para quitar o empréstimo", "error");
+    
+    setIsTakingLoan(true);
+    try {
+      const newBalance = Number((currentCoins - loan.total_payable).toFixed(8));
+      
+      // 1. Marcar como pago
+      const { error: updLoanErr } = await supabase
+        .from("loans_delivery")
+        .update({ status: 'paid' })
+        .eq("id", loan.id);
+      
+      if (updLoanErr) throw updLoanErr;
+
+      // 2. Debitar Usuário
+      const { error: updUserErr } = await supabase
+        .from("users_delivery")
+        .update({ izi_coins: newBalance })
+        .eq("id", userId);
+      
+      if (updUserErr) throw updUserErr;
+
+      // 3. Registrar Transação
+      await supabase.from("wallet_transactions").insert({
+        user_id: userId,
+        amount: loan.total_payable,
+        type: "pagamento", // Debito
+        description: `Pagamento de Empréstimo Izi Pay`,
+        balance_after: newBalance
+      });
+
+      showToast?.("Empréstimo quitado com sucesso!", "success");
+      fetchLoans();
+    } catch (err) {
+      showToast?.("Erro ao quitar empréstimo", "error");
+    } finally {
+      setIsTakingLoan(false);
+    }
+  };
 
 
 
@@ -495,6 +597,142 @@ export const WalletView: React.FC<WalletViewProps> = ({
     );
   }
 
+  if (walletMode === "loans") {
+    return (
+      <div className="flex flex-col h-full bg-black text-white p-6 pt-12 gap-8 overflow-y-auto no-scrollbar pb-32">
+        <header className="w-full flex items-center justify-between">
+          <button onClick={() => setWalletMode("main")} className="size-10 rounded-full bg-zinc-900 flex items-center justify-center">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <h1 className="font-extrabold text-base uppercase tracking-widest">Crédito Izi Pay</h1>
+          <div className="size-10" />
+        </header>
+
+        <section className="space-y-6">
+          <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-[32px] text-black shadow-xl relative overflow-hidden">
+            <div className="relative z-10">
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Limite Inicial Pré-Aprovado</p>
+              <h2 className="text-4xl font-black italic mt-1">Z 1.000,00</h2>
+              <div className="mt-6 flex items-center gap-2">
+                 <span className="material-symbols-outlined text-sm">info</span>
+                 <p className="text-[9px] font-bold uppercase tracking-tight">Taxa de 10% / mês • Liberação na hora</p>
+              </div>
+            </div>
+            <div className="absolute -bottom-4 -right-4 size-32 bg-black/5 rounded-full blur-2xl" />
+          </div>
+
+          <div className="bg-zinc-900 p-6 rounded-[32px] border border-white/5 space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Quanto você precisa?</label>
+                <div className="flex items-center gap-3">
+                   <span className="text-2xl font-black text-yellow-500">Z</span>
+                   <input 
+                     type="number" 
+                     placeholder="0.00"
+                     value={loanAmount}
+                     onChange={(e) => setLoanAmount(e.target.value)}
+                     className="bg-transparent text-3xl font-black text-white outline-none flex-1"
+                   />
+                </div>
+              </div>
+
+              <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest block">Número de Parcelas</label>
+              <div className="grid grid-cols-4 gap-2">
+                {[1, 3, 6, 12].map((p) => (
+                  <button 
+                    key={p}
+                    onClick={() => setLoanInstallments(p)}
+                    className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
+                      loanInstallments === p 
+                      ? 'bg-yellow-400 text-black border-yellow-400 shadow-lg shadow-yellow-400/20' 
+                      : 'bg-transparent text-zinc-500 border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    {p}x
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {loanAmount && Number(loanAmount) > 0 && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-3 pt-4 border-t border-white/5">
+                <div className="flex justify-between text-[10px] font-bold uppercase text-zinc-500">
+                  <span>Plano de Pagamento</span>
+                  <span className="text-white">{loanInstallments}x de Z {((Number(loanAmount) * 1.1) / loanInstallments).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-xs font-black uppercase text-white pt-2 border-t border-white/5">
+                   <span>Total c/ 10% Juros</span>
+                   <span className="text-yellow-400">Z {(Number(loanAmount) * 1.1).toLocaleString('pt-BR')}</span>
+                </div>
+              </motion.div>
+            )}
+
+            <button 
+              onClick={handleTakeLoan}
+              disabled={isTakingLoan || !loanAmount || Number(loanAmount) <= 0}
+              className="w-full py-4 bg-yellow-400 rounded-2xl font-black text-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all"
+            >
+              {isTakingLoan ? "Processando..." : "Solicitar Crédito"}
+            </button>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h3 className="font-extrabold text-white uppercase tracking-tight text-sm">Meus Empréstimos</h3>
+          <div className="space-y-3">
+            {isLoadingLoans ? (
+              <div className="p-10 flex justify-center"><div className="size-6 border-2 border-yellow-400 border-t-transparent animate-spin rounded-full"/></div>
+            ) : loans.length === 0 ? (
+              <div className="p-8 bg-zinc-900/40 rounded-[24px] text-center border border-dashed border-white/5">
+                <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Nenhum empréstimo ativo</p>
+              </div>
+            ) : (
+              loans.map((loan) => (
+                <div key={loan.id} className="bg-zinc-900 p-5 rounded-[24px] border border-white/5 flex flex-col gap-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                       <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Dívida Total</p>
+                       <h4 className="text-xl font-black text-white">Z {Number(loan.total_payable).toLocaleString('pt-BR')}</h4>
+                    </div>
+                     <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
+                        loan.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500' : 
+                        loan.status === 'pending' ? 'bg-indigo-500/10 text-indigo-400' :
+                        loan.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
+                        'bg-yellow-500/10 text-yellow-500'
+                      }`}>
+                      {loan.status === 'paid' ? 'Liquidado' : loan.status === 'pending' ? 'Sob Análise' : loan.status === 'rejected' ? 'Recusado' : 'A pagar'}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-[10px]">
+                    <div>
+                       <p className="text-zinc-600 uppercase font-black tracking-tight">Vencimento</p>
+                       <p className="text-white font-bold">{loan.status === 'pending' ? 'A definir' : new Date(loan.due_date).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                    <div>
+                      <p className="text-zinc-600 uppercase font-black tracking-tight">Valor Original</p>
+                      <p className="text-white font-bold">Z {Number(loan.amount).toLocaleString('pt-BR')}</p>
+                    </div>
+                  </div>
+
+                  {loan.status === 'active' && (
+                    <button 
+                      onClick={() => handlePayLoan(loan)}
+                      className="w-full py-3 bg-white text-black rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-yellow-400 transition-colors"
+                    >
+                      Quitar Empréstimo
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
 
   const handleSaveCard = async () => {
     if(!newCard.number || newCard.number.length < 14) return showToast?.("Número do cartão inválido", "error");
@@ -674,13 +912,14 @@ export const WalletView: React.FC<WalletViewProps> = ({
           </motion.div>
         </div>
 
-        {/* AÇÕES RÁPIDAS - GRID DE 5 COLUNAS */}
-        <div className="grid grid-cols-5 gap-1 w-full max-w-sm mx-auto">
+        {/* AÇÕES RÁPIDAS - GRID DE 3 COLUNAS */}
+        <div className="grid grid-cols-3 gap-1 w-full max-w-sm mx-auto">
           {[
             { icon: "add_circle", label: "Depositar", action: () => setShowDepositModal(true) },
             { icon: "arrow_outward", label: "Enviar", action: () => setWalletMode("transfer") },
             { icon: "qr_code_scanner", label: "Escanear", action: () => setWalletMode("scan") },
             { icon: "qr_code", label: "Meu QR", action: () => setWalletMode("my_qr") },
+            { icon: "account_balance", label: "Crédito", action: () => setWalletMode("loans") },
             { icon: "history", label: "Extrato", action: () => historyRef.current?.scrollIntoView({ behavior: 'smooth' }) },
           ].map((a) => (
             <button
