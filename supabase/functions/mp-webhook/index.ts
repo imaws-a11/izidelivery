@@ -38,6 +38,29 @@ serve(async (req) => {
     )
 
     const orderId = payment.external_reference
+    
+    // Verificação de Pagamento de Empréstimo via Metadados
+    if (payment.metadata?.type === 'loan_payment') {
+      if (payment.status === 'approved') {
+        const { data: rpcRes, error: rpcErr } = await supabaseAdmin.rpc('record_loan_payment_v1', {
+          p_loan_id: payment.metadata.loan_id,
+          p_user_id: payment.metadata.user_id,
+          p_installments_count: payment.metadata.installments_count,
+          p_total_amount: payment.transaction_amount,
+          p_payment_method: 'pix'
+        });
+
+        if (rpcErr) console.error('Error recording loan payment via webhook:', rpcErr);
+        
+        await supabaseAdmin.from('audit_logs_delivery').insert({
+          action: 'Parcela Empréstimo Paga',
+          module: 'MercadoPago',
+          metadata: { loanId: payment.metadata.loan_id, amount: payment.transaction_amount, status: payment.status },
+        });
+      }
+      return new Response(JSON.stringify({ received: true, type: 'loan_payment' }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     if (!orderId) {
       console.error('Webhook: external_reference (orderId) missing in payment', paymentId)
       return new Response(JSON.stringify({ error: 'orderId missing' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
