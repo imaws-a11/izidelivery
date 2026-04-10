@@ -34,6 +34,7 @@ import { PaymentMethodsView } from "./components/features/Profile/PaymentMethods
 // Mobilidade e Envios
 import { TaxiWizard } from "./components/features/Mobility/TaxiWizard";
 import { VanWizard } from "./components/features/Mobility/VanWizard";
+import { ExcursionWizard } from "./components/features/Excursions/ExcursionWizard";
 import { FreightWizard } from "./components/features/Mobility/FreightWizard";
 import { MobilityPaymentView } from "./components/features/Mobility/MobilityPaymentView";
 
@@ -108,7 +109,7 @@ function App() {
     | "payments"
     | "transit_selection"
     | "taxi_wizard"
-    | "van_wizard"
+    | "excursion_wizard"
     | "freight_wizard"
     | "generic_list"
     | "wallet"
@@ -1899,6 +1900,13 @@ const navigateSubView = (target: string) => {
     pickupCode: "",
     invoiceNumber: "",
     pickupSector: "",
+    excursionData: {
+      passengers: 10,
+      tripType: 'ida_e_volta',
+      departureDate: '',
+      returnDate: '',
+      notes: ''
+    }
   });
   const [distancePrices, setDistancePrices] = useState<Record<string, number>>({});
   const [distanceValueKm, setDistanceValueKm] = useState(0);
@@ -2546,17 +2554,19 @@ const navigateSubView = (target: string) => {
       service_type: transitData.type,
       pickup_address: transitData.origin,
       delivery_address: `${transitData.destination} | OBS: ${
-        (transitData.type === 'logistica' || transitData.type === 'frete')
-          ? `FRETE: ${transitData.vehicleCategory}. ${transitData.helpers || 0} ajudantes. ${
-              (transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination) ? 'Necessário subir ESCADAS.' : 'Sem escadas.'
-            }`
-          : isShipping
-            ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
-            : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`
+        transitData.type === 'van'
+          ? `EXCURSÃO: ${transitData.excursionData.passengers} passageiros. Tipo: ${transitData.excursionData.tripType === 'ida_e_volta' ? 'Ida e Volta' : 'Somente Ida'}. Partida: ${transitData.excursionData.departureDate}. ${transitData.excursionData.notes || ''}`
+          : (transitData.type === 'logistica' || transitData.type === 'frete')
+            ? `FRETE: ${transitData.vehicleCategory}. ${transitData.helpers || 0} ajudantes. ${
+                (transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination) ? 'Necessário subir ESCADAS.' : 'Sem escadas.'
+              }`
+            : isShipping
+              ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName} (${transitData.receiverPhone})`
+              : `VIAGEM: Transporte de passageiro (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`
       }`,
       payment_method: paymentMethod,
       payment_status: (paymentMethod === 'dinheiro' || paymentMethod === 'pix' || paymentMethod === 'bitcoin_lightning') ? 'pending' : 'paid',
-      scheduled_at: transitData.scheduled ? `${transitData.scheduledDate}T${transitData.scheduledTime}:00` : null,
+      scheduled_at: (transitData.scheduled || transitData.type === 'van') ? (transitData.type === 'van' ? transitData.excursionData.departureDate : `${transitData.scheduledDate}T${transitData.scheduledTime}:00`) : null,
       route_polyline: routePolyline
     };
 
@@ -2585,6 +2595,18 @@ const navigateSubView = (target: string) => {
         .single();
 
       if (insertError) throw insertError;
+
+      // 2.1 Se for Excursão, salvar detalhes específicos
+      if (transitData.type === 'van') {
+        await supabase.from("excursions_delivery").insert({
+          order_id: order.id,
+          trip_type: transitData.excursionData.tripType,
+          passengers: transitData.excursionData.passengers,
+          departure_date: transitData.excursionData.departureDate,
+          return_date: transitData.excursionData.tripType === 'ida_e_volta' ? transitData.excursionData.returnDate : null,
+          additional_notes: transitData.excursionData.notes
+        });
+      }
 
       // 3. Se for PIX, redirecionar para tela de CPF + QR Code
       if (paymentMethod === 'pix') {
@@ -2642,7 +2664,7 @@ const navigateSubView = (target: string) => {
 
       // [Comentario Limpo pelo Sistema]
   useEffect(() => {
-    const includedViews = ["taxi_wizard", "transit_selection", "freight_wizard", "van_wizard", "shipping_details"];
+    const includedViews = ["taxi_wizard", "transit_selection", "freight_wizard", "excursion_wizard", "shipping_details"];
     if (includedViews.includes(subView) && transitData.origin && transitData.destination) {
       setIsCalculatingPrice(true);
       setDistancePrices({});
@@ -2670,7 +2692,7 @@ const navigateSubView = (target: string) => {
 
   useEffect(() => {
     const previousSubView = previousSubViewRef.current;
-    const mobilityWizardViews = ["taxi_wizard", "freight_wizard", "van_wizard"];
+    const mobilityWizardViews = ["taxi_wizard", "freight_wizard", "excursion_wizard"];
     const isEnteringDifferentWizard =
       mobilityWizardViews.includes(subView) &&
       previousSubView !== subView &&
@@ -6318,6 +6340,31 @@ const navigateSubView = (target: string) => {
     );
   };
 
+  const renderExcursionWizard = () => {
+    return (
+      <ExcursionWizard 
+        transitData={transitData}
+        setTransitData={setTransitData}
+        mobilityStep={mobilityStep}
+        setMobilityStep={setMobilityStep}
+        userLocation={userLocation}
+        updateLocation={updateLocation}
+        routePolyline={routePolyline}
+        driverLocation={driverLocation}
+        distancePrices={distancePrices}
+        isCalculatingPrice={isCalculatingPrice}
+        marketConditions={marketConditions}
+        paymentMethod={paymentMethod}
+        userLevel={userLevel}
+        routeDistance={routeDistance}
+        setPaymentsOrigin={setPaymentsOrigin}
+        setSubView={setSubView}
+        navigateSubView={navigateSubView}
+        showToast={showToast}
+      />
+    );
+  };
+
   const renderTaxiWizard = () => {
     return (
       <TaxiWizard 
@@ -6417,7 +6464,7 @@ const navigateSubView = (target: string) => {
                 <h4 className="text-white font-black text-lg tracking-tight mb-2">Izi Versátil</h4>
                 <p className="text-zinc-500 text-xs leading-relaxed max-w-[200px]">Transporte de cargas pesadas, utilitários e vans para empresas ou particulares.</p>
                 <div className="mt-6 flex gap-3">
-                   <button onClick={() => { setTransitData({ ...transitData, type: "van", scheduled: true }); setSubView("van_wizard"); setMobilityStep(1); }} className="px-5 py-3 bg-yellow-400 text-black text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-yellow-400/20 active:scale-95 transition-all">Vans e Fretes</button>
+                   <button onClick={() => { setTransitData({ ...transitData, type: "van", scheduled: true }); setSubView("excursion_wizard"); setMobilityStep(1); }} className="px-5 py-3 bg-yellow-400 text-black text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-yellow-400/20 active:scale-95 transition-all">Excursões & Viagens</button>
                    <button onClick={() => setShowLojistasModal(true)} className="px-5 py-3 bg-white/5 text-white text-[10px] font-black rounded-xl uppercase tracking-widest border border-white/5 active:scale-95 transition-all">Ver Parceiros</button>
                 </div>
              </div>
@@ -6928,7 +6975,7 @@ const navigateSubView = (target: string) => {
     const serviceLabels: Record<string, { label: string; icon: string; color: string }> = {
       mototaxi: { label: "MotoTáxi", icon: "motorcycle", color: "text-yellow-400" },
       carro: { label: "Carro Executivo", icon: "directions_car", color: "text-zinc-500" },
-      van: { label: "Van de Carga", icon: "airport_shuttle", color: "text-blue-500" },
+      van: { label: "Excursão", icon: "airport_shuttle", color: "text-blue-500" },
       utilitario: { label: "Izi Express", icon: "bolt", color: "text-purple-500" },
     };
     const service = serviceLabels[selectedItem.service_type] || { label: "Serviço", icon: "local_shipping", color: "text-yellow-400" };
@@ -7012,7 +7059,7 @@ const navigateSubView = (target: string) => {
   const renderScheduledOrder = () => {
     if (!selectedItem) return null;
     const svcIcons: Record<string,string> = { mototaxi:'motorcycle', carro:'directions_car', van:'airport_shuttle', utilitario:'bolt' };
-    const svcLabels: Record<string,string> = { mototaxi:'MotoTáxi', carro:'Carro Executivo', van:'Van de Carga', utilitario:'Izi Express' };
+    const svcLabels: Record<string,string> = { mototaxi:'MotoTáxi', carro:'Carro Executivo', van:'Excursão', utilitario:'Izi Express' };
     const icon = svcIcons[selectedItem.service_type] || 'event';
     const label = svcLabels[selectedItem.service_type] || 'Serviço';
     const scheduledAt = selectedItem.scheduled_at 
@@ -7489,9 +7536,9 @@ const navigateSubView = (target: string) => {
                   {renderFreightWizard()}
                 </motion.div>
               )}
-              {subView === "van_wizard" && (
-                <motion.div key="vanv" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  {renderVanWizard()}
+              {subView === "excursion_wizard" && (
+                <motion.div key="excv" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  {renderExcursionWizard()}
                 </motion.div>
               )}
               {subView === "mobility_payment" && (

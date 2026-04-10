@@ -1065,7 +1065,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div className="grid grid-cols-4 gap-4 relative z-10 px-1">
               {[
                 { icon: "two_wheeler", label: "Moto", action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("taxi_wizard"); } },
-                { icon: "airport_shuttle", label: "Vans", action: () => { setTransitData({ ...transitData, type: "van", scheduled: false }); navigateSubView("van_wizard"); } },
+                { icon: "airport_shuttle", label: "Excursões", action: () => { setTransitData({ ...transitData, type: "van", scheduled: true }); navigateSubView("excursion_wizard"); } },
                 { icon: "directions_car", label: "Carros", action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("taxi_wizard"); } },
                 { icon: "local_shipping", label: "Logística", action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("freight_wizard"); } },
               ].map((svc, i) => (
