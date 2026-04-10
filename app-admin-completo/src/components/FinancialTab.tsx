@@ -514,14 +514,14 @@ function ManageLoansSection() {
                   </p>
                 </td>
                 <td className="px-8 py-6 text-right">
-                   <span className={`inline-flex px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                        l.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                        l.status === 'pending' ? 'bg-indigo-50 text-indigo-600 border-indigo-100 animate-pulse' :
-                        l.status === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' :
-                        'bg-amber-50 text-amber-600 border-amber-100'
+                   <span className={`inline-flex px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                        l.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                        l.status === 'pending' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 animate-pulse' :
+                        l.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                        'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.1)]'
                       }`}>
-                    {l.status === 'paid' ? 'Liquidado' : l.status === 'pending' ? 'Pendente' : l.status === 'rejected' ? 'Recusado' : 'Em Aberto'}
-                  </span>
+                     {l.status === 'paid' ? 'Liquidado' : l.status === 'pending' ? 'Pendente' : l.status === 'rejected' ? 'Recusado' : 'Ativo / Em Dia'}
+                   </span>
                 </td>
               </tr>
             ))}
@@ -569,41 +569,29 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
     
     setIsProcessing(true);
     try {
-      const { data: userData } = await supabase.from('users_delivery').select('izi_coins').eq('id', loan.user_id).single();
-      const currentCoins = Number(userData?.izi_coins || 0);
-      const newBalance = Number((currentCoins + finalAmount).toFixed(8));
-
-      // 1. Atualizar carteira
-      const { error: walletErr } = await supabase.from('users_delivery').update({ izi_coins: newBalance }).eq('id', loan.user_id);
-      if (walletErr) throw walletErr;
-
-      // 2. Transação
-      await supabase.from('wallet_transactions').insert({
-        user_id: loan.user_id,
-        amount: finalAmount,
-        type: 'deposito',
-        description: 'Crédito de Empréstimo Izi Pay',
-        balance_after: newBalance
+      const { data: rpcData, error: rpcError } = await supabase.rpc('approve_loan_v4', {
+        p_loan_id: loan.id,
+        p_admin_id: 'admin',
+        p_amount: finalAmount,
+        p_total_payable: finalAmount * (1 + (interestRate / 100)),
+        p_interest_rate: interestRate,
+        p_installments: approvedInstallments,
+        p_due_date: new Date(approvedDueDate).toISOString()
       });
 
-      // 3. Atualizar Empréstimo com as condições determinadas pelo Admin
-      const { error: loanErr } = await supabase.from('loans_delivery').update({
-        status: 'active',
-        approved_at: new Date().toISOString(),
-        due_date: new Date(approvedDueDate).toISOString(),
-        amount: finalAmount,
-        total_payable: finalAmount * (1 + (interestRate / 100)),
-        interest_rate: interestRate,
-        installments_count: approvedInstallments
-      }).eq('id', loan.id);
+      if (rpcError) throw rpcError;
       
-      if (loanErr) throw loanErr;
+      const result = rpcData as { success: boolean, error?: string };
+      if (result && !result.success) {
+        throw new Error(result.error || 'Erro desconhecido na execução da RPC');
+      }
 
       toastSuccess("Empréstimo configurado e creditado!");
       onUpdate();
       onClose();
     } catch (e: any) {
-      toastError("Erro ao aprovar: " + e.message);
+      console.error("Erro na aprovação:", e);
+      toastError("Erro ao aprovar: " + (e.message || "Erro desconhecido"));
     } finally {
       setIsProcessing(false);
     }
@@ -682,13 +670,13 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
              </div>
              <div className="space-y-1">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status Atual</p>
-                <span className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                  loan.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
-                  loan.status === 'pending' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                  loan.status === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' :
-                  'bg-amber-50 text-amber-600 border-amber-100'
+                <span className={`inline-flex px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                  loan.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
+                  loan.status === 'pending' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' :
+                  loan.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                  'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
                 }`}>
-                  {loan.status === 'paid' ? 'Liquidado' : loan.status === 'pending' ? 'Pendente' : loan.status === 'rejected' ? 'Recusado' : 'Em Aberto'}
+                  {loan.status === 'paid' ? 'Liquidado' : loan.status === 'pending' ? 'Pendente' : loan.status === 'rejected' ? 'Recusado' : 'Ativo / Em curso'}
                 </span>
              </div>
           </div>
