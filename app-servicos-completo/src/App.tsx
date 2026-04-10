@@ -2200,6 +2200,12 @@ const navigateSubView = (target: string) => {
         storm: { multiplier: 1.8, active: true },
         snow: { multiplier: 2.5, active: false }
       },
+      shippingPriorities: {
+        normal: { multiplier: 1.0, min_fee: 8 },
+        light: { multiplier: 1.2, min_fee: 12 },
+        turbo: { multiplier: 1.5, min_fee: 15 },
+        scheduled: { multiplier: 1.0, min_fee: 12 }
+      },
       baseValues: {
         mototaxi_min: 6.0, mototaxi_km: 2.5,
         carro_min: 14.0, carro_km: 4.5,
@@ -2250,6 +2256,7 @@ const navigateSubView = (target: string) => {
         weather: ratesData?.find(r => r.type === 'weather_rules')?.metadata || marketConditions.settings.weather,
         baseValues: ratesData?.find(r => r.type === 'base_values')?.metadata || marketConditions.settings.baseValues,
         flowControl: ratesData?.find(r => r.type === 'flow_control')?.metadata || marketConditions.settings.flowControl,
+        shippingPriorities: ratesData?.find(r => r.type === 'shipping_priorities')?.metadata || {},
         peakHours: (ratesData?.find(r => r.type === 'peak_hour')?.metadata as any)?.rules || []
       };
 
@@ -3133,7 +3140,7 @@ const navigateSubView = (target: string) => {
                      />
                    ))}
                  </div>
-               )}
+              )}
             </div>
 
            <div className="grid grid-cols-1 gap-6 pt-4">
@@ -6688,7 +6695,7 @@ const navigateSubView = (target: string) => {
                      <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nome de quem recebe</p>
                      <input 
                        type="text" 
-                       value={transitData.receiverName}
+                       value={transitData.receiverName || ""}
                        onChange={(e) => setTransitData({...transitData, receiverName: e.target.value})}
                        placeholder="Ex: João Silva"
                        className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-white"
@@ -6699,7 +6706,7 @@ const navigateSubView = (target: string) => {
                      <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Telefone de Contato</p>
                      <input 
                        type="tel" 
-                       value={transitData.receiverPhone}
+                       value={transitData.receiverPhone || ""}
                        onChange={(e) => setTransitData({...transitData, receiverPhone: e.target.value})}
                        placeholder="(11) 99999-9999"
                        className="w-full bg-transparent border-none p-0 text-lg font-bold focus:ring-0 text-white"
@@ -6709,10 +6716,20 @@ const navigateSubView = (target: string) => {
               )}
 
               {transitData.subService === "coleta" && (
-                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl ring-1 ring-yellow-400/10">
-                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Endereço de Entrega (Destino)</p>
+                <div className="space-y-4">
+                  <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl ring-1 ring-yellow-400/10">
+                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Endereço de Coleta (Origem/Parceiro)</p>
+                     <AddressSearchInput 
+                       initialValue={transitData.origin || ""}
+                       placeholder="Confirme o endereço do parceiro..."
+                       onSelect={(data) => setTransitData(prev => ({ ...prev, origin: data.formatted_address || "" }))}
+                       className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
+                     />
+                  </div>
+                  <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl ring-1 ring-yellow-400/10">
+                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Endereço de Entrega (Destino)</p>
                    <AddressSearchInput 
-                     initialValue={transitData.destination}
+                     initialValue={transitData.destination || ""}
                      placeholder="Onde devemos entregar?"
                      className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white placeholder:text-zinc-600"
                      userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
@@ -6723,7 +6740,8 @@ const navigateSubView = (target: string) => {
                          calculateDistancePrices(transitData.origin, dest);
                        }
                      }}
-                   />
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -6740,7 +6758,7 @@ const navigateSubView = (target: string) => {
                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nome do Parceiro / Loja</p>
                    <input 
                      type="text" 
-                     value={transitData.receiverName}
+                     value={transitData.receiverName || ""}
                      onChange={(e) => setTransitData({...transitData, receiverName: e.target.value})}
                      placeholder="Ex: Hub Logístico Izi"
                      className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
@@ -6751,7 +6769,7 @@ const navigateSubView = (target: string) => {
                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Telefone do Parceiro</p>
                    <input 
                      type="tel" 
-                     value={transitData.receiverPhone}
+                     value={transitData.receiverPhone || ""}
                      onChange={(e) => setTransitData({...transitData, receiverPhone: e.target.value})}
                      placeholder="(11) 99999-9999"
                      className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
@@ -6762,7 +6780,7 @@ const navigateSubView = (target: string) => {
                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Cód. do Pedido / Retirada</p>
                    <input 
                      type="text" 
-                     value={transitData.pickupCode}
+                     value={transitData.pickupCode || ""}
                      onChange={(e) => setTransitData({...transitData, pickupCode: e.target.value})}
                      placeholder="Ex: ABC123456"
                      className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
@@ -6773,7 +6791,7 @@ const navigateSubView = (target: string) => {
                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Setor / Guichê</p>
                    <input 
                      type="text" 
-                     value={transitData.pickupSector}
+                     value={transitData.pickupSector || ""}
                      onChange={(e) => setTransitData({...transitData, pickupSector: e.target.value})}
                      placeholder="Piso / Corredor"
                      className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
@@ -6793,7 +6811,7 @@ const navigateSubView = (target: string) => {
                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Descrição do Item</p>
                   <textarea 
-                    value={transitData.packageDesc}
+                    value={transitData.packageDesc || ""}
                     onChange={(e) => setTransitData({...transitData, packageDesc: e.target.value})}
                     placeholder="Ex: 2 Camisetas, 1 Par de Tênis..."
                     rows={3}
@@ -7659,22 +7677,22 @@ const navigateSubView = (target: string) => {
                     whileTap={{ scale: 0.98 }}
                     key={store.id} 
                     onClick={() => { 
-                      setTransitData({
-                        ...transitData, 
-                        receiverName: store.name, 
-                        receiverPhone: store.phone, 
-                        origin: store.address
-                      }); 
+                      setTransitData(prev => ({
+                        ...prev, 
+                        receiverName: store.name || "", 
+                        receiverPhone: store.phone || store.store_phone || "", 
+                        origin: store.address || store.store_address || ""
+                      })); 
                       setShowLojistasModal(false); 
                     }}
                     className="p-6 rounded-[30px] border border-zinc-800 hover:border-yellow-400/30 transition-all group cursor-pointer"
                   >
                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded bg-yellow-400/10 text-yellow-400">{store.type}</span>
-                        <span className="text-[10px] font-bold text-zinc-500">{store.hours}</span>
+                        <span className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded bg-yellow-400/10 text-yellow-400">{store.type || "Loja"}</span>
+                        <span className="text-[10px] font-bold text-zinc-500">{store.hours || "Horário não informado"}</span>
                      </div>
-                     <h4 className="font-black text-white text-base group-hover:text-yellow-400 transition-colors">{store.name}</h4>
-                     <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">{store.address}</p>
+                     <h4 className="font-black text-white text-base group-hover:text-yellow-400 transition-colors">{store.name || "Sem Nome"}</h4>
+                     <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">{store.address || store.store_address || "Endereço não informado"}</p>
                   </motion.div>
                ))}
             </div>
