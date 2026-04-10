@@ -308,23 +308,37 @@ export const WalletView: React.FC<WalletViewProps> = ({
         balance_after: newBalanceSelf
       });
 
-      // 3. Crédito no destinatário (Buscar saldo atual do destinatário primeiro)
-      const { data: destUser } = await supabase.from("users_delivery").select("izi_coins").eq("id", recipient.id).single();
-      const destCoins = Number(destUser?.izi_coins || 0);
-      const newBalanceDest = Number((destCoins + val).toFixed(8));
+      // 3. Crédito no destinatário (Roteamento por tipo)
+      if (recipient.type === 'merchant') {
+        // Lojistas: Registram o saldo na wallet_transactions_delivery (somatório virtual)
+        const { error: errDest } = await supabase.from("wallet_transactions_delivery").insert({
+          user_id: recipient.id,
+          amount: val,
+          type: "venda",
+          description: `Recebimento IZIPAY de ${userName}`,
+          status: 'concluido'
+        });
+        if (errDest) throw errDest;
+      } else {
+        // Usuários comuns: Atualizam o campo izi_coins na users_delivery
+        const { data: destUser } = await supabase.from("users_delivery").select("izi_coins").eq("id", recipient.id).single();
+        const destCoins = Number(destUser?.izi_coins || 0);
+        const newBalanceDest = Number((destCoins + val).toFixed(8));
 
-      await supabase.from("users_delivery").update({
-        izi_coins: newBalanceDest
-      }).eq("id", recipient.id);
+        const { error: errDest } = await supabase.from("users_delivery").update({
+          izi_coins: newBalanceDest
+        }).eq("id", recipient.id);
+        if (errDest) throw errDest;
 
-      // 4. Registro da transação pro destinatário
-      await supabase.from("wallet_transactions").insert({
-        user_id: recipient.id,
-        amount: val,
-        type: "deposito",
-        description: `Transferência IZI recebida de ${userName}`,
-        balance_after: newBalanceDest
-      });
+        // Registro da transação para o destinatário usuário
+        await supabase.from("wallet_transactions").insert({
+          user_id: recipient.id,
+          amount: val,
+          type: "deposito",
+          description: `Transferência IZI recebida de ${userName}`,
+          balance_after: newBalanceDest
+        });
+      }
 
       showToast?.("Transferência realizada com sucesso!", "success");
       
@@ -347,9 +361,15 @@ export const WalletView: React.FC<WalletViewProps> = ({
 
 
   const handleScanResult = useCallback((text: string) => {
-    const idText = text.replace("izipay:", "").trim();
+    // Remove possíveis prefixos para obter apenas o ID (UUID)
+    const cleanId = text
+      .replace("izipay:", "")
+      .replace("merchant:", "")
+      .replace("user:", "")
+      .trim();
+      
     setWalletMode("transfer");
-    handleSearchRecipient(idText);
+    handleSearchRecipient(cleanId);
   }, [handleSearchRecipient]);
 
   const handleCancelScan = useCallback(() => {

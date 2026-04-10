@@ -383,6 +383,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         if (role === 'merchant') {
           const profile: MerchantProfile = {
+            id: data.id,
             merchant_id: data.id,
             store_name: data.store_name || 'Loja',
             store_logo: data.store_logo || '',

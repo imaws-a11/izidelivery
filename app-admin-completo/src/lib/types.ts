@@ -115,6 +115,7 @@ export interface Merchant {
 }
 
 export interface MerchantProfile {
+  id?: string;
   merchant_id?: string;
   store_name?: string;
   store_logo?: string;
