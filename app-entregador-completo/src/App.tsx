@@ -1091,7 +1091,11 @@ function App() {
 
                 // 2. Disponíveis no Dashboard
                 const available = data.filter((o: any) => {
-                    const statusOk = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status);
+                    const isMerchantOrder = !!o.merchant_id || !!o.admin_users;
+                    const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted'].includes(o.status);
+                    const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status);
+                    
+                    const statusOk = isMerchantOrder ? merchantAccepted : p2pAllowed;
                     const notMyAssignment = !o.driver_id || String(o.driver_id).trim() === '';
                     const notDeclined = !(now - (declinedMap[o.id] || 0) < 5000);
                     const notFinancial = !['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'].includes(o.service_type);
@@ -1143,7 +1147,15 @@ function App() {
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
                 
                 // Filtros de segurança e status
-                if (!['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status)) return;
+                const isMerchantOrder = !!o.merchant_id;
+                const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted'].includes(o.status);
+                const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status);
+                
+                if (isMerchantOrder) {
+                    if (!merchantAccepted) return;
+                } else {
+                    if (!p2pAllowed) return;
+                }
                 if (Date.now() - (declinedMap[o.id] || 0) < 5000) return;
                 
                 // Ignorar transações financeiras (Izi Coin, Assinatura) que não são missões
@@ -1265,7 +1277,12 @@ function App() {
                 }
 
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
-                if (['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status) && !(Date.now() - (declinedMap[o.id] || 0) < 5000)) {
+                const isMerchantOrder = !!o.merchant_id;
+                const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted'].includes(o.status);
+                const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status);
+                const statusOk = isMerchantOrder ? merchantAccepted : p2pAllowed;
+
+                if (statusOk && !(Date.now() - (declinedMap[o.id] || 0) < 5000)) {
                     setOrders(prev => {
                         const isNew = !prev.find(x => x.realId === o.id);
                         if (isNew) {
@@ -1294,8 +1311,15 @@ function App() {
                         }
                         return prev;
                     });
-                } else if (!['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status) && (!currentMission || o.id !== currentMission.id)) {
-                    setOrders(prev => prev.filter((order: any) => order.realId !== o.id));
+                } else {
+                    const isMerchantOrder = !!o.merchant_id;
+                    const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted'].includes(o.status);
+                    const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status);
+                    const statusOk = isMerchantOrder ? merchantAccepted : p2pAllowed;
+
+                    if (!statusOk && (!currentMission || o.id !== currentMission.id)) {
+                        setOrders(prev => prev.filter((order: any) => order.realId !== o.id));
+                    }
                 }
             })
             .subscribe();
