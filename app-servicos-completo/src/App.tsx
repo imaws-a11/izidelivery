@@ -649,6 +649,7 @@ function App() {
       fetchCartData(userId!);
       fetchCoupons();
       fetchBeveragePromo();
+      fetchFlashOffers();
     } else if (!authInitLoading) {
       setView("login");
     }
@@ -1180,6 +1181,7 @@ function App() {
     const targetView = "restaurant_menu";
 
     try {
+      // 1. Buscar produtos do estabelecimento
       const { data: products } = await supabase
         .from("products_delivery")
         .select("*")
@@ -1187,13 +1189,33 @@ function App() {
         .eq("is_available", true)
         .order("created_at", { ascending: false });
 
+      // 2. Buscar redenções do usuário para desativar ofertas já utilizadas
+      let usedSourceIds = new Set<string>();
+      if (userId) {
+        const trackedCpf = getBenefitTrackingCpf();
+        const filters: string[] = [`user_id.eq.${userId}`];
+        if (trackedCpf) filters.push(`cpf.eq.${trackedCpf}`);
+        
+        const { data: redemptions } = await supabase
+          .from("benefit_redemptions_delivery")
+          .select("source_id")
+          .or(filters.join(","));
+          
+        if (redemptions) {
+          usedSourceIds = new Set(redemptions.map(r => r.source_id));
+        }
+      }
+
       console.log("Produtos recebidos:", products?.length, products?.[0]);
       if (products && products.length > 0) {
+        // 3. Filtrar ofertas ativas que o usuário ainda NÃO utilizou
         const activeProductOffers = (flashOffers || []).filter((offer: any) =>
           offer?.merchant_id === shop.id &&
           offer?.is_active &&
-          (!offer?.expires_at || new Date(offer.expires_at).getTime() > Date.now())
+          (!offer?.expires_at || new Date(offer.expires_at).getTime() > Date.now()) &&
+          !usedSourceIds.has(offer.id)
         );
+
         const offersByProductId = new Map<string, any>();
         const offersByProductName = new Map<string, any>();
         activeProductOffers.forEach((offer: any) => {
@@ -1214,9 +1236,11 @@ function App() {
         products.forEach((p: any) => {
           const cat = p.category || p.subcategory || (isRestaurant ? "Cardápio" : "Produtos");
           if (!grouped[cat]) grouped[cat] = [];
+          
           const linkedOffer =
             offersByProductId.get(String(p.id)) ||
             offersByProductName.get(normalizeFlashOfferProductKey(p.name));
+          
           const discountedPrice = linkedOffer ? Number(linkedOffer.discounted_price) : Number(p.price);
           const hasLinkedOffer = Boolean(
             linkedOffer &&
@@ -1224,6 +1248,7 @@ function App() {
             discountedPrice >= 0 &&
             discountedPrice < Number(p.price)
           );
+
           grouped[cat].push({
             id: p.id,
             name: p.name,
@@ -1241,7 +1266,9 @@ function App() {
         const categories = Object.entries(grouped).map(([name, items]) => ({ name, items }));
         setSelectedShop({ ...shop, categories });
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Erro ao carregar menu:", e);
+    }
 
     navigateSubView(targetView);
   };
@@ -1362,7 +1389,28 @@ function App() {
       .eq('is_active', true)
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false });
-    if (data) setFlashOffers(data);
+    
+    if (data) {
+      if (userId) {
+        const trackedCpf = getBenefitTrackingCpf();
+        const filters: string[] = [`user_id.eq.${userId}`];
+        if (trackedCpf) filters.push(`cpf.eq.${trackedCpf}`);
+        
+        const { data: redemptions } = await supabase
+          .from("benefit_redemptions_delivery")
+          .select("source_id")
+          .or(filters.join(","));
+          
+        if (redemptions) {
+          const usedIds = new Set(redemptions.map(r => r.source_id));
+          setFlashOffers(data.filter(offer => !usedIds.has(offer.id)));
+        } else {
+          setFlashOffers(data);
+        }
+      } else {
+        setFlashOffers(data);
+      }
+    }
   };
 
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
