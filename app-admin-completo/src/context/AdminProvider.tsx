@@ -173,6 +173,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     flashOfferExpiry: '',
     iziCoinRate: 1.0
   });
+  const [globalSettings, setGlobalSettings] = useState<any>({
+    izi_coin_value: 0.01,
+    loan_interest_rate: 12.0,
+    service_fee_percent: 5.0,
+    payment_methods_active: { pix: true, card: true, lightning: false, wallet: true }
+  });
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'pending' | 'saved' | 'error'>('idle');
   const [isFetchingSettings, setIsFetchingSettings] = useState(false);
   const [lastSavedHash, setLastSavedHash] = useState('');
@@ -769,11 +775,23 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.log(`📡 Status Realtime [${channelName}]:`, status);
       });
 
+    const settingsChannel = supabase.channel('global_settings_sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'admin_settings_delivery' },
+        (payload) => {
+          console.log('⚡ SETTINGS REALTIME:', payload);
+          if (payload.new) setGlobalSettings(payload.new);
+        }
+      )
+      .subscribe();
+
     return () => {
       console.log(`[REALTIME] Fechando canal: ${channelName}`);
       supabase.removeChannel(channel);
+      supabase.removeChannel(settingsChannel);
     };
-  }, [session?.user?.id, userRole, merchantProfile?.id]); // Removidas as funções voláteis das dependências
+  }, [session?.user?.id, userRole, merchantProfile?.id]);
 
   const fetchMerchantFinance = useCallback(async () => {
     const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
@@ -1139,6 +1157,30 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
+  const fetchGlobalSettings = useCallback(async () => {
+    try {
+      const { data } = await supabase.from('admin_settings_delivery').select('*').single();
+      if (data) setGlobalSettings(data);
+    } catch (e) {
+      console.error('Erro ao buscar global settings:', e);
+    }
+  }, []);
+
+  const saveGlobalSettings = useCallback(async (newSettings: any) => {
+    try {
+      // Garantir que temos um ID para o upsert se necessário, mas geralmente é uma linha única
+      const { error } = await supabase
+        .from('admin_settings_delivery')
+        .upsert({ ...newSettings, updated_at: new Date().toISOString() });
+      
+      if (error) throw error;
+      setGlobalSettings(newSettings);
+    } catch (err: any) {
+      toastError('Erro ao salvar configurações globais: ' + err.message);
+      throw err;
+    }
+  }, []);
+
   const fetchMyDedicatedSlots = useCallback(async () => {
     if (!merchantProfile?.id) return;
     try {
@@ -1166,6 +1208,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!userRole) return;
 
     fetchAppSettings();
+    fetchGlobalSettings();
     fetchEstablishmentTypes();
     
     if (userRole === 'admin') {
@@ -2103,7 +2146,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     driversPage, setDriversPage, filteredDrivers: [], paginatedDrivers: [], 
     driverSearch, setDriverSearch, driverFilter, setDriverFilter, userStatusFilter, 
     setUserStatusFilter, promoFilter, setPromoFilter, promoSearch, setPromoSearch, 
-    categoryGroupFilter, setCategoryGroupFilter, appSettings, setAppSettings, autoSaveStatus, 
+    categoryGroupFilter, setCategoryGroupFilter, appSettings, setAppSettings, 
+    globalSettings, setGlobalSettings, fetchGlobalSettings, autoSaveStatus, 
     selectedUser, setSelectedUser, selectedMerchantPreview, setSelectedMerchantPreview, 
     selectedDriverStudio, setSelectedDriverStudio, selectedUserStudio, setSelectedUserStudio, 
     selectedCategoryStudio, setSelectedCategoryStudio, selectedHexagons, setSelectedHexagons, 
@@ -2130,7 +2174,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isLoaded,
     fetchStats, fetchUsers, fetchDrivers, fetchMyDrivers, fetchProducts, fetchMenuCategories, 
     fetchAllOrders, fetchSubscriptionOrders, fetchCategories, fetchDynamicRates, 
-    fetchPromotions, fetchAuditLogs, fetchMerchants, fetchPartners, fetchAppSettings, fetchMyDedicatedSlots, 
+    fetchPromotions, fetchAuditLogs, fetchMerchants, fetchPartners, fetchAppSettings, fetchGlobalSettings, saveGlobalSettings, fetchMyDedicatedSlots, 
     openMerchantPreview, handleAddCredit, handleApplyCredit, handleUpdateDriver, 
     handleUpdateCategory, handleUpdateMyDriver, handleDeleteMyDriver, handleUpdateUser, 
     handleUpdateMyProduct, handleUpdateMenuCategory, handleDeleteMenuCategory, handleDeleteProduct, handleCreateNewProduct, 

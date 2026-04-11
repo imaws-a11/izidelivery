@@ -89,6 +89,10 @@ export interface AdminContextType {
   // Settings
   appSettings: AppSettings;
   setAppSettings: (s: AppSettings) => void;
+  globalSettings: any;
+  setGlobalSettings: (s: any) => void;
+  fetchGlobalSettings: () => Promise<void>;
+  saveGlobalSettings: (s: any) => Promise<void>;
   autoSaveStatus: 'idle' | 'pending' | 'saved' | 'error';
 
   // Selected items

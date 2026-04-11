@@ -89,73 +89,12 @@ export default function FinancialTab() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Tax configuration card */}
+        {/* Economy Management Card - Replacing Divisão de Taxas */}
         <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <span className="material-symbols-outlined text-8xl">settings_input_component</span>
+          <div className="absolute top-0 right-0 p-8 opacity-5">
+            <span className="material-symbols-outlined text-8xl">account_balance</span>
           </div>
-          
-          <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3 mb-6">
-            <span className="material-symbols-outlined text-primary text-2xl">account_tree</span>
-            Divisão de Taxas
-          </h4>
-          
-          <div className="space-y-6">
-            <div className="p-4 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-               <div className="flex justify-between items-center mb-1">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sua Comissão Atual</span>
-                  <span className="text-sm font-black text-primary">
-                    {merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12}%
-                  </span>
-               </div>
-               <p className="text-[9px] font-bold text-slate-500 leading-tight">
-                 Percentual fixo aplicado sobre o valor bruto de cada pedido realizado através da plataforma IZI.
-               </p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                   <span className="material-symbols-outlined">receipt</span>
-                </div>
-                <div>
-                   <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">Valor da Venda</p>
-                   <p className="text-[10px] font-bold text-slate-400">Ex: R$ 100,00</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="size-10 rounded-xl bg-red-50 flex items-center justify-center text-red-500">
-                   <span className="material-symbols-outlined">trending_down</span>
-                </div>
-                <div>
-                   <p className="text-xs font-black text-red-500 uppercase tracking-tight">Taxa IZI ({(merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12)}%)</p>
-                   <p className="text-[10px] font-bold text-slate-400">- R$ {(100 * ((merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12) / 100)).toFixed(2).replace('.', ',')}</p>
-                </div>
-              </div>
-
-              <div className="h-px bg-slate-100 dark:bg-slate-800 my-2"></div>
-
-              <div className="flex items-center gap-4">
-                <div className="size-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500">
-                   <span className="material-symbols-outlined">payments</span>
-                </div>
-                <div>
-                   <p className="text-xs font-black text-emerald-500 uppercase tracking-tight">Seu Recebimento</p>
-                   <p className="text-[10px] font-bold text-slate-400">R$ {(100 - (100 * ((merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12) / 100))).toFixed(2).replace('.', ',')}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 p-5 rounded-3xl bg-slate-900 text-white shadow-xl">
-               <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary mb-2">Nota Importante</p>
-               <p className="text-[10px] font-medium leading-relaxed opacity-80">
-                 {userRole === 'merchant' 
-                   ? 'As taxas são deduzidas automaticamente no momento da conclusão do pedido. O repasse é realizado conforme o ciclo de faturamento acordado.'
-                   : 'As taxas exibidas aqui são as configurações globais ou específicas definidas para este lojista no painel de controle admin.'}
-               </p>
-            </div>
-          </div>
+          <MasterFinancialControl />
         </div>
 
         {/* Revenue Trend Chart */}
@@ -971,9 +910,172 @@ function PreApprovedLimitsSection() {
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
 }
 
+function MasterFinancialControl() {
+  const { globalSettings, saveGlobalSettings, fetchGlobalSettings } = useAdmin();
+  const [saving, setSaving] = React.useState(false);
+
+  const settings = globalSettings || {
+    payment_methods_active: { pix: true, card: true, lightning: false, wallet: true },
+    withdrawal_fee_percent: 2.5,
+    min_withdrawal_amount: 50.0,
+    service_fee_percent: 5.0,
+    izi_coin_value: 0.01,
+    loan_interest_rate: 12.0
+  };
+
+  const handleUpdate = async (field: string, val: any) => {
+    setSaving(true);
+    try {
+      const newSettings = { ...settings, [field]: val };
+      await saveGlobalSettings(newSettings);
+      toastSuccess('Configuração atualizada!');
+    } catch (err) {
+      toastError('Erro ao salvar alteração');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleMethod = (method: string) => {
+    const current = settings.payment_methods_active || {};
+    const updated = { ...current, [method]: !current[method] };
+    handleUpdate('payment_methods_active', updated);
+  };
+
+  if (!globalSettings) return (
+    <div className="animate-pulse space-y-4 pt-10">
+      <div className="h-40 bg-slate-100 dark:bg-slate-800 rounded-3xl" />
+      <div className="h-40 bg-slate-100 dark:bg-slate-800 rounded-3xl" />
+    </div>
+  );
+
+  return (
+    <div className="space-y-8">
+       {/* GATEWAYS CONTROL */}
+       <div>
+          <div className="flex justify-between items-center mb-6">
+            <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Gateways Ativos</h4>
+            <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${saving ? 'bg-primary/20 text-primary' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+              {saving ? 'Sincronizando...' : 'Online'}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+             {[
+               { id: 'pix', label: 'PIX', icon: 'qrcode', color: 'text-emerald-500' },
+               { id: 'card', label: 'Cartão', icon: 'credit_card', color: 'text-blue-500' },
+               { id: 'lightning', label: 'Bitcoin', icon: 'currency_bitcoin', color: 'text-amber-500' },
+               { id: 'wallet', label: 'Wallet', icon: 'account_balance_wallet', color: 'text-primary' }
+             ].map((m) => (
+               <button 
+                 key={m.id}
+                 onClick={() => toggleMethod(m.id)}
+                 className={`flex flex-col items-center justify-center p-4 rounded-[28px] transition-all border ${
+                   settings.payment_methods_active?.[m.id] 
+                   ? 'bg-white dark:bg-slate-900 shadow-sm border-slate-200/50 dark:border-slate-700' 
+                   : 'bg-slate-50 dark:bg-slate-800/20 border-transparent opacity-40 hover:opacity-60 grayscale'
+                 }`}
+               >
+                  <span className={`material-symbols-outlined ${m.color} text-2xl mb-2`}>{m.icon}</span>
+                  <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest">{m.label}</span>
+                  <div className={`mt-2 h-1 w-6 rounded-full ${settings.payment_methods_active?.[m.id] ? 'bg-primary' : 'bg-slate-300'}`} />
+               </button>
+             ))}
+          </div>
+       </div>
+
+       {/* ECONOMY RATES */}
+       <div className="pt-4 space-y-4">
+          <div className="flex items-center justify-between px-2">
+             <div className="flex items-center gap-3">
+                <div className="size-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                   <span className="material-symbols-outlined text-base">percent</span>
+                </div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa de Serviço Global</span>
+             </div>
+             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
+               <input 
+                 type="number" step="0.1"
+                 value={settings.service_fee_percent}
+                 onChange={(e) => handleUpdate('service_fee_percent', parseFloat(e.target.value))}
+                 className="w-10 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
+               />
+               <span className="text-[10px] text-slate-400 font-bold">%</span>
+             </div>
+          </div>
+
+          <div className="flex items-center justify-between px-2">
+             <div className="flex items-center gap-3">
+                <div className="size-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                   <span className="material-symbols-outlined text-base">monetization_on</span>
+                </div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor Moeda (1 Z)</span>
+             </div>
+             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
+               <span className="text-[10px] text-slate-400 font-bold">R$</span>
+               <input 
+                 type="number" step="0.01"
+                 value={settings.izi_coin_value}
+                 onChange={(e) => handleUpdate('izi_coin_value', parseFloat(e.target.value))}
+                 className="w-12 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
+               />
+             </div>
+          </div>
+
+          <div className="flex items-center justify-between px-2">
+             <div className="flex items-center gap-3">
+                <div className="size-8 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500">
+                   <span className="material-symbols-outlined text-base">trending_up</span>
+                </div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Juros Empréstimo</span>
+             </div>
+             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
+               <input 
+                 type="number" step="0.1"
+                 value={settings.loan_interest_rate}
+                 onChange={(e) => handleUpdate('loan_interest_rate', parseFloat(e.target.value))}
+                 className="w-10 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
+               />
+               <span className="text-[10px] text-slate-400 font-bold">%</span>
+             </div>
+          </div>
+       </div>
+
+       {/* WITHDRAWAL RULES */}
+       <div className="p-6 rounded-[32px] bg-slate-900 border border-white/5 space-y-4">
+          <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+             <span className="material-symbols-outlined text-sm">account_balance</span>
+             Regras de Liquidez
+          </p>
+          <div className="flex justify-between items-center">
+             <span className="text-[11px] font-bold text-slate-400">Taxa de Saque</span>
+             <div className="flex items-center gap-2">
+                <input 
+                  type="number" step="0.5"
+                  value={settings.withdrawal_fee_percent}
+                  onChange={(e) => handleUpdate('withdrawal_fee_percent', parseFloat(e.target.value))}
+                  className="w-10 bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-white font-black text-right text-xs outline-none focus:border-primary"
+                />
+                <span className="text-[10px] text-white/20">%</span>
+             </div>
+          </div>
+          <div className="flex justify-between items-center">
+             <span className="text-[11px] font-bold text-slate-400">Valor Mínimo</span>
+             <div className="flex items-center gap-2">
+                <span className="text-[10px] text-white/20">R$</span>
+                <input 
+                  type="number"
+                  value={settings.min_withdrawal_amount}
+                  onChange={(e) => handleUpdate('min_withdrawal_amount', parseFloat(e.target.value))}
+                  className="w-14 bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-white font-black text-right text-xs outline-none focus:border-primary"
+                />
+             </div>
+          </div>
+       </div>
+    </div>
+  );
+}

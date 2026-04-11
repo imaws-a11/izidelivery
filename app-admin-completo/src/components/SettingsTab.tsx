@@ -3,8 +3,16 @@ import { useAdmin } from '../context/AdminContext';
 // Configurações do Sistema
 export default function SettingsTab() {
   const {
-    appSettings, setAppSettings, autoSaveStatus, fetchAppSettings, handleSaveAppSettings, isSaving
+    appSettings, setAppSettings, autoSaveStatus, fetchAppSettings, handleSaveAppSettings, isSaving,
+    globalSettings, saveGlobalSettings
   } = useAdmin();
+
+  const handleUpdateGlobalFinance = async (key: string, value: number) => {
+    if (!globalSettings) return;
+    const newSettings = { ...globalSettings, [key]: value };
+    await saveGlobalSettings(newSettings);
+  };
+
   return (
     <div className="space-y-8 pb-20">
       {/* Header */}
@@ -239,8 +247,12 @@ export default function SettingsTab() {
               <input
                 className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-blue-600 focus:ring-2 focus:ring-blue-300 shadow-inner"
                 type="number" min="0" max="20" step="0.01"
-                value={appSettings.serviceFee}
-                onChange={(e) => setAppSettings({ ...appSettings, serviceFee: parseFloat(e.target.value) || 0 })}
+                value={globalSettings?.service_fee_percent ?? appSettings.serviceFee}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value) || 0;
+                  setAppSettings({ ...appSettings, serviceFee: val });
+                  handleUpdateGlobalFinance('service_fee_percent', val);
+                }}
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-500 font-black text-sm">%</span>
             </div>
@@ -265,8 +277,12 @@ export default function SettingsTab() {
                 <input
                   className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-9 pr-2 py-3.5 font-black text-xl text-emerald-600 focus:ring-2 focus:ring-amber-300 shadow-inner transition-all hover:bg-amber-50/50 dark:hover:bg-slate-800"
                   type="number" min="0.001" step="0.001"
-                  value={appSettings.iziCoinRate || 0}
-                  onChange={(e) => setAppSettings({ ...appSettings, iziCoinRate: parseFloat(e.target.value) || 0 })}
+                  value={globalSettings?.izi_coin_value ?? appSettings.iziCoinRate}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    setAppSettings({ ...appSettings, iziCoinRate: val });
+                    handleUpdateGlobalFinance('izi_coin_value', val);
+                  }}
                 />
               </div>
             </div>
