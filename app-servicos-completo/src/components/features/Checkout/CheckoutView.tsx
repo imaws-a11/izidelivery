@@ -85,7 +85,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       id: "cartao",
       icon: "credit_card",
       label: "Cartão App",
-      sub: savedCards.length > 0 ? `•• ${savedCards[0].last4}` : "Pagar agora",
+      sub: selectedCard ? `•• ${selectedCard.last4}` : (savedCards.length > 0 ? `•• ${savedCards[0].last4}` : "Pagar agora"),
       color: "text-blue-400",
       active: paymentMethodsActive.card !== false
     },

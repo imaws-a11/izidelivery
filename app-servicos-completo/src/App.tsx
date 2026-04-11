@@ -252,7 +252,10 @@ function App() {
       setSavedCards(cards);
       // [Comentario Limpo pelo Sistema]
       const defaultCard = cards.find((c: any) => c.active);
-      if (defaultCard) setPaymentMethod("cartao");
+      if (defaultCard) {
+        setPaymentMethod("cartao");
+        setSelectedCard(defaultCard);
+      }
     }
     setIsLoadingCards(false);
   };
@@ -438,6 +441,66 @@ function App() {
       if (userProfileSub) supabase.removeChannel(userProfileSub);
     };
   }, [userId]);
+
+  const handleConfirmSavedCardShortcut = async (orderId: string, amount: number, origin: string) => {
+    if (!selectedCard) {
+      setSubView("card_payment");
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const cleanEmail = (user?.email || loginEmail || "cliente@izidelivery.com").trim().toLowerCase();
+      const brand = selectedCard.brand || "Visa";
+      const token = selectedCard.mp_token || selectedCard.token;
+
+      const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
+        body: {
+          amount: Number(amount.toFixed(2)),
+          orderId: orderId,
+          payment_method_id: brand.toLowerCase().includes('visa') ? 'visa' : 'master',
+          token: token,
+          email: cleanEmail,
+          installments: 1
+        },
+      });
+
+      if (fnErr || (fnData && fnData.status !== 'approved')) {
+         const mpMsg = fnData?.details?.cause?.[0]?.description || fnData?.error || fnErr?.message || "O cartão foi recusado pela operadora.";
+         toastError(`Pagamento não aprovado: ${mpMsg}`);
+         if (origin === "izi_black") setSubView("izi_black_purchase");
+         else if (origin === "profile") {
+           setShowDepositModal(true);
+           setSubView("none");
+         }
+         else setSubView("checkout");
+         return;
+      }
+
+      // Sucesso
+      if (origin === "izi_black") {
+         await supabase.from('users_delivery').update({ is_izi_black: true }).eq('id', userId);
+         setIsIziBlackMembership(true);
+         setIziBlackStep('success');
+         setSubView("izi_black_purchase");
+      } else if (origin === "profile") {
+         setSubView("izi_coin_tracking");
+      } else {
+         const { data: updatedOrder } = await supabase.from("orders_delivery").select().eq("id", orderId).single();
+         setSelectedItem(updatedOrder || { id: orderId });
+         if (cart.length > 0) await clearCart(orderId);
+         setTab("orders");
+         setSubView("none");
+      }
+      toastSuccess("Pagamento aprovado!");
+
+    } catch (err: any) {
+      console.error("Card processing shortcut error:", err);
+      toastError("Instabilidade na rede. Tente novamente.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchWalletBalance = async (uid: string) => {
     if (!uid) return;
@@ -1801,6 +1864,16 @@ function App() {
       }
 
       if (paymentMethod === "cartao") {
+        if (selectedCard) {
+           const orderPayload = { ...orderBase, status: "pendente_pagamento" };
+           const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(orderPayload).select().single();
+           if (insertError || !order) {
+              toastError("Erro ao criar pedido. Tente novamente.");
+              return;
+           }
+           handleConfirmSavedCardShortcut(order.id, total, "checkout");
+           return;
+        }
         setSubView("card_payment");
         return;
       }
@@ -5092,6 +5165,10 @@ const navigateSubView = (target: string) => {
       if (method === "cartao") {
         setSelectedItem(orderData);
         setPaymentsOrigin("profile");
+        if (selectedCard) {
+          handleConfirmSavedCardShortcut(orderData.id, amount, "profile");
+          return;
+        }
         setSubView("card_payment");
       } else if (method === "lightning") {
         setSubView("payment_processing");
@@ -5326,8 +5403,12 @@ const navigateSubView = (target: string) => {
         // 2. Disparar o fluxo de pagamento correto
         if (paymentMethod === "cartao") {
           setSelectedItem(orderData);
-          setIsLoading(false);
           setPaymentsOrigin("izi_black");
+          if (selectedCard) {
+            handleConfirmSavedCardShortcut(orderData.id, total, "izi_black");
+            return;
+          }
+          setIsLoading(false);
           setSubView("card_payment");
           return;
         } else if (paymentMethod === "pix") {
