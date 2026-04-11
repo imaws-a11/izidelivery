@@ -384,6 +384,8 @@ export interface AppSettings {
   iziBlackFee: number;
   iziBlackCashback: number;
   iziBlackMinOrderFreeShipping: number;
+  izi_black_cashback_multiplier: number;
+  izi_black_xp_multiplier: number;
   flashOfferTitle: string;
   flashOfferDiscount: number;
   flashOfferExpiry: string;

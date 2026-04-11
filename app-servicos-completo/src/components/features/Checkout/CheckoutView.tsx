@@ -27,6 +27,7 @@ interface CheckoutViewProps {
   deliveryFee: number;
   serviceFee?: number;
   isIziBlack?: boolean;
+  iziBlackCashbackMultiplier?: number;
   paymentMethodsActive?: { pix?: boolean; card?: boolean; lightning?: boolean; wallet?: boolean };
 }
 
@@ -54,6 +55,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   deliveryFee = 0,
   serviceFee = 0,
   isIziBlack = false,
+  iziBlackCashbackMultiplier = 2,
   paymentMethodsActive = { pix: true, card: true, lightning: true, wallet: true }
 }) => {
   const [useCoins, setUseCoins] = React.useState(false);
@@ -422,11 +424,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                 </div>
                  <div className="flex flex-col items-end">
                     <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 italic">
-                       {isIziBlack ? "Cashback Duplo Izi Black" : "Ganha + Cashback"}
+                       {isIziBlack ? (iziBlackCashbackMultiplier === 2 ? "Cashback Duplo Izi Black" : `Cashback ${iziBlackCashbackMultiplier}x Izi Black`) : "Ganha + Cashback"}
                     </span>
                     <div className="bg-yellow-400/10 px-3 py-1.5 rounded-full border border-yellow-400/10">
                        <span className="text-yellow-400 font-black text-[9px] uppercase tracking-widest italic">
-                          + {((total * (isIziBlack ? (iziCoinRate * 2) : iziCoinRate)) / 100).toFixed(2).replace(".", ",")} Coins
+                          + {Math.floor(total * (isIziBlack ? (iziCoinRate * iziBlackCashbackMultiplier) : iziCoinRate)).toLocaleString("pt-BR")} Coins
                        </span>
                     </div>
                  </div>
