@@ -4336,7 +4336,7 @@ const navigateSubView = (target: string) => {
                        user_id: userId,
                        brand: brand,
                        last_four: last4,
-                       active: savedCards.length === 0,
+                       is_default: savedCards.length === 0,
                        token: token
                      }).select().single();
 

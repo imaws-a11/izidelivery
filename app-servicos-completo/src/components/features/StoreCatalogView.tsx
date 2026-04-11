@@ -39,7 +39,7 @@ export const StoreCatalogView: React.FC<StoreCatalogViewProps> = ({
       </nav>
 
       <header className="relative w-full h-72 overflow-hidden shrink-0">
-        <img src={shop.banner || shop.img || "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=800"} alt={shop.name} className="w-full h-full object-cover" />
+        <img src={shop.banner || shop.img || "/images/banner-default.png"} alt={shop.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
         <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-yellow-400/50 to-transparent" />
       </header>
