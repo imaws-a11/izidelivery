@@ -26,19 +26,19 @@ export const StoreCatalogView = ({
 
   const getCategoryAssets = (name: string) => {
     const n = name.toLowerCase();
-    if (n.includes('todos') || n.includes('destaque')) return { icon: "storefront", img: "https://images.unsplash.com/photo-1534723452862-4c874018d66d?q=80&w=800", color: "zinc-400" };
-    if (n.includes('mercearia') || n.includes('despensa')) return { icon: "shopping_basket", img: "https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=600", color: "amber-500" };
-    if (n.includes('congelado')) return { icon: "ac_unit", img: "https://images.unsplash.com/photo-1584263343327-447967b33da0?q=80&w=600", color: "blue-400" };
-    if (n.includes('padaria') || n.includes('pães')) return { icon: "bakery_dining", img: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=600", color: "orange-400" };
-    if (n.includes('higiene') || n.includes('banho')) return { icon: "clean_hands", img: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=600", color: "rose-400" };
-    if (n.includes('limpeza')) return { icon: "cleaning_services", img: "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?q=80&w=600", color: "cyan-400" };
-    if (n.includes('pet')) return { icon: "pets", img: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=600", color: "emerald-400" };
-    if (n.includes('sorvete') || n.includes('gelado') || n.includes('doces')) return { icon: "icecream", img: "https://images.unsplash.com/photo-1501443762994-82bd5dace89a?q=80&w=600", color: "sky-300" };
-    if (n.includes('bebida')) return { icon: "local_bar", img: "https://images.unsplash.com/photo-1527661591475-527312dd65f5?q=80&w=600", color: "purple-400" };
-    if (n.includes('carne') || n.includes('açougue')) return { icon: "kebab_dining", img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=600", color: "red-500" };
-    if (n.includes('fruta') || n.includes('verdura') || n.includes('horti')) return { icon: "potted_plant", img: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=600", color: "green-500" };
+    if (n.includes('todos') || n.includes('destaque')) return { icon: "storefront", img: "", color: "zinc-400" };
+    if (n.includes('mercearia') || n.includes('despensa')) return { icon: "shopping_basket", img: "", color: "amber-500" };
+    if (n.includes('congelado')) return { icon: "ac_unit", img: "", color: "blue-400" };
+    if (n.includes('padaria') || n.includes('pães')) return { icon: "bakery_dining", img: "", color: "orange-400" };
+    if (n.includes('higiene') || n.includes('banho')) return { icon: "clean_hands", img: "", color: "rose-400" };
+    if (n.includes('limpeza')) return { icon: "cleaning_services", img: "", color: "cyan-400" };
+    if (n.includes('pet')) return { icon: "pets", img: "", color: "emerald-400" };
+    if (n.includes('sorvete') || n.includes('gelado') || n.includes('doces')) return { icon: "icecream", img: "", color: "sky-300" };
+    if (n.includes('bebida')) return { icon: "local_bar", img: "", color: "purple-400" };
+    if (n.includes('carne') || n.includes('açougue')) return { icon: "kebab_dining", img: "", color: "red-500" };
+    if (n.includes('fruta') || n.includes('verdura') || n.includes('horti')) return { icon: "potted_plant", img: "", color: "green-500" };
     
-    return { icon: "category", img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600", color: "zinc-400" };
+    return { icon: "category", img: "", color: "zinc-400" };
   };
 
   const categorizeProduct = (p: any): string => {
@@ -103,7 +103,7 @@ export const StoreCatalogView = ({
       </nav>
 
       <header className="relative w-full h-80 overflow-hidden shrink-0">
-        <img src={shop.banner || shop.img || "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=800"} alt={shop.name} className="w-full h-full object-cover" />
+        <img src={shop.banner || shop.img || ""} alt={shop.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
            <div className="size-24 rounded-[32px] overflow-hidden border-4 border-white/10 shadow-2xl mb-4">
@@ -184,7 +184,7 @@ export const StoreCatalogView = ({
                   className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-[28px] p-3 flex flex-col gap-3 group relative active:scale-[0.98] transition-all"
                 >
                   <div className="relative aspect-square rounded-[22px] overflow-hidden shadow-2xl bg-zinc-800">
-                    <img src={item.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400"} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    <img src={item.img || ""} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                     <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
                     <button 
                       onClick={(e) => { 

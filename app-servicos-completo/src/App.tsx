@@ -854,7 +854,7 @@ function App() {
           price: p.price,
           oldPrice: p.price * (discountMult || 1.25),
           off: `${discountPct}%`,
-          img: p.image_url || "https://images.unsplash.com/photo-1596753738914-7bc33e08f58b?q=80&w=400",
+          img: p.image_url || "",
           cat: p.category || "Bebidas",
           merchant_id: p.merchant_id // Injetar merchant_id para evitar pedidos órfãos
         }));
@@ -1055,7 +1055,7 @@ function App() {
 
     // 1. Feedback Visual Imediato (Animação)
     if (e && triggerCartAnimation) {
-      triggerCartAnimation(e, item.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400");
+      triggerCartAnimation(e, item.img || "");
     }
 
     processingItemsRef.current.add(item.id);
@@ -1154,7 +1154,7 @@ function App() {
             desc: p.description || "",
             price: hasLinkedOffer ? discountedPrice : p.price,
             oldPrice: hasLinkedOffer ? Number(p.price) : undefined,
-            img: p.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600",
+            img: p.image_url || "",
             merchant_id: shop.id,
             merchant_name: shop.name,
             store: shop.name,
@@ -2025,8 +2025,8 @@ const navigateSubView = (target: string) => {
             rating: "4.9",
             dist: "1.5 km",
             time: m.estimated_time || "30-45 min",
-            img: m.store_logo || "https://images.unsplash.com/photo-1552566626-52f8b828add9?q=80&w=200",
-            banner: m.store_banner || "https://images.unsplash.com/photo-1514933651103-005eec06ccc0?q=80&w=800",
+            img: m.store_logo || "",
+            banner: m.store_banner || "",
             freeDelivery: !!m.free_delivery,
             free_delivery: !!m.free_delivery,
             service_fee: m.free_delivery ? 0 : (m.service_fee !== undefined && m.service_fee !== null ? Number(m.service_fee) : undefined),
@@ -2838,7 +2838,7 @@ const navigateSubView = (target: string) => {
         id: f.product_id || f.id,
         name: f.product_name,
         store: f.admin_users?.store_name || 'Loja Parceira',
-        img: f.product_image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600',
+        img: f.product_image || '',
         oldPrice: Number(f.original_price),
         price: Number(f.discounted_price),
         merchant_id: f.merchant_id,
@@ -2850,36 +2850,7 @@ const navigateSubView = (target: string) => {
           ? `- R$ ${(Number(f.original_price) - Number(f.discounted_price)).toFixed(2).replace('.', ',')} OFF` 
           : `- R$ ${(Number(f.original_price) * (Number(f.discount_percent) / 100)).toFixed(2).replace('.', ',')} OFF`,
         desc: (f.description || 'Oferta imperdível por tempo limitado!') + `\n\nðŸ“Œ Vendido por: ${f.admin_users?.store_name || 'Loja Parceira'}`
-      })) : [
-        {
-          id: 'vip-burger-1',
-          name: 'The Ultimate Izi Black Burger',
-          store: 'Burger Gourmet Lab',
-          img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600',
-          oldPrice: 59.90,
-          price: 29.95,
-          merchant_id: null,
-          merchant_name: 'Burger Gourmet Lab',
-          is_flash_offer: true,
-          expires_at: new Date(Date.now() + 3600000 * 2).toISOString(),
-          off: '50% OFF',
-          desc: 'Blend de carne Angus 180g, queijo brie maçaricado, cebola caramelizada no Jack Daniels e pão brioche artesanal.\n\nðŸ“Œ Vendido por: Burger Gourmet Lab'
-        },
-        {
-          id: 'vip-pizza-1',
-          name: 'Pizza Trufada Individual',
-          store: 'Forneria d\'Oro',
-          img: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600',
-          oldPrice: 72.00,
-          price: 36.00,
-          merchant_id: null,
-          merchant_name: 'Forneria d\'Oro',
-          is_flash_offer: true,
-          expires_at: new Date(Date.now() + 1800000).toISOString(),
-          off: '50% OFF',
-          desc: 'Massa de fermentação natural, mozzarella fior di latte, azeite de trufas brancas e manjericão fresco.\n\nðŸ“Œ Vendido por: Forneria d\'Oro'
-        }
-      ];
+      })) : [];
     }
 
     let h = "00", m = "00", s = "00";
@@ -3137,7 +3108,7 @@ const navigateSubView = (target: string) => {
                    className="absolute inset-0"
                  >
                    <img 
-                     src={beverageBanners.length > 0 ? beverageBanners[bevBannerIndex].image_url : "https://images.unsplash.com/photo-1470337458703-46ad1756a187?q=80&w=800"} 
+                     src={beverageBanners.length > 0 ? beverageBanners[bevBannerIndex].image_url : ""} 
                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[3000ms]" 
                    />
                    <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent flex flex-col justify-center px-10">
@@ -6207,7 +6178,7 @@ const navigateSubView = (target: string) => {
       }
     };
 
-    const itemImage = selectedItem.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop";
+    const itemImage = selectedItem.img || "";
     const addonsPrice = calculateAddonsPrice();
     const totalProductPrice = selectedItem.price + addonsPrice;
 
@@ -7660,7 +7631,7 @@ const navigateSubView = (target: string) => {
         {cartAnimations.map(anim => (
           <motion.img
             key={anim.id}
-            src={anim.img || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=200"}
+            src={anim.img || ""}
             initial={{ x: anim.x - 30, y: anim.y - 30, scale: 0.8, opacity: 1 }}
             animate={{ 
               x: window.innerWidth / 2 - 30,
