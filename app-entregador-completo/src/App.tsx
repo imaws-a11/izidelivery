@@ -416,9 +416,16 @@ function App() {
     const [appSettings, setAppSettings] = useState<any>(null);
 
     const fetchGlobalSettings = useCallback(async () => {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         try {
-            const { data } = await supabase.from('app_settings_delivery').select('*').single();
-            if (data) setAppSettings(data);
+            const res = await fetch(`${supabaseUrl}/rest/v1/admin_settings_delivery?select=*`, {
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data[0]) setAppSettings(data[0]);
+            }
         } catch (e) {
             console.error('[SETTINGS] Erro ao buscar configurações:', e);
         }
@@ -460,8 +467,12 @@ function App() {
     const [earningsHistory, setEarningsHistory] = useState<Order[]>([]);
     const [withdrawHistory, setWithdrawHistory] = useState<any[]>([]);
     const [isFinanceLoading, setIsFinanceLoading] = useState(false);
+    const [isWithdrawLoading, setIsWithdrawLoading] = useState(false);
+    const [isSavingPix, setIsSavingPix] = useState(false);
+    const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
     const [pixKey, setPixKey] = useState(() => localStorage.getItem('izi_driver_pix') || '');
+    const [isEditingPix, setIsEditingPix] = useState(false);
 
     const [activeMission, setActiveMission] = useState<Order | null>(() => {
         const saved = localStorage.getItem('Izi_active_mission');
@@ -1714,13 +1725,31 @@ function App() {
         const headers = { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` };
 
         try {
+            // Timeout de 10 segundos para cada requisição
+            const fetchWithTimeout = (url: string) => 
+                fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+
             // Consulta de Carteira para Saldo e Extrato
-            const txsRes = await fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery?user_id=eq.${driverId}&order=created_at.desc`, { headers });
-            const txs = txsRes.ok ? await txsRes.json() : null;
+            const txsRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/wallet_transactions_delivery?user_id=eq.${driverId}&order=created_at.desc`).catch(() => null);
+            const txs = (txsRes && txsRes.ok) ? await txsRes.json() : null;
+
+            // Busca Informações do Motorista (Chave PIX no bank_info)
+            const driverRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}&select=bank_info,name`).catch(() => null);
+            const driverData = (driverRes && driverRes.ok) ? await driverRes.json() : null;
+            
+            if (driverData && driverData[0]) {
+                const bankInfo = driverData[0].bank_info;
+                // O bank_info é um JSON que contém { pix_key: "..." }
+                const savedPix = bankInfo?.pix_key || '';
+                if (savedPix) {
+                    setPixKey(savedPix);
+                    localStorage.setItem('izi_driver_pix', savedPix);
+                }
+            }
 
             // Consulta de Pedidos para Ganhos Reais
-            const ordersRes = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,entregue)`, { headers });
-            const orders = ordersRes.ok ? await ordersRes.json() : null;
+            const ordersRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,entregue)`).catch(() => null);
+            const orders = (ordersRes && ordersRes.ok) ? await ordersRes.json() : null;
 
             let balance = 0;
             if (txs) {
@@ -1742,7 +1771,7 @@ function App() {
                 missionCount = orders.length;
 
                 orders.forEach(o => {
-                    const fee = getNetEarnings(o); console.log('ORDER ', o.id, ' FEE:', fee);
+                    const fee = getNetEarnings(o);
                     totalGanhos += fee;
                     if (new Date(o.created_at) >= startOfDay) {
                         todaySum += fee;
@@ -1752,46 +1781,165 @@ function App() {
 
             setStats(prev => ({
                 ...prev,
-                balance: balance, // Permite aparecer saldo negativo se ele dever ao app
+                balance: balance,
                 today: todaySum,
                 totalEarnings: totalGanhos,
                 count: missionCount,
                 level: Math.floor(missionCount / 10) + 1
             }));
 
+            // Aproveitar e atualizar configurações globais
+            const { data: sets } = await fetchWithTimeout(`${supabaseUrl}/rest/v1/admin_settings_delivery?limit=1`).then(r => r?.ok ? r.json() : {ok: false}).catch(() => ({}));
+            if (sets && sets[0]) {
+                setAppSettings(sets[0]);
+            }
+
         } catch (e) {
-            console.error("Finance fetch error:", e);
+            console.error("[FINANCE] Fetch error:", e);
         } finally {
             setIsFinanceLoading(false);
         }
     };
 
-    const handleWithdrawRequest = async () => {
-        if (stats.balance < 10) return toastError('O saldo mínimo para saque é R$ 10,00');
-        if (!pixKey) return toastError('Por favor, informe uma chave PIX antes de sacar.');
+    const handleWithdrawRequest = () => {
+        if (isWithdrawLoading) return;
+        
+        // 1. Validar PIX
+        if (!pixKey || pixKey.trim().length < 3) {
+            toastError('Cadastre uma chave PIX válida antes de sacar.');
+            setIsEditingPix(true);
+            return;
+        }
 
-        if (!await showConfirm({ message: `Confirmar solicitação de saque de R$ ${stats.balance.toFixed(2)} para a chave PIX: ${pixKey}?` })) return;
+        // 2. Validar saldo
+        if (stats.balance <= 0) {
+            toastError('Você não possui saldo disponível para saque.');
+            return;
+        }
 
-        setIsFinanceLoading(true);
+        // 3. Abrir modal de confirmação
+        setShowWithdrawModal(true);
+    };
+
+    const confirmWithdraw = async () => {
+        if (isWithdrawLoading) return;
+        
+        console.log('>>> [WITHDRAW] Click Confirmar');
+        setIsWithdrawLoading(true);
+        
         try {
-            // Registrar saída na carteira digital
-            const { error } = await supabase.from('wallet_transactions_delivery').insert({
-                user_id: driverId,
+            console.log('>>> [WITHDRAW] Verificando dados...');
+            
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            
+            // 1. Obter ID do motorista (prioriza o que está no estado/localStorage)
+            const uid = driverId || localStorage.getItem('izi_driver_uid');
+            
+            if (!uid) {
+                throw new Error('Identificação do motorista ignorada (ID Vazio). Tente sair e entrar novamente.');
+            }
+
+            // 2. Obter Token (Manualmente para evitar travamentos do supabase-js)
+            let token = supabaseKey;
+            try {
+                const lsKey = `sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`;
+                const ls = localStorage.getItem(lsKey);
+                if (ls) {
+                    const parsed = JSON.parse(ls);
+                    token = parsed.access_token || token;
+                }
+            } catch(e) {
+                console.warn('[WITHDRAW] Falha ao extrair token do LocalStorage');
+            }
+
+            console.log('>>> [WITHDRAW] Enviando requisição para:', uid);
+
+            // 3. Chamada REST com Timeout de 10s
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+            const body = {
+                user_id: uid,
                 amount: stats.balance,
                 type: 'saque',
-                description: `Saque solicitado via PIX: ${pixKey}`,
+                description: `Saque PIX: ${pixKey}`,
                 status: 'pendente'
+            };
+
+            const response = await fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
+                method: 'POST',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify(body),
+                signal: controller.signal
             });
 
-            if (error) throw error;
-            toastSuccess('Solicitação de transferência enviada! 🎉');
-            fetchFinanceData();
-        } catch (e: any) {
-            toastError('Falha ao processar saque. Tente novamente.');
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorDetail = await response.text();
+                console.error('>>> [WITHDRAW] Erro API:', response.status, errorDetail);
+                throw new Error(`Erro no servidor (${response.status}). Verifique seu saldo.`);
+            }
+
+            console.log('>>> [WITHDRAW] Pedido criado com sucesso!');
+
+            // Sucesso - Feedback Visual
+            setShowWithdrawModal(false);
+            setTimeout(() => {
+                setShowSuccessOverlay(true);
+            }, 300);
+
+            setTimeout(() => {
+                setShowSuccessOverlay(false);
+                fetchFinanceData();
+            }, 4500);
+
+        } catch (err: any) {
+            console.error('>>> [WITHDRAW] FALHA CRÍTICA:', err);
+            const msg = err.name === 'AbortError' 
+                ? 'O servidor demorou muito para responder. Tente novamente.' 
+                : (err.message || 'Erro desconhecido ao processar saque.');
+            toastError(msg);
         } finally {
-            setIsFinanceLoading(false);
+            console.log('>>> [WITHDRAW] Liberando travamento de UI');
+            setIsWithdrawLoading(false);
         }
     };
+
+    const handleSavePix = async (val?: string) => {
+
+        const keyToSave = (val || pixKey).trim();
+        if (!keyToSave) return toastError('Digite uma chave PIX válida');
+        if (!driverId) return toastError('Entregador não identificado');
+
+        setIsSavingPix(true);
+        try {
+            console.log('[PIX_SAVE] Tentando salvar:', keyToSave);
+            const { error } = await supabase
+                .from('drivers_delivery')
+                .update({ bank_info: { pix_key: keyToSave } })
+                .eq('id', driverId);
+
+            if (error) throw error;
+
+            localStorage.setItem('izi_driver_pix', keyToSave);
+            setPixKey(keyToSave);
+            setIsEditingPix(false);
+            toastSuccess('Chave PIX salva com sucesso!');
+        } catch (e: any) {
+            console.error('[PIX_SAVE] Error:', e);
+            toastError("Erro ao salvar chave PIX: " + e.message);
+        } finally {
+            setIsSavingPix(false);
+        }
+    };
+
     const handleLogout = useCallback(async (reason = 'manual') => {
         const dId = driverId ? String(driverId).trim() : null;
         console.log(`[AUTH] handleLogout disparado. Motivo: ${reason}`);
@@ -2337,11 +2485,11 @@ function App() {
                 <div className="flex gap-4 mt-8 relative z-10">
                     <button 
                         onClick={handleWithdrawRequest}
-                        disabled={isFinanceLoading || stats.balance < 10}
+                        disabled={isWithdrawLoading}
                         className="flex-1 bg-primary text-slate-900 font-black rounded-3xl text-[11px] uppercase tracking-widest shadow-[inset_0_-4px_12px_rgba(0,0,0,0.3),_inset_0_4px_10px_rgba(255,255,255,0.6),_0_10px_25px_rgba(20,184,166,0.3)] active:scale-95 active:shadow-none transition-all py-5 flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
                     >
                         <Icon name="payments" className="text-xl opacity-80" />
-                        {isFinanceLoading ? 'Processando...' : 'Sacar via PIX'}
+                        {isWithdrawLoading ? 'Processando...' : 'Sacar via PIX'}
                     </button>
                 </div>
             </div>
@@ -2402,51 +2550,57 @@ function App() {
             </div>
 
             {/* Gestão de Chave PIX */}
-            {!pixKey && (
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-[32px] p-6 space-y-4">
+            <div className="bg-[#151c2c] border border-white/5 rounded-[32px] p-6 space-y-4 shadow-[inset_0_-4px_12px_rgba(0,0,0,0.3),_0_10px_20px_rgba(0,0,0,0.4)]">
+                <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Icon name="account_balance" className="text-emerald-400" />
-                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Configurar Saque</p>
+                        <div className="size-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                            <Icon name="account_balance" className="text-lg" />
+                        </div>
+                        <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">Chave PIX para Saque</p>
                     </div>
-                    <p className="text-[10px] text-white/40 leading-relaxed">Cadastre sua chave PIX para habilitar os saques automáticos de seus rendimentos.</p>
-                    <div className="flex gap-2">
-                        <input 
-                            type="text" 
-                            placeholder="Sua chave PIX (CPF, E-mail ou Telefone)"
-                            id="pix_input"
-                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:border-primary outline-none"
-                        />
+                    {pixKey && !isEditingPix && (
                         <button 
-                            onClick={() => {
-                                const val = (document.getElementById('pix_input') as HTMLInputElement).value;
-                                if (val) {
-                                    setPixKey(val);
-                                    const savePixKey = async () => {
-                                        if (!driverId) return;
-                                        try {
-                                            // Salvar no banco para sincronizar entre aparelhos
-                                            const { error } = await supabase
-                                                .from('drivers_delivery')
-                                                .update({ bank_info: { pix_key: val } })
-                                                .eq('id', driverId);
-                                            
-                                            if (error) throw error;
-                                            
-                                            localStorage.setItem('izi_driver_pix', val);
-                                            setShowPixModal(false);
-                                        } catch (e: any) {
-                                            alert('Erro ao salvar chave PIX: ' + e.message);
-                                        }
-                                    };
-                                    savePixKey();
-                                    toastSuccess('Chave PIX salva!');
-                                }
-                            }}
-                            className="bg-primary text-slate-900 px-4 py-3 rounded-xl text-[10px] font-black uppercase"
-                        >Salvar</button>
-                    </div>
+                            onClick={() => setIsEditingPix(true)}
+                            className="text-[9px] font-black text-primary uppercase tracking-widest"
+                        >Alterar</button>
+                    )}
                 </div>
-            )}
+
+                {(!pixKey || isEditingPix) ? (
+                    <div className="space-y-4">
+                        <p className="text-[10px] text-white/30 leading-relaxed">
+                            {pixKey ? 'Informe a nova chave para atualizar seu cadastro.' : 'Cadastre sua chave PIX para habilitar os saques de seus rendimentos.'}
+                        </p>
+                        <div className="flex gap-2">
+                            <input 
+                                type="text" 
+                                placeholder="CPF, E-mail ou Telefone"
+                                id="pix_input_main"
+                                defaultValue={pixKey}
+                                className="flex-1 bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:border-primary outline-none transition-all"
+                            />
+                            <button 
+                                onClick={() => {
+                                    const input = document.getElementById('pix_input_main') as HTMLInputElement;
+                                    handleSavePix(input.value);
+                                }}
+                                disabled={isSavingPix}
+                                className="bg-primary text-slate-900 px-6 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-primary/20 active:scale-95 transition-all disabled:opacity-50"
+                            >
+                                {isSavingPix ? '...' : 'Salvar'}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="bg-slate-900/40 rounded-2xl p-4 border border-white/5 flex items-center justify-between">
+                        <div className="flex flex-col">
+                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Chave Atual</span>
+                            <p className="text-sm font-black text-white tracking-widest">{pixKey}</p>
+                        </div>
+                        <Icon name="check_circle" className="text-emerald-500 text-xl opacity-50" />
+                    </div>
+                )}
+            </div>
         </motion.div>
     );
 
@@ -3112,6 +3266,123 @@ function App() {
                             </main>
                         </div>
                     </div>
+                )}
+            </AnimatePresence>
+
+            {/* Modal de Confirmação de Saque */}
+            <AnimatePresence>
+                {showWithdrawModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[150] bg-black/70 backdrop-blur-sm flex items-end justify-center"
+                        onClick={() => setShowWithdrawModal(false)}
+                    >
+                        <motion.div
+                            initial={{ y: 100, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 100, opacity: 0 }}
+                            transition={{ type: 'spring', damping: 20 }}
+                            onClick={e => e.stopPropagation()}
+                            className="w-full max-w-sm bg-[#0f172a] border border-white/10 rounded-t-[40px] p-8 space-y-6"
+                        >
+                            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto" />
+                            <div className="text-center space-y-1">
+                                <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Confirmar Saque PIX</p>
+                                <p className="text-4xl font-black text-white tracking-tighter">R$ {stats.balance.toFixed(2).replace('.', ',')}</p>
+                            </div>
+                            <div className="bg-white/[0.04] border border-white/5 rounded-[24px] p-5 space-y-3">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-bold text-white/40">Destino</span>
+                                    <span className="text-xs font-black text-white truncate max-w-[180px]">{pixKey}</span>
+                                </div>
+                                <div className="h-px bg-white/5" />
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-bold text-white/40">Status</span>
+                                    <span className="text-xs font-black text-amber-400">Aguarda aprovação admin</span>
+                                </div>
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setShowWithdrawModal(false)}
+                                    disabled={isWithdrawLoading}
+                                    className="flex-1 h-14 rounded-2xl bg-white/5 border border-white/10 text-white/60 font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all disabled:opacity-30"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={confirmWithdraw}
+                                    disabled={isWithdrawLoading}
+                                    className="flex-1 h-14 rounded-2xl bg-primary text-slate-900 font-black text-[11px] uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {isWithdrawLoading ? (
+                                        <>
+                                            <div className="size-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
+                                            <span>Processando...</span>
+                                        </>
+                                    ) : (
+                                        'Confirmar'
+                                    )}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Overlay de Sucesso de Saque - Premium */}
+
+            <AnimatePresence>
+                {showSuccessOverlay && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] bg-slate-900/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.5, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ type: "spring", damping: 12 }}
+                            className="size-32 rounded-[48px] bg-emerald-500 shadow-[0_20px_60px_rgba(16,185,129,0.4)] flex items-center justify-center mb-10"
+                        >
+                            <motion.span 
+                                initial={{ pathLength: 0 }}
+                                animate={{ pathLength: 1 }}
+                                className="material-symbols-outlined text-black text-6xl font-black"
+                            >
+                                check
+                            </motion.span>
+                        </motion.div>
+                        
+                        <motion.h2 
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.2 }}
+                            className="text-3xl font-black text-white uppercase tracking-tighter italic"
+                        >
+                            Saque Solicitado!
+                        </motion.h2>
+                        
+                        <motion.p 
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-slate-400 font-bold text-sm mt-4 max-w-xs leading-relaxed"
+                        >
+                            Sua solicitação de PIX foi enviada e já aparece no painel administrativo para aprovação.
+                        </motion.p>
+                        
+                        <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: "100%" }}
+                            transition={{ duration: 3, ease: "linear" }}
+                            className="h-1 bg-primary/20 rounded-full mt-12 max-w-[200px] overflow-hidden"
+                        >
+                            <div className="h-full bg-primary" />
+                        </motion.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
