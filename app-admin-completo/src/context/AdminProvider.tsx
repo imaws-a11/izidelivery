@@ -16,6 +16,8 @@ import { countOnlineDrivers, removeDriverFromList, sortDriversByPresence, upsert
 
 
 
+const GOOGLE_MAPS_LIBRARIES: ("places" | "geometry")[] = ['places', 'geometry'];
+
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { session, logout } = useAuth();
   const MASTER_ADMIN_EMAIL = (import.meta.env.VITE_MASTER_ADMIN_EMAIL as string || 'swmcapital@gmail.com').trim().toLowerCase();
@@ -24,7 +26,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { isLoaded, loadError: mapsLoadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: ['places', 'geometry']
+    libraries: GOOGLE_MAPS_LIBRARIES
   });
 
   const ORDERS_PER_PAGE = 50;
