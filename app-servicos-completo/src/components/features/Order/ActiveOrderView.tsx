@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Icon } from "../../common/Icon";
-import { IziTrackingMap } from "../Map/IziTrackingMap";
+import { OpenTrackingMap } from "../Map/OpenTrackingMap";
 
 interface ActiveOrderViewProps {
   selectedItem: any;
@@ -37,10 +37,8 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
 
   const isMobility = ["mototaxi", "carro", "van", "utilitario"].includes(selectedItem.service_type);
   
-  // Regra de Negócio: Mostrar entregador apenas quando ele estiver em trânsito para o cliente/destino
-  const shouldShowDriver = isMobility 
-    ? ["a_caminho", "at_pickup", "picked_up", "em_rota", "no_local"].includes(selectedItem.status)
-    : ["picked_up", "saiu_para_entrega", "em_rota", "no_local"].includes(selectedItem.status);
+  // Regra de Negócio: Mostrar entregador sempre que ele for assinalado a corrida/pedido
+  const shouldShowDriver = !!selectedItem?.driver_id;
 
   const steps = isMobility
     ? [
@@ -120,9 +118,9 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
 
   // Configurações do Bottom Sheet para framer-motion (Sincronizado com feedback de UI Premium)
   const sheetVariants = {
-    collapsed: { y: "72%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
-    half: { y: "45%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
-    expanded: { y: "5%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } }
+    collapsed: { y: "65%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
+    half: { y: "35%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
+    expanded: { y: "0%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } }
   };
   const [sheetState, setSheetState] = React.useState<"collapsed" | "half" | "expanded">("collapsed");
 
@@ -137,18 +135,25 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
     }
   };
 
+  let pickupLoc = null;
+  if (selectedItem?.pickup_lat && selectedItem?.pickup_lng) {
+    pickupLoc = { lat: Number(selectedItem.pickup_lat), lng: Number(selectedItem.pickup_lng) };
+  } else if (selectedItem?.merchant_lat && selectedItem?.merchant_lng) {
+    pickupLoc = { lat: Number(selectedItem.merchant_lat), lng: Number(selectedItem.merchant_lng) };
+  }
+
   return (
     <div className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-hidden">
-      {/* MAPA FULLSCREEN AO FUNDO */}
+      {/* MAPA REAL DINÂMICO FUNCIONAL AO FUNDO (LEAFLET / OPENSTREETMAP) */}
       <div className="absolute inset-0 z-0">
-        <IziTrackingMap 
+        <OpenTrackingMap 
           driverLoc={shouldShowDriver ? driverLocation : null} 
+          pickupLoc={pickupLoc}
           userLoc={userLocation} 
-          routePolyline={routePolyline} 
           onMyLocationClick={onMyLocationClick} 
         />
         {/* Overlay gradiente suave para profundidade */}
-        <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/70 via-black/20 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/80 via-black/30 to-transparent pointer-events-none" />
       </div>
 
       {/* Botão flutuante voltar (sempre visível no topo) */}

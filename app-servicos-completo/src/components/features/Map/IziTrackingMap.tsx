@@ -11,24 +11,20 @@ interface IziTrackingMapProps {
 }
 
 /**
- * ESTILO WAZE CLEAN - SUAVE & FLUIDO
- * Remove excesso de labels e usa cores contrastantes suaves.
+ * ESTILO DARK SIMULATION - MINIMALISTA & PREMIUM
+ * Focado totalmente no trajeto, removendo distrações e usando tons de cinza profundos com preto.
  */
-const WAZE_CLEAN_STYLE: google.maps.MapTypeStyle[] = [
-  { "featureType": "water", "elementType": "geometry.fill", "stylers": [{ "color": "#d3d3d3" }] },
-  { "featureType": "transit", "stylers": [{ "visibility": "off" }] },
-  { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
-  { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "visibility": "off" }] },
-  { "featureType": "road.arterial", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
-  { "featureType": "road.arterial", "elementType": "geometry.stroke", "stylers": [{ "visibility": "off" }] },
-  { "featureType": "road.local", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
-  { "featureType": "road.local", "elementType": "geometry.stroke", "stylers": [{ "visibility": "off" }] },
+const RADAR_CLEAN_STYLE: google.maps.MapTypeStyle[] = [
+  { "elementType": "geometry", "stylers": [{ "visibility": "off" }] },
+  { "elementType": "labels", "stylers": [{ "visibility": "off" }] },
+  { "featureType": "water", "stylers": [{ "visibility": "off" }] },
+  { "featureType": "administrative", "stylers": [{ "visibility": "off" }] },
   { "featureType": "poi", "stylers": [{ "visibility": "off" }] },
-  { "featureType": "landscape", "elementType": "geometry.fill", "stylers": [{ "color": "#f5f5f5" }] },
-  { "featureType": "administrative", "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
-  { "featureType": "administrative", "elementType": "labels.text.stroke", "stylers": [{ "visibility": "off" }] },
-  { "featureType": "road", "elementType": "labels.text.fill", "stylers": [{ "color": "#7c93a3" }] },
-  { "featureType": "road", "elementType": "labels.text.stroke", "stylers": [{ "visibility": "on" }, { "color": "#ffffff" }, { "weight": 2 }] }
+  { "featureType": "road", "stylers": [{ "visibility": "off" }] },
+  { "featureType": "landscape", "stylers": [{ "visibility": "off" }] },
+  { "featureType": "transit", "stylers": [{ "visibility": "off" }] },
+  // Regra base para garantir que tudo fique apagado caso exista algo adicional
+  { "stylers": [{ "visibility": "off" }] }
 ];
 
 export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocationClick }: IziTrackingMapProps) {
@@ -152,8 +148,8 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
           disableDefaultUI: true,
           zoomControl: false,
           gestureHandling: 'greedy',
-          styles: WAZE_CLEAN_STYLE,
-          backgroundColor: '#f5f5f5',
+          styles: RADAR_CLEAN_STYLE,
+          backgroundColor: '#0a0a0a',
           clickableIcons: false
         }}
       >

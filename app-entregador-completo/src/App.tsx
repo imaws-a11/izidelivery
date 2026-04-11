@@ -449,6 +449,7 @@ function App() {
         const saved = localStorage.getItem('Izi_active_mission');
         return saved ? 'active_mission' : 'dashboard';
     });
+    const [finishedMissionData, setFinishedMissionData] = useState<{show: boolean, amount: number} | null>(null);
     const [isOnline, setIsOnline] = useState(() => localStorage.getItem('Izi_online') === 'true');
     const isFirstRender = useRef(true);
     const hasLoadedOnlineStatus = useRef(false); // Impede que refreshes de token sobrescrevam o status
@@ -1666,6 +1667,8 @@ function App() {
                 }
 
                 toastSuccess('Missão concluída com sucesso!');
+                const netEarnings = getNetEarnings(activeMission);
+                setFinishedMissionData({ show: true, amount: netEarnings });
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
                 setActiveTab('dashboard');
@@ -3435,6 +3438,90 @@ function App() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Modal de Feedback Visual de Conclusão de Missão (Ganhos) */}
+            <AnimatePresence>
+                {finishedMissionData?.show && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[250] bg-slate-950/98 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center overflow-hidden"
+                    >
+                        {/* Partículas de Brilho ao Fundo */}
+                        <div className="absolute inset-0 pointer-events-none opacity-20">
+                           <div className="absolute top-1/4 left-1/4 size-64 bg-primary/20 blur-[120px] rounded-full animate-pulse" />
+                           <div className="absolute bottom-1/4 right-1/4 size-64 bg-emerald-500/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+                        </div>
+
+                        <motion.div 
+                            initial={{ scale: 0.3, opacity: 0, rotate: -20 }}
+                            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                            transition={{ type: "spring", damping: 10, stiffness: 100 }}
+                            className="size-36 rounded-[54px] bg-gradient-to-br from-primary to-yellow-500 shadow-[0_20px_80px_rgba(250,204,21,0.4)] flex items-center justify-center mb-10 relative"
+                        >
+                            <span className="material-symbols-outlined text-zinc-950 text-7xl font-black">celebration</span>
+                            
+                            {/* Anéis de Pulso */}
+                            <motion.div 
+                                animate={{ scale: [1, 1.4], opacity: [0.5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                                className="absolute inset-0 border-4 border-primary rounded-[54px]"
+                            />
+                        </motion.div>
+                        
+                        <motion.div
+                            initial={{ y: 30, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.2 }}
+                            className="space-y-4"
+                        >
+                            <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">
+                                Parabéns! <br />
+                                <span className="text-primary">Missão Concluída</span>
+                            </h2>
+                            <p className="text-slate-400 font-bold text-sm tracking-wide uppercase opacity-60">Você acaba de faturar:</p>
+                        </motion.div>
+
+                        <motion.div 
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.4, type: "spring" }}
+                            className="my-10 px-10 py-6 bg-white/[0.03] border border-white/10 rounded-[40px] shadow-inner"
+                        >
+                            <span className="block text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-1">Valor Líquido</span>
+                            <span className="text-6xl font-black text-white tracking-tighter italic">
+                                R$ {finishedMissionData.amount.toFixed(2).replace('.', ',')}
+                            </span>
+                        </motion.div>
+
+                        <motion.div 
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.6 }}
+                            className="space-y-8 w-full max-w-xs"
+                        >
+                            <p className="text-emerald-400 font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+                                <span className="material-symbols-outlined text-xs">account_balance_wallet</span>
+                                Já disponível na sua carteira
+                            </p>
+
+                            <button
+                                onClick={() => setFinishedMissionData(null)}
+                                className="w-full h-16 rounded-[28px] bg-white text-zinc-950 font-black text-xs uppercase tracking-[0.3em] shadow-2xl active:scale-95 transition-all hover:bg-primary"
+                            >
+                                Continuar Ganhando
+                            </button>
+                        </motion.div>
+
+                        {/* Detalhe Estético Inferior */}
+                        <div className="absolute bottom-10 left-0 right-0 flex justify-center opacity-30">
+                            <div className="w-12 h-1.5 bg-white/10 rounded-full" />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
         </div>
     );
 }
