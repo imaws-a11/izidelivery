@@ -8,8 +8,60 @@ import type { DashboardData } from '../lib/types';
 // Relatórios Financeiros
 export default function FinancialTab() {
   const {
-    allOrders, appSettings, dashboardData, userRole, merchantProfile
+    allOrders, dashboardOrders, appSettings, dashboardData: globalDashboardData, 
+    userRole, merchantProfile, selectedMerchantPreview, merchantsList
   } = useAdmin();
+
+  const isMerchantPreview = userRole === 'admin' && selectedMerchantPreview;
+  const activeMerchant = isMerchantPreview ? selectedMerchantPreview : (userRole === 'merchant' ? merchantProfile : null);
+
+  // Se for preview, recalculamos os dados para este lojista específico
+  const effectiveDashboardData = React.useMemo(() => {
+    if (!isMerchantPreview || !selectedMerchantPreview) return globalDashboardData;
+
+    const orders = dashboardOrders.filter(o => o.merchant_id === selectedMerchantPreview.id);
+    const completed = orders.filter(o => o.status === 'concluido' || o.status === 'delivered');
+    const totalRevenue = completed.reduce((acc, curr) => acc + (Number(curr.total_price) || 0), 0);
+    const totalOrders = orders.length;
+    const completedOrdersCount = completed.length;
+    const avgTicket = completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0;
+    const deliverySuccessRate = totalOrders > 0 ? (completedOrdersCount / totalOrders) * 100 : 0;
+
+    let totalCommission = 0;
+    const dailyRev = [0, 0, 0, 0, 0, 0, 0];
+    const today = new Date();
+
+    completed.forEach(order => {
+      const commRate = selectedMerchantPreview.commission_percent ?? appSettings.appCommission ?? 12;
+      totalCommission += (Number(order.total_price) || 0) * (commRate / 100);
+
+      const orderDate = new Date(order.created_at);
+      const diffDays = Math.floor((today.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < 7) {
+        const dayIdx = orderDate.getDay();
+        dailyRev[dayIdx] += (Number(order.total_price) || 0);
+      }
+    });
+
+    return {
+      ...globalDashboardData,
+      totalRevenue,
+      completedOrdersCount,
+      avgTicket,
+      deliverySuccessRate,
+      totalCommission,
+      netProfit: totalRevenue - totalCommission,
+      dailyRevenue: dailyRev
+    };
+  }, [isMerchantPreview, selectedMerchantPreview, dashboardOrders, globalDashboardData, appSettings.appCommission]);
+
+  // Filtrar ordens da tabela
+  const displayOrders = React.useMemo(() => {
+    if (isMerchantPreview && selectedMerchantPreview) {
+      return allOrders.filter(o => o.merchant_id === selectedMerchantPreview.id);
+    }
+    return allOrders;
+  }, [allOrders, isMerchantPreview, selectedMerchantPreview]);
 
   return (
     <div className="space-y-8 pb-20">
@@ -17,11 +69,11 @@ export default function FinancialTab() {
       <div className="flex flex-wrap justify-between items-end gap-6">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
-            {userRole === 'merchant' ? 'Meu Financeiro' : 'Relatórios de Faturamento'}
+            {(userRole === 'merchant' || isMerchantPreview) ? 'Financeiro da Loja' : 'Relatórios de Faturamento'}
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-base">
-            {userRole === 'merchant' 
-              ? `Acompanhe seus ganhos e repasses da loja ${merchantProfile?.store_name}.` 
+            {(userRole === 'merchant' || isMerchantPreview)
+              ? `Acompanhe ganhos e repasses do estabelecimento ${activeMerchant?.store_name}.` 
               : 'Acompanhe a saúde financeira e o desempenho de vendas da plataforma.'}
           </p>
         </div>
@@ -42,7 +94,7 @@ export default function FinancialTab() {
         {[
           { 
             label: 'Vendas Totais (Bruto)', 
-            val: `R$ ${(dashboardData.totalRevenue || 0).toFixed(2).replace('.', ',')}`, 
+            val: `R$ ${(effectiveDashboardData.totalRevenue || 0).toFixed(2).replace('.', ',')}`, 
             trend: 'Total histórico', 
             icon: 'payments', 
             color: 'bg-primary/10 text-primary', 
@@ -50,23 +102,23 @@ export default function FinancialTab() {
           },
           { 
             label: 'Pedidos Concluídos', 
-            val: dashboardData.completedOrdersCount || 0, 
-            trend: `${dashboardData.deliverySuccessRate.toFixed(1)}% de sucesso`, 
+            val: effectiveDashboardData.completedOrdersCount || 0, 
+            trend: `${(effectiveDashboardData.deliverySuccessRate || 0).toFixed(1)}% de sucesso`, 
             icon: 'check_circle', 
             color: 'bg-emerald-50 text-emerald-500', 
             trendCol: 'text-emerald-500' 
           },
           { 
-            label: userRole === 'merchant' ? 'Taxas IZI' : 'Comissões Totais', 
-            val: `R$ ${(dashboardData.totalCommission || 0).toFixed(2).replace('.', ',')}`, 
-            trend: userRole === 'merchant' ? 'Comissão da plataforma' : 'Receita da IZI', 
+            label: userRole === 'merchant' || isMerchantPreview ? 'Taxas IZI' : 'Comissões Totais', 
+            val: `R$ ${(effectiveDashboardData.totalCommission || 0).toFixed(2).replace('.', ',')}`, 
+            trend: userRole === 'merchant' || isMerchantPreview ? 'Comissão da plataforma' : 'Receita da IZI', 
             icon: 'percent', 
             color: 'bg-red-50 text-red-500', 
             trendCol: 'text-red-500' 
           },
           { 
-            label: userRole === 'merchant' ? 'Líquido a Receber' : 'Lucro Líquido', 
-            val: `R$ ${(dashboardData.netProfit || 0).toFixed(2).replace('.', ',')}`, 
+            label: userRole === 'merchant' || isMerchantPreview ? 'Líquido a Receber' : 'Lucro Líquido', 
+            val: `R$ ${(effectiveDashboardData.netProfit || 0).toFixed(2).replace('.', ',')}`, 
             trend: 'Saldo disponível', 
             icon: 'account_balance_wallet', 
             color: 'bg-blue-50 text-blue-500', 
@@ -91,10 +143,37 @@ export default function FinancialTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Economy Management Card - Replacing Divisão de Taxas */}
         <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-5">
+           <div className="absolute top-0 right-0 p-8 opacity-5">
             <span className="material-symbols-outlined text-8xl">account_balance</span>
           </div>
-          <MasterFinancialControl />
+          {(!isMerchantPreview && userRole === 'admin') ? (
+            <MasterFinancialControl />
+          ) : (
+            <div className="space-y-6 relative z-10">
+               <div className="flex flex-col gap-1">
+                 <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Perfil do Estabelecimento</p>
+                 <h4 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{activeMerchant?.store_name || 'Loja Parceira'}</h4>
+               </div>
+               
+               <div className="grid grid-cols-1 gap-4">
+                  <div className="p-5 rounded-[24px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 group-hover:border-primary/20 transition-all">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Taxa de Comissão</p>
+                    <div className="flex items-end gap-2">
+                      <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{(activeMerchant?.commission_percent ?? appSettings.appCommission ?? 12)}%</span>
+                      <span className="text-[10px] font-bold text-slate-400 mb-1.5 whitespace-nowrap">por pedido concluído</span>
+                    </div>
+                  </div>
+                  
+                  <div className="p-5 rounded-[24px] bg-emerald-500/5 border border-emerald-500/10 transition-all">
+                    <p className="text-[10px] font-black text-emerald-500/60 uppercase tracking-widest mb-2">Status do Repasse</p>
+                     <div className="flex items-center gap-2">
+                        <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tight">Fluxo Ativo</span>
+                     </div>
+                  </div>
+               </div>
+            </div>
+          )}
         </div>
 
         {/* Revenue Trend Chart */}
@@ -113,8 +192,8 @@ export default function FinancialTab() {
           </div>
 
           <div className="h-64 flex items-end justify-between gap-1 px-4">
-            {(dashboardData.dailyRevenue || []).map((val: number, i: number) => {
-              const maxVal = Math.max(...(dashboardData.dailyRevenue || [1]), 1);
+            {(effectiveDashboardData.dailyRevenue || []).map((val: number, i: number) => {
+              const maxVal = Math.max(...(effectiveDashboardData.dailyRevenue || [1]), 1);
               const h = (val / maxVal) * 100;
               return (
                 <div key={i} className="flex-1 bg-slate-50 dark:bg-slate-800/50 rounded-t-lg relative group cursor-pointer">
@@ -140,11 +219,11 @@ export default function FinancialTab() {
       {/* Withdrawal Requests Logic */}
       <WithdrawalRequestsSection />
 
-      {/* Loans Management Section */}
-      {userRole === 'admin' && <ManageLoansSection />}
+      {/* Loans Management Section - Mostrar apenas no modo GLOBAL Admin */}
+      {userRole === 'admin' && !isMerchantPreview && <ManageLoansSection />}
 
-      {/* Pre-Approved Limits Section */}
-      {userRole === 'admin' && <PreApprovedLimitsSection />}
+      {/* Pre-Approved Limits Section - Mostrar apenas no modo GLOBAL Admin */}
+      {userRole === 'admin' && !isMerchantPreview && <PreApprovedLimitsSection />}
 
       {/* Transactions Table */}
       <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
@@ -154,7 +233,7 @@ export default function FinancialTab() {
             Histórico de Pedidos
           </h4>
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            {allOrders.length} pedidos encontrados
+            {displayOrders.length} pedidos encontrados
           </span>
         </div>
         <div className="overflow-x-auto">
@@ -171,11 +250,13 @@ export default function FinancialTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-              {allOrders.slice(0, 10).map((tr) => {
-                const commRate = merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12;
+              {displayOrders.slice(0, 50).map((tr) => {
+                const isPlatformOrder = !tr.merchant_id || tr.service_type === 'coin_purchase' || tr.service_type === 'subscription';
+                const commRate = isPlatformOrder ? 0 : (activeMerchant?.commission_percent ?? appSettings.appCommission ?? 12);
                 const commiss = (tr.total_price || 0) * (commRate / 100);
                 const net = (tr.total_price || 0) - commiss;
                 
+                const clientName = tr.user_name || (tr.user ? tr.user.name : 'Consumidor');
                 return (
                   <tr key={tr.id} className="hover:bg-primary/5 transition-colors group">
                     <td className="px-8 py-6 text-xs font-bold text-slate-500 dark:text-slate-400">
@@ -185,10 +266,15 @@ export default function FinancialTab() {
                       #{tr.id.slice(0, 5)}
                     </td>
                     <td className="px-8 py-6 text-sm font-bold text-slate-700 dark:text-slate-300 capitalize">
-                      {tr.user_name || 'Consumidor'}
+                      <p className="line-clamp-1">{clientName || 'Cliente IZI'}</p>
+                      <span className="text-[9px] font-black text-slate-400 block uppercase tracking-tighter">
+                        {tr.service_type === 'coin_purchase' ? '🛒 App' : tr.service_type || 'Pedido'}
+                      </span>
                     </td>
                     <td className="px-8 py-6 text-sm font-black text-slate-900 dark:text-white">R$ {tr.total_price?.toFixed(2).replace('.', ',')}</td>
-                    <td className="px-8 py-6 text-sm font-bold text-red-500/80">- R$ {commiss.toFixed(2).replace('.', ',')}</td>
+                    <td className="px-8 py-6 text-sm font-bold text-red-500/80">
+                      {commiss > 0 ? `- R$ ${commiss.toFixed(2).replace('.', ',')}` : <span className="opacity-30">N/A</span>}
+                    </td>
                     <td className="px-8 py-6 text-sm font-black text-emerald-500">R$ {net.toFixed(2).replace('.', ',')}</td>
                     <td className="px-8 py-6 text-right">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${

@@ -350,11 +350,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const handleLogout = useCallback(async () => {
     await logout();
-    setMerchantProfile(null);
-    setActiveTab('dashboard');
-    localStorage.removeItem('izi_admin_active_tab');
-    localStorage.removeItem('izi_admin_role');
-    localStorage.removeItem('izi_admin_profile');
+     setMerchantProfile(null);
+     setDashboardOrders([]);
+     setActiveTab('dashboard');
+     localStorage.removeItem('izi_admin_active_tab');
+     localStorage.removeItem('izi_admin_role');
+     localStorage.removeItem('izi_admin_profile');
   }, [logout]);
 
   const fetchUserRole = useCallback(async (userEmail: string) => {
@@ -472,7 +473,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const { data: userData } = await supabase.from('users_delivery').select('id').eq('is_deleted', false);
       const { data: driverData } = await supabase.from('drivers_delivery').select('id').eq('is_deleted', false);
-      const { data: orderData } = await supabase.from('orders_delivery').select('total_price, status, merchant_id, created_at, service_type');
+      let orderQuery = supabase
+        .from('orders_delivery')
+        .select('total_price, status, merchant_id, created_at, service_type');
+      
+      // FILTRAGEM DE SEGURANÇA: Se não for ADMIN mestre, forçamos a filtragem por merchant_id no BANCO
+      if (userRole === 'merchant' && merchantProfile?.id) {
+        orderQuery = orderQuery.eq('merchant_id', merchantProfile.id);
+      }
+
+      const { data: orderData } = await orderQuery;
       const { data: onlineData } = await supabase.from('drivers_delivery').select('id, is_online, last_seen_at').eq('is_online', true).eq('is_deleted', false);
       const onlineDriversCount = countOnlineDrivers((onlineData || []) as Driver[]);
 
@@ -497,7 +507,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setDashboardOrders(filtered);
       }
 
-      const totalRevenue = completedOrders.reduce((acc: number, curr: any) => acc + (curr.total_price || 0), 0);
+      // Se for lojista, as estatísticas de faturamento devem respeitar apenas os seus pedidos
+      const relevantCompleted = userRole === 'merchant' && merchantProfile?.id 
+        ? completedOrders.filter(o => o.merchant_id === merchantProfile.id)
+        : completedOrders;
+
+      const totalRevenue = relevantCompleted.reduce((acc: number, curr: any) => acc + (curr.total_price || 0), 0);
       const cancelationImpact = canceledOrders.reduce((acc: number, curr: any) => acc + (curr.total_price || 0), 0);
       const totalCouponsValue = coupons.reduce((acc: number, curr: any) => acc + (curr.discount_value || 0), 0);
       const activeOffers = promoData?.filter((p: any) => p.is_active).length || 0;
@@ -614,10 +629,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (count !== null) setMerchantOrdersTotalCount(count);
         setMerchantOrdersPage(targetPage);
       } else {
-        const { data, error, count } = await supabase
+        let query = supabase
           .from('orders_delivery')
           .select('*, user:users_delivery(*)', { count: 'exact' })
-          .neq('service_type', 'subscription')
+          .neq('service_type', 'subscription');
+        
+        // Segregação de Dados: Lojistas só buscam seus próprios pedidos
+        if (userRole === 'merchant' && merchantProfile?.id) {
+          query = query.eq('merchant_id', merchantProfile.id);
+        }
+
+        const { data, error, count } = await query
           .order('created_at', { ascending: false })
           .range(from, to);
 
@@ -2038,7 +2060,19 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const dashboardData = useMemo(() => {
-    if (!dashboardOrders || dashboardOrders.length === 0) {
+    let orders = [...dashboardOrders];
+    
+    // Filtro de segurança absoluto: se for merchant, GARANTIR que só vê suas ordens
+    if (userRole === 'merchant' && merchantProfile?.id) {
+      orders = orders.filter(o => o.merchant_id === merchantProfile.id);
+    } else if (userRole === 'admin') {
+      // Admin vê tudo, mas talvez queiramos separar faturamento de sistema vs lojistas depois
+    } else {
+      // Se não tem role definida ou profile de merchant faltando enquanto deveria ter, retorna vazio por segurança
+      if (userRole === 'merchant') orders = [];
+    }
+
+    if (!orders || orders.length === 0) {
       return {
         totalRevenue: 0,
         totalOrders: 0,
@@ -2052,25 +2086,35 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         dayLabels: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
         totalOrdersToday: 0,
         categories: [],
+        topProducts: [],
         topMerchants: []
       };
     }
 
-    const completed = dashboardOrders.filter(o => o.status === 'concluido');
-    const totalRevenue = completed.reduce((acc, curr) => acc + (curr.total_price || 0), 0);
-    const totalOrders = dashboardOrders.length;
+    const completed = orders.filter(o => o.status === 'concluido' || o.status === 'delivered');
+    const totalRevenue = completed.reduce((acc, curr) => acc + (Number(curr.total_price) || 0), 0);
+    const totalOrders = orders.length;
     const completedOrdersCount = completed.length;
     const avgTicket = completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0;
     const deliverySuccessRate = totalOrders > 0 ? (completedOrdersCount / totalOrders) * 100 : 0;
 
     let netProfit = 0;
     let totalCommission = 0;
+    const merchantMap: Record<string, any> = {};
 
     const dailyRev = [0, 0, 0, 0, 0, 0, 0];
     const today = new Date();
 
     completed.forEach(order => {
       const m = merchantsList.find(ml => ml.id === order.merchant_id);
+      const merchantName = m?.store_name || order.merchant_id || 'Plataforma';
+      
+      if (!merchantMap[merchantName]) {
+        merchantMap[merchantName] = { label: merchantName, orders: 0, revenue: 0, id: order.merchant_id };
+      }
+      merchantMap[merchantName].orders++;
+      merchantMap[merchantName].revenue += (Number(order.total_price) || 0);
+
       const commissionRate = m?.commission_percent ?? appSettings.appCommission ?? 12;
       const commission = (order.total_price || 0) * (commissionRate / 100);
       
@@ -2098,17 +2142,38 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }).length;
 
     const categoryMap: Record<string, { label: string, val: number, revenue: number }> = {};
+    const productMap: Record<string, { label: string, sales: number, revenue: number }> = {};
+
     completed.forEach(o => {
+      // Agregação por categoria de serviço
       const cat = o.service_type || 'Geral';
       if (!categoryMap[cat]) categoryMap[cat] = { label: cat, val: 0, revenue: 0 };
       categoryMap[cat].val++;
       categoryMap[cat].revenue += (o.total_price || 0);
+
+      // Agregação por itens do pedido (se disponíveis)
+      if (o.items && Array.isArray(o.items)) {
+        o.items.forEach((item: any) => {
+          const itemName = item.name || 'Produto IZI';
+          if (!productMap[itemName]) productMap[itemName] = { label: itemName, sales: 0, revenue: 0 };
+          productMap[itemName].sales += (item.quantity || 1);
+          productMap[itemName].revenue += (item.price || 0) * (item.quantity || 1);
+        });
+      }
     });
 
     const categories = Object.values(categoryMap).map(c => ({
       ...c,
       percent: totalRevenue > 0 ? (c.revenue / totalRevenue) * 100 : 0
     })).sort((a, b) => b.revenue - a.revenue);
+
+    const topProducts = Object.values(productMap)
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 5);
+
+    const topMerchants = Object.values(merchantMap)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
 
     return {
       totalRevenue,
@@ -2123,11 +2188,10 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       dayLabels: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
       totalOrdersToday,
       categories,
-      topMerchants: []
+      topProducts,
+      topMerchants
     };
-  }, [dashboardOrders, merchantsList, appSettings, userRole]);
-
-
+  }, [dashboardOrders, merchantsList, appSettings, userRole, merchantProfile?.id]);
 
   const value: AdminContextType = {
     session,
