@@ -193,6 +193,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
   const [selectedMethod, setSelectedMethod] = useState<'pix' | 'card' | null>(null);
   const [pixData, setPixData] = useState<any>(null);
   const [isGeneratingPix, setIsGeneratingPix] = useState(false);
+  const [preApprovedLimit, setPreApprovedLimit] = useState(1000); // Default fallback
 
   // Estados de Animação Real-time
   const [showAnimation, setShowAnimation] = useState(false);
@@ -231,6 +232,36 @@ export const WalletView: React.FC<WalletViewProps> = ({
   useEffect(() => {
     lastCoinValue.current = iziCoins;
   }, [iziCoins]);
+
+  // Buscar Limite Pré-Aprovado
+  useEffect(() => {
+    if (!userId) return;
+    const fetchLimit = async () => {
+      try {
+        // 1. Busca limite individual
+        const { data: userData } = await supabase
+          .from("users_delivery")
+          .select("pre_approved_limit")
+          .eq("id", userId)
+          .single();
+        
+        // 2. Busca limite global das configurações
+        const { data: globalData } = await supabase
+          .from("admin_settings_delivery")
+          .select("global_pre_approved_limit")
+          .single();
+
+        const userLimit = Number(userData?.pre_approved_limit || 0);
+        const globalLimit = Number(globalData?.global_pre_approved_limit || 0);
+
+        // Prioridade: Limite Individual (se definido e > 0), senão usa o Global
+        setPreApprovedLimit(userLimit > 0 ? userLimit : globalLimit);
+      } catch (err) {
+        console.error("Erro ao carregar limites:", err);
+      }
+    };
+    fetchLimit();
+  }, [userId, walletMode]);
 
   const walletBalance = walletTransactions.reduce(
     (acc: number, t: any) =>
@@ -272,6 +303,10 @@ export const WalletView: React.FC<WalletViewProps> = ({
   const handleTakeLoan = async () => {
     const amountVal = Number(loanAmount);
     if (!amountVal || amountVal <= 0) return showToast?.("Valor inválido", "error");
+    
+    if (amountVal > preApprovedLimit) {
+      return showToast?.(`O valor máximo permitido para você é Z ${preApprovedLimit.toLocaleString('pt-BR')}`, "warning");
+    }
     
     setIsTakingLoan(true);
     try {
@@ -683,8 +718,8 @@ export const WalletView: React.FC<WalletViewProps> = ({
         <section className="space-y-6">
           <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-[32px] text-black shadow-xl relative overflow-hidden">
             <div className="relative z-10">
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Limite Inicial Pré-Aprovado</p>
-              <h2 className="text-4xl font-black italic mt-1">Z 1.000,00</h2>
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Seu Limite Pré-Aprovado</p>
+              <h2 className="text-4xl font-black italic mt-1">Z {preApprovedLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
               <div className="mt-6 flex items-center gap-2">
                  <span className="material-symbols-outlined text-sm">info</span>
                  <p className="text-[9px] font-bold uppercase tracking-tight">Taxa de 10% / mês • Liberação na hora</p>

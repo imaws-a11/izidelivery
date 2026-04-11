@@ -204,6 +204,9 @@ export default function FinancialTab() {
       {/* Loans Management Section */}
       {userRole === 'admin' && <ManageLoansSection />}
 
+      {/* Pre-Approved Limits Section */}
+      {userRole === 'admin' && <PreApprovedLimitsSection />}
+
       {/* Transactions Table */}
       <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/20">
@@ -817,3 +820,160 @@ function LoanDetailModal({ loan, onClose, onUpdate }: { loan: any, onClose: () =
     </div>
   );
 }
+function PreApprovedLimitsSection() {
+  const [search, setSearch] = React.useState('');
+  const [foundUsers, setFoundUsers] = React.useState<any[]>([]);
+  const [globalLimit, setGlobalLimit] = React.useState(0);
+  const [loading, setLoading] = React.useState(false);
+  const [savingId, setSavingId] = React.useState<string | null>(null);
+
+  const fetchGlobalLimit = async () => {
+    const { data } = await supabase.from('admin_settings_delivery').select('global_pre_approved_limit').single();
+    if (data) setGlobalLimit(data.global_pre_approved_limit || 0);
+  };
+
+  const handleUpdateGlobal = async (val: number) => {
+    setGlobalLimit(val);
+    const { error } = await supabase.from('admin_settings_delivery').update({ global_pre_approved_limit: val }).eq('id', '00000000-0000-0000-0000-000000000000');
+    if (!error) toastSuccess('Limite global atualizado!');
+  };
+
+  const searchUsers = async (query: string) => {
+    if (query.length < 2) {
+      setFoundUsers([]);
+      return;
+    }
+    setLoading(true);
+    const { data } = await supabase
+      .from('users_delivery')
+      .select('id, name, email, phone, pre_approved_limit, avatar_url')
+      .or(`name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`)
+      .limit(3);
+    setFoundUsers(data || []);
+    setLoading(false);
+  };
+
+  const updateIndividualLimit = async (userId: string, newLimit: number) => {
+    setSavingId(userId);
+    const { error } = await supabase.from('users_delivery').update({ pre_approved_limit: newLimit }).eq('id', userId);
+    if (!error) {
+      toastSuccess('Limite individual atualizado!');
+      setFoundUsers(prev => prev.map(u => u.id === userId ? { ...u, pre_approved_limit: newLimit } : u));
+    }
+    setSavingId(null);
+  };
+
+  React.useEffect(() => { fetchGlobalLimit(); }, []);
+
+  return (
+    <div className="space-y-6 mb-12">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* GLOBAL LIMIT CONFIG */}
+        <div className="lg:col-span-1 bg-white dark:bg-slate-900 rounded-[40px] p-8 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 size-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10" />
+          <div className="relative z-10 flex flex-col h-full justify-between">
+            <div>
+              <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6">
+                <span className="material-symbols-outlined font-fill">public</span>
+              </div>
+              <h4 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Limite Base</h4>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Válido para todos os novos usuários</p>
+            </div>
+            
+            <div className="mt-10">
+              <div className="flex items-baseline gap-2 mb-4">
+                <span className="text-sm font-black text-primary">Z</span>
+                <input 
+                  type="number"
+                  value={globalLimit}
+                  onChange={(e) => setGlobalLimit(parseFloat(e.target.value) || 0)}
+                  onBlur={(e) => handleUpdateGlobal(parseFloat(e.target.value) || 0)}
+                  className="bg-transparent text-4xl font-black text-slate-900 dark:text-white outline-none w-full border-b-2 border-slate-100 dark:border-slate-800 focus:border-primary transition-all pb-2 tabular-nums"
+                />
+              </div>
+              <p className="text-[9px] text-slate-500 font-bold italic tracking-tight">Alteração reflete instantaneamente para clientes sem limite customizado</p>
+            </div>
+          </div>
+        </div>
+
+        {/* INDIVIDUAL SEARCH & MANAGE */}
+        <div className="lg:col-span-2 bg-gradient-to-br from-slate-900 to-slate-950 rounded-[40px] p-8 border border-white/5 shadow-2xl relative overflow-hidden">
+          <div className="relative z-10 space-y-8">
+            <header className="flex justify-between items-center">
+              <div>
+                <h4 className="text-xl font-black text-white uppercase tracking-tight">Gestão Individual</h4>
+                <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mt-1">Busque um cliente para atribuir teto VIP</p>
+              </div>
+              {loading && <div className="size-5 border-2 border-primary border-t-transparent animate-spin rounded-full" />}
+            </header>
+
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-white/20 text-2xl">search</span>
+              <input 
+                type="text"
+                placeholder="Nome, e-mail ou telefone do cliente..."
+                value={search}
+                onChange={(e) => { 
+                  setSearch(e.target.value);
+                  searchUsers(e.target.value);
+                }}
+                className="w-full h-16 pl-16 pr-6 bg-white/5 border border-white/10 rounded-2xl text-white font-black text-lg outline-none focus:bg-white/10 focus:border-primary/50 transition-all placeholder:text-white/10"
+              />
+            </div>
+
+            <div className="space-y-3">
+              {foundUsers.map(user => (
+                <div key={user.id} className="bg-white/5 border border-white/5 p-4 rounded-3xl flex items-center justify-between group hover:bg-white/10 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="size-14 rounded-2xl bg-slate-800 flex items-center justify-center overflow-hidden">
+                       {user.avatar_url ? <img src={user.avatar_url} className="size-full object-cover" /> : <span className="material-symbols-outlined text-white/20">person</span>}
+                    </div>
+                    <div>
+                      <h5 className="text-sm font-black text-white uppercase">{user.name || 'Sem Nome'}</h5>
+                      <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">{user.email}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-6">
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold text-white/20 uppercase mb-1">Limite Atual</p>
+                      <div className="flex items-center gap-3">
+                        <span className="text-primary font-black text-lg">Z</span>
+                        <input 
+                          type="number"
+                          defaultValue={user.pre_approved_limit || 0}
+                          onBlur={(e) => updateIndividualLimit(user.id, parseFloat(e.target.value) || 0)}
+                          className="w-24 bg-slate-800/50 border border-white/5 rounded-xl px-3 py-2 text-white font-black text-center outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                       <button 
+                        onClick={() => updateIndividualLimit(user.id, (user.pre_approved_limit || 0) + 500)}
+                        className="size-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all scale-90"
+                       >
+                         <span className="material-symbols-outlined text-sm">add</span>
+                       </button>
+                       <button 
+                        onClick={() => updateIndividualLimit(user.id, Math.max(0, (user.pre_approved_limit || 0) - 500))}
+                        className="size-8 rounded-lg bg-white/5 text-white/40 flex items-center justify-center hover:bg-white/10 hover:text-white transition-all scale-90"
+                       >
+                         <span className="material-symbols-outlined text-sm">remove</span>
+                       </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {search.length >= 2 && foundUsers.length === 0 && !loading && (
+                <p className="text-center py-6 text-[10px] font-bold text-white/10 uppercase tracking-[0.3em]">Nenhum usuário encontrado</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
