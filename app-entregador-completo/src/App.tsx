@@ -110,192 +110,91 @@ interface Order {
     items?: any[];
     notes?: string;
 }
-function IziRealTimeMap({ driverCoords, destCoords, destAddress }: any) {
-  const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: GOOGLE_MAPS_ID,
-    googleMapsApiKey: mapsKey,
-    libraries: GOOGLE_MAPS_LIBRARIES,
-    language: 'pt-BR',
-    region: 'BR',
-  });
+const isValidCoord = (c: any) => c && typeof c.lat === 'number' && Math.abs(c.lat) > 0.01;
 
-  const [routeData, setRouteData] = useState<{
-    polyline: string;
-    distance: string;
-    duration: string;
-  } | null>(null);
-  const [isNavMode, setIsNavMode] = useState(true);
+function IziRealTimeMap({ driverCoords, pickupCoords, pickupAddress, pickupName, deliveryCoords, deliveryAddress, deliveryName, currentStatus }: any) {
+  const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const { isLoaded, loadError } = useJsApiLoader({ id: GOOGLE_MAPS_ID, googleMapsApiKey: mapsKey, libraries: GOOGLE_MAPS_LIBRARIES, language: 'pt-BR', region: 'BR' });
+  const [routeData, setRouteData] = useState<any>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [isNavMode, setIsNavMode] = useState(true);
   const lastDestRef = useRef<string>('');
 
-  // Validar coordenadas
-  const isValidCoord = (c: any): c is { lat: number; lng: number } =>
-    c && typeof c.lat === 'number' && typeof c.lng === 'number' && isFinite(c.lat) && isFinite(c.lng);
+  const isDeliveryPhase = ['picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega', 'no_local', 'completed'].includes(currentStatus || '');
+  const targetC = isDeliveryPhase ? deliveryCoords : pickupCoords;
+  const targetAddress = isDeliveryPhase ? deliveryAddress : pickupAddress;
+  const targetName = isDeliveryPhase ? deliveryName : pickupName;
 
-  const validDriverCoords = isValidCoord(driverCoords) ? driverCoords : null;
-  const validDestCoords = isValidCoord(destCoords) ? destCoords : null;
-  const resolvedDest = validDestCoords ? validDestCoords : (destAddress || null);
+  // Usar exclusivamente o endereço textual para evitar que nomes de lojas similares em outros estados confundam o Google
+  const fullAddressSearch = targetAddress;
+  const resolvedTarget = (targetC && isValidCoord(targetC)) ? targetC : (fullAddressSearch || null);
 
-  // Calcular rota: imediato na 1a vez e ao mudar destino, depois a cada 30s
+  const vDriver = isValidCoord(driverCoords) ? driverCoords : null;
+
   useEffect(() => {
-    if (!isLoaded || !validDriverCoords || !resolvedDest) return;
-    
-    const calcRoute = async () => {
-      if (!isLoaded || !validDriverCoords || !resolvedDest) return;
+    if (!isLoaded || !vDriver || !resolvedTarget) return;
+    console.log('[MAP-TRACE] Alvo:', resolvedTarget, 'Fase:', isDeliveryPhase ? 'Entrega' : 'Coleta');
+    const calc = async () => {
       try {
-        const origin = { location: { latLng: { latitude: validDriverCoords.lat, longitude: validDriverCoords.lng } } };
-        const destin = typeof resolvedDest === 'string' 
-          ? { address: resolvedDest }
-          : { location: { latLng: { latitude: resolvedDest.lat, longitude: resolvedDest.lng } } };
-
+        const origin = { location: { latLng: { latitude: vDriver.lat, longitude: vDriver.lng } } };
+        const destin = typeof resolvedTarget === 'string' ? { address: resolvedTarget } : { location: { latLng: { latitude: resolvedTarget.lat, longitude: resolvedTarget.lng } } };
         const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
           method: 'POST',
-          headers: {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": mapsKey,
-            "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline",
-          },
-          body: JSON.stringify({
-            origin,
-            destination: destin,
-            travelMode: 'DRIVE',
-            routingPreference: 'TRAFFIC_AWARE',
-            computeAlternativeRoutes: false,
-            routeModifiers: { avoidTolls: false, avoidHighways: false, avoidFerries: false },
-            languageCode: 'pt-BR',
-            units: 'METRIC'
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": mapsKey, "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline,routes.legs" },
+          body: JSON.stringify({ 
+            origin, 
+            destination: destin, 
+            travelMode: 'DRIVE', 
+            routingPreference: 'TRAFFIC_AWARE', 
+            languageCode: 'pt-BR', 
+            units: 'METRIC' 
           })
         });
-
-        if (res.status === 403) {
-           console.error('⚠️ ERRO DE PERMISSÃO GOOGLE MAPS (403): Verifique se a "Routes API" está ATIVADA no Google Cloud Console e se o seu domínio está permitido.');
-           return;
-        }
-
         const data = await res.json();
-        if (data.routes && data.routes[0]) {
-          const route = data.routes[0];
+        if (data.routes?.[0]) {
+          const r = data.routes[0];
           setRouteData({
-            polyline: route.polyline.encodedPolyline,
-            distance: (route.distanceMeters / 1000).toFixed(1) + ' km',
-            duration: Math.ceil(parseInt(route.duration) / 60) + ' min'
+            poly: r.polyline.encodedPolyline,
+            dist: (r.distanceMeters / 1000).toFixed(1) + ' km',
+            dur: Math.ceil(parseInt(r.duration) / 60) + ' min',
+            target: r.legs?.[0]?.endLocation?.latLng ? { lat: r.legs[0].endLocation.latLng.latitude, lng: r.legs[0].endLocation.latLng.longitude } : null
           });
         }
-      } catch (e) {
-        console.error('ERRO ROUTES API:', e);
-      }
+      } catch (e) { console.error('MAP_ERR:', e); }
     };
+    const key = typeof resolvedTarget === 'string' ? resolvedTarget : `${resolvedTarget.lat},${resolvedTarget.lng}`;
+    if (key !== lastDestRef.current) { lastDestRef.current = key; calc(); }
+    const inv = setInterval(calc, 30000);
+    return () => clearInterval(inv);
+  }, [isLoaded, vDriver, resolvedTarget]);
 
-    const destKey = typeof resolvedDest === 'string' ? resolvedDest : `${resolvedDest.lat},${resolvedDest.lng}`;
-    if (destKey !== lastDestRef.current) {
-      lastDestRef.current = destKey;
-      calcRoute();
-    }
+  useEffect(() => { if (map && isNavMode && vDriver) map.panTo(vDriver); }, [map, isNavMode, vDriver]);
 
-    const interval = setInterval(calcRoute, 30000);
-    return () => clearInterval(interval);
-  }, [isLoaded, validDriverCoords, resolvedDest]);
-
-  // Centralização suave
-  useEffect(() => {
-    if (map && isNavMode && validDriverCoords) {
-      map.panTo(validDriverCoords);
-    }
-  }, [map, isNavMode, validDriverCoords]);
-
-  if (loadError) return (
-    <div className="absolute inset-0 bg-red-950 flex flex-col items-center justify-center p-8 text-center z-50">
-        <Icon name="satellite_alt" className="text-6xl text-red-500 mb-6 animate-bounce" />
-        <h1 className="text-2xl font-black text-white uppercase mb-2">Erro de Mapa</h1>
-        <p className="text-white/60 text-xs max-w-xs">{loadError.message || 'Falha ao conectar com Google Maps. Chave inválida ou limite atingido.'}</p>
-        <button onClick={() => window.location.reload()} className="mt-8 px-6 py-3 bg-white/10 rounded-2xl text-[10px] uppercase font-black tracking-widest text-white/40">Tentar Novamente</button>
-    </div>
-  );
-
-  if (!isLoaded || !validDriverCoords) return (
-    <div className="absolute inset-0 bg-slate-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4 animate-pulse">
-            <Icon name="radar" className="text-primary text-4xl" />
-            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em]">Calibrando Sinal GPS...</p>
-        </div>
-    </div>
-  );
+  if (loadError) return <div className="absolute inset-0 bg-slate-950 flex items-center justify-center text-white p-8 text-center">Erro no Mapa</div>;
+  if (!isLoaded || !vDriver) return <div className="absolute inset-0 bg-slate-950 flex items-center justify-center text-white/20 text-[10px] font-black uppercase tracking-widest">GPS...</div>;
 
   return (
     <div className="absolute inset-0 z-0">
-      <GoogleMap
-        mapContainerStyle={mapContainerStyle}
-        onLoad={setMap}
-        center={validDriverCoords}
-        zoom={16}
-        options={mapOptions}
-      >
-        {/* Marcador de Pulso do Usuário (Waze Style) */}
-        <OverlayView
-            position={validDriverCoords}
-            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-        >
-            <div className="marker-user-pulse" />
-        </OverlayView>
-
-        {validDestCoords && (
-          <Marker 
-            position={validDestCoords}
-            options={{
-              icon: {
-                url: 'https://cdn-icons-png.flaticon.com/512/9131/9131546.png', // Pin de Destino Premium
-                scaledSize: new window.google.maps.Size(42, 42),
-                anchor: new window.google.maps.Point(21, 42)
-              }
-            }}
-            zIndex={500}
-          />
+      <GoogleMap mapContainerStyle={mapContainerStyle} onLoad={setMap} center={vDriver} zoom={16} options={mapOptions}>
+        <OverlayView position={vDriver} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}><div className="marker-user-pulse" /></OverlayView>
+        
+        {/* Marcador de COLETA (Lojista) */}
+        {(pickupCoords || (!isDeliveryPhase && routeData?.target)) && (
+          <Marker position={(!isDeliveryPhase && routeData?.target) || pickupCoords} options={{ icon: { url: 'https://cdn-icons-png.flaticon.com/512/606/606363.png', scaledSize: new window.google.maps.Size(32, 32), anchor: new window.google.maps.Point(16, 32) }, label: { text: "COLETA", color: "#FFF", fontSize: "10px", fontWeight: "bold" } }} />
         )}
 
-        {routeData?.polyline && isLoaded && (
-          <Polyline 
-            path={google.maps.geometry.encoding.decodePath(routeData.polyline)}
-            options={{
-              strokeColor: "#ffd700",
-              strokeWeight: 6,
-              strokeOpacity: 0.8,
-              zIndex: 100
-            }}
-          />
+        {/* Marcador de ENTREGA (Cliente) */}
+        {(deliveryCoords || (isDeliveryPhase && routeData?.target)) && (
+          <Marker position={(isDeliveryPhase && routeData?.target) || deliveryCoords} options={{ icon: { url: 'https://cdn-icons-png.flaticon.com/512/9131/9131546.png', scaledSize: new window.google.maps.Size(32, 32), anchor: new window.google.maps.Point(16, 32) }, label: { text: "ENTREGA", color: "#FFF", fontSize: "10px", fontWeight: "bold" } }} />
         )}
+
+        {routeData?.poly && <Polyline path={window.google.maps.geometry.encoding.decodePath(routeData.poly)} options={{ strokeColor: '#ffca28', strokeOpacity: 0.8, strokeWeight: 6 }} />}
       </GoogleMap>
-
-      <div className="absolute bottom-6 right-6 z-50 flex flex-col gap-3">
-        <button 
-                onClick={() => setIsNavMode(!isNavMode)}
-                className={`size-14 rounded-2xl flex items-center justify-center border shadow-2xl transition-all active:scale-90 ${isNavMode ? 'bg-primary text-slate-950 border-white/20' : 'bg-slate-900/80 text-white border-white/10 backdrop-blur-md'}`}
-                title={isNavMode ? 'Mudar para Mapa Livre' : 'Voltar para Navegação'}
-            >
-                <span className="material-symbols-outlined text-2xl">
-                {isNavMode ? 'explore' : 'near_me'}
-                </span>
-        </button>
-      </div>
 
       {routeData && (
         <div className="absolute top-6 left-6 z-[60] bg-slate-900/90 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-left-4">
-          <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
-            <Icon name="navigation" size={20} />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Tempo Estimado</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-xl font-black text-white tracking-tight">{routeData.duration.replace('s', ' min')}</span>
-              <span className="text-[10px] font-black text-primary">{routeData.distance}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!isNavMode && (
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-slate-900/80 backdrop-blur-md rounded-xl border border-white/10 text-[8px] font-black text-white uppercase tracking-[0.2em] shadow-2xl animate-in fade-in slide-in-from-bottom-4">
-          Modo Mapa Livre Ativo
+          <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary"><Icon name="navigation" size={20} /></div>
+          <div className="flex flex-col"><p className="text-[10px] font-black text-white/40 uppercase tracking-widest">{isDeliveryPhase ? 'Destino Cliente' : 'Coleta Lojista'}</p><div className="flex items-baseline gap-2"><span className="text-lg font-black text-white">{routeData.dist}</span><span className="text-xs font-bold text-primary">{routeData.dur}</span></div></div>
         </div>
       )}
     </div>
@@ -1136,8 +1035,9 @@ function App() {
 
         const fetchOrders = async () => {
             try {
-                // Busca ampla para pegar tanto pedidos novos quanto se eu fui atribuído a algum
-                const data = await fetchFromDB('orders_delivery', 'select=*&order=created_at.desc&limit=20');
+                // Busca ampla incluindo dados vivos do lojista. Sintaxe corrigida para garantir o JOIN.
+                const data = await fetchFromDB('orders_delivery', 'select=*,admin_users(store_name,store_address,latitude,longitude)&order=created_at.desc&limit=20');
+                console.log('[POLL-DEBUG] Dados recebidos:', data?.length, 'primeiro item tem admin_users?', !!data?.[0]?.admin_users);
                 
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
                 const now = Date.now();
@@ -1150,7 +1050,19 @@ function App() {
                 );
 
                 if (myAssignment && (!currentMission || currentMission.realId !== myAssignment.id)) {
-                    const mission = { ...myAssignment, realId: myAssignment.id, type: myAssignment.service_type, customer: myAssignment.user_name || 'Cliente Izi' };
+                    const merchant = myAssignment.admin_users;
+                    const mission = { 
+                        ...myAssignment, 
+                        realId: myAssignment.id, 
+                        type: myAssignment.service_type, 
+                        customer: myAssignment.user_name || 'Cliente Izi',
+                        store_name: merchant?.store_name || myAssignment.store_name || 'Paladar Distribuidora',
+                        pickup_address: merchant?.store_address || myAssignment.pickup_address,
+                        origin: merchant?.store_address || myAssignment.pickup_address,
+                        pickup_lat: merchant?.latitude || myAssignment.pickup_lat,
+                        pickup_lng: merchant?.longitude || myAssignment.pickup_lng
+                    };
+                    console.log('[COLETA-DEBUG] Missão Ativa Sincronizada:', mission.pickup_address);
                     setActiveMission(mission);
                     localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                     if (activeTabRef.current !== 'active_mission') setActiveTab('active_mission');
@@ -1165,17 +1077,28 @@ function App() {
                     return statusOk && notMyAssignment && notDeclined && notFinancial;
                 });
 
-                setOrders(available.map((o: any) => ({
-                    ...o,
-                    id: o.id.slice(0, 8).toUpperCase(), 
-                    realId: o.id, 
-                    type: o.service_type, 
-                    origin: o.pickup_address, 
-                    destination: o.delivery_address, 
-                    price: o.total_price,
-                    status: o.status,
-                    customer: 'Izi' 
-                })));
+                setOrders(available.map((o: any) => {
+                    const merchant = o.admin_users;
+                    if (merchant) {
+                        console.log(`[COLETA-DEBUG] Loja: ${merchant.store_name} | Endereço: ${merchant.store_address} | Coords: ${merchant.latitude},${merchant.longitude}`);
+                    }
+                    return {
+                        ...o,
+                        id: o.id.slice(0, 8).toUpperCase(), 
+                        realId: o.id, 
+                        type: o.service_type, 
+                        origin: merchant?.store_address || o.pickup_address, 
+                        destination: o.delivery_address, 
+                        price: o.total_price,
+                        status: o.status,
+                        pickup_lat: merchant?.latitude || o.pickup_lat,
+                        pickup_lng: merchant?.longitude || o.pickup_lng,
+                        delivery_lat: o.delivery_lat,
+                        delivery_lng: o.delivery_lng,
+                        store_name: merchant?.store_name || o.store_name || 'Paladar Distribuidora',
+                        customer: 'Izi' 
+                    };
+                }));
             } catch (err) {
                 console.warn('[POLL] Falha na rede:', err);
             }
@@ -1232,6 +1155,7 @@ function App() {
                     }
 
                     const mapped = { 
+                        ...o,
                         id: o.id.slice(0, 8).toUpperCase(), 
                         realId: o.id, 
                         type: o.service_type, 
@@ -1291,14 +1215,21 @@ function App() {
                         }
 
                         // Sincronizar o status da missão ativa com o servidor
+                        // MANTÉM OS DADOS DO LOJISTA DE BRUMADINHO (Join admin_users) - Prioridade Total
                         const mission: any = { 
                             ...o, 
                             realId: o.id, 
                             type: o.service_type || 'delivery', 
-                            origin: o.pickup_address || 'Origem', 
+                            origin: currentMission?.pickup_address || o.store_address || o.pickup_address, 
                             destination: o.delivery_address || 'Destino', 
                             price: o.total_price || 0, 
-                            customer: o.user_name || 'Cliente Izi' 
+                            customer: o.user_name || 'Cliente Izi',
+                            store_name: currentMission?.store_name || o.store_name || 'Paladar Distribuidora',
+                            pickup_address: currentMission?.pickup_address || o.pickup_address,
+                            pickup_lat: currentMission?.pickup_lat || o.pickup_lat,
+                            pickup_lng: currentMission?.pickup_lng || o.pickup_lng,
+                            delivery_lat: o.delivery_lat,
+                            delivery_lng: o.delivery_lng
                         };
                         
                         setActiveMission(mission);
@@ -2647,14 +2578,13 @@ function App() {
                 <div className="flex-1 bg-[#030a1a] relative overflow-hidden">
                     <IziRealTimeMap 
                       driverCoords={driverCoords} 
-                      destCoords={activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega'
-                        ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng } 
-                        : { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng }
-                      }
-                      destAddress={activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega'
-                        ? addressOnly
-                        : (activeMission.origin || activeMission.pickup_address)
-                      }
+                      pickupCoords={isValidCoord({ lat: activeMission.pickup_lat, lng: activeMission.pickup_lng }) ? { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng } : null}
+                      pickupAddress={activeMission.origin || activeMission.pickup_address}
+                      pickupName={activeMission.store_name} // Corrigido para store_name
+                      deliveryCoords={isValidCoord({ lat: activeMission.delivery_lat, lng: activeMission.delivery_lng }) ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng } : null}
+                      deliveryAddress={addressOnly}
+                      deliveryName={activeMission.user_name || activeMission.customer} // Novo: Nome do Cliente
+                      currentStatus={activeMission.status}
                     />
                     <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#020617]/40 via-transparent to-[#030712]/40" />
                     
@@ -2689,21 +2619,51 @@ function App() {
                 {!isMapOnly && (
                 <div className="max-h-[60%] overflow-y-auto no-scrollbar bg-[#030712] border-t border-white/5 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] flex flex-col">
                     <div className="p-6 space-y-6">
-                        {/* Seção 1: Cliente e Pagamento */}
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="size-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
-                                    <Icon name="person" size={24} />
+                        {/* Seção 1: Cliente e Pagamento Detalhado */}
+                        <div className="bg-white/[0.03] border border-white/8 rounded-[28px] p-6 space-y-5">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="size-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
+                                        <Icon name="person" size={24} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Cliente</p>
+                                        <h3 className="text-base font-black text-white">{activeMission.user_name || activeMission.customer || 'Usuário Izi'}</h3>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Cliente</p>
-                                    <h3 className="text-base font-black text-white">{activeMission.user_name || activeMission.customer || 'Usuário Izi'}</h3>
+                                <div className="text-right">
+                                    <p className="text-[8px] font-black text-primary uppercase tracking-widest">Seu Ganho Líquido</p>
+                                    <p className="text-2xl font-black text-primary">R$ {getNetEarnings(activeMission).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <p className="text-[8px] font-black text-primary uppercase tracking-widest">Valor Líquido a Receber</p>
-                                <p className="text-2xl font-black text-primary">R$ {getNetEarnings(activeMission).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                <p className="text-[8px] text-white/30 uppercase font-black">{activeMission.payment_method === 'dinheiro' ? 'Dinheiro (Na Entrega)' : 'Pago pelo App'}</p>
+
+                            <div className={`p-4 rounded-2xl border ${
+                                activeMission.payment_method === 'dinheiro' || activeMission.payment_method === 'cartao_maquininha' 
+                                ? 'bg-amber-500/10 border-amber-500/20' 
+                                : 'bg-emerald-500/10 border-emerald-500/20'
+                            }`}>
+                                <div className="flex items-start gap-4">
+                                    <div className={`size-10 rounded-xl flex items-center justify-center ${
+                                        activeMission.payment_method === 'dinheiro' || activeMission.payment_method === 'cartao_maquininha' ? 'text-amber-400' : 'text-emerald-400'
+                                    }`}>
+                                        <Icon name={activeMission.payment_method === 'dinheiro' ? 'payments' : 'account_balance_wallet'} size={24} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Instrução de Cobrança</p>
+                                        <h4 className="text-sm font-black text-white mt-0.5">
+                                            {activeMission.payment_method === 'dinheiro' 
+                                                ? `Receber R$ ${activeMission.total_price?.toFixed(2)} em DINHEIRO` 
+                                                : activeMission.payment_method === 'cartao_maquininha'
+                                                ? `Passar R$ ${activeMission.total_price?.toFixed(2)} NA MAQUININHA`
+                                                : 'Já Pago (Não cobrar do cliente)'}
+                                        </h4>
+                                        {activeMission.payment_method === 'dinheiro' && activeMission.change_for > 0 && (
+                                            <p className="text-[10px] font-bold text-amber-400/80 mt-1">
+                                                ⚠️ LEVAR TROCO PARA R$ {activeMission.change_for.toFixed(2)}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -2745,14 +2705,7 @@ function App() {
                                                 ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 shadow-emerald-500/10' 
                                                 : 'bg-amber-500/20 border-amber-500/30 text-amber-400 shadow-amber-500/10'
                                             }`}>
-                                                <button 
-                                    onClick={handleManualSync}
-                                    disabled={isSyncing}
-                                    className="p-2 rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-500/30 active:scale-95 transition-all flex items-center gap-2"
-                                >
-                                    <span className={`material-symbols-outlined text-sm ${isSyncing ? 'animate-spin' : ''}`}>sync</span>
-                                    <span className="text-[10px] font-black uppercase tracking-widest">{isSyncing ? 'Buscando...' : 'SYNC VERMELHO'}</span>
-                                </button>
+
                                                 <Icon 
                                                     name={activeMission.preparation_status === 'pronto' ? 'check_circle' : 'restaurant'} 
                                                     size={16} 

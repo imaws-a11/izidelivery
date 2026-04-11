@@ -105,7 +105,7 @@ export default function MyStudioTab() {
         setIsLocating(false);
         toastError("Erro ao obter localização: " + error.message);
       },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
@@ -250,12 +250,13 @@ export default function MyStudioTab() {
                        />
                     </div>
                     <div className="md:col-span-2 space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Endereço de Origem (Para cálculo de entregas)</label>
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Meu endereço de coletas</label>
                        <div className="relative group">
                          <AddressSearchInput 
-                           className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 pr-14 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
+                           className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 pr-24 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
                            initialValue={targetItem.store_address || ''}
                            userCoords={targetItem.latitude && targetItem.longitude ? { lat: targetItem.latitude, lng: targetItem.longitude } : null}
+                           extraRightPadding={true}
                            onSelect={(addr) => {
                              updateItem({
                                ...targetItem, 
