@@ -305,17 +305,18 @@ function WithdrawalRequestsSection() {
     setLoading(true);
     try {
       // 1. Get all pending 'saque' transactions
+      // REMOVIDO: nested select 'driver:drivers_delivery' pois causa erro se não houver FK no banco
       const { data: txs, error } = await supabase
         .from('wallet_transactions_delivery')
-        .select(`
-          *,
-          driver:drivers_delivery ( name )
-        `)
+        .select('*')
         .eq('type', 'saque')
         .eq('status', 'pendente')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+          console.warn("[WITHDRAWAL] Erro na query principal:", error.message);
+          throw error;
+      }
 
       // 2. Map driver names
       if (txs && txs.length > 0) {
