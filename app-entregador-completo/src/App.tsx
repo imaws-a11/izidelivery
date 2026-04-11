@@ -51,6 +51,7 @@ function Icon({ name, className = "", size = 20 }: any) {
     'verified': BespokeIcons.Check,
     'chat': BespokeIcons.Support,
     'power_off': BespokeIcons.Logout,
+    'power_settings_new': BespokeIcons.Power,
     'radar': BespokeIcons.Bolt,
     'check': BespokeIcons.Check,
     'close': BespokeIcons.X,
@@ -125,9 +126,9 @@ function IziRealTimeMap({ driverCoords, pickupCoords, pickupAddress, pickupName,
   const targetAddress = isDeliveryPhase ? deliveryAddress : pickupAddress;
   const targetName = isDeliveryPhase ? deliveryName : pickupName;
 
-  // Usar exclusivamente o endereço textual para evitar que nomes de lojas similares em outros estados confundam o Google
+  // Usar exclusivamente o endereço textual para evitar que as coordenadas salvas erradas levem o mapa do Entregador para outro estado
   const fullAddressSearch = targetAddress;
-  const resolvedTarget = (targetC && isValidCoord(targetC)) ? targetC : (fullAddressSearch || null);
+  const resolvedTarget = fullAddressSearch || null;
 
   const vDriver = isValidCoord(driverCoords) ? driverCoords : null;
 
@@ -453,8 +454,9 @@ function App() {
     const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
     const [scheduledOrders, setScheduledOrders] = useState<any[]>([]);
     const [history, setHistory] = useState<Order[]>([]);
+    const [selectedHistoryOrder, setSelectedHistoryOrder] = useState<any>(null);
     const [merchantCoords, setMerchantCoords] = useState<{lat: number, lng: number} | null>(null);
-    const [stats, setStats] = useState({ balance: 0, today: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
+    const [stats, setStats] = useState({ balance: 0, today: 0, totalEarnings: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
     const [earningsHistory, setEarningsHistory] = useState<Order[]>([]);
     const [withdrawHistory, setWithdrawHistory] = useState<any[]>([]);
     const [isFinanceLoading, setIsFinanceLoading] = useState(false);
@@ -1025,35 +1027,20 @@ function App() {
         if (!isAuthenticated || !driverId) return;
 
         const fetchFromDB = async (table: string, queryParams: string = '') => {
-            // Decodificar parâmetros da query string para usar no cliente JS do Supabase
-            // Exemplo: select=*,admin_users(...)&order=created_at.desc&limit=20
-            const params = new URLSearchParams(queryParams);
-            let query = supabase.from(table).select(params.get('select') || '*');
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            
+            let token = supabaseKey;
+            try {
+                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
+                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
+            } catch(e) {}
 
-            // Aplicar ordenação se existir
-            const orderStr = params.get('order');
-            if (orderStr) {
-                const [column, direction] = orderStr.split('.');
-                query = query.order(column, { ascending: direction === 'asc' });
-            }
-
-            // Aplicar limite se existir
-            const limitStr = params.get('limit');
-            if (limitStr) {
-                query = query.limit(parseInt(limitStr));
-            }
-
-            // Filtragem simples (ex: id=eq.xxx)
-            params.forEach((val, key) => {
-                if (['select', 'order', 'limit'].includes(key)) return;
-                if (val.startsWith('eq.')) {
-                    query = query.eq(key, val.slice(3));
-                }
+            const res = await fetch(`${supabaseUrl}/rest/v1/${table}?${queryParams}`, {
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
             });
-
-            const { data, error } = await query;
-            if (error) throw new Error(`DB Error: ${error.message}`);
-            return data;
+            if (!res.ok) throw new Error(`DB Error: ${res.status}`);
+            return await res.json();
         };
 
         const fetchOrders = async () => {
@@ -1318,11 +1305,17 @@ function App() {
             
             console.log('2. URL Alvo:', `${supabaseUrl}/rest/v1/orders_delivery?select=*&limit=5`);
 
+            let token = supabaseKey;
+            try {
+                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
+                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
+            } catch(e) {}
+
             // Fazendo a busca manualmente sem usar a biblioteca Supabase para evitar hangs
             const response = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?select=*&order=created_at.desc&limit=10`, {
                 headers: {
                     'apikey': supabaseKey,
-                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -1481,14 +1474,22 @@ function App() {
                  return;
             }
 
-            console.log('1. Verificando integridade via Supabase...');
-            const { data: dbOrders, error: checkError } = await supabase
-                .from('orders_delivery')
-                .select('*')
-                .eq('id', targetId);
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+            let token = supabaseKey;
+            try {
+                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
+                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
+            } catch(e) {}
+
+            console.log('1. Verificando integridade via REST...');
+            const checkRes = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${targetId}&select=*`, {
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` }
+            });
             
-            if (checkError) throw checkError;
-            const realOrder = dbOrders?.[0];
+            const ordersList = await checkRes.json();
+            const realOrder = ordersList[0];
 
             if (!realOrder) throw new Error('Pedido não encontrado.');
             
@@ -1499,17 +1500,23 @@ function App() {
                 return;
             }
 
-            console.log('2. Gravando aceite via Supabase...');
-            const { error: updateError } = await supabase
-                .from('orders_delivery')
-                .update({
+            console.log('2. Gravando aceite via PATCH REST...');
+            const updateRes = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${targetId}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({
                     status: 'a_caminho_coleta',
                     driver_id: driverId,
                     updated_at: new Date().toISOString()
                 })
-                .eq('id', targetId);
+            });
 
-            if (updateError) throw updateError;
+            if (!updateRes.ok) throw new Error('Falha ao gravar aceite no banco.');
 
             console.log('3. Aceite confirmado!');
             playIziSound('success');
@@ -1542,15 +1549,27 @@ function App() {
         
         try {
             const missionId = activeMission.realId || activeMission.id;
-            const { error: patchError } = await supabase
-                .from('orders_delivery')
-                .update({ 
-                    status: newStatus, 
-                    updated_at: new Date().toISOString() 
-                })
-                .eq('id', missionId);
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-            if (patchError) throw patchError;
+            let token = supabaseKey;
+            try {
+                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
+                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
+            } catch(e) {}
+
+            console.log('[STATUS] Atualizando status via REST para:', newStatus);
+            const response = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${missionId}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() })
+            });
+
+            if (!response.ok) throw new Error('Falha ao atualizar status no servidor.');
 
             // Lógica de Finalização
             const finishStatus = ['concluido', 'entregue', 'finalizado', 'delivered'];
@@ -1560,11 +1579,15 @@ function App() {
                     const netEarnings = getNetEarnings(activeMission);
                     
                     if (driverId && netEarnings > 0) {
-                        await supabase.from('wallet_transactions_delivery').insert({
-                            user_id: driverId,
-                            amount: netEarnings,
-                            type: 'deposito',
-                            description: `Ganhos: Missão #${missionId.slice(0, 8).toUpperCase()} (Líquido)`
+                        await fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
+                            method: 'POST',
+                            headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                user_id: driverId,
+                                amount: netEarnings,
+                                type: 'deposito',
+                                description: `Ganhos: Missão #${missionId.slice(0, 8).toUpperCase()} (Líquido)`
+                            })
                         });
                     }
 
@@ -1572,11 +1595,11 @@ function App() {
                     if (activeMission.merchant_id && (Number(activeMission.total_price) || 0) > 0) {
                         try {
                             // Buscar comissão do lojista
-                            const { data: mData } = await supabase
-                                .from('admin_users')
-                                .select('commission_percent')
-                                .eq('id', activeMission.merchant_id)
-                                .single();
+                            const commRes = await fetch(`${supabaseUrl}/rest/v1/admin_users?select=commission_percent&id=eq.${activeMission.merchant_id}&limit=1`, {
+                                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                            });
+                            const commData = await commRes.json();
+                            const mData = commData[0];
                             
                             const commRate = mData?.commission_percent ?? appSettings?.appCommission ?? 12;
                             const totalPrice = Number(activeMission.total_price) || 0;
@@ -1584,12 +1607,16 @@ function App() {
                             const merchantNet = totalPrice - commValue;
 
                             if (merchantNet > 0) {
-                                await supabase.from('wallet_transactions_delivery').insert({
-                                    user_id: activeMission.merchant_id,
-                                    amount: merchantNet,
-                                    type: 'venda',
-                                    description: `Venda Pedido #${missionId.slice(0, 8).toUpperCase()} (Líquido)`,
-                                    status: 'concluido'
+                                await fetch(`${supabaseUrl}/rest/v1/rpc/credit_wallet_transaction`, {
+                                    method: 'POST',
+                                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        p_user_id: activeMission.merchant_id,
+                                        p_amount: merchantNet,
+                                        p_type: 'venda',
+                                        p_description: `Venda Pedido #${missionId.slice(0, 8).toUpperCase()} (Líquido)`,
+                                        p_status: 'concluido'
+                                    })
                                 });
                             }
                         } catch (mErr) {
@@ -1597,7 +1624,8 @@ function App() {
                         }
                     }
 
-                    await fetchFinanceData();
+                    // Chamada REST manual também para evitar bloqueio no sync
+                    fetchFinanceData(); // Sem await para não bloquear a UI, deixa atualizar no fundo
                 } catch (finalizeErr) {
                     console.error('[FINALIZE] Erro interno no processamento financeiro:', finalizeErr);
                 }
@@ -1606,8 +1634,9 @@ function App() {
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
                 setActiveTab('dashboard');
+                // Chamada não bloqueante
                 fetchMissionHistory();
-            } 
+            }  
             // 3. Se for CANCELAMENTO
             else if (['cancelado'].includes(newStatus)) {
                 setActiveMission(null);
@@ -1640,23 +1669,27 @@ function App() {
     const fetchMissionHistory = async () => {
         if (!driverId) return;
         try {
-            const { data, error } = await supabase
-                .from('orders_delivery')
-                .select('*')
-                .eq('driver_id', driverId)
-                .in('status', ['concluido', 'finalizado', 'entregue'])
-                .order('created_at', { ascending: false });
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            let token = supabaseKey;
+            try {
+                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
+                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
+            } catch(e) {}
 
-            if (error) throw error;
+            const res = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,finalizado,entregue)&order=created_at.desc`, {
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!res.ok) throw new Error('Falha ao buscar histórico');
+            const data = await res.json();
 
             if (data) {
-                const formatted = data.map(o => ({
+                const formatted = data.map((o: any) => ({
                     ...o,
                     price: Number(o.total_price || 0),
                     type: o.service_type || 'package',
-                    // Fallback para nomes de destino se estiver vazio
                     destination: o.delivery_address || o.destination || 'Destino ignorado',
-                    // Formato estético para ID na lista
                     displayId: (o.id || "").slice(0, 8).toUpperCase()
                 }));
                 setHistory(formatted);
@@ -1669,38 +1702,63 @@ function App() {
     const fetchFinanceData = async () => {
         if (!driverId) return;
         setIsFinanceLoading(true);
-        try {
-            // Unidade de conta central: wallet_transactions_delivery
-            const { data: txs } = await supabase
-                .from('wallet_transactions_delivery')
-                .select('*')
-                .eq('user_id', driverId)
-                .order('created_at', { ascending: false });
 
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        let token = supabaseKey;
+        try {
+            const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
+            if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
+        } catch(e) {}
+
+        const headers = { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` };
+
+        try {
+            // Consulta de Carteira para Saldo e Extrato
+            const txsRes = await fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery?user_id=eq.${driverId}&order=created_at.desc`, { headers });
+            const txs = txsRes.ok ? await txsRes.json() : null;
+
+            // Consulta de Pedidos para Ganhos Reais
+            const ordersRes = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,entregue)`, { headers });
+            const orders = ordersRes.ok ? await ordersRes.json() : null;
+
+            let balance = 0;
             if (txs) {
-                const balance = txs.reduce((acc, t) => 
-                    ['deposito', 'reembolso'].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 
+                balance = txs.reduce((acc, t) => 
+                    ['deposito', 'reembolso', 'venda'].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 
                     0
                 );
                 
-                const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
-                const todaySum = txs
-                    .filter(t => t.type === 'deposito' && new Date(t.created_at) >= startOfDay)
-                    .reduce((acc, t) => acc + Number(t.amount), 0);
-                
-                const missionCount = txs.filter(t => t.type === 'deposito' && t.description?.includes('Missão')).length;
-
-                setStats(prev => ({
-                    ...prev,
-                    balance: Math.max(0, balance),
-                    today: todaySum,
-                    count: missionCount,
-                    level: Math.floor(missionCount / 10) + 1
-                }));
-
-                setEarningsHistory(txs.filter(t => t.type === 'deposito') as any);
+                setEarningsHistory(txs.filter(t => t.type !== 'saque') as any);
                 setWithdrawHistory(txs.filter(t => t.type === 'saque'));
             }
+
+            let todaySum = 0;
+            let totalGanhos = 0;
+            let missionCount = 0;
+
+            if (orders) {
+                const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+                missionCount = orders.length;
+
+                orders.forEach(o => {
+                    const fee = getNetEarnings(o); console.log('ORDER ', o.id, ' FEE:', fee);
+                    totalGanhos += fee;
+                    if (new Date(o.created_at) >= startOfDay) {
+                        todaySum += fee;
+                    }
+                });
+            }
+
+            setStats(prev => ({
+                ...prev,
+                balance: balance, // Permite aparecer saldo negativo se ele dever ao app
+                today: todaySum,
+                totalEarnings: totalGanhos,
+                count: missionCount,
+                level: Math.floor(missionCount / 10) + 1
+            }));
+
         } catch (e) {
             console.error("Finance fetch error:", e);
         } finally {
@@ -2191,10 +2249,10 @@ function App() {
                         const formattedTime = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
                         return (
-                            <motion.div key={order.id || i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-white/[0.03] border border-white/5 rounded-[24px] p-5 flex items-center gap-4">
+                            <motion.div onClick={() => setSelectedHistoryOrder(order)} key={order.id || i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-white/[0.03] border border-white/5 rounded-[24px] p-5 flex items-center gap-4 cursor-pointer active:scale-95 transition-all">
                                 <div className={`size-12 rounded-[18px] ${details.bg} ${details.color} flex items-center justify-center border border-current/10 shrink-0`}><Icon name={details.icon} className="text-2xl" /></div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-black text-white truncate">{order.destination.split(',')[0]}</p>
+                                    <p className="text-sm font-black text-white truncate">{order.destination?.split(',')[0] || 'Destino ignorado'}</p>
                                     <div className="flex items-center gap-2 mt-0.5">
                                         <span className="text-[8px] font-black text-white/30 uppercase">{formattedDate} às {formattedTime}</span>
                                         <div className="size-1 rounded-full bg-emerald-400/30" />
@@ -2210,40 +2268,94 @@ function App() {
                     })}
                 </div>
             )}
+
+            <AnimatePresence>
+                {selectedHistoryOrder && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-[4px] flex items-center justify-center p-5">
+                       <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f172a] border border-white/10 p-7 rounded-[36px] w-full max-w-sm space-y-6 shadow-2xl relative overflow-hidden">
+                           <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none"><Icon name={getTypeDetails(selectedHistoryOrder.type).icon} className="text-[140px] text-white -rotate-12" /></div>
+                           <button onClick={() => setSelectedHistoryOrder(null)} className="absolute top-5 right-5 text-white/40 bg-white/5 size-10 rounded-2xl flex items-center justify-center active:scale-95 transition-all"><Icon name="close" /></button>
+                           
+                           <div className="relative">
+                               <p className="text-[9px] font-black text-primary uppercase tracking-[0.4em]">Recibo da Missão</p>
+                               <h3 className="text-2xl font-black text-white mt-1">#{selectedHistoryOrder.displayId || selectedHistoryOrder.id?.slice(0,8)}</h3>
+                               <p className="text-xs font-bold text-white/40 mt-1">{new Date(selectedHistoryOrder.created_at).toLocaleDateString('pt-BR')} às {new Date(selectedHistoryOrder.created_at).toLocaleTimeString('pt-BR')}</p>
+                           </div>
+
+                           <div className="space-y-4 bg-white/[0.02] border border-white/5 p-5 rounded-[24px] relative">
+                               <div>
+                                   <p className="text-[9px] font-black uppercase text-white/30 tracking-widest mb-1 shadow-sm">Local de Coleta</p>
+                                   <p className="text-sm text-white font-semibold leading-relaxed">{selectedHistoryOrder.pickup_address || 'Ponto Inicial Omitido'}</p>
+                               </div>
+                               <div className="h-px bg-white/5" />
+                               <div>
+                                   <p className="text-[9px] font-black uppercase text-white/30 tracking-widest mb-1 shadow-sm">Destino do Cliente</p>
+                                   <p className="text-sm text-white font-semibold leading-relaxed">{selectedHistoryOrder.destination || selectedHistoryOrder.delivery_address || 'Destino Omitido'}</p>
+                               </div>
+                           </div>
+                           
+                           <div className="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-[24px] p-5 flex justify-between items-center relative overflow-hidden">
+                               <div className="relative z-10">
+                                   <p className="text-[9px] font-black text-primary opacity-80 uppercase tracking-widest mb-1">Seu Ganho Líquido</p>
+                                   <div className="flex items-baseline gap-1">
+                                       <span className="text-sm font-black text-white/50">R$</span>
+                                       <p className="text-3xl font-black text-white">{getNetEarnings(selectedHistoryOrder).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                   </div>
+                               </div>
+                               <div className="size-12 rounded-[18px] bg-primary/20 text-primary flex items-center justify-center shrink-0 relative z-10">
+                                   <Icon name="payments" className="text-2xl" />
+                               </div>
+                           </div>
+
+                       </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 
     const renderEarningsView = () => (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-24 pt-4">
             <div className="flex items-center justify-between">
-                <div><p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Financeiro</p><h2 className="text-3xl font-black text-white tracking-tight mt-1">Rendimentos</h2></div>
-                <button onClick={fetchFinanceData} disabled={isFinanceLoading} className="size-10 bg-white/5 rounded-2xl flex items-center justify-center active:rotate-180 transition-all duration-500">
-                    <Icon name="refresh" className={`text-white/40 ${isFinanceLoading ? 'animate-spin' : ''}`} />
+                <div><p className="text-[9px] font-black text-primary uppercase tracking-[0.5em] shadow-primary/20">Financeiro</p><h2 className="text-3xl font-black text-white tracking-tight mt-1">Rendimentos</h2></div>
+                <button onClick={fetchFinanceData} disabled={isFinanceLoading} className="size-12 bg-slate-800 shadow-[inset_0_-4px_10px_rgba(0,0,0,0.4),_inset_0_4px_10px_rgba(255,255,255,0.05),_0_10px_20px_rgba(0,0,0,0.4)] border border-white/5 rounded-[20px] flex items-center justify-center active:rotate-180 transition-all duration-500">
+                    <Icon name="refresh" className={`text-white/40 ${isFinanceLoading ? 'animate-spin text-primary' : ''}`} />
                 </button>
             </div>
             
-            <div className="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-[40px] p-8 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-6 opacity-5"><Icon name="account_balance_wallet" className="text-[120px] text-primary -rotate-12" /></div>
-                <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.5em]">Saldo Disponível</p>
-                <div className="flex items-baseline gap-2 mt-2">
-                    <span className="text-2xl font-black text-primary opacity-50">R$</span>
-                    <p className="text-5xl font-black text-white tracking-tight">{stats.balance.toFixed(2).replace('.', ',')}</p>
+            <div className="bg-[#151c2c] border border-white/5 rounded-[40px] p-8 relative overflow-hidden shadow-[inset_0_-8px_24px_rgba(0,0,0,0.4),_inset_0_4px_12px_rgba(255,255,255,0.03),_0_20px_40px_rgba(0,0,0,0.8)]">
+                <div className="absolute top-0 right-0 p-6 opacity-5"><Icon name="account_balance_wallet" className="text-[140px] text-primary -rotate-12" /></div>
+                
+                <div className="relative z-10">
+                    <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.5em] mb-1">Saldo Disponível</p>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-black text-primary opacity-50">R$</span>
+                        <p className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{stats.balance.toFixed(2).replace('.', ',')}</p>
+                    </div>
                 </div>
-                <div className="flex gap-4 mt-8">
+
+                <div className="flex gap-4 mt-8 relative z-10">
                     <button 
                         onClick={handleWithdrawRequest}
                         disabled={isFinanceLoading || stats.balance < 10}
-                        className="flex-1 bg-primary text-slate-900 font-black rounded-2xl text-[11px] uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-95 transition-all py-4 disabled:opacity-50"
+                        className="flex-1 bg-primary text-slate-900 font-black rounded-3xl text-[11px] uppercase tracking-widest shadow-[inset_0_-4px_12px_rgba(0,0,0,0.3),_inset_0_4px_10px_rgba(255,255,255,0.6),_0_10px_25px_rgba(20,184,166,0.3)] active:scale-95 active:shadow-none transition-all py-5 flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
                     >
+                        <Icon name="payments" className="text-xl opacity-80" />
                         {isFinanceLoading ? 'Processando...' : 'Sacar via PIX'}
                     </button>
                 </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                {[{ label: 'Hoje', value: `R$ ${stats.today.toFixed(0)}`, icon: 'today', color: 'text-primary' }, { label: 'Total Ganhos', value: `R$ ${(stats.balance + withdrawHistory.filter(w => w.status === 'concluido').reduce((a,b) => a + b.amount, 0)).toFixed(0)}`, icon: 'account_balance', color: 'text-emerald-400' }, { label: 'Corridas', value: stats.count.toString(), icon: 'route', color: 'text-blue-400' }, { label: 'Nível', value: stats.level.toString(), icon: 'military_tech', color: 'text-yellow-400' }].map((stat, i) => (
-                    <div key={i} className="bg-white/[0.03] border border-white/5 rounded-[24px] p-5 space-y-2">
-                        <Icon name={stat.icon} className={`${stat.color} text-xl`} /><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">{stat.label}</p><p className="text-xl font-black text-white">{stat.value}</p>
+                {[{ label: 'Hoje', value: `R$ ${stats.today.toFixed(0)}`, icon: 'today', color: 'text-primary' }, { label: 'Total Ganhos', value: `R$ ${stats.totalEarnings.toFixed(0)}`, icon: 'account_balance', color: 'text-emerald-400' }, { label: 'Corridas', value: stats.count.toString(), icon: 'route', color: 'text-blue-400' }, { label: 'Nível', value: stats.level.toString(), icon: 'military_tech', color: 'text-yellow-400' }].map((stat, i) => (
+                    <div key={i} className="bg-[#151c2c] border border-white/5 rounded-[32px] p-6 flex flex-col justify-between shadow-[inset_0_-4px_12px_rgba(0,0,0,0.3),_inset_0_2px_8px_rgba(255,255,255,0.03),_0_12px_24px_rgba(0,0,0,0.5)]">
+                        <div className={`size-10 rounded-2xl bg-slate-900 shadow-[inset_0_-2px_6px_rgba(0,0,0,0.5),_inset_0_2px_4px_rgba(255,255,255,0.05)] flex items-center justify-center border border-white/5 mb-4`}>
+                            <Icon name={stat.icon} className={`${stat.color} text-lg drop-shadow-md`} />
+                        </div>
+                        <div>
+                            <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1">{stat.label}</p>
+                            <p className="text-2xl font-black text-white drop-shadow-md tracking-tight">{stat.value}</p>
+                        </div>
                     </div>
                 ))}
             </div>
@@ -2255,10 +2367,13 @@ function App() {
                     <Icon name="history" className="text-white/10" size={16} />
                 </div>
                 <div className="space-y-4">
-                    {[...earningsHistory.slice(0, 3), ...withdrawHistory.slice(0, 3)]
+                    {[...earningsHistory.slice(0, 5), ...withdrawHistory.slice(0, 5)]
                         .sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                         .map((item: any, i: number) => {
-                            const isWithdraw = item.amount !== undefined && item.pix_key !== undefined;
+                            const isWithdraw = item.type === 'saque';
+                            const isRefund = item.type === 'reembolso';
+                            const isDeposit = item.type === 'deposito' || item.type === 'venda';
+                            
                             return (
                                 <div key={i} className="flex items-center justify-between pb-4 border-b border-white/5 last:border-0 last:pb-0">
                                     <div className="flex items-center gap-3">
@@ -2266,15 +2381,15 @@ function App() {
                                             <Icon name={isWithdraw ? 'arrow_outward' : 'add_circle'} size={20} />
                                         </div>
                                         <div>
-                                            <p className="text-xs font-black text-white">{isWithdraw ? 'Saque PIX' : (item.type === 'package' ? 'Entrega' : 'Corrida')}</p>
-                                            <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">{new Date(item.created_at).toLocaleDateString('pt-BR')}</p>
+                                            <p className="text-xs font-black text-white">{isWithdraw ? 'Saque' : (item.description || 'Depósito')}</p>
+                                            <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">{new Date(item.created_at).toLocaleDateString('pt-BR')}  {new Date(item.created_at).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</p>
                                         </div>
                                     </div>
                                     <div className="text-right">
                                         <p className={`text-sm font-black ${isWithdraw ? 'text-red-400' : 'text-emerald-400'}`}>
-                                            {isWithdraw ? '-' : '+'} R$ {(item.price || item.amount || 0).toFixed(2)}
+                                            {isWithdraw ? '-' : '+'} R$ {(Number(item.amount) || 0).toFixed(2)}
                                         </p>
-                                        {isWithdraw && <p className={`text-[7px] font-black uppercase tracking-widest ${item.status === 'concluido' ? 'text-emerald-400' : 'text-yellow-400'}`}>{item.status}</p>}
+                                        <p className={`text-[7px] font-black uppercase tracking-widest ${item.status === 'concluido' ? 'text-emerald-400' : 'text-yellow-400'}`}>{item.status}</p>
                                     </div>
                                 </div>
                             );
@@ -2578,11 +2693,19 @@ function App() {
         const orderItems = getOrderItems();
         const rawAddr = (activeMission.delivery_address || activeMission.destination || '');
         let addressOnly = rawAddr.split('| ITENS:')[0].trim();
-        // Garantir Brumadinho MG para geocoding preciso
+        // Garantir Brumadinho MG para geocoding preciso (Entrega)
         if (addressOnly && !addressOnly.toLowerCase().includes('brumadinho')) {
             addressOnly += ', Brumadinho - MG, Brasil';
         } else if (addressOnly && !addressOnly.toLowerCase().includes('brasil')) {
             addressOnly += ', Brasil';
+        }
+
+        let pickupOnly = (activeMission.origin || activeMission.pickup_address || '').split('| ITENS:')[0].trim();
+        // Garantir Brumadinho MG para geocoding preciso (Coleta)
+        if (pickupOnly && !pickupOnly.toLowerCase().includes('brumadinho')) {
+            pickupOnly += ', Brumadinho - MG, Brasil';
+        } else if (pickupOnly && !pickupOnly.toLowerCase().includes('brasil')) {
+            pickupOnly += ', Brasil';
         }
 
         // Status Label & Color logic
@@ -2637,7 +2760,7 @@ function App() {
                     <IziRealTimeMap 
                       driverCoords={driverCoords} 
                       pickupCoords={isValidCoord({ lat: activeMission.pickup_lat, lng: activeMission.pickup_lng }) ? { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng } : merchantCoords}
-                      pickupAddress={activeMission.origin || activeMission.pickup_address}
+                      pickupAddress={pickupOnly}
                       pickupName={activeMission.store_name} 
                       deliveryCoords={isValidCoord({ lat: activeMission.delivery_lat, lng: activeMission.delivery_lng }) ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng } : null}
                       deliveryAddress={addressOnly}
@@ -2968,19 +3091,13 @@ function App() {
                                     animate={{ scale: 1, y: 0 }} 
                                     whileTap={{ scale: 0.9 }} 
                                     onClick={handleToggleOnline} 
-                                    className={`fixed bottom-8 right-6 h-16 px-8 rounded-[30px] flex items-center justify-center gap-4 z-[90] shadow-2xl transition-all duration-500 border-2 ${
+                                    className={`fixed bottom-8 right-6 size-16 rounded-full flex items-center justify-center z-[90] shadow-2xl transition-all duration-500 border-2 ${
                                         isOnline 
-                                        ? 'bg-emerald-500 border-emerald-400 text-slate-900 shadow-emerald-500/40' 
-                                        : 'bg-slate-900/90 backdrop-blur-xl border-white/10 text-white shadow-black/60'
+                                        ? 'bg-emerald-500 border-emerald-400 text-slate-900 shadow-[0_10px_20px_rgba(16,185,129,0.3)]' 
+                                        : 'bg-slate-700/80 backdrop-blur-xl border-slate-500/50 text-white shadow-[0_10px_20px_rgba(0,0,0,0.5)]'
                                     }`}
                                 >
-                                    <div className={`size-10 rounded-2xl flex items-center justify-center ${isOnline ? 'bg-slate-900/10' : 'bg-white/5'}`}>
-                                        <Icon name={isOnline ? 'wifi_tethering' : 'wifi_tethering_off'} size={24} className={isOnline ? 'animate-pulse' : ''} />
-                                    </div>
-                                    <div className="flex flex-col items-start">
-                                        <span className={`text-[9px] font-black uppercase tracking-[0.2em] opacity-40`}>Modo Piloto</span>
-                                        <span className="text-sm font-black uppercase tracking-widest">{isOnline ? 'Ficar Offline' : 'Ficar Online'}</span>
-                                    </div>
+                                    <Icon name="power_settings_new" size={28} className={isOnline ? 'animate-pulse' : 'opacity-70'} />
                                 </motion.button>
                             )}
                             <main className="flex-1 overflow-y-auto no-scrollbar">
