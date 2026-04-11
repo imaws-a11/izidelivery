@@ -837,11 +837,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       }}
                       className="relative flex-shrink-0 w-[360px] h-[196px] rounded-[36px] overflow-hidden group cursor-pointer transition-all snap-center shadow-[0_14px_40px_rgba(0,0,0,0.7)] border border-white/10 hover:border-yellow-400/30"
                     >
-                       <img 
-                         src={coupon.image_url || ""}
-                         alt={coupon.title || "Cupom"} 
-                         className="absolute inset-0 w-full h-full object-cover brightness-[0.32] saturate-[1.05] group-hover:scale-110 transition-transform duration-1000"
-                       />
+                       {coupon.image_url && (
+                         <img 
+                           src={coupon.image_url}
+                           alt={coupon.title || "Cupom"} 
+                           className="absolute inset-0 w-full h-full object-cover brightness-[0.32] saturate-[1.05] group-hover:scale-110 transition-transform duration-1000"
+                         />
+                       )}
                        
                        <div className="absolute inset-0 bg-gradient-to-br from-black/85 via-black/58 to-black/90" />
                        <div className="absolute inset-y-0 right-0 w-32 bg-yellow-400/10 blur-3xl opacity-70" />
