@@ -17,15 +17,16 @@ export default function MerchantDashboardTab() {
     fetchAllOrders(1);
   }, [fetchAllOrders]);
 
-  // Filtrar pedidos concluídos do lojista
-  const merchantOrders = allOrders.filter(o => o.merchant_id === merchantProfile?.merchant_id);
-  const completedOrders = merchantOrders.filter(o => o.status === 'concluido');
-  const totalRevenue = completedOrders.reduce((acc, curr) => acc + (curr.total_price || 0), 0);
-  const avgTicket = completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0;
+  // Filtrar ordens do lojista de forma robusta
+  const merchantOrders = allOrders.filter(o => o.merchant_id === merchantProfile?.id);
+  const completedOrders = merchantOrders.filter(o => o.status === 'concluido' || o.status === 'delivered');
   
-  // Metas e Projeções (Mock logic for now, could be dynamic)
-  const monthlyGoal = 15000;
-  const progressPercent = Math.min((totalRevenue / monthlyGoal) * 100, 100);
+  // Usar dados reais do contexto (mais performático e já filtrado)
+  const { totalRevenue, completedOrdersCount, avgTicket, dailyRevenue, topProducts } = dashboardData;
+  
+  // Metas e Projeções (Dinâmico baseado nas configurações)
+  const monthlyGoal = 0; // Removido meta fixa de 15k
+  const progressPercent = monthlyGoal > 0 ? Math.min((totalRevenue / monthlyGoal) * 100, 100) : 0;
 
   return (
     <div className="space-y-8 pb-20">
@@ -47,10 +48,12 @@ export default function MerchantDashboardTab() {
               <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
               Sacar Saldo
             </button>
-            <div className="px-6 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Meta Mensal</span>
-                <span className="text-lg font-black text-slate-900 dark:text-white italic">R$ {monthlyGoal.toLocaleString('pt-BR')}</span>
-            </div>
+            {monthlyGoal > 0 && (
+              <div className="px-6 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Meta Mensal</span>
+                  <span className="text-lg font-black text-slate-900 dark:text-white italic">R$ {monthlyGoal.toLocaleString('pt-BR')}</span>
+              </div>
+            )}
         </div>
       </div>
 
@@ -67,8 +70,8 @@ export default function MerchantDashboardTab() {
             action: goToFinancial 
           },
           { label: 'Faturamento Total', val: `R$ ${totalRevenue.toFixed(2).replace('.', ',')}`, icon: 'payments', info: 'Vendas concluídas', color: 'text-primary', bg: 'bg-primary/10' },
-          { label: 'Pedidos Realizados', val: merchantOrders.length, icon: 'shopping_basket', info: `Taxa de conversão: 12%`, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-          { label: 'Ticket Médio', val: `R$ ${avgTicket.toFixed(2).replace('.', ',')}`, icon: 'confirmation_number', info: '+5.4% vs mês anterior', color: 'text-purple-500', bg: 'bg-purple-500/10' },
+          { label: 'Pedidos Realizados', val: completedOrdersCount, icon: 'shopping_basket', info: `${merchantOrders.length} ordens no total`, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+          { label: 'Ticket Médio', val: `R$ ${avgTicket.toFixed(2).replace('.', ',')}`, icon: 'confirmation_number', info: 'Média por pedido', color: 'text-purple-500', bg: 'bg-purple-500/10' },
         ].map((item, i) => (
           <motion.div
             key={i}
@@ -112,21 +115,30 @@ export default function MerchantDashboardTab() {
           </div>
 
           <div className="h-72 flex items-end justify-between gap-4 px-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-              {[65, 40, 85, 55, 95, 70, 75].map((h, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
-                      <div className="w-full relative h-64 flex items-end">
-                          <motion.div 
-                            initial={{ height: 0 }}
-                            animate={{ height: `${h}%` }}
-                            transition={{ duration: 1, delay: i * 0.1 }}
-                            className="w-full bg-slate-100 dark:bg-slate-800/50 rounded-2xl group-hover:bg-primary transition-colors relative overflow-hidden"
-                          >
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent" />
-                          </motion.div>
-                      </div>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'][i]}</span>
-                  </div>
-              ))}
+              {(dailyRevenue || [0,0,0,0,0,0,0]).map((val, i) => {
+                  const maxVal = Math.max(...(dailyRevenue || [1]), 1);
+                  const h = (val / maxVal) * 100;
+                  return (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
+                        <div className="w-full relative h-64 flex items-end">
+                            <motion.div 
+                              initial={{ height: 0 }}
+                              animate={{ height: `${Math.max(h, 5)}%` }}
+                              transition={{ duration: 1, delay: i * 0.1 }}
+                              className="w-full bg-slate-100 dark:bg-slate-800/50 rounded-2xl group-hover:bg-primary transition-colors relative overflow-hidden"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent" />
+                                {val > 0 && (
+                                  <div className="absolute top-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md">
+                                    R${val}
+                                  </div>
+                                )}
+                            </motion.div>
+                        </div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{['D', 'S', 'T', 'Q', 'Q', 'S', 'S'][i]}</span>
+                    </div>
+                  );
+              })}
           </div>
           <div className="mt-8 flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
               <div className="flex items-center gap-6">
@@ -139,7 +151,7 @@ export default function MerchantDashboardTab() {
                       <span>Projeção</span>
                   </div>
               </div>
-              <p>Média: R$ 1.450,00 / dia</p>
+              <p>Ticket Médio: R$ {avgTicket.toFixed(2).replace('.', ',')}</p>
           </div>
         </div>
 
@@ -152,7 +164,7 @@ export default function MerchantDashboardTab() {
                 <div className="relative z-10">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-4 opacity-70">Status da Meta</p>
                     <h3 className="text-4xl font-black tracking-tighter italic mb-8">
-                        {progressPercent.toFixed(1)}% <span className="text-xl font-bold opacity-60 italic tracking-normal ml-1">ALCANÇADO</span>
+                        {monthlyGoal > 0 ? `${progressPercent.toFixed(1)}%` : 'Sem Meta'} <span className="text-xl font-bold opacity-60 italic tracking-normal ml-1">DEFINIDA</span>
                     </h3>
                     
                     <div className="w-full h-4 bg-white/10 dark:bg-black/10 rounded-full overflow-hidden mb-8 border border-white/5">
@@ -165,7 +177,9 @@ export default function MerchantDashboardTab() {
                     </div>
 
                     <p className="text-xs font-bold leading-relaxed opacity-80 mb-8">
-                        Faltam <span className="font-black underline underline-offset-4">R$ {(monthlyGoal - totalRevenue).toFixed(2).replace('.', ',')}</span> para atingir sua meta de faturamento mensal.
+                        {monthlyGoal > 0 
+                          ? `Faltam R$ ${(monthlyGoal - totalRevenue).toFixed(2).replace('.', ',')} para atingir sua meta.`
+                          : "Defina uma meta mensal para acompanhar seu progresso."}
                     </p>
 
                     <button className="w-full py-5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-[24px] text-xs font-black uppercase tracking-[0.2em] shadow-xl hover:translate-y-[-2px] active:translate-y-[0px] transition-all">
@@ -178,23 +192,26 @@ export default function MerchantDashboardTab() {
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[48px] border border-slate-200 dark:border-slate-800 shadow-sm">
                 <h3 className="text-sm font-black text-slate-900 dark:text-white italic uppercase tracking-widest mb-6">Mais Vendidos</h3>
                 <div className="space-y-6">
-                    {[
-                        { name: 'X-Burger IZI Special', sales: 145, color: 'bg-amber-500' },
-                        { name: 'Pizza Calabresa GG', sales: 98, color: 'bg-rose-500' },
-                        { name: 'Sushi Combo 40 Peças', sales: 64, color: 'bg-emerald-500' },
-                    ].map((p, i) => (
+                    {(topProducts && topProducts.length > 0) ? topProducts.map((p: any, i: number) => (
                         <div key={i} className="flex items-center justify-between group cursor-pointer">
                             <div className="flex items-center gap-4">
-                                <div className={`size-10 ${p.color}/10 rounded-xl flex items-center justify-center`}>
-                                    <span className={`material-symbols-outlined text-sm ${p.color.replace('bg-', 'text-')} font-black`}>local_fire_department</span>
+                                <div className={`size-10 bg-primary/10 rounded-xl flex items-center justify-center`}>
+                                    <span className={`material-symbols-outlined text-sm text-primary font-black`}>local_fire_department</span>
                                 </div>
-                                <span className="text-xs font-black text-slate-900 dark:text-white truncate max-w-[120px]">{p.name}</span>
+                                <span className="text-xs font-black text-slate-900 dark:text-white truncate max-w-[120px]">{p.label}</span>
                             </div>
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{p.sales} un</span>
                         </div>
-                    ))}
+                    )) : (
+                      <div className="py-10 text-center opacity-30">
+                        <p className="text-[10px] font-black uppercase tracking-widest">Sem vendas ainda</p>
+                      </div>
+                    )}
                 </div>
-                <button className="w-full mt-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-t border-slate-50 dark:border-slate-800 hover:text-primary transition-colors">
+                <button 
+                  onClick={goToFinancial}
+                  className="w-full mt-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-t border-slate-50 dark:border-slate-800 hover:text-primary transition-colors"
+                >
                     Relatório Completo
                 </button>
             </div>

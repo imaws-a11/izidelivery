@@ -4,8 +4,12 @@ import { useAdmin } from '../context/AdminContext';
 
 export default function DashboardTab() {
   const {
-    recentOrders, stats, appSettings, setActiveTab, fetchStats, fetchAllOrders
+    recentOrders, stats, appSettings, setActiveTab, fetchStats, fetchAllOrders, dashboardData,
+    userRole, selectedMerchantPreview
   } = useAdmin();
+
+  const isMerchantPreview = userRole === 'admin' && selectedMerchantPreview;
+  const activeMerchant = isMerchantPreview ? selectedMerchantPreview : null;
 
   React.useEffect(() => {
     fetchStats();
@@ -35,10 +39,10 @@ export default function DashboardTab() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter italic uppercase">
-            Master Console <span className="text-primary italic font-black">IZI</span>
+            {activeMerchant ? activeMerchant.store_name : 'Master Console'} <span className="text-primary italic font-black">IZI</span>
           </h1>
           <p className="text-slate-400 font-bold text-sm mt-1 uppercase tracking-widest">
-            Visão Global de Ecossistema em Tempo Real
+            {activeMerchant ? 'Visão de Desempenho da Unidade' : 'Visão Global de Ecossistema em Tempo Real'}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -46,9 +50,9 @@ export default function DashboardTab() {
                  {[1,2,3,4].map(i => (
                      <div key={i} className="size-10 rounded-full border-2 border-white dark:border-slate-950 bg-slate-200 dark:bg-slate-800" />
                  ))}
-                 <div className="size-10 rounded-full border-2 border-white dark:border-slate-950 bg-primary flex items-center justify-center text-[10px] font-black text-slate-900">
-                     +2k
-                 </div>
+                  <div className="size-10 rounded-full border-2 border-white dark:border-slate-950 bg-primary flex items-center justify-center text-[10px] font-black text-slate-900">
+                      +{stats.users > 1000 ? (stats.users / 1000).toFixed(1) + 'k' : stats.users}
+                  </div>
              </div>
              <div className="h-10 w-[1px] bg-slate-200 dark:bg-slate-800 mx-2" />
              <button className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2">
@@ -96,42 +100,51 @@ export default function DashboardTab() {
                     <h3 className="text-2xl font-black text-white tracking-tight italic uppercase">Fluxo de Performance Global</h3>
                     <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-widest">Análise de saúde transacional em tempo real</p>
                  </div>
-                 <div className="bg-white/5 p-4 rounded-3xl border border-white/5 backdrop-blur-xl">
-                      <div className="flex items-center gap-6">
-                           <div>
-                               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Taxa de Sucesso</p>
-                               <p className="text-xl font-black text-emerald-400 italic">94.2%</p>
-                           </div>
-                           <div className="w-[1px] h-8 bg-white/10" />
-                           <div>
-                               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Cancelamentos</p>
-                               <p className="text-xl font-black text-rose-400 italic">5.8%</p>
-                           </div>
-                      </div>
-                 </div>
+                  <div className="bg-white/5 p-4 rounded-3xl border border-white/5 backdrop-blur-xl">
+                       <div className="flex items-center gap-6">
+                            <div>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Taxa de Sucesso</p>
+                                <p className="text-xl font-black text-emerald-400 italic">{dashboardData.deliverySuccessRate.toFixed(1)}%</p>
+                            </div>
+                            <div className="w-[1px] h-8 bg-white/10" />
+                            <div>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Cancelamentos</p>
+                                <p className="text-xl font-black text-rose-400 italic">{((stats.canceledOrders / (stats.orders || 1)) * 100).toFixed(1)}%</p>
+                            </div>
+                       </div>
+                  </div>
              </div>
 
              <div className="h-64 flex items-end gap-3 px-2">
-                  {[45, 60, 85, 40, 95, 70, 80, 55, 90, 75, 65, 85].map((h, i) => (
-                      <div key={i} className="flex-1 flex flex-col gap-2 group">
-                           <div className="w-full relative h-48 flex items-end">
-                                <motion.div 
-                                    initial={{ height: 0 }}
-                                    animate={{ height: `${h}%` }}
-                                    className={`w-full rounded-t-xl transition-all relative ${
-                                        h < 50 ? 'bg-rose-500/80 shadow-[0_0_20px_rgba(244,63,94,0.3)]' : 
-                                        h > 80 ? 'bg-emerald-500/80 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 
-                                        'bg-primary shadow-[0_0_20px_rgba(255,217,0,0.3)]'
-                                    }`}
-                                >
-                                     <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </motion.div>
-                           </div>
-                      </div>
-                  ))}
+                  {(dashboardData.dailyRevenue || [0,0,0,0,0,0,0]).map((val, i) => {
+                      const maxVal = Math.max(...(dashboardData.dailyRevenue || [1]), 1);
+                      const h = (val / maxVal) * 100;
+                      return (
+                        <div key={i} className="flex-1 flex flex-col gap-2 group">
+                             <div className="w-full relative h-48 flex items-end">
+                                  <motion.div 
+                                      initial={{ height: 0 }}
+                                      animate={{ height: `${Math.max(h, 5)}%` }}
+                                      className={`w-full rounded-t-xl transition-all relative ${
+                                          h < 30 ? 'bg-rose-500/80 shadow-[0_0_20px_rgba(244,63,94,0.3)]' : 
+                                          h > 70 ? 'bg-emerald-500/80 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 
+                                          'bg-primary shadow-[0_0_20px_rgba(255,217,0,0.3)]'
+                                      }`}
+                                  >
+                                       <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                       {val > 0 && (
+                                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-slate-900 text-[10px] font-black px-2 py-1 rounded-lg shadow-xl">
+                                             R${val}
+                                         </div>
+                                       )}
+                                  </motion.div>
+                             </div>
+                        </div>
+                      );
+                  })}
              </div>
              <div className="mt-8 flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] border-t border-white/5 pt-6">
-                  <span>Janeiro / 2026</span>
+                  <span>{new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date()).toUpperCase()}</span>
                   <div className="flex gap-8">
                        <span className="flex items-center gap-2"><div className="size-2 bg-emerald-500 rounded-full" /> Performance Ideal</span>
                        <span className="flex items-center gap-2"><div className="size-2 bg-primary rounded-full" /> Na Meta</span>
@@ -166,8 +179,12 @@ export default function DashboardTab() {
       <div className="bg-white dark:bg-slate-900 rounded-[48px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="px-10 py-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight italic uppercase">Monitor Transacional Global</h3>
-                <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Acompanhamento de todos os pedidos da rede</p>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight italic uppercase">
+                  {activeMerchant ? 'Pedidos da Unidade' : 'Monitor Transacional Global'}
+                </h3>
+                <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">
+                  {activeMerchant ? `Histórico de vendas de ${activeMerchant.store_name}` : 'Acompanhamento de todos os pedidos da rede'}
+                </p>
               </div>
               <button onClick={() => setActiveTab('orders')} className="px-6 py-3 bg-primary text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
                   Gerenciar Pedidos

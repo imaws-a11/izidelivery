@@ -855,7 +855,8 @@ function App() {
           oldPrice: p.price * (discountMult || 1.25),
           off: `${discountPct}%`,
           img: p.image_url || "https://images.unsplash.com/photo-1596753738914-7bc33e08f58b?q=80&w=400",
-          cat: p.category || "Bebidas"
+          cat: p.category || "Bebidas",
+          merchant_id: p.merchant_id // Injetar merchant_id para evitar pedidos órfãos
         }));
         setBeverageOffers(formatted);
       }
@@ -1659,8 +1660,9 @@ function App() {
     const totalRaw = subtotal + deliveryFee + serviceFeeAmount - couponDiscount - coinDiscount;
     const total = Math.max(0, Number(totalRaw.toFixed(2)));
 
-    const shopId = selectedShop?.id || cart[0]?.merchant_id || null;
-    const shopName = selectedShop?.name || "Estabelecimento";
+    // Garantir que shopId seja capturado de qualquer forma (Loja selecionada ou primeiro item do carrinho)
+    const shopId = selectedShop?.id || cart[0]?.merchant_id || cart.find(i => i.merchant_id)?.merchant_id || null;
+    const shopName = selectedShop?.name || cart[0]?.merchant_name || cart[0]?.store || "Estabelecimento";
 
     const orderBase = {
       user_id: userId,
@@ -1725,7 +1727,8 @@ function App() {
 
       if (paymentMethod === "dinheiro" || paymentMethod === "cartao_entrega") {
         if (!shopId) { 
-          toastError("Erro: Loja não identificada.");
+          console.error("[CRITICAL] Checkout abortado: merchant_id não encontrado no carrinho nem na loja.", { cart });
+          toastError("Houve um erro técnico: Loja não identificada. Por favor, tente adicionar os itens novamente.");
           setIsLoading(false);
           return; 
         }
