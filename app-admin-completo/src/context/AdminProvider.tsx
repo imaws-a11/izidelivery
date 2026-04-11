@@ -727,7 +727,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const shouldNotifyOnPaymentApproval =
             payload.eventType === 'UPDATE' &&
             oldOrder?.status === 'pendente_pagamento' &&
-            newOrder.status === 'novo';
+            (newOrder.status === 'novo' || newOrder.status === 'waiting_merchant');
 
           // Para recargas, sÃ³ notificar quando o pagamento for aprovado
           const shouldNotify = isCoinPurchase
@@ -815,7 +815,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             if (newTx.type === 'deposito' || newTx.type === 'venda') {
               toastSuccess(`Pagamento Recebido: R$ ${parseFloat(newTx.amount).toFixed(2)} - ${newTx.description}`);
               fetchMerchantFinance();
-              playIziSound('merchant');
+              playIziSound('payment');
             }
           }
         }
