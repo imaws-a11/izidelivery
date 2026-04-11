@@ -1747,6 +1747,7 @@ function App() {
       status: "novo",
       total_price: Number(total.toFixed(2)),
       delivery_fee: deliveryFee,
+      service_fee: Number(serviceFeeAmount.toFixed(2)),
       items: cart,
       pickup_address: shopName,
       delivery_address: `${userLocation?.address || "Endereço não informado"}`,

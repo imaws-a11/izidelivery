@@ -1826,10 +1826,14 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       // 3. Inserir transação na carteira do lojista (wallet_transactions_delivery)
       if (order.merchant_id && order.total_price > 0) {
-        // Calcular comissão
+        // Calcular comissão sobre o valor dos produtos (Total - Frete - Taxa de Serviço)
+        const deliveryFee = Number(order.delivery_fee || 0);
+        const serviceFee = Number(order.service_fee || 0);
+        const basePrice = order.total_price - deliveryFee - serviceFee;
+        
         const commRate = merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12;
-        const commissionAmount = order.total_price * (commRate / 100);
-        const netAmount = order.total_price - commissionAmount;
+        const commissionAmount = basePrice * (commRate / 100);
+        const netAmount = basePrice - commissionAmount;
 
         // Calcular saldo atual para registrar balance_after
         const { data: currentWallet } = await supabase
