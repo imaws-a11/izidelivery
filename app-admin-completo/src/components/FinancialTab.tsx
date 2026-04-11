@@ -1161,13 +1161,33 @@ function MasterFinancialControl() {
                 />
              </div>
           </div>
-          <div className="pt-2">
-             <p className="text-[9px] font-bold text-slate-500 uppercase italic leading-relaxed">
-               Prazo de processamento: 12h. <br/>
-               Os pagamentos são liquidados toda quarta-feira.
+          <div className="flex justify-between items-center">
+             <span className="text-[11px] font-bold text-slate-400">Prazo (Horas)</span>
+             <div className="flex items-center gap-2">
+                <input 
+                  type="number"
+                  value={settings.withdrawal_period_h}
+                  onChange={(e) => handleUpdate('withdrawal_period_h', parseInt(e.target.value))}
+                  className="w-10 bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-white font-black text-right text-xs outline-none focus:border-primary"
+                />
+                <span className="text-[10px] text-white/20">H</span>
+             </div>
+          </div>
+          <div className="flex justify-between items-center">
+             <span className="text-[11px] font-bold text-slate-400">Dia de Pagamento</span>
+             <input 
+               type="text"
+               value={settings.withdrawal_day}
+               onChange={(e) => handleUpdate('withdrawal_day', e.target.value)}
+               className="w-24 bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-white font-black text-right text-[10px] outline-none focus:border-primary"
+             />
+          </div>
+          <div className="pt-2 border-t border-white/5">
+             <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed italic">
+               Nota: Estas regras refletem globalmente no ecossistema Izi para todos os parceiros.
              </p>
           </div>
-       </div>
+        </div>
     </div>
   );
 }

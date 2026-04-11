@@ -171,12 +171,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     flashOfferTitle: 'Burgers Gourmet',
     flashOfferDiscount: 50,
     flashOfferExpiry: '',
-    iziCoinRate: 1.0
+    iziCoinRate: 1.0,
+    withdrawal_period_h: 12,
+    withdrawal_day: 'Quarta-feira',
+    minwithdrawalamount: 50.0
   });
   const [globalSettings, setGlobalSettings] = useState<any>({
     izi_coin_value: 0.01,
     loan_interest_rate: 12.0,
     min_withdrawal_amount: 50.0,
+    withdrawal_period_h: 12,
+    withdrawal_day: 'Quarta-feira',
     service_fee_percent: 5.0,
     payment_methods_active: { pix: true, card: true, lightning: false, wallet: true }
   });
@@ -213,6 +218,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
            serviceFee: Number(appSettings.serviceFee || 0),
            flashOfferDiscount: Number(appSettings.flashOfferDiscount || 0),
            iziCoinRate: Number(appSettings.iziCoinRate || 0),
+           withdrawal_period_h: Number(appSettings.withdrawal_period_h || 12),
+           withdrawal_day: String(appSettings.withdrawal_day || 'Quarta-feira'),
+           minwithdrawalamount: Number(appSettings.minwithdrawalamount || 50.0),
            updated_at: new Date().toISOString()
         };
         
