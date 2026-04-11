@@ -1078,7 +1078,13 @@ export const WalletView: React.FC<WalletViewProps> = ({
                         disabled={isPayingInstallments || isGeneratingPix}
                         className="w-full py-5 bg-emerald-500 rounded-2xl font-black text-black uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2"
                       >
-                        {isPayingInstallments ? <div className="size-5 border-2 border-black border-t-transparent animate-spin rounded-full" /> : "Já pa                    <motion.div 
+                        {isPayingInstallments ? <div className="size-5 border-2 border-black border-t-transparent animate-spin rounded-full" /> : "Já paguei"}
+                      </button>
+                    </motion.div>
+                  )}
+
+                  {loanPaymentStep === 'card' && (
+                    <motion.div 
                       key="card"
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -1128,8 +1134,6 @@ export const WalletView: React.FC<WalletViewProps> = ({
                         className="w-full py-5 bg-blue-500 rounded-2xl font-black text-white uppercase tracking-widest active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                       >
                         {isPayingInstallments ? <div className="size-5 border-white border-t-transparent animate-spin rounded-full" /> : "Confirmar Pagamento"}
-                      </button>
-                    </motion.div>l" /> : "Confirmar Pagamento"}
                       </button>
                     </motion.div>
                   )}
