@@ -64,7 +64,7 @@ export default function MyStudioTab() {
     establishmentTypes, fetchEstablishmentTypes, handleUpdateEstablishmentType, handleDeleteEstablishmentType,
     merchantBalance, merchantTransactions, fetchMerchantFinance,
     handleRequestWithdrawal, handleUpdateMerchantBankInfo, handleSyncMerchantBalance,
-    dashboardData, appSettings
+    dashboardData, appSettings, setAppSettings
   } = useAdmin();
 
   const [isLocating, setIsLocating] = React.useState(false);
@@ -114,6 +114,9 @@ export default function MyStudioTab() {
   const [tempTime, setTempTime] = React.useState('');
   const [selectedProductStudio, setSelectedProductStudio] = React.useState<any>(null);
   const [productSearch, setProductSearch] = React.useState('');
+  const [withdrawalAmount, setWithdrawalAmount] = React.useState('');
+  const [withdrawalStatus, setWithdrawalStatus] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [withdrawalError, setWithdrawalError] = React.useState('');
 
 
   const targetMerchantId = userRole === 'merchant' ? merchantProfile?.merchant_id : selectedMerchantPreview?.id;
@@ -564,22 +567,98 @@ export default function MyStudioTab() {
                         <div>
                           <p className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-2">Saldo Disponível para Saque</p>
                           <h2 className="text-5xl font-black text-white tracking-tighter">R$ {merchantBalance.toFixed(2).replace('.', ',')}</h2>
+                          
+                          {withdrawalStatus === 'success' && (
+                            <motion.div 
+                              initial={{ opacity: 0, x: -10 }} 
+                              animate={{ opacity: 1, x: 0 }}
+                              className="mt-4 flex flex-col gap-1 text-white bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/20 w-fit"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-sm font-black">check_circle</span>
+                                <span className="text-[10px] font-black uppercase tracking-wider">Solicitação Enviada!</span>
+                              </div>
+                              <p className="text-[8px] font-bold opacity-80 uppercase tracking-widest pl-6">Processamento em até {appSettings.withdrawal_period_h} horas</p>
+                            </motion.div>
+                          )}
                         </div>
-                        <button 
-                          onClick={() => {
-                            const amountStr = prompt('Digite o valor do saque (Mínimo R$ 50,00):');
-                            if (amountStr) {
-                              const amount = parseFloat(amountStr.replace(',', '.'));
-                              if (isNaN(amount)) return toastError('Valor inválido');
-                              if (amount < 50) return toastError('O valor mínimo para saque é R$ 50,00');
-                              handleRequestWithdrawal(amount, targetItem.bank_info?.pix_key || '');
-                            }
-                          }}
-                          className="bg-white text-emerald-600 px-10 h-16 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
-                        >
-                          <span className="material-symbols-outlined font-black">logout</span>
-                          Solicitar Saque
-                        </button>
+
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="relative">
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 text-xs font-black">R$</span>
+                              <input 
+                                type="text"
+                                placeholder="0,00"
+                                value={withdrawalAmount}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/\D/g, '');
+                                  const formatted = (Number(val) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                                  setWithdrawalAmount(formatted);
+                                  setWithdrawalStatus('idle');
+                                  setWithdrawalError('');
+                                }}
+                                className="w-32 bg-white/10 border border-white/20 rounded-2xl h-16 pl-10 pr-4 text-white font-black text-sm outline-none focus:ring-2 focus:ring-white placeholder:text-white/20 transition-all"
+                              />
+                            </div>
+                            <button 
+                              onClick={async () => {
+                                const amount = parseFloat(withdrawalAmount.replace('.', '').replace(',', '.'));
+                                if (isNaN(amount) || amount <= 0) {
+                                  setWithdrawalError('Digite um valor válido');
+                                  setWithdrawalStatus('error');
+                                  return;
+                                }
+                                if (amount < (appSettings.minwithdrawalamount || 50)) {
+                                  setWithdrawalError(`Mínimo R$ ${Number(appSettings.minwithdrawalamount || 50).toFixed(2).replace('.', ',')}`);
+                                  setWithdrawalStatus('error');
+                                  return;
+                                }
+                                if (amount > merchantBalance) {
+                                  setWithdrawalError('Saldo insuficiente');
+                                  setWithdrawalStatus('error');
+                                  return;
+                                }
+
+                                setWithdrawalStatus('loading');
+                                try {
+                                  await handleRequestWithdrawal(amount, targetItem.bank_info?.pix_key || '');
+                                  setWithdrawalStatus('success');
+                                  setWithdrawalAmount('');
+                                  setTimeout(() => setWithdrawalStatus('idle'), 5000);
+                                } catch (err) {
+                                  setWithdrawalStatus('error');
+                                  setWithdrawalError('Erro na solicitação');
+                                }
+                              }}
+                              disabled={withdrawalStatus === 'loading'}
+                              className="bg-white text-emerald-600 px-8 h-16 rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                            >
+                              {withdrawalStatus === 'loading' ? (
+                                <div className="size-4 border-2 border-emerald-600/20 border-t-emerald-600 rounded-full animate-spin"></div>
+                              ) : (
+                                <>
+                                  <span className="material-symbols-outlined font-black text-sm">logout</span>
+                                  Sacar
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          
+                          <AnimatePresence>
+                            {withdrawalStatus === 'error' && (
+                              <motion.p 
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="text-[10px] font-black text-white/90 bg-red-500/80 backdrop-blur-sm px-3 py-1.5 rounded-xl w-fit flex items-center gap-2"
+                              >
+                                <span className="material-symbols-outlined text-xs">error</span>
+                                {withdrawalError}
+                              </motion.p>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       </div>
                     </div>
 
@@ -634,8 +713,76 @@ export default function MyStudioTab() {
                       </div>
                     </div>
                   </div>
-
+                  
                   <div className="space-y-8">
+                    {/* CARD DE GESTÃO GLOBAL (EXCLUSIVO PARA ADMIN NO PAINEL DO LOJISTA) */}
+                    {userRole === 'admin' && (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-slate-900 border border-white/5 p-8 rounded-[48px] shadow-2xl relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 p-8 opacity-5">
+                          <span className="material-symbols-outlined text-6xl text-primary">settings_suggest</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-4 mb-8">
+                          <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                            <span className="material-symbols-outlined text-lg font-black">admin_panel_settings</span>
+                          </div>
+                          <div>
+                            <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Gestão do Ecossistema</h4>
+                            <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest mt-1">Regras Globais de Saque</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-6">
+                           <div className="space-y-2">
+                              <div className="flex justify-between items-center ml-4">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mínimo para Saque</label>
+                                <span className="text-[9px] font-black text-primary">R$</span>
+                              </div>
+                              <input 
+                                type="number"
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 font-black text-sm text-white focus:outline-none focus:border-primary transition-colors text-right"
+                                value={appSettings.minwithdrawalamount}
+                                onChange={e => setAppSettings({ ...appSettings, minwithdrawalamount: parseFloat(e.target.value) })}
+                              />
+                           </div>
+
+                           <div className="space-y-2">
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">Prazo de Resgate (H)</label>
+                              <div className="relative">
+                                <input 
+                                  type="number"
+                                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 font-black text-sm text-white focus:outline-none focus:border-primary transition-colors text-right pr-12"
+                                  value={appSettings.withdrawal_period_h}
+                                  onChange={e => setAppSettings({ ...appSettings, withdrawal_period_h: parseInt(e.target.value) })}
+                                />
+                                <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[9px] font-black text-white/20">HORAS</span>
+                              </div>
+                           </div>
+
+                           <div className="space-y-2">
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">Dia Oficial de Pgto</label>
+                              <input 
+                                type="text"
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 font-black text-sm text-white focus:outline-none focus:border-primary transition-colors text-right"
+                                value={appSettings.withdrawal_day}
+                                onChange={e => setAppSettings({ ...appSettings, withdrawal_day: e.target.value })}
+                                placeholder="Ex: Toda Quarta-feira"
+                              />
+                           </div>
+
+                           <div className="pt-2">
+                              <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed italic text-center px-4">
+                                Estas alterações afetam todos os lojistas e entregadores do ecossistema IZI.
+                              </p>
+                           </div>
+                        </div>
+                      </motion.div>
+                    )}
+
                     <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-[48px] border border-slate-100 dark:border-slate-800 shadow-inner space-y-8">
                       <div className="flex items-center gap-4">
                         <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
@@ -679,7 +826,7 @@ export default function MyStudioTab() {
                           <span className="material-symbols-outlined text-lg">info</span>
                           <span className="text-[9px] font-black uppercase tracking-widest">Regras de Saque</span>
                         </div>
-                        <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase italic">Os saques são processados em até 12h. Pagamentos realizados toda quarta-feira. O valor mínimo é de R$ 50,00.</p>
+                        <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase italic">Os saques são processados em até {appSettings.withdrawal_period_h}h. Pagamentos realizados: {appSettings.withdrawal_day}. O valor mínimo é de R$ {Number(appSettings.minwithdrawalamount).toFixed(2).replace('.', ',')}.</p>
                       </div>
                     </div>
                   </div>
@@ -3329,7 +3476,21 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
             </div>
             <div>
               <p className="text-sm font-black text-slate-900 dark:text-white line-clamp-1">{o.user_name || 'Cliente'}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{o.status}</p>
+              <div className="flex items-center gap-1.5">
+                <span className={`size-1.5 rounded-full ${
+                  o.status === 'preparando' ? 'bg-amber-500 animate-pulse' :
+                  ['picked_up', 'em_rota', 'a_caminho'].includes(o.status) ? 'bg-emerald-500' :
+                  'bg-blue-500'
+                }`} />
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  {o.status === 'preparando' ? 'Em Preparação' :
+                   o.status === 'pronto' ? 'Pronto p/ Retirada' :
+                   ['picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega'].includes(o.status) ? 'Saiu para Entrega' :
+                   ['waiting_driver', 'pending'].includes(o.status) ? 'Buscando Entregador' :
+                   ['accepted', 'a_caminho_coleta', 'no_local_coleta', 'chegou_coleta', 'confirmado'].includes(o.status) ? 'Vindo coletar' :
+                   o.status}
+                </p>
+              </div>
             </div>
           </div>
           <div className="text-right">

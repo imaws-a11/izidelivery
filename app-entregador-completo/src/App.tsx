@@ -453,6 +453,7 @@ function App() {
     const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
     const [scheduledOrders, setScheduledOrders] = useState<any[]>([]);
     const [history, setHistory] = useState<Order[]>([]);
+    const [merchantCoords, setMerchantCoords] = useState<{lat: number, lng: number} | null>(null);
     const [stats, setStats] = useState({ balance: 0, today: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
     const [earningsHistory, setEarningsHistory] = useState<Order[]>([]);
     const [withdrawHistory, setWithdrawHistory] = useState<any[]>([]);
@@ -1417,6 +1418,34 @@ function App() {
         };
         recoverActiveMission();
     }, [driverId, isAuthenticated]);
+
+    // Gancho para buscar coordenadas reais do lojista se os campos pickup_lat/lng estiverem vazios no pedido
+    useEffect(() => {
+        const fetchMerchantCoords = async () => {
+            if (activeMission?.merchant_id) {
+                try {
+                    const { data } = await supabase
+                        .from('admin_users')
+                        .select('latitude, longitude')
+                        .eq('id', activeMission.merchant_id)
+                        .single();
+                    if (data?.latitude && data?.longitude) {
+                        setMerchantCoords({ lat: Number(data.latitude), lng: Number(data.longitude) });
+                    } else {
+                        setMerchantCoords(null);
+                    }
+                } catch (e) {
+                    console.error('[COORDS] Erro ao buscar coordenadas do lojista:', e);
+                    setMerchantCoords(null);
+                }
+            } else {
+                setMerchantCoords(null);
+            }
+        };
+        fetchMerchantCoords();
+    }, [activeMission?.merchant_id]);
+
+
 
 
 
@@ -2547,7 +2576,14 @@ function App() {
         };
 
         const orderItems = getOrderItems();
-        const addressOnly = (activeMission.delivery_address || activeMission.destination || '').split('| ITENS:')[0].trim();
+        const rawAddr = (activeMission.delivery_address || activeMission.destination || '');
+        let addressOnly = rawAddr.split('| ITENS:')[0].trim();
+        // Garantir Brumadinho MG para geocoding preciso
+        if (addressOnly && !addressOnly.toLowerCase().includes('brumadinho')) {
+            addressOnly += ', Brumadinho - MG, Brasil';
+        } else if (addressOnly && !addressOnly.toLowerCase().includes('brasil')) {
+            addressOnly += ', Brasil';
+        }
 
         // Status Label & Color logic
         const getStatusDisplay = () => {
@@ -2600,12 +2636,12 @@ function App() {
                 <div className="flex-1 bg-[#030a1a] relative overflow-hidden">
                     <IziRealTimeMap 
                       driverCoords={driverCoords} 
-                      pickupCoords={isValidCoord({ lat: activeMission.pickup_lat, lng: activeMission.pickup_lng }) ? { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng } : null}
+                      pickupCoords={isValidCoord({ lat: activeMission.pickup_lat, lng: activeMission.pickup_lng }) ? { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng } : merchantCoords}
                       pickupAddress={activeMission.origin || activeMission.pickup_address}
-                      pickupName={activeMission.store_name} // Corrigido para store_name
+                      pickupName={activeMission.store_name} 
                       deliveryCoords={isValidCoord({ lat: activeMission.delivery_lat, lng: activeMission.delivery_lng }) ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng } : null}
                       deliveryAddress={addressOnly}
-                      deliveryName={activeMission.user_name || activeMission.customer} // Novo: Nome do Cliente
+                      deliveryName={activeMission.user_name || activeMission.customer} 
                       currentStatus={activeMission.status}
                     />
                     <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#020617]/40 via-transparent to-[#030712]/40" />
