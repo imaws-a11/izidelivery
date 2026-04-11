@@ -186,7 +186,14 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
             {paymentOptions.map((m) => (
               <button
                 key={m.id}
-                onClick={() => !m.disabled && setPaymentMethod(m.id)}
+                onClick={() => {
+                   if (!m.disabled) {
+                      setPaymentMethod(m.id);
+                      if (m.id === "cartao" && !selectedCard && savedCards.length > 0) {
+                         setSelectedCard(savedCards[0]);
+                      }
+                   }
+                }}
                 disabled={m.disabled}
                 className={`flex flex-col items-center justify-center p-5 rounded-[32px] transition-all duration-300 border relative group overflow-hidden
                   ${paymentMethod === m.id

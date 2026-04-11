@@ -474,7 +474,8 @@ function App() {
       });
 
       if (fnErr || (fnData && (fnData.status !== 'approved' && fnData.status !== 'in_process'))) {
-         const mpMsg = fnData?.details?.cause?.[0]?.description || fnData?.error || fnErr?.message || "O cartão foi recusado pela operadora.";
+         const mpMsg = fnData?.details || fnData?.error || fnErr?.message || "O cartão foi recusado pela operadora.";
+         console.error("[PAYMENT ERROR]", { fnErr, fnData });
          toastError(`Pagamento não aprovado: ${mpMsg}`);
          if (origin === "izi_black") setSubView("izi_black_purchase");
          else if (origin === "profile") {
@@ -810,15 +811,19 @@ function App() {
       )
       .subscribe();
 
-    // Sincronização de Cartões Salvos em tempo real
-    const cardSub = supabase
-      .channel(`card_sync_${userId}`)
+    // Sincronização de Pedidos em tempo real para o cliente
+    const orderSub = supabase
+      .channel(`order_sync_${userId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "payment_methods", filter: `user_id=eq.${userId}` },
-        () => {
-          console.log("[SYNC] Cartões salvos atualizados, sincronizando...");
-          fetchSavedCards(userId);
+        { event: "*", schema: "public", table: "orders_delivery", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          console.log("[SYNC] Pedido atualizado, atualizando lista e visualização...");
+          fetchMyOrders(userId);
+          // Se o pedido atual for o que estamos vendo, atualiza o item selecionado
+          if (selectedItemRef.current && (payload.new as any).id === selectedItemRef.current.id) {
+             setSelectedItem(payload.new);
+          }
         }
       )
       .subscribe();
@@ -827,6 +832,7 @@ function App() {
       supabase.removeChannel(userSub);
       supabase.removeChannel(addrSub);
       supabase.removeChannel(cardSub);
+      supabase.removeChannel(orderSub);
     };
   }, [userId]);
   
