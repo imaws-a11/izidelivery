@@ -720,73 +720,97 @@ export const WalletView: React.FC<WalletViewProps> = ({
         </header>
 
         <section className="space-y-6">
-          <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-[32px] text-black shadow-xl relative overflow-hidden">
-            <div className="relative z-10">
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Seu Limite Pré-Aprovado</p>
-              <h2 className="text-4xl font-black italic mt-1">Z {preApprovedLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
-              <div className="mt-6 flex items-center gap-2">
-                 <span className="material-symbols-outlined text-sm">info</span>
-                 <p className="text-[9px] font-bold uppercase tracking-tight">Taxa de {loanInterestRate}% / mês • Liberação na hora</p>
-              </div>
-            </div>
-            <div className="absolute -bottom-4 -right-4 size-32 bg-black/5 rounded-full blur-2xl" />
-          </div>
+          {/* Lógica de Bloqueio para Empréstimo Ativo */}
+          {(() => {
+            const hasActiveLoan = loans.some(l => l.status === 'pending' || l.status === 'approved' || l.status === 'active');
+            
+            return (
+              <div className="relative space-y-6">
+                {hasActiveLoan && (
+                  <div className="absolute inset-x-0 inset-y-0 z-50 flex items-center justify-center p-6 text-center">
+                    <div className="bg-black/80 backdrop-blur-md border border-white/10 p-8 rounded-[40px] shadow-2xl scale-90 md:scale-100">
+                      <span className="material-symbols-outlined text-yellow-400 text-5xl mb-4">lock</span>
+                      <h4 className="font-black text-xl uppercase italic tracking-tighter">Acesso Bloqueado</h4>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-2 px-4 leading-relaxed">
+                        Você já possui um empréstimo em andamento. <br/>
+                        Quite o atual para liberar novo crédito.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-          <div className="bg-zinc-900 p-6 rounded-[32px] border border-white/5 space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Quanto você precisa?</label>
-                <div className="flex items-center gap-3">
-                   <span className="text-2xl font-black text-yellow-500">Z</span>
-                   <input 
-                     type="number" 
-                     placeholder="0.00"
-                     value={loanAmount}
-                     onChange={(e) => setLoanAmount(e.target.value)}
-                     className="bg-transparent text-3xl font-black text-white outline-none flex-1"
-                   />
+                <div className={`space-y-6 transition-all duration-500 ${hasActiveLoan ? 'opacity-30 grayscale pointer-events-none scale-[0.98]' : ''}`}>
+                  <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 p-6 rounded-[32px] text-black shadow-xl relative overflow-hidden">
+                    <div className="relative z-10">
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Seu Limite Pré-Aprovado</p>
+                      <h2 className="text-3xl font-black italic mt-1">Z {preApprovedLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
+                      <div className="mt-6 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm">info</span>
+                        <p className="text-[9px] font-bold uppercase tracking-tight">Taxa de {loanInterestRate}% / mês • Liberação na hora</p>
+                      </div>
+                    </div>
+                    <div className="absolute -bottom-4 -right-4 size-32 bg-black/5 rounded-full blur-2xl" />
+                  </div>
+
+                  <div className="bg-zinc-900 p-6 rounded-[32px] border border-white/5 space-y-6">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Quanto você precisa?</label>
+                        <div className="flex items-center gap-3">
+                           <span className="text-2xl font-black text-yellow-500">Z</span>
+                           <input 
+                             type="number" 
+                             placeholder="0.00"
+                             value={loanAmount}
+                             onChange={(e) => setLoanAmount(e.target.value)}
+                             className="bg-transparent text-3xl font-black text-white outline-none flex-1"
+                           />
+                        </div>
+                      </div>
+
+                      <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest block">Número de Parcelas</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[1, 3, 6, 12].map((p) => (
+                          <button 
+                            key={p}
+                            onClick={() => setLoanInstallments(p)}
+                            className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
+                              loanInstallments === p 
+                              ? 'bg-yellow-400 text-black border-yellow-400 shadow-lg shadow-yellow-400/20' 
+                              : 'bg-transparent text-zinc-500 border-white/5 hover:border-white/20'
+                            }`}
+                          >
+                            {p}x
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {loanAmount && Number(loanAmount) > 0 && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-3 pt-4 border-t border-white/5">
+                        <div className="flex justify-between text-[10px] font-bold uppercase text-zinc-500">
+                          <span>Plano de Pagamento</span>
+                          <span className="text-white">{loanInstallments}x de Z {((Number(loanAmount) * (1 + (loanInterestRate / 100))) / loanInstallments).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between text-xs font-black uppercase text-white pt-2 border-t border-white/5">
+                           <span>Total c/ {loanInterestRate}% Juros</span>
+                           <span className="text-yellow-400">Z {(Number(loanAmount) * (1 + (loanInterestRate / 100))).toLocaleString('pt-BR')}</span>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    <button 
+                      onClick={handleTakeLoan}
+                      disabled={isTakingLoan || !loanAmount || Number(loanAmount) <= 0}
+                      className="w-full py-4 bg-yellow-400 rounded-2xl font-black text-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all font-display"
+                    >
+                      {isTakingLoan ? "Processando..." : "Solicitar Crédito"}
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest block">Número de Parcelas</label>
-              <div className="grid grid-cols-4 gap-2">
-                {[1, 3, 6, 12].map((p) => (
-                  <button 
-                    key={p}
-                    onClick={() => setLoanInstallments(p)}
-                    className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
-                      loanInstallments === p 
-                      ? 'bg-yellow-400 text-black border-yellow-400 shadow-lg shadow-yellow-400/20' 
-                      : 'bg-transparent text-zinc-500 border-white/5 hover:border-white/20'
-                    }`}
-                  >
-                    {p}x
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {loanAmount && Number(loanAmount) > 0 && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-3 pt-4 border-t border-white/5">
-                <div className="flex justify-between text-[10px] font-bold uppercase text-zinc-500">
-                  <span>Plano de Pagamento</span>
-                  <span className="text-white">{loanInstallments}x de Z {((Number(loanAmount) * (1 + (loanInterestRate / 100))) / loanInstallments).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between text-xs font-black uppercase text-white pt-2 border-t border-white/5">
-                   <span>Total c/ {loanInterestRate}% Juros</span>
-                   <span className="text-yellow-400">Z {(Number(loanAmount) * (1 + (loanInterestRate / 100))).toLocaleString('pt-BR')}</span>
-                </div>
-              </motion.div>
-            )}
-
-            <button 
-              onClick={handleTakeLoan}
-              disabled={isTakingLoan || !loanAmount || Number(loanAmount) <= 0}
-              className="w-full py-4 bg-yellow-400 rounded-2xl font-black text-black uppercase tracking-widest active:scale-95 disabled:opacity-50 transition-all"
-            >
-              {isTakingLoan ? "Processando..." : "Solicitar Crédito"}
-            </button>
-          </div>
+            );
+          })()}
         </section>
 
         <section className="space-y-4">
