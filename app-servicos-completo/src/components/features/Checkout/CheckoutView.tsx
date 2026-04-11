@@ -96,7 +96,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       id: "saldo",
       icon: "currency_bitcoin",
       label: "Saldo em IZI Coins",
-      sub: `${iziCoins.toLocaleString("pt-BR")} coins`,
+      sub: `${iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString("pt-BR")} coins`,
       disabled: (iziCoins * iziCoinValue) < total,
       color: "text-yellow-400",
       active: paymentMethodsActive.wallet !== false
@@ -428,7 +428,12 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                     </span>
                     <div className="bg-yellow-400/10 px-3 py-1.5 rounded-full border border-yellow-400/10">
                        <span className="text-yellow-400 font-black text-[9px] uppercase tracking-widest italic">
-                          + {Math.floor(total * (isIziBlack ? (iziCoinRate * iziBlackCashbackMultiplier) : iziCoinRate)).toLocaleString("pt-BR")} Coins
+                          + {(() => {
+                            const val = total * ((isIziBlack ? (iziCoinRate * iziBlackCashbackMultiplier) : iziCoinRate) / 100);
+                            return val < 1 
+                              ? val.toFixed(8).replace(".", ",") 
+                              : val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                          })()} Coins
                        </span>
                     </div>
                  </div>

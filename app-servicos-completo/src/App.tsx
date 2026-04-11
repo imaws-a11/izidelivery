@@ -831,7 +831,6 @@ function App() {
     return () => {
       supabase.removeChannel(userSub);
       supabase.removeChannel(addrSub);
-      supabase.removeChannel(cardSub);
       supabase.removeChannel(orderSub);
     };
   }, [userId]);
@@ -1289,8 +1288,8 @@ function App() {
     const baseRate = globalSettings?.izi_coin_rate || 1;
     const coinRate = isIziBlackMembership ? (baseRate * cashbackMult) : baseRate;
     
-    const earnedCoins = Math.floor(total * coinRate);
-    const finalCoins = isUsingCoins ? earnedCoins : (iziCoins + earnedCoins);
+    const earnedCoins = Number((total * (coinRate / 100)).toFixed(8));
+    const finalCoins = isUsingCoins ? earnedCoins : (Number(iziCoins) + earnedCoins);
     
     // BENEFÍCIO IZI BLACK: XP Dinâmico
     const baseXP = 50;
@@ -4735,7 +4734,7 @@ const navigateSubView = (target: string) => {
               <div className="space-y-4">
                 <div>
                   <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Acumulado em Coins</p>
-                  <p className="text-3xl font-black text-white">{iziCoins.toLocaleString("pt-BR")} <span className="text-sm text-yellow-400 italic">coins</span></p>
+                  <p className="text-3xl font-black text-white">{iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString("pt-BR")} <span className="text-sm text-yellow-400 italic">coins</span></p>
                 </div>
                 <div className="flex gap-4">
                   <div className="flex-1 p-3 rounded-2xl bg-black/40 border border-white/5">
@@ -4762,7 +4761,7 @@ const navigateSubView = (target: string) => {
                 { icon: "pix",                    label: "PIX",             desc: "Mercado Pago ÃÂ¢ââ€šÂ¬Â¢ InstantÃÂ¢neo",    id: "pix" },
                 { icon: "bolt",                   label: "Bitcoin Lightning", desc: "LNbits ÃÂ¢ââ€šÂ¬Â¢ Satoshis",           id: "bitcoin_lightning" },
                 { icon: "payments",               label: "Dinheiro",        desc: "Pague na entrega",              id: "dinheiro" },
-                { icon: "currency_bitcoin",       label: "Saldo em IZI Coins",  desc: `${iziCoins.toLocaleString("pt-BR")} coins disponíveis`, id: "saldo" },
+                { icon: "currency_bitcoin",       label: "Saldo em IZI Coins",  desc: `${iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString("pt-BR")} coins disponíveis`, id: "saldo" },
               ].map((m) => (
                 <div key={m.id} className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0 group active:scale-98 transition-transform cursor-pointer"
                   onClick={() => setPaymentMethod(m.id)}>
@@ -5901,7 +5900,7 @@ const navigateSubView = (target: string) => {
                 <div className="size-1.5 rounded-full bg-yellow-400 shadow-[0_0_8px_white]" />
                 <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.4em]">IziCoin Balance</p>
               </div>
-              <h2 className="text-7xl font-black text-white tabular-nums tracking-tighter leading-none mb-4 italic">{iziCoins.toLocaleString('pt-BR')}</h2>
+              <h2 className="text-7xl font-black text-white tabular-nums tracking-tighter leading-none mb-4 italic">{iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString('pt-BR')}</h2>
               <div className="inline-block px-6 py-2 rounded-full bg-white/5 border border-white/5 text-[9px] font-black text-white/20 uppercase tracking-[0.3em]">
                 Acumule {globalSettings?.izi_coin_rate || 1} coins a cada R$ 1,00 gasto
               </div>

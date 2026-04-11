@@ -120,14 +120,14 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
 
   // Configurações do Bottom Sheet para framer-motion (Sincronizado com feedback de UI Premium)
   const sheetVariants = {
-    collapsed: { y: "76%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
+    collapsed: { y: "72%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
     half: { y: "45%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
-    expanded: { y: "10%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } }
+    expanded: { y: "5%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } }
   };
   const [sheetState, setSheetState] = React.useState<"collapsed" | "half" | "expanded">("collapsed");
 
   const handleDragEnd = (_: any, info: any) => {
-    const threshold = 100;
+    const threshold = 50; // Menor para ser mais sensível
     if (info.offset.y > threshold) {
       if (sheetState === "expanded") setSheetState("half");
       else setSheetState("collapsed");
@@ -167,39 +167,50 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
         initial="collapsed"
         animate={sheetState}
         drag="y"
-        dragElastic={0.7}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={0.15}
         onDragEnd={handleDragEnd}
-        className="absolute inset-x-0 bottom-0 z-40 bg-zinc-900 border-t-4 border-white/5 rounded-t-[60px] shadow-[-20px_-20px_60px_rgba(255,255,255,0.02),20px_20px_60px_rgba(0,0,0,0.8),inset_4px_4px_12px_rgba(255,255,255,0.05),inset_-4px_-4px_12px_rgba(0,0,0,0.3)] flex flex-col cursor-grab active:cursor-grabbing"
-        style={{ height: "100vh" }}
+        className="absolute inset-x-0 bottom-0 z-40 bg-zinc-900 border-t-4 border-white/5 rounded-t-[60px] shadow-[-20px_-20px_60px_rgba(255,255,255,0.02),20px_20px_60px_rgba(0,0,0,0.8),inset_4px_4px_12px_rgba(255,255,255,0.05),inset_-4px_-4px_12px_rgba(0,0,0,0.3)] flex flex-col cursor-grab active:cursor-grabbing touch-none"
+        style={{ height: "100dvh" }}
       >
-        {/* Handle de arraste visível e área sensível maior */}
-        <div className="w-full h-14 flex items-center justify-center shrink-0">
-          <div className="w-16 h-2 bg-zinc-800 rounded-full shadow-[inset_2px_2px_4px_rgba(0,0,0,0.5),inset_-2px_-2px_4px_rgba(255,255,255,0.05)]" />
-        </div>
+        {/* Área superior de interação (Handle + Cabeçalho) */}
+        <div 
+          className="shrink-0" 
+          onClick={() => {
+            if (sheetState === "collapsed") setSheetState("half");
+            else if (sheetState === "half") setSheetState("expanded");
+            else setSheetState("collapsed");
+          }}
+        >
+          {/* Handle de arraste visível e área sensível maior */}
+          <div className="w-full h-10 flex items-center justify-center pt-4">
+            <div className="w-16 h-2 bg-zinc-700/50 rounded-full shadow-[inset_1px_1px_2px_rgba(0,0,0,0.5)]" />
+          </div>
 
-        {/* CABEÇALHO DO SHEET (STATUS RÁPIDO - CLAY STYLE) */}
-        <div className="px-6 pb-6" onClick={() => setSheetState(sheetState === "collapsed" ? "half" : "expanded")}>
-          <div className="bg-zinc-800 p-6 rounded-[40px] flex items-center gap-5 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)] border-none relative overflow-hidden group">
-            <div className="absolute top-0 right-0 size-24 bg-yellow-400/5 blur-3xl rounded-full" />
-            
-            <div className="size-16 rounded-[24px] bg-yellow-400 flex items-center justify-center shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)]">
-              <span className="material-symbols-outlined text-black text-3xl animate-bounce">
-                {steps[currentIdx]?.icon || "sync"}
-              </span>
-            </div>
-            
-            <div className="flex-1">
-              <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-1">
-                Acompanhando
-              </p>
-              <h3 className="text-xl font-black text-white tracking-tighter leading-none">
-                {steps[currentIdx]?.label || "Sintonizando..."}
-              </h3>
-            </div>
-            
-            <div className="px-4 py-2 rounded-2xl bg-zinc-900/50 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_4px_rgba(255,255,255,0.02)]">
-              <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-0.5 text-center">Chega em</p>
-              <p className="text-xl font-black text-yellow-400 italic leading-none">{selectedItem.delivery_time || "15-25"}</p>
+          {/* CABEÇALHO DO SHEET (STATUS RÁPIDO - CLAY STYLE) */}
+          <div className="px-6 pb-6 pt-2">
+            <div className="bg-zinc-800 p-6 rounded-[40px] flex items-center gap-5 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)] border-none relative overflow-hidden group active:scale-[0.98] transition-all">
+              <div className="absolute top-0 right-0 size-24 bg-yellow-400/5 blur-3xl rounded-full" />
+              
+              <div className="size-16 rounded-[24px] bg-yellow-400 flex items-center justify-center shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)]">
+                <span className="material-symbols-outlined text-black text-3xl animate-bounce">
+                  {steps[currentIdx]?.icon || "sync"}
+                </span>
+              </div>
+              
+              <div className="flex-1">
+                <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-1">
+                  {isMobility ? "Sua Viagem" : "Seu Pedido"}
+                </p>
+                <h3 className="text-xl font-black text-white tracking-tighter leading-none">
+                  {steps[currentIdx]?.label || "Sintonizando..."}
+                </h3>
+              </div>
+              
+              <div className="px-4 py-2 rounded-2xl bg-zinc-900/50 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_4px_rgba(255,255,255,0.02)]">
+                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-0.5 text-center">Chega em</p>
+                <p className="text-xl font-black text-yellow-400 italic leading-none">{selectedItem.delivery_time || "15-25"}</p>
+              </div>
             </div>
           </div>
         </div>

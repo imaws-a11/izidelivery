@@ -690,8 +690,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
                   />
                 </div>
                 <p className="text-center text-xs text-zinc-700 flex items-center justify-center gap-1">
-                  Saldo disponível: <span className="izi-coin-symbol">Z</span> {iziCoins.toLocaleString("pt-BR")}
-                  {((iziCoins || 0) % 1 > 0) && <span className="opacity-40 text-[10px]">,{(iziCoins % 1).toFixed(8).split('.')[1]}</span>}
+                  Saldo disponível: <span className="izi-coin-symbol">Z</span> {iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString("pt-BR")}
                 </p>
               </div>
 
