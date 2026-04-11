@@ -1513,8 +1513,6 @@ function App() {
         
         try {
             const missionId = activeMission.realId || activeMission.id;
-            console.log('[STATUS-DEBUG] Enviando comando:', { missionId, newStatus });
-            
             const { error: patchError } = await supabase
                 .from('orders_delivery')
                 .update({ 
@@ -1524,33 +1522,55 @@ function App() {
                 .eq('id', missionId);
 
             if (patchError) throw patchError;
-            console.log('[STATUS-DEBUG] Comando aceito pelo banco.');
 
             // Lógica de Finalização
             const finishStatus = ['concluido', 'entregue', 'finalizado', 'delivered'];
             if (finishStatus.includes(newStatus.toLowerCase())) {
                 try {
+                    // 1. Ganho do Entregador
                     const netEarnings = getNetEarnings(activeMission);
-                    console.log('[FINALIZE] Recording transaction for driver:', driverId, 'Amount:', netEarnings);
                     
                     if (driverId && netEarnings > 0) {
-                        const { error: wErr } = await supabase.from('wallet_transactions_delivery').insert({
+                        await supabase.from('wallet_transactions_delivery').insert({
                             user_id: driverId,
                             amount: netEarnings,
                             type: 'deposito',
                             description: `Ganhos: Missão #${missionId.slice(0, 8).toUpperCase()} (Líquido)`
                         });
+                    }
 
-                        if (wErr) {
-                            console.error('[FINALIZE] Wallet insert error:', wErr);
-                            // Não relançamos o erro para não travar a finalização do pedido
-                        } else {
-                            console.log('[FINALIZE] Wallet transaction recorded successfully.');
-                            await fetchFinanceData();
+                    // 2. Crédito do Lojista (NOVO)
+                    if (activeMission.merchant_id && (Number(activeMission.total_price) || 0) > 0) {
+                        try {
+                            // Buscar comissão do lojista
+                            const { data: mData } = await supabase
+                                .from('admin_users')
+                                .select('commission_percent')
+                                .eq('id', activeMission.merchant_id)
+                                .single();
+                            
+                            const commRate = mData?.commission_percent ?? appSettings?.appCommission ?? 12;
+                            const totalPrice = Number(activeMission.total_price) || 0;
+                            const commValue = totalPrice * (Number(commRate) / 100);
+                            const merchantNet = totalPrice - commValue;
+
+                            if (merchantNet > 0) {
+                                await supabase.from('wallet_transactions_delivery').insert({
+                                    user_id: activeMission.merchant_id,
+                                    amount: merchantNet,
+                                    type: 'venda',
+                                    description: `Venda Pedido #${missionId.slice(0, 8).toUpperCase()} (Líquido)`,
+                                    status: 'concluido'
+                                });
+                            }
+                        } catch (mErr) {
+                            console.error('[FINALIZE] Erro ao creditar lojista:', mErr);
                         }
                     }
+
+                    await fetchFinanceData();
                 } catch (finalizeErr) {
-                    console.error('[FINALIZE] Erro interno no processamento de ganhos:', finalizeErr);
+                    console.error('[FINALIZE] Erro interno no processamento financeiro:', finalizeErr);
                 }
 
                 toastSuccess('Missão concluída com sucesso!');

@@ -567,10 +567,11 @@ export default function MyStudioTab() {
                         </div>
                         <button 
                           onClick={() => {
-                            const amountStr = prompt('Digite o valor do saque (ex: 10.00):');
+                            const amountStr = prompt('Digite o valor do saque (Mínimo R$ 50,00):');
                             if (amountStr) {
                               const amount = parseFloat(amountStr.replace(',', '.'));
                               if (isNaN(amount)) return toastError('Valor inválido');
+                              if (amount < 50) return toastError('O valor mínimo para saque é R$ 50,00');
                               handleRequestWithdrawal(amount, targetItem.bank_info?.pix_key || '');
                             }
                           }}
@@ -678,7 +679,7 @@ export default function MyStudioTab() {
                           <span className="material-symbols-outlined text-lg">info</span>
                           <span className="text-[9px] font-black uppercase tracking-widest">Regras de Saque</span>
                         </div>
-                        <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase italic">Os saques são processados em até 24h úteis. O valor mínimo é de R$ 10,00.</p>
+                        <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase italic">Os saques são processados em até 12h. Pagamentos realizados toda quarta-feira. O valor mínimo é de R$ 50,00.</p>
                       </div>
                     </div>
                   </div>
