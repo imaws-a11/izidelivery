@@ -390,6 +390,10 @@ export interface AppSettings {
   flashOfferDiscount: number;
   flashOfferExpiry: string;
   iziCoinRate: number;
+  minwithdrawalamount?: number;
+  withdrawalfeepercent?: number;
+  withdrawal_period_h?: number;
+  withdrawal_day?: string;
   created_at?: string;
   updated_at?: string;
 }

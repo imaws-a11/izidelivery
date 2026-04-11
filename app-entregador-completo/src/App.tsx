@@ -419,7 +419,7 @@ function App() {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         try {
-            const res = await fetch(`${supabaseUrl}/rest/v1/admin_settings_delivery?select=*`, {
+            const res = await fetch(`${supabaseUrl}/rest/v1/app_settings_delivery?select=*`, {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
             });
             if (res.ok) {
@@ -1817,7 +1817,14 @@ function App() {
             return;
         }
 
-        // 3. Abrir modal de confirmação
+        // 3. Validar Saque Mínimo
+        const minAmount = Number(appSettings?.minwithdrawalamount ?? 0);
+        if (stats.balance < minAmount) {
+            toastError(`O valor mínimo para saque é de R$ ${minAmount.toFixed(2).replace('.', ',')}`);
+            return;
+        }
+
+        // 4. Abrir modal de confirmação
         setShowWithdrawModal(true);
     };
 
@@ -1859,11 +1866,14 @@ function App() {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
+            const feePercent = Number(appSettings?.withdrawalfeepercent ?? 0);
+            const feeAmount = stats.balance * (feePercent / 100);
+
             const body = {
                 user_id: uid,
                 amount: stats.balance,
                 type: 'saque',
-                description: `Saque PIX: ${pixKey}`,
+                description: `Saque PIX: ${pixKey}${feeAmount > 0 ? ` (Taxa IZI: R$ ${feeAmount.toFixed(2)})` : ''}`,
                 status: 'pendente'
             };
 
@@ -3298,11 +3308,27 @@ function App() {
                                     <span className="text-xs font-black text-white truncate max-w-[180px]">{pixKey}</span>
                                 </div>
                                 <div className="h-px bg-white/5" />
+                                {Number(appSettings?.withdrawalfeepercent ?? 0) > 0 && (
+                                    <>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs font-bold text-white/40">Taxa Administrativa ({appSettings?.withdrawalfeepercent}%)</span>
+                                            <span className="text-xs font-black text-red-400">- R$ {(stats.balance * (Number(appSettings?.withdrawalfeepercent) / 100)).toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                        <div className="h-px bg-white/5" />
+                                    </>
+                                )}
+                                <div className="flex justify-between items-center text-primary font-black">
+                                    <span className="text-xs uppercase tracking-widest">Líquido a Receber</span>
+                                    <span className="text-sm">R$ {(stats.balance * (1 - (Number(appSettings?.withdrawalfeepercent ?? 0) / 100))).toFixed(2).replace('.', ',')}</span>
+                                </div>
+                                <div className="h-px bg-white/5" />
                                 <div className="flex justify-between items-center">
                                     <span className="text-xs font-bold text-white/40">Status</span>
                                     <span className="text-xs font-black text-amber-400">Aguarda aprovação admin</span>
                                 </div>
                             </div>
+                            
+                            <p className="text-[10px] text-center text-white/20 italic">Os saques são processados em até {appSettings?.withdrawal_period_h ?? 24}h.</p>
                             <div className="flex gap-3 pt-2">
                                 <button
                                     onClick={() => setShowWithdrawModal(false)}

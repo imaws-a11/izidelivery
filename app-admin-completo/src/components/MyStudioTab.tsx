@@ -609,8 +609,9 @@ export default function MyStudioTab() {
                                   setWithdrawalStatus('error');
                                   return;
                                 }
-                                if (amount < (appSettings.minwithdrawalamount || 50)) {
-                                  setWithdrawalError(`Mínimo R$ ${Number(appSettings.minwithdrawalamount || 50).toFixed(2).replace('.', ',')}`);
+                                const minLimit = Number(appSettings.minwithdrawalamount ?? 0);
+                                if (amount < minLimit) {
+                                  setWithdrawalError(`Mínimo R$ ${minLimit.toFixed(2).replace('.', ',')}`);
                                   setWithdrawalStatus('error');
                                   return;
                                 }
@@ -715,73 +716,6 @@ export default function MyStudioTab() {
                   </div>
                   
                   <div className="space-y-8">
-                    {/* CARD DE GESTÃO GLOBAL (EXCLUSIVO PARA ADMIN NO PAINEL DO LOJISTA) */}
-                    {userRole === 'admin' && (
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="bg-slate-900 border border-white/5 p-8 rounded-[48px] shadow-2xl relative overflow-hidden"
-                      >
-                        <div className="absolute top-0 right-0 p-8 opacity-5">
-                          <span className="material-symbols-outlined text-6xl text-primary">settings_suggest</span>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 mb-8">
-                          <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                            <span className="material-symbols-outlined text-lg font-black">admin_panel_settings</span>
-                          </div>
-                          <div>
-                            <h4 className="text-[11px] font-black text-white uppercase tracking-widest">Gestão do Ecossistema</h4>
-                            <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest mt-1">Regras Globais de Saque</p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-6">
-                           <div className="space-y-2">
-                              <div className="flex justify-between items-center ml-4">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mínimo para Saque</label>
-                                <span className="text-[9px] font-black text-primary">R$</span>
-                              </div>
-                              <input 
-                                type="number"
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 font-black text-sm text-white focus:outline-none focus:border-primary transition-colors text-right"
-                                value={appSettings.minwithdrawalamount}
-                                onChange={e => setAppSettings({ ...appSettings, minwithdrawalamount: parseFloat(e.target.value) })}
-                              />
-                           </div>
-
-                           <div className="space-y-2">
-                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">Prazo de Resgate (H)</label>
-                              <div className="relative">
-                                <input 
-                                  type="number"
-                                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 font-black text-sm text-white focus:outline-none focus:border-primary transition-colors text-right pr-12"
-                                  value={appSettings.withdrawal_period_h}
-                                  onChange={e => setAppSettings({ ...appSettings, withdrawal_period_h: parseInt(e.target.value) })}
-                                />
-                                <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[9px] font-black text-white/20">HORAS</span>
-                              </div>
-                           </div>
-
-                           <div className="space-y-2">
-                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">Dia Oficial de Pgto</label>
-                              <input 
-                                type="text"
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 font-black text-sm text-white focus:outline-none focus:border-primary transition-colors text-right"
-                                value={appSettings.withdrawal_day}
-                                onChange={e => setAppSettings({ ...appSettings, withdrawal_day: e.target.value })}
-                                placeholder="Ex: Toda Quarta-feira"
-                              />
-                           </div>
-
-                           <div className="pt-2">
-                              <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed italic text-center px-4">
-                                Estas alterações afetam todos os lojistas e entregadores do ecossistema IZI.
-                              </p>
-                           </div>
-                        </div>
-                      </motion.div>
-                    )}
 
                     <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-[48px] border border-slate-100 dark:border-slate-800 shadow-inner space-y-8">
                       <div className="flex items-center gap-4">
@@ -826,7 +760,7 @@ export default function MyStudioTab() {
                           <span className="material-symbols-outlined text-lg">info</span>
                           <span className="text-[9px] font-black uppercase tracking-widest">Regras de Saque</span>
                         </div>
-                        <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase italic">Os saques são processados em até {appSettings.withdrawal_period_h}h. Pagamentos realizados: {appSettings.withdrawal_day}. O valor mínimo é de R$ {Number(appSettings.minwithdrawalamount).toFixed(2).replace('.', ',')}.</p>
+                        <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase italic">Os saques são processados em até {appSettings.withdrawal_period_h ?? 24}h. Pagamentos realizados: {appSettings.withdrawal_day ?? 'Qualquer dia'}. O valor mínimo é de R$ {(appSettings.minwithdrawalamount ?? 0).toFixed(2).replace('.', ',')}.</p>
                       </div>
                     </div>
                   </div>
@@ -1683,7 +1617,10 @@ export default function MyStudioTab() {
         </div>
         <p className="text-slate-500 dark:text-slate-400">Controle seus ganhos, solicitações de saque e histórico de vendas.</p>
       </div>
-      <button className="flex items-center gap-2 bg-emerald-500 text-white px-8 py-4 rounded-[24px] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all">
+      <button 
+        onClick={() => handleRequestWithdrawal(merchantBalance, merchantProfile?.bank_info?.pix_key || '')}
+        className="flex items-center gap-2 bg-emerald-500 text-white px-8 py-4 rounded-[24px] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+      >
         <span className="material-symbols-outlined">payments</span>
         Solicitar Saque
       </button>
@@ -1694,16 +1631,16 @@ export default function MyStudioTab() {
         <section className="bg-slate-900 rounded-[40px] p-8 text-white relative overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/20 -mr-20 -mt-20 rounded-full blur-3xl"></div>
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Saldo Disponível</p>
-          <h2 className="text-5xl font-black tracking-tighter mb-8">R$ 1.254,80</h2>
+          <h2 className="text-5xl font-black tracking-tighter mb-8">R$ {merchantBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
 
           <div className="space-y-4">
             <div className="flex justify-between items-center p-4 rounded-3xl bg-white/5 border border-white/10">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">A Receber (7 dias)</span>
-              <span className="font-black text-emerald-400">R$ 840,00</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saque Mínimo</span>
+              <span className="font-black text-emerald-400">R$ {(appSettings.minwithdrawalamount ?? 0).toFixed(2).replace('.', ',')}</span>
             </div>
             <div className="flex justify-between items-center p-4 rounded-3xl bg-white/5 border border-white/10">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Vendas (Mês)</span>
-              <span className="font-black">R$ 4.580,00</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Taxa de Saque</span>
+              <span className="font-black">{(appSettings.withdrawalfeepercent ?? 0)} %</span>
             </div>
           </div>
         </section>
@@ -1711,20 +1648,20 @@ export default function MyStudioTab() {
         <section className="bg-white dark:bg-slate-900 rounded-[40px] p-8 border border-slate-200 dark:border-slate-800 shadow-sm">
           <h3 className="text-lg font-black text-slate-900 dark:text-white mb-6 flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">pie_chart</span>
-            Divisão de Taxas
+            Regras Atuais
           </h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center text-sm">
-              <span className="font-bold text-slate-500">Sua Receita (88%)</span>
-              <span className="font-black text-slate-900 dark:text-white">R$ 4.030,40</span>
+              <span className="font-bold text-slate-500">Sua Comissão (Líquido)</span>
+              <span className="font-black text-slate-900 dark:text-white">{100 - (merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12)}%</span>
             </div>
             <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
-              <div className="h-full bg-emerald-500 w-[88%]"></div>
-              <div className="h-full bg-slate-300 dark:bg-slate-700 w-[12%]"></div>
+              <div className="h-full bg-emerald-500" style={{ width: `${100 - (merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12)}%` }}></div>
+              <div className="h-full bg-slate-300 dark:bg-slate-700" style={{ width: `${(merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12)}%` }}></div>
             </div>
             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-              <span>Comissão App (12%)</span>
-              <span>R$ 549,60</span>
+              <span>Taxa sobre Venda</span>
+              <span>{(merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12)}%</span>
             </div>
           </div>
         </section>

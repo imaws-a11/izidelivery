@@ -40,6 +40,14 @@ export default function SettingsTab() {
             {autoSaveStatus === 'saved' ? 'Salvo' : autoSaveStatus === 'pending' ? 'Salvando...' : autoSaveStatus === 'error' ? 'Erro ao salvar' : 'Auto-save ativo'}
           </div>
           <button
+            onClick={() => handleSaveAppSettings()}
+            disabled={isSaving}
+            className="px-6 py-3 bg-primary text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-base">save</span>
+            {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+          </button>
+          <button
             onClick={() => fetchAppSettings()}
             className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-2"
           >
@@ -287,6 +295,78 @@ export default function SettingsTab() {
               </div>
             </div>
             <p className="text-[9px] text-amber-600/70 font-bold tracking-widest uppercase mt-4 text-center">DEFINE O VALOR DE MERCADO DA MOEDA</p>
+          </div>
+        </div>
+      </section>
+      
+      {/* Regras de Saque (Withdrawal Rules) */}
+      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="p-3 rounded-2xl bg-amber-50 text-amber-500 border border-amber-100 dark:bg-amber-500/10 dark:border-amber-500/20">
+            <span className="material-symbols-outlined">account_balance_wallet</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Regras de Saque da Plataforma</h2>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controla como lojistas e entregadores recebem</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="p-6 rounded-[28px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Valor Mínimo (R$)</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">R$</span>
+              <input
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-10 pr-4 py-3.5 font-black text-xl text-slate-700 dark:text-white focus:ring-2 focus:ring-primary shadow-sm"
+                type="number" step="1"
+                value={appSettings.minwithdrawalamount ?? 0}
+                onChange={(e) => setAppSettings({ ...appSettings, minwithdrawalamount: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+          </div>
+
+          <div className="p-6 rounded-[28px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Taxa de Saque (%)</label>
+            <div className="relative">
+              <input
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-xl text-slate-700 dark:text-white focus:ring-2 focus:ring-primary shadow-sm"
+                type="number" step="0.1"
+                value={appSettings.withdrawalfeepercent || 0}
+                onChange={(e) => setAppSettings({ ...appSettings, withdrawalfeepercent: parseFloat(e.target.value) || 0 })}
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">%</span>
+            </div>
+          </div>
+
+          <div className="p-6 rounded-[28px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Dia Oficial de Saque</label>
+            <select
+              className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-black text-xs uppercase tracking-widest text-slate-600 dark:text-white focus:ring-2 focus:ring-primary shadow-sm appearance-none"
+              value={appSettings.withdrawal_day || ''}
+              onChange={(e) => setAppSettings({ ...appSettings, withdrawal_day: e.target.value })}
+            >
+              <option value="">Qualquer dia</option>
+              <option value="Segunda-feira">Segunda-feira</option>
+              <option value="Terça-feira">Terça-feira</option>
+              <option value="Quarta-feira">Quarta-feira</option>
+              <option value="Quinta-feira">Quinta-feira</option>
+              <option value="Sexta-feira">Sexta-feira</option>
+              <option value="Sábado">Sábado</option>
+              <option value="Domingo">Domingo</option>
+            </select>
+          </div>
+
+          <div className="p-6 rounded-[28px] bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Intervalo entre Saques (H)</label>
+            <div className="relative">
+              <input
+                className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-xl text-slate-700 dark:text-white focus:ring-2 focus:ring-primary shadow-sm"
+                type="number" step="1"
+                value={appSettings.withdrawal_period_h || 0}
+                onChange={(e) => setAppSettings({ ...appSettings, withdrawal_period_h: parseInt(e.target.value) || 0 })}
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] font-black uppercase">hrs</span>
+            </div>
           </div>
         </div>
       </section>
