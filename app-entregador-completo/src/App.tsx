@@ -548,22 +548,20 @@ function App() {
         const isPrivateDriver = ['car_ride', 'motorista_particular'].includes(type);
         
         let driverBaseAmount = 0;
-        
         if (isMobility) {
-            // Em mobilidade, o valor base é o total da corrida
-            driverBaseAmount = Number(order.total_price || order.price || 0);
-        } else if (isErrand) {
-            // Em entregas de encomendas/avulsas, o total costuma ser o próprio frete
+            // Em mobilidade (Uber/99 style), o valor da corrida é o preço total ou frete
             driverBaseAmount = Number(order.delivery_fee || order.total_price || order.price || 0);
         } else {
-            // Em restaurante/mercado, usamos a delivery_fee ou o baseFee como fallback
+            // Em entregas (iFood style), o entregador NUNCA recebe o valor do produto.
+            // Recebe SOMENTE o frete (delivery_fee).
             const deliveryFee = Number(order.delivery_fee || 0);
-            driverBaseAmount = deliveryFee > 0 ? deliveryFee : defaultBaseFee;
-        }
-
-        // Se mesmo assim for zero, tentamos o total_price como última instância (limitado a um teto razoável se não for mobilidade)
-        if (driverBaseAmount <= 0) {
-            driverBaseAmount = Number(order.total_price || order.price || 0);
+            
+            if (deliveryFee > 0) {
+                driverBaseAmount = deliveryFee;
+            } else {
+                // Se o frete for zero no banco, usamos a taxa base definida no admin como segurança
+                driverBaseAmount = defaultBaseFee;
+            }
         }
 
         const commission = isPrivateDriver ? privateDriverCommission : deliveryCommission;
@@ -2456,10 +2454,33 @@ function App() {
 
             <AnimatePresence>
                 {selectedHistoryOrder && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-[4px] flex items-center justify-center p-5">
-                       <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0f172a] border border-white/10 p-7 rounded-[36px] w-full max-w-sm space-y-6 shadow-2xl relative overflow-hidden">
-                           <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none"><Icon name={getTypeDetails(selectedHistoryOrder.type).icon} className="text-[140px] text-white -rotate-12" /></div>
-                           <button onClick={() => setSelectedHistoryOrder(null)} className="absolute top-5 right-5 text-white/40 bg-white/5 size-10 rounded-2xl flex items-center justify-center active:scale-95 transition-all"><Icon name="close" /></button>
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }} 
+                        onClick={() => setSelectedHistoryOrder(null)}
+                        className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-[8px] flex items-center justify-center p-5 cursor-pointer"
+                    >
+                       <motion.div 
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+                            animate={{ scale: 1, opacity: 1, y: 0 }} 
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }} 
+                            onClick={e => e.stopPropagation()}
+                            className="bg-[#0f172a] border border-white/10 p-7 rounded-[40px] w-full max-w-sm space-y-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden cursor-default"
+                        >
+                           <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                               <Icon name={getTypeDetails(selectedHistoryOrder.type).icon} className="text-[140px] text-white -rotate-12" />
+                           </div>
+                           
+                           <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedHistoryOrder(null);
+                                }} 
+                                className="absolute top-6 right-6 text-white/40 hover:text-white hover:bg-white/10 bg-white/5 size-10 rounded-2xl flex items-center justify-center active:scale-90 transition-all z-20"
+                            >
+                                <Icon name="close" size={20} />
+                            </button>
                            
                            <div className="relative">
                                <p className="text-[9px] font-black text-primary uppercase tracking-[0.4em]">Recibo da Missão</p>
