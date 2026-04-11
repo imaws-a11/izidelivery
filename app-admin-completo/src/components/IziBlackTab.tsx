@@ -199,6 +199,30 @@ export default function IziBlackTab() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mult. Cashback</label>
+                <div className="relative">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">x</span>
+                  <input type="text" inputMode="decimal"
+                    value={appSettings.izi_black_cashback_multiplier?.toString().replace('.', ',')}
+                    onChange={e => setAppSettings({ ...appSettings, izi_black_cashback_multiplier: Number(e.target.value.replace(',', '.')) })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 font-black text-lg focus:ring-2 focus:ring-primary dark:text-white text-center" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mult. XP</label>
+                <div className="relative">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">x</span>
+                  <input type="text" inputMode="decimal"
+                    value={appSettings.izi_black_xp_multiplier?.toString().replace('.', ',')}
+                    onChange={e => setAppSettings({ ...appSettings, izi_black_xp_multiplier: Number(e.target.value.replace(',', '.')) })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 font-black text-lg focus:ring-2 focus:ring-primary dark:text-white text-center" />
+                </div>
+              </div>
+            </div>
+
             <div className="pt-4">
               <button 
                 onClick={handleSaveAppSettings}

@@ -1282,15 +1282,19 @@ function App() {
     
     const total = Math.max(0, subtotal - couponDiscount);
     
-    // BENEFÍCIO IZI BLACK: Dobro de Cashback (Coins)
+    // BENEFÍCIO IZI BLACK: Multiplicadores Dinâmicos
+    const cashbackMult = appSettings?.izi_black_cashback_multiplier || 2;
+    const xpMult = appSettings?.izi_black_xp_multiplier || 2;
+
     const baseRate = globalSettings?.izi_coin_rate || 1;
-    const coinRate = isIziBlackMembership ? (baseRate * 2) : baseRate;
+    const coinRate = isIziBlackMembership ? (baseRate * cashbackMult) : baseRate;
     
     const earnedCoins = Math.floor(total * coinRate);
     const finalCoins = isUsingCoins ? earnedCoins : (iziCoins + earnedCoins);
     
-    // BENEFÍCIO IZI BLACK: XP em dobro (100 em vez de 50)
-    const earnedXP = isIziBlackMembership ? 100 : 50;
+    // BENEFÍCIO IZI BLACK: XP Dinâmico
+    const baseXP = 50;
+    const earnedXP = isIziBlackMembership ? (baseXP * xpMult) : baseXP;
     
     await registerPendingBenefitUsages(orderId);
 
@@ -7453,10 +7457,11 @@ const navigateSubView = (target: string) => {
                     setSubView={(v: any) => setSubView(v)} 
                     iziCoins={iziCoins} 
                     iziCoinValue={globalSettings?.izi_coin_value || 0.01} 
-                    iziCoinRate={globalSettings?.izi_coin_value || 1}
+                    iziCoinRate={globalSettings?.izi_coin_rate || 1}
                     deliveryFee={calculateDeliveryFee()} 
                     serviceFee={globalSettings?.service_fee_percent || 0}
                     isIziBlack={isIziBlackMembership}
+                    iziBlackCashbackMultiplier={appSettings?.izi_black_cashback_multiplier || 2}
                     paymentMethodsActive={globalSettings?.payment_methods_active}
                   />
                 </motion.div>
