@@ -1161,6 +1161,12 @@ function MasterFinancialControl() {
                 />
              </div>
           </div>
+          <div className="pt-2">
+             <p className="text-[9px] font-bold text-slate-500 uppercase italic leading-relaxed">
+               Prazo de processamento: 12h. <br/>
+               Os pagamentos são liquidados toda quarta-feira.
+             </p>
+          </div>
        </div>
     </div>
   );

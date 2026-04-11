@@ -176,6 +176,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [globalSettings, setGlobalSettings] = useState<any>({
     izi_coin_value: 0.01,
     loan_interest_rate: 12.0,
+    min_withdrawal_amount: 50.0,
     service_fee_percent: 5.0,
     payment_methods_active: { pix: true, card: true, lightning: false, wallet: true }
   });
@@ -830,7 +831,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (error) throw error;
       if (data) {
         setMerchantTransactions(data as WalletTransaction[]);
-        const balance = data.reduce((acc, t) => acc + (t.type === 'saque' ? -Number(t.amount) : Number(t.amount)), 0);
+        const balance = data.reduce((acc, t) => {
+          if (t.status === 'cancelado' || t.status === 'estornado') return acc;
+          const amt = Number(t.amount) || 0;
+          return acc + (t.type === 'saque' ? -amt : amt);
+        }, 0);
         setMerchantBalance(balance);
       }
     } catch (err: any) {
@@ -868,7 +873,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
     if (!idToUse) return;
 
-    if (amount < 10) return toastError('O valor mínimo para saque é R$ 10,00');
+    if (amount < 50) return toastError('O valor mínimo para saque é R$ 50,00');
     if (amount > merchantBalance) return toastError('Saldo insuficiente para este saque.');
 
     if (!await showConfirm({ 
