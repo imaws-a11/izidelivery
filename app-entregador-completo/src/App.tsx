@@ -1124,48 +1124,69 @@ function App() {
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
 
-        const fetchOrders = async () => {
-            console.log('[POLL] Buscando chamadas disponíveis...');
-            const { data, error } = await supabase.from('orders_delivery')
-                .select('*')
-                .in('status', ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'confirmado'])
-                .is('driver_id', null); // Garante que pegamos apenas o que está livre
-                
-            if (error) {
-                console.error('[POLL] Erro ao buscar pedidos:', error);
-                return;
-            }
-
-            const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
-            const now = Date.now();
-            const cleanDeclined: Record<string, number> = {};
-            Object.entries(declinedMap).forEach(([id, ts]) => {
-                if (now - ts < 5000) cleanDeclined[id] = ts;
+        const fetchFromDB = async (table: string, query: string = 'select=*') => {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            const res = await fetch(`${supabaseUrl}/rest/v1/${table}?${query}`, {
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' }
             });
-            localStorage.setItem('Izi_declined_timed', JSON.stringify(cleanDeclined));
-
-            const available = (data || []).filter((o: any) => !cleanDeclined[o.id]);
-            setOrders(available.map((o: any) => ({ 
-              ...o,
-              id: o.id.slice(0, 8).toUpperCase(), 
-              realId: o.id, 
-              type: o.service_type as ServiceType, 
-              origin: o.pickup_address, 
-              destination: o.delivery_address, 
-              price: o.total_price,
-              pickup_lat: o.pickup_lat,
-              pickup_lng: o.pickup_lng,
-              delivery_lat: o.delivery_lat,
-              delivery_lng: o.delivery_lng,
-              status: o.status,
-              preparation_status: o.preparation_status || 'preparando',
-              customer: 'Cliente Izi' 
-            })));
+            if (!res.ok) throw new Error(`DB Error: ${res.status}`);
+            return await res.json();
         };
+
+        const fetchOrders = async () => {
+            try {
+                // Busca ampla para pegar tanto pedidos novos quanto se eu fui atribuído a algum
+                const data = await fetchFromDB('orders_delivery', 'select=*&order=created_at.desc&limit=20');
+                
+                const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
+                const now = Date.now();
+                const currentMission = activeMissionRef.current;
+
+                // 1. Sincronizar Missão Ativa (Se o Admin me deu um pedido ou aceitei em outro lugar)
+                const myAssignment = data.find((o: any) => 
+                    o.driver_id && String(o.driver_id).trim() === String(driverId).trim() &&
+                    !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)
+                );
+
+                if (myAssignment && (!currentMission || currentMission.realId !== myAssignment.id)) {
+                    const mission = { ...myAssignment, realId: myAssignment.id, type: myAssignment.service_type, customer: myAssignment.user_name || 'Cliente Izi' };
+                    setActiveMission(mission);
+                    localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
+                    if (activeTabRef.current !== 'active_mission') setActiveTab('active_mission');
+                }
+
+                // 2. Disponíveis no Dashboard
+                const available = data.filter((o: any) => {
+                    const statusOk = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status);
+                    const notMyAssignment = !o.driver_id || String(o.driver_id).trim() === '';
+                    const notDeclined = !(now - (declinedMap[o.id] || 0) < 5000);
+                    const notFinancial = !['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'].includes(o.service_type);
+                    return statusOk && notMyAssignment && notDeclined && notFinancial;
+                });
+
+                setOrders(available.map((o: any) => ({
+                    ...o,
+                    id: o.id.slice(0, 8).toUpperCase(), 
+                    realId: o.id, 
+                    type: o.service_type, 
+                    origin: o.pickup_address, 
+                    destination: o.delivery_address, 
+                    price: o.total_price,
+                    status: o.status,
+                    customer: 'Izi' 
+                })));
+            } catch (err) {
+                console.warn('[POLL] Falha na rede:', err);
+            }
+        };
+
         const fetchDedicatedSlots = async () => {
-            const declinedIds = JSON.parse(localStorage.getItem('Izi_declined_slots') || '[]');
-            const { data } = await supabase.from('dedicated_slots_delivery').select('*, admin_users(store_name, store_logo, store_address, store_phone)').eq('is_active', true).order('created_at', { ascending: false });
-            setDedicatedSlots((data || []).filter((s: any) => !declinedIds.includes(s.id)));
+            try {
+                const declinedIds = JSON.parse(localStorage.getItem('Izi_declined_slots') || '[]');
+                const data = await fetchFromDB('dedicated_slots_delivery', 'select=*,admin_users(store_name,store_logo,store_address,store_phone)&is_active=eq.true&order=created_at.desc');
+                setDedicatedSlots((data || []).filter((s: any) => !declinedIds.includes(s.id)));
+            } catch (e) {}
         };
         fetchOrders(); fetchDedicatedSlots();
 
@@ -1334,44 +1355,40 @@ function App() {
     const handleManualSync = async () => {
         if (isSyncing) return;
         setIsSyncing(true);
-        console.log('[DEBUG-SYNC] Iniciando limpeza e busca profunda...');
+        console.group('[DEBUG-REST-SYNC]');
+        console.log('1. Iniciando teste de conexão via REST DIRETO...');
 
         try {
-            // LIMPEZA DE EMERGÊNCIA: Removemos tokens que podem estar travando o client
-            console.log('[DEBUG-SYNC] Limpando vestígios de sessão...');
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && key.includes('supabase.auth.token')) {
-                    localStorage.removeItem(key);
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            
+            console.log('2. URL Alvo:', `${supabaseUrl}/rest/v1/orders_delivery?select=*&limit=5`);
+
+            // Fazendo a busca manualmente sem usar a biblioteca Supabase para evitar hangs
+            const response = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?select=*&order=created_at.desc&limit=10`, {
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json'
                 }
+            });
+
+            console.log('3. Status da Resposta:', response.status, response.statusText);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Erro na API: ${response.status} - ${errorText}`);
             }
-            localStorage.removeItem('Izi_declined_timed');
+
+            const allRecent = await response.json();
+            console.log('4. Dados recebidos com SUCESSO via REST!', allRecent.length, 'itens');
             
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 7000); // 7s para dar mais fôlego
-
-            console.log('[DEBUG-SYNC] URL do Banco:', supabase.supabaseUrl);
-            
-            // Tenta buscar com dados completos para o dashboard
-            const { data: allRecent, error: dbError } = await supabase
-                .from('orders_delivery')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(10)
-                .abortSignal(controller.signal);
-
-            clearTimeout(timeoutId);
-
-            if (dbError) throw dbError;
-
             if (!allRecent || allRecent.length === 0) {
-                console.log('[DEBUG-SYNC] Banco respondeu, mas a tabela está vazia.');
-                toastError('O banco respondeu, mas não encontrou pedidos.');
+                toastError('O banco está vazio (vias REST).');
                 return;
             }
 
-            console.log(`[DEBUG-SYNC] SUCESSO! Recebemos ${allRecent.length} registros.`);
-            
+            // Filtros de exibição
             const available = allRecent.filter((o: any) => 
                 !o.driver_id && 
                 !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)
@@ -1385,35 +1402,35 @@ function App() {
                 origin: o.pickup_address, 
                 destination: o.delivery_address, 
                 price: o.total_price, 
-                customer: 'Status: ' + o.status
+                customer: 'REST: ' + o.status
             })));
 
             const myActive = allRecent.find((o: any) => 
-                String(o.driver_id || '').trim() === String(driverId || '').trim() &&
+                o.driver_id && String(o.driver_id).trim() === String(driverId || '').trim() &&
                 !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)
             );
 
             if (myActive) {
+                console.log('5. Missão ativa encontrada via REST:', myActive.id);
                 const mission = { ...myActive, realId: myActive.id, type: myActive.service_type, customer: myActive.user_name || 'Cliente Izi' };
                 setActiveMission(mission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                 setActiveTab('active_mission');
-                toastSuccess('Conectado! Sua missão ativa foi recuperada.');
+                toastSuccess('Conectado via REST! Missão recuperada.');
             } else {
-                toastSuccess(`Conectado! Encontradas ${available.length} chamadas.`);
+                toastSuccess(`Conectado! ${available.length} chamadas via REST.`);
             }
 
-        } catch (err: any) { 
-            console.error('[DEBUG-SYNC] Falha crítica:', err);
-            if (err.name === 'AbortError') {
-                toastError('A conexão com o banco de dados expirou (Timeout). Verifique sua internet.');
-            } else {
-                toastError('Falha na conexão: ' + (err.message || 'Erro desconhecido')); 
-            }
-        } finally { 
+        } catch (e: any) {
+            console.error('ERRO CRÍTICO NO REST SYNC:', e);
+            toastError('Falha na conexão rest: ' + e.message);
+        } finally {
+            console.groupEnd();
             setIsSyncing(false);
         }
     };
+
+
 
     // Startup / Session Recovery: Buscar missão ativa no banco se o driverId estiver presente
     useEffect(() => {
@@ -2145,7 +2162,7 @@ function App() {
                 <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2"><div className={`size-2 rounded-full ${isOnline ? 'bg-primary animate-ping' : 'bg-white/20'}`} /><h2 className="text-sm font-black text-white uppercase tracking-widest">{isOnline ? 'Chamadas' : 'Scanner Desativado'}</h2></div>
                     <div className="flex items-center gap-2">
-                        <button onClick={handleManualSync} disabled={isSyncing} className="flex items-center gap-1.5 bg-white/[0.05] border border-white/10 px-3 py-1.5 rounded-xl active:scale-90 transition-all disabled:opacity-50" title="Sincronizar pedidos">
+                        <button onClick={handleManualSync} disabled={isSyncing} className="flex items-center gap-1.5 bg-white/[0.05] border border-white/10 px-3 py-1.5 rounded-xl active:scale-95 transition-all disabled:opacity-50" title="Sincronizar pedidos">
                             <span className={`material-symbols-outlined text-sm text-primary ${isSyncing ? 'animate-spin' : ''}`}>sync</span>
                             <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">{isSyncing ? 'Sync...' : 'Sync'}</span>
                         </button>
@@ -2769,6 +2786,14 @@ function App() {
                                                 ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 shadow-emerald-500/10' 
                                                 : 'bg-amber-500/20 border-amber-500/30 text-amber-400 shadow-amber-500/10'
                                             }`}>
+                                                <button 
+                                    onClick={handleManualSync}
+                                    disabled={isSyncing}
+                                    className="p-2 rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-500/30 active:scale-95 transition-all flex items-center gap-2"
+                                >
+                                    <span className={`material-symbols-outlined text-sm ${isSyncing ? 'animate-spin' : ''}`}>sync</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest">{isSyncing ? 'Buscando...' : 'SYNC VERMELHO'}</span>
+                                </button>
                                                 <Icon 
                                                     name={activeMission.preparation_status === 'pronto' ? 'check_circle' : 'restaurant'} 
                                                     size={16} 
