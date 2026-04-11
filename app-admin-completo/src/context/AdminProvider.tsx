@@ -694,6 +694,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         { event: '*', schema: 'public', table: 'orders_delivery' },
         (payload) => {
           console.log('⚡ PEDIDO REALTIME:', payload.eventType, payload);
+          
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            // ✅ FORÇAR ATUALIZAÇÃO SÍNCRONA LOCAL PARA EVITAR DEADLOCKS DE SUPABASE-JS
+            setAllOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o));
+            setDashboardOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o));
+          }
+
           fetchStatsRef.current(true);
           fetchAllOrdersRef.current(undefined, true);
           
