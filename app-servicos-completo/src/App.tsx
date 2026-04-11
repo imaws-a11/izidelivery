@@ -2764,8 +2764,8 @@ const navigateSubView = (target: string) => {
             if (!lnErr && lnData?.payment_request) {
                setLightningData({ 
                  payment_request: lnData.payment_request, 
-                 satoshis: Math.round(finalPrice * 2000), // Exemplo de conversão
-                 btc_price_brl: 350000 
+                 satoshis: lnData.satoshis || Math.round(finalPrice * 1800), // Aproximação se API falhar no campo
+                 btc_price_brl: lnData.btc_price_brl || 380000 
                });
                setSubView("lightning_payment");
             }
@@ -3325,28 +3325,42 @@ const navigateSubView = (target: string) => {
       />
     );
   };
-
   const renderLightningPayment = () => {
-    const invoice = selectedItem?.lightning_invoice || selectedItem?.lightningInvoice || lightningData?.payment_request || "";
+    const invoice = selectedItem?.lightningInvoice || selectedItem?.lightning_invoice || lightningData?.payment_request || "";
     const satoshis = selectedItem?.satoshis || lightningData?.satoshis || 0;
     const btcPrice = selectedItem?.btcPrice || selectedItem?.btc_price_brl || lightningData?.btc_price_brl || 0;
+    const amountBrl = selectedItem?.total_price || selectedItem?.amount_brl || (satoshis > 0 && btcPrice > 0 ? (satoshis * btcPrice / 100000000) : 0);
 
     return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
-        <header className="sticky top-0 z-50 bg-black flex items-center gap-4 px-5 py-4 border-b border-zinc-900">
-          <button onClick={() => setSubView("checkout")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
+      <div className="absolute inset-0 z-[200] bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
+        <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-lg flex items-center gap-4 px-5 py-6 border-b border-white/5">
+          <button onClick={() => setSubView("checkout")} className="size-11 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center active:scale-90 transition-all">
             <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
           </button>
-          <h1 className="text-lg font-black text-white uppercase tracking-tight">Bitcoin Lightning</h1>
+          <div className="flex flex-col">
+            <h1 className="text-sm font-black text-white uppercase tracking-widest">Bitcoin Lightning</h1>
+            <p className="text-[10px] font-bold text-orange-400 uppercase tracking-tight">Pagamento Ultra-Rápido</p>
+          </div>
         </header>
-        <main className="px-5 pt-8 flex flex-col items-center gap-6 max-w-sm mx-auto w-full">
-          <div className="text-center space-y-1">
-            <div className="size-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-3">
-              <span className="material-symbols-outlined text-3xl text-orange-400" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
+        <main className="px-5 pt-10 flex flex-col items-center gap-8 max-w-sm mx-auto w-full">
+          <div className="text-center space-y-2">
+            <div className="size-20 rounded-[32px] bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-4 shadow-[0_0_40px_rgba(249,115,22,0.1)]">
+              <span className="material-symbols-outlined text-4xl text-orange-400" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
             </div>
-            <p className="text-zinc-500 text-xs font-black uppercase tracking-widest">Total em Satoshis</p>
-            <p className="text-3xl font-black text-white">{satoshis.toLocaleString("pt-BR")} sats</p>
-            {btcPrice > 0 && <p className="text-zinc-500 text-xs">1 BTC = R$ {btcPrice.toLocaleString("pt-BR")}</p>}
+            
+            <div className="space-y-1">
+              <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Valor a Pagar</p>
+              <p className="text-4xl font-black text-white">{satoshis.toLocaleString("pt-BR")} <span className="text-orange-400">SATS</span></p>
+              {amountBrl > 0 && (
+                <p className="text-zinc-400 text-sm font-bold">
+                  ≈ R$ {amountBrl.toFixed(2).replace(".", ",")}
+                </p>
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-white/5 mt-4">
+              {btcPrice > 0 && <p className="text-zinc-600 text-[9px] font-bold uppercase tracking-tight">Câmbio: 1 BTC = R$ {btcPrice.toLocaleString("pt-BR")}</p>}
+            </div>
           </div>
 
           {invoice && !selectedItem?.lightningError ? (
