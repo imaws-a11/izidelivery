@@ -1,5 +1,6 @@
 import { GoogleMap, Marker, Polyline, OverlayView } from '@react-google-maps/api';
 import { useGoogleMapsLoader } from '../../../hooks/useGoogleMapsLoader';
+import { GMAPS_KEY } from '../../../config';
 import { useRef, useCallback, useState, useMemo, useEffect } from 'react';
 
 interface IziTrackingMapProps {
@@ -112,7 +113,7 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
         <div className="text-center">
           <p className="text-sm font-black text-white mb-1 uppercase tracking-tighter">Izi Maps Indisponível</p>
           <p className="text-[10px] text-white/30 font-medium leading-relaxed">
-            Houve um problema de carregamento. Verifique sua chave API.
+            Houve um problema de carregamento. {!GMAPS_KEY ? 'Chave de API do Google Maps não encontrada no sistema.' : 'Verifique se sua chave API é válida e tem as permissões necessárias.'}
           </p>
         </div>
         {loc && (
@@ -169,14 +170,14 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
           />
         )}
 
-        {driverLoc && (
+        {driverLoc && isLoaded && window.google && (
           <Marker
             position={driverLoc}
             options={{
               icon: {
                  url: 'https://cdn-icons-png.flaticon.com/128/3448/3448339.png',
-                 scaledSize: new window.google.maps.Size(42, 42),
-                 anchor: new window.google.maps.Point(21, 21),
+                 scaledSize: { width: 42, height: 42 } as google.maps.Size,
+                 anchor: { x: 21, y: 21 } as google.maps.Point,
               }
             }}
             zIndex={100}
@@ -184,7 +185,7 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
         )}
 
         {/* MARCADOR PULSANTE DO USUÁRIO - AMARELO IZI */}
-        {userLoc && (
+        {userLoc && isLoaded && window.google && (
            <OverlayView
             position={userLoc}
             mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
