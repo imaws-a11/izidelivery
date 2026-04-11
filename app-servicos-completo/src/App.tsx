@@ -451,21 +451,29 @@ function App() {
     setIsLoading(true);
     try {
       const cleanEmail = (user?.email || loginEmail || "cliente@izidelivery.com").trim().toLowerCase();
-      const brand = selectedCard.brand || "Visa";
+      const brand = (selectedCard.brand || "Visa").toLowerCase();
       const token = selectedCard.mp_token || selectedCard.token;
+
+      // Mapeamento correto para IDs do Mercado Pago
+      let mpMethodId = "master";
+      if (brand.includes("visa")) mpMethodId = "visa";
+      else if (brand.includes("master")) mpMethodId = "master";
+      else if (brand.includes("amex")) mpMethodId = "amex";
+      else if (brand.includes("elo")) mpMethodId = "elo";
+      else if (brand.includes("hiper")) mpMethodId = "hipercard";
 
       const { data: fnData, error: fnErr } = await supabase.functions.invoke("process-mp-payment", {
         body: {
           amount: Number(amount.toFixed(2)),
           orderId: orderId,
-          payment_method_id: brand.toLowerCase().includes('visa') ? 'visa' : 'master',
+          payment_method_id: mpMethodId,
           token: token,
           email: cleanEmail,
           installments: 1
         },
       });
 
-      if (fnErr || (fnData && fnData.status !== 'approved')) {
+      if (fnErr || (fnData && (fnData.status !== 'approved' && fnData.status !== 'in_process'))) {
          const mpMsg = fnData?.details?.cause?.[0]?.description || fnData?.error || fnErr?.message || "O cartão foi recusado pela operadora.";
          toastError(`Pagamento não aprovado: ${mpMsg}`);
          if (origin === "izi_black") setSubView("izi_black_purchase");
