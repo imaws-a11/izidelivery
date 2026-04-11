@@ -13,7 +13,8 @@ export default function OrdersMerchantTab() {
     merchantOrdersTotalCount, 
     fetchAllOrders, 
     merchantProfile,
-    isLoadingList
+    isLoadingList,
+    appSettings
   } = useAdmin();
 
   const ORDERS_PER_PAGE = 50;
@@ -617,9 +618,15 @@ export default function OrdersMerchantTab() {
                                                        <span className="text-rose-500 font-black">- R$ {Number(selectedOrderDetails.discount).toFixed(2).replace('.', ',')}</span>
                                                    </div>
                                                )}
+                                                                                               <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-widest pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
+                                                   <div className="flex items-center gap-1">
+                                                       <span>Comissão IZI ({merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12}%)</span>
+                                                   </div>
+                                                   <span className="text-rose-500 font-black">- R$ {((Number(selectedOrderDetails.total_price || 0) - Number(selectedOrderDetails.delivery_fee || 0)) * ((merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12) / 100)).toFixed(2).replace('.', ',')}</span>
+                                               </div>
                                                <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                                                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Líquido</span>
-                                                   <span className="text-xl font-black text-primary italic">R$ {Number(selectedOrderDetails.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Líquido (Recebe)</span>
+                                                   <span className="text-xl font-black text-emerald-500 italic">R$ {( (Number(selectedOrderDetails.total_price || 0) - Number(selectedOrderDetails.delivery_fee || 0)) * (1 - (merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12) / 100) ).toFixed(2).replace('.', ',')}</span>
                                                </div>
                                           </div>
                                       </>
@@ -657,9 +664,15 @@ export default function OrdersMerchantTab() {
                                                         <span className="text-rose-500 font-black">- R$ {Number(selectedOrderDetails.discount).toFixed(2).replace('.', ',')}</span>
                                                    </div>
                                                )}
+                                                                                               <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-widest pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
+                                                   <div className="flex items-center gap-1">
+                                                       <span>Comissão IZI ({merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12}%)</span>
+                                                   </div>
+                                                   <span className="text-rose-500 font-black">- R$ {((Number(selectedOrderDetails.total_price || 0) - Number(selectedOrderDetails.delivery_fee || 0)) * ((merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12) / 100)).toFixed(2).replace('.', ',')}</span>
+                                               </div>
                                                <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                                                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Líquido</span>
-                                                   <span className="text-xl font-black text-primary italic">R$ {Number(selectedOrderDetails.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Líquido (Recebe)</span>
+                                                   <span className="text-xl font-black text-emerald-500 italic">R$ {( (Number(selectedOrderDetails.total_price || 0) - Number(selectedOrderDetails.delivery_fee || 0)) * (1 - (merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12) / 100) ).toFixed(2).replace('.', ',')}</span>
                                                </div>
                                           </div>
                                       </div>
@@ -697,7 +710,7 @@ export default function OrdersMerchantTab() {
                                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pagamento ({selectedOrderDetails.payment_method})</h4>
                                   </div>
                                   <div className="flex items-end justify-between">
-                                      <p className="text-2xl font-black text-primary">R$ {selectedOrderDetails.total_price?.toFixed(2).replace('.', ',')}</p>
+                                       <p className="text-2xl font-black text-emerald-500">R$ {((Number(selectedOrderDetails.total_price || 0) - Number(selectedOrderDetails.delivery_fee || 0)) * (1 - (merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12) / 100)).toFixed(2).replace('.', ',')}</p>
                                       {selectedOrderDetails.payment_method === 'dinheiro' && (
                                           <span className="px-2 py-1 bg-rose-100 text-rose-600 rounded-lg text-[8px] font-black uppercase mb-1">Receber no local</span>
                                       )}
