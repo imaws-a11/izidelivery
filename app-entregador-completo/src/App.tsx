@@ -545,6 +545,7 @@ function App() {
     const [isOnline, setIsOnline] = useState(() => localStorage.getItem('Izi_online') === 'true');
     const isFirstRender = useRef(true);
     const hasLoadedOnlineStatus = useRef(false); // Impede que refreshes de token sobrescrevam o status
+    const hasBootedRef = useRef(false); // Garante que syncMissionWithDB e restauração só ocorrem 1x por sessão
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSOSActive, setIsSOSActive] = useState(false);
     const [isAccepting, setIsAccepting] = useState(false);
@@ -571,6 +572,7 @@ function App() {
     useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
     const clearDriverSessionState = useCallback(() => {
+        console.log('[AUTH] Executando limpeza de sessão (Logout)');
         setIsMenuOpen(false);
         setIsAuthenticated(false);
         setDriverId(null);
@@ -590,10 +592,30 @@ function App() {
         setAuthPassword('');
         setAuthError('');
 
-        // Limpa TUDO do storage para garantir que o token do Supabase também suma
-        localStorage.clear();
+        // Remove chaves críticas de sessão
+        const keysToRemove = [
+            'izi_driver_authenticated',
+            'izi_driver_uid',
+            'izi_driver_name',
+            'izi_driver_pix',
+            'Izi_active_mission',
+            'Izi_declined_slots',
+            'Izi_online' // Aqui sim limpamos o online
+        ];
+        keysToRemove.forEach(k => localStorage.removeItem(k));
         sessionStorage.clear();
     }, []);
+
+    // WATCHDOG DE STATUS ONLINE
+    // Se o estado isOnline divergir do localStorage por qualquer motivo (race condition, re-render),
+    // este efeito força a reconciliação com a intenção do motorista.
+    useEffect(() => {
+        const localIntent = localStorage.getItem('Izi_online') === 'true';
+        if (localIntent && !isOnline) {
+            console.warn('[WATCHDOG] Detectada divergência de status! Forçando ONLINE conforme localStorage.');
+            setIsOnline(true);
+        }
+    }, [isOnline]);
 
     const getNetEarnings = useCallback((order: any) => {
         if (!order) return 0;
@@ -680,15 +702,13 @@ function App() {
                     vehicle_type: 'mototaxi'
                 });
             } else {
-                // Se o registro existe (mesmo que excluído pelo admin), não fazemos o upsert para não "ressuscitar"
+                // Se o registro existe, não fazemos o upsert para não "ressuscitar"
                 if (data.name) {
                     setDriverName(data.name);
                     localStorage.setItem('izi_driver_name', data.name);
                 }
-                if (data.is_online !== undefined) {
-                    setIsOnline(data.is_online);
-                    localStorage.setItem('Izi_online', String(data.is_online));
-                }
+                // REMOVIDO: setIsOnline daqui. O controle de is_online agora
+                // é feito exclusivamente pelo useEffect de restauração de sessão.
                 const lat = Number(data.lat);
                 const lng = Number(data.lng);
                 if (isFinite(lat) && isFinite(lng) && lat !== 0 && lng !== 0) setDriverCoords({ lat, lng });
@@ -723,32 +743,43 @@ function App() {
             if (user) {
                 setDriverId(user.id);
                 setIsAuthenticated(true);
-                
-                // Buscar perfil completo do banco para sincronizar entre dispositivos
-                const { data: profile } = await supabase
-                    .from('drivers_delivery')
-                    .select('*')
-                    .eq('id', user.id)
-                    .single();
 
-                if (profile) {
-                    setDriverName(profile.name || 'Entregador');
-                    setPixKey(profile.bank_info?.pix_key || '');
-                    setIsOnline(profile.is_online || false);
-                    localStorage.setItem('Izi_online', String(profile.is_online || false));
+                // BOOT ÚNICO: só executa restauração completa na primeira vez
+                if (!hasBootedRef.current) {
+                    hasBootedRef.current = true;
+                    console.log('[AUTH] Primeiro boot detectado. Carregando perfil...');
+
+                    // Buscar perfil apenas para nome e chave pix (NÃO tocar no is_online aqui)
+                    const { data: profile } = await supabase
+                        .from('drivers_delivery')
+                        .select('name, bank_info')
+                        .eq('id', user.id)
+                        .single();
+
+                    if (profile) {
+                        setDriverName(profile.name || 'Entregador');
+                        setPixKey(profile.bank_info?.pix_key || '');
+                    } else {
+                        const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
+                        setDriverName(name);
+                        ensureDriverRecord(user.id, user.email || '', name);
+                    }
+
+                    fetchFinanceData();
+                    fetchMissionHistory();
+                    syncMissionWithDB();
                 } else {
-                    const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
-                    setDriverName(name);
-                    ensureDriverRecord(user.id, user.email || '', name);
+                    // Renovações de token (TOKEN_REFRESHED): NÃO alterar nenhum estado
+                    console.log('[AUTH] Renovação de token. Ignorando reset de estado.');
                 }
-                
-                fetchFinanceData();
-                fetchMissionHistory();
-                syncMissionWithDB();
             } else {
-                setDriverId(null);
-                setIsAuthenticated(false);
-                setDriverName('Entregador');
+                if (hasBootedRef.current) {
+                    console.warn('[AUTH] SIGNED_OUT detectado. Limpando sessão...');
+                    hasBootedRef.current = false;
+                    setDriverId(null);
+                    setIsAuthenticated(false);
+                    setDriverName('Entregador');
+                }
             }
             setAuthInitLoading(false);
         });
@@ -821,6 +852,32 @@ function App() {
 
 
 
+    // =====================================================================
+    // RESTAURAÇÃO DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
+    // Este é o ÚNICO lugar onde o is_online é restaurado após login/refresh.
+    // Ele dispara quando driverId e isAuthenticated ficam disponíveis.
+    // =====================================================================
+    useEffect(() => {
+        if (!driverId || !isAuthenticated) return;
+
+        const localWantsOnline = localStorage.getItem('Izi_online') === 'true';
+        console.log(`[ONLINE-RESTORE] Autenticado! localStorage diz online=${localWantsOnline}`);
+
+        // Setar estado local imediatamente (sem depender do banco)
+        setIsOnline(localWantsOnline);
+
+        if (localWantsOnline) {
+            // Sincronizar banco em background para garantir consistência
+            supabase.from('drivers_delivery')
+                .update({ is_online: true, last_seen_at: new Date().toISOString() })
+                .eq('id', driverId)
+                .then(({ error }) => {
+                    if (error) console.error('[ONLINE-RESTORE] Erro ao sincronizar online no banco:', error.message);
+                    else console.log('[ONLINE-RESTORE] Banco sincronizado: is_online=true');
+                });
+        }
+    }, [driverId, isAuthenticated]);
+
     // Sincronização entre múltiplos dispositivos (Online status, Carteira, Perfil)
     useEffect(() => {
         if (!driverId || !isAuthenticated) return;
@@ -836,11 +893,10 @@ function App() {
                 const updated = payload.new;
                 console.log('[REALTIME] Sincronização multi-dispositivo:', updated);
                 
-                // Sincronizar Online status
-                if (updated.is_online !== undefined && updated.is_online !== isOnline) {
-                    setIsOnline(updated.is_online);
-                    localStorage.setItem('Izi_online', String(updated.is_online));
-                }
+                // Sincronização multi-dispositivo de perfil e financeira
+                // REMOVIDO: Sincronização de is_online do banco para cá.
+                // O localStorage é a autoridade absoluta sobre a intenção do motorista.
+                // A única forma de ser ejetado é via is_active (Remote Eject) ou Logout manual.
                 
                 // Recarregar dados financeiros se o saldo mudou por outro dispositivo
                 fetchFinanceData();
@@ -848,7 +904,7 @@ function App() {
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, [driverId, isAuthenticated, isOnline]);
+    }, [driverId, isAuthenticated]); // REMOVIDO isOnline das deps - evita re-subscrição que dispara snapshot do banco
 
     // Heartbeat: enquanto online, atualiza last_seen_at a cada 5 segundos
     useEffect(() => {
@@ -874,23 +930,22 @@ function App() {
 
     const handleToggleOnline = async () => {
         const nextState = !isOnline;
-        setIsOnline(nextState); // Mudança visual imediata
+
+        // SALVA NO LOCALSTORAGE IMEDIATAMENTE — antes de qualquer chamada ao banco
+        // Isso garante que F5 sempre restaura o status correto, independente de rede
+        localStorage.setItem('Izi_online', nextState.toString());
+        setIsOnline(nextState);
         
         if (driverId) {
             try {
-                // Atualizar banco (ao ficar online, atualiza last_seen_at para evitar auto-offline imediato)
                 const updatePayload = nextState 
                     ? { is_online: true, last_seen_at: new Date().toISOString() }
                     : { is_online: false };
-                const { error } = await supabase.from('drivers_delivery').update(updatePayload).eq('id', driverId);
-                if (error) throw error;
-                localStorage.setItem('Izi_online', nextState.toString());
-                console.log(`[STATUS] Mudou para ${nextState ? 'ONLINE' : 'OFFLINE'}`);
+                await supabase.from('drivers_delivery').update(updatePayload).eq('id', driverId);
+                console.log(`[STATUS] ${nextState ? 'ONLINE' : 'OFFLINE'} - banco e storage sincronizados`);
             } catch (e: any) {
-                console.error('Erro ao atualizar banco:', e);
-                // Reverter se der erro crítico no banco
-                setIsOnline(!nextState);
-                toastError('Falha ao comunicar com o servidor. Tente novamente.');
+                console.warn('[STATUS] Falha ao sincronizar banco (storage preservado):', e.message);
+                // NÃO reverte — o localStorage já salvou a intenção e o heartbeat sincronizará o banco
             }
         }
     };
@@ -911,9 +966,12 @@ function App() {
             }, (payload) => {
                 // Se is_active mudar para false, ejeta na hora
                 if (payload.new && payload.new.is_active === false) {
-                    console.log('[EJECT] Sessão ejetada remotamente!');
+                    console.error('[EJECT] Sessão ejetada remotamente! Motivo: Motorista desativado no painel Admin.');
+                    toastError('Sua conta foi desativada pelo administrador.');
                     handleLogout();
                 }
+                // Se o banco forçar is_online=false MAS o motorista quer estar online, 
+                // o heartbeat (useEffect abaixo) vai corrigir o banco em 5 segundos.
             })
             .subscribe();
 
@@ -936,7 +994,8 @@ function App() {
             const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
             const activeOrder = orders?.find((o: any) => 
                 !['concluido', 'cancelado', 'pendente_pagamento', 'finalizado', 'entregue'].includes(o.status) &&
-                !financialTypes.includes(o.service_type)
+                !financialTypes.includes(o.service_type) &&
+                o.driver_id === dId // RIGOROSO: Só é missão ativa se for MINHA
             );
 
             if (activeOrder) {
@@ -954,17 +1013,30 @@ function App() {
                 setActiveMission(mission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                 setActiveTab('active_mission');
-                toastSuccess('Missão recuperada!');
                 console.log('[SYNC] Missão restaurada do banco:', mission.realId);
             } else {
                 console.log('[SYNC] Nenhuma missão ativa no banco para o motorista:', driverId);
-                if (orders && orders.length > 0) {
-                    console.log('[SYNC] Status encontrados:', orders.map(o => o.status));
-                }
-                // Limpa storage se no banco diz que não tem nada
-                if (localStorage.getItem('Izi_active_mission')) {
-                    setActiveMission(null);
-                    localStorage.removeItem('Izi_active_mission');
+
+                // PROTEÇÃO: Só apaga o cache local se a missão for ANTIGA (> 30 min)
+                // Isso evita apagar uma missão que acabou de ser aceita mas ainda não propagou no banco
+                const cachedMissionRaw = localStorage.getItem('Izi_active_mission');
+                if (cachedMissionRaw) {
+                    try {
+                        const cachedMission = JSON.parse(cachedMissionRaw);
+                        const createdAt = new Date(cachedMission.created_at || 0).getTime();
+                        const ageMs = Date.now() - createdAt;
+                        const thirtyMinutes = 30 * 60 * 1000;
+                        if (ageMs > thirtyMinutes) {
+                            console.log('[SYNC] Missão antiga no cache (> 30 min). Limpando...');
+                            setActiveMission(null);
+                            localStorage.removeItem('Izi_active_mission');
+                        } else {
+                            console.log('[SYNC] Missão recente no cache. Mantendo estado local por precaução.');
+                        }
+                    } catch {
+                        setActiveMission(null);
+                        localStorage.removeItem('Izi_active_mission');
+                    }
                 }
             }
         } catch (err: any) {
@@ -1053,18 +1125,27 @@ function App() {
         if (!isAuthenticated || !driverId) return;
 
         const fetchOrders = async () => {
-            const { data, error } = await supabase.from('orders_delivery').select('*').in('status', ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver']);
-            if (error || !data) return;
-            // Filtrar somente rejeições com menos de 5 segundos
+            console.log('[POLL] Buscando chamadas disponíveis...');
+            const { data, error } = await supabase.from('orders_delivery')
+                .select('*')
+                .in('status', ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'confirmado'])
+                .is('driver_id', null); // Garante que pegamos apenas o que está livre
+                
+            if (error) {
+                console.error('[POLL] Erro ao buscar pedidos:', error);
+                return;
+            }
+
             const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
             const now = Date.now();
-            // Limpar rejeições expiradas (>5s)
             const cleanDeclined: Record<string, number> = {};
             Object.entries(declinedMap).forEach(([id, ts]) => {
                 if (now - ts < 5000) cleanDeclined[id] = ts;
             });
             localStorage.setItem('Izi_declined_timed', JSON.stringify(cleanDeclined));
-            setOrders(data.map((o: any) => ({ 
+
+            const available = (data || []).filter((o: any) => !cleanDeclined[o.id]);
+            setOrders(available.map((o: any) => ({ 
               ...o,
               id: o.id.slice(0, 8).toUpperCase(), 
               realId: o.id, 
@@ -1079,7 +1160,7 @@ function App() {
               status: o.status,
               preparation_status: o.preparation_status || 'preparando',
               customer: 'Cliente Izi' 
-            })).filter((o: any) => !cleanDeclined[o.realId]));
+            })));
         };
         const fetchDedicatedSlots = async () => {
             const declinedIds = JSON.parse(localStorage.getItem('Izi_declined_slots') || '[]');
@@ -1097,7 +1178,7 @@ function App() {
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
                 
                 // Filtros de segurança e status
-                if (!['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver'].includes(o.status)) return;
+                if (!['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status)) return;
                 if (Date.now() - (declinedMap[o.id] || 0) < 5000) return;
                 
                 // Ignorar transações financeiras (Izi Coin, Assinatura) que não são missões
@@ -1145,10 +1226,15 @@ function App() {
                     };
 
                     // Se o pedido já veio atribuído a mim (ex: admin atribuiu), define como missão ativa na hora
-                    if (o.driver_id === String(driverId).trim()) {
+                    if (o.driver_id && String(o.driver_id).trim() === String(driverId).trim()) {
                         setActiveMission(mapped);
                         localStorage.setItem('Izi_active_mission', JSON.stringify(mapped));
                         setActiveTab('active_mission');
+                        return prev;
+                    }
+
+                    // Se o pedido tem motorista mas NÃO SOU EU, ignora (foi aceito por outro)
+                    if (o.driver_id && String(o.driver_id).trim() !== '') {
                         return prev;
                     }
 
@@ -1206,7 +1292,7 @@ function App() {
                 }
 
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
-                if (['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver'].includes(o.status) && !(Date.now() - (declinedMap[o.id] || 0) < 5000)) {
+                if (['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status) && !(Date.now() - (declinedMap[o.id] || 0) < 5000)) {
                     setOrders(prev => {
                         const isNew = !prev.find(x => x.realId === o.id);
                         if (isNew) {
@@ -1235,7 +1321,7 @@ function App() {
                         }
                         return prev;
                     });
-                } else if (!['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver'].includes(o.status) && (!currentMission || o.id !== currentMission.id)) {
+                } else if (!['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status) && (!currentMission || o.id !== currentMission.id)) {
                     setOrders(prev => prev.filter((order: any) => order.realId !== o.id));
                 }
             })
@@ -1244,72 +1330,88 @@ function App() {
         return () => { clearInterval(pollInterval); supabase.removeChannel(channel); };
     }, [isOnline, isAuthenticated, driverId]);
 
-    // Função de sincronização manual
     const [isSyncing, setIsSyncing] = useState(false);
     const handleManualSync = async () => {
+        if (isSyncing) return;
         setIsSyncing(true);
+        console.log('[DEBUG-SYNC] Iniciando limpeza e busca profunda...');
+
         try {
-            // Limpar todas as rejeições para forçar pedidos a aparecerem
+            // LIMPEZA DE EMERGÊNCIA: Removemos tokens que podem estar travando o client
+            console.log('[DEBUG-SYNC] Limpando vestígios de sessão...');
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.includes('supabase.auth.token')) {
+                    localStorage.removeItem(key);
+                }
+            }
             localStorage.removeItem('Izi_declined_timed');
             
-            // 1. Buscar pedidos disponíveis
-            const { data } = await supabase.from('orders_delivery').select('*').in('status', ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver']);
-            if (data) {
-                setOrders(data.map((o: any) => ({ 
-                    ...o,
-                    id: o.id.slice(0, 8).toUpperCase(), 
-                    realId: o.id, 
-                    type: o.service_type as ServiceType, 
-                    origin: o.pickup_address, 
-                    destination: o.delivery_address, 
-                    price: o.total_price, 
-                    customer: 'Cliente Izi',
-                    pickup_lat: o.pickup_lat,
-                    pickup_lng: o.pickup_lng,
-                    delivery_lat: o.delivery_lat,
-                    delivery_lng: o.delivery_lng,
-                    preparation_status: o.preparation_status
-                })));
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 7000); // 7s para dar mais fôlego
+
+            console.log('[DEBUG-SYNC] URL do Banco:', supabase.supabaseUrl);
+            
+            // Tenta buscar com dados completos para o dashboard
+            const { data: allRecent, error: dbError } = await supabase
+                .from('orders_delivery')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(10)
+                .abortSignal(controller.signal);
+
+            clearTimeout(timeoutId);
+
+            if (dbError) throw dbError;
+
+            if (!allRecent || allRecent.length === 0) {
+                console.log('[DEBUG-SYNC] Banco respondeu, mas a tabela está vazia.');
+                toastError('O banco respondeu, mas não encontrou pedidos.');
+                return;
             }
 
-            // 2. Buscar Missão Ativa (Se o app perdeu o estado mas o banco ainda tem)
-            if (driverId) {
-                console.log('[SYNC] Verificando missões ativas no banco para driver:', driverId);
-                const { data: myActive, error: syncError } = await supabase
-                    .from('orders_delivery')
-                    .select('*')
-                    .eq('driver_id', driverId)
-                    .not('status', 'in', '(concluido,cancelado,finalizado,entregue)')
-                    .maybeSingle();
-                
-                if (syncError) console.error('[SYNC] Erro ao buscar missão ativa:', syncError);
+            console.log(`[DEBUG-SYNC] SUCESSO! Recebemos ${allRecent.length} registros.`);
+            
+            const available = allRecent.filter((o: any) => 
+                !o.driver_id && 
+                !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)
+            );
 
-                if (myActive) {
-                    console.log('[SYNC] Missão ativa recuperada do banco:', myActive.id);
-                    const mission = { 
-                        ...myActive, 
-                        realId: myActive.id, 
-                        type: myActive.service_type, 
-                        origin: myActive.pickup_address, 
-                        destination: myActive.delivery_address, 
-                        price: myActive.total_price,
-                        customer: myActive.user_name || 'Cliente Izi'
-                    };
-                    setActiveMission(mission);
-                    localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
-                    setActiveTab('active_mission');
-                    toastSuccess('Sincronizado! Missão ativa recuperada.');
-                } else {
-                    toastSuccess('Sincronizado! ' + (data?.length || 0) + ' pedidos encontrados.');
-                }
+            setOrders(available.map((o: any) => ({ 
+                ...o,
+                id: o.id.slice(0, 8).toUpperCase(), 
+                realId: o.id, 
+                type: o.service_type, 
+                origin: o.pickup_address, 
+                destination: o.delivery_address, 
+                price: o.total_price, 
+                customer: 'Status: ' + o.status
+            })));
+
+            const myActive = allRecent.find((o: any) => 
+                String(o.driver_id || '').trim() === String(driverId || '').trim() &&
+                !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)
+            );
+
+            if (myActive) {
+                const mission = { ...myActive, realId: myActive.id, type: myActive.service_type, customer: myActive.user_name || 'Cliente Izi' };
+                setActiveMission(mission);
+                localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
+                setActiveTab('active_mission');
+                toastSuccess('Conectado! Sua missão ativa foi recuperada.');
             } else {
-                toastSuccess('Sincronizado! ' + (data?.length || 0) + ' pedidos encontrados.');
+                toastSuccess(`Conectado! Encontradas ${available.length} chamadas.`);
             }
-        } catch (err) { 
-            console.error('[SYNC] Erro:', err);
-            toastError('Erro ao sincronizar.'); 
+
+        } catch (err: any) { 
+            console.error('[DEBUG-SYNC] Falha crítica:', err);
+            if (err.name === 'AbortError') {
+                toastError('A conexão com o banco de dados expirou (Timeout). Verifique sua internet.');
+            } else {
+                toastError('Falha na conexão: ' + (err.message || 'Erro desconhecido')); 
+            }
         } finally { 
-            setTimeout(() => setIsSyncing(false), 1000); 
+            setIsSyncing(false);
         }
     };
 
@@ -1372,13 +1474,18 @@ function App() {
             const targetId = order.realId || order.id;
             console.log('Target ID Identificado:', targetId, { orderId: order.id, realId: order.realId });
             
-            // Validação de segurança básica: Se for ID curto (< 20 chars) e não tiver realId, estamos em apuros
-            if (!targetId || String(targetId).length < 10) {
-                 console.error('ID do pedido suspeito (provavelmente curto demais para ser UUID):', targetId);
-                 toastError('ID de pedido inválido. Tente atualizar a lista.');
+            // Validação de segurança básica: Relaxada para suportar listagens que usam apenas ID curto
+            if (!targetId) {
+                 console.error('ID do pedido ausente na tentativa de aceite.');
+                 toastError('Ocorreu um erro ao identificar o pedido.');
                  setIsAccepting(false);
                  console.groupEnd();
                  return;
+            }
+            
+            // Se o ID for curto e não houver realId, tentamos usá-lo assim mesmo, mas registramos
+            if (String(targetId).length < 20 && !order.realId) {
+                console.warn('Usando ID curto para aceite. Isso pode falhar se não houver um mapeamento UUID no banco.', targetId);
             }
             
             // Timeout de segurança: Se em 10 segundos não resolver, libera o botão
@@ -1669,29 +1776,32 @@ function App() {
             setIsFinanceLoading(false);
         }
     };
-    const handleLogout = useCallback(async () => {
+    const handleLogout = useCallback(async (reason = 'manual') => {
         const dId = driverId ? String(driverId).trim() : null;
+        console.log(`[AUTH] handleLogout disparado. Motivo: ${reason}`);
 
         try {
-            // Tenta avisar o banco que ficou offline, mas não bloqueia se falhar/demorar
             if (dId) {
+                // Tenta avisar o banco que ficou offline
                 supabase.from('drivers_delivery').update({ is_online: false }).eq('id', dId).then();
             }
         } catch (e) {
             console.error('[LOGOUT] Erro status:', e);
         }
 
-        // Limpa TUDO do localStorage imediatamente
+        // Garante que o status online seja resetado NO STORAGE apenas em logout MANUAL
+        localStorage.removeItem('Izi_online');
+
+        // Limpa sessão completo
         clearDriverSessionState();
 
         try {
-            // SignOut local é rápido e não requer rede obrigatoriamente
             await supabase.auth.signOut({ scope: 'local' });
         } catch (e) {
             console.error('[LOGOUT] Erro ao encerrar sessão:', e);
         } finally {
-            // Força um recarregamento total da página para garantir estado limpo
-            window.location.href = window.location.pathname || '/';
+            console.log('[LOGOUT] Redirecionando...');
+            window.location.href = '/';
         }
     }, [clearDriverSessionState, driverId]);
 
@@ -1748,7 +1858,12 @@ function App() {
                             ].map(item => (
                                 <button 
                                     key={item.id} 
-                                    onClick={item.onClick || (() => { setActiveTab(item.id as any); setIsMenuOpen(false); })} 
+                                    onClick={item.onClick || (() => { 
+                                        setActiveTab(item.id as any); 
+                                        setIsMenuOpen(false); 
+                                        // Auto-sync se for missão
+                                        if (item.id === 'active_mission') syncMissionWithDB();
+                                    })} 
                                     className={`w-full flex items-center gap-5 px-5 py-4.5 rounded-[22px] transition-all text-left group ${activeTab === item.id ? 'bg-primary text-slate-950 font-black shadow-lg shadow-primary/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
                                 >
                                     <div className="relative">
