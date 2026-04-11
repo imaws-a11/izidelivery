@@ -41,39 +41,32 @@ export const playIziSound = (role: 'merchant' | 'driver' | 'success') => {
   const ctx = getAudioContext();
   if (ctx && ctx.state === 'suspended') ctx.resume();
 
-  try {
-    // 1. Tentar tocar o som personalizado (Uber Eats para motorista)
-    const soundUrl = role === 'driver' 
-      ? 'https://www.myinstants.com/media/sounds/uber_driver_2019-99d7bb65-f449-4a38-b010-1ff9ff0454f2.mp3'
-      : role === 'success'
-      ? 'https://cdn.pixabay.com/audio/2021/08/04/audio_346b0a6e0e.mp3' // Success chime
-      : 'https://cdn.pixabay.com/audio/2022/10/04/audio_79bd7a4d75.mp3';
-
-    const audio = new Audio(soundUrl);
-    audio.play().catch(err => {
-       console.warn('Erro ao tocar áudio personalizado, tentando sintetizador:', err);
-       playSyntheticRing(ctx);
-    });
-
-    // Função de fallback sintética
-    function playSyntheticRing(ac: AudioContext | null) {
-      if (!ac) return;
-      for (let i = 0; i < 3; i++) {
-        const offset = i * 0.8;
-        for (let j = 0; j < 15; j++) {
-          const microOffset = offset + (j * 0.02);
-          const freq = (j % 2 === 0) ? 440 : 480;
-          playTone(ac, freq, 'square', microOffset, 0.04, 0.45); 
-          playTone(ac, freq * 1.5, 'sawtooth', microOffset, 0.04, 0.15); 
-        }
-        const offset2 = offset + 0.35;
-        for (let j = 0; j < 12; j++) {
-           const microOffset = offset2 + (j * 0.02);
-           const freq = (j % 2 === 0) ? 440 : 480;
-           playTone(ac, freq, 'square', microOffset, 0.04, 0.45);
-        }
+  // Função de voz (Backup Infalível)
+  const speak = (text: string) => {
+    try {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'pt-BR';
+        utterance.rate = 1.1;
+        window.speechSynthesis.speak(utterance);
       }
-    }
+    } catch(e) {}
+  };
+
+  try {
+    // Links mais estáveis (GitHub ou Repositórios de CDN)
+    const soundUrls = {
+      driver: 'https://cdn.freesound.org/previews/219/219244_4082826-lq.mp3', // Radar/Notification
+      success: 'https://cdn.freesound.org/previews/171/171671_2437358-lq.mp3', // Ding/Success
+      merchant: 'https://cdn.freesound.org/previews/263/263133_2064400-lq.mp3' // Alert
+    };
+
+    const audio = new Audio(soundUrls[role]);
+    audio.play().catch(err => {
+       console.warn('Erro ao tocar áudio, usando voz:', err);
+       if (role === 'driver') speak('Nova missão disponível no Izi Delivery');
+       if (role === 'success') speak('Corrida aceita com sucesso');
+    });
 
   } catch (e) {
     console.warn('Erro ao reproduzir som:', e);

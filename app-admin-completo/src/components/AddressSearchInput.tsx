@@ -13,6 +13,8 @@ interface AddressSearchInputProps {
   userCoords?: { lat: number; lng: number } | null;
   /** Se true, o input estÃ¡ dentro de um modal/overlay com fundo escuro */
   darkMode?: boolean;
+  /** Se true, desloca o botÃ£o de limpar para a esquerda para dar espaço a um botÃ£o externo */
+  extraRightPadding?: boolean;
 }
 
 export const AddressSearchInput = ({
@@ -22,6 +24,7 @@ export const AddressSearchInput = ({
   onClear,
   className,
   userCoords,
+  extraRightPadding,
 }: AddressSearchInputProps) => {
   const [query, setQuery] = useState(initialValue || "");
   useEffect(() => {
@@ -331,7 +334,12 @@ export const AddressSearchInput = ({
           }}
         />
         {loading && (
-          <div style={{ position: "absolute", right: query ? "2.8rem" : "0.75rem", display: "flex", alignItems: "center" }}>
+          <div style={{ 
+            position: "absolute", 
+            right: extraRightPadding ? (query ? "5.8rem" : "3.5rem") : (query ? "2.8rem" : "0.75rem"), 
+            display: "flex", 
+            alignItems: "center" 
+          }}>
             <svg style={{ width: "14px", height: "14px", animation: "spin 1s linear infinite", color: "rgba(255,217,0,0.6)" }} viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.2" />
               <path d="M22 12A10 10 0 0 0 12 2" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
@@ -343,7 +351,7 @@ export const AddressSearchInput = ({
             onMouseDown={(e) => { e.preventDefault(); handleClear(); }}
             style={{
               position: "absolute",
-              right: "10px",
+              right: extraRightPadding ? "52px" : "10px",
               background: "rgba(100,116,139,0.15)",
               border: "none",
               borderRadius: "50%",
