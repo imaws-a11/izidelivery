@@ -176,9 +176,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     flashOfferDiscount: 50,
     flashOfferExpiry: '',
     iziCoinRate: 1.0,
-    withdrawal_period_h: 12,
+    minwithdrawalamount: 0,
+    withdrawalfeepercent: 2.5,
+    withdrawal_period_h: 24,
     withdrawal_day: 'Quarta-feira',
-    minwithdrawalamount: 50.0
+    loan_interest_rate: 12.0,
+    paymentmethodsactive: { pix: true, card: true, lightning: false, wallet: true }
   });
   const [globalSettings, setGlobalSettings] = useState<any>({
     izi_coin_value: 0.01,
@@ -211,23 +214,25 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const cleanSettings = {
           ...appSettings,
           id: appSettings.id || '00000000-0000-0000-0000-000000000000',
-          iziBlackFee: Number(appSettings.iziBlackFee || 0),
-           iziBlackCashback: Number(appSettings.iziBlackCashback || 0),
-           iziBlackMinOrderFreeShipping: Number(appSettings.iziBlackMinOrderFreeShipping || 0),
-           izi_black_cashback_multiplier: Number(appSettings.izi_black_cashback_multiplier ?? 2),
-           izi_black_xp_multiplier: Number(appSettings.izi_black_xp_multiplier ?? 2),
-           radius: Number(appSettings.radius || 0),
-           baseFee: Number(appSettings.baseFee || 0),
-           appCommission: Number(appSettings.appCommission || 0),
-           driverFreightCommission: Number(appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
-           privateDriverCommission: Number(appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
-           serviceFee: Number(appSettings.serviceFee || 0),
-           flashOfferDiscount: Number(appSettings.flashOfferDiscount || 0),
-           iziCoinRate: Number(appSettings.iziCoinRate || 0),
-           withdrawal_period_h: Number(appSettings.withdrawal_period_h || 12),
-           withdrawal_day: String(appSettings.withdrawal_day || 'Quarta-feira'),
-           minwithdrawalamount: Number(appSettings.minwithdrawalamount || 50.0),
-           updated_at: new Date().toISOString()
+          iziBlackFee: Number(appSettings.iziBlackFee ?? 0),
+          iziBlackCashback: Number(appSettings.iziBlackCashback ?? 0),
+          iziBlackMinOrderFreeShipping: Number(appSettings.iziBlackMinOrderFreeShipping ?? 0),
+          izi_black_cashback_multiplier: Number(appSettings.izi_black_cashback_multiplier ?? 2),
+          izi_black_xp_multiplier: Number(appSettings.izi_black_xp_multiplier ?? 2),
+          radius: Number(appSettings.radius ?? 0),
+          baseFee: Number(appSettings.baseFee ?? 0),
+          appCommission: Number(appSettings.appCommission ?? 0),
+          driverFreightCommission: Number(appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
+          privateDriverCommission: Number(appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
+          serviceFee: Number(appSettings.serviceFee ?? 0),
+          flashOfferDiscount: Number(appSettings.flashOfferDiscount ?? 0),
+          iziCoinRate: Number(appSettings.iziCoinRate ?? 0),
+          withdrawalfeepercent: Number(appSettings.withdrawalfeepercent ?? 0),
+          withdrawal_period_h: Number(appSettings.withdrawal_period_h ?? 12),
+          withdrawal_day: String(appSettings.withdrawal_day || 'Quarta-feira'),
+          minwithdrawalamount: Number(appSettings.minwithdrawalamount ?? 0.0),
+          loan_interest_rate: Number(appSettings.loan_interest_rate ?? 12.0),
+          updated_at: new Date().toISOString()
         };
         
         const { error } = await supabase
@@ -894,21 +899,49 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
     if (!idToUse) return;
 
-    if (amount < 50) return toastError('O valor mínimo para saque é R$ 50,00');
-    if (amount > merchantBalance) return toastError('Saldo insuficiente para este saque.');
+    // 1. Validar Valor Mínimo Global
+    const minAmount = Number(appSettings.minwithdrawalamount ?? 0);
+    if (amount < minAmount) {
+      return toastError(`O valor mínimo para saque é R$ ${minAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+    }
+
+    if (amount > merchantBalance) {
+      return toastError('Saldo insuficiente para este saque.');
+    }
+
+    // 2. Validar Dia de Saque (opcional, se configurado)
+    if (appSettings.withdrawal_day) {
+      const today = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(new Date());
+      // Ajuste para ignorar case e acentos se necessário, mas geralmente o DB salva 'Quarta-feira'
+      if (!today.toLowerCase().includes(appSettings.withdrawal_day.toLowerCase())) {
+        toastWarning(`Atenção: O dia oficial para saques é ${appSettings.withdrawal_day}. Sua solicitação pode demorar mais para ser processada.`);
+      }
+    }
+
+    // 3. Calcular Taxa
+    const feePercent = Number(appSettings.withdrawalfeepercent || 0);
+    const feeAmount = amount * (feePercent / 100);
+    const netAmount = amount - feeAmount;
+
+    const confirmMessage = feeAmount > 0 
+      ? `Deseja solicitar o saque de R$ ${amount.toFixed(2)}?\n\n` +
+        `Taxa de processamento (${feePercent}%): R$ ${feeAmount.toFixed(2)}\n` +
+        `Valor líquido a receber: R$ ${netAmount.toFixed(2)}\n\n` +
+        `Chave PIX: ${pixKey}`
+      : `Deseja solicitar o saque de R$ ${amount.toFixed(2)} para a chave PIX: ${pixKey}?`;
 
     if (!await showConfirm({ 
       title: 'Confirmar Saque',
-      message: `Deseja solicitar o saque de R$ ${amount.toFixed(2)} para a chave PIX: ${pixKey}?` 
+      message: confirmMessage
     })) return;
 
     setIsSaving(true);
     try {
       const { error } = await supabase.from('wallet_transactions_delivery').insert({
         user_id: idToUse,
-        amount,
+        amount: amount, // Registramos o valor bruto solicitado
         type: 'saque',
-        description: `Saque solicitado via PIX: ${pixKey}`,
+        description: `Saque solicitado via PIX: ${pixKey}${feeAmount > 0 ? ` (Taxa IZI: R$ ${feeAmount.toFixed(2)})` : ''}`,
         status: 'pendente',
         balance_after: merchantBalance - amount
       });
@@ -917,13 +950,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       toastSuccess('Solicitação de saque enviada com sucesso!');
       fetchMerchantFinance();
-      logAction('Withdrawal Request', 'Wallet', { userId: idToUse, amount });
+      logAction('Withdrawal Request', 'Wallet', { userId: idToUse, amount, feeAmount });
     } catch (err: any) {
       toastError(err.message);
     } finally {
       setIsSaving(false);
     }
-  }, [userRole, merchantProfile, selectedMerchantPreview, merchantBalance, fetchMerchantFinance, logAction]);
+  }, [userRole, merchantProfile, selectedMerchantPreview, merchantBalance, fetchMerchantFinance, logAction, appSettings]);
 
   const handleRequestPartnerWithdrawal = useCallback(async (partnerId: string, amount: number, pixKey: string) => {
     if (!partnerId) return;
@@ -1192,6 +1225,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const mergedSettings = {
           ...appSettings,
           ...data,
+          minwithdrawalamount: data.minwithdrawalamount !== undefined ? Number(data.minwithdrawalamount) : appSettings.minwithdrawalamount,
+          withdrawalfeepercent: data.withdrawalfeepercent !== undefined ? Number(data.withdrawalfeepercent) : appSettings.withdrawalfeepercent,
+          withdrawal_period_h: data.withdrawal_period_h !== undefined ? Number(data.withdrawal_period_h) : appSettings.withdrawal_period_h,
           driverFreightCommission: Number((data as any).driverFreightCommission ?? (data as any).appCommission ?? appSettings.driverFreightCommission),
           privateDriverCommission: Number((data as any).privateDriverCommission ?? (data as any).driverFreightCommission ?? (data as any).appCommission ?? appSettings.privateDriverCommission),
         } as AppSettings;
@@ -1280,6 +1316,22 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       fetchMerchantFinance();
     }
   }, [userRole, fetchAppSettings, fetchStats, fetchUsers, fetchDrivers, fetchMerchants, fetchCategories, fetchPromotions, fetchDynamicRates, fetchAllOrders, fetchSubscriptionOrders, fetchMyDrivers, fetchProducts, fetchMenuCategories, fetchMyDedicatedSlots, fetchMerchantFinance]);
+
+  // Real-time: App Settings
+  useEffect(() => {
+    if (!userRole) return;
+
+    const channel = supabase
+      .channel('public:app_settings_delivery')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings_delivery' }, () => {
+        fetchAppSettings();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userRole, fetchAppSettings]);
 
   // Polling: a cada 30s limpa entregadores ausentes e atualiza a lista
   useEffect(() => {
@@ -2028,17 +2080,23 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const cleanSettings = {
          ...appSettings,
-         iziBlackFee: Number(appSettings.iziBlackFee || 0),
-         iziBlackCashback: Number(appSettings.iziBlackCashback || 0),
-         iziBlackMinOrderFreeShipping: Number(appSettings.iziBlackMinOrderFreeShipping || 0),
-         radius: Number(appSettings.radius || 0),
-         baseFee: Number(appSettings.baseFee || 0),
-         appCommission: Number(appSettings.appCommission || 0),
+         iziBlackFee: Number(appSettings.iziBlackFee ?? 0),
+         iziBlackCashback: Number(appSettings.iziBlackCashback ?? 0),
+         iziBlackMinOrderFreeShipping: Number(appSettings.iziBlackMinOrderFreeShipping ?? 0),
+         radius: Number(appSettings.radius ?? 0),
+         baseFee: Number(appSettings.baseFee ?? 0),
+         appCommission: Number(appSettings.appCommission ?? 0),
          driverFreightCommission: Number(appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
          privateDriverCommission: Number(appSettings.privateDriverCommission ?? appSettings.driverFreightCommission ?? appSettings.appCommission ?? 0),
-         serviceFee: Number(appSettings.serviceFee || 0),
-         flashOfferDiscount: Number(appSettings.flashOfferDiscount || 0),
-         iziCoinRate: Number(appSettings.iziCoinRate || 0),
+         serviceFee: Number(appSettings.serviceFee ?? 0),
+         flashOfferDiscount: Number(appSettings.flashOfferDiscount ?? 0),
+         iziCoinRate: Number(appSettings.iziCoinRate ?? 0),
+         minwithdrawalamount: Number(appSettings.minwithdrawalamount ?? 0),
+         withdrawalfeepercent: Number(appSettings.withdrawalfeepercent ?? 0),
+         withdrawal_period_h: Number(appSettings.withdrawal_period_h ?? 24),
+         withdrawal_day: appSettings.withdrawal_day || 'Quarta-feira',
+         loan_interest_rate: Number(appSettings.loan_interest_rate ?? 12.0),
+         paymentmethodsactive: appSettings.paymentmethodsactive || { pix: true, card: true, lightning: false, wallet: true },
          updated_at: new Date().toISOString()
       };
 

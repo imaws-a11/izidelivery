@@ -1003,38 +1003,32 @@ function PreApprovedLimitsSection() {
 }
 
 function MasterFinancialControl() {
-  const { globalSettings, saveGlobalSettings, fetchGlobalSettings } = useAdmin();
+  const { appSettings, setAppSettings, handleSaveAppSettings } = useAdmin();
   const [saving, setSaving] = React.useState(false);
 
-  const settings = globalSettings || {
-    payment_methods_active: { pix: true, card: true, lightning: false, wallet: true },
-    withdrawal_fee_percent: 2.5,
-    min_withdrawal_amount: 50.0,
-    service_fee_percent: 5.0,
-    izi_coin_value: 0.01,
-    loan_interest_rate: 12.0
+  const handleUpdate = (field: keyof AppSettings, val: any) => {
+    setAppSettings(prev => ({ ...prev, [field]: val }));
   };
 
-  const handleUpdate = async (field: string, val: any) => {
+  const toggleMethod = (method: string) => {
+    const current = appSettings.paymentmethodsactive || {};
+    const updated = { ...current, [method]: !current[method] };
+    handleUpdate('paymentmethodsactive', updated);
+  };
+
+  const onSave = async () => {
     setSaving(true);
     try {
-      const newSettings = { ...settings, [field]: val };
-      await saveGlobalSettings(newSettings);
-      toastSuccess('Configuração atualizada!');
+      await handleSaveAppSettings();
+      toastSuccess('Configurações sincronizadas!');
     } catch (err) {
-      toastError('Erro ao salvar alteração');
+      toastError('Erro ao sincronizar');
     } finally {
       setSaving(false);
     }
   };
 
-  const toggleMethod = (method: string) => {
-    const current = settings.payment_methods_active || {};
-    const updated = { ...current, [method]: !current[method] };
-    handleUpdate('payment_methods_active', updated);
-  };
-
-  if (!globalSettings) return (
+  if (!appSettings) return (
     <div className="animate-pulse space-y-4 pt-10">
       <div className="h-40 bg-slate-100 dark:bg-slate-800 rounded-3xl" />
       <div className="h-40 bg-slate-100 dark:bg-slate-800 rounded-3xl" />
@@ -1042,12 +1036,12 @@ function MasterFinancialControl() {
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-12">
        {/* GATEWAYS CONTROL */}
        <div>
           <div className="flex justify-between items-center mb-6">
             <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Gateways Ativos</h4>
-            <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${saving ? 'bg-primary/20 text-primary' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+            <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${saving ? 'bg-primary/20 text-primary' : 'bg-green-500/10 text-green-500'}`}>
               {saving ? 'Sincronizando...' : 'Online'}
             </div>
           </div>
@@ -1061,15 +1055,15 @@ function MasterFinancialControl() {
                <button 
                  key={m.id}
                  onClick={() => toggleMethod(m.id)}
-                 className={`flex flex-col items-center justify-center p-4 rounded-[28px] transition-all border ${
-                   settings.payment_methods_active?.[m.id] 
+                 className={`flex flex-col items-center justify-center p-4 rounded-[32px] transition-all border ${
+                   appSettings.paymentmethodsactive?.[m.id] 
                    ? 'bg-white dark:bg-slate-900 shadow-sm border-slate-200/50 dark:border-slate-700' 
                    : 'bg-slate-50 dark:bg-slate-800/20 border-transparent opacity-40 hover:opacity-60 grayscale'
                  }`}
                >
                   <span className={`material-symbols-outlined ${m.color} text-2xl mb-2`}>{m.icon}</span>
                   <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest">{m.label}</span>
-                  <div className={`mt-2 h-1 w-6 rounded-full ${settings.payment_methods_active?.[m.id] ? 'bg-primary' : 'bg-slate-300'}`} />
+                  <div className={`mt-2 h-1 w-6 rounded-full ${appSettings.paymentmethodsactive?.[m.id] ? 'bg-primary' : 'bg-slate-300'}`} />
                </button>
              ))}
           </div>
@@ -1087,8 +1081,8 @@ function MasterFinancialControl() {
              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
                <input 
                  type="number" step="0.1"
-                 value={settings.service_fee_percent}
-                 onChange={(e) => handleUpdate('service_fee_percent', parseFloat(e.target.value))}
+                 value={appSettings.serviceFee}
+                 onChange={(e) => handleUpdate('serviceFee', parseFloat(e.target.value))}
                  className="w-10 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
                />
                <span className="text-[10px] text-slate-400 font-bold">%</span>
@@ -1106,8 +1100,8 @@ function MasterFinancialControl() {
                <span className="text-[10px] text-slate-400 font-bold">R$</span>
                <input 
                  type="number" step="0.01"
-                 value={settings.izi_coin_value}
-                 onChange={(e) => handleUpdate('izi_coin_value', parseFloat(e.target.value))}
+                 value={appSettings.iziCoinRate}
+                 onChange={(e) => handleUpdate('iziCoinRate', parseFloat(e.target.value))}
                  className="w-12 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
                />
              </div>
@@ -1123,7 +1117,7 @@ function MasterFinancialControl() {
              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-700">
                <input 
                  type="number" step="0.1"
-                 value={settings.loan_interest_rate}
+                 value={appSettings.loan_interest_rate}
                  onChange={(e) => handleUpdate('loan_interest_rate', parseFloat(e.target.value))}
                  className="w-10 bg-transparent text-xs font-black text-slate-900 dark:text-white outline-none text-right"
                />
@@ -1133,62 +1127,80 @@ function MasterFinancialControl() {
        </div>
 
        {/* WITHDRAWAL RULES */}
-       <div className="p-6 rounded-[32px] bg-slate-900 border border-white/5 space-y-4">
+       <div className="p-6 rounded-[40px] bg-slate-900 border border-white/5 space-y-5 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-6 opacity-5">
+            <span className="material-symbols-outlined text-4xl text-primary">account_balance</span>
+          </div>
+
           <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-             <span className="material-symbols-outlined text-sm">account_balance</span>
+             <span className="material-symbols-outlined text-sm">payments</span>
              Regras de Liquidez
           </p>
+          
           <div className="flex justify-between items-center">
              <span className="text-[11px] font-bold text-slate-400">Taxa de Saque</span>
              <div className="flex items-center gap-2">
                 <input 
                   type="number" step="0.5"
-                  value={settings.withdrawal_fee_percent}
-                  onChange={(e) => handleUpdate('withdrawal_fee_percent', parseFloat(e.target.value))}
-                  className="w-10 bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-white font-black text-right text-xs outline-none focus:border-primary"
+                  value={appSettings.withdrawalfeepercent ?? 0}
+                  onChange={(e) => handleUpdate('withdrawalfeepercent', parseFloat(e.target.value) || 0)}
+                  className="w-12 bg-white/5 border border-white/10 rounded-[14px] py-1.5 px-3 text-white font-black text-right text-xs outline-none focus:border-primary transition-all"
                 />
                 <span className="text-[10px] text-white/20">%</span>
              </div>
           </div>
+
           <div className="flex justify-between items-center">
              <span className="text-[11px] font-bold text-slate-400">Valor Mínimo</span>
              <div className="flex items-center gap-2">
                 <span className="text-[10px] text-white/20">R$</span>
                 <input 
                   type="number"
-                  value={settings.min_withdrawal_amount}
-                  onChange={(e) => handleUpdate('min_withdrawal_amount', parseFloat(e.target.value))}
-                  className="w-14 bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-white font-black text-right text-xs outline-none focus:border-primary"
+                  value={appSettings.minwithdrawalamount ?? 0}
+                  onChange={(e) => handleUpdate('minwithdrawalamount', parseFloat(e.target.value) || 0)}
+                  className="w-16 bg-white/5 border border-white/10 rounded-[14px] py-1.5 px-3 text-white font-black text-right text-xs outline-none focus:border-primary transition-all"
                 />
              </div>
           </div>
+
           <div className="flex justify-between items-center">
              <span className="text-[11px] font-bold text-slate-400">Prazo (Horas)</span>
              <div className="flex items-center gap-2">
                 <input 
                   type="number"
-                  value={settings.withdrawal_period_h}
-                  onChange={(e) => handleUpdate('withdrawal_period_h', parseInt(e.target.value))}
-                  className="w-10 bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-white font-black text-right text-xs outline-none focus:border-primary"
+                  value={appSettings.withdrawal_period_h ?? 24}
+                  onChange={(e) => handleUpdate('withdrawal_period_h', parseInt(e.target.value) || 24)}
+                  className="w-12 bg-white/5 border border-white/10 rounded-[14px] py-1.5 px-3 text-white font-black text-right text-xs outline-none focus:border-primary transition-all"
                 />
                 <span className="text-[10px] text-white/20">H</span>
              </div>
           </div>
+
           <div className="flex justify-between items-center">
              <span className="text-[11px] font-bold text-slate-400">Dia de Pagamento</span>
              <input 
                type="text"
-               value={settings.withdrawal_day}
+               value={appSettings.withdrawal_day || 'Sexta-feira'}
                onChange={(e) => handleUpdate('withdrawal_day', e.target.value)}
-               className="w-24 bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-white font-black text-right text-[10px] outline-none focus:border-primary"
+               className="w-28 bg-white/5 border border-white/10 rounded-[14px] py-1.5 px-3 text-white font-black text-right text-[9px] outline-none focus:border-primary uppercase tracking-wider"
              />
           </div>
-          <div className="pt-2 border-t border-white/5">
-             <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed italic">
-               Nota: Estas regras refletem globalmente no ecossistema Izi para todos os parceiros.
-             </p>
-          </div>
-        </div>
+
+          <button 
+            onClick={onSave}
+            disabled={saving}
+            className="w-full mt-2 h-12 bg-primary text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/10"
+          >
+            {saving ? (
+              <div className="size-4 border-2 border-slate-900/20 border-t-slate-900 rounded-full animate-spin"></div>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-base">save</span>
+                Sincronizar Regras
+              </>
+            )}
+          </button>
+       </div>
     </div>
   );
 }
