@@ -1496,136 +1496,95 @@ function App() {
                  console.error('ID do pedido ausente na tentativa de aceite.');
                  toastError('Ocorreu um erro ao identificar o pedido.');
                  setIsAccepting(false);
-                 console.groupEnd();
                  return;
             }
-            
-            // Se o ID for curto e não houver realId, tentamos usá-lo assim mesmo, mas registramos
-            if (String(targetId).length < 20 && !order.realId) {
-                console.warn('Usando ID curto para aceite. Isso pode falhar se não houver um mapeamento UUID no banco.', targetId);
-            }
-            
-            // Timeout de segurança: Se em 10 segundos não resolver, libera o botão
-            const safetyTimeout = setTimeout(() => {
-                if (isAccepting) {
-                   console.warn('Timeout de segurança atingido no handleAccept (10s)');
-                   setIsAccepting(false);
-                }
-            }, 10000);
 
-            console.log('Buscando integridade do pedido no servidor...');
-            const { data: realOrder, error: findError } = await supabase
-                .from('orders_delivery')
-                .select('*')
-                .eq('id', targetId)
-                .single();
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+            console.log('1. Verificando integridade via REST...');
+            const checkRes = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${targetId}&select=*`, {
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+            });
             
-            if (findError || !realOrder) {
-                console.error('Pedido não encontrado ou erro na busca:', findError);
-                toastError('Este pedido já foi aceito por outro piloto ou não existe mais.');
-                setOrders(prev => prev.filter((o: any) => (o.realId || o.id) !== targetId));
-                setIsAccepting(false);
-                console.groupEnd();
+            const orders = await checkRes.json();
+            const realOrder = orders[0];
+
+            if (!realOrder) throw new Error('Pedido não encontrado.');
+            
+            // Verificar se ainda está disponível
+            if (realOrder.driver_id && String(realOrder.driver_id).trim() !== '') {
+                toastError('Este pedido já foi aceito por outro piloto.');
+                setOrders(prev => prev.filter(o => (o.realId || o.id) !== targetId));
                 return;
             }
 
-            console.log('Status atual no servidor:', realOrder.status);
-            const canAccept = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(realOrder.status);
-            
-            if (!canAccept) {
-                // Se o driver_id no banco já for o meu, significa que eu já aceitei (talvez em outro clique ou dispositivo)
-                // Nesse caso, permitimos prosseguir para sincronizar a UI
-                if (realOrder.driver_id === driverId) {
-                    console.log('Detectado que este motorista já é o dono da missão. Sincronizando estado local.');
-                } else {
-                    console.warn('Bloqueio: Status do servidor não permite aceite:', realOrder.status);
-                    toastError('Este pedido já está sendo processado.');
-                    setOrders(prev => prev.filter((o: any) => o.id !== order.id));
-                    setIsAccepting(false);
-                    console.groupEnd();
-                    return;
-                }
-            }
-
-            if (!driverId) { 
-                console.error('ERRO CRÍTICO: Sessão perdida (driverId ausente).');
-                toastError('Sessão expirada. Por favor, saia e entre novamente no app.'); 
-                setIsAccepting(false);
-                console.groupEnd();
-                return; 
-            }
-
-            console.log('Iniciando transação de aceite no banco...', { orderId: realOrder.id, driverId });
-            const { error: updError } = await supabase.from('orders_delivery')
-                .update({ 
-                    status: 'a_caminho_coleta', 
+            console.log('2. Gravando aceite via PATCH...');
+            const updateRes = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${targetId}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({
+                    status: 'a_caminho_coleta',
                     driver_id: driverId,
                     updated_at: new Date().toISOString()
                 })
-                .eq('id', realOrder.id);
-            
-            if (updError) {
-                console.error('Falha no UPDATE:', updError);
-                throw new Error(updError.message || 'Falha ao gravar no banco');
-            }
+            });
 
-            console.log('UPDATE realizado com sucesso no banco!');
+            if (!updateRes.ok) throw new Error('Falha ao gravar aceite no banco.');
+
+            console.log('3. Aceite confirmado!');
             playIziSound('success');
 
             const mission = { 
                 ...order, 
                 ...realOrder, 
-                id: realOrder.id, 
-                realId: realOrder.id, 
+                realId: targetId, 
                 status: 'a_caminho_coleta' 
             };
             
             setActiveMission(mission);
             localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
-            setOrders(prev => prev.filter((o: any) => (o.realId || o.id) !== realOrder.id));
-            
-            console.log('Mudando para aba de Missão Ativa...');
+            setOrders(prev => prev.filter(o => (o.realId || o.id) !== targetId));
             setActiveTab('active_mission');
-            toastSuccess('Corrida aceita! Siga para a coleta. 🚀');
+            toastSuccess('Corrida aceita! Siga para a coleta.');
 
-        } catch (e: any) { 
-            console.error('Falha catastrófica no handleAccept:', e);
-            toastError('Erro ao aceitar pedido. Verifique sua conexão e tente novamente.'); 
-        } finally { 
-            // Proteção contra travamento visual infinito
-            console.log('Finalizando processo (reset loading).');
-            if (typeof safetyTimeout !== 'undefined') clearTimeout(safetyTimeout);
-            setIsAccepting(false); 
+        } catch (e: any) {
+            console.error('ERRO NO ACEITE:', e);
+            toastError('Erro ao aceitar: ' + e.message);
+        } finally {
+            setIsAccepting(false);
             console.groupEnd();
         }
     };
 
-    const handleDecline = (order: Order) => {
-        // Rejeição temporária: salva com timestamp, pedido reaparece após 5s no próximo poll
-        const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
-        declinedMap[order.realId] = Date.now();
-        localStorage.setItem('Izi_declined_timed', JSON.stringify(declinedMap));
-        setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
-    };
-
     const handleUpdateStatus = async (newStatus: string) => {
-        if (!activeMission) return;
+        if (!activeMission || isAccepting) return;
         setIsAccepting(true);
+        
         try {
             const missionId = activeMission.realId || activeMission.id;
-            
-            // 1. Atualizar o pedido no banco de dados primeiro
-            console.log('[STATUS UPDATE] Changing mission status:', { missionId, newStatus });
-            const { error: statusError } = await supabase.from('orders_delivery')
-                .update({ status: newStatus })
-                .eq('id', missionId);
-            
-            if (statusError) {
-                console.error('[STATUS UPDATE] DB update error:', statusError);
-                throw statusError;
-            }
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-            // 2. Se for um status de FINALIZAÇÃO (Sucesso)
+            console.log('[STATUS] Atualizando para:', newStatus);
+            const response = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${missionId}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() })
+            });
+
+            if (!response.ok) throw new Error('Falha ao atualizar status no servidor.');
+
+            // Lógica de Finalização
             const finishStatus = ['concluido', 'entregue', 'finalizado', 'delivered'];
             if (finishStatus.includes(newStatus.toLowerCase())) {
                 const netEarnings = getNetEarnings(activeMission);
