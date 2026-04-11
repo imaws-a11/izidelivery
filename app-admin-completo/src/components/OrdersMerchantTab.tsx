@@ -301,9 +301,10 @@ export default function OrdersMerchantTab() {
                         'bg-emerald-100 text-emerald-600'
                       }`}>
                         {o.status === 'preparando' ? 'Preparando' : 
-                         o.status === 'pending' || o.status === 'accepted' || o.status === 'waiting_driver' ? 'Buscando Entregador' : 
-                         o.status === 'a_caminho' ? 'Saiu p/ Entrega' : 
-                         o.status === 'em_rota' ? 'Em Rota' : o.status}
+                         o.status === 'waiting_driver' || o.status === 'pending' ? 'Buscando Entregador' : 
+                         ['accepted', 'a_caminho_coleta', 'no_local_coleta', 'chegou_coleta'].includes(o.status) ? 'Vindo coletar' :
+                         ['picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega'].includes(o.status) ? 'Saiu para Entrega' : 
+                         o.status === 'pronto' ? 'Pronto p/ Retirada' : o.status}
                       </span>
                       {o.payment_method === 'dinheiro' && <span className="text-[8px] font-black text-rose-500 uppercase mt-1">Dinheiro na Entrega</span>}
                     </div>
@@ -516,7 +517,9 @@ export default function OrdersMerchantTab() {
                                           {selectedOrderDetails.status === 'pendente_pagamento' ? 'Aguardando Confirmação do Pagamento' :
                                            selectedOrderDetails.status === 'waiting_merchant' ? 'Aguardando Aprovação' : 
                                            selectedOrderDetails.status === 'preparando' ? 'Em Preparação' : 
-                                           selectedOrderDetails.status === 'waiting_driver' ? 'Aguardando Entregador' : 
+                                           selectedOrderDetails.status === 'waiting_driver' || selectedOrderDetails.status === 'pending' ? 'Buscando Entregador' : 
+                                           ['accepted', 'a_caminho_coleta', 'no_local_coleta', 'chegou_coleta'].includes(selectedOrderDetails.status) ? 'Entregador vindo coletar' :
+                                           ['picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega'].includes(selectedOrderDetails.status) ? 'Pedido saiu para entrega' :
                                            selectedOrderDetails.status === 'concluido' ? 'Pedido Finalizado' : selectedOrderDetails.status}
                                       </p>
                                   </div>
