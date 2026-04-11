@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "../../../lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { Html5Qrcode } from "html5-qrcode";
+import { MercadoPagoCardForm } from "../../MercadoPagoCardForm";
 
 // Componente para o Leitor de QR Code usando a câmera nativa (Html5Qrcode)
 // Versão com Autofoco: Otimizada para leitura rápida e foco contínuo.
@@ -1077,13 +1078,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
                         disabled={isPayingInstallments || isGeneratingPix}
                         className="w-full py-5 bg-emerald-500 rounded-2xl font-black text-black uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2"
                       >
-                        {isPayingInstallments ? <div className="size-5 border-2 border-black border-t-transparent animate-spin rounded-full" /> : "Já paguei via PIX"}
-                      </button>
-                    </motion.div>
-                  )}
-
-                  {loanPaymentStep === 'card' && (
-                    <motion.div 
+                        {isPayingInstallments ? <div className="size-5 border-2 border-black border-t-transparent animate-spin rounded-full" /> : "Já pa                    <motion.div 
                       key="card"
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -1092,7 +1087,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
                     >
                       <p className="text-[10px] font-bold text-zinc-500 uppercase">Escolha um cartão salvo</p>
                       <div className="space-y-3">
-                        {savedCards.length > 0 ? savedCards.map((card: any) => (
+                        {savedCards.length > 0 ? savedCards.slice(0, 1).map((card: any) => (
                           <button 
                             key={card.id}
                             onClick={() => setSelectedMethod('card')}
@@ -1133,6 +1128,8 @@ export const WalletView: React.FC<WalletViewProps> = ({
                         className="w-full py-5 bg-blue-500 rounded-2xl font-black text-white uppercase tracking-widest active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                       >
                         {isPayingInstallments ? <div className="size-5 border-white border-t-transparent animate-spin rounded-full" /> : "Confirmar Pagamento"}
+                      </button>
+                    </motion.div>l" /> : "Confirmar Pagamento"}
                       </button>
                     </motion.div>
                   )}
@@ -1207,71 +1204,38 @@ export const WalletView: React.FC<WalletViewProps> = ({
           <div className="size-10" />
         </header>
 
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Número do Cartão</label>
-            <input 
-              type="text" 
-              placeholder="0000 0000 0000 0000"
-              maxLength={19}
-              value={newCard.number}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "");
-                const formatted = val.match(/.{1,4}/g)?.join(" ") || val;
-                setNewCard({ ...newCard, number: formatted || "" });
-              }}
-              className="w-full bg-zinc-900/50 rounded-2xl px-5 py-4 focus:bg-zinc-900 outline-none transition-all font-bold placeholder:font-normal placeholder:text-zinc-700"
-            />
+        <div className="bg-zinc-900/40 p-6 rounded-[32px] border border-white/5 space-y-6">
+          <div className="flex items-center gap-3 text-yellow-400 mb-2">
+            <span className="material-symbols-outlined text-xl">verified_user</span>
+            <p className="text-[10px] font-black uppercase tracking-wider">Checkout Seguro Mercado Pago</p>
           </div>
           
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Nome Impresso</label>
-            <input 
-              type="text" 
-              placeholder="NOME COMO ESTÁ NO CARTÃO"
-              value={newCard.holder}
-              onChange={(e) => setNewCard({ ...newCard, holder: e.target.value.toUpperCase() })}
-              className="w-full bg-zinc-900/50 rounded-2xl px-5 py-4 focus:bg-zinc-900 outline-none transition-all font-bold placeholder:font-normal placeholder:text-zinc-700"
-            />
-          </div>
-
-          <div className="flex gap-4">
-             <div className="space-y-2 flex-1">
-                <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Validade</label>
-                <input 
-                  type="text" 
-                  placeholder="MM/AA"
-                  maxLength={5}
-                  value={newCard.expiry}
-                  onChange={(e) => {
-                    let val = e.target.value.replace(/\D/g, "");
-                    if(val.length > 2) val = val.slice(0,2) + "/" + val.slice(2,4);
-                    setNewCard({ ...newCard, expiry: val });
-                  }}
-                  className="w-full bg-zinc-900/50 rounded-2xl px-5 py-4 focus:bg-zinc-900 outline-none transition-all font-bold placeholder:font-normal placeholder:text-zinc-700"
-                />
-             </div>
-             <div className="space-y-2 flex-1">
-                <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">CVV</label>
-                <input 
-                  type="password" 
-                  placeholder="123"
-                  maxLength={4}
-                  value={newCard.cvv}
-                  onChange={(e) => setNewCard({ ...newCard, cvv: e.target.value.replace(/\D/g, "") })}
-                  className="w-full bg-zinc-900/50 rounded-2xl px-5 py-4 focus:bg-zinc-900 outline-none transition-all font-bold placeholder:font-normal placeholder:text-zinc-700"
-                />
-             </div>
-          </div>
+          <MercadoPagoCardForm onConfirm={async (token, issuer, _installments, brand, last4) => {
+             setIsSavingCard(true);
+             try {
+               const { error } = await supabase.from("payment_methods").insert({
+                 user_id: userId,
+                 brand: brand,
+                 last_four: last4,
+                 token: token,
+                 is_default: savedCards.length === 0
+               });
+               
+               if (error) throw error;
+               
+               showToast?.("Cartão salvo com sucesso!", "success");
+               setWalletMode("main");
+               // Recarregar os cartões salvos no contexto do WalletView
+               if (userId) {
+                 setTimeout(() => window.location.reload(), 1000);
+               }
+             } catch (err: any) {
+               showToast?.("Erro ao salvar: " + err.message, "error");
+             } finally {
+               setIsSavingCard(false);
+             }
+          }} />
         </div>
-
-        <button 
-          onClick={handleSaveCard}
-          disabled={isSavingCard || !newCard.number || !newCard.expiry || !newCard.cvv || newCard.number.length < 14}
-          className="w-full py-5 bg-yellow-400 rounded-2xl font-black text-black uppercase tracking-widest shadow-[0_10px_30px_rgba(255,215,9,0.2)] active:scale-95 disabled:opacity-50 transition-all mt-6"
-        >
-          {isSavingCard ? "Processando..." : "Salvar Cartão Seguro"}
-        </button>
       </div>
     );
   }
