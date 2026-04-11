@@ -36,6 +36,11 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
   };
 
   const isMobility = ["mototaxi", "carro", "van", "utilitario"].includes(selectedItem.service_type);
+  
+  // Regra de Negócio: Mostrar entregador apenas quando ele estiver em trânsito para o cliente/destino
+  const shouldShowDriver = isMobility 
+    ? ["a_caminho", "at_pickup", "picked_up", "em_rota", "no_local"].includes(selectedItem.status)
+    : ["picked_up", "saiu_para_entrega", "em_rota", "no_local"].includes(selectedItem.status);
 
   const steps = isMobility
     ? [
@@ -137,7 +142,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
       {/* MAPA FULLSCREEN AO FUNDO */}
       <div className="absolute inset-0 z-0">
         <IziTrackingMap 
-          driverLoc={driverLocation} 
+          driverLoc={shouldShowDriver ? driverLocation : null} 
           userLoc={userLocation} 
           routePolyline={routePolyline} 
           onMyLocationClick={onMyLocationClick} 

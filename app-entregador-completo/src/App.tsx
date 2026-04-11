@@ -1360,55 +1360,109 @@ function App() {
     const handleAccept = async (order: Order) => {
         if (isAccepting) return;
         setIsAccepting(true);
+        console.group('[handleAccept] Processando aceite de pedido');
+        
         try {
             // Validar UUID — order.id é o ID curto (8 chars), order.realId é o UUID completo
-            const targetId = order.realId ?? order.id;
-            // Validação de ID mais flexível
-            if (!targetId || String(targetId).length < 5) {
-                console.error('[handleAccept] ID inválido:', targetId, '| order:', order);
-                toastError('ID do pedido inválido. Tente sincronizar a lista.');
-                setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
-                return;
+            const targetId = order.realId || order.id;
+            console.log('Target ID Identificado:', targetId, { orderId: order.id, realId: order.realId });
+            
+            // Validação de segurança básica: Se for ID curto (< 20 chars) e não tiver realId, estamos em apuros
+            if (!targetId || String(targetId).length < 10) {
+                 console.error('ID do pedido suspeito (provavelmente curto demais para ser UUID):', targetId);
+                 toastError('ID de pedido inválido. Tente atualizar a lista.');
+                 setIsAccepting(false);
+                 console.groupEnd();
+                 return;
             }
+            
+            // Timeout de segurança: Se em 10 segundos não resolver, libera o botão
+            const safetyTimeout = setTimeout(() => {
+                if (isAccepting) {
+                   console.warn('Timeout de segurança atingido no handleAccept (10s)');
+                   setIsAccepting(false);
+                }
+            }, 10000);
 
-            console.log('[handleAccept] Tentando aceitar:', targetId);
-            const { data: realOrder, error: findError } = await supabase.from('orders_delivery').select('*').eq('id', targetId).single();
+            console.log('Buscando integridade do pedido no servidor...');
+            const { data: realOrder, error: findError } = await supabase
+                .from('orders_delivery')
+                .select('*')
+                .eq('id', targetId)
+                .single();
             
             if (findError || !realOrder) {
-                console.error('[handleAccept] Pedido não encontrado no banco:', targetId, findError);
-                toastError('Pedido não encontrado ou já aceito por outro.');
-                setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
+                console.error('Pedido não encontrado ou erro na busca:', findError);
+                toastError('Este pedido já foi aceito por outro piloto ou não existe mais.');
+                setOrders(prev => prev.filter((o: any) => (o.realId || o.id) !== targetId));
+                setIsAccepting(false);
+                console.groupEnd();
                 return;
             }
 
-            if (!['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'a_caminho_coleta'].includes(realOrder.status)) {
-                toastError('Este pedido já foi processado ou cancelado.');
-                setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
+            console.log('Status atual no servidor:', realOrder.status);
+            const canAccept = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(realOrder.status);
+            
+            if (!canAccept) {
+                console.warn('Bloqueio: Status do servidor não permite aceite:', realOrder.status);
+                toastError('Este pedido já está sendo processado.');
+                setOrders(prev => prev.filter((o: any) => o.id !== order.id));
+                setIsAccepting(false);
+                console.groupEnd();
                 return;
             }
+
             if (!driverId) { 
-                console.error('[handleAccept] driverId is missing!');
-                toastError('Sessão expirada. Faça login novamente.'); 
+                console.error('ERRO CRÍTICO: Sessão perdida (driverId ausente).');
+                toastError('Sessão expirada. Por favor, saia e entre novamente no app.'); 
+                setIsAccepting(false);
+                console.groupEnd();
                 return; 
             }
 
-            console.log('[handleAccept] Salvando no banco:', { orderId: realOrder.id, driverId });
+            console.log('Iniciando transação de aceite no banco...', { orderId: realOrder.id, driverId });
             const { error: updError } = await supabase.from('orders_delivery')
-                .update({ status: 'a_caminho_coleta', driver_id: driverId })
+                .update({ 
+                    status: 'a_caminho_coleta', 
+                    driver_id: driverId,
+                    updated_at: new Date().toISOString()
+                })
                 .eq('id', realOrder.id);
             
             if (updError) {
-                console.error('[handleAccept] Erro no update do banco:', updError);
-                throw updError;
+                console.error('Falha no UPDATE:', updError);
+                throw new Error(updError.message || 'Falha ao gravar no banco');
             }
+
+            console.log('UPDATE realizado com sucesso no banco!');
             playIziSound('success');
-            const mission = { ...order, ...realOrder, id: realOrder.id, realId: realOrder.id, status: 'a_caminho_coleta' };
+
+            const mission = { 
+                ...order, 
+                ...realOrder, 
+                id: realOrder.id, 
+                realId: realOrder.id, 
+                status: 'a_caminho_coleta' 
+            };
+            
             setActiveMission(mission);
             localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
-            setOrders(prev => prev.filter((o: any) => o.realId !== order.realId));
+            setOrders(prev => prev.filter((o: any) => (o.realId || o.id) !== realOrder.id));
+            
+            console.log('Mudando para aba de Missão Ativa...');
             setActiveTab('active_mission');
-        } catch { toastError('Erro ao aceitar pedido. Tente novamente.'); }
-        finally { setIsAccepting(false); }
+            toastSuccess('Corrida aceita! Siga para a coleta. 🚀');
+
+        } catch (e: any) { 
+            console.error('Falha catastrófica no handleAccept:', e);
+            toastError('Erro ao aceitar pedido. Verifique sua conexão e tente novamente.'); 
+        } finally { 
+            // Proteção contra travamento visual infinito
+            console.log('Finalizando processo (reset loading).');
+            if (typeof safetyTimeout !== 'undefined') clearTimeout(safetyTimeout);
+            setIsAccepting(false); 
+            console.groupEnd();
+        }
     };
 
     const handleDecline = (order: Order) => {
