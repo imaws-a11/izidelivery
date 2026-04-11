@@ -1023,14 +1023,36 @@ function App() {
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
 
-        const fetchFromDB = async (table: string, query: string = 'select=*') => {
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-            const res = await fetch(`${supabaseUrl}/rest/v1/${table}?${query}`, {
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' }
+        const fetchFromDB = async (table: string, queryParams: string = '') => {
+            // Decodificar parâmetros da query string para usar no cliente JS do Supabase
+            // Exemplo: select=*,admin_users(...)&order=created_at.desc&limit=20
+            const params = new URLSearchParams(queryParams);
+            let query = supabase.from(table).select(params.get('select') || '*');
+
+            // Aplicar ordenação se existir
+            const orderStr = params.get('order');
+            if (orderStr) {
+                const [column, direction] = orderStr.split('.');
+                query = query.order(column, { ascending: direction === 'asc' });
+            }
+
+            // Aplicar limite se existir
+            const limitStr = params.get('limit');
+            if (limitStr) {
+                query = query.limit(parseInt(limitStr));
+            }
+
+            // Filtragem simples (ex: id=eq.xxx)
+            params.forEach((val, key) => {
+                if (['select', 'order', 'limit'].includes(key)) return;
+                if (val.startsWith('eq.')) {
+                    query = query.eq(key, val.slice(3));
+                }
             });
-            if (!res.ok) throw new Error(`DB Error: ${res.status}`);
-            return await res.json();
+
+            const { data, error } = await query;
+            if (error) throw new Error(`DB Error: ${error.message}`);
+            return data;
         };
 
         const fetchOrders = async () => {
@@ -1430,16 +1452,14 @@ function App() {
                  return;
             }
 
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-            console.log('1. Verificando integridade via REST...');
-            const checkRes = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${targetId}&select=*`, {
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-            });
+            console.log('1. Verificando integridade via Supabase...');
+            const { data: dbOrders, error: checkError } = await supabase
+                .from('orders_delivery')
+                .select('*')
+                .eq('id', targetId);
             
-            const orders = await checkRes.json();
-            const realOrder = orders[0];
+            if (checkError) throw checkError;
+            const realOrder = dbOrders?.[0];
 
             if (!realOrder) throw new Error('Pedido não encontrado.');
             
@@ -1450,23 +1470,17 @@ function App() {
                 return;
             }
 
-            console.log('2. Gravando aceite via PATCH...');
-            const updateRes = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${targetId}`, {
-                method: 'PATCH',
-                headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${supabaseKey}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                },
-                body: JSON.stringify({
+            console.log('2. Gravando aceite via Supabase...');
+            const { error: updateError } = await supabase
+                .from('orders_delivery')
+                .update({
                     status: 'a_caminho_coleta',
                     driver_id: driverId,
                     updated_at: new Date().toISOString()
                 })
-            });
+                .eq('id', targetId);
 
-            if (!updateRes.ok) throw new Error('Falha ao gravar aceite no banco.');
+            if (updateError) throw updateError;
 
             console.log('3. Aceite confirmado!');
             playIziSound('success');
@@ -1499,35 +1513,27 @@ function App() {
         
         try {
             const missionId = activeMission.realId || activeMission.id;
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            console.log('[STATUS-DEBUG] Enviando comando:', { missionId, newStatus });
+            
+            const { error: patchError } = await supabase
+                .from('orders_delivery')
+                .update({ 
+                    status: newStatus, 
+                    updated_at: new Date().toISOString() 
+                })
+                .eq('id', missionId);
 
-            console.log('[STATUS] Atualizando para:', newStatus);
-            const response = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${missionId}`, {
-                method: 'PATCH',
-                headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${supabaseKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() })
-            });
-
-            if (!response.ok) throw new Error('Falha ao atualizar status no servidor.');
+            if (patchError) throw patchError;
+            console.log('[STATUS-DEBUG] Comando aceito pelo banco.');
 
             // Lógica de Finalização
             const finishStatus = ['concluido', 'entregue', 'finalizado', 'delivered'];
             if (finishStatus.includes(newStatus.toLowerCase())) {
-                const netEarnings = getNetEarnings(activeMission);
-                
-                // Registrar ganho Financeiro (Líquido)
-                console.log('[FINALIZE] Recording transaction for driver:', driverId, 'Amount:', netEarnings);
-                
-                if (!driverId) {
-                    console.error('[FINALIZE] CRITICAL: driverId is missing during transaction recording!');
-                    toastError('Erro: Sua ID de motorista não foi encontrada.');
-                } else {
-                    try {
+                try {
+                    const netEarnings = getNetEarnings(activeMission);
+                    console.log('[FINALIZE] Recording transaction for driver:', driverId, 'Amount:', netEarnings);
+                    
+                    if (driverId && netEarnings > 0) {
                         const { error: wErr } = await supabase.from('wallet_transactions_delivery').insert({
                             user_id: driverId,
                             amount: netEarnings,
@@ -1537,21 +1543,17 @@ function App() {
 
                         if (wErr) {
                             console.error('[FINALIZE] Wallet insert error:', wErr);
-                            toastError('Erro ao creditar saldo: ' + wErr.message);
+                            // Não relançamos o erro para não travar a finalização do pedido
                         } else {
-                            console.log('[FINALIZE] Wallet transaction recorded successfully. Fetching finance updates...');
-                            // Forçar atualização imediata do estado de finanças
+                            console.log('[FINALIZE] Wallet transaction recorded successfully.');
                             await fetchFinanceData();
                         }
-                    } catch (txErr: any) {
-                        console.error('[FINALIZE] Transaction exception:', txErr);
-                        toastError('Erro ao registrar transação.');
                     }
+                } catch (finalizeErr) {
+                    console.error('[FINALIZE] Erro interno no processamento de ganhos:', finalizeErr);
                 }
 
                 toastSuccess('Missão concluída com sucesso!');
-
-                // Limpar missão ativa e atualizar histórico
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
                 setActiveTab('dashboard');
