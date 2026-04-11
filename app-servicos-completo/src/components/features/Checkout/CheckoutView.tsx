@@ -27,6 +27,7 @@ interface CheckoutViewProps {
   deliveryFee: number;
   serviceFee?: number;
   isIziBlack?: boolean;
+  paymentMethodsActive?: { pix?: boolean; card?: boolean; lightning?: boolean; wallet?: boolean };
 }
 
 export const CheckoutView: React.FC<CheckoutViewProps> = ({
@@ -53,6 +54,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   deliveryFee = 0,
   serviceFee = 0,
   isIziBlack = false,
+  paymentMethodsActive = { pix: true, card: true, lightning: true, wallet: true }
 }) => {
   const [useCoins, setUseCoins] = React.useState(false);
   const subtotal = cart.reduce((sum, item) => {
@@ -84,33 +86,37 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       icon: "credit_card",
       label: "Cartão App",
       sub: savedCards.length > 0 ? `•• ${savedCards[0].last4}` : "Pagar agora",
-      color: "text-blue-400"
+      color: "text-blue-400",
+      active: paymentMethodsActive.card !== false
     },
-    { id: "pix", icon: "pix", label: "PIX", sub: "Instantâneo", color: "text-emerald-400" },
+    { id: "pix", icon: "pix", label: "PIX", sub: "Instantâneo", color: "text-emerald-400", active: paymentMethodsActive.pix !== false },
     {
       id: "saldo",
       icon: "currency_bitcoin",
       label: "Saldo em IZI Coins",
       sub: `${iziCoins.toLocaleString("pt-BR")} coins`,
       disabled: (iziCoins * iziCoinValue) < total,
-      color: "text-yellow-400"
+      color: "text-yellow-400",
+      active: paymentMethodsActive.wallet !== false
     },
-    { id: "dinheiro", icon: "payments", label: "Dinheiro", sub: "Na entrega", color: "text-green-400" },
+    { id: "dinheiro", icon: "payments", label: "Dinheiro", sub: "Na entrega", color: "text-green-400", active: true },
     {
       id: "cartao_entrega",
       icon: "contactless",
       label: "Maquininha",
       sub: "Na entrega",
-      color: "text-orange-400"
+      color: "text-orange-400",
+      active: true
     },
     {
       id: "bitcoin_lightning",
       icon: "bolt",
       label: "Bitcoin",
       sub: "Lightning",
-      color: "text-yellow-500"
+      color: "text-yellow-500",
+      active: paymentMethodsActive.lightning === true
     },
-  ];
+  ].filter(o => o.active);
 
   return (
     <div className="absolute inset-0 z-40 bg-zinc-950 text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-48">

@@ -7331,7 +7331,7 @@ const navigateSubView = (target: string) => {
               )}
               {tab === "wallet" && (
                 <motion.div key="wallet-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                   <WalletView walletTransactions={walletTransactions} myOrders={myOrders} userXP={userXP} savedCards={savedCards} paymentMethod={paymentMethod} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} showToast={showToast} userId={userId} userName={userName} iziCoins={iziCoins} iziCashback={iziCashbackEarned} setShowDepositModal={setShowDepositModal} iziCoinValue={appSettings?.iziCoinRate || 1.0} iziCoinRate={appSettings?.iziCoinRate || 1.0} />
+                   <WalletView walletTransactions={walletTransactions} myOrders={myOrders} userXP={userXP} savedCards={savedCards} paymentMethod={paymentMethod} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} showToast={showToast} userId={userId} userName={userName} iziCoins={iziCoins} iziCashback={iziCashbackEarned} setShowDepositModal={setShowDepositModal} iziCoinValue={globalSettings?.izi_coin_value || 0.01} iziCoinRate={globalSettings?.izi_coin_value || 1.0} />
                 </motion.div>
               )}
               {tab === "profile" && (
@@ -7353,7 +7353,7 @@ const navigateSubView = (target: string) => {
                     merchantProducts={selectedShop?.products || []}
                     merchantName={selectedShop?.name || ""}
                     handleAddToCart={handleAddToCart}
-                    iziCoinRate={appSettings?.iziCoinRate || 1}
+                    iziCoinRate={globalSettings?.izi_coin_value || 1}
                     isIziBlack={isIziBlackMembership} 
                     deliveryFee={calculateDeliveryFee()} 
                   />
@@ -7383,10 +7383,11 @@ const navigateSubView = (target: string) => {
                     setSubView={(v: any) => setSubView(v)} 
                     iziCoins={iziCoins} 
                     iziCoinValue={globalSettings?.izi_coin_value || 0.01} 
-                    iziCoinRate={globalSettings?.izi_coin_rate || 5}
+                    iziCoinRate={globalSettings?.izi_coin_value || 1}
                     deliveryFee={calculateDeliveryFee()} 
-                    serviceFee={globalSettings?.service_fee_percent || appSettings?.serviceFee || 0}
+                    serviceFee={globalSettings?.service_fee_percent || 0}
                     isIziBlack={isIziBlackMembership}
+                    paymentMethodsActive={globalSettings?.payment_methods_active}
                   />
                 </motion.div>
               )}

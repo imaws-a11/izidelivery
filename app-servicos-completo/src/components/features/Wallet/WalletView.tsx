@@ -194,6 +194,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
   const [pixData, setPixData] = useState<any>(null);
   const [isGeneratingPix, setIsGeneratingPix] = useState(false);
   const [preApprovedLimit, setPreApprovedLimit] = useState(1000); // Default fallback
+  const [loanInterestRate, setLoanInterestRate] = useState(10); // Default 10%
 
   // Estados de Animação Real-time
   const [showAnimation, setShowAnimation] = useState(false);
@@ -233,7 +234,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
     lastCoinValue.current = iziCoins;
   }, [iziCoins]);
 
-  // Buscar Limite Pré-Aprovado
+  // Buscar Limite Pré-Aprovado e Configurações Econômicas
   useEffect(() => {
     if (!userId) return;
     const fetchLimit = async () => {
@@ -245,19 +246,21 @@ export const WalletView: React.FC<WalletViewProps> = ({
           .eq("id", userId)
           .single();
         
-        // 2. Busca limite global das configurações
+        // 2. Busca configurações globais (limite base e juros)
         const { data: globalData } = await supabase
           .from("admin_settings_delivery")
-          .select("global_pre_approved_limit")
+          .select("global_pre_approved_limit, loan_interest_rate")
           .single();
 
         const userLimit = Number(userData?.pre_approved_limit || 0);
         const globalLimit = Number(globalData?.global_pre_approved_limit || 0);
+        const globalInterest = Number(globalData?.loan_interest_rate || 10);
 
         // Prioridade: Limite Individual (se definido e > 0), senão usa o Global
         setPreApprovedLimit(userLimit > 0 ? userLimit : globalLimit);
+        setLoanInterestRate(globalInterest);
       } catch (err) {
-        console.error("Erro ao carregar limites:", err);
+        console.error("Erro ao carregar configurações econômicas:", err);
       }
     };
     fetchLimit();
@@ -310,6 +313,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
     
     setIsTakingLoan(true);
     try {
+      const multiplier = 1 + (loanInterestRate / 100);
       const { error: loanErr } = await supabase
         .from("loans_delivery")
         .insert({
@@ -317,7 +321,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
           requested_amount: amountVal,
           requested_installments: loanInstallments,
           amount: amountVal,
-          total_payable: amountVal * 1.1,
+          total_payable: amountVal * multiplier,
           installments_count: loanInstallments,
           status: 'pending'
         });
@@ -722,7 +726,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
               <h2 className="text-4xl font-black italic mt-1">Z {preApprovedLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
               <div className="mt-6 flex items-center gap-2">
                  <span className="material-symbols-outlined text-sm">info</span>
-                 <p className="text-[9px] font-bold uppercase tracking-tight">Taxa de 10% / mês • Liberação na hora</p>
+                 <p className="text-[9px] font-bold uppercase tracking-tight">Taxa de {loanInterestRate}% / mês • Liberação na hora</p>
               </div>
             </div>
             <div className="absolute -bottom-4 -right-4 size-32 bg-black/5 rounded-full blur-2xl" />
@@ -766,11 +770,11 @@ export const WalletView: React.FC<WalletViewProps> = ({
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-3 pt-4 border-t border-white/5">
                 <div className="flex justify-between text-[10px] font-bold uppercase text-zinc-500">
                   <span>Plano de Pagamento</span>
-                  <span className="text-white">{loanInstallments}x de Z {((Number(loanAmount) * 1.1) / loanInstallments).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-white">{loanInstallments}x de Z {((Number(loanAmount) * (1 + (loanInterestRate / 100))) / loanInstallments).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between text-xs font-black uppercase text-white pt-2 border-t border-white/5">
-                   <span>Total c/ 10% Juros</span>
-                   <span className="text-yellow-400">Z {(Number(loanAmount) * 1.1).toLocaleString('pt-BR')}</span>
+                   <span>Total c/ {loanInterestRate}% Juros</span>
+                   <span className="text-yellow-400">Z {(Number(loanAmount) * (1 + (loanInterestRate / 100))).toLocaleString('pt-BR')}</span>
                 </div>
               </motion.div>
             )}
