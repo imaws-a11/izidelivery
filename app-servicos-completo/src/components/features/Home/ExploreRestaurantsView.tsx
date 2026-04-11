@@ -36,43 +36,8 @@ export const ExploreRestaurantsView = ({
 }: ExploreRestaurantsViewProps) => {
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
 
-  const categoryImages: Record<string, string> = {
-    "Todos": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600",
-    "Promoções": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=600",
-    "Burguer": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600",
-    "Burger": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600",
-    "Hamburguer": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600",
-    "Pizza": "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=600",
-    "Doces e Bolos": "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=600",
-    "Salgados": "https://images.unsplash.com/photo-1541014741259-de529411b96a?q=80&w=600",
-    "Porções": "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?q=80&w=600",
-    "Japonês": "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=600",
-    "Massas": "https://images.unsplash.com/photo-1473093226795-af9932fe5856?q=80&w=600",
-    "Fit": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=600",
-    "Açaí": "https://images.unsplash.com/photo-1590301157890-4810ed352733?q=80&w=600",
-    "Sorvetes": "https://images.unsplash.com/photo-1501443762994-82bd5dace89a?q=80&w=600",
-    "Sorvete": "https://images.unsplash.com/photo-1501443762994-82bd5dace89a?q=80&w=600",
-    "Gelato": "https://images.unsplash.com/photo-1501443762994-82bd5dace89a?q=80&w=600",
-    "Promoção do Dia": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=600",
-    "Monte o seu": "https://images.unsplash.com/photo-1544333346-63e393789b52?q=80&w=600",
-    "Pratos feitos": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=600",
-    "Marmitas": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600"
-  };
-
   const getCategoryImg = (name: string) => {
-    const n = name?.trim();
-    if (!n) return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400";
-    
-    // Tenta correspondência exata, depois busca termos chave
-    if (categoryImages[n]) return categoryImages[n];
-    
-    const lower = n.toLowerCase();
-    if (lower.includes('sorvete') || lower.includes('gelato') || lower.includes('ice cream')) return categoryImages["Sorvetes"];
-    if (lower.includes('açai') || lower.includes('açaí')) return categoryImages["Açaí"];
-    if (lower.includes('burguer') || lower.includes('burger')) return categoryImages["Burgers"];
-    if (lower.includes('pizza')) return categoryImages["Pizza"];
-    
-    return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400";
+    return "";
   };
 
   // Garantir que categorias de comida tenham "Todos" e não incluam redundâncias
@@ -252,7 +217,7 @@ export const ExploreRestaurantsView = ({
                   }}
                   className="flex-shrink-0 w-64 h-32 rounded-[28px] relative overflow-hidden group border border-white/5 cursor-pointer shadow-xl"
                 >
-                  <img src={cpn.image_url || "https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=600"} className="absolute inset-0 size-full object-cover brightness-50 group-hover:scale-110 transition-transform duration-1000" />
+                  <img src={cpn.image_url || ""} className="absolute inset-0 size-full object-cover brightness-50 group-hover:scale-110 transition-transform duration-1000" />
                   <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/20 to-transparent p-5 flex flex-col justify-between backdrop-blur-[2px]">
                     <div className="flex items-center justify-between">
                        <span className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.2em]">{cpn.title || "Cupom Izi"}</span>

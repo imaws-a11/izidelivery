@@ -179,11 +179,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
     { icon: "local_bar",      img: "/images/bebidas.png",  tagline: "BEBIDAS FINAIS",   highlight: "none", label: "Bebidas",      type: "beverages",  action: null },
     { icon: "local_pharmacy", img: "/images/saude.png",    tagline: "SAÚDE INTEGRAL",   highlight: "cyan", label: "Saúde",        type: "pharmacy",   action: null },
     { icon: "pedal_bike",     img: "/images/envios.png",   tagline: "",                 highlight: "none", label: "Envios",       type: null,         action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
-    { icon: "pets",           img: "/images/petshop.png",  tagline: "CONFORTO PET",     highlight: "gold", label: "Petshop",      type: "generic",    action: () => { setExploreCategoryState({ id: "pets", title: "Pet Shop Premium", tagline: "Mimo para seu melhor amigo", primaryColor: "rose-500", icon: "pets", banner: "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=1200" }); navigateSubView("explore_category"); } },
-    { icon: "propane_tank",   img: "/images/gas-agua.png", tagline: "VITAIS",           highlight: "cyan", label: "Gas e Agua",   type: "generic",    action: () => { setExploreCategoryState({ id: "gas", title: "Gás e Água", tagline: "Essencial na sua porta", primaryColor: "blue-500", icon: "propane_tank", banner: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=1200" }); navigateSubView("explore_category"); } },
-    { icon: "kebab_dining",   img: "/images/acougue.png",  tagline: "CARNES PRIME",     highlight: "gold", label: "Açougue",      type: "generic",    action: () => { setExploreCategoryState({ id: "açougue", title: "Corte Prime", tagline: "Os melhores cortes selecionados", primaryColor: "red-600", icon: "kebab_dining", banner: "https://images.unsplash.com/photo-1607623273573-599d0086353f?q=80&w=1200" }); navigateSubView("explore_category"); } },
-    { icon: "bakery_dining",  img: "/images/padaria.png",  tagline: "PADARIA ARTESANAL",highlight: "gold", label: "Padaria",      type: "generic",    action: () => { setExploreCategoryState({ id: "padaria", title: "Padaria Izi", tagline: "Pão quentinho o dia todo", primaryColor: "amber-600", icon: "bakery_dining", banner: "https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=1200" }); navigateSubView("explore_category"); } },
-    { icon: "nutrition",      img: "/images/hortifruti.png",tagline:"FRESCOR HORTI",    highlight: "cyan", label: "Hortifruti",   type: "generic",    action: () => { setExploreCategoryState({ id: "hortifruti", title: "Hortifruti Izi", tagline: "Do campo para sua casa", primaryColor: "emerald-600", icon: "nutrition", banner: "https://images.unsplash.com/photo-1610348725531-843dff563e2c?q=80&w=1200" }); navigateSubView("explore_category"); } },
+    { icon: "pets",           img: "/images/petshop.png",  tagline: "CONFORTO PET",     highlight: "gold", label: "Petshop",      type: "generic",    action: () => { setExploreCategoryState({ id: "pets", title: "Pet Shop Premium", tagline: "Mimo para seu melhor amigo", primaryColor: "rose-500", icon: "pets" }); navigateSubView("explore_category"); } },
+    { icon: "propane_tank",   img: "/images/gas-agua.png", tagline: "VITAIS",           highlight: "cyan", label: "Gas e Agua",   type: "generic",    action: () => { setExploreCategoryState({ id: "gas", title: "Gás e Água", tagline: "Essencial na sua porta", primaryColor: "blue-500", icon: "propane_tank" }); navigateSubView("explore_category"); } },
+    { icon: "kebab_dining",   img: "/images/acougue.png",  tagline: "CARNES PRIME",     highlight: "gold", label: "Açougue",      type: "generic",    action: () => { setExploreCategoryState({ id: "açougue", title: "Corte Prime", tagline: "Os melhores cortes selecionados", primaryColor: "red-600", icon: "kebab_dining" }); navigateSubView("explore_category"); } },
+    { icon: "bakery_dining",  img: "/images/padaria.png",  tagline: "PADARIA ARTESANAL",highlight: "gold", label: "Padaria",      type: "generic",    action: () => { setExploreCategoryState({ id: "padaria", title: "Padaria Izi", tagline: "Pão quentinho o dia todo", primaryColor: "amber-600", icon: "bakery_dining" }); navigateSubView("explore_category"); } },
+    { icon: "nutrition",      img: "/images/hortifruti.png",tagline:"FRESCOR HORTI",    highlight: "cyan", label: "Hortifruti",   type: "generic",    action: () => { setExploreCategoryState({ id: "hortifruti", title: "Hortifruti Izi", tagline: "Do campo para sua casa", primaryColor: "emerald-600", icon: "nutrition" }); navigateSubView("explore_category"); } },
   ];
 
   const handleServiceSelection = (cat: any) => {
@@ -225,7 +225,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       finalPrice: finalPriceFormatted,
       originalPrice: originalPriceFormatted,
       timeLeft,
-      img: offer.product_image || offer.admin_users?.store_logo || "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=400",
+      img: offer.product_image || offer.admin_users?.store_logo || "",
       isMaster: userLevel >= 10 && offer.is_vip,
       offer,
     };
@@ -292,10 +292,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
       <main className="flex flex-col pt-[110px]">
         {/* BANNER GIGANTE IMERSIVO - CARROSSEL SWIPE */}
-        <section className="relative w-full h-[380px] group">
-          <div className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar w-full h-full" id="home-banner-carousel">
-            {banners && banners.length > 0 ? (
-              banners.map((banner: any, i: number) => (
+        {banners && banners.length > 0 && (
+          <section className="relative w-full h-[380px] group">
+            <div className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar w-full h-full" id="home-banner-carousel">
+              {banners.map((banner: any, i: number) => (
                 <div
                   key={banner.id || i}
                   className="snap-center shrink-0 w-full h-full relative cursor-pointer"
@@ -303,7 +303,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 >
                   <img 
                     className="w-full h-full object-cover brightness-[0.8] saturate-[1.2]" 
-                    src={banner.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1200"} 
+                    src={banner.image_url} 
                     alt={banner.title || "Promoção Izi"} 
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
@@ -333,34 +333,26 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     </motion.div>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="snap-center shrink-0 w-full h-full relative bg-zinc-900 flex items-center justify-center cursor-pointer" onClick={() => navigateSubView('exclusive_offer')}>
-                <img className="absolute inset-0 w-full h-full object-cover brightness-[0.4]" src="https://images.unsplash.com/photo-1621939106968-3e28cb404c04?q=80&w=1200" alt="Izi" />
-                <div className="relative z-10 text-center">
-                  <h2 className="text-2xl font-black text-white uppercase italic">Seja Izi Black</h2>
-                  <p className="text-zinc-400 text-[10px] mt-2 uppercase tracking-widest">Taxa zero e benefícios reais</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {banners && banners.length > 1 && (
-            <div className="absolute bottom-6 right-6 flex gap-1.5 z-30">
-              {banners.map((_: any, i: number) => (
-                <button 
-                  key={i} 
-                  onClick={(e) => {
-                     e.stopPropagation();
-                     const carousel = document.getElementById('home-banner-carousel');
-                     if (carousel) carousel.scrollTo({ left: carousel.offsetWidth * i, behavior: 'smooth' });
-                  }}
-                  className={`h-1.5 rounded-full transition-all duration-500 hover:bg-white/40 ${i === activeBannerIndex ? 'w-8 bg-yellow-400' : 'w-2 bg-white/20'}`}
-                />
               ))}
             </div>
-          )}
-        </section>
+
+            {banners.length > 1 && (
+              <div className="absolute bottom-6 right-6 flex gap-1.5 z-30">
+                {banners.map((_: any, i: number) => (
+                  <button 
+                    key={i} 
+                    onClick={(e) => {
+                       e.stopPropagation();
+                       const carousel = document.getElementById('home-banner-carousel');
+                       if (carousel) carousel.scrollTo({ left: carousel.offsetWidth * i, behavior: 'smooth' });
+                    }}
+                    className={`h-1.5 rounded-full transition-all duration-500 hover:bg-white/40 ${i === activeBannerIndex ? 'w-8 bg-yellow-400' : 'w-2 bg-white/20'}`}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         <div className="px-5 -mt-6 relative z-30 space-y-12 pb-12">
           <div className="relative group shadow-2xl shadow-black/40">
@@ -460,7 +452,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                                     shop = {
                                       id: data.id,
                                       name: data.store_name || data.name,
-                                      img: data.avatar_url || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1000&auto=format&fit=crop",
+                                      img: data.avatar_url || "",
                                       tag: data.segment || data.type || "Restaurante",
                                       rating: "5.0",
                                       time: data.estimated_time || "30-45 min",
@@ -832,14 +824,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-4 -mx-5 px-5">
                 {availableCoupons.map((coupon, i) => {
                   const isCopied = copiedCoupon === coupon.coupon_code;
-                  // Alta qualidade de imagens para banners de publicidade / cupons
-                  const bannerImages = [
-                    "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=800",
-                    "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=800",
-                    "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=800",
-                    "https://images.unsplash.com/photo-1470337458703-46ad1756a187?q=80&w=800"
-                  ];
-                  const fallbackImg = bannerImages[i % bannerImages.length];
 
                   return (
                     <motion.div 
@@ -854,7 +838,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       className="relative flex-shrink-0 w-[360px] h-[196px] rounded-[36px] overflow-hidden group cursor-pointer transition-all snap-center shadow-[0_14px_40px_rgba(0,0,0,0.7)] border border-white/10 hover:border-yellow-400/30"
                     >
                        <img 
-                         src={coupon.image_url || fallbackImg}
+                         src={coupon.image_url || ""}
                          alt={coupon.title || "Cupom"} 
                          className="absolute inset-0 w-full h-full object-cover brightness-[0.32] saturate-[1.05] group-hover:scale-110 transition-transform duration-1000"
                        />

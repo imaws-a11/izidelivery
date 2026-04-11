@@ -21,33 +21,14 @@ export const RestaurantMenuView: React.FC<RestaurantMenuViewProps> = ({
   handleAddToCart
 }) => {
   const shop = selectedShop || {
-    name: "Gourmet Lab",
-    rating: "4.9",
-    tag: "Artesanal • Premium",
-    time: "20-30 min",
+    name: "Restaurante",
+    rating: "5.0",
+    tag: "",
+    time: "-- min",
     freeDelivery: false,
-    img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1000",
-    banner: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1200",
-    categories: [
-      {
-        name: "Populares do Mestre",
-        items: [
-          { id: 101, name: "Filet Mignon Au Poivre", desc: "Filet grelhado com crosta de pimentas negras e molho demi-glace artesanal.", price: 89.00, img: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=600" },
-          { id: 102, name: "Pasta de Trufas Negras", desc: "Massa fresca envolta em creme de parmesão envelhecido e trufas frescas.", price: 74.00, img: "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?q=80&w=600" },
-          { id: 103, name: "Bisque de Lagosta", desc: "Creme aveludado de lagosta com toque de conhaque e ervas finas.", price: 62.00, img: "https://images.unsplash.com/photo-1547592166-23ac45744acd?q=80&w=600" },
-          { id: 104, name: "Fondant de Chocolate 70%", desc: "Bolo quente com centro cremoso servido com gelato de baunilha Bourbon.", price: 45.00, img: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?q=80&w=600" },
-        ]
-      },
-      { name: "Entradas", items: [
-        { id: 201, name: "Carpaccio de Wagyu", desc: "Fatias finas de wagyu com alcaparras e parmesão.", price: 52.00, img: "https://images.unsplash.com/photo-1607189860920-34ef073e7a77?q=80&w=600" },
-      ]},
-      { name: "Sobremesas", items: [
-        { id: 301, name: "Crème Brûlée", desc: "Clássico francês com crosta caramelizada na hora.", price: 38.00, img: "https://images.unsplash.com/photo-1470124182917-cc6e71b22ecc?q=80&w=600" },
-      ]},
-      { name: "Bebidas", items: [
-        { id: 401, name: "Água com Gás", desc: "500ml gelada.", price: 9.00, img: "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?q=80&w=600" },
-      ]},
-    ]
+    img: "",
+    banner: "",
+    categories: []
   };
 
   const allCategoryNames = ["Destaques", ...(shop.categories || []).map((c: any) => c.name)];

@@ -17,9 +17,9 @@ export default function FinancialTab() {
 
   // Se for preview, recalculamos os dados para este lojista específico
   const effectiveDashboardData = React.useMemo(() => {
-    if (!isMerchantPreview || !selectedMerchantPreview) return globalDashboardData;
+    if (!activeMerchant) return globalDashboardData;
 
-    const orders = dashboardOrders.filter(o => o.merchant_id === selectedMerchantPreview.id);
+    const orders = dashboardOrders.filter(o => o.merchant_id === activeMerchant.id);
     const completed = orders.filter(o => o.status === 'concluido' || o.status === 'delivered');
     const totalRevenue = completed.reduce((acc, curr) => acc + (Number(curr.total_price) || 0), 0);
     const totalOrders = orders.length;
@@ -57,11 +57,11 @@ export default function FinancialTab() {
 
   // Filtrar ordens da tabela
   const displayOrders = React.useMemo(() => {
-    if (isMerchantPreview && selectedMerchantPreview) {
-      return allOrders.filter(o => o.merchant_id === selectedMerchantPreview.id);
+    if (activeMerchant) {
+      return allOrders.filter(o => o.merchant_id === activeMerchant.id);
     }
     return allOrders;
-  }, [allOrders, isMerchantPreview, selectedMerchantPreview]);
+  }, [allOrders, activeMerchant]);
 
   return (
     <div className="space-y-8 pb-20">

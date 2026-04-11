@@ -44,7 +44,7 @@ export const BeverageOffersView = ({
       <main className="p-6 space-y-8">
           <div className="relative h-64 rounded-[50px] overflow-hidden group border border-white/10">
             <img 
-              src={beverageBanners.length > 0 ? beverageBanners[0].image_url : "https://images.unsplash.com/photo-1470337458703-46ad1756a187?q=80&w=800"} 
+              src={beverageBanners.length > 0 ? beverageBanners[0].image_url : ""} 
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[3000ms]" 
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent flex flex-col justify-center px-10">
