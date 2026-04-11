@@ -744,6 +744,7 @@ function App() {
                 
                 fetchFinanceData();
                 fetchMissionHistory();
+                syncMissionWithDB();
             } else {
                 setDriverId(null);
                 setIsAuthenticated(false);
@@ -958,9 +959,13 @@ function App() {
             } else {
                 console.log('[SYNC] Nenhuma missão ativa no banco para o motorista:', driverId);
                 if (orders && orders.length > 0) {
-                    console.log('[SYNC] Pedidos recentes encontrados mas nenhum ativo:', orders.map(o => o.status));
+                    console.log('[SYNC] Status encontrados:', orders.map(o => o.status));
                 }
-                toastError('Nenhuma missão ativa encontrada no servidor.');
+                // Limpa storage se no banco diz que não tem nada
+                if (localStorage.getItem('Izi_active_mission')) {
+                    setActiveMission(null);
+                    localStorage.removeItem('Izi_active_mission');
+                }
             }
         } catch (err: any) {
             console.error('[SYNC] Falha ao sincronizar missão:', err.message);
@@ -1404,12 +1409,18 @@ function App() {
             const canAccept = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(realOrder.status);
             
             if (!canAccept) {
-                console.warn('Bloqueio: Status do servidor não permite aceite:', realOrder.status);
-                toastError('Este pedido já está sendo processado.');
-                setOrders(prev => prev.filter((o: any) => o.id !== order.id));
-                setIsAccepting(false);
-                console.groupEnd();
-                return;
+                // Se o driver_id no banco já for o meu, significa que eu já aceitei (talvez em outro clique ou dispositivo)
+                // Nesse caso, permitimos prosseguir para sincronizar a UI
+                if (realOrder.driver_id === driverId) {
+                    console.log('Detectado que este motorista já é o dono da missão. Sincronizando estado local.');
+                } else {
+                    console.warn('Bloqueio: Status do servidor não permite aceite:', realOrder.status);
+                    toastError('Este pedido já está sendo processado.');
+                    setOrders(prev => prev.filter((o: any) => o.id !== order.id));
+                    setIsAccepting(false);
+                    console.groupEnd();
+                    return;
+                }
             }
 
             if (!driverId) { 
@@ -2452,7 +2463,32 @@ function App() {
     const [isMapOnly, setIsMapOnly] = useState(false);
 
     const renderActiveMissionView = () => {
-        if (!activeMission) return null;
+        if (!activeMission) {
+            return (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-[#030712] flex flex-col items-center justify-center p-10 text-center">
+                    <div className="size-24 rounded-[40px] bg-white/5 border border-white/10 flex items-center justify-center mb-6">
+                        <Icon name="route" size={40} className="text-white/20" />
+                    </div>
+                    <h2 className="text-xl font-black text-white uppercase tracking-tight mb-2">Sem Missão Ativa</h2>
+                    <p className="text-sm text-white/40 leading-relaxed mb-8">Você não possui nenhuma corrida em andamento no momento. Vá ao Dashboard para aceitar novos pedidos.</p>
+                    
+                    <div className="flex flex-col gap-3 w-full max-w-xs">
+                        <button 
+                            onClick={() => setActiveTab('dashboard')}
+                            className="h-14 bg-primary text-slate-900 font-black text-xs uppercase tracking-widest rounded-3xl w-full active:scale-95 transition-all shadow-lg shadow-primary/20"
+                        >
+                            Ir para o Dashboard
+                        </button>
+                        <button 
+                            onClick={syncMissionWithDB}
+                            className="h-14 bg-white/5 border border-white/10 text-white font-black text-xs uppercase tracking-widest rounded-3xl w-full active:scale-95 transition-all"
+                        >
+                            Verificar no Servidor
+                        </button>
+                    </div>
+                </motion.div>
+            );
+        }
         const details = getTypeDetails(activeMission.type);
         const isMobility = activeMission.type === 'mototaxi' || activeMission.type === 'car_ride';
         
@@ -2804,7 +2840,7 @@ function App() {
                 {isAuthenticated && (
                     <div key="app" className="flex flex-col h-full overflow-hidden">
                         <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
-                        <AnimatePresence>{activeMission && activeTab === 'active_mission' && renderActiveMissionView()}</AnimatePresence>
+                        <AnimatePresence>{activeTab === 'active_mission' && renderActiveMissionView()}</AnimatePresence>
                         {renderNavigationDrawer()}
                         <div className="flex flex-col h-full overflow-hidden">
                             {renderHeader()}
