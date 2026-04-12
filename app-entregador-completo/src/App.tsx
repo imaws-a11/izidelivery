@@ -14,19 +14,21 @@ const mapOptions = {
     disableDefaultUI: true,
     zoomControl: false,
     gestureHandling: 'greedy',
+    backgroundColor: '#111111',
     styles: [
-        { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#00b2ff" }] },
-        { "featureType": "landscape", "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
-        { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#ffca28" }] },
-        { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#ffb300" }] },
-        { "featureType": "road.arterial", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
-        { "featureType": "road.arterial", "elementType": "geometry.stroke", "stylers": [{ "color": "#dcdcdc" }] },
-        { "featureType": "road.local", "elementType": "geometry.fill", "stylers": [{ "color": "#ffffff" }] },
-        { "featureType": "road.local", "elementType": "geometry.stroke", "stylers": [{ "color": "#eeeeee" }] },
-        { "featureType": "poi.park", "elementType": "geometry.fill", "stylers": [{ "color": "#8dc26f" }] },
-        { "featureType": "transit.line", "elementType": "geometry.fill", "stylers": [{ "color": "#808080" }] },
-        { "elementType": "labels.text.fill", "stylers": [{ "color": "#444444" }] },
-        { "elementType": "labels.text.stroke", "stylers": [{ "color": "#ffffff" }] }
+        { "featureType": "all", "elementType": "labels.text.fill", "stylers": [{ "color": "#888888" }] },
+        { "featureType": "all", "elementType": "labels.text.stroke", "stylers": [{ "visibility": "off" }] },
+        { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "visibility": "off" }] },
+        { "featureType": "landscape", "elementType": "geometry", "stylers": [{ "color": "#1a1a1a" }] },
+        { "featureType": "poi", "elementType": "all", "stylers": [{ "visibility": "off" }] },
+        { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#2c2c2c" }] },
+        { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#3c3c3c" }] },
+        { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#FACD05" }, { "weight": 4 }] },
+        { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "visibility": "off" }] },
+        { "featureType": "road.arterial", "elementType": "geometry", "stylers": [{ "color": "#333333" }] },
+        { "featureType": "road.local", "elementType": "geometry", "stylers": [{ "color": "#282828" }] },
+        { "featureType": "transit", "elementType": "all", "stylers": [{ "visibility": "off" }] },
+        { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#0e1626" }] }
     ]
 };
 
@@ -119,36 +121,44 @@ function IziRealTimeMap({ driverCoords, pickupCoords, pickupAddress, pickupName,
   const { isLoaded, loadError } = useJsApiLoader({ id: GOOGLE_MAPS_ID, googleMapsApiKey: mapsKey, libraries: GOOGLE_MAPS_LIBRARIES, language: 'pt-BR', region: 'BR' });
   const [routeData, setRouteData] = useState<any>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [isNavMode, setIsNavMode] = useState(true);
   const lastDestRef = useRef<string>('');
 
   const isDeliveryPhase = ['picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega', 'no_local', 'completed'].includes(currentStatus || '');
-  const targetC = isDeliveryPhase ? deliveryCoords : pickupCoords;
   const targetAddress = isDeliveryPhase ? deliveryAddress : pickupAddress;
-  const targetName = isDeliveryPhase ? deliveryName : pickupName;
-
-  // Usar exclusivamente o endereço textual para evitar que as coordenadas salvas erradas levem o mapa do Entregador para outro estado
-  const fullAddressSearch = targetAddress;
-  const resolvedTarget = fullAddressSearch || null;
-
   const vDriver = isValidCoord(driverCoords) ? driverCoords : null;
 
+  // Waze-Style: Ultra Minimalist Dark
+  const mapOptions = {
+    disableDefaultUI: true,
+    styles: [
+      { "featureType": "all", "elementType": "labels.text.fill", "stylers": [{ "color": "#8c92a3" }] },
+      { "featureType": "all", "elementType": "labels.text.stroke", "stylers": [{ "visibility": "off" }] },
+      { "featureType": "all", "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
+      { "featureType": "administrative", "elementType": "geometry.fill", "stylers": [{ "color": "#111827" }] },
+      { "featureType": "landscape", "elementType": "geometry", "stylers": [{ "color": "#020617" }] },
+      { "featureType": "poi", "stylers": [{ "visibility": "off" }] },
+      { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#1e293b" }] },
+      { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#1e293b" }, { "lightness": -20 }] },
+      { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#334155" }] },
+      { "featureType": "transit", "stylers": [{ "visibility": "off" }] },
+      { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#0f172a" }] }
+    ],
+    gestureHandling: "greedy" as const
+  };
+
   useEffect(() => {
-    if (!isLoaded || !vDriver || !resolvedTarget) return;
-    console.log('[MAP-TRACE] Alvo:', resolvedTarget, 'Fase:', isDeliveryPhase ? 'Entrega' : 'Coleta');
+    if (!isLoaded || !vDriver || !targetAddress) return;
     const calc = async () => {
       try {
         const origin = { location: { latLng: { latitude: vDriver.lat, longitude: vDriver.lng } } };
-        const destin = typeof resolvedTarget === 'string' ? { address: resolvedTarget } : { location: { latLng: { latitude: resolvedTarget.lat, longitude: resolvedTarget.lng } } };
         const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
           method: 'POST',
-          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": mapsKey, "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline,routes.legs" },
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": mapsKey, "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline" },
           body: JSON.stringify({ 
             origin, 
-            destination: destin, 
+            destination: { address: targetAddress }, 
             travelMode: 'DRIVE', 
-            routingPreference: 'TRAFFIC_AWARE', 
-            languageCode: 'pt-BR', 
+            routingPreference: 'TRAFFIC_AWARE',
             units: 'METRIC' 
           })
         });
@@ -158,45 +168,59 @@ function IziRealTimeMap({ driverCoords, pickupCoords, pickupAddress, pickupName,
           setRouteData({
             poly: r.polyline.encodedPolyline,
             dist: (r.distanceMeters / 1000).toFixed(1) + ' km',
-            dur: Math.ceil(parseInt(r.duration) / 60) + ' min',
-            target: r.legs?.[0]?.endLocation?.latLng ? { lat: r.legs[0].endLocation.latLng.latitude, lng: r.legs[0].endLocation.latLng.longitude } : null
+            dur: Math.ceil(parseInt(r.duration) / 60) + ' min'
           });
         }
       } catch (e) { console.error('MAP_ERR:', e); }
     };
-    const key = typeof resolvedTarget === 'string' ? resolvedTarget : `${resolvedTarget.lat},${resolvedTarget.lng}`;
-    if (key !== lastDestRef.current) { lastDestRef.current = key; calc(); }
-    const inv = setInterval(calc, 30000);
+    if (targetAddress !== lastDestRef.current) { lastDestRef.current = targetAddress; calc(); }
+    const inv = setInterval(calc, 45000);
     return () => clearInterval(inv);
-  }, [isLoaded, vDriver, resolvedTarget]);
+  }, [isLoaded, vDriver, targetAddress]);
 
-  useEffect(() => { if (map && isNavMode && vDriver) map.panTo(vDriver); }, [map, isNavMode, vDriver]);
+  useEffect(() => { if (map && vDriver) map.panTo(vDriver); }, [map, vDriver]);
 
-  if (loadError) return <div className="absolute inset-0 bg-slate-950 flex items-center justify-center text-white p-8 text-center">Erro no Mapa</div>;
-  if (!isLoaded || !vDriver) return <div className="absolute inset-0 bg-slate-950 flex items-center justify-center text-white/20 text-[10px] font-black uppercase tracking-widest">GPS...</div>;
+  if (loadError || !isLoaded || !vDriver) return null;
 
   return (
-    <div className="absolute inset-0 z-0">
-      <GoogleMap mapContainerStyle={mapContainerStyle} onLoad={setMap} center={vDriver} zoom={16} options={mapOptions}>
-        <OverlayView position={vDriver} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}><div className="marker-user-pulse" /></OverlayView>
+    <div className="absolute inset-0 z-0 text-white">
+      <GoogleMap 
+        mapContainerStyle={{ width: '100%', height: '100%' }} 
+        onLoad={setMap} 
+        center={vDriver} 
+        zoom={18} 
+        options={mapOptions}
+      >
+        <OverlayView position={vDriver} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+          <div className="relative flex items-center justify-center">
+            <div className="absolute size-8 rounded-full bg-primary/20 animate-ping" />
+            <div className="absolute size-5 rounded-full bg-primary/40 border border-white/5 animate-pulse" />
+            <div className="size-3.5 rounded-full bg-primary border border-white shadow-[0_0_15px_rgba(250,204,21,0.8)]" />
+          </div>
+        </OverlayView>
         
-        {/* Marcador de COLETA (Lojista) */}
-        {(pickupCoords || (!isDeliveryPhase && routeData?.target)) && (
-          <Marker position={(!isDeliveryPhase && routeData?.target) || pickupCoords} options={{ icon: { url: 'https://cdn-icons-png.flaticon.com/512/606/606363.png', scaledSize: new window.google.maps.Size(32, 32), anchor: new window.google.maps.Point(16, 32) }, label: { text: "COLETA", color: "#FFF", fontSize: "10px", fontWeight: "bold" } }} />
+        {routeData?.poly && (
+          <Polyline 
+            path={window.google.maps.geometry.encoding.decodePath(routeData.poly)} 
+            options={{ 
+              strokeColor: '#FACD05', 
+              strokeOpacity: 0.9, 
+              strokeWeight: 6,
+              lineCap: 'round',
+              lineJoin: 'round'
+            }} 
+          />
         )}
-
-        {/* Marcador de ENTREGA (Cliente) */}
-        {(deliveryCoords || (isDeliveryPhase && routeData?.target)) && (
-          <Marker position={(isDeliveryPhase && routeData?.target) || deliveryCoords} options={{ icon: { url: 'https://cdn-icons-png.flaticon.com/512/9131/9131546.png', scaledSize: new window.google.maps.Size(32, 32), anchor: new window.google.maps.Point(16, 32) }, label: { text: "ENTREGA", color: "#FFF", fontSize: "10px", fontWeight: "bold" } }} />
-        )}
-
-        {routeData?.poly && <Polyline path={window.google.maps.geometry.encoding.decodePath(routeData.poly)} options={{ strokeColor: '#ffca28', strokeOpacity: 0.8, strokeWeight: 6 }} />}
       </GoogleMap>
 
+      {/* Indicador de Rota Ultra Minimalista */}
       {routeData && (
-        <div className="absolute top-6 left-6 z-[60] bg-slate-900/90 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-left-4">
-          <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary"><Icon name="navigation" size={20} /></div>
-          <div className="flex flex-col"><p className="text-[10px] font-black text-white/40 uppercase tracking-widest">{isDeliveryPhase ? 'Destino Cliente' : 'Coleta Lojista'}</p><div className="flex items-baseline gap-2"><span className="text-lg font-black text-white">{routeData.dist}</span><span className="text-xs font-bold text-primary">{routeData.dur}</span></div></div>
+        <div className="absolute top-[115px] left-6 z-[60] animate-in fade-in slide-in-from-left-4 duration-700">
+           <div className="px-3 py-1.5 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full flex items-center gap-2">
+              <span className="text-[10px] font-black text-primary uppercase">{routeData.dur}</span>
+              <div className="w-[1px] h-3 bg-white/10" />
+              <span className="text-[10px] font-bold text-white/50 uppercase">{routeData.dist}</span>
+           </div>
         </div>
       )}
     </div>
@@ -415,17 +439,28 @@ function App() {
     const [authError, setAuthError] = useState('');
     const [authInitLoading, setAuthInitLoading] = useState(true);
     const [appSettings, setAppSettings] = useState<any>(null);
+    const [dynamicRates, setDynamicRates] = useState<any>(null);
 
     const fetchGlobalSettings = useCallback(async () => {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         try {
+            // Busca configurações gerais
             const res = await fetch(`${supabaseUrl}/rest/v1/app_settings_delivery?select=*`, {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
             });
             if (res.ok) {
                 const data = await res.json();
                 if (data && data[0]) setAppSettings(data[0]);
+            }
+
+            // Busca taxas dinâmicas (especialmente os valores base como food_min)
+            const resRates = await fetch(`${supabaseUrl}/rest/v1/dynamic_rates_delivery?type=eq.base_values&select=*`, {
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+            });
+            if (resRates.ok) {
+                const dataRates = await resRates.json();
+                if (dataRates && dataRates[0]) setDynamicRates(dataRates[0].metadata);
             }
         } catch (e) {
             console.error('[SETTINGS] Erro ao buscar configurações:', e);
@@ -553,40 +588,56 @@ function App() {
     const getNetEarnings = useCallback((order: any) => {
         if (!order) return 0;
         
-        // Configurações globais com valores padrão seguros
-        const defaultBaseFee = appSettings?.baseFee ?? 8;
-        
         const rawType = order.service_type || order.type || 'generic';
         const type = normalizeServiceType(rawType);
+        
         const deliveryCommission = Number(appSettings?.driverFreightCommission ?? appSettings?.appCommission ?? 7);
         const privateDriverCommission = Number(appSettings?.privateDriverCommission ?? appSettings?.driverFreightCommission ?? appSettings?.appCommission ?? 7);
         
-        // Categorias de serviço
         const isMobility = ['mototaxi', 'car_ride', 'frete', 'logistica', 'motorista_particular', 'van', 'utilitario'].includes(type);
-        const isErrand = ['package', 'motoboy', 'generic'].includes(type);
         const isPrivateDriver = ['car_ride', 'motorista_particular'].includes(type);
         
         let driverBaseAmount = 0;
-        if (isMobility) {
-            // Em mobilidade (Uber/99 style), o valor da corrida é o preço total ou frete
-            driverBaseAmount = Number(order.delivery_fee || order.total_price || order.price || 0);
+        let minGuaranteed = 0;
+
+        // 1. Determinar o mínimo garantido baseado no tipo de serviço e taxas dinâmicas
+        if (type === 'restaurant') {
+            minGuaranteed = Number(dynamicRates?.food_min || appSettings?.baseFee || 7);
+        } else if (type === 'market') {
+            minGuaranteed = Number(dynamicRates?.market_min || dynamicRates?.food_min || appSettings?.baseFee || 7);
+        } else if (type === 'pharmacy') {
+            minGuaranteed = Number(dynamicRates?.pharmacy_min || dynamicRates?.food_min || appSettings?.baseFee || 7);
+        } else if (type === 'beverages') {
+            minGuaranteed = Number(dynamicRates?.beverages_min || dynamicRates?.food_min || appSettings?.baseFee || 7);
+        } else if (type === 'mototaxi') {
+            minGuaranteed = Number(dynamicRates?.mototaxi_min || 6);
+        } else if (isPrivateDriver) {
+            minGuaranteed = Number(dynamicRates?.carro_min || 14);
         } else {
-            // Em entregas (iFood style), o entregador NUNCA recebe o valor do produto.
-            // Recebe SOMENTE o frete (delivery_fee).
-            const deliveryFee = Number(order.delivery_fee || 0);
-            
-            if (deliveryFee > 0) {
-                driverBaseAmount = deliveryFee;
-            } else {
-                // Se o frete for zero no banco, usamos a taxa base definida no admin como segurança
-                driverBaseAmount = defaultBaseFee;
-            }
+            minGuaranteed = Number(appSettings?.baseFee || 7);
         }
 
+        // 2. Definir o montante base sobre o qual a comissão é calculada
+        if (isMobility) {
+            driverBaseAmount = Number(order.delivery_fee || order.total_price || order.price || 0);
+        } else {
+            const deliveryFee = Number(order.delivery_fee || 0);
+            // GARANTIA DE MÍNIMO: Se a taxa for menor que o mínimo configurado, assume o mínimo
+            driverBaseAmount = Math.max(deliveryFee, minGuaranteed);
+        }
+
+        // Se por algum motivo o base amount ainda for 0, usa o teto global
+        if (driverBaseAmount <= 0) driverBaseAmount = Number(appSettings?.baseFee || 7);
+
+        // 3. Aplicar Comissão
         const commission = isPrivateDriver ? privateDriverCommission : deliveryCommission;
-        const net = driverBaseAmount * (1 - (commission / 100));
-        return Number(net.toFixed(2));
-    }, [appSettings]);
+        const netCalculated = driverBaseAmount * (1 - (commission / 100));
+
+        // 4. GARANTIA: O entregador nunca recebe menos que o mínimo configurado (valor líquido final)
+        const finalNet = Math.max(minGuaranteed, netCalculated);
+
+        return Number(finalNet.toFixed(2));
+    }, [appSettings, dynamicRates]);
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
@@ -1602,6 +1653,7 @@ function App() {
         
         try {
             const missionId = activeMission.realId || activeMission.id;
+            if (!missionId) throw new Error('Identificador da missão não encontrado.');
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -1611,18 +1663,34 @@ function App() {
                 if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
             } catch(e) {}
 
-            console.log('[STATUS] Atualizando status via REST para:', newStatus);
+            console.log('[STATUS] Atualizando status via REST para:', newStatus, 'MissionID:', missionId);
             const response = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${missionId}`, {
                 method: 'PATCH',
                 headers: {
                     'apikey': supabaseKey,
                     'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
                 },
                 body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() })
             });
 
-            if (!response.ok) throw new Error('Falha ao atualizar status no servidor.');
+            if (!response.ok) {
+                const errBody = await response.text();
+                console.error('[STATUS-ERROR] Detalhes:', response.status, errBody);
+                let msg = `Erro ${response.status}: `;
+                try {
+                   const parsed = JSON.parse(errBody);
+                   msg += parsed.message || parsed.error || errBody;
+                } catch(e) { msg += errBody || 'Erro desconhecido'; }
+                
+                showToast(msg, 'error');
+                throw new Error(msg);
+            }
+            
+            const updatedData = await response.json();
+            console.log('[STATUS] Sucesso:', updatedData);
+            toastSuccess(`Status alterado para: ${newStatus}`);
 
             // Lógica de Finalização
             const finishStatus = ['concluido', 'entregue', 'finalizado', 'delivered'];
@@ -2965,19 +3033,17 @@ function App() {
 
         return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-[#020617] flex flex-col overflow-hidden">
-                {/* MAPA AO FUNDO */}
+                {/* MAPA AO FUNDO (Waze Style) */}
                 <div className="absolute inset-0 z-0">
                     <IziRealTimeMap 
                         driverCoords={driverCoords} 
                         pickupCoords={isValidCoord({ lat: activeMission.pickup_lat, lng: activeMission.pickup_lng }) ? { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng } : merchantCoords}
                         pickupAddress={pickupOnly}
-                        pickupName={activeMission.store_name} 
                         deliveryCoords={isValidCoord({ lat: activeMission.delivery_lat, lng: activeMission.delivery_lng }) ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng } : null}
                         deliveryAddress={addressOnly}
-                        deliveryName={activeMission.user_name || activeMission.customer} 
                         currentStatus={activeMission.status}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/80 pointer-events-none" />
                 </div>
 
                 {/* Header Flutuante */}
@@ -3009,7 +3075,7 @@ function App() {
                     dragConstraints={{ top: 0, bottom: 0 }}
                     dragElastic={0.1}
                     onDragEnd={handleMissionDragEnd}
-                    className="relative z-40 mt-auto bg-[#030712]/95 backdrop-blur-3xl border-t border-white/5 flex flex-col rounded-t-[45px] shadow-[0_-25px_50px_rgba(0,0,0,0.6)] touch-none"
+                    className="relative z-40 mt-auto bg-[#030712] border-t-4 border-white/5 flex flex-col rounded-t-[60px] shadow-[-20px_-20px_60px_rgba(255,255,255,0.02),20px_20px_60px_rgba(0,0,0,0.8),inset_4px_4px_12px_rgba(255,255,255,0.05),inset_-4px_-4px_12px_rgba(0,0,0,0.3)] touch-none"
                     style={{ height: "100dvh" }}
                 >
                     <div 
@@ -3024,8 +3090,8 @@ function App() {
                     </div>
 
                     <div className="p-8 pb-40 overflow-y-auto no-scrollbar flex-1 space-y-8">
-                        {/* Resumo Financeiro e Cliente */}
-                        <div className="bg-white/[0.03] border border-white/5 rounded-[32px] p-6 space-y-6">
+                        {/* Resumo Financeiro e Cliente - CLAY CARD */}
+                        <div className="bg-zinc-900 border-none rounded-[40px] p-8 space-y-6 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <div className="size-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
@@ -3042,29 +3108,29 @@ function App() {
                                 </div>
                             </div>
 
-                            <div className={`p-4 rounded-2xl border ${
+                            <div className={`p-6 rounded-[30px] border-none shadow-[inset_4px_4px_12px_rgba(255,255,255,0.05),inset_-4px_-4px_12px_rgba(0,0,0,0.3)] ${
                                 activeMission.payment_method === 'dinheiro' || activeMission.payment_method === 'cartao_maquininha' 
-                                ? 'bg-amber-500/10 border-amber-500/20' 
-                                : 'bg-emerald-500/10 border-emerald-500/20'
+                                ? 'bg-amber-500/5' 
+                                : 'bg-emerald-500/5'
                             }`}>
                                 <div className="flex items-start gap-4">
                                     <Icon name={activeMission.payment_method === 'dinheiro' ? 'payments' : 'account_balance_wallet'} className={activeMission.payment_method === 'dinheiro' || activeMission.payment_method === 'cartao_maquininha' ? 'text-amber-400' : 'text-emerald-400'} size={24} />
                                     <div className="flex-1">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Cobrança</p>
-                                        <h4 className="text-sm font-black text-white mt-0.5 uppercase italic">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Fluxo de Cobrança</p>
+                                        <h4 className="text-sm font-black text-white mt-1 uppercase italic tracking-tight">
                                             {activeMission.payment_method === 'dinheiro' 
                                                 ? `Receber R$ ${activeMission.total_price?.toFixed(2)} em DINHEIRO` 
                                                 : activeMission.payment_method === 'cartao_maquininha'
                                                 ? `Passar R$ ${activeMission.total_price?.toFixed(2)} NA MAQUININHA`
-                                                : 'Já Pago (Não cobrar)'}
+                                                : 'Pagamento Digital Confirmado'}
                                         </h4>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Rota Detalhada */}
-                        <div className="bg-white/[0.03] border border-white/5 rounded-[32px] p-6 space-y-6">
+                        {/* Rota Detalhada - CLAY CARD */}
+                        <div className="bg-zinc-900 border-none rounded-[40px] p-8 space-y-6 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
                             <div className="relative">
                                 <div className="absolute left-[11px] top-6 bottom-6 w-[2px] bg-gradient-to-b from-blue-500/20 via-primary/20 to-primary/40" />
                                 
@@ -3100,17 +3166,17 @@ function App() {
                                     const destination = (lat && lng) ? `${lat},${lng}` : encodeURIComponent(addr);
                                     window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
                                 }}
-                                className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-3 text-white/40 active:scale-95 transition-all group"
+                                className="w-full py-5 bg-zinc-800 border-none rounded-[28px] flex items-center justify-center gap-3 text-white/60 active:scale-95 transition-all group shadow-[ inset_4px_4px_10px_rgba(255,255,255,0.02), inset_-4px_-4px_10px_rgba(0,0,0,0.5)] border border-white/5"
                             >
                                 <Icon name="navigation" size={18} className="group-hover:text-blue-400 transition-colors" />
-                                <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-white transition-colors">Abrir no Maps</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-white transition-colors">Navegar com Google Maps</span>
                             </button>
                         </div>
 
                         {/* Itens */}
                         {orderItems.length > 0 && (
-                            <div className="bg-white/[0.02] border border-white/5 rounded-[24px] p-6">
-                                <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-4">Lista de Itens</p>
+                            <div className="bg-zinc-900 border-none rounded-[40px] p-8 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
+                                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-4">Lista de Itens</p>
                                 <div className="space-y-3">
                                     {orderItems.map((item: any, idx: number) => (
                                         <div key={idx} className="flex justify-between items-center text-xs font-bold text-white/60">
@@ -3129,7 +3195,7 @@ function App() {
                             {(['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando', 'aceito', 'atribuido'].includes(activeMission.status || '')) && (
                                 <button 
                                     onClick={() => handleUpdateStatus('chegou_coleta')} 
-                                    className="w-full h-18 bg-blue-500 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/10"
+                                    className="w-full h-20 bg-blue-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(37,99,235,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
                                 >
                                     <Icon name="location_on" /> Cheguei na Coleta
                                 </button>
@@ -3138,7 +3204,7 @@ function App() {
                             {(['chegou_coleta', 'no_local_coleta', 'waiting_driver'].includes(activeMission.status || '') || activeMission.status === 'pronto') && (
                                 <button 
                                     onClick={() => handleUpdateStatus('picked_up')} 
-                                    className="w-full h-18 bg-emerald-500 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/10"
+                                    className="w-full h-20 bg-emerald-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(5,150,105,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
                                 >
                                     <Icon name="package_2" /> Confirmar Coleta
                                 </button>
@@ -3147,7 +3213,7 @@ function App() {
                             {activeMission.status === 'picked_up' && (
                                 <button 
                                     onClick={() => handleUpdateStatus('a_caminho')} 
-                                    className="w-full h-18 bg-primary text-slate-950 font-black text-base uppercase tracking-widest rounded-[35px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/20"
+                                    className="w-full h-20 bg-primary text-slate-950 font-black text-base uppercase tracking-widest rounded-[40px] shadow-[0_15px_35px_rgba(250,204,21,0.25),inset_4px_4px_10px_rgba(255,255,255,0.6),inset_-4px_-4px_10px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
                                 >
                                     <Icon name="moped" /> Iniciar Entrega
                                 </button>
@@ -3156,7 +3222,7 @@ function App() {
                             {(activeMission.status === 'a_caminho' || activeMission.status === 'em_rota') && (
                                 <button 
                                     onClick={() => handleUpdateStatus('no_local')} 
-                                    className="w-full h-18 bg-blue-500 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/10"
+                                    className="w-full h-20 bg-blue-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(37,99,235,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
                                 >
                                     <Icon name="person_pin_circle" /> Tô no Destino
                                 </button>
@@ -3165,7 +3231,7 @@ function App() {
                             {(activeMission.status === 'no_local' || activeMission.status === 'saiu_para_entrega') && (
                                 <button 
                                     onClick={() => handleUpdateStatus('concluido')} 
-                                    className="w-full h-18 bg-emerald-500 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/20"
+                                    className="w-full h-20 bg-emerald-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(5,150,105,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
                                 >
                                     <Icon name="check_circle" /> {isMobility ? 'Encerrar Corrida' : 'Finalizar Entrega'}
                                 </button>

@@ -96,13 +96,31 @@ export default function OrdersAdminTab() {
     };
   };
 
-  const normalizeServiceType = (raw?: string | null) => {
-    const type = String(raw || '').toLowerCase().trim();
-    if (['carro', 'car_ride', 'taxi', 'ride'].includes(type)) return 'car_ride';
-    if (['mototaxi', 'moto_taxi', 'motortaxi'].includes(type)) return 'mototaxi';
-    if (['motorista_particular', 'motorista particular', 'chauffeur'].includes(type)) return 'motorista_particular';
-    if (['logistica', 'logistics'].includes(type)) return 'logistica';
-    return type || 'generic';
+  const normalizeServiceType = (raw: string | undefined | null): string => {
+      if (!raw) return 'delivery';
+      const t = raw.toLowerCase().trim();
+      // Tipos de comida / restaurante
+      if (['restaurant', 'restaurante', 'food', 'hamburguer', 'hamburger', 'burger',
+           'lanchonete', 'lanche', 'pizzaria', 'pizza', 'sushi', 'japanese',
+           'churrasco', 'grill', 'culinaria', 'culinária', 'refeicao', 'refeição'].includes(t)) return 'restaurant';
+      // Mercado / supermercado
+      if (['market', 'mercado', 'supermercado', 'hortifruti'].includes(t)) return 'market';
+      // Farmácia / saúde
+      if (['pharmacy', 'farmacia', 'farmácia', 'saude', 'saúde', 'health'].includes(t)) return 'pharmacy';
+      // Bebidas
+      if (['beverages', 'bebidas', 'drinks', 'bar'].includes(t)) return 'beverages';
+      // Mobilidade
+      if (['mototaxi', 'moto_taxi', 'motortaxi'].includes(t)) return 'mototaxi';
+      if (['car_ride', 'carro', 'taxi', 'car', 'ride'].includes(t)) return 'car_ride';
+      if (['motorista_particular', 'motorista particular', 'chauffeur'].includes(t)) return 'motorista_particular';
+      // Logística
+      if (['van'].includes(t)) return 'van';
+      if (['utilitario', 'utilitario leve', 'utility'].includes(t)) return 'utilitario';
+      if (['logistica', 'logistics'].includes(t)) return 'logistica';
+      if (['frete', 'carreto', 'freight', 'mudanca', 'mudança'].includes(t)) return 'frete';
+      if (['motoboy', 'courier'].includes(t)) return 'motoboy';
+      if (['package', 'pacote', 'encomenda', 'express', 'delivery'].includes(t)) return 'package';
+      return t;
   };
 
   const formatCurrency = (value: number) => `R$ ${Number(value || 0).toFixed(2).replace('.', ',')}`;
@@ -129,19 +147,36 @@ export default function OrdersAdminTab() {
     const type = normalizeServiceType(order.service_type);
     const isPrivateDriver = ['car_ride', 'motorista_particular'].includes(type);
     const isMobilityOrFreight = ['mototaxi', 'car_ride', 'motorista_particular', 'frete', 'logistica', 'van', 'utilitario'].includes(type);
-    const isErrand = ['package', 'motoboy', 'generic'].includes(type);
+    
+    // Novas taxas do dynamicRatesState.baseValues (usado no AdminContext)
+    const baseValues = (useAdmin() as any).dynamicRatesState?.baseValues || {};
+
+    let minGuaranteed = 0;
+    if (type === 'restaurant') {
+        minGuaranteed = Number(baseValues?.food_min || appSettings?.baseFee || 7);
+    } else if (type === 'market') {
+        minGuaranteed = Number(baseValues?.market_min || baseValues?.food_min || appSettings?.baseFee || 7);
+    } else if (type === 'pharmacy') {
+        minGuaranteed = Number(baseValues?.pharmacy_min || baseValues?.food_min || appSettings?.baseFee || 7);
+    } else if (type === 'beverages') {
+        minGuaranteed = Number(baseValues?.beverages_min || baseValues?.food_min || appSettings?.baseFee || 7);
+    } else if (type === 'mototaxi') {
+        minGuaranteed = Number(baseValues?.mototaxi_min || 6);
+    } else if (isPrivateDriver) {
+        minGuaranteed = Number(baseValues?.carro_min || 14);
+    } else {
+        minGuaranteed = Number(appSettings?.baseFee || 7);
+    }
 
     let baseAmount = 0;
     if (isMobilityOrFreight) {
-      baseAmount = Number(order.total_price || 0);
-    } else if (isErrand) {
-      baseAmount = Number(order.delivery_fee || order.total_price || 0);
+      baseAmount = Number(order.total_price || order.delivery_fee || 0);
     } else {
       const freightValue = Number(order.delivery_fee || 0);
-      baseAmount = freightValue > 0 ? freightValue : Number(appSettings?.baseFee || 0);
+      baseAmount = Math.max(freightValue, minGuaranteed);
     }
 
-    if (baseAmount <= 0) return null;
+    if (baseAmount <= 0) baseAmount = Number(appSettings?.baseFee || 7);
 
     const rate = Number(
       isPrivateDriver

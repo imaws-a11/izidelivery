@@ -41,42 +41,15 @@ export const playIziSound = (role: 'merchant' | 'driver' | 'success') => {
   const ctx = getAudioContext();
   if (ctx && ctx.state === 'suspended') ctx.resume();
 
-  // Função de voz (Backup Infalível)
-  const speak = (text: string) => {
-    try {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); // Limpa filas anteriores
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'pt-BR';
-        utterance.rate = 1.0;
-        window.speechSynthesis.speak(utterance);
-      }
-    } catch(e) {}
-  };
-
   try {
-    // 1. Som Sintético (Funciona mesmo sem internet)
-    if (ctx) {
-      if (role === 'driver') {
-        playTone(ctx, 880, 'triangle', 0, 0.4, 0.3); // A5
-        playTone(ctx, 1320, 'triangle', 0.2, 0.6, 0.2); // E6
-      } else if (role === 'success') {
-        playTone(ctx, 523, 'sine', 0, 0.2, 0.3);
-        playTone(ctx, 783, 'sine', 0.1, 0.3, 0.2);
-      }
-    }
-
-    // 2. Voz (Reforço auditivo)
-    if (role === 'driver') speak('Atenção: Nova missão disponível');
-
-    // 3. Vibração (Tátil)
+    // 1. Vibração (Tátil)
     if (role === 'driver' && 'vibrate' in navigator) {
-      navigator.vibrate([500, 200, 500]); // Vibração longa para chamadas
+      navigator.vibrate([500, 200, 500]); 
     } else if (role === 'success' && 'vibrate' in navigator) {
-      navigator.vibrate(100); // Vibração curta para sucesso
+      navigator.vibrate(100); 
     }
 
-    // 4. Audio MP3 (Textura premium)
+    // 2. Audio MP3 (Som principal - Único ativo conforme pedido)
     const soundUrls = {
       driver: '/sounds/mission_call.wav',
       success: 'https://cdn.freesound.org/previews/171/171671_2437358-lq.mp3',
@@ -85,7 +58,10 @@ export const playIziSound = (role: 'merchant' | 'driver' | 'success') => {
 
     const audio = new Audio(soundUrls[role]);
     audio.play().catch(() => {
-        // Fallback já garantido pelo som sintético e voz
+        // Fallback dinâmico se o navegador bloquear
+        if (ctx && role === 'driver') {
+            playTone(ctx, 880, 'triangle', 0, 0.4, 0.1); 
+        }
     });
 
   } catch (e) {

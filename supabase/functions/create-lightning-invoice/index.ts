@@ -35,21 +35,34 @@ serve(async (req) => {
         usdPriceBRL = parseFloat(u.data.amount) || usdPriceBRL
         console.log(`Preo USD obtido: R$ ${usdPriceBRL}`)
       }
+      const btcUsdRes = await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot')
+      if (btcUsdRes.ok) {
+        const b = await btcUsdRes.json()
+        btcPriceUSD = parseFloat(b.data.amount) || btcPriceUSD
+      }
     } catch (e) {
       console.error('Erro ao buscar taxas de cmbio Coinbase:', e.message)
     }
 
-    // Clculos
+    console.log(`[LN] Calculando Invoice: BRL=${amount}, BTC/BRL=${btcPriceBRL}, BTC/USD=${btcPriceUSD}, OrderId=${orderId}`);
+
     const amountNum = Number(amount)
-    const satoshis = Math.round((amountNum / btcPriceBRL) * 100_000_000)
-    let amountUSD = Number((amountNum / usdPriceBRL).toFixed(2))
+    const btcAmount = amountNum / btcPriceBRL;
+    const satoshis = Math.round(btcAmount * 100_000_000);
+
+    // Valor mínimo de 1 satoshi para evitar exibir 0
+    const finalSatoshis = satoshis > 0 ? satoshis : 1;
+
+    console.log(`[LN] Resultado: BTC=${btcAmount.toFixed(10)}, Satoshis=${finalSatoshis}`);
+
+    let amountUSD = (amountNum / btcPriceBRL) * btcPriceUSD
     
     // Garantir que amountUSD no seja 0 se o amount for > 0
     if (amountNum > 0 && amountUSD < 0.01) {
       amountUSD = 0.01
     }
 
-    console.log(`Processando fatura: R$ ${amountNum} -> $ ${amountUSD} USD -> ${satoshis} sats`)
+    console.log(`Processando fatura: R$ ${amountNum} -> $ ${amountUSD} USD -> ${finalSatoshis} sats`)
 
     // Criar cobrana no OpenNode
     // Nota: Usamos USD como moeda base para a cobrana para que o OpenNode calcule os sats na cotao dele
@@ -101,7 +114,7 @@ serve(async (req) => {
       chargeId: charge.id, 
       payment_request: charge.lightning_invoice?.payreq, 
       hosted_checkout: charge.hosted_checkout_url, 
-      satoshis, 
+      satoshis: finalSatoshis, 
       amount_brl: amountNum, 
       btc_price_brl: btcPriceBRL 
     }

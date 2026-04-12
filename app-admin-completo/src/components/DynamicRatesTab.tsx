@@ -249,6 +249,10 @@ export default function DynamicRatesTab() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
+              { title: 'Restaurantes (Comida)', minKey: 'food_min', kmKey: 'food_km' },
+              { title: 'Mercado / Supermercado', minKey: 'market_min', kmKey: 'market_km' },
+              { title: 'Farmácia / Drogaria', minKey: 'pharmacy_min', kmKey: 'pharmacy_km' },
+              { title: 'Bebidas / Conveniência', minKey: 'beverages_min', kmKey: 'beverages_km' },
               { title: 'MotoTáxi', minKey: 'mototaxi_min', kmKey: 'mototaxi_km' },
               { title: 'Carro Executivo', minKey: 'carro_min', kmKey: 'carro_km' },
               { title: 'Entrega Express', minKey: 'utilitario_min', kmKey: 'utilitario_km' },

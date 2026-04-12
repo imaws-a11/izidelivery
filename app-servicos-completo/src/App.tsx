@@ -1844,6 +1844,14 @@ function App() {
           }
 
           setSelectedItem({ ...order, total_price: total, lightningInvoice: lnData.payment_request, satoshis: lnData.satoshis, btc_price_brl: lnData.btc_price_brl });
+          
+          // Persistir os dados da fatura no banco de dados para evitar perda em refresh
+          await supabase.from("orders_delivery").update({ 
+            lightning_invoice: lnData.payment_request,
+            satoshis: lnData.satoshis,
+            btc_price_brl: lnData.btc_price_brl
+          }).eq("id", order.id);
+
           // O cart NÃO deve ser limpo aqui. Só após o pagamento ser confirmado via Realtime/Webhook
           navigateSubView("lightning_payment");
           return;
@@ -3326,8 +3334,16 @@ const navigateSubView = (target: string) => {
     
     // Cálculo robusto: Tenta total_price, depois amount_brl, depois calcula baseado em sats
     let amountBrl = Number(selectedItem?.total_price || selectedItem?.amount_brl || 0);
-    if (amountBrl === 0 && satoshis > 0 && btcPrice > 0) {
-      amountBrl = (satoshis * btcPrice) / 100000000;
+    let finalSatoshis = satoshis;
+
+    // Se satoshis vier zerado mas temos o valor em BRL e a cotação, recalculamos no frontend
+    if (finalSatoshis === 0 && amountBrl > 0 && btcPrice > 0) {
+      finalSatoshis = Math.round((amountBrl / btcPrice) * 100_000_000);
+    }
+    
+    // Fallback inverso: se temos sats mas não BRL
+    if (amountBrl === 0 && finalSatoshis > 0 && btcPrice > 0) {
+      amountBrl = (finalSatoshis * btcPrice) / 100000000;
     }
 
     return (
@@ -3360,8 +3376,9 @@ const navigateSubView = (target: string) => {
           </div>
 
           <div className="space-y-2 mb-10 w-full max-w-xs">
-            <h3 className="text-3xl font-black text-white tracking-tighter flex items-center justify-center gap-2">
-              {satoshis.toLocaleString("pt-BR")} <span className="text-sm font-black text-zinc-500 uppercase tracking-widest mt-2">Sats</span>
+            <h3 className="text-3xl font-black text-white tracking-tighter flex flex-col items-center justify-center gap-1">
+              <span>{finalSatoshis.toLocaleString("pt-BR")}</span>
+              <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Satoshi</span>
             </h3>
             {amountBrl > 0 && (
               <p className="text-zinc-400 text-sm font-bold">

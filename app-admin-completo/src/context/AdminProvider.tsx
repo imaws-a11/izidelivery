@@ -76,6 +76,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [subscriptionOrders, setSubscriptionOrders] = useState<Order[]>([]);
   const [dynamicRatesState, setDynamicRatesState] = useState<DynamicRatesState>({
     baseValues: {
+      food_min: '7,00',
+      food_km: '1,50',
       mototaxi_min: '6,00',
       mototaxi_km: '2,50',
       carro_min: '14,00',
@@ -1150,6 +1152,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           equilibrium: equilibriumRow?.metadata ? (equilibriumRow.metadata as any) : prev.equilibrium,
           flowControl: flowControlRow?.metadata ? (flowControlRow.metadata as any) : prev.flowControl,
           baseValues: baseValuesRow?.metadata ? {
+            food_min: (baseValuesRow.metadata as any).food_min?.toString().replace('.', ',') || '7,00',
+            food_km: (baseValuesRow.metadata as any).food_km?.toString().replace('.', ',') || '1,50',
             mototaxi_min: (baseValuesRow.metadata as any).mototaxi_min?.toString().replace('.', ',') || '6,00',
             mototaxi_km: (baseValuesRow.metadata as any).mototaxi_km?.toString().replace('.', ',') || '2,50',
             carro_min: (baseValuesRow.metadata as any).carro_min?.toString().replace('.', ',') || '14,00',
@@ -1988,6 +1992,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const cleanBaseValues = {
         ...dynamicRatesState.baseValues,
+        food_min: parseFloat(dynamicRatesState.baseValues.food_min.replace(',', '.')),
+        food_km: parseFloat(dynamicRatesState.baseValues.food_km.replace(',', '.')),
         mototaxi_min: parseFloat(dynamicRatesState.baseValues.mototaxi_min.replace(',', '.')),
         mototaxi_km: parseFloat(dynamicRatesState.baseValues.mototaxi_km.replace(',', '.')),
         carro_min: parseFloat(dynamicRatesState.baseValues.carro_min.replace(',', '.')),
