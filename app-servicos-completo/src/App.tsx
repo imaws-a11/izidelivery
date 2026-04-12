@@ -1843,7 +1843,7 @@ function App() {
             throw new Error(lnData?.error || "Não foi possível gerar a fatura Bitcoin.");
           }
 
-          setSelectedItem({ ...order, lightningInvoice: lnData.payment_request, satoshis: lnData.satoshis, btc_price_brl: lnData.btc_price_brl });
+          setSelectedItem({ ...order, total_price: total, lightningInvoice: lnData.payment_request, satoshis: lnData.satoshis, btc_price_brl: lnData.btc_price_brl });
           // O cart NÃO deve ser limpo aqui. Só após o pagamento ser confirmado via Realtime/Webhook
           navigateSubView("lightning_payment");
           return;
@@ -2740,20 +2740,187 @@ const navigateSubView = (target: string) => {
 
       // 2.1 Se for Excursão, salvar detalhes específicos
       if (transitData.type === 'van') {
+          // Atualizar estPrice no transitData para uso no pagamento
+          setTransitData(prev => ({ ...prev, estPrice: newPrices[prev.type] || newPrices.mototaxi }));
+
+          // Buscar motoristas online reais
+          supabase
+            .from('drivers_delivery')
+            .select('id, name, vehicle_type, rating')
+            .eq('is_online', true)
+            .limit(5)
+            .then(({ data }) => {
+              if (data) {
+                setNearbyDrivers(data);
+                setNearbyDriversCount(data.length);
+              }
+            });
+      }
+    } catch (err) {
+      console.error("Error calculating routes:", err);
+    } finally {
+      setIsCalculatingPrice(false);
+    }
+  };
+
+  const handleRequestTransit = () => {
+    if (!transitData.origin) {
+      toastError("Selecione um ponto de coleta/parceiro");
+      return;
+    }
+    if (!transitData.destination) {
+      toastError("Defina o endereço de entrega");
+      return;
+    }
+    if (!transitData.receiverName) {
+      toastError("Informe o nome do destinatário");
+      return;
+    }
+    if (!transitData.receiverPhone) {
+      toastError("Informe o telefone de contato");
+      return;
+    }
+    setSubView("mobility_payment");
+  };
+
+  const handleConfirmMobility = async (paymentMethod: string) => {
+    if (!userId) {
+      toastWarning("Faça login para continuar");
+      setView("login");
+      return;
+    }
+
+    const isShipping = ['utilitario', 'van', 'frete', 'logistica'].includes(transitData.type);
+    const bv = marketConditions.settings.baseValues;
+    const basePrices: Record<string, number> = { 
+      mototaxi: bv.mototaxi_min || 6, 
+      carro: bv.carro_min || 14, 
+      van: bv.van_min || 35, 
+      utilitario: bv.utilitario_min || 10 
+    };
+    
+    let finalPrice = 0;
+    const surgeMultiplier = bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0;
+
+    if (transitData.type === 'logistica' || transitData.type === 'frete') {
+       const vehicleConfigs: Record<string, { min: string, km: string }> = {
+         "Fiorino": { min: 'fiorino_min', km: 'fiorino_km' },
+         "Caminhonete": { min: 'caminhonete_min', km: 'caminhonete_km' },
+         "Caminhão Baú Pequeno": { min: 'bau_p_min', km: 'bau_p_km' },
+         "Caminhão Baú Médio": { min: 'bau_m_min', km: 'bau_m_km' },
+         "Caminhão Baú Grande": { min: 'bau_g_min', km: 'bau_g_km' },
+         "Caminhão Aberto": { min: 'aberto_min', km: 'aberto_km' }
+       };
+
+       const configKeys = vehicleConfigs[transitData.vehicleCategory];
+       let baseFare = parseFloat(String(bv.logistica_min || 45));
+       let distanceRate = parseFloat(String(bv.logistica_km || 4.5));
+
+       if (configKeys && bv[configKeys.min] && parseFloat(String(bv[configKeys.min])) > 0) {
+          baseFare = parseFloat(String(bv[configKeys.min]));
+          distanceRate = parseFloat(String(bv[configKeys.km]));
+       } else {
+          const vehicleMultipliers: Record<string, number> = {
+            "Fiorino": 1.0, "Caminhonete": 1.25, "Caminhão Baú Pequeno": 1.6,
+            "Caminhão Baú Médio": 2.2, "Caminhão Baú Grande": 3.5, "Caminhão Aberto": 1.9,
+          };
+          const multiplier = vehicleMultipliers[transitData.vehicleCategory] || 1.0;
+          baseFare *= multiplier;
+          distanceRate *= multiplier;
+       }
+
+       finalPrice = calculateFreightPrice({
+          baseFare: baseFare * surgeMultiplier,
+          distanceInKm: distanceValueKm || 1,
+          distanceRate: distanceRate * surgeMultiplier,
+          helperCount: transitData.helpers || 0,
+          helperRate: parseFloat(String(bv.logistica_helper || 50)),
+          hasStairs: transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination,
+          stairsFee: parseFloat(String(bv.logistica_stairs || 30))
+       }).totalPrice;
+    } else if (transitData.type === 'van') {
+       finalPrice = calculateVanPrice({
+          baseFare: parseFloat(String(bv.van_min || 35)),
+          distanceInKm: distanceValueKm || 1,
+          distanceRate: parseFloat(String(bv.van_km || 8)) * surgeMultiplier,
+          stopCount: transitData.stops?.length || 0,
+          stopRate: 15,
+          isDaily: transitData.tripType === 'hourly',
+          hours: 4,
+          hourlyRate: 45
+       }).totalPrice;
+    } else {
+      const rawP = distancePrices[transitData.type];
+      finalPrice = isNaN(rawP) || !rawP ? (basePrices[transitData.type] || 6.90) : rawP;
+    }
+    
+    const priorityId = transitData.priority;
+    const priorityConfig = marketConditions.settings?.shippingPriorities?.[priorityId as keyof typeof marketConditions.settings.shippingPriorities];
+    
+    if (priorityConfig && priorityConfig.active) {
+      finalPrice *= (priorityConfig.multiplier || 1.0);
+      if (finalPrice < (priorityConfig.min_fee || 0)) finalPrice = priorityConfig.min_fee;
+    }
+
+    if (isIziBlackMembership && isShipping) {
+      finalPrice = 0;
+    } else {
+      const serviceFeePercent = appSettings?.serviceFee || 0;
+      const serviceFeeAmount = (finalPrice * serviceFeePercent) / 100;
+      finalPrice += serviceFeeAmount;
+    }
+
+    setIsLoading(true);
+
+    const orderBase: any = {
+      user_id: userId,
+      merchant_id: null,
+      status: "waiting_driver",
+      total_price: finalPrice,
+      service_type: transitData.type,
+      pickup_address: transitData.origin,
+      delivery_address: `${transitData.destination} | OBS: ${
+        transitData.type === 'van'
+          ? `EXCURSÃO: ${transitData.excursionData.passengers} passageiros. Tipo: ${transitData.excursionData.tripType === 'ida_e_volta' ? 'Ida e Volta' : 'Somente Ida'}. Partida: ${transitData.excursionData.departureDate}`
+          : (transitData.type === 'logistica' || transitData.type === 'frete')
+            ? `FRETE: ${transitData.vehicleCategory}. ${transitData.helpers || 0} ajudantes.`
+            : isShipping
+              ? `ENVIO: ${transitData.packageDesc || 'Objeto'} (${transitData.weightClass}). Recebedor: ${transitData.receiverName}`
+              : `VIAGEM: Transporte (${transitData.type === 'mototaxi' ? 'MotoTáxi' : 'Particular'})`
+      }`,
+      payment_method: paymentMethod,
+      payment_status: ['dinheiro', 'pix', 'bitcoin_lightning'].includes(paymentMethod) ? 'pending' : 'paid',
+      scheduled_at: (transitData.scheduled || transitData.type === 'van') ? (transitData.type === 'van' ? transitData.excursionData.departureDate : `${transitData.scheduledDate}T${transitData.scheduledTime}:00`) : null,
+      route_polyline: routePolyline
+    };
+
+    try {
+      if (paymentMethod === "saldo") {
+        if (walletBalance < finalPrice) {
+          toastError("Saldo insuficiente na carteira");
+          setIsLoading(false); return;
+        }
+        await supabase.from("wallet_transactions").insert({
+          user_id: userId, type: "pagamento", amount: finalPrice,
+          description: `Viagem: ${transitData.origin.split(',')[0]} para ${transitData.destination.split(',')[0]}`
+        });
+        setWalletBalance(prev => prev - finalPrice);
+      }
+
+      const { data: order, error: insertError } = await supabase.from("orders_delivery").insert(orderBase).select().single();
+      if (insertError) throw insertError;
+
+      if (transitData.type === 'van') {
         await supabase.from("excursions_delivery").insert({
-          order_id: order.id,
-          trip_type: transitData.excursionData.tripType,
-          passengers: transitData.excursionData.passengers,
-          departure_date: transitData.excursionData.departureDate,
+          order_id: order.id, trip_type: transitData.excursionData.tripType,
+          passengers: transitData.excursionData.passengers, departure_date: transitData.excursionData.departureDate,
           return_date: transitData.excursionData.tripType === 'ida_e_volta' ? transitData.excursionData.returnDate : null,
           additional_notes: transitData.excursionData.notes
         });
       }
 
-      // 3. Se for PIX, redirecionar para tela de CPF + QR Code
       if (paymentMethod === 'pix') {
-         setPixConfirmed(false);
-         setPixCpf("");
+         setPixConfirmed(false); setPixCpf("");
          setSelectedItem({ ...order, total_price: finalPrice });
          setSubView('pix_payment');
       } else if (paymentMethod === 'bitcoin_lightning') {
@@ -2762,32 +2929,35 @@ const navigateSubView = (target: string) => {
               body: { amount: finalPrice, orderId: order.id, memo: `Viagem Izi #${order.id}` },
             });
             if (!lnErr && lnData?.payment_request) {
-               setLightningData({ 
+               const lData = { 
                  payment_request: lnData.payment_request, 
-                 satoshis: lnData.satoshis || Math.round(finalPrice * 1800), // Aproximação se API falhar no campo
-                 btc_price_brl: lnData.btc_price_brl || 380000 
+                 satoshis: lnData.satoshis,
+                 btc_price_brl: lnData.btc_price_brl 
+               };
+               setLightningData(lData);
+               setSelectedItem({ 
+                 ...order, 
+                 lightningInvoice: lData.payment_request, 
+                 satoshis: lData.satoshis, 
+                 btc_price_brl: lData.btc_price_brl,
+                 total_price: finalPrice 
                });
                setSubView("lightning_payment");
+               setIsLoading(false);
+               return;
             }
-          } catch(e) {}
+          } catch(e) { console.error("LN Error:", e); }
       }
 
-      // [Comentario Limpo pelo Sistema]
       const newHistory = [transitData.destination, ...transitHistory.filter(h => h !== transitData.destination)].slice(0, 10);
       setTransitHistory(newHistory);
       localStorage.setItem("transitHistory", JSON.stringify(newHistory));
-
       setSelectedItem(order);
       
       if (paymentMethod !== 'pix' && paymentMethod !== 'bitcoin_lightning') {
-        toastSuccess(isShipping ? "Pedido de envio criado!" : "Procurando motorista mais próximo...");
-        if (transitData.scheduled) {
-          setSubView("payment_success");
-        } else {
-          setSubView("active_order");
-        }
+        toastSuccess(isShipping ? "Pedido de envio criado!" : "Procurando motorista...");
+        setSubView(transitData.scheduled ? "payment_success" : "active_order");
       }
-
     } catch (err: any) {
       console.error("Erro no fluxo de mobilidade:", err);
       toastError("Não foi possível criar seu pedido: " + err.message);
@@ -3116,7 +3286,7 @@ const navigateSubView = (target: string) => {
     const categoryIcons: Record<string, string> = {
       "Petshop": "pets", "Flores": "local_florist", "Doces & Bolos": "cake",
       "Farmácia": "local_pharmacy", "Mercado": "local_mall",
-      "Gás & Ãgua": "propane_tank", "Açougue": "kebab_dining", "Padaria": "bakery_dining", "Hortifruti": "nutrition"
+      "Gás & Ã gua": "propane_tank", "Açougue": "kebab_dining", "Padaria": "bakery_dining", "Hortifruti": "nutrition"
     };
     const icon = categoryIcons[title] || "storefront";
 
@@ -3325,11 +3495,17 @@ const navigateSubView = (target: string) => {
       />
     );
   };
+
   const renderLightningPayment = () => {
     const invoice = selectedItem?.lightningInvoice || selectedItem?.lightning_invoice || lightningData?.payment_request || "";
-    const satoshis = selectedItem?.satoshis || lightningData?.satoshis || 0;
-    const btcPrice = selectedItem?.btcPrice || selectedItem?.btc_price_brl || lightningData?.btc_price_brl || 0;
-    const amountBrl = selectedItem?.total_price || selectedItem?.amount_brl || (satoshis > 0 && btcPrice > 0 ? (satoshis * btcPrice / 100000000) : 0);
+    const satoshis = Number(selectedItem?.satoshis || lightningData?.satoshis || 0);
+    const btcPrice = Number(selectedItem?.btcPrice || selectedItem?.btc_price_brl || lightningData?.btc_price_brl || 0);
+    
+    // Cálculo robusto: Tenta total_price, depois amount_brl, depois calcula baseado em sats
+    let amountBrl = Number(selectedItem?.total_price || selectedItem?.amount_brl || 0);
+    if (amountBrl === 0 && satoshis > 0 && btcPrice > 0) {
+      amountBrl = (satoshis * btcPrice) / 100000000;
+    }
 
     return (
       <div className="absolute inset-0 z-[200] bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
@@ -3337,75 +3513,70 @@ const navigateSubView = (target: string) => {
           <button onClick={() => setSubView("checkout")} className="size-11 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center active:scale-90 transition-all">
             <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
           </button>
-          <div className="flex flex-col">
-            <h1 className="text-sm font-black text-white uppercase tracking-widest">Bitcoin Lightning</h1>
-            <p className="text-[10px] font-bold text-orange-400 uppercase tracking-tight">Pagamento Ultra-Rápido</p>
+          <div className="flex-1">
+            <h2 className="text-xl font-black tracking-tight leading-none mb-1">Bitcoin Lightning</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Pagamento Instantâneo</p>
+          </div>
+          <div className="size-11 rounded-2xl bg-yellow-400/5 border border-yellow-400/10 flex items-center justify-center">
+             <span className="material-symbols-outlined text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
           </div>
         </header>
-        <main className="px-5 pt-10 flex flex-col items-center gap-8 max-w-sm mx-auto w-full">
-          <div className="text-center space-y-2">
-            <div className="size-20 rounded-[32px] bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-4 shadow-[0_0_40px_rgba(249,115,22,0.1)]">
-              <span className="material-symbols-outlined text-4xl text-orange-400" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
-            </div>
-            
-            <div className="space-y-1">
-              <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Valor a Pagar</p>
-              <p className="text-4xl font-black text-white">{satoshis.toLocaleString("pt-BR")} <span className="text-orange-400">SATS</span></p>
-              {amountBrl > 0 && (
-                <p className="text-zinc-400 text-sm font-bold">
-                  ≈ R$ {amountBrl.toFixed(2).replace(".", ",")}
-                </p>
-              )}
-            </div>
 
-            <div className="pt-2 border-t border-white/5 mt-4">
-              {btcPrice > 0 && <p className="text-zinc-600 text-[9px] font-bold uppercase tracking-tight">Câmbio: 1 BTC = R$ {btcPrice.toLocaleString("pt-BR")}</p>}
-            </div>
+        <main className="flex-1 flex flex-col items-center justify-center p-8 text-center pt-16">
+          <div className="mb-12 relative">
+             <div className="absolute -inset-8 bg-yellow-400/10 blur-[60px] rounded-full animate-pulse" />
+             <div className="relative group p-4 border-2 border-dashed border-yellow-400/30 rounded-[40px] bg-zinc-950/50">
+               <div className="bg-white p-6 rounded-[32px] shadow-2xl transition-all duration-700">
+                <img
+                  src={"https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(invoice)}
+                  alt="Lightning QR"
+                  className="size-[220px] rounded-2xl"
+                />
+               </div>
+             </div>
           </div>
 
-          {invoice && !selectedItem?.lightningError ? (
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full flex flex-col items-center gap-4">
-              <div className="w-52 h-52 bg-white rounded-3xl flex items-center justify-center p-3 shadow-[0_0_30px_rgba(249,115,22,0.2)]">
-                <img
-                  src={"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(invoice)}
-                  alt="Lightning QR"
-                  className="w-full h-full rounded-2xl"
-                />
-              </div>
-              <div className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between gap-3">
-                <p className="text-zinc-400 text-xs font-mono truncate flex-1">{invoice.slice(0, 40)}...</p>
-                <button onClick={() => { navigator.clipboard.writeText(invoice); toastSuccess("Invoice copiada!"); }}
-                  className="text-orange-400 active:scale-90 transition-all shrink-0">
-                  <span className="material-symbols-outlined text-lg">content_copy</span>
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="size-2 bg-orange-400 rounded-full animate-pulse" />
-                <p className="text-zinc-500 text-xs font-black uppercase tracking-wider">Aguardando pagamento Lightning...</p>
-              </div>
-              <button onClick={() => { setTab("orders"); setSubView("none"); }}
-                className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest border border-zinc-800 text-zinc-400 hover:border-orange-400/30 hover:text-orange-400 transition-all active:scale-95">
-                Ver Meus Pedidos
-              </button>
-            </motion.div>
-          ) : selectedItem?.lightningError ? (
-            <div className="w-full flex flex-col items-center gap-6 text-center py-6">
-               <div className="size-20 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-2">
-                  <span className="material-symbols-outlined text-4xl text-orange-500">bolt_slash</span>
-               </div>
-               <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Falha na Conexão Lightning</h3>
-               <p className="text-zinc-500 text-sm px-4">Não foi possível gerar sua fatura agora. O pedido foi registrado mas o pagamento via Bitcoin está indisponível.</p>
-               <button onClick={() => { setTab("orders"); setSubView("none"); }}
-                  className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-sm uppercase tracking-widest">
-                  Ver Meus Pedidos
-               </button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-3 py-8">
-              <div className="size-10 border-2 border-orange-400/20 border-t-orange-400 rounded-full animate-spin" />
-              <p className="text-zinc-500 text-sm">Gerando invoice Lightning...</p>
-            </div>
-          )}
+          <div className="space-y-2 mb-10 w-full max-w-xs">
+            <h3 className="text-3xl font-black text-white tracking-tighter flex items-center justify-center gap-2">
+              {satoshis.toLocaleString("pt-BR")} <span className="text-sm font-black text-zinc-500 uppercase tracking-widest mt-2">Sats</span>
+            </h3>
+            {amountBrl > 0 && (
+              <p className="text-zinc-400 text-sm font-bold">
+                ≈ R$ {amountBrl.toFixed(2).replace(".", ",")}
+              </p>
+            )}
+          </div>
+
+          <div className="w-full space-y-4">
+             <button 
+               onClick={() => {
+                 navigator.clipboard.writeText(invoice);
+                 toastSuccess("Fatura copiada!");
+               }}
+               className="w-full h-16 rounded-[24px] bg-white text-black font-black uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-white/5"
+             >
+               <span className="material-symbols-outlined">content_copy</span>
+               Copiar Invoice
+             </button>
+             
+             <button 
+               onClick={() => {
+                 window.open(`lightning:${invoice}`);
+               }}
+               className="w-full h-16 rounded-[24px] bg-zinc-900 border border-white/10 text-white font-black uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all"
+             >
+               <span className="material-symbols-outlined">open_in_new</span>
+               Abrir na Carteira
+             </button>
+             
+             <div className="pt-8 flex flex-col items-center gap-4">
+                <div className="flex items-center gap-3">
+                   <div className="size-2 bg-yellow-400 rounded-full animate-ping" />
+                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Aguardando pagamento...</p>
+                </div>
+                <p className="text-[10px] text-zinc-600 max-w-[200px] leading-relaxed font-medium">Não feche esta tela até que o pagamento seja detectado automaticamente.</p>
+             </div>
+          </div>
         </main>
       </div>
     );

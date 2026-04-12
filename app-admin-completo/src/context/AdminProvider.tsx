@@ -637,6 +637,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const to = from + ORDERS_PER_PAGE - 1;
 
       if (userRole === 'merchant' && merchantProfile?.id) {
+        // Caso seja Lojista, fazemos um fetch padrão + um fetch de segurança para pedidos pendentes
         const { data, error, count } = await supabase
           .from('orders_delivery')
           .select('*, user:users_delivery(*)', { count: 'exact' })
@@ -645,7 +646,28 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .range(from, to);
 
         if (error) throw error;
-        if (data) setAllOrders(data as Order[]);
+
+        let finalOrders = data as Order[];
+
+        // SEURANÇA: Se estamos na página 1, buscar TODOS os pedidos que precisam de ação imediata 
+        // para garantir que não fiquem "presos" em páginas posteriores ou perdidos por cache
+        if (targetPage === 1) {
+          const { data: actionableData } = await supabase
+            .from('orders_delivery')
+            .select('*, user:users_delivery(*)')
+            .eq('merchant_id', merchantProfile.id)
+            .in('status', ['novo', 'waiting_merchant', 'paid', 'pago', 'confirmed', 'confirmado'])
+            .order('created_at', { ascending: false });
+
+          if (actionableData && actionableData.length > 0) {
+            // Mergiar garantindo unicidade por ID
+            const actionableIds = new Set(actionableData.map(o => o.id));
+            const otherOrders = finalOrders.filter(o => !actionableIds.has(o.id));
+            finalOrders = [...actionableData, ...otherOrders];
+          }
+        }
+
+        if (data) setAllOrders(finalOrders);
         if (count !== null) setMerchantOrdersTotalCount(count);
         setMerchantOrdersPage(targetPage);
       } else {
@@ -700,44 +722,41 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         (payload) => {
           console.log('⚡ PEDIDO REALTIME:', payload.eventType, payload);
           
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            // ✅ FORÇAR ATUALIZAÇÃO SÍNCRONA LOCAL PARA EVITAR DEADLOCKS DE SUPABASE-JS
-            setAllOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o));
-            setDashboardOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, ...payload.new } : o));
+          if ((payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') && payload.new) {
+            const updatedOrder = payload.new as Order;
+            
+            // Ignorar se não for deste merchant (segurança adicional)
+            if (userRole === 'merchant' && updatedOrder.merchant_id !== merchantProfile?.id) return;
+
+            setAllOrders(prev => {
+              const exists = prev.find(o => o.id === updatedOrder.id);
+              if (exists) {
+                return prev.map(o => o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o);
+              }
+              // Se é novo ou mudou para um status relevante, adiciona no topo
+              return [updatedOrder, ...prev];
+            });
+
+            setDashboardOrders(prev => {
+              const exists = prev.find(o => o.id === updatedOrder.id);
+              if (exists) {
+                return prev.map(o => o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o);
+              }
+              return [updatedOrder, ...prev];
+            });
+
+            // Notificação Sonora e Visual
+            const isActionable = updatedOrder.status === 'novo' || updatedOrder.status === 'waiting_merchant';
+            
+            if (isActionable) {
+              console.log(`[REALTIME] Pedido acionável detectado (${payload.eventType}):`, updatedOrder.id);
+              setNewOrderNotification({ show: true, orderId: updatedOrder.id });
+              playIziSound('merchant');
+            }
           }
 
           fetchStatsRef.current(true);
           fetchAllOrdersRef.current(undefined, true);
-          
-          const newOrder = payload.new as Order | undefined;
-          const oldOrder = payload.old as Order | undefined;
-
-          if (!newOrder) return;
-
-          // Para lojistas, ignorar pedidos de outros merchants
-          if (userRole === 'merchant' && newOrder.merchant_id !== merchantProfile?.id) return;
-
-          const isPendingPayment = newOrder.status === 'pendente_pagamento';
-          const isCoinPurchase = newOrder.service_type === 'coin_purchase';
-
-          // Notificar na criaÃ§Ã£o somente se nÃ£o estiver aguardando pagamento
-          const shouldNotifyOnInsert = payload.eventType === 'INSERT' && !isPendingPayment;
-
-          // Notificar quando um pedido sai de "pendente_pagamento" para "novo" (pagamento aprovado)
-          const shouldNotifyOnPaymentApproval =
-            payload.eventType === 'UPDATE' &&
-            oldOrder?.status === 'pendente_pagamento' &&
-            (newOrder.status === 'novo' || newOrder.status === 'waiting_merchant');
-
-          // Para recargas, sÃ³ notificar quando o pagamento for aprovado
-          const shouldNotify = isCoinPurchase
-            ? shouldNotifyOnPaymentApproval
-            : (shouldNotifyOnInsert || shouldNotifyOnPaymentApproval);
-
-          if (shouldNotify) {
-            setNewOrderNotification({ show: true, orderId: newOrder.id });
-            playIziSound('merchant');
-          }
         }
       )
       .on(

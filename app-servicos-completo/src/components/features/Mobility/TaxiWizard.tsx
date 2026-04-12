@@ -45,6 +45,25 @@ export const TaxiWizard: React.FC<TaxiWizardProps> = ({
   navigateSubView,
   showToast,
 }) => {
+  const [sheetState, setSheetState] = React.useState<"collapsed" | "half" | "expanded">("expanded");
+
+  const sheetVariants = {
+    collapsed: { y: "85%", transition: { type: "spring", damping: 25, stiffness: 200 } },
+    half: { y: "40%", transition: { type: "spring", damping: 25, stiffness: 200 } },
+    expanded: { y: "0%", transition: { type: "spring", damping: 25, stiffness: 200 } }
+  };
+
+  const handleDragEnd = (_: any, info: any) => {
+    const threshold = 50;
+    if (info.offset.y > threshold) {
+      if (sheetState === "expanded") setSheetState("half");
+      else setSheetState("collapsed");
+    } else if (info.offset.y < -threshold) {
+      if (sheetState === "collapsed") setSheetState("half");
+      else setSheetState("expanded");
+    }
+  };
+
   return (
     <div className="absolute inset-0 z-[120] bg-transparent text-zinc-100 flex flex-col overflow-hidden italic">
       {/* MAPA NO FUNDO */}
@@ -93,8 +112,26 @@ export const TaxiWizard: React.FC<TaxiWizardProps> = ({
         </div>
       </header>
 
-      <main className="relative z-40 mt-auto bg-zinc-950/90 backdrop-blur-3xl border-t border-white/5 flex flex-col h-[70vh] rounded-t-[45px] shadow-[0_-25px_50px_rgba(0,0,0,0.6)]">
-        <div className="flex justify-center pt-4 pb-2">
+      {/* BOTTOM SHEET DESLIZANTE */}
+      <motion.div 
+        variants={sheetVariants}
+        initial="expanded"
+        animate={sheetState}
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={0.1}
+        onDragEnd={handleDragEnd}
+        className="relative z-40 mt-auto bg-zinc-950/90 backdrop-blur-3xl border-t border-white/5 flex flex-col rounded-t-[45px] shadow-[0_-25px_50px_rgba(0,0,0,0.6)] touch-none"
+        style={{ height: "100dvh" }}
+      >
+        <div 
+          className="flex justify-center pt-4 pb-2 cursor-grab active:cursor-grabbing"
+          onClick={() => {
+            if (sheetState === "collapsed") setSheetState("half");
+            else if (sheetState === "half") setSheetState("expanded");
+            else setSheetState("collapsed");
+          }}
+        >
           <div className="w-12 h-1.5 bg-white/10 rounded-full" />
         </div>
         <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
@@ -307,7 +344,8 @@ export const TaxiWizard: React.FC<TaxiWizardProps> = ({
             <span className="material-symbols-outlined font-black group-hover:translate-x-2 transition-transform text-2xl">{mobilityStep === 1 ? 'arrow_forward' : 'bolt'}</span>
           </motion.button>
         </div>
-      </main>
+        </div>
+      </motion.div>
     </div>
   );
 };
