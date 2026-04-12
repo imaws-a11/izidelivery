@@ -151,6 +151,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
           pickupLoc={pickupLoc}
           userLoc={userLocation} 
           onMyLocationClick={onMyLocationClick} 
+          orderStatus={selectedItem?.status}
         />
         {/* Overlay gradiente suave para profundidade */}
         <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/80 via-black/30 to-transparent pointer-events-none" />

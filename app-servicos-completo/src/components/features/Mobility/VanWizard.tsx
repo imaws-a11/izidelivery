@@ -267,7 +267,6 @@ export const VanWizard: React.FC<VanWizardProps> = ({
             <span className="material-symbols-outlined font-black group-hover:translate-x-2 transition-transform text-2xl">{mobilityStep === 1 ? 'arrow_forward' : 'bolt'}</span>
           </motion.button>
         </div>
-        </div>
       </motion.div>
     </div>
   );

@@ -9,6 +9,7 @@ interface OpenTrackingMapProps {
   pickupLoc?: { lat: number; lng: number } | null;
   userLoc?: { lat: number; lng: number } | null;
   onMyLocationClick?: () => void;
+  orderStatus?: string;
 }
 
 // Fix Leaflet icons
@@ -63,9 +64,9 @@ function FitBounds({ pathPositions, locs }: any) {
   return null;
 }
 
-export function OpenTrackingMap({ driverLoc, pickupLoc, userLoc, onMyLocationClick }: OpenTrackingMapProps) {
+export function OpenTrackingMap({ driverLoc, pickupLoc, userLoc, onMyLocationClick, orderStatus }: OpenTrackingMapProps) {
   const [routePrimary, setRoutePrimary] = useState<[number, number][]>([]);
-  const [routeSecondary, setRouteSecondary] = useState<[number, number][]>([]);
+  // const [routeSecondary, setRouteSecondary] = useState<[number, number][]>([]);
 
   useEffect(() => {
     // Determine the route to fetch based on what's available
@@ -73,8 +74,16 @@ export function OpenTrackingMap({ driverLoc, pickupLoc, userLoc, onMyLocationCli
       try {
         let waypoints = [];
         if (driverLoc) waypoints.push(`${driverLoc.lng},${driverLoc.lat}`);
-        if (pickupLoc) waypoints.push(`${pickupLoc.lng},${pickupLoc.lat}`);
-        if (userLoc) waypoints.push(`${userLoc.lng},${userLoc.lat}`);
+        
+        const isCollected = ['picked_up', 'a_caminho', 'saiu_para_entrega', 'em_rota', 'chegou_cliente', 'concluido'].includes(orderStatus || '');
+
+        if (!isCollected && pickupLoc) {
+          // Se não coletou, mostra caminho até a loja
+          waypoints.push(`${pickupLoc.lng},${pickupLoc.lat}`);
+        } else if (userLoc) {
+          // Se já coletou (ou não tem pickup), mostra caminho até o usuário
+          waypoints.push(`${userLoc.lng},${userLoc.lat}`);
+        }
 
         // Need at least 2 points to route
         if (waypoints.length < 2) return;
@@ -93,7 +102,7 @@ export function OpenTrackingMap({ driverLoc, pickupLoc, userLoc, onMyLocationCli
     };
     
     fetchRoute();
-  }, [driverLoc, pickupLoc, userLoc]);
+  }, [driverLoc, pickupLoc, userLoc, orderStatus]);
 
   // Determine initial center
   const initialCenter = driverLoc ?? pickupLoc ?? userLoc ?? { lat: -23.5505, lng: -46.6333 };
@@ -114,9 +123,9 @@ export function OpenTrackingMap({ driverLoc, pickupLoc, userLoc, onMyLocationCli
 
         <FitBounds pathPositions={routePrimary} locs={[driverLoc, pickupLoc, userLoc]} />
 
-        {/* Camiho principal */}
+        {/* Caminho principal */}
         {routePrimary.length > 0 && (
-          <Polyline positions={routePrimary} color="#facc15" weight={5} opacity={0.8} dashArray="10, 10" />
+          <Polyline positions={routePrimary} color="#facc15" weight={6} opacity={0.9} />
         )}
 
         {pickupLoc && (
