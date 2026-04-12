@@ -582,7 +582,6 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
             </div>
           )}
         </AnimatePresence>
-        </div>
       </motion.div>
     </div>
   );
