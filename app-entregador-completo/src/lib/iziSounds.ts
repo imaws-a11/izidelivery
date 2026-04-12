@@ -78,7 +78,7 @@ export const playIziSound = (role: 'merchant' | 'driver' | 'success') => {
 
     // 4. Audio MP3 (Textura premium)
     const soundUrls = {
-      driver: 'https://cdn.freesound.org/previews/219/219244_4082826-lq.mp3',
+      driver: '/sounds/mission_call.wav',
       success: 'https://cdn.freesound.org/previews/171/171671_2437358-lq.mp3',
       merchant: 'https://cdn.freesound.org/previews/263/263133_2064400-lq.mp3'
     };
