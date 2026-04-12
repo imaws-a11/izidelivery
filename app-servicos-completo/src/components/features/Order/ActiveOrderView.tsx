@@ -122,7 +122,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
     half: { y: "35%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
     expanded: { y: "0%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } }
   };
-  const [sheetState, setSheetState] = React.useState<"collapsed" | "half" | "expanded">("collapsed");
+  const [sheetState, setSheetState] = React.useState<"collapsed" | "half" | "expanded">("expanded");
 
   const handleDragEnd = (_: any, info: any) => {
     const threshold = 50; // Menor para ser mais sensível
@@ -169,7 +169,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
       {/* BOTTOM SHEET DESLIZANTE GESTUAL COM CLAYMORPHISM */}
       <motion.div
         variants={sheetVariants}
-        initial="collapsed"
+        initial="expanded"
         animate={sheetState}
         drag="y"
         dragConstraints={{ top: 0, bottom: 0 }}

@@ -23,7 +23,9 @@ export default function OrdersMerchantTab() {
   const myOrders = allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id);
   
   // Pedidos que precisam de INTERVENÇÃO (Aceitar/Recusar)
-  const pendingOrders = myOrders.filter((o: any) => o.status === 'waiting_merchant' || o.status === 'novo');
+  const pendingOrders = myOrders.filter((o: any) => 
+    ['waiting_merchant', 'novo', 'paid', 'pago', 'confirmed', 'confirmado'].includes(o.status)
+  );
   
   // Pedidos aguardando pagamento (EXCLUÍDOS DA VISÃO DO LOJISTA ATÉ CONFIRMAÇÃO)
   const waitingPaymentOrders: any[] = [];
@@ -152,7 +154,7 @@ export default function OrdersMerchantTab() {
             <span className="text-[10px] font-bold uppercase hidden md:inline">Testar Som</span>
           </button>
           <button 
-            onClick={() => fetchAllOrders(merchantOrdersPage)}
+            onClick={() => fetchAllOrders(1)}
             disabled={isLoadingList}
             className="p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-primary transition-all active:scale-95 shadow-sm"
           >
