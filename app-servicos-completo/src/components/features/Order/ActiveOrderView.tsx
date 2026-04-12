@@ -1,7 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Icon } from "../../common/Icon";
-import { OpenTrackingMap } from "../Map/OpenTrackingMap";
 
 interface ActiveOrderViewProps {
   selectedItem: any;
@@ -116,25 +115,6 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
     .findIndex((s) => s.status.includes(selectedItem.status));
   const currentIdx = revIdx === -1 ? 0 : steps.length - 1 - revIdx;
 
-  // Configurações do Bottom Sheet para framer-motion (Sincronizado com feedback de UI Premium)
-  const sheetVariants = {
-    collapsed: { y: "65%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
-    half: { y: "35%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } },
-    expanded: { y: "0%", transition: { type: "spring" as const, damping: 25, stiffness: 200 } }
-  };
-  const [sheetState, setSheetState] = React.useState<"collapsed" | "half" | "expanded">("expanded");
-
-  const handleDragEnd = (_: any, info: any) => {
-    const threshold = 50; // Menor para ser mais sensível
-    if (info.offset.y > threshold) {
-      if (sheetState === "expanded") setSheetState("half");
-      else setSheetState("collapsed");
-    } else if (info.offset.y < -threshold) {
-      if (sheetState === "collapsed") setSheetState("half");
-      else setSheetState("expanded");
-    }
-  };
-
   let pickupLoc = null;
   if (selectedItem?.pickup_lat && selectedItem?.pickup_lng) {
     pickupLoc = { lat: Number(selectedItem.pickup_lat), lng: Number(selectedItem.pickup_lng) };
@@ -143,58 +123,25 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
   }
 
   return (
-    <div className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-hidden">
-      {/* MAPA REAL DINÂMICO FUNCIONAL AO FUNDO (LEAFLET / OPENSTREETMAP) */}
-      <div className="absolute inset-0 z-0">
-        <OpenTrackingMap 
-          driverLoc={shouldShowDriver ? driverLocation : null} 
-          pickupLoc={pickupLoc}
-          userLoc={userLocation} 
-          onMyLocationClick={onMyLocationClick} 
-          orderStatus={selectedItem?.status}
-        />
-        {/* Overlay gradiente suave para profundidade */}
-        <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/80 via-black/30 to-transparent pointer-events-none" />
-      </div>
-
+    <div className="absolute inset-0 z-[100] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
       {/* Botão flutuante voltar (sempre visível no topo) */}
       <div className="absolute top-8 left-6 z-50">
         <button
           onClick={() => setSubView("none")}
-          className="size-12 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all shadow-xl"
+          className="size-12 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all shadow-xl shadow-black/50"
         >
           <Icon name="arrow_back" />
         </button>
       </div>
 
-      {/* BOTTOM SHEET DESLIZANTE GESTUAL COM CLAYMORPHISM */}
+      {/* CONTEÚDO PRINCIPAL (REFORMULADO SEM MAPA) */}
       <motion.div
-        variants={sheetVariants}
-        initial="expanded"
-        animate={sheetState}
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={0.15}
-        onDragEnd={handleDragEnd}
-        className="absolute inset-x-0 bottom-0 z-40 bg-zinc-900 border-t-4 border-white/5 rounded-t-[60px] shadow-[-20px_-20px_60px_rgba(255,255,255,0.02),20px_20px_60px_rgba(0,0,0,0.8),inset_4px_4px_12px_rgba(255,255,255,0.05),inset_-4px_-4px_12px_rgba(0,0,0,0.3)] flex flex-col cursor-grab active:cursor-grabbing touch-none"
-        style={{ height: "100dvh" }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex-1 flex flex-col pt-24"
       >
-        {/* Área superior de interação (Handle + Cabeçalho) */}
-        <div 
-          className="shrink-0" 
-          onClick={() => {
-            if (sheetState === "collapsed") setSheetState("half");
-            else if (sheetState === "half") setSheetState("expanded");
-            else setSheetState("collapsed");
-          }}
-        >
-          {/* Handle de arraste visível e área sensível maior */}
-          <div className="w-full h-10 flex items-center justify-center pt-4">
-            <div className="w-16 h-2 bg-zinc-700/50 rounded-full shadow-[inset_1px_1px_2px_rgba(0,0,0,0.5)]" />
-          </div>
-
-          {/* CABEÇALHO DO SHEET (STATUS RÁPIDO - CLAY STYLE) */}
-          <div className="px-6 pb-6 pt-2">
+        {/* ÁREA DE CABEÇALHO (STATUS RÁPIDO - CLAY STYLE) */}
+        <div className="shrink-0 px-6 pb-6 mt-4">
             <div className="bg-zinc-800 p-6 rounded-[40px] flex items-center gap-5 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)] border-none relative overflow-hidden group active:scale-[0.98] transition-all">
               <div className="absolute top-0 right-0 size-24 bg-yellow-400/5 blur-3xl rounded-full" />
               
@@ -219,7 +166,6 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
               </div>
             </div>
           </div>
-        </div>
 
         {/* CONTEÚDO SCROLLABLE */}
         <main className="flex-1 overflow-y-auto no-scrollbar px-6 py-8 space-y-12 pb-48">

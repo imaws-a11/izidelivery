@@ -72,6 +72,7 @@ function Icon({ name, className = "", size = 20 }: any) {
     'support_agent': BespokeIcons.Support,
     'badge': BespokeIcons.User,
     'settings': BespokeIcons.Menu,
+    'volume_up': BespokeIcons.Notifications,
   };
 
   const IconComp = icons[name] || BespokeIcons.Help;
@@ -456,6 +457,24 @@ function App() {
     const hasBootedRef = useRef(false); // Garante que syncMissionWithDB e restauração só ocorrem 1x por sessão
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSOSActive, setIsSOSActive] = useState(false);
+    const [missionSheetState, setMissionSheetState] = useState<"collapsed" | "half" | "expanded">("half");
+
+    const missionSheetVariants = {
+        collapsed: { y: "85%", transition: { type: "spring", damping: 30, stiffness: 200 } },
+        half: { y: "45%", transition: { type: "spring", damping: 30, stiffness: 200 } },
+        expanded: { y: "0%", transition: { type: "spring", damping: 30, stiffness: 200 } }
+    };
+
+    const handleMissionDragEnd = (_: any, info: any) => {
+        const threshold = 50;
+        if (info.offset.y > threshold) {
+            if (missionSheetState === "expanded") setMissionSheetState("half");
+            else setMissionSheetState("collapsed");
+        } else if (info.offset.y < -threshold) {
+            if (missionSheetState === "collapsed") setMissionSheetState("half");
+            else setMissionSheetState("expanded");
+        }
+    };
     const [isAccepting, setIsAccepting] = useState(false);
     const [filter, setFilter] = useState<ServiceType | 'all'>('all');
     const [orders, setOrders] = useState<Order[]>([]);
@@ -2822,28 +2841,39 @@ function App() {
                     <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1">Zona de Recuperação</p>
                     <p className="text-[11px] text-white/40 leading-relaxed">Se o app estiver travado em uma missão antiga ou invisível, use os botões abaixo para sincronizar ou forçar limpeza.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <button 
+                        onClick={() => {
+                            syncMissionWithDB();
+                            toastSuccess('Sincronizando...');
+                        }}
+                        className="flex-1 h-12 bg-white/5 border border-white/10 text-white/70 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
+                    >
+                        Sincronizar Missão
+                    </button>
+                    <button 
+                        onClick={() => {
+                            if (confirm('Deseja forçar a limpeza da missão atual do seu celular?')) {
+                                setActiveMission(null);
+                                localStorage.removeItem('Izi_active_mission');
+                                setActiveTab('dashboard');
+                                toastSuccess('Limpeza concluída!');
+                            }
+                        }}
+                        className="flex-1 h-12 bg-red-500/10 border border-red-500/20 text-red-500 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
+                    >
+                        Forçar Finalização
+                    </button>
+                  </div>
                   <button 
                       onClick={() => {
-                          syncMissionWithDB();
-                          toastSuccess('Sincronizando...');
+                          playIziSound('driver');
+                          toastSuccess('Testando som de chamada...');
                       }}
-                      className="flex-1 h-12 bg-white/5 border border-white/10 text-white/70 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
+                      className="w-full h-12 bg-primary/10 border border-primary/20 text-primary font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                   >
-                      Sincronizar Missão
-                  </button>
-                  <button 
-                      onClick={() => {
-                          if (confirm('Deseja forçar a limpeza da missão atual do seu celular?')) {
-                              setActiveMission(null);
-                              localStorage.removeItem('Izi_active_mission');
-                              setActiveTab('dashboard');
-                              toastSuccess('Limpeza concluída!');
-                          }
-                      }}
-                      className="flex-1 h-12 bg-red-500/10 border border-red-500/20 text-red-500 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
-                  >
-                      Forçar Finalização
+                      <Icon name="volume_up" size={16} /> Testar Som de Chamada
                   </button>
                 </div>
             </div>
@@ -2889,10 +2919,9 @@ function App() {
                 </motion.div>
             );
         }
-        const details = getTypeDetails(activeMission.type);
+
         const isMobility = activeMission.type === 'mototaxi' || activeMission.type === 'car_ride';
         
-        // Helper para extrair itens se estiverem no endereço ou no JSON
         const getOrderItems = () => {
             if (activeMission.items && Array.isArray(activeMission.items)) return activeMission.items;
             const address = activeMission.delivery_address || activeMission.destination || '';
@@ -2905,7 +2934,6 @@ function App() {
         const orderItems = getOrderItems();
         const rawAddr = (activeMission.delivery_address || activeMission.destination || '');
         let addressOnly = rawAddr.split('| ITENS:')[0].trim();
-        // Garantir Brumadinho MG para geocoding preciso (Entrega)
         if (addressOnly && !addressOnly.toLowerCase().includes('brumadinho')) {
             addressOnly += ', Brumadinho - MG, Brasil';
         } else if (addressOnly && !addressOnly.toLowerCase().includes('brasil')) {
@@ -2913,14 +2941,12 @@ function App() {
         }
 
         let pickupOnly = (activeMission.origin || activeMission.pickup_address || '').split('| ITENS:')[0].trim();
-        // Garantir Brumadinho MG para geocoding preciso (Coleta)
         if (pickupOnly && !pickupOnly.toLowerCase().includes('brumadinho')) {
             pickupOnly += ', Brumadinho - MG, Brasil';
         } else if (pickupOnly && !pickupOnly.toLowerCase().includes('brasil')) {
             pickupOnly += ', Brasil';
         }
 
-        // Status Label & Color logic
         const getStatusDisplay = () => {
             switch(activeMission.status) {
                 case 'saiu_para_coleta':
@@ -2939,93 +2965,79 @@ function App() {
 
         return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-[#020617] flex flex-col overflow-hidden">
-                {/* Header Compacto */}
-                {!isMapOnly && (
-                    <div className="px-6 py-5 bg-[#020617]/90 backdrop-blur-3xl border-b border-white/10 flex items-center justify-between shrink-0 z-[110]">
-                        <div className="flex items-center gap-4">
-                            <button 
-                                onClick={() => setActiveTab('dashboard')}
-                                className="size-11 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-white/40 active:scale-90 transition-all mr-1"
-                                title="Minimizar para o Dashboard"
-                            >
-                                <span className="material-symbols-outlined text-xl">arrow_back</span>
-                            </button>
-                            <div className={`size-12 rounded-2xl ${statusDisplay.bg} ${statusDisplay.color} flex items-center justify-center border border-current/20 shadow-lg shadow-black/20`}>
-                                <Icon name={statusDisplay.icon} size={24} className="animate-pulse" />
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.4em]">Missão Ativa</span>
-                                    <div className="size-1 rounded-full bg-white/20" />
-                                    <span className="text-[8px] font-black text-primary uppercase tracking-[0.2em]">#{activeMission.realId?.slice(0,8).toUpperCase()}</span>
-                                </div>
-                                <h2 className="text-base font-black text-white tracking-tight uppercase mt-0.5">{statusDisplay.label}</h2>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            {/* SOS Removido por solicitação */}
-                        </div>
-                    </div>
-                )}
-
-                <div className="flex-1 bg-[#030a1a] relative overflow-hidden">
+                {/* MAPA AO FUNDO */}
+                <div className="absolute inset-0 z-0">
                     <IziRealTimeMap 
-                      driverCoords={driverCoords} 
-                      pickupCoords={isValidCoord({ lat: activeMission.pickup_lat, lng: activeMission.pickup_lng }) ? { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng } : merchantCoords}
-                      pickupAddress={pickupOnly}
-                      pickupName={activeMission.store_name} 
-                      deliveryCoords={isValidCoord({ lat: activeMission.delivery_lat, lng: activeMission.delivery_lng }) ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng } : null}
-                      deliveryAddress={addressOnly}
-                      deliveryName={activeMission.user_name || activeMission.customer} 
-                      currentStatus={activeMission.status}
+                        driverCoords={driverCoords} 
+                        pickupCoords={isValidCoord({ lat: activeMission.pickup_lat, lng: activeMission.pickup_lng }) ? { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng } : merchantCoords}
+                        pickupAddress={pickupOnly}
+                        pickupName={activeMission.store_name} 
+                        deliveryCoords={isValidCoord({ lat: activeMission.delivery_lat, lng: activeMission.delivery_lng }) ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng } : null}
+                        deliveryAddress={addressOnly}
+                        deliveryName={activeMission.user_name || activeMission.customer} 
+                        currentStatus={activeMission.status}
                     />
-                    <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#020617]/40 via-transparent to-[#030712]/40" />
-                    
-                    {/* Botão flutuante para alternar modo mapa / painel completo */}
-                    <button 
-                        onClick={() => setIsMapOnly(!isMapOnly)}
-                        className={`absolute bottom-6 left-6 z-50 h-14 px-6 rounded-2xl flex items-center justify-center gap-3 border shadow-2xl transition-all active:scale-90 ${isMapOnly ? 'bg-primary text-slate-950 border-primary/50 shadow-primary/30' : 'bg-slate-900/90 text-white border-white/10 backdrop-blur-xl shadow-black/50'}`}
-                    >
-                        <Icon name={isMapOnly ? 'expand_less' : 'expand_more'} size={20} />
-                        <span className="text-[11px] font-black uppercase tracking-widest">{isMapOnly ? 'Abrir Painel' : 'Recolher'}</span>
-                    </button>
-
-                    {/* Navegação Rápida no Mapa */}
-                    <button 
-                         onClick={() => {
-                            const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega';
-                            const lat = isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat;
-                            const lng = isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng;
-                            const addressText = isDeliveryPhase ? addressOnly : (activeMission.origin || activeMission.pickup_address);
-                            let destination = '';
-                            if (lat && lng) destination = `${lat},${lng}`;
-                            else if (addressText) destination = encodeURIComponent(addressText);
-                            if (destination) window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
-                        }}
-                        className="absolute bottom-6 right-24 z-50 size-14 bg-blue-600/90 text-white rounded-2xl flex items-center justify-center border border-white/10 shadow-2xl active:scale-90 transition-all"
-                    >
-                        <Icon name="navigation" size={24} />
-                    </button>
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
                 </div>
 
-                {/* Painel Inferior Expandido */}
-                {!isMapOnly && (
-                <div className="max-h-[60%] overflow-y-auto no-scrollbar bg-[#030712] border-t border-white/5 shadow-[0_-20px_40px_rgba(0,0,0,0.5)] flex flex-col">
-                    <div className="p-6 space-y-6">
-                        {/* Seção 1: Cliente e Pagamento Detalhado */}
-                        <div className="bg-white/[0.03] border border-white/8 rounded-[28px] p-6 space-y-5">
+                {/* Header Flutuante */}
+                <header className="relative z-50 flex items-center justify-between px-6 pt-10">
+                    <button 
+                        onClick={() => setActiveTab('dashboard')}
+                        className="size-12 bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl flex items-center justify-center text-white active:scale-90 transition-all shadow-2xl"
+                    >
+                        <Icon name="arrow_back" />
+                    </button>
+                    <div className="text-right">
+                        <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.4em] mb-1">Missão Ativa</p>
+                        <h2 className="text-xl font-black text-white tracking-tighter leading-none mb-1 shadow-sm">
+                            #{activeMission.realId?.slice(0,8).toUpperCase()}
+                        </h2>
+                        <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-primary/10 border border-primary/20">
+                            <Icon name={statusDisplay.icon} size={10} className={`${statusDisplay.color} animate-pulse`} />
+                            <span className={`text-[8px] font-black uppercase tracking-widest ${statusDisplay.color}`}>{statusDisplay.label}</span>
+                        </div>
+                    </div>
+                </header>
+
+                {/* BOTTOM SHEET DESLIZANTE */}
+                <motion.div 
+                    variants={missionSheetVariants}
+                    initial="half"
+                    animate={missionSheetState}
+                    drag="y"
+                    dragConstraints={{ top: 0, bottom: 0 }}
+                    dragElastic={0.1}
+                    onDragEnd={handleMissionDragEnd}
+                    className="relative z-40 mt-auto bg-[#030712]/95 backdrop-blur-3xl border-t border-white/5 flex flex-col rounded-t-[45px] shadow-[0_-25px_50px_rgba(0,0,0,0.6)] touch-none"
+                    style={{ height: "100dvh" }}
+                >
+                    <div 
+                        className="flex justify-center pt-4 pb-2 cursor-grab active:cursor-grabbing"
+                        onClick={() => {
+                            if (missionSheetState === "collapsed") setMissionSheetState("half");
+                            else if (missionSheetState === "half") setMissionSheetState("expanded");
+                            else setMissionSheetState("collapsed");
+                        }}
+                    >
+                        <div className="w-12 h-1.5 bg-white/10 rounded-full" />
+                    </div>
+
+                    <div className="p-8 pb-40 overflow-y-auto no-scrollbar flex-1 space-y-8">
+                        {/* Resumo Financeiro e Cliente */}
+                        <div className="bg-white/[0.03] border border-white/5 rounded-[32px] p-6 space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
-                                    <div className="size-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
-                                        <Icon name="person" size={24} />
+                                    <div className="size-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
+                                        <Icon name="person" size={28} />
                                     </div>
                                     <div>
-                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Cliente</p>
-                                        <h3 className="text-base font-black text-white">{activeMission.user_name || activeMission.customer || 'Usuário Izi'}</h3>
+                                        <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Cliente</p>
+                                        <h3 className="text-lg font-black text-white">{activeMission.user_name || activeMission.customer || 'Usuário Izi'}</h3>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[8px] font-black text-primary uppercase tracking-widest">Seu Ganho Líquido</p>
+                                    <p className="text-[9px] font-black text-primary uppercase tracking-widest">Ganho Líquido</p>
                                     <p className="text-2xl font-black text-primary">R$ {getNetEarnings(activeMission).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                 </div>
                             </div>
@@ -3036,185 +3048,141 @@ function App() {
                                 : 'bg-emerald-500/10 border-emerald-500/20'
                             }`}>
                                 <div className="flex items-start gap-4">
-                                    <div className={`size-10 rounded-xl flex items-center justify-center ${
-                                        activeMission.payment_method === 'dinheiro' || activeMission.payment_method === 'cartao_maquininha' ? 'text-amber-400' : 'text-emerald-400'
-                                    }`}>
-                                        <Icon name={activeMission.payment_method === 'dinheiro' ? 'payments' : 'account_balance_wallet'} size={24} />
-                                    </div>
+                                    <Icon name={activeMission.payment_method === 'dinheiro' ? 'payments' : 'account_balance_wallet'} className={activeMission.payment_method === 'dinheiro' || activeMission.payment_method === 'cartao_maquininha' ? 'text-amber-400' : 'text-emerald-400'} size={24} />
                                     <div className="flex-1">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Instrução de Cobrança</p>
-                                        <h4 className="text-sm font-black text-white mt-0.5">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Cobrança</p>
+                                        <h4 className="text-sm font-black text-white mt-0.5 uppercase italic">
                                             {activeMission.payment_method === 'dinheiro' 
                                                 ? `Receber R$ ${activeMission.total_price?.toFixed(2)} em DINHEIRO` 
                                                 : activeMission.payment_method === 'cartao_maquininha'
                                                 ? `Passar R$ ${activeMission.total_price?.toFixed(2)} NA MAQUININHA`
-                                                : 'Já Pago (Não cobrar do cliente)'}
+                                                : 'Já Pago (Não cobrar)'}
                                         </h4>
-                                        {activeMission.payment_method === 'dinheiro' && activeMission.change_for > 0 && (
-                                            <p className="text-[10px] font-bold text-amber-400/80 mt-1">
-                                                ⚠️ LEVAR TROCO PARA R$ {activeMission.change_for.toFixed(2)}
-                                            </p>
-                                        )}
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Seção 2: Itens do Pedido (se houver) */}
-                        {orderItems.length > 0 && (
-                            <div className="bg-white/[0.02] border border-white/5 rounded-[24px] p-5 space-y-3">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Icon name="package_2" className="text-white/20" size={14} />
-                                    <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Itens do Pedido</p>
-                                </div>
-                                <div className="space-y-2">
-                                    {orderItems.map((item: any, idx: number) => (
-                                        <div key={idx} className="flex justify-between items-center text-xs font-bold text-white/70">
-                                            <span>{item.quantity ? `${item.quantity}x ` : ''}{item.name}</span>
-                                            {item.price && <span className="text-white/30">R$ {item.price.toFixed(2)}</span>}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Seção 3: Endereços com Linha de Tempo */}
-                        <div className="bg-white/[0.03] border border-white/8 rounded-[28px] p-6 space-y-5">
+                        {/* Rota Detalhada */}
+                        <div className="bg-white/[0.03] border border-white/5 rounded-[32px] p-6 space-y-6">
                             <div className="relative">
                                 <div className="absolute left-[11px] top-6 bottom-6 w-[2px] bg-gradient-to-b from-blue-500/20 via-primary/20 to-primary/40" />
                                 
                                 <div className="flex items-start gap-5 relative z-10">
-                                    <div className={`mt-1.5 size-6 rounded-full flex items-center justify-center shrink-0 ${['a_caminho_coleta', 'chegou_coleta', 'saiu_para_coleta', 'no_local_coleta'].includes(activeMission.status || '') ? 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)] ring-4 ring-blue-500/20' : 'bg-white/10'}`}>
-                                        <Icon name="hospital" size={12} className="text-white" />
+                                    <div className={`mt-1.5 size-6 rounded-full flex items-center justify-center shrink-0 ${['a_caminho_coleta', 'chegou_coleta', 'saiu_para_coleta', 'no_local_coleta'].includes(activeMission.status || '') ? 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)]' : 'bg-white/10'}`}>
+                                        <Icon name="storefront" size={12} className="text-white" />
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Retirada: {activeMission.merchant_name || 'Estabelecimento'}</p>
-                                        <p className="text-sm font-bold text-white/80 leading-tight">{activeMission.origin || activeMission.pickup_address}</p>
-                                        
-                                        {/* Status de Preparo do Lojista */}
-                                        {activeMission.preparation_status && ['a_caminho_coleta', 'chegou_coleta', 'saiu_para_coleta', 'no_local_coleta'].includes(activeMission.status || '') && (
-                                            <div className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border shadow-lg ${
-                                                activeMission.preparation_status === 'pronto' 
-                                                ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 shadow-emerald-500/10' 
-                                                : 'bg-amber-500/20 border-amber-500/30 text-amber-400 shadow-amber-500/10'
-                                            }`}>
-
-                                                <Icon 
-                                                    name={activeMission.preparation_status === 'pronto' ? 'check_circle' : 'restaurant'} 
-                                                    size={16} 
-                                                    className={activeMission.preparation_status === 'preparando' ? 'animate-pulse' : ''} 
-                                                />
-                                                <span className="text-[10px] font-black uppercase tracking-widest">
-                                                    {activeMission.preparation_status === 'pronto' ? 'Pronto para Retirada' : 'Em Preparação...'}
-                                                </span>
-                                            </div>
-                                        )}
+                                    <div className="flex-1">
+                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Coleta: {activeMission.merchant_name || 'Estabelecimento'}</p>
+                                        <p className="text-sm font-bold text-white/80 leading-tight italic">{pickupOnly}</p>
                                     </div>
                                 </div>
 
                                 <div className="h-8" />
 
                                 <div className="flex items-start gap-5 relative z-10">
-                                    <div className={`mt-1.5 size-6 rounded-full flex items-center justify-center shrink-0 ${['picked_up', 'a_caminho', 'em_rota', 'no_local'].includes(activeMission.status || '') ? 'bg-primary shadow-[0_0_12px_rgba(255,217,0,0.5)] ring-4 ring-primary/20' : 'bg-white/10'}`}>
-                                        <Icon name="location_on" size={12} className="text-slate-900" />
+                                    <div className={`mt-1.5 size-6 rounded-full flex items-center justify-center shrink-0 ${['picked_up', 'a_caminho', 'em_rota', 'no_local'].includes(activeMission.status || '') ? 'bg-primary shadow-[0_0_12px_rgba(255,217,0,0.5)]' : 'bg-white/10'}`}>
+                                        <Icon name="location_on" size={12} className="text-slate-950" />
                                     </div>
-                                    <div className="flex-1 min-w-0">
+                                    <div className="flex-1">
                                         <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Entrega: {activeMission.user_name || activeMission.customer || 'Cliente'}</p>
-                                        <p className="text-sm font-black text-white leading-tight">{addressOnly}</p>
-                                        {activeMission.notes && <p className="mt-2 text-[10px] text-primary/60 border-l border-primary/20 pl-2 italic">Obs: {activeMission.notes}</p>}
+                                        <p className="text-sm font-black text-white leading-tight italic">{addressOnly}</p>
                                     </div>
                                 </div>
                             </div>
+
+                            <button 
+                                onClick={() => {
+                                    const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega';
+                                    const lat = isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat;
+                                    const lng = isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng;
+                                    const addr = isDeliveryPhase ? addressOnly : pickupOnly;
+                                    const destination = (lat && lng) ? `${lat},${lng}` : encodeURIComponent(addr);
+                                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
+                                }}
+                                className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-3 text-white/40 active:scale-95 transition-all group"
+                            >
+                                <Icon name="navigation" size={18} className="group-hover:text-blue-400 transition-colors" />
+                                <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-white transition-colors">Abrir no Maps</span>
+                            </button>
                         </div>
 
-                        {/* Seção 4: Botões de Ação */}
-                        <div className="pt-4 space-y-4">
-                            {/* Aceite -> No Local de Coleta */}
-                            {(['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando', 'aceito', 'atribuido'].includes(activeMission.status || '')) && (
-                                <div className="space-y-4">
-                                    <button 
-                                        onClick={() => handleUpdateStatus('chegou_coleta')} 
-                                        disabled={isAccepting}
-                                        className="w-full h-18 bg-gradient-to-r from-blue-700 via-blue-600 to-blue-500 text-white font-black text-base uppercase tracking-widest rounded-3xl shadow-2xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-50 border border-white/10"
-                                    >
-                                        <div className="size-10 bg-white/20 rounded-xl flex items-center justify-center shadow-inner">
-                                            <Icon name="location_on" size={24} />
+                        {/* Itens */}
+                        {orderItems.length > 0 && (
+                            <div className="bg-white/[0.02] border border-white/5 rounded-[24px] p-6">
+                                <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-4">Lista de Itens</p>
+                                <div className="space-y-3">
+                                    {orderItems.map((item: any, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-center text-xs font-bold text-white/60">
+                                            <span>• {item.quantity ? `${item.quantity}x ` : ''}{item.name}</span>
                                         </div>
-                                        <span className="flex-1 text-center pr-10">Cheguei na Coleta</span>
-                                    </button>
-
-                                    <button 
-                                        onClick={async () => {
-                                            if (await showConfirm({ message: 'Deseja realmente cancelar esta missão?' })) {
-                                                await handleUpdateStatus('cancelado');
-                                            }
-                                        }}
-                                        className="w-full py-4 text-red-500/50 text-[10px] font-black uppercase tracking-[0.3em] hover:text-red-500 transition-all"
-                                    >
-                                        Cancelar Missão
-                                    </button>
+                                    ))}
                                 </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer com Botão de Ação */}
+                    <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-[#030712] via-[#030712] to-transparent pt-20 pointer-events-none">
+                        <div className="pointer-events-auto w-full space-y-3">
+                            {/* BOTOES DE ACAO CENTRALIZADOS */}
+                            {(['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando', 'aceito', 'atribuido'].includes(activeMission.status || '')) && (
+                                <button 
+                                    onClick={() => handleUpdateStatus('chegou_coleta')} 
+                                    className="w-full h-18 bg-blue-500 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/10"
+                                >
+                                    <Icon name="location_on" /> Cheguei na Coleta
+                                </button>
                             )}
 
-                            {/* Chegou Coleta -> Coletado */}
                             {(['chegou_coleta', 'no_local_coleta', 'waiting_driver'].includes(activeMission.status || '') || activeMission.status === 'pronto') && (
                                 <button 
                                     onClick={() => handleUpdateStatus('picked_up')} 
-                                    disabled={isAccepting}
-                                    className={`w-full h-18 font-black text-base uppercase tracking-widest rounded-3xl shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-50 border border-white/10 ${activeMission.status === 'pronto' ? 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-400 text-white shadow-emerald-500/30 animate-pulse' : 'bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-500 text-white shadow-emerald-500/20'}`}
+                                    className="w-full h-18 bg-emerald-500 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/10"
                                 >
-                                    <div className="size-10 bg-white/20 rounded-xl flex items-center justify-center shadow-inner">
-                                        <Icon name="package_2" size={24} />
-                                    </div>
-                                    <span className="flex-1 text-center pr-10">Confirmar Coleta</span>
+                                    <Icon name="package_2" /> Confirmar Coleta
                                 </button>
                             )}
 
-                            {/* Coletado -> A Caminho / Em Rota */}
                             {activeMission.status === 'picked_up' && (
                                 <button 
                                     onClick={() => handleUpdateStatus('a_caminho')} 
-                                    disabled={isAccepting}
-                                    className="w-full h-18 bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-300 text-slate-950 font-black text-base uppercase tracking-widest rounded-3xl shadow-2xl shadow-yellow-500/40 active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-50 border border-white/20"
+                                    className="w-full h-18 bg-primary text-slate-950 font-black text-base uppercase tracking-widest rounded-[35px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/20"
                                 >
-                                    <div className="size-10 bg-black/10 rounded-xl flex items-center justify-center shadow-inner">
-                                        <Icon name="moped" size={24} />
-                                    </div>
-                                    <span className="flex-1 text-center pr-10">Iniciar Entrega</span>
+                                    <Icon name="moped" /> Iniciar Entrega
                                 </button>
                             )}
 
-                            {/* In Entrega -> No Destino */}
                             {(activeMission.status === 'a_caminho' || activeMission.status === 'em_rota') && (
                                 <button 
                                     onClick={() => handleUpdateStatus('no_local')} 
-                                    disabled={isAccepting}
-                                    className="w-full h-18 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400 text-white font-black text-base uppercase tracking-widest rounded-3xl shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-50 border border-white/10"
+                                    className="w-full h-18 bg-blue-500 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/10"
                                 >
-                                    <div className="size-10 bg-white/20 rounded-xl flex items-center justify-center shadow-inner">
-                                        <Icon name="person_pin_circle" size={24} />
-                                    </div>
-                                    <span className="flex-1 text-center pr-10">Tô no Destino</span>
+                                    <Icon name="person_pin_circle" /> Tô no Destino
                                 </button>
                             )}
 
-                            {/* No Destino / Finalização -> Concluído */}
                             {(activeMission.status === 'no_local' || activeMission.status === 'saiu_para_entrega') && (
                                 <button 
                                     onClick={() => handleUpdateStatus('concluido')} 
-                                    disabled={isAccepting}
-                                    className="w-full h-20 bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-300 text-white font-black text-lg uppercase tracking-tight rounded-3xl shadow-[0_20px_50px_rgba(16,185,129,0.3)] active:scale-[0.98] transition-all flex items-center justify-center gap-4 disabled:opacity-50 border-t border-white/30"
+                                    className="w-full h-18 bg-emerald-500 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/20"
                                 >
-                                    <div className="size-12 bg-white/30 rounded-2xl flex items-center justify-center shadow-md">
-                                        <Icon name="check_circle" size={28} />
-                                    </div>
-                                    <span className="flex-1 text-center pr-12">{isMobility ? 'Encerrar Corrida' : 'Finalizar Entrega'}</span>
+                                    <Icon name="check_circle" /> {isMobility ? 'Encerrar Corrida' : 'Finalizar Entrega'}
+                                </button>
+                            )}
+
+                            {/* CANCELAR SEMPRE DISCRETO */}
+                            {['a_caminho_coleta', 'saiu_para_coleta', 'aceito'].includes(activeMission.status || '') && (
+                                <button 
+                                    onClick={async () => { if (await showConfirm({ message: 'Cancelar missão?' })) handleUpdateStatus('cancelado'); }}
+                                    className="w-full py-2 text-red-500/40 text-[9px] font-black uppercase tracking-[0.4em]"
+                                >
+                                    Cancelar Missão
                                 </button>
                             )}
                         </div>
                     </div>
-                </div>
-                )}
+                </motion.div>
             </motion.div>
         );
     };
