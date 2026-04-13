@@ -60,7 +60,8 @@ interface HomeViewProps {
     | "shipping_priority"
     | "izi_black_purchase"
     | "card_payment"
-    | "izi_coin_tracking";
+    | "izi_coin_tracking"
+    | "flash_offers_list";
   searchQuery: string;
   setSearchQuery: (val: string) => void;
   setSelectedItem: (item: any) => void;
@@ -227,6 +228,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       timeLeft,
       img: offer.product_image || offer.admin_users?.store_logo || "",
       isMaster: userLevel >= 10 && offer.is_vip,
+      isRedeemed: offer.is_redeemed,
       offer,
     };
   });
@@ -317,7 +319,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       className="flex flex-col"
                     >
                       <span className="bg-white/10 backdrop-blur-md text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-[0.2em] w-fit mb-4 border border-white/10">
-                        Exclusivo Izi
+                        {banner.target_view === 'izi_black_purchase' ? 'Izi Black' : 'Exclusivo Izi'}
                       </span>
                       <h2 className="text-4xl font-black text-white leading-[0.9] tracking-tighter uppercase italic drop-shadow-2xl">
                         {banner.title || "Experimente o Novo"}
@@ -712,7 +714,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     key={story.id} 
                     whileTap={{ scale: 0.96 }}
                     onClick={() => {
-                      if (story.isMaster && userLevel < 10) showToast("Esta oferta é exclusiva para membros Tier MASTER.", "info");
+                      if (story.isRedeemed) showToast("Você já aproveitou esta oferta!", "info");
+                      else if (story.isMaster && userLevel < 10) showToast("Esta oferta é exclusiva para membros Tier MASTER.", "info");
                       else if (story.isMaster) setShowMasterPerks(true);
                       else {
                         const fakeItem = {
@@ -735,7 +738,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         navigateSubView("exclusive_offer");
                       }
                     }}
-                    className={`relative flex-shrink-0 w-[280px] h-[160px] snap-center rounded-[40px] overflow-hidden group cursor-pointer border-[3px] ${story.isMaster ? "border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.2)]" : "border-white/5"} transition-all duration-500`}
+                    className={`relative flex-shrink-0 w-[280px] h-[160px] snap-center rounded-[40px] overflow-hidden group cursor-pointer border-[3px] ${story.isRedeemed ? "border-zinc-800 opacity-80" : story.isMaster ? "border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.2)]" : "border-white/5"} transition-all duration-500`}
                   >
                     {/* Imagem de Fundo com Overlay Gradiente Pesado */}
                     <img 
@@ -747,10 +750,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     
                     {/* Badge de Tempo - Design "Relógio de Pulso" */}
                     <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-xl border border-white/10 px-3 py-2 rounded-2xl flex items-center gap-2 shadow-2xl z-20">
-                      <div className="size-2 rounded-full bg-red-500 animate-ping" />
-                      <span className="text-[10px] font-black text-white tracking-widest">
-                        {story.timeLeft}
-                      </span>
+                       {story.isRedeemed ? (
+                         <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                            RESGATADO <span className="material-symbols-outlined text-xs">check_circle</span>
+                         </span>
+                       ) : (
+                         <>
+                           <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
+                           <span className="text-[10px] font-black text-white uppercase tracking-widest">{story.timeLeft}</span>
+                         </>
+                       )}
                     </div>
 
                     {/* Badge de Loja */}
@@ -798,7 +807,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 ))}
 
                 {/* Card de "Ver Mais" minimalista */}
-                <div className="flex-shrink-0 w-24 h-[160px] flex flex-col items-center justify-center gap-3 bg-zinc-900/40 rounded-[40px] border border-white/5 cursor-pointer hover:bg-zinc-800 transition-all">
+                <div 
+                  onClick={() => navigateSubView("flash_offers_list")}
+                  className="flex-shrink-0 w-24 h-[160px] flex flex-col items-center justify-center gap-3 bg-zinc-900/40 rounded-[40px] border border-white/5 cursor-pointer hover:bg-zinc-800 transition-all"
+                >
                    <div className="size-10 rounded-full border border-white/10 flex items-center justify-center">
                       <span className="material-symbols-outlined text-zinc-500">add</span>
                    </div>

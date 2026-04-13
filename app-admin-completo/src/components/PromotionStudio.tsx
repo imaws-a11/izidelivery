@@ -51,7 +51,8 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
     merchant_id: merchantId,
     // Flash specific
     merchant_ids: merchantId ? [merchantId] : [],
-    selected_product_ids: []
+    selected_product_ids: [],
+    target_view: ''
   });
 
   const fetchFlashOffers = useCallback(async () => {
@@ -167,6 +168,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       image_url: activeTab === 'banner' ? formData.image_url : null,
       target_merchants: activeTab === 'coupon' ? formData.merchant_ids : null,
       target_products: activeTab === 'coupon' ? formData.selected_product_ids : null,
+      target_view: activeTab === 'banner' ? formData.target_view : null,
       type: activeTab,
     };
 
@@ -271,7 +273,8 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       is_free_shipping: false,
       merchant_id: merchantId,
       merchant_ids: merchantId ? [merchantId] : [],
-      selected_product_ids: []
+      selected_product_ids: [],
+      target_view: ''
     });
   };
 
@@ -417,26 +420,43 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                 />
                              </div>
 
-                             {activeTab === 'banner' && (
-                                 <div className="space-y-2 md:col-span-2">
-                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Imagem do Banner (Público Geral)</label>
-                                     <div className="aspect-[3/1] rounded-[40px] bg-white/5 border-2 border-dashed border-white/10 relative overflow-hidden group hover:border-primary/50 transition-colors cursor-pointer">
-                                         {formData.image_url ? (
-                                             <>
-                                                 <img src={formData.image_url} className="w-full h-full object-cover" />
-                                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                     <span className="material-symbols-outlined text-primary text-5xl">edit</span>
+                              {activeTab === 'banner' && (
+                                 <>
+                                     <div className="space-y-2 md:col-span-2">
+                                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Imagem do Banner (Público Geral)</label>
+                                         <div className="aspect-[3/1] rounded-[40px] bg-white/5 border-2 border-dashed border-white/10 relative overflow-hidden group hover:border-primary/50 transition-colors cursor-pointer">
+                                             {formData.image_url ? (
+                                                 <>
+                                                     <img src={formData.image_url} className="w-full h-full object-cover" />
+                                                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                         <span className="material-symbols-outlined text-primary text-5xl">edit</span>
+                                                     </div>
+                                                 </>
+                                             ) : (
+                                                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-slate-500 group-hover:text-primary transition-colors">
+                                                     <span className="material-symbols-outlined text-6xl text-slate-500">add_photo_alternate</span>
+                                                     <span className="text-xs font-black uppercase tracking-widest text-center px-10">Banner Home Geral - Desktop/Mobile 1200x400</span>
                                                  </div>
-                                             </>
-                                         ) : (
-                                             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-slate-500 group-hover:text-primary transition-colors">
-                                                 <span className="material-symbols-outlined text-6xl text-slate-500">add_photo_alternate</span>
-                                                 <span className="text-xs font-black uppercase tracking-widest text-center px-10">Banner Home Geral - Desktop/Mobile 1200x400</span>
-                                             </div>
-                                         )}
-                                         <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleFileUpload} />
+                                             )}
+                                             <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleFileUpload} />
+                                         </div>
                                      </div>
-                                 </div>
+
+                                     <div className="space-y-2 md:col-span-2">
+                                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Ação ao Clicar (Destino)</label>
+                                         <select 
+                                            value={formData.target_view || ''}
+                                            onChange={e => setFormData({...formData, target_view: e.target.value})}
+                                            className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all outline-none"
+                                         >
+                                             <option value="" className="bg-slate-900 border-none">Padrão (Izi Black para não assinantes)</option>
+                                             <option value="izi_black_purchase" className="bg-slate-900 border-none">Assinatura Izi Black</option>
+                                             <option value="exclusive_offer" className="bg-slate-900 border-none">Ofertas Exclusivas Izi</option>
+                                             <option value="explore_category" className="bg-slate-900 border-none">Navegar Categoria</option>
+                                             <option value="wallet" className="bg-slate-900 border-none">Carteira / Pagamentos</option>
+                                         </select>
+                                     </div>
+                                 </>
                              )}
 
                              {activeTab === 'coupon' && (
@@ -531,121 +551,131 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                              )}
 
                                        {/* Tipo de Desconto e Valor – ocultados no modo Frete Grátis */}
-                              {!formData.is_free_shipping && (
+                              {activeTab !== 'banner' && (
                                 <>
-                                  <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
-                                        Tipo de Desconto
-                                    </label>
-                                    <select 
-                                       value={formData.discount_type}
-                                       onChange={e => setFormData({...formData, discount_type: e.target.value})}
-                                       className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all outline-none"
-                                    >
-                                        <option value="percent" className="bg-slate-900 border-none">Porcentagem (%)</option>
-                                        <option value="fixed" className="bg-slate-900 border-none">Valor Fixo (R$)</option>
-                                    </select>
-                                  </div>
+                                  {!formData.is_free_shipping && (
+                                    <>
+                                      <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
+                                            Tipo de Desconto
+                                        </label>
+                                        <select 
+                                           value={formData.discount_type}
+                                           onChange={e => setFormData({...formData, discount_type: e.target.value})}
+                                           className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all outline-none"
+                                        >
+                                            <option value="percent" className="bg-slate-900 border-none">Porcentagem (%)</option>
+                                            <option value="fixed" className="bg-slate-900 border-none">Valor Fixo (R$)</option>
+                                        </select>
+                                      </div>
 
-                                  <div className="space-y-2">
+                                      <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
+                                            Valor do Desconto
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            inputMode="decimal"
+                                            value={formData.discount_value?.toString().replace('.', ',')}
+                                            onChange={e => setFormData({...formData, discount_value: e.target.value.replace(',', '.')})}
+                                            className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-black text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
+                                        />
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {/* Banner de Frete Grátis */}
+                                  {formData.is_free_shipping && activeTab === 'coupon' && (
+                                    <div className="col-span-2 flex items-center gap-5 p-6 bg-sky-500/10 border border-sky-500/30 rounded-3xl">
+                                      <div className="size-12 rounded-2xl bg-sky-500/20 flex items-center justify-center text-sky-400 shrink-0">
+                                        <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>local_shipping</span>
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-black text-sky-400">Cupom de Frete Grátis</p>
+                                        <p className="text-[10px] font-bold text-slate-400 mt-0.5">Este cupom zera a taxa de entrega cobrada pelo Izi. Defina um pedido mínimo abaixo se quiser restringir o uso.</p>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
-                                        Valor do Desconto
+                                         Pedido Mínimo (R$)
                                     </label>
                                     <input 
                                         type="text" 
                                         inputMode="decimal"
-                                        value={formData.discount_value?.toString().replace('.', ',')}
-                                        onChange={e => setFormData({...formData, discount_value: e.target.value.replace(',', '.')})}
+                                        value={formData.min_order_value?.toString().replace('.', ',') || ''}
+                                        onChange={e => setFormData({...formData, min_order_value: e.target.value.replace(',', '.')})}
                                         className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-black text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
+                                        placeholder="0,00"
                                     />
-                                  </div>
+                                 </div>
                                 </>
                               )}
 
-                              {/* Banner de Frete Grátis */}
-                              {formData.is_free_shipping && activeTab === 'coupon' && (
-                                <div className="col-span-2 flex items-center gap-5 p-6 bg-sky-500/10 border border-sky-500/30 rounded-3xl">
-                                  <div className="size-12 rounded-2xl bg-sky-500/20 flex items-center justify-center text-sky-400 shrink-0">
-                                    <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>local_shipping</span>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-black text-sky-400">Cupom de Frete Grátis</p>
-                                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">Este cupom zera a taxa de entrega cobrada pelo Izi. Defina um pedido mínimo abaixo se quiser restringir o uso.</p>
-                                  </div>
-                                </div>
-                              )}
-
-                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
-                                     {activeTab === 'banner' ? 'Preço da Assinatura (R$)' : 'Pedido Mínimo (R$)'}
-                                </label>
-                                <input 
-                                    type="text" 
-                                    inputMode="decimal"
-                                    value={formData.min_order_value?.toString().replace('.', ',') || ''}
-                                    onChange={e => setFormData({...formData, min_order_value: e.target.value.replace(',', '.')})}
-                                    className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-black text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
-                                    placeholder="0,00"
-                                />
-                             </div>
-
-                             <div className="space-y-2">
-                                <label className="text-[10px) font-black text-slate-500 uppercase tracking-widest ml-4">Expira em (Vencimento)</label>
-                                <input 
-                                    type={activeTab === 'flash' ? 'datetime-local' : 'date'}
-                                    value={formData.expires_at}
-                                    onChange={e => setFormData({...formData, expires_at: e.target.value})}
-                                    className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner text-white appearance-none"
-                                />
-                             </div>
-
-                             <div className="md:col-span-2 pt-4 flex gap-6">
-                                <label className="flex-1 flex items-center justify-between p-6 bg-white/5 border border-white/5 rounded-[32px] cursor-pointer group hover:bg-white/10 transition-all">
-                                    <div className="flex items-center gap-4">
-                                        <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                                            <span className="material-symbols-outlined">check_circle</span>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-black">Status Ativo</p>
-                                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Publicar imediatamente</p>
-                                        </div>
-                                    </div>
+                             {activeTab !== 'banner' && (
+                                 <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Expira em (Vencimento)</label>
                                     <input 
-                                        type="checkbox" 
-                                        checked={formData.is_active}
-                                        onChange={e => setFormData({...formData, is_active: e.target.checked})}
-                                        className="size-8 rounded-xl bg-white/5 border-white/10 text-emerald-500 focus:ring-emerald-500 transition-all" 
+                                        type={activeTab === 'flash' ? 'datetime-local' : 'date'}
+                                        value={formData.expires_at}
+                                        onChange={e => setFormData({...formData, expires_at: e.target.value})}
+                                        className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner text-white appearance-none"
                                     />
-                                </label>
+                                 </div>
+                             )}
 
-                                <label className="flex-1 flex items-center justify-between p-6 bg-white/5 border border-white/5 rounded-[32px] cursor-pointer group hover:bg-white/10 transition-all">
-                                    <div className="flex items-center gap-4">
-                                        <div className="size-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-                                            <span className="material-symbols-outlined">stars</span>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-black text-amber-500">Exclusivo Black</p>
-                                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest text-amber-500/60">Somente membros VIP</p>
-                                        </div>
-                                    </div>
-                                    <input 
-                                        type="checkbox" 
-                                        checked={formData.is_vip}
-                                        onChange={e => setFormData({...formData, is_vip: e.target.checked})}
-                                        className="size-8 rounded-xl bg-white/5 border-white/10 text-amber-500 focus:ring-amber-500 transition-all" 
-                                    />
-                                </label>
-                             </div>
+                             {activeTab !== 'banner' && (
+                                 <>
+                                     <div className="md:col-span-2 pt-4 flex gap-6">
+                                        <label className="flex-1 flex items-center justify-between p-6 bg-white/5 border border-white/5 rounded-[32px] cursor-pointer group hover:bg-white/10 transition-all">
+                                            <div className="flex items-center gap-4">
+                                                <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                                                    <span className="material-symbols-outlined">check_circle</span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black">Status Ativo</p>
+                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Publicar imediatamente</p>
+                                                </div>
+                                            </div>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={formData.is_active}
+                                                onChange={e => setFormData({...formData, is_active: e.target.checked})}
+                                                className="size-8 rounded-xl bg-white/5 border-white/10 text-emerald-500 focus:ring-emerald-500 transition-all" 
+                                            />
+                                        </label>
 
-                             <div className="md:col-span-2 space-y-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Descrição da Campanha</label>
-                                <textarea 
-                                    value={formData.description}
-                                    onChange={e => setFormData({...formData, description: e.target.value})}
-                                    className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-sm focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner min-h-[120px] resize-none"
-                                    placeholder="Explique os benefícios e regras da promoção..."
-                                />
-                             </div>
+                                        <label className="flex-1 flex items-center justify-between p-6 bg-white/5 border border-white/5 rounded-[32px] cursor-pointer group hover:bg-white/10 transition-all">
+                                            <div className="flex items-center gap-4">
+                                                <div className="size-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                                                    <span className="material-symbols-outlined">stars</span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-amber-500">Exclusivo Black</p>
+                                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest text-amber-500/60">Somente membros VIP</p>
+                                                </div>
+                                            </div>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={formData.is_vip}
+                                                onChange={e => setFormData({...formData, is_vip: e.target.checked})}
+                                                className="size-8 rounded-xl bg-white/5 border-white/10 text-amber-500 focus:ring-amber-500 transition-all" 
+                                            />
+                                        </label>
+                                     </div>
+
+                                     <div className="md:col-span-2 space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Descrição da Campanha</label>
+                                        <textarea 
+                                            value={formData.description}
+                                            onChange={e => setFormData({...formData, description: e.target.value})}
+                                            className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-sm focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner min-h-[120px] resize-none"
+                                            placeholder="Explique os benefícios e regras da promoção..."
+                                        />
+                                     </div>
+                                 </>
+                             )}
                         </div>
                     </div>
 
