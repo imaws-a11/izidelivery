@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
 interface BeveragesListViewProps {
@@ -20,8 +20,19 @@ export const BeveragesListView: React.FC<BeveragesListViewProps> = ({
   ESTABLISHMENTS,
   handleShopClick
 }) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, []);
+
   return (
-    <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
+    <div 
+      ref={scrollContainerRef}
+      className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10"
+    >
       <header className="sticky top-0 z-50 px-5 pt-5 pb-4"
         style={{ background: "linear-gradient(to bottom, #000000 70%, transparent)" }}>
         <div className="flex items-center justify-between mb-4">

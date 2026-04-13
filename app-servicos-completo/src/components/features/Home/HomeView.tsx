@@ -273,7 +273,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </div>
 
               <div className="flex items-center gap-1.5">
-                <button onClick={() => cart.length > 0 && navigateSubView("cart")} 
+                <button onClick={() => navigateSubView("cart")} 
                   className="group relative w-9 h-9 flex items-center justify-center rounded-2xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95">
                   <span className="material-symbols-outlined text-zinc-100 text-[18px] group-hover:text-yellow-400 transition-colors">shopping_bag</span>
                   {cart.length > 0 && (

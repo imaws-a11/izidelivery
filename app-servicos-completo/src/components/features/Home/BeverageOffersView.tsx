@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useEffect, useRef } from "react";
 import { Icon } from "../../common/Icon";
 
 interface BeverageOffersViewProps {
@@ -20,10 +21,22 @@ export const BeverageOffersView = ({
   getItemCount,
   beverageBanners,
 }: BeverageOffersViewProps) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+  }, []);
+
   const deals = beverageOffers;
 
   return (
-    <div className="bg-black text-zinc-100 absolute inset-0 z-50 text-white flex flex-col hide-scrollbar overflow-y-auto pb-32">
+    <div 
+      ref={scrollContainerRef}
+      className="bg-black text-zinc-100 absolute inset-0 z-50 text-white flex flex-col hide-scrollbar overflow-y-auto pb-10"
+    >
       <header className="sticky top-0 z-[60] bg-slate-950/80 backdrop-blur-2xl border-b border-white/10 p-6 flex items-center gap-6">
          <button 
           onClick={() => setSubView("beverages_list")}
