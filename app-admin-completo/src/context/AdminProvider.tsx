@@ -747,16 +747,25 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               return [updatedOrder, ...prev];
             });
 
-            // Notificação Sonora e Visual
-            const isActionable = updatedOrder.status === 'novo' || updatedOrder.status === 'waiting_merchant';
+            // Notificação Sonora e Visual para o Lojista
+            const actionableStatuses = ['novo', 'waiting_merchant', 'paid', 'pago', 'confirmado', 'confirmed'];
+            const isActionable = actionableStatuses.includes(updatedOrder.status);
             
             if (isActionable) {
-              console.log(`[REALTIME] Pedido acionável detectado (${payload.eventType}):`, updatedOrder.id);
-              setNewOrderNotification({ show: true, orderId: updatedOrder.id });
-              playIziSound('merchant');
+              console.log(`[REALTIME-ACTIONABLE] Pedido detectado (${payload.eventType}):`, updatedOrder.id, 'Status:', updatedOrder.status);
+              
+              // Só toca som e mostra notificação se for realmente uma transição para um estado acionável
+              // ou se for um novo registro (INSERT)
+              const oldStatus = (payload.old as any)?.status;
+              if (payload.eventType === 'INSERT' || (oldStatus && oldStatus !== updatedOrder.status)) {
+                setNewOrderNotification({ show: true, orderId: updatedOrder.id });
+                playIziSound('merchant');
+                console.log('[REALTIME-SOUND] Som disparado para o merchant');
+              }
             }
           }
 
+          // Busca dados atualizados para garantir consistência total
           fetchStatsRef.current(true);
           fetchAllOrdersRef.current(undefined, true);
         }

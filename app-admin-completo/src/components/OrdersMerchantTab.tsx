@@ -20,7 +20,11 @@ export default function OrdersMerchantTab() {
   const ORDERS_PER_PAGE = 50;
 
   // Filtrar pedidos que pertencem a este lojista
-  const myOrders = allOrders.filter((o: any) => o.merchant_id === merchantProfile?.merchant_id);
+  const myOrders = React.useMemo(() => {
+    const mId = merchantProfile?.merchant_id || merchantProfile?.id;
+    if (!mId) return allOrders;
+    return allOrders.filter((o: any) => String(o.merchant_id) === String(mId));
+  }, [allOrders, merchantProfile]);
   
   // Pedidos que precisam de INTERVENÇÃO (Aceitar/Recusar)
   const pendingOrders = myOrders.filter((o: any) => 

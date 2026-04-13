@@ -1234,13 +1234,12 @@ function App() {
                 // Restringir sons por categoria e status (Evitar barulho precoce em Food)
                 const availabilityType = normalizeServiceType(o.service_type);
                 const isMobility = ['mototaxi', 'car_ride', 'frete', 'van', 'utilitario', 'logistica', 'motorista_particular', 'package', 'motoboy'].includes(availabilityType);
-                const isFoodReady = ['pronto', 'waiting_driver'].includes(o.status);
-                const servicePreview = getServicePresentation(o);
-                
-                // Só toca som se: (É Mobilidade e status inicial OK) OU (É Food e já está pronto)
-                // E também semente se o pagamento já foi aprovado ou é em dinheiro
+                // Só toca som se: (É Mobilidade) OU (É Food e está em um status visível/acionável)
+                // E também somente se o pagamento já foi aprovado ou é em dinheiro
+                const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted'];
                 const isPaidOrCash = o.payment_method === 'cash' || o.payment_status === 'paid' || o.payment_method === 'dinheiro';
-                const shouldSound = (isMobility || isFoodReady) && isPaidOrCash;
+                const shouldSound = actionableStatuses.includes(o.status) && isPaidOrCash;
+                const servicePreview = getServicePresentation(o);
 
                 setOrders(prev => {
                     if (prev.find(x => x.realId === o.id)) return prev;
@@ -1359,12 +1358,10 @@ function App() {
                             const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
                             if (financialTypes.includes(o.service_type)) return prev;
 
-                            // Mesma lógica de filtro de som: Food só quando pronto, Mobilidade sempre que novo, e Pago/Dinheiro
-                            const availabilityType = normalizeServiceType(o.service_type);
-                            const isMobility = ['mototaxi', 'car_ride', 'frete', 'van', 'utilitario', 'logistica', 'motorista_particular', 'package', 'motoboy'].includes(availabilityType);
-                            const isFoodReady = ['pronto', 'waiting_driver'].includes(o.status);
+                            // Alerta para qualquer pedido novo disponível para o entregador (Mobilidade ou Food)
+                            const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted'];
                             const isPaidOrCash = o.payment_method === 'cash' || o.payment_status === 'paid' || o.payment_method === 'dinheiro';
-                            const shouldSound = (isMobility || isFoodReady) && isPaidOrCash;
+                            const shouldSound = actionableStatuses.includes(o.status) && isPaidOrCash;
                             const servicePreview = getServicePresentation(o);
 
                             if (isOnline && shouldSound) {

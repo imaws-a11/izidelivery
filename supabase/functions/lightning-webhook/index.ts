@@ -72,7 +72,7 @@ serve(async (req) => {
       query = query.eq('id', internalOrderId)
     }
 
-    const { data: updateData, error: updateError } = await query.select('id, status, payment_status')
+    const { data: updateData, error: updateError } = await query.select('*')
 
     if (updateError) {
       console.error('Erro ao atualizar pedido:', updateError)
@@ -91,7 +91,7 @@ serve(async (req) => {
            updated_at: new Date().toISOString()
          })
          .eq('id', internalOrderId)
-         .select('id, status')
+         .select('*')
        
        if (retryError) {
          console.error('Erro no retry do webhook:', retryError)
