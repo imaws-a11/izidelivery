@@ -30,6 +30,7 @@ import { BeverageOffersView } from "./components/features/Home/BeverageOffersVie
 import { RestaurantMenuView } from "./components/features/Home/RestaurantMenuView";
 import { MarketExploreView } from "./components/features/Home/MarketExploreView";
 import { PaymentMethodsView } from "./components/features/Profile/PaymentMethodsView";
+import { FlashOffersListView } from "./components/features/FlashOffersListView";
 
 // Mobilidade e Envios
 import { TaxiWizard } from "./components/features/Mobility/TaxiWizard";
@@ -141,6 +142,7 @@ function App() {
     | "izi_black_purchase"
     | "card_payment"
     | "izi_coin_tracking"
+    | "flash_offers_list"
   >("none");
   const previousSubViewRef = useRef<string>("none");
   const [iziBlackOrigin, setIziBlackOrigin] = useState<"home" | "checkout">("home");
@@ -1384,33 +1386,49 @@ function App() {
   }, [globalSettings]);
 
   const fetchFlashOffers = async () => {
-    const { data } = await supabase
-      .from('flash_offers')
-      .select('*, admin_users(store_name, store_logo)')
-      .eq('is_active', true)
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false });
-    
-    if (data) {
-      if (userId) {
-        const trackedCpf = getBenefitTrackingCpf();
-        const filters: string[] = [`user_id.eq.${userId}`];
-        if (trackedCpf) filters.push(`cpf.eq.${trackedCpf}`);
-        
+    try {
+      // 1. Busca todas as ofertas relâmpago ativas que ainda não expiraram
+      const { data, error: offersError } = await supabase
+        .from('flash_offers')
+        .select('*, admin_users(store_name, store_logo)')
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false });
+
+      if (offersError) throw offersError;
+      if (!data) return;
+
+      // 2. Busca resgates do usuário para marcar como 'Resgatado' em vez de ocultar
+      let redeemedIds = new Set<string>();
+      
+      const userId = user?.id || localStorage.getItem('user_id');
+      const userCpf = user?.cpf || localStorage.getItem('user_cpf');
+
+      if (userId || userCpf) {
+        const filters = [];
+        if (userId) filters.push(`user_id.eq.${userId}`);
+        if (userCpf) filters.push(`cpf.eq.${userCpf}`);
+
         const { data: redemptions } = await supabase
           .from("benefit_redemptions_delivery")
           .select("source_id")
+          .eq("source_type", "flash_offer")
           .or(filters.join(","));
-          
+
         if (redemptions) {
-          const usedIds = new Set(redemptions.map(r => r.source_id));
-          setFlashOffers(data.filter(offer => !usedIds.has(offer.id)));
-        } else {
-          setFlashOffers(data);
+          redeemedIds = new Set(redemptions.map(r => r.source_id));
         }
-      } else {
-        setFlashOffers(data);
       }
+
+      // 3. Marca cada oferta como resgatada ou não
+      const offersWithStatus = data.map((offer: any) => ({
+        ...offer,
+        is_redeemed: redeemedIds.has(offer.id)
+      }));
+
+      setFlashOffers(offersWithStatus);
+    } catch (error) {
+      console.error("Erro ao buscar ofertas relâmpago:", error);
     }
   };
 
@@ -3313,6 +3331,49 @@ const navigateSubView = (target: string) => {
       </div>
     );
   };
+
+  const renderFlashOffersList = () => {
+    // Re-computar activeStories similar ao HomeView para consistência
+    const activeStorieslist = (flashOffers || []).map((offer: any) => {
+      const expiresAt = new Date(offer.expires_at);
+      const now = new Date();
+      const diffMs = expiresAt.getTime() - now.getTime();
+      const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      const timeLeft = diffHrs > 0 ? diffHrs + "h" : diffMins + "min";
+      
+      let finalPrice = Number(offer.discounted_price);
+      if (!finalPrice && offer.original_price && offer.discount_percent) {
+          finalPrice = Number(offer.original_price) * (1 - (Number(offer.discount_percent) / 100));
+      }
+      
+      const originalPrice = Number(offer.original_price);
+      return {
+        id: offer.id,
+        merchant: offer.admin_users?.store_name || offer.merchant_name || "Loja",
+        name: offer.product_name,
+        finalPrice: finalPrice ? finalPrice.toFixed(2).replace('.', ',') : "Flash",
+        originalPrice: originalPrice ? originalPrice.toFixed(2).replace('.', ',') : "",
+        timeLeft,
+        img: offer.product_image || offer.admin_users?.store_logo || "",
+        isMaster: (userLevel || 0) >= 10 && offer.is_vip,
+        offer,
+      };
+    });
+
+    return (
+      <FlashOffersListView 
+        activeStories={activeStorieslist}
+        setSubView={setSubView}
+        navigateSubView={navigateSubView}
+        setSelectedItem={setSelectedItem}
+        userLevel={userLevel || 0}
+        showToast={showToast}
+        setShowMasterPerks={setShowMasterPerks}
+      />
+    );
+  };
+
 
   const renderRestaurantMenu = () => {
     return (
@@ -7468,7 +7529,7 @@ const navigateSubView = (target: string) => {
                     if (order?.payment_method === 'pix') setSubView("pix_payment");
                     else if (order?.payment_method === 'lightning') setSubView("lightning_payment");
                     else setSubView("card_payment");
-                  }} availableCoupons={availableCoupons.filter((c: any) => c.coupon_code)} banners={availableCoupons.filter((c: any) => !c.coupon_code)} copiedCoupon={copiedCoupon} setCopiedCoupon={setCopiedCoupon} showToast={showToast} setShowMasterPerks={setShowMasterPerks} ESTABLISHMENTS={ESTABLISHMENTS} handleShopClick={handleShopClick} flashOffers={flashOffers} setActiveService={setActiveService} transitData={transitData} setTransitData={setTransitData} setExploreCategoryState={setExploreCategoryState} setRestaurantInitialCategory={setRestaurantInitialCategory} setTab={setTab} />
+                  }} availableCoupons={availableCoupons.filter((c: any) => c.coupon_code)} banners={availableCoupons.filter((c: any) => !c.coupon_code && c.image_url)} copiedCoupon={copiedCoupon} setCopiedCoupon={setCopiedCoupon} showToast={showToast} setShowMasterPerks={setShowMasterPerks} ESTABLISHMENTS={ESTABLISHMENTS} handleShopClick={handleShopClick} flashOffers={flashOffers} setActiveService={setActiveService} transitData={transitData} setTransitData={setTransitData} setExploreCategoryState={setExploreCategoryState} setRestaurantInitialCategory={setRestaurantInitialCategory} setTab={setTab} />
                 </motion.div>
               )}
               {tab === "orders" && (
@@ -7748,6 +7809,11 @@ const navigateSubView = (target: string) => {
               {subView === "izi_black_purchase" && (
                 <motion.div key="iziblackp" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.5 }} className="absolute inset-0 z-[180]">
                   {renderIziBlackPurchase()}
+                </motion.div>
+              )}
+              {subView === "flash_offers_list" && (
+                <motion.div key="flash_list" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
+                  {renderFlashOffersList()}
                 </motion.div>
               )}
               {isAIOpen && (
