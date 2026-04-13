@@ -313,7 +313,12 @@ export default function OrdersMerchantTab() {
                          ['picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega'].includes(o.status) ? 'Saiu para Entrega' : 
                          o.status === 'pronto' ? 'Pronto p/ Retirada' : o.status}
                       </span>
-                      {o.payment_method === 'dinheiro' && <span className="text-[8px] font-black text-rose-500 uppercase mt-1">Dinheiro na Entrega</span>}
+                      {o.payment_method === 'dinheiro' && (
+                        <div className="flex flex-col items-end">
+                          <span className="text-[8px] font-black text-rose-500 uppercase mt-1">Dinheiro na Entrega</span>
+                          {o.notes && <span className="text-[8px] font-black text-amber-500 uppercase">{o.notes}</span>}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -718,9 +723,14 @@ export default function OrdersMerchantTab() {
                                   </div>
                                   <div className="flex items-end justify-between">
                                        <p className="text-2xl font-black text-emerald-500">R$ {((Number(selectedOrderDetails.total_price || 0) - Number(selectedOrderDetails.delivery_fee || 0) - Number(selectedOrderDetails.service_fee || 0)) * (1 - (merchantProfile?.commission_percent ?? appSettings?.appCommission ?? 12) / 100)).toFixed(2).replace('.', ',')}</p>
-                                      {selectedOrderDetails.payment_method === 'dinheiro' && (
-                                          <span className="px-2 py-1 bg-rose-100 text-rose-600 rounded-lg text-[8px] font-black uppercase mb-1">Receber no local</span>
-                                      )}
+                                       {selectedOrderDetails.payment_method === 'dinheiro' && (
+                                           <div className="flex flex-col items-end gap-1 mb-1">
+                                               <span className="px-2 py-1 bg-rose-100 text-rose-600 rounded-lg text-[8px] font-black uppercase">Receber no local</span>
+                                               {selectedOrderDetails.notes && (
+                                                   <span className="text-[10px] font-black text-rose-500 uppercase">{selectedOrderDetails.notes}</span>
+                                               )}
+                                           </div>
+                                       )}
                                   </div>
                               </div>
                           </div>

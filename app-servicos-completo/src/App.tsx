@@ -3963,10 +3963,10 @@ const navigateSubView = (target: string) => {
                       </p>
                       <div className="pt-3 flex items-center gap-3">
                         <button
-                          onClick={() => { setSelectedItem(order); setSubView("active_order"); }}
+                          onClick={() => { setSelectedItem(order); setSubView("order_detail"); }}
                           className="bg-yellow-400 text-black font-black px-6 py-3 rounded-xl shadow-[0_0_20px_rgba(255,215,9,0.25)] hover:opacity-90 active:scale-95 transition-all text-xs uppercase tracking-wider"
                         >
-                          Rastrear
+                          Detalhes
                         </button>
                         <button
                           onClick={() => { setSelectedItem(order); setSubView("order_chat"); }}
