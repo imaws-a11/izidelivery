@@ -382,12 +382,13 @@ export default function OrdersMerchantTab() {
                     <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
                       o.status === 'concluido' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
                       o.status === 'cancelado' ? 'bg-rose-50 text-rose-600 border-rose-100' : 
+                      ['novo', 'paid', 'pago', 'waiting_merchant'].includes(o.status) ? 'bg-amber-50 text-amber-600 border-amber-100' :
                       'bg-slate-50 text-slate-600 border-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
                     }`}>
                       {o.status === 'concluido' ? 'Concluído' : 
                        o.status === 'cancelado' ? 'Cancelado' : 
                        o.status === 'preparando' ? 'Em Preparo' : 
-                       o.status === 'pending' || o.status === 'accepted' ? 'Novo' : o.status}
+                       ['novo', 'paid', 'pago', 'waiting_merchant', 'pending', 'accepted'].includes(o.status) ? 'Novo' : o.status}
                     </span>
                   </td>
                   <td className="px-8 py-6 font-bold text-slate-400 text-xs">

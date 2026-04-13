@@ -29,18 +29,18 @@ serve(async (req) => {
     // OpenNode envia status: 'paid' quando confirmado
     if (payload.status !== 'paid') {
       console.log('Status não é "paid", ignorando:', payload.status)
-      return new Response(JSON.stringify({ message: 'Status ignorado' }), { 
+      return new Response(JSON.stringify({ message: `Status '${payload.status}' ignorado` }), { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       })
     }
 
-    const chargeId = payload.id
-    const orderIdPayload = payload.order_id // Opcional: ID que enviamos na criação
+    const openNodeChargeId = payload.id
+    const internalOrderId = payload.order_id // ID que enviamos na criação (order.id)
 
-    if (!chargeId) {
-      console.error('Charge ID ausente no payload')
-      return new Response(JSON.stringify({ error: 'Missing charge id' }), { 
+    if (!openNodeChargeId && !internalOrderId) {
+      console.error('Dados de identificação ausentes no payload (id/order_id)')
+      return new Response(JSON.stringify({ error: 'Missing charge/order identification' }), { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       })
@@ -57,31 +57,73 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false }
     })
 
-    // Tentar atualizar pelo payment_intent_id (Charge ID do OpenNode)
-    const { data: updateData, error: updateError } = await db
-      .from('orders_delivery')
-      .update({ 
-        payment_status: 'paid', 
-        status: 'novo',
-        updated_at: new Date().toISOString()
-      })
-      .eq('payment_intent_id', chargeId)
-      .select('id, service_type, user_id')
+    console.log(`[LN-WEBHOOK] Tentando confirmar pagamento. ChargeID: ${openNodeChargeId}, InternalID: ${internalOrderId}`);
+
+    // Tentativa 1: Localizar pelo payment_intent_id (ID da cobrança OpenNode)
+    let query = db.from('orders_delivery').update({ 
+      payment_status: 'paid', 
+      status: 'novo',
+      updated_at: new Date().toISOString()
+    })
+
+    if (openNodeChargeId) {
+      query = query.eq('payment_intent_id', openNodeChargeId)
+    } else {
+      query = query.eq('id', internalOrderId)
+    }
+
+    const { data: updateData, error: updateError } = await query.select('id, status, payment_status')
 
     if (updateError) {
       console.error('Erro ao atualizar pedido:', updateError)
       throw updateError
     }
 
-    console.log('Pedido confirmado com sucesso!', chargeId, updateData)
+    // Tentativa 2: Se falhou na primeira e temos o internalOrderId, tentamos por ele diretamente caso o intent_id não tenha batido
+    if ((!updateData || updateData.length === 0) && internalOrderId && openNodeChargeId) {
+       console.log(`[LN-WEBHOOK] IntentID não encontrado, tentando por ID interno: ${internalOrderId}`);
+       const { data: retryData, error: retryError } = await db
+         .from('orders_delivery')
+         .update({ 
+           payment_status: 'paid', 
+           status: 'novo',
+           payment_intent_id: openNodeChargeId, // Força o vínculo se não estava vinculado
+           updated_at: new Date().toISOString()
+         })
+         .eq('id', internalOrderId)
+         .select('id, status')
+       
+       if (retryError) {
+         console.error('Erro no retry do webhook:', retryError)
+         throw retryError
+       }
 
-    return new Response(JSON.stringify({ message: 'OK', updated: updateData?.length || 0 }), { 
+       if (retryData && retryData.length > 0) {
+         console.log('Pedido confirmado via ID interno com sucesso!', internalOrderId)
+         return new Response(JSON.stringify({ message: 'OK', method: 'retry_internal_id', updated: 1 }), { 
+           status: 200, 
+           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+         })
+       }
+    }
+
+    if (!updateData || updateData.length === 0) {
+      console.warn(`[LN-WEBHOOK] Nenhum pedido encontrado para atualizar. IDs: ${openNodeChargeId} / ${internalOrderId}`);
+      return new Response(JSON.stringify({ message: 'No order found', updated: 0 }), { 
+        status: 200, // Retornamos 200 para o OpenNode não ficar tentando reenviar se o pedido sumiu
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
+    }
+
+    console.log('Pedido confirmado via IntentID com sucesso!', openNodeChargeId, updateData)
+
+    return new Response(JSON.stringify({ message: 'OK', method: 'intent_id', updated: updateData.length }), { 
       status: 200, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     })
 
   } catch (err: any) {
-    console.error('Erro no lightning-webhook:', err.message)
+    console.error('Erro crítico no lightning-webhook:', err.message)
     return new Response(JSON.stringify({ error: err.message }), { 
       status: 500, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
