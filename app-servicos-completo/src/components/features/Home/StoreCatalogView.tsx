@@ -9,6 +9,8 @@ interface StoreCatalogViewProps {
   handleAddToCart: (item: any, e?: any) => void;
   navigateSubView: (view: any) => void;
   cart: any[];
+  iziCoinRate?: number;
+  isIziBlack?: boolean;
 }
 
 export const StoreCatalogView = ({
@@ -19,6 +21,8 @@ export const StoreCatalogView = ({
   handleAddToCart,
   navigateSubView,
   cart,
+  iziCoinRate = 0,
+  isIziBlack = false,
 }: StoreCatalogViewProps) => {
   const shop = selectedShop || { name: "Loja", rating: "5.0", time: "30 min", freeDelivery: false, img: "", banner: "", categories: [] };
   
@@ -96,7 +100,7 @@ export const StoreCatalogView = ({
         <button onClick={() => setSubView("none")} className="pointer-events-auto flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/10 active:scale-95 transition-all">
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
-        <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="pointer-events-auto relative flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/10 active:scale-95 transition-all group">
+        <button onClick={() => navigateSubView("cart")} className="pointer-events-auto relative flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/10 active:scale-95 transition-all group">
           <span className="material-symbols-outlined group-hover:text-emerald-400 transition-colors">shopping_bag</span>
           {cart.length > 0 && <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-black animate-pulse">{cart.length}</span>}
         </button>
@@ -223,6 +227,12 @@ export const StoreCatalogView = ({
             <div className="flex flex-col">
               <span className="text-[9px] uppercase tracking-[0.3em] text-emerald-400/60 font-black mb-0.5">Sua Sacola</span>
               <span className="text-white font-black text-sm italic">{cart.length} {cart.length === 1 ? "Item" : "Itens"}</span>
+              {iziCoinRate > 0 && (
+                <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>monetization_on</span>
+                  +{Math.floor(cart.reduce((a, b) => a + (b.price || 0), 0) * (isIziBlack ? iziCoinRate * 2 : iziCoinRate))} Coins
+                </span>
+              )}
             </div>
             <button onClick={() => navigateSubView("cart")}
               className="flex items-center gap-4 bg-emerald-400 text-black px-6 py-3 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(52,211,153,0.3)] active:scale-95 transition-all">

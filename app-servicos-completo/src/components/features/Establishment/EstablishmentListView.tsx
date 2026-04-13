@@ -1,4 +1,5 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef } from "react";
 
 import type { Establishment } from "../../../types";
 import { MerchantCard } from "./MerchantCard";
@@ -32,8 +33,20 @@ export const EstablishmentListView = ({
   navigateSubView,
   backView = "none"
 }: EstablishmentListViewProps) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
-    <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
+    <div 
+      ref={scrollContainerRef}
+      className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10"
+    >
       <header className="sticky top-0 z-50 px-5 py-3 bg-black/40 backdrop-blur-2xl border-b border-white/5 transition-all">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
 interface FlashOffersListViewProps {
@@ -20,8 +20,20 @@ export const FlashOffersListView: React.FC<FlashOffersListViewProps> = ({
   showToast,
   setShowMasterPerks
 }) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
-    <div className="bg-black text-zinc-100 absolute inset-0 z-[120] flex flex-col hide-scrollbar overflow-y-auto pb-32">
+    <div 
+      ref={scrollContainerRef}
+      className="bg-black text-zinc-100 absolute inset-0 z-[120] flex flex-col hide-scrollbar overflow-y-auto pb-10"
+    >
       {/* HEADER PREMIUM */}
       <header className="sticky top-0 z-[130] bg-black/80 backdrop-blur-2xl border-b border-white/5 p-6 flex items-center gap-6">
          <button 

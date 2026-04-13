@@ -9,6 +9,8 @@ interface RestaurantMenuViewProps {
   handleAddToCart: (item: any, e?: any) => void;
   navigateSubView: (view: any) => void;
   cart: any[];
+  iziCoinRate?: number;
+  isIziBlack?: boolean;
 }
 
 export const RestaurantMenuView = ({
@@ -19,6 +21,8 @@ export const RestaurantMenuView = ({
   handleAddToCart,
   navigateSubView,
   cart,
+  iziCoinRate = 0,
+  isIziBlack = false,
 }: RestaurantMenuViewProps) => {
   const shop = selectedShop || {
     name: "Gourmet Lab",
@@ -178,6 +182,12 @@ export const RestaurantMenuView = ({
             <div className="flex flex-col">
               <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black">Sua Sacola</span>
               <span className="text-white font-black text-sm">{cart.length} {cart.length === 1 ? "item" : "itens"}</span>
+              {iziCoinRate > 0 && (
+                <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>monetization_on</span>
+                  +{Math.floor(cart.reduce((a, b) => a + (b.price || 0), 0) * (isIziBlack ? iziCoinRate * 2 : iziCoinRate))} Coins
+                </span>
+              )}
             </div>
             <button
               onClick={() => navigateSubView("cart")}

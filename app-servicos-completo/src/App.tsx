@@ -144,6 +144,16 @@ function App() {
     | "izi_coin_tracking"
     | "flash_offers_list"
   >("none");
+
+  // Reset scroll on subView change
+  useEffect(() => {
+    if (subView !== "none") {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+    }
+  }, [subView]);
+
   const previousSubViewRef = useRef<string>("none");
   const [iziBlackOrigin, setIziBlackOrigin] = useState<"home" | "checkout">("home");
   const [iziBlackStep, setIziBlackStep] = useState<"info" | "payment" | "pix_qr" | "success">("info");
@@ -1834,6 +1844,37 @@ function App() {
        return;
     }
 
+    // 1. Verificação de Uso Único para Izi Flash (por CPF/ID)
+    const flashOfferItem = cart.find(i => i.is_flash_offer && i.flash_offer_id);
+    if (flashOfferItem) {
+      const trackedCpf = getBenefitTrackingCpf();
+      if (userId || trackedCpf) {
+          const filters = [];
+          if (userId) filters.push(`user_id.eq.${userId}`);
+          if (trackedCpf) filters.push(`cpf.eq.${trackedCpf}`);
+
+          const { data: redemptions } = await supabase
+            .from("benefit_redemptions_delivery")
+            .select("id")
+            .eq("source_id", flashOfferItem.flash_offer_id)
+            .eq("source_type", "flash_offer")
+            .or(filters.join(","));
+
+          if (redemptions && redemptions.length > 0) {
+            toastError("Você já aproveitou esta oferta Izi Flash (uso único por CPF).");
+            setIsLoading(false);
+            return;
+          }
+      }
+      
+      // Também verifica se a oferta ainda é válida (tempo)
+      if (flashOfferItem.expires_at && new Date(flashOfferItem.expires_at) < new Date()) {
+         toastError("Esta oferta Izi Flash expirou. Remova-a da sacola para continuar.");
+         setIsLoading(false);
+         return;
+      }
+    }
+
     try {
       setIsLoading(true);
 
@@ -2216,7 +2257,7 @@ const navigateSubView = (target: string) => {
     // AI Dynamic Suggestions Cycle
     const aiTips = [
       "Percebi que você gosta de culinária japonesa. Que tal conferir as ofertas do Sushi Zen?",
-      "Hoje é sexta! Temos cupons especiais de 20% em bebidas para membros Izi Black. ÃÆ’Â°Ãâ€¦Â¸Ãâ€šÂÃâ€šÂ»",
+      "Hoje é sexta! Temos cupons especiais de 20% em bebidas para membros Izi Black. ÃÆ’Â°Ãâ€¦Â¸Ãâ€šÂ Ãâ€šÂ»",
       "Baseado no seu histórico, você costuma pedir em mercados ÃÆ’ s 19h. Deseja agendar suas compras?",
       "O trÃÂ¢nsito está pesado hoje. Sugiro usar o Mototáxi para chegar mais rápido ao seu destino.",
       "Você está a apenas 250 XP de subir para o nível 13! Que tal um pedido extra hoje?"
@@ -2929,7 +2970,7 @@ const navigateSubView = (target: string) => {
     const specials: any[] = [];
 
     return (
-      <div className="absolute inset-0 z-40 bg-black text-white text-zinc-100 flex flex-col hide-scrollbar overflow-y-auto pb-40">
+      <div className="absolute inset-0 z-40 bg-black text-white text-zinc-100 flex flex-col hide-scrollbar overflow-y-auto pb-10">
         <header className="sticky top-0 z-50 bg-black/80  backdrop-blur-3xl border-b border-slate-200/50 border-zinc-800/50 pb-6 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.05)]">
           <div className="flex items-center p-6 pb-2 justify-between">
             <div className="flex items-center gap-5">
@@ -3023,7 +3064,7 @@ const navigateSubView = (target: string) => {
     }
 
     return (
-      <div className="absolute inset-0 z-[100] bg-zinc-950 text-white flex flex-col hide-scrollbar overflow-y-auto pb-40">
+      <div className="absolute inset-0 z-[100] bg-zinc-950 text-white flex flex-col hide-scrollbar overflow-y-auto pb-10">
         {/* Luxury Background Effects */}
         <div className="fixed inset-0 pointer-events-none z-0">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 size-[600px] bg-yellow-400/[0.02] blur-[120px] rounded-full -translate-y-1/2" />
@@ -3237,7 +3278,7 @@ const navigateSubView = (target: string) => {
   const renderBeverageOffers = () => {
     const deals = beverageOffers;
     return (
-      <div className="bg-black text-zinc-100 absolute inset-0 z-50 bg-zinc-950 text-white flex flex-col hide-scrollbar overflow-y-auto pb-32">
+      <div className="bg-black text-zinc-100 absolute inset-0 z-50 bg-zinc-950 text-white flex flex-col hide-scrollbar overflow-y-auto pb-10">
         <header className="sticky top-0 z-[60] bg-zinc-950/80 backdrop-blur-2xl border-b border-white/10 p-6 flex items-center gap-6">
            <button 
             onClick={() => setSubView("beverages_list")}
@@ -3249,7 +3290,7 @@ const navigateSubView = (target: string) => {
             <h1 className="text-2xl font-black tracking-tighter leading-none mb-1">Ofertas Geladas</h1>
             <p className="text-[10px] text-yellow-400 font-black uppercase tracking-[0.2em]">Seleção Premium de Ofertas</p>
           </div>
-          <button onClick={() => cart.length > 0 && navigateSubView("cart")} className="relative size-12 rounded-2xl bg-zinc-900/5 border border-white/10 flex items-center justify-center group active:scale-95 transition-all">
+          <button onClick={() => navigateSubView("cart")} className="relative size-12 rounded-2xl bg-zinc-900/5 border border-white/10 flex items-center justify-center group active:scale-95 transition-all">
             <Icon name="shopping_bag" />
             {cart.length > 0 && <span className="absolute -top-1.5 -right-1.5 size-6 bg-yellow-400 text-white text-[10px] font-black rounded-full flex items-center justify-center ring-4 ring-slate-950 shadow-xl">{cart.length}</span>}
           </button>
@@ -3385,6 +3426,8 @@ const navigateSubView = (target: string) => {
         handleAddToCart={handleAddToCart}
         navigateSubView={navigateSubView}
         cart={cart}
+        iziCoinRate={globalSettings?.izi_coin_rate || 1.0}
+        isIziBlack={isIziBlackMembership}
       />
     );
   };

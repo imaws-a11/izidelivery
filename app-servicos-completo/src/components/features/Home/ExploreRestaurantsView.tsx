@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MerchantCard } from "../Establishment/MerchantCard";
 
@@ -35,6 +35,14 @@ export const ExploreRestaurantsView = ({
   isIziBlackMembership = false
 }: ExploreRestaurantsViewProps) => {
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+  }, []);
 
   const getCategoryImg = (name: string) => {
     return "";
@@ -100,7 +108,10 @@ export const ExploreRestaurantsView = ({
   }, [establishments, searchQuery, selectedCategory]);
 
   return (
-    <div className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-40">
+    <div 
+      ref={scrollContainerRef}
+      className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10"
+    >
       {/* HEADER PREMIUM - ILHA FLUTUANTE */}
       <header className="fixed top-4 inset-x-4 z-[110] flex flex-col bg-black/60 backdrop-blur-3xl border border-white/5 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4">
@@ -120,7 +131,7 @@ export const ExploreRestaurantsView = ({
             </div>
           </div>
           <button 
-            onClick={() => cart.length > 0 && navigateSubView("cart")} 
+            onClick={() => navigateSubView("cart")} 
             className="group relative size-11 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center active:scale-90 transition-all hover:bg-zinc-800"
           >
             <span className="material-symbols-outlined text-white text-[20px] group-hover:text-yellow-400 transition-colors">shopping_bag</span>
