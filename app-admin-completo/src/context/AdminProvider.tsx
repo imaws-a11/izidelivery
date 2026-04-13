@@ -78,6 +78,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     baseValues: {
       food_min: '7,00',
       food_km: '1,50',
+      market_min: '7,00',
+      market_km: '1,50',
+      pharmacy_min: '7,00',
+      pharmacy_km: '1,50',
+      beverages_min: '7,00',
+      beverages_km: '1,50',
       mototaxi_min: '6,00',
       mototaxi_km: '2,50',
       carro_min: '14,00',
@@ -1160,35 +1166,19 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           weather: weatherRulesRow?.metadata ? (weatherRulesRow.metadata as any) : prev.weather,
           equilibrium: equilibriumRow?.metadata ? (equilibriumRow.metadata as any) : prev.equilibrium,
           flowControl: flowControlRow?.metadata ? (flowControlRow.metadata as any) : prev.flowControl,
-          baseValues: baseValuesRow?.metadata ? {
-            food_min: (baseValuesRow.metadata as any).food_min?.toString().replace('.', ',') || '7,00',
-            food_km: (baseValuesRow.metadata as any).food_km?.toString().replace('.', ',') || '1,50',
-            mototaxi_min: (baseValuesRow.metadata as any).mototaxi_min?.toString().replace('.', ',') || '6,00',
-            mototaxi_km: (baseValuesRow.metadata as any).mototaxi_km?.toString().replace('.', ',') || '2,50',
-            carro_min: (baseValuesRow.metadata as any).carro_min?.toString().replace('.', ',') || '14,00',
-            carro_km: (baseValuesRow.metadata as any).carro_km?.toString().replace('.', ',') || '4,50',
-            van_min: (baseValuesRow.metadata as any).van_min?.toString().replace('.', ',') || '20,00',
-            van_km: (baseValuesRow.metadata as any).van_km?.toString().replace('.', ',') || '6,00',
-            utilitario_min: (baseValuesRow.metadata as any).utilitario_min?.toString().replace('.', ',') || '12,00',
-            utilitario_km: (baseValuesRow.metadata as any).utilitario_km?.toString().replace('.', ',') || '4,00',
-            logistica_min: (baseValuesRow.metadata as any).logistica_min?.toString().replace('.', ',') || '45,00',
-            logistica_km: (baseValuesRow.metadata as any).logistica_km?.toString().replace('.', ',') || '8,00',
-            logistica_stairs: (baseValuesRow.metadata as any).logistica_stairs?.toString().replace('.', ',') || '30,00',
-            logistica_helper: (baseValuesRow.metadata as any).logistica_helper?.toString().replace('.', ',') || '35,00',
-            fiorino_min: (baseValuesRow.metadata as any).fiorino_min?.toString().replace('.', ',') || '40,00',
-            fiorino_km: (baseValuesRow.metadata as any).fiorino_km?.toString().replace('.', ',') || '4,00',
-            caminhonete_min: (baseValuesRow.metadata as any).caminhonete_min?.toString().replace('.', ',') || '50,00',
-            caminhonete_km: (baseValuesRow.metadata as any).caminhonete_km?.toString().replace('.', ',') || '5,00',
-            bau_p_min: (baseValuesRow.metadata as any).bau_p_min?.toString().replace('.', ',') || '60,00',
-            bau_p_km: (baseValuesRow.metadata as any).bau_p_km?.toString().replace('.', ',') || '6,00',
-            bau_m_min: (baseValuesRow.metadata as any).bau_m_min?.toString().replace('.', ',') || '80,00',
-            bau_m_km: (baseValuesRow.metadata as any).bau_m_km?.toString().replace('.', ',') || '8,00',
-            bau_g_min: (baseValuesRow.metadata as any).bau_g_min?.toString().replace('.', ',') || '100,00',
-            bau_g_km: (baseValuesRow.metadata as any).bau_g_km?.toString().replace('.', ',') || '10,00',
-            aberto_min: (baseValuesRow.metadata as any).aberto_min?.toString().replace('.', ',') || '50,00',
-            aberto_km: (baseValuesRow.metadata as any).aberto_km?.toString().replace('.', ',') || '5,00',
-            isDynamicActive: (baseValuesRow.metadata as any).isDynamicActive ?? true
-          } : prev.baseValues,
+          baseValues: baseValuesRow?.metadata ? (() => {
+            const metadata = baseValuesRow.metadata as any;
+            const merged = { ...prev.baseValues };
+            Object.keys(metadata).forEach(key => {
+              const val = metadata[key];
+              if (typeof val === 'number') {
+                merged[key] = val.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+              } else {
+                merged[key] = val;
+              }
+            });
+            return merged;
+          })() : prev.baseValues,
           shippingPriorities: shippingPrioritiesRow?.metadata ? (shippingPrioritiesRow.metadata as any) : prev.shippingPriorities,
         }));
       }
@@ -1999,23 +1989,15 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const saveDynamicRates = useCallback(async () => {
     setIsSaving(true);
     try {
-      const cleanBaseValues = {
-        ...dynamicRatesState.baseValues,
-        food_min: parseFloat(dynamicRatesState.baseValues.food_min.replace(',', '.')),
-        food_km: parseFloat(dynamicRatesState.baseValues.food_km.replace(',', '.')),
-        mototaxi_min: parseFloat(dynamicRatesState.baseValues.mototaxi_min.replace(',', '.')),
-        mototaxi_km: parseFloat(dynamicRatesState.baseValues.mototaxi_km.replace(',', '.')),
-        carro_min: parseFloat(dynamicRatesState.baseValues.carro_min.replace(',', '.')),
-        carro_km: parseFloat(dynamicRatesState.baseValues.carro_km.replace(',', '.')),
-        van_min: parseFloat(dynamicRatesState.baseValues.van_min.replace(',', '.')),
-        van_km: parseFloat(dynamicRatesState.baseValues.van_km.replace(',', '.')),
-        utilitario_min: parseFloat(dynamicRatesState.baseValues.utilitario_min.replace(',', '.')),
-        utilitario_km: parseFloat(dynamicRatesState.baseValues.utilitario_km.replace(',', '.')),
-        logistica_min: parseFloat(dynamicRatesState.baseValues.logistica_min.replace(',', '.')),
-        logistica_km: parseFloat(dynamicRatesState.baseValues.logistica_km.replace(',', '.')),
-        logistica_stairs: parseFloat((dynamicRatesState.baseValues.logistica_stairs as string || '30').replace(',', '.')),
-        logistica_helper: parseFloat((dynamicRatesState.baseValues.logistica_helper as string || '35').replace(',', '.')),
-      };
+      const cleanBaseValues: any = {};
+      Object.keys(dynamicRatesState.baseValues).forEach(key => {
+        const val = (dynamicRatesState.baseValues as any)[key];
+        if (typeof val === 'string' && key !== 'isDynamicActive') {
+          cleanBaseValues[key] = parseFloat(val.replace(',', '.'));
+        } else {
+          cleanBaseValues[key] = val;
+        }
+      });
 
       const rows = [
         { type: 'base_values', metadata: cleanBaseValues },

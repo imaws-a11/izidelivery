@@ -596,22 +596,13 @@ function App() {
         }
     }, [isOnline]);
 
-    const getNetEarnings = useCallback((order: any) => {
+    const getGrossEarnings = useCallback((order: any) => {
         if (!order) return 0;
         
         const rawType = order.service_type || order.type || 'generic';
         const type = normalizeServiceType(rawType);
         
-        const deliveryCommission = Number(appSettings?.driverFreightCommission ?? appSettings?.appCommission ?? 7);
-        const privateDriverCommission = Number(appSettings?.privateDriverCommission ?? appSettings?.driverFreightCommission ?? appSettings?.appCommission ?? 7);
-        
-        const isMobility = ['mototaxi', 'car_ride', 'frete', 'logistica', 'motorista_particular', 'van', 'utilitario'].includes(type);
-        const isPrivateDriver = ['car_ride', 'motorista_particular'].includes(type);
-        
-        let driverBaseAmount = 0;
         let minGuaranteed = 0;
-
-        // 1. Determinar o mínimo garantido baseado no tipo de serviço e taxas dinâmicas
         if (type === 'restaurant') {
             minGuaranteed = Number(dynamicRates?.food_min || appSettings?.baseFee || 7);
         } else if (type === 'market') {
@@ -622,30 +613,42 @@ function App() {
             minGuaranteed = Number(dynamicRates?.beverages_min || dynamicRates?.food_min || appSettings?.baseFee || 7);
         } else if (type === 'mototaxi') {
             minGuaranteed = Number(dynamicRates?.mototaxi_min || 6);
-        } else if (isPrivateDriver) {
+        } else if (['car_ride', 'motorista_particular'].includes(type)) {
             minGuaranteed = Number(dynamicRates?.carro_min || 14);
         } else {
             minGuaranteed = Number(appSettings?.baseFee || 7);
         }
 
-        // 2. Definir o montante base sobre o qual a comissão é calculada
+        const isMobility = ['mototaxi', 'car_ride', 'frete', 'logistica', 'motorista_particular', 'van', 'utilitario', 'motoboy'].includes(type);
+        
+        let base = 0;
         if (isMobility) {
-            driverBaseAmount = Number(order.delivery_fee || order.total_price || order.price || 0);
+            base = Number(order.delivery_fee || order.total_price || order.price || 0);
         } else {
             const deliveryFee = Number(order.delivery_fee || 0);
-            // GARANTIA DE MÍNIMO: Se a taxa for menor que o mínimo configurado, assume o mínimo
-            driverBaseAmount = Math.max(deliveryFee, minGuaranteed);
+            base = Math.max(deliveryFee, minGuaranteed);
         }
 
-        // Se por algum motivo o base amount ainda for 0, usa o teto global
-        if (driverBaseAmount <= 0) driverBaseAmount = Number(appSettings?.baseFee || 7);
+        if (base <= 0) base = Number(appSettings?.baseFee || 7);
+        return Number(base.toFixed(2));
+    }, [appSettings, dynamicRates]);
 
-        // 3. Aplicar Comissão
+    const getNetEarnings = useCallback((order: any) => {
+        if (!order) return 0;
+        
+        const rawType = order.service_type || order.type || 'generic';
+        const type = normalizeServiceType(rawType);
+        
+        const deliveryCommission = Number(appSettings?.driverFreightCommission ?? appSettings?.appCommission ?? 7);
+        const privateDriverCommission = Number(appSettings?.privateDriverCommission ?? appSettings?.driverFreightCommission ?? appSettings?.appCommission ?? 7);
+        const isPrivateDriver = ['car_ride', 'motorista_particular'].includes(type);
+        
         const commission = isPrivateDriver ? privateDriverCommission : deliveryCommission;
+        const driverBaseAmount = getGrossEarnings(order);
         const finalNet = driverBaseAmount * (1 - (commission / 100));
 
         return Number(finalNet.toFixed(2));
-    }, [appSettings, dynamicRates]);
+    }, [appSettings, dynamicRates, getGrossEarnings]);
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
@@ -2566,8 +2569,8 @@ function App() {
                         const formattedTime = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
                         return (
-                            <motion.div onClick={() => setSelectedHistoryOrder(order)} key={order.id || i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-white/[0.03] border border-white/5 rounded-[24px] p-5 flex items-center gap-4 cursor-pointer active:scale-95 transition-all">
-                                <div className={`size-12 rounded-[18px] ${details.bg} ${details.color} flex items-center justify-center border border-current/10 shrink-0`}><Icon name={details.icon} className="text-2xl" /></div>
+                            <motion.div onClick={() => setSelectedHistoryOrder(order)} key={order.id || i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="clay-card rounded-[24px] p-5 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-all">
+                                <div className={`size-12 rounded-[18px] ${details.bg} ${details.color} flex items-center justify-center border border-current/10 shrink-0 shadow-[inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]`}><Icon name={details.icon} className="text-2xl" /></div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-black text-white truncate">{order.destination?.split(',')[0] || 'Destino ignorado'}</p>
                                     <div className="flex items-center gap-2 mt-0.5">
@@ -2600,7 +2603,7 @@ function App() {
                             animate={{ scale: 1, opacity: 1, y: 0 }} 
                             exit={{ scale: 0.9, opacity: 0, y: 20 }} 
                             onClick={e => e.stopPropagation()}
-                            className="bg-[#0f172a] border border-white/10 p-7 rounded-[40px] w-full max-w-sm space-y-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden cursor-default"
+                            className="clay-card-dark p-7 w-full max-w-sm space-y-6 relative overflow-hidden cursor-default"
                         >
                            <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
                                <Icon name={getTypeDetails(selectedHistoryOrder.type).icon} className="text-[140px] text-white -rotate-12" />
@@ -2633,17 +2636,53 @@ function App() {
                                    <p className="text-sm text-white font-semibold leading-relaxed">{selectedHistoryOrder.destination || selectedHistoryOrder.delivery_address || 'Destino Omitido'}</p>
                                </div>
                            </div>
-                           
-                           <div className="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-[24px] p-5 flex justify-between items-center relative overflow-hidden">
-                               <div className="relative z-10">
-                                   <p className="text-[9px] font-black text-primary opacity-80 uppercase tracking-widest mb-1">Seu Ganho Líquido</p>
-                                   <div className="flex items-baseline gap-1">
-                                       <span className="text-sm font-black text-white/50">R$</span>
-                                       <p className="text-3xl font-black text-white">{getNetEarnings(selectedHistoryOrder).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+
+                           <div className="grid grid-cols-2 gap-3">
+                               <div className="bg-white/[0.03] border border-white/5 rounded-2xl px-5 py-3 shadow-[inset_1px_1px_4px_rgba(255,255,255,0.02)]">
+                                   <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">Distância Percorrida</p>
+                                   <div className="flex items-center gap-2">
+                                       <Icon name="route" size={14} className="text-primary" />
+                                       <span className="text-sm font-bold text-white">{selectedHistoryOrder.distance || '---'}</span>
                                    </div>
                                </div>
-                               <div className="size-12 rounded-[18px] bg-primary/20 text-primary flex items-center justify-center shrink-0 relative z-10">
-                                   <Icon name="payments" className="text-2xl" />
+                               <div className="bg-white/[0.03] border border-white/5 rounded-2xl px-5 py-3 shadow-[inset_1px_1px_4px_rgba(255,255,255,0.02)]">
+                                   <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">Meio de Pagamento</p>
+                                   <div className="flex items-center gap-2">
+                                       <Icon name={selectedHistoryOrder.payment_method === 'dinheiro' ? 'payments' : 'account_balance_wallet'} size={14} className="text-primary" />
+                                       <span className="text-sm font-bold text-white capitalize">{selectedHistoryOrder.payment_method?.replace('_', ' ') || '---'}</span>
+                                   </div>
+                               </div>
+                           </div>
+                           
+                           <div className="bg-white/[0.02] border border-white/5 rounded-[32px] p-6 space-y-4 shadow-[inset_2px_2px_8px_rgba(255,255,255,0.02),inset_-2px_-2px_8px_rgba(0,0,0,0.2)]">
+                               <div className="flex justify-between items-center text-xs">
+                                   <div className="flex items-center gap-2">
+                                       <div className="size-1.5 rounded-full bg-white/20" />
+                                       <span className="font-bold text-white/40 uppercase tracking-widest">Valor Base da Corrida</span>
+                                   </div>
+                                   <span className="font-black text-white/80">R$ {getGrossEarnings(selectedHistoryOrder).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                               </div>
+                               <div className="flex justify-between items-center text-xs">
+                                   <div className="flex items-center gap-2">
+                                       <div className="size-1.5 rounded-full bg-rose-500/30" />
+                                       <span className="font-bold text-rose-400/60 uppercase tracking-widest">Taxa de Intermediação</span>
+                                   </div>
+                                   <span className="font-black text-rose-400/80">- R$ {(getGrossEarnings(selectedHistoryOrder) - getNetEarnings(selectedHistoryOrder)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                               </div>
+                               
+                               <div className="h-px bg-white/5 mx-2" />
+
+                               <div className="flex justify-between items-center pt-2">
+                                   <div className="space-y-1">
+                                       <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Crédito em Carteira</p>
+                                       <div className="flex items-baseline gap-1">
+                                           <span className="text-sm font-black text-primary/60">R$</span>
+                                           <p className="text-3xl font-black text-white drop-shadow-[0_0_10px_rgba(255,217,0,0.3)]">{getNetEarnings(selectedHistoryOrder).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                       </div>
+                                   </div>
+                                   <div className="size-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-[inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]">
+                                       <Icon name="verified" size={28} />
+                                   </div>
                                </div>
                            </div>
 
