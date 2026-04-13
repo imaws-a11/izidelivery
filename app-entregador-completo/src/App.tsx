@@ -3146,14 +3146,27 @@ function App() {
                     style={{ height: "100dvh" }}
                 >
                     <div 
-                        className="flex justify-center pt-4 pb-2 cursor-grab active:cursor-grabbing"
+                        className="flex items-center justify-between px-8 pt-5 pb-3 cursor-grab active:cursor-grabbing border-b border-white/5"
                         onClick={() => {
                             if (missionSheetState === "collapsed") setMissionSheetState("half");
                             else if (missionSheetState === "half") setMissionSheetState("expanded");
                             else setMissionSheetState("collapsed");
                         }}
                     >
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTab('dashboard');
+                            }}
+                            className="bg-zinc-800/50 border border-white/5 px-4 h-9 rounded-2xl flex items-center justify-center gap-2 active:scale-90 transition-all shadow-inner"
+                        >
+                            <span className="material-symbols-outlined text-white/50 text-[18px]">arrow_back</span>
+                            <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Minimizar</span>
+                        </button>
+                        
                         <div className="w-12 h-1.5 bg-white/10 rounded-full" />
+                        
+                        <div className="size-8" /> {/* Spacer para manter o handle no centro */}
                     </div>
 
                     <div className="p-8 pb-40 overflow-y-auto no-scrollbar flex-1 space-y-8">
@@ -3162,23 +3175,30 @@ function App() {
                             <motion.div 
                                 initial={{ scale: 0.9, opacity: 0 }} 
                                 animate={{ scale: 1, opacity: 1 }}
-                                className="bg-emerald-500/10 border border-emerald-500/20 rounded-[35px] p-6 flex items-center gap-5 shadow-[0_0_40px_rgba(16,185,129,0.1)]"
+                                className="bg-gradient-to-r from-emerald-500 to-teal-500 p-[1px] rounded-[35px] shadow-[0_20px_40px_rgba(16,185,129,0.2)]"
                             >
-                                <div className="size-14 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]">
-                                    <Icon name="check" size={24} className="text-white" />
-                                </div>
-                                <div>
-                                    <h4 className="text-base font-black text-emerald-400 uppercase tracking-tight">Pedido está Pronto!</h4>
-                                    <p className="text-[10px] font-bold text-emerald-500/60 uppercase tracking-widest">O lojista confirmou o preparo</p>
+                                <div className="bg-[#030712]/90 backdrop-blur-xl rounded-[34px] p-6 flex items-center gap-5">
+                                    <div className="size-14 rounded-[22px] bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center relative overflow-hidden">
+                                        <motion.div 
+                                            animate={{ x: [-40, 60] }}
+                                            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                                            className="absolute inset-0 w-8 bg-white/20 skew-x-12 blur-md"
+                                        />
+                                        <Icon name="check" size={24} className="text-black font-black" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-base font-black text-emerald-400 uppercase tracking-tight">Pedido está Pronto!</h4>
+                                        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Pode retirar no estabelecimento</p>
+                                    </div>
                                 </div>
                             </motion.div>
                         )}
 
                         {/* Resumo Financeiro e Cliente - CLAY CARD */}
-                        <div className="bg-zinc-900 border-none rounded-[40px] p-8 space-y-6 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
+                        <div className="bg-white/5 border border-white/10 backdrop-blur-md rounded-[40px] p-8 space-y-6 shadow-2xl">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
-                                    <div className="size-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
+                                    <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
                                         <Icon name="person" size={28} />
                                     </div>
                                     <div>
@@ -3188,24 +3208,26 @@ function App() {
                                 </div>
                                 <div className="text-right">
                                     <p className="text-[9px] font-black text-primary uppercase tracking-widest">Ganho Líquido</p>
-                                    <p className="text-2xl font-black text-primary">R$ {getNetEarnings(activeMission).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                    <p className="text-2xl font-black text-white italic">R$ {getNetEarnings(activeMission).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                 </div>
                             </div>
 
-                            <div className={`p-6 rounded-[30px] border-none shadow-[inset_4px_4px_12px_rgba(255,255,255,0.05),inset_-4px_-4px_12px_rgba(0,0,0,0.3)] ${
+                            <div className={`p-6 rounded-[30px] border border-white/5 shadow-inner ${
                                 activeMission.payment_method === 'dinheiro' || activeMission.payment_method === 'cartao_maquininha' 
-                                ? 'bg-amber-500/5' 
-                                : 'bg-emerald-500/5'
+                                ? 'bg-amber-500/10' 
+                                : 'bg-emerald-500/10'
                             }`}>
                                 <div className="flex items-start gap-4">
-                                    <Icon name={activeMission.payment_method === 'dinheiro' ? 'payments' : 'account_balance_wallet'} className={activeMission.payment_method === 'dinheiro' || activeMission.payment_method === 'cartao_maquininha' ? 'text-amber-400' : 'text-emerald-400'} size={24} />
+                                    <div className={`size-10 rounded-xl flex items-center justify-center ${activeMission.payment_method === 'dinheiro' || activeMission.payment_method === 'cartao_maquininha' ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                                        <Icon name={activeMission.payment_method === 'dinheiro' ? 'payments' : 'account_balance_wallet'} size={20} />
+                                    </div>
                                     <div className="flex-1">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Fluxo de Cobrança</p>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Fluxo de Cobrança</p>
                                         <h4 className="text-sm font-black text-white mt-1 uppercase italic tracking-tight">
                                             {activeMission.payment_method === 'dinheiro' 
-                                                ? `Receber R$ ${activeMission.total_price?.toFixed(2)} em DINHEIRO` 
+                                                ? <><span className="text-amber-400">Receber R$ {activeMission.total_price?.toFixed(2)}</span> em DINHEIRO</>
                                                 : activeMission.payment_method === 'cartao_maquininha'
-                                                ? `Passar R$ ${activeMission.total_price?.toFixed(2)} NA MAQUININHA`
+                                                ? <><span className="text-amber-400">Passar R$ {activeMission.total_price?.toFixed(2)}</span> NA MAQUININHA</>
                                                 : 'Pagamento Digital Confirmado'}
                                         </h4>
                                     </div>
@@ -3213,30 +3235,40 @@ function App() {
                             </div>
                         </div>
 
-                        {/* Rota Detalhada - CLAY CARD */}
-                        <div className="bg-zinc-900 border-none rounded-[40px] p-8 space-y-6 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
+                        {/* Rota Detalhada - GLASS CARD PREMIUM */}
+                        <div className="bg-white/[0.03] border border-white/10 backdrop-blur-xl rounded-[40px] p-8 space-y-8 shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                                <Icon name="explore" size={120} className="text-primary -rotate-12" />
+                            </div>
+
                             <div className="relative">
-                                <div className="absolute left-[11px] top-6 bottom-6 w-[2px] bg-gradient-to-b from-blue-500/20 via-primary/20 to-primary/40" />
+                                <div className="absolute left-[13px] top-8 bottom-8 w-[2px] bg-gradient-to-b from-blue-500/20 via-primary/20 to-primary/40 dashed" />
                                 
-                                <div className="flex items-start gap-5 relative z-10">
-                                    <div className={`mt-1.5 size-6 rounded-full flex items-center justify-center shrink-0 ${['a_caminho_coleta', 'chegou_coleta', 'saiu_para_coleta', 'no_local_coleta'].includes(activeMission.status || '') ? 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)]' : 'bg-white/10'}`}>
-                                        <Icon name="storefront" size={12} className="text-white" />
+                                <div className="flex items-start gap-6 relative z-10">
+                                    <div className={`mt-1 size-7 rounded-2xl flex items-center justify-center shrink-0 ${['a_caminho_coleta', 'chegou_coleta', 'saiu_para_coleta', 'no_local_coleta'].includes(activeMission.status || '') ? 'bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)]' : 'bg-white/10'}`}>
+                                        <Icon name="storefront" size={16} className="text-white" />
                                     </div>
                                     <div className="flex-1">
-                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Coleta: {activeMission.merchant_name || 'Estabelecimento'}</p>
-                                        <p className="text-sm font-bold text-white/80 leading-tight italic">{pickupOnly}</p>
+                                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2">
+                                            <span className="size-1 rounded-full bg-blue-400" />
+                                            Coleta: {activeMission.merchant_name || 'Estabelecimento'}
+                                        </p>
+                                        <p className="text-sm font-black text-white leading-relaxed italic pr-4">{pickupOnly}</p>
                                     </div>
                                 </div>
 
-                                <div className="h-8" />
+                                <div className="h-10" />
 
-                                <div className="flex items-start gap-5 relative z-10">
-                                    <div className={`mt-1.5 size-6 rounded-full flex items-center justify-center shrink-0 ${['picked_up', 'a_caminho', 'em_rota', 'no_local'].includes(activeMission.status || '') ? 'bg-primary shadow-[0_0_12px_rgba(255,217,0,0.5)]' : 'bg-white/10'}`}>
-                                        <Icon name="location_on" size={12} className="text-slate-950" />
+                                <div className="flex items-start gap-6 relative z-10">
+                                    <div className={`mt-1 size-7 rounded-2xl flex items-center justify-center shrink-0 ${['picked_up', 'a_caminho', 'em_rota', 'no_local'].includes(activeMission.status || '') ? 'bg-primary shadow-[0_0_15px_rgba(255,217,0,0.4)]' : 'bg-white/10'}`}>
+                                        <Icon name="location_on" size={16} className="text-slate-950" />
                                     </div>
                                     <div className="flex-1">
-                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Entrega: {activeMission.user_name || activeMission.customer || 'Cliente'}</p>
-                                        <p className="text-sm font-black text-white leading-tight italic">{addressOnly}</p>
+                                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2">
+                                            <span className="size-1 rounded-full bg-primary" />
+                                            Entrega: {activeMission.user_name || activeMission.customer || 'Cliente'}
+                                        </p>
+                                        <p className="text-sm font-black text-white leading-relaxed italic pr-4">{addressOnly}</p>
                                     </div>
                                 </div>
                             </div>
@@ -3250,10 +3282,12 @@ function App() {
                                     const destination = (lat && lng) ? `${lat},${lng}` : encodeURIComponent(addr);
                                     window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
                                 }}
-                                className="w-full py-5 bg-zinc-800 border-none rounded-[28px] flex items-center justify-center gap-3 text-white/60 active:scale-95 transition-all group shadow-[ inset_4px_4px_10px_rgba(255,255,255,0.02), inset_-4px_-4px_10px_rgba(0,0,0,0.5)] border border-white/5"
+                                className="w-full py-6 bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-[30px] flex items-center justify-center gap-4 text-white active:scale-95 transition-all group shadow-xl"
                             >
-                                <Icon name="navigation" size={18} className="group-hover:text-blue-400 transition-colors" />
-                                <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-white transition-colors">Navegar com Google Maps</span>
+                                <div className="size-10 rounded-2xl bg-primary/20 flex items-center justify-center group-hover:bg-primary/30 transition-all">
+                                    <Icon name="near_me" size={20} className="text-primary" />
+                                </div>
+                                <span className="text-[11px] font-black uppercase tracking-widest text-white/80 group-hover:text-white">Abrir GPS Externo</span>
                             </button>
                         </div>
 
