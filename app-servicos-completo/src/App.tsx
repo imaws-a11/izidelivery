@@ -737,8 +737,9 @@ function App() {
           }
 
           // Transições de estados de espera
-          if (subViewRef.current === "waiting_merchant" && ["aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
-            showToast("Loja aceitou seu pedido! 🥳", "success");
+          if ((subViewRef.current === "waiting_merchant" || subViewRef.current === "lightning_payment" || subViewRef.current === "pix_payment") && 
+              ["novo", "paid", "pago", "aceito", "confirmado", "preparando", "pendente", "no_preparo", "pronto", "waiting_driver"].includes(newOrder.status)) {
+            showToast("Pagamento confirmado! 🥳", "success");
             setSelectedItem(newOrder); 
             setTimeout(() => setSubView("active_order"), 1000);
           }
