@@ -631,10 +631,7 @@ function App() {
 
         // 3. Aplicar Comissão
         const commission = isPrivateDriver ? privateDriverCommission : deliveryCommission;
-        const netCalculated = driverBaseAmount * (1 - (commission / 100));
-
-        // 4. GARANTIA: O entregador nunca recebe menos que o mínimo configurado (valor líquido final)
-        const finalNet = Math.max(minGuaranteed, netCalculated);
+        const finalNet = driverBaseAmount * (1 - (commission / 100));
 
         return Number(finalNet.toFixed(2));
     }, [appSettings, dynamicRates]);
@@ -1225,7 +1222,7 @@ function App() {
                 } else {
                     if (!p2pAllowed) return;
                 }
-                if (Date.now() - (declinedMap[o.id] || 0) < 5000) return;
+                if (Date.now() - (declinedMap[o.id] || 0) < 1800000) return;
                 
                 // Ignorar transações financeiras (Izi Coin, Assinatura) que não são missões
                 const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
@@ -1350,7 +1347,7 @@ function App() {
                 const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status);
                 const statusOk = isMerchantOrder ? merchantAccepted : p2pAllowed;
 
-                if (statusOk && !(Date.now() - (declinedMap[o.id] || 0) < 5000)) {
+                if (statusOk && !(Date.now() - (declinedMap[o.id] || 0) < 1800000)) {
                     setOrders(prev => {
                         const isNew = !prev.find(x => x.realId === o.id);
                         if (isNew) {
@@ -1642,6 +1639,21 @@ function App() {
             setIsAccepting(false);
             console.groupEnd();
         }
+    };
+
+    const handleDecline = (order: Order) => {
+        const targetId = order.realId || order.id;
+        console.log('[LOG-DRIVER] Recusando pedido:', targetId);
+        
+        // Salva no localStorage para ignorar este pedido por 30 minutos (ou até limpar cache)
+        const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
+        declinedMap[targetId] = Date.now();
+        localStorage.setItem('Izi_declined_timed', JSON.stringify(declinedMap));
+        
+        // Remove da lista atual
+        setOrders(prev => prev.filter(o => (o.realId || o.id) !== targetId));
+        
+        toastSuccess('Chamada descartada com sucesso.');
     };
 
     const handleUpdateStatus = async (newStatus: string) => {
@@ -3030,17 +3042,37 @@ function App() {
 
         return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-[#020617] flex flex-col overflow-hidden">
-                {/* MAPA AO FUNDO (Waze Style) */}
-                <div className="absolute inset-0 z-0">
-                    <IziRealTimeMap 
-                        driverCoords={driverCoords} 
-                        pickupCoords={isValidCoord({ lat: activeMission.pickup_lat, lng: activeMission.pickup_lng }) ? { lat: activeMission.pickup_lat, lng: activeMission.pickup_lng } : merchantCoords}
-                        pickupAddress={pickupOnly}
-                        deliveryCoords={isValidCoord({ lat: activeMission.delivery_lat, lng: activeMission.delivery_lng }) ? { lat: activeMission.delivery_lat, lng: activeMission.delivery_lng } : null}
-                        deliveryAddress={addressOnly}
-                        currentStatus={activeMission.status}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/80 pointer-events-none" />
+                {/* BACKGROUND SEM MAPA - BOTÃO DE NAVEGAÇÃO CENTRAL */}
+                <div className="absolute inset-0 z-0 bg-[#020617] flex flex-col items-center justify-center p-8">
+                    <div className="relative mb-12">
+                        <div className="absolute inset-0 bg-primary/20 blur-[80px] rounded-full animate-pulse" />
+                        <div className="size-32 rounded-[45px] bg-white/5 border border-white/10 flex items-center justify-center relative z-10">
+                            <Icon name="route" size={48} className="text-primary" />
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={() => {
+                            const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega';
+                            const lat = isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat;
+                            const lng = isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng;
+                            const addr = isDeliveryPhase ? addressOnly : pickupOnly;
+                            const destination = (lat && lng) ? `${lat},${lng}` : encodeURIComponent(addr);
+                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
+                        }}
+                        className="w-full max-w-xs h-20 bg-primary text-slate-900 rounded-[30px] flex items-center justify-center gap-4 shadow-2xl shadow-primary/20 active:scale-95 transition-all group"
+                    >
+                        <div className="size-10 rounded-2xl bg-slate-900/10 flex items-center justify-center group-hover:bg-slate-900/20">
+                            <Icon name="navigation" size={20} />
+                        </div>
+                        <span className="text-base font-black uppercase tracking-widest">Ir para a Rota</span>
+                    </button>
+                    
+                    <p className="mt-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.3em] text-center max-w-[240px] leading-relaxed">
+                        Toque no botão acima para abrir o seu GPS favorito e seguir a rota.
+                    </p>
+
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80 pointer-events-none" />
                 </div>
 
                 {/* Header Flutuante */}
@@ -3087,6 +3119,23 @@ function App() {
                     </div>
 
                     <div className="p-8 pb-40 overflow-y-auto no-scrollbar flex-1 space-y-8">
+                        {/* Status de Preparo - Banner Visual de "PRONTO" */}
+                        {activeMission.preparation_status === 'pronto' && (
+                            <motion.div 
+                                initial={{ scale: 0.9, opacity: 0 }} 
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="bg-emerald-500/10 border border-emerald-500/20 rounded-[35px] p-6 flex items-center gap-5 shadow-[0_0_40px_rgba(16,185,129,0.1)]"
+                            >
+                                <div className="size-14 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]">
+                                    <Icon name="check" size={24} className="text-white" />
+                                </div>
+                                <div>
+                                    <h4 className="text-base font-black text-emerald-400 uppercase tracking-tight">Pedido está Pronto!</h4>
+                                    <p className="text-[10px] font-bold text-emerald-500/60 uppercase tracking-widest">O lojista confirmou o preparo</p>
+                                </div>
+                            </motion.div>
+                        )}
+
                         {/* Resumo Financeiro e Cliente - CLAY CARD */}
                         <div className="bg-zinc-900 border-none rounded-[40px] p-8 space-y-6 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
                             <div className="flex items-center justify-between">
