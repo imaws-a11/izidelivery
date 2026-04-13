@@ -526,6 +526,17 @@ function App() {
     const [isSavingPix, setIsSavingPix] = useState(false);
     const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+    const [confirmPaymentState, setConfirmPaymentState] = useState<{
+        show: boolean,
+        resolve: (confirmed: boolean) => void,
+        mission: any
+    } | null>(null);
+
+    const showConfirmPaymentMethod = (mission: any) => {
+        return new Promise<boolean>((resolve) => {
+            setConfirmPaymentState({ show: true, resolve, mission });
+        });
+    };
     const [pixKey, setPixKey] = useState(() => localStorage.getItem('izi_driver_pix') || '');
     const [isEditingPix, setIsEditingPix] = useState(false);
 
@@ -1390,6 +1401,23 @@ function App() {
         return () => { clearInterval(pollInterval); supabase.removeChannel(channel); };
     }, [isOnline, isAuthenticated, driverId]);
 
+    // Loop de som para novas chamadas (Looping at o entregador agir)
+    useEffect(() => {
+        let soundInterval: any;
+        if (isOnline && orders.length > 0 && !activeMission) {
+            // Toca imediatamente na deteco de novos pedidos
+            playIziSound('driver');
+            
+            // Intervalo de 8s (3s de durao do som + 5s de pausa solicitada)
+            soundInterval = setInterval(() => {
+                if (isOnline && orders.length > 0 && !activeMission) {
+                    playIziSound('driver');
+                }
+            }, 8000); 
+        }
+        return () => { if (soundInterval) clearInterval(soundInterval); };
+    }, [isOnline, orders.length, !!activeMission]);
+
     const [isSyncing, setIsSyncing] = useState(false);
     const handleManualSync = async () => {
         if (isSyncing) return;
@@ -1658,6 +1686,16 @@ function App() {
 
     const handleUpdateStatus = async (newStatus: string) => {
         if (!activeMission || isAccepting) return;
+
+        // Validação de pagamento se estiver finalizando
+        const isFinishing = ['concluido', 'entregue', 'finalizado', 'delivered'].includes(newStatus.toLowerCase());
+        const isPaid = activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago';
+        
+        if (isFinishing && !isPaid) {
+             const confirmed = await showConfirmPaymentMethod(activeMission);
+             if (!confirmed) return;
+        }
+
         setIsAccepting(true);
         
         try {
@@ -3535,6 +3573,65 @@ function App() {
                             className="h-1 bg-primary/20 rounded-full mt-12 max-w-[200px] overflow-hidden"
                         >
                             <div className="h-full bg-primary" />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Modal de Confirmação de Pagamento Pendente */}
+            <AnimatePresence>
+                {confirmPaymentState?.show && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[300] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-6"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-[40px] p-8 shadow-2xl"
+                        >
+                            <div className="size-16 rounded-3xl bg-amber-500/10 flex items-center justify-center mb-6 border border-amber-500/20">
+                                <span className="material-symbols-outlined text-amber-500 text-3xl">payments</span>
+                            </div>
+
+                            <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2 italic">Atenção Piloto!</h3>
+                            <p className="text-slate-400 font-medium text-sm leading-relaxed mb-8">
+                                Este pedido ainda <span className="text-rose-500 font-bold">não foi pago</span> via App. 
+                                Confirme como você recebeu o valor de <span className="text-white font-black">R$ {Number(confirmPaymentState.mission.total_price || 0).toFixed(2).replace('.', ',')}</span>:
+                            </p>
+
+                            <div className="space-y-3">
+                                <button 
+                                    onClick={() => {
+                                        confirmPaymentState.resolve(true);
+                                        setConfirmPaymentState(null);
+                                    }}
+                                    className="w-full py-4 rounded-2xl bg-white text-black font-black text-[11px] uppercase tracking-widest hover:bg-primary transition-all active:scale-95"
+                                >
+                                    Recebi em Dinheiro
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        confirmPaymentState.resolve(true);
+                                        setConfirmPaymentState(null);
+                                    }}
+                                    className="w-full py-4 rounded-2xl bg-slate-800 text-white font-black text-[11px] uppercase tracking-widest border border-white/5 hover:bg-slate-700 transition-all active:scale-95"
+                                >
+                                    Recebi via Pix / Cartão
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        confirmPaymentState.resolve(false);
+                                        setConfirmPaymentState(null);
+                                    }}
+                                    className="w-full py-4 rounded-2xl text-slate-500 font-black text-[10px] uppercase tracking-widest"
+                                >
+                                    Ainda não recebi
+                                </button>
+                            </div>
                         </motion.div>
                     </motion.div>
                 )}
