@@ -769,8 +769,8 @@ function App() {
                         ensureDriverRecord(user.id, user.email || '', name);
                     }
 
-                    fetchFinanceData();
-                    fetchMissionHistory();
+                    refreshFinanceData();
+                    
                     syncMissionWithDB();
                 } else {
                     // RenovaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes de token (TOKEN_REFRESHED): NÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢O alterar nenhum estado
@@ -796,8 +796,8 @@ function App() {
 
     useEffect(() => {
         if (activeTab === 'earnings' || activeTab === 'history') {
-            fetchFinanceData();
-            fetchMissionHistory();
+            refreshFinanceData();
+            
         }
     }, [activeTab]);
 
@@ -903,7 +903,7 @@ function App() {
                 // A ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âºnica forma de ser ejetado ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© via is_active (Remote Eject) ou Logout manual.
                 
                 // Recarregar dados financeiros se o saldo mudou por outro dispositivo
-                fetchFinanceData();
+                refreshFinanceData();
             })
             .subscribe();
 
@@ -1101,6 +1101,7 @@ function App() {
             setMyApplications(data || []);
         };
         fetchApps();
+        refreshFinanceData();
     }, [isAuthenticated, driverId]);
 
     // Buscar Agendamentos disponÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­veis e aceitos
@@ -1721,10 +1722,70 @@ function App() {
         toastSuccess('Chamada descartada com sucesso.');
     };
 
+        const refreshFinanceData = async () => {
+        if (!driverId) return;
+        setIsFinanceLoading(true);
+        try {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            
+            let token = supabaseKey;
+            try {
+                const lsKey = `sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`;
+                const ls = localStorage.getItem(lsKey);
+                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
+            } catch(e) {}
+
+            const headers = { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` };
+            const fetchWithTimeout = (url: string) => fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+
+            const txsRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/wallet_transactions_delivery?user_id=eq.${driverId}&order=created_at.desc`).catch(() => null);
+            const txs = (txsRes && txsRes.ok) ? await txsRes.json() : null;
+
+            const driverRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}&select=bank_info,name`).catch(() => null);
+            const driverData = (driverRes && driverRes.ok) ? await driverRes.json() : null;
+            
+            if (driverData && driverData[0]) {
+                const savedPix = driverData[0].bank_info?.pix_key || '';
+                if (savedPix) { setPixKey(savedPix); localStorage.setItem('izi_driver_pix', savedPix); }
+            }
+
+            const ordersRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,entregue,finalizado)`).catch(() => null);
+            const orders = (ordersRes && ordersRes.ok) ? await ordersRes.json() : null;
+
+            let balance = 0;
+            if (txs) {
+                balance = txs.reduce((acc: number, t: any) => 
+                    ['deposito', 'reembolso', 'venda', 'vaga_dedicada', 'bonus'].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
+                setEarningsHistory(txs.filter((t: any) => t.type !== 'saque'));
+                setWithdrawHistory(txs.filter((t: any) => t.type === 'saque'));
+            }
+
+            let todaySum = 0; let totalGanhos = 0; let missionCount = 0;
+            if (orders) { setHistory(orders);
+                const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+                missionCount = orders.length;
+                orders.forEach((o: any) => {
+                    const fee = getNetEarnings(o);
+                    totalGanhos += fee;
+                    if (new Date(o.created_at) >= startOfDay) todaySum += fee;
+                });
+            }
+
+            setStats(prev => ({ ...prev, balance, today: todaySum, totalEarnings: totalGanhos, count: missionCount, level: Math.floor(missionCount / 10) + 1 }));
+
+            const { data: sets } = await fetchWithTimeout(`${supabaseUrl}/rest/v1/admin_settings_delivery?limit=1`).then(r => r?.ok ? r.json() : {ok: false}).catch(() => { return { ok: false }; });
+            if (sets && sets[0]) setAppSettings(sets[0]);
+        } catch (e) {
+            console.error("[FINANCE] Error:", e);
+        } finally {
+            setIsFinanceLoading(false);
+        }
+    };
+
     const handleUpdateStatus = async (newStatus: string) => {
         if (!activeMission || isAccepting) return;
 
-        // ValidaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o de pagamento se estiver finalizando
         const isFinishing = ['concluido', 'entregue', 'finalizado', 'delivered'].includes(newStatus.toLowerCase());
         const isPaid = activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago';
         
@@ -1737,609 +1798,148 @@ function App() {
         
         try {
             const missionId = activeMission.realId || activeMission.id;
-            if (!missionId) throw new Error('Identificador da missÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o nÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o encontrado.');
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-            let token = supabaseKey;
-            try {
-                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
-                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
-            } catch(e) {}
-
-            console.log('[STATUS] Atualizando status via REST para:', newStatus, 'MissionID:', missionId);
-            const response = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${missionId}`, {
-                method: 'PATCH',
-                headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                },
-                body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() })
-            });
-
-            if (!response.ok) {
-                const errBody = await response.text();
-                console.error('[STATUS-ERROR] Detalhes:', response.status, errBody);
-                let msg = `Erro ${response.status}: `;
-                try {
-                   const parsed = JSON.parse(errBody);
-                   msg += parsed.message || parsed.error || errBody;
-                } catch(e) { msg += errBody || 'Erro desconhecido'; }
-                
-                showToast(msg, 'error');
-                throw new Error(msg);
-            }
+            if (!missionId) throw new Error('Identificador da missão não encontrado.');
             
-            const updatedData = await response.json();
-            console.log('[STATUS] Sucesso:', updatedData);
-            toastSuccess(`Status alterado para: ${newStatus}`);
+            const { error: updateError } = await supabase
+                .from('orders_delivery')
+                .update({ 
+                    status: newStatus.toLowerCase(),
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', missionId);
 
-            // LÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³gica de FinalizaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
-            const finishStatus = ['concluido', 'entregue', 'finalizado', 'delivered'];
-            if (finishStatus.includes(newStatus.toLowerCase())) {
-                try {
-                    // 1. Ganho do Entregador
-                    const netEarnings = getNetEarnings(activeMission);
-                    
-                    if (driverId && netEarnings > 0) {
-                        await fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
-                            method: 'POST',
-                            headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                user_id: driverId,
-                                amount: netEarnings,
-                                type: 'deposito',
-                                description: `Ganhos: MissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o #${missionId.slice(0, 8).toUpperCase()} (LÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­quido)`
-                            })
-                        });
-                    }
+            if (updateError) throw updateError;
 
-                    // 2. CrÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©dito do Lojista (NOVO)
-                    if (activeMission.merchant_id && (Number(activeMission.total_price) || 0) > 0) {
-                        try {
-                            // Buscar comissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o do lojista
-                            const commRes = await fetch(`${supabaseUrl}/rest/v1/admin_users?select=commission_percent&id=eq.${activeMission.merchant_id}&limit=1`, {
-                                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-                            });
-                            const commData = await commRes.json();
-                            const mData = commData[0];
-                            
-                            const commRate = mData?.commission_percent ?? appSettings?.appCommission ?? 12;
-                            const totalPrice = Number(activeMission.total_price) || 0;
-                            const commValue = totalPrice * (Number(commRate) / 100);
-                            const merchantNet = totalPrice - commValue;
-
-                            if (merchantNet > 0) {
-                                await fetch(`${supabaseUrl}/rest/v1/rpc/credit_wallet_transaction`, {
-                                    method: 'POST',
-                                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        p_user_id: activeMission.merchant_id,
-                                        p_amount: merchantNet,
-                                        p_type: 'venda',
-                                        p_description: `Venda Pedido #${missionId.slice(0, 8).toUpperCase()} (LÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­quido)`,
-                                        p_status: 'concluido'
-                                    })
-                                });
-                            }
-                        } catch (mErr) {
-                            console.error('[FINALIZE] Erro ao creditar lojista:', mErr);
-                        }
-                    }
-
-                    // Chamada REST manual tambÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©m para evitar bloqueio no sync
-                    fetchFinanceData(); // Sem await para nÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o bloquear a UI, deixa atualizar no fundo
-                } catch (finalizeErr) {
-                    console.error('[FINALIZE] Erro interno no processamento financeiro:', finalizeErr);
-                }
-
-                toastSuccess('MissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o concluÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­da com sucesso!');
-                const grossEarnings = getGrossEarnings(activeMission);
-                const netEarnings = getNetEarnings(activeMission);
-                
-                const rawType = activeMission.service_type || activeMission.type || 'generic';
-                const type = normalizeServiceType(rawType);
-                
-                // CÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡lculo do breakdown do valor real
-                const baseValue = Number(dynamicRates?.[`${type}_min`] || appSettings?.baseFee || 7);
-                const distance = Number(activeMission.route_distance_km || 0);
-                const kmRate = Number(dynamicRates?.[`${type}_km`] || 1);
-                const extraKmValue = distance * kmRate;
-
-                setFinishedMissionData({ 
-                    show: true, 
-                    amount: netEarnings,
-                    grossAmount: grossEarnings,
-                    baseValue: baseValue,
-                    extraKmValue: extraKmValue,
-                    distance: distance
+            toastSuccess(`Status atualizado para: ${newStatus}`);
+            
+            if (isFinishing) {
+                setFinishedMissionData({
+                    amount: activeMission.price || 0,
+                    bonus: 0,
+                    extraKm: 0,
+                    extraKmValue: 0
                 });
                 setActiveMission(null);
-                localStorage.removeItem('Izi_active_mission');
-                setActiveTab('dashboard');
-                // Chamada nÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o bloqueante
-                fetchMissionHistory();
-            }  
-            // 3. Se for CANCELAMENTO
-            else if (['cancelado'].includes(newStatus)) {
-                setActiveMission(null);
-                localStorage.removeItem('Izi_active_mission');
-                setActiveTab('dashboard');
-                toastSuccess('Pedido cancelado.');
-            }
-            // 4. Status intermediÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡rio (A caminho, etc)
-            else {
-                const updatedMission = { ...activeMission, status: newStatus };
-                setActiveMission(updatedMission);
-                localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
-                toastSuccess('Status atualizado!');
+                refreshFinanceData();
+            } else {
+                setActiveMission(prev => prev ? { ...prev, status: newStatus.toLowerCase() } : null);
             }
         } catch (e: any) {
-            console.error('[STATUS] Erro ao atualizar:', e);
-            toastError('Erro ao atualizar status: ' + (e.message || 'Tente novamente.'));
-            
-            // Se o erro for que o pedido nÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o existe mais ou algo fatal, limpa a tela
-            if (e.message?.includes('not found') || e.message?.includes('invalid input syntax')) {
-                setActiveMission(null);
-                localStorage.removeItem('Izi_active_mission');
-                setActiveTab('dashboard');
-            }
+            console.error("[UPDATE_STATUS] Error:", e);
+            toastError("Erro ao atualizar status: " + e.message);
         } finally {
             setIsAccepting(false);
         }
     };
 
-    const fetchMissionHistory = async () => {
-        if (!driverId) return;
-        try {
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-            let token = supabaseKey;
-            try {
-                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
-                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
-            } catch(e) {}
-
-            const res = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,finalizado,entregue)&order=created_at.desc`, {
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` }
-            });
-
-            if (!res.ok) throw new Error('Falha ao buscar histÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³rico');
-            const data = await res.json();
-
-            if (data) {
-                const formatted = data.map((o: any) => ({
-                    ...o,
-                    price: Number(o.total_price || 0),
-                    type: o.service_type || 'package',
-                    destination: o.delivery_address || o.destination || 'Destino ignorado',
-                    displayId: (o.id || "").slice(0, 8).toUpperCase()
-                }));
-                setHistory(formatted);
-            }
-        } catch (e) {
-            console.error("History fetch error:", e);
-        }
-    };
-
-    const fetchFinanceData = async () => {
-        if (!driverId) return;
-        setIsFinanceLoading(true);
-
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        let token = supabaseKey;
-        try {
-            const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
-            if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
-        } catch(e) {}
-
-        const headers = { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` };
-
-        try {
-            // Timeout de 10 segundos para cada requisiÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
-            const fetchWithTimeout = (url: string) => 
-                fetch(url, { headers, signal: AbortSignal.timeout(10000) });
-
-            // Consulta de Carteira para Saldo e Extrato
-            const txsRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/wallet_transactions_delivery?user_id=eq.${driverId}&order=created_at.desc`).catch(() => null);
-            const txs = (txsRes && txsRes.ok) ? await txsRes.json() : null;
-
-            // Busca InformaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes do Motorista (Chave PIX no bank_info)
-            const driverRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}&select=bank_info,name`).catch(() => null);
-            const driverData = (driverRes && driverRes.ok) ? await driverRes.json() : null;
-            
-            if (driverData && driverData[0]) {
-                const bankInfo = driverData[0].bank_info;
-                // O bank_info ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© um JSON que contÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©m { pix_key: "..." }
-                const savedPix = bankInfo?.pix_key || '';
-                if (savedPix) {
-                    setPixKey(savedPix);
-                    localStorage.setItem('izi_driver_pix', savedPix);
-                }
-            }
-
-            // Consulta de Pedidos para Ganhos Reais
-            const ordersRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,entregue)`).catch(() => null);
-            const orders = (ordersRes && ordersRes.ok) ? await ordersRes.json() : null;
-
-            let balance = 0;
-            if (txs) {
-                balance = txs.reduce((acc, t) => 
-                    ['deposito', 'reembolso', 'venda'].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 
-                    0
-                );
-                
-                setEarningsHistory(txs.filter(t => t.type !== 'saque') as any);
-                setWithdrawHistory(txs.filter(t => t.type === 'saque'));
-            }
-
-            let todaySum = 0;
-            let totalGanhos = 0;
-            let missionCount = 0;
-
-            if (orders) {
-                const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
-                missionCount = orders.length;
-
-                orders.forEach(o => {
-                    const fee = getNetEarnings(o);
-                    totalGanhos += fee;
-                    if (new Date(o.created_at) >= startOfDay) {
-                        todaySum += fee;
-                    }
-                });
-            }
-
-            setStats(prev => ({
-                ...prev,
-                balance: balance,
-                today: todaySum,
-                totalEarnings: totalGanhos,
-                count: missionCount,
-                level: Math.floor(missionCount / 10) + 1
-            }));
-
-            // Aproveitar e atualizar configuraÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes globais
-            const { data: sets } = await fetchWithTimeout(`${supabaseUrl}/rest/v1/admin_settings_delivery?limit=1`).then(r => r?.ok ? r.json() : {ok: false}).catch(() => ({}));
-            if (sets && sets[0]) {
-                setAppSettings(sets[0]);
-            }
-
-        } catch (e) {
-            console.error("[FINANCE] Fetch error:", e);
-        } finally {
-            setIsFinanceLoading(false);
-        }
-    };
-
     const handleWithdrawRequest = () => {
-        if (isWithdrawLoading) return;
-        
-        // 1. Validar PIX
-        if (!pixKey || pixKey.trim().length < 3) {
-            toastError('Cadastre uma chave PIX vÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡lida antes de sacar.');
-            setIsEditingPix(true);
-            return;
-        }
-
-        // 2. Validar saldo
-        if (stats.balance <= 0) {
-            toastError('VocÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âª nÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o possui saldo disponÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­vel para saque.');
-            return;
-        }
-
-        // 3. Validar Saque MÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­nimo
+        if (!pixKey || pixKey.trim().length < 3) { toastError('Cadastre uma chave PIX válida.'); setIsEditingPix(true); return; }
+        if (stats.balance <= 0) { toastError('Sem saldo disponível.'); return; }
         const minAmount = Number(appSettings?.minwithdrawalamount ?? 0);
-        if (stats.balance < minAmount) {
-            toastError(`O valor mÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­nimo para saque ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© de R$ ${minAmount.toFixed(2).replace('.', ',')}`);
-            return;
-        }
-
-        // 4. Abrir modal de confirmaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
+        if (stats.balance < minAmount) { toastError(`Saque mínimo: R$ ${minAmount.toFixed(2)}`); return; }
         setShowWithdrawModal(true);
     };
 
     const confirmWithdraw = async () => {
         if (isWithdrawLoading) return;
-        
-        console.log('>>> [WITHDRAW] Click Confirmar');
         setIsWithdrawLoading(true);
-        
         try {
-            console.log('>>> [WITHDRAW] Verificando dados...');
-            
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-            
-            // 1. Obter ID do motorista (prioriza o que estÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ no estado/localStorage)
             const uid = driverId || localStorage.getItem('izi_driver_uid');
-            
-            if (!uid) {
-                throw new Error('IdentificaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o do motorista ignorada (ID Vazio). Tente sair e entrar novamente.');
-            }
-
-            // 2. Obter Token (Manualmente para evitar travamentos do supabase-js)
-            let token = supabaseKey;
-            try {
-                const lsKey = `sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`;
-                const ls = localStorage.getItem(lsKey);
-                if (ls) {
-                    const parsed = JSON.parse(ls);
-                    token = parsed.access_token || token;
-                }
-            } catch(e) {
-                console.warn('[WITHDRAW] Falha ao extrair token do LocalStorage');
-            }
-
-            console.log('>>> [WITHDRAW] Enviando requisiÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o para:', uid);
-
-            // 3. Chamada REST com Timeout de 10s
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-
             const feePercent = Number(appSettings?.withdrawalfeepercent ?? 0);
             const feeAmount = stats.balance * (feePercent / 100);
 
-            const body = {
-                user_id: uid,
-                amount: stats.balance,
-                type: 'saque',
-                description: `Saque PIX: ${pixKey}${feeAmount > 0 ? ` (Taxa IZI: R$ ${feeAmount.toFixed(2)})` : ''}`,
-                status: 'pendente'
-            };
-
-            const response = await fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
-                method: 'POST',
-                headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=minimal'
-                },
-                body: JSON.stringify(body),
-                signal: controller.signal
+            const { error } = await supabase.from('wallet_transactions_delivery').insert({
+                user_id: uid, amount: stats.balance, type: 'saque', status: 'pendente',
+                description: `Saque PIX: ${pixKey}${feeAmount > 0 ? ` (Taxa IZI: R$ ${feeAmount.toFixed(2)})` : ''}`
             });
 
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                const errorDetail = await response.text();
-                console.error('>>> [WITHDRAW] Erro API:', response.status, errorDetail);
-                throw new Error(`Erro no servidor (${response.status}). Verifique seu saldo.`);
-            }
-
-            console.log('>>> [WITHDRAW] Pedido criado com sucesso!');
-
-            // Sucesso - Feedback Visual
-            setShowWithdrawModal(false);
-            setTimeout(() => {
-                setShowSuccessOverlay(true);
-            }, 300);
-
-            setTimeout(() => {
-                setShowSuccessOverlay(false);
-                fetchFinanceData();
-            }, 4500);
-
+            if (error) throw error;
+            setShowWithdrawModal(false); setShowSuccessOverlay(true);
+            setTimeout(() => { setShowSuccessOverlay(false); refreshFinanceData(); }, 4000);
         } catch (err: any) {
-            console.error('>>> [WITHDRAW] FALHA CRÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂTICA:', err);
-            const msg = err.name === 'AbortError' 
-                ? 'O servidor demorou muito para responder. Tente novamente.' 
-                : (err.message || 'Erro desconhecido ao processar saque.');
-            toastError(msg);
+            toastError("Erro ao processar saque.");
         } finally {
-            console.log('>>> [WITHDRAW] Liberando travamento de UI');
             setIsWithdrawLoading(false);
         }
     };
 
     const handleSavePix = async (val?: string) => {
-
         const keyToSave = (val || pixKey).trim();
-        if (!keyToSave) return toastError('Digite uma chave PIX vÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡lida');
-        if (!driverId) return toastError('Entregador nÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o identificado');
-
+        if (!keyToSave || !driverId) return;
         setIsSavingPix(true);
         try {
-            console.log('[PIX_SAVE] Tentando salvar:', keyToSave);
-            const { error } = await supabase
-                .from('drivers_delivery')
-                .update({ bank_info: { pix_key: keyToSave } })
-                .eq('id', driverId);
-
+            const { error } = await supabase.from('drivers_delivery').update({ bank_info: { pix_key: keyToSave } }).eq('id', driverId);
             if (error) throw error;
-
-            localStorage.setItem('izi_driver_pix', keyToSave);
-            setPixKey(keyToSave);
-            setIsEditingPix(false);
-            toastSuccess('Chave PIX salva com sucesso!');
+            localStorage.setItem('izi_driver_pix', keyToSave); setPixKey(keyToSave); setIsEditingPix(false);
+            toastSuccess('Chave PIX salva!');
         } catch (e: any) {
-            console.error('[PIX_SAVE] Error:', e);
-            toastError("Erro ao salvar chave PIX: " + e.message);
+            toastError("Erro ao salvar PIX");
         } finally {
             setIsSavingPix(false);
         }
     };
 
-    const handleLogout = useCallback(async (reason = 'manual') => {
-        const dId = driverId ? String(driverId).trim() : null;
-        console.log(`[AUTH] handleLogout disparado. Motivo: ${reason}`);
-
-        try {
-            if (dId) {
-                // Tenta avisar o banco que ficou offline
-                supabase.from('drivers_delivery').update({ is_online: false }).eq('id', dId).then();
-            }
-        } catch (e) {
-            console.error('[LOGOUT] Erro status:', e);
-        }
-
-        // Garante que o status online seja resetado NO STORAGE apenas em logout MANUAL
+    const handleLogout = useCallback(async () => {
         localStorage.removeItem('Izi_online');
-
-        // Limpa sessÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o completo
         clearDriverSessionState();
-
-        try {
-            await supabase.auth.signOut({ scope: 'local' });
-        } catch (e) {
-            console.error('[LOGOUT] Erro ao encerrar sessÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o:', e);
-        } finally {
-            console.log('[LOGOUT] Redirecionando...');
-            window.location.href = '/';
-        }
-    }, [clearDriverSessionState, driverId]);
-
-
-
+        try { await supabase.auth.signOut(); } finally { window.location.href = '/'; }
+    }, [clearDriverSessionState]);
 
     const renderHeader = () => (
         <header className="px-6 py-6 flex items-center justify-between sticky top-0 z-50 bg-black/80 backdrop-blur-3xl border-b border-white/5 shrink-0">
-            <button onClick={() => setIsMenuOpen(true)} className="size-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center active:scale-90 transition-all shadow-premium">
-                <Icon name="menu" className="text-white" size={24} />
-            </button>
+            <div className="size-12" />
             <div className="flex flex-col items-center">
                 <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.5em] mb-0.5">Terminal Operacional</span>
-                <h1 className="text-xl font-black text-white tracking-tighter uppercase leading-none">Izi <span className="text-primary italic">Pilot</span></h1>
+                <h1 className="text-xl font-black text-white tracking-tighter uppercase leading-none">Izi Pilot</h1>
             </div>
-            <div className="flex flex-col items-end">
-                <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.5em] mb-0.5">Status Rede</span>
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${isOnline ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-500'} transition-all`}>
-                    <div className={`size-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
-                    <span className="text-[10px] font-black uppercase tracking-widest">{isOnline ? 'Ativo' : 'Inativo'}</span>
-                </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/5 bg-white/5">
+                <div className={`size-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{isOnline ? 'On' : 'Off'}</span>
             </div>
         </header>
     );
 
-    const renderNavigationDrawer = () => (
-        <AnimatePresence>
-            {isMenuOpen && (
-                <>
-                    <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        exit={{ opacity: 0 }} 
-                        onClick={() => setIsMenuOpen(false)} 
-                        className="fixed inset-0 bg-slate-950/40 backdrop-blur-3xl z-[100]" 
-                    />
-                    <motion.div 
-                        initial={{ x: '-100%' }} 
-                        animate={{ x: 0 }} 
-                        exit={{ x: '-100%' }} 
-                        transition={{ type: 'spring', damping: 35, stiffness: 350 }} 
-                        className="fixed top-0 left-0 bottom-0 w-[85%] max-w-[340px] bg-black border-r border-white/5 z-[101] flex flex-col p-8 overflow-y-auto no-scrollbar shadow-[20px_0_50px_rgba(0,0,0,0.8)]"
-                    >
-                        {/* Drawer Header - Clay Profile */}
-                        <div className="clay-card p-6 mb-8 flex items-center gap-4 relative overflow-hidden group">
-                            <div className="size-14 rounded-[20px] bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]">
-                                <Icon name="person" size={28} className="text-slate-900" />
+    const renderBottomNavigation = () => (
+        <nav className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-6 pt-2 pointer-events-none">
+            <div className="clay-card-dark rounded-[32px] p-2 flex items-center justify-between border-white/5 backdrop-blur-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.5)] pointer-events-auto">
+                {[
+                    { id: 'dashboard', label: 'Início', icon: 'grid_view' },
+                    { id: 'scheduled', label: 'Agenda', icon: 'event', badge: scheduledOrders.length },
+                    { id: 'earnings', label: 'Financeiro', icon: 'payments' },
+                    { id: 'history', label: 'Histórico', icon: 'history' },
+                    { id: 'profile', label: 'Perfil', icon: 'person' }
+                ].map((item) => {
+                    const isActive = activeTab === item.id;
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => setActiveTab(item.id as any)}
+                            className={`flex flex-col items-center gap-1.5 py-3 px-3 rounded-3xl transition-all relative flex-1 ${
+                                isActive ? 'text-primary' : 'text-white/30'
+                            }`}
+                        >
+                            <div className={`size-10 rounded-2xl flex items-center justify-center transition-all ${
+                                isActive ? 'bg-primary/10 border border-primary/20 scale-110' : 'bg-transparent'
+                            }`}>
+                                <Icon name={item.icon} size={isActive ? 24 : 22} className={isActive ? 'text-primary' : 'text-white/20'} />
+                                {item.badge > 0 && (
+                                    <span className="absolute top-1 right-2 size-4 bg-primary text-slate-900 text-[8px] font-black rounded-full flex items-center justify-center border border-black shadow-lg">
+                                        {item.badge}
+                                    </span>
+                                )}
                             </div>
-                            <div className="min-w-0">
-                                <h3 className="text-base font-black text-white truncate italic tracking-tight">{driverName}</h3>
-                                <div className="flex items-center gap-2 mt-1 bg-white/5 px-3 py-1 rounded-full border border-white/5 w-fit">
-                                    <div className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">NÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­vel {stats.level}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Balance Card - Clay Style */}
-                        <div className="clay-card-dark p-6 mb-8 flex items-center justify-between border-white/[0.03]">
-                            <div>
-                                <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] mb-1">Saldo Izi</p>
-                                <p className="text-2xl font-black text-white tracking-tighter font-mono italic">R$ {stats.balance.toFixed(2).replace('.', ',')}</p>
-                            </div>
-                            <div className="size-10 bg-primary/10 rounded-2xl flex items-center justify-center shadow-inner">
-                                <Icon name="account_balance_wallet" size={20} className="text-primary" />
-                            </div>
-                        </div>
-
-                        {/* Navigation Items */}
-                        <nav className="flex-1 space-y-3">
-                            <p className="text-[9px] font-black text-white/10 uppercase tracking-[0.5em] px-4 mb-4 italic">Menu do Piloto</p>
-                            {[
-                                { id: 'dashboard', label: 'Painel', icon: 'grid_view' },
-                                { id: 'active_mission', label: 'MissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o Ativa', icon: 'route', badge: activeMission ? 1 : 0 },
-                                { id: 'dedicated', label: 'Vagas Dedicadas', icon: 'stars' },
-                                { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length },
-                                { id: 'history', label: 'HistÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³rico', icon: 'history' },
-                                { id: 'earnings', label: 'Financeiro', icon: 'payments' },
-                                { id: 'support', label: 'Suporte Izi', icon: 'support_agent', onClick: () => { window.open('https://wa.me/55...', '_blank'); setIsMenuOpen(false); } },
-                                { id: 'profile', label: 'Meu Perfil', icon: 'person' }
-                            ].map((item, i) => {
-                                const isActive = activeTab === item.id;
-                                return (
-                                    <motion.button 
-                                        key={item.id} 
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: i * 0.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        onClick={item.onClick || (() => { 
-                                            setActiveTab(item.id as any); 
-                                            setIsMenuOpen(false); 
-                                            if (item.id === 'active_mission') syncMissionWithDB();
-                                        })} 
-                                        className={`w-full flex items-center gap-4 px-5 py-4.5 rounded-[24px] transition-all text-left relative overflow-hidden ${
-                                            isActive 
-                                                ? 'bg-primary text-slate-900 font-black shadow-[inset_3px_3px_6px_rgba(255,255,255,0.4),8px_8px_16px_rgba(255,217,0,0.2)]' 
-                                                : 'text-white/30 hover:bg-white/[0.03] border border-transparent hover:border-white/5'
-                                        }`}
-                                    >
-                                        <div className="relative z-10">
-                                            <Icon name={item.icon} size={20} className={isActive ? 'text-slate-900' : 'text-white/20'} />
-                                            {item.badge > 0 && (
-                                                <span className={`absolute -top-2 -right-2 size-5 ${item.id === 'active_mission' ? 'bg-emerald-500' : 'bg-blue-500'} text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-[#020617]`}>
-                                                    {item.badge}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <span className="text-[11px] font-black uppercase tracking-widest relative z-10 italic">{item.label}</span>
-                                        {isActive && <motion.div layoutId="nav-glow" className="absolute left-1 top-1 bottom-1 w-1 bg-white/40 rounded-full" />}
-                                    </motion.button>
-                                );
-                            })}
-                        </nav>
-
-                        {/* Footer - Status & Logout */}
-                        <div className="pt-8 border-t border-white/5 space-y-6 mt-8">
-                            <div className="flex items-center justify-between px-4">
-                                <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em]">Status</span>
-                                <button 
-                                    onClick={handleToggleOnline} 
-                                    className={`h-9 w-16 rounded-[20px] relative transition-all duration-700 shadow-inner ${
-                                        isOnline ? 'bg-emerald-500/20 border border-emerald-500/20' : 'bg-white/5 border border-white/5'
-                                    }`}
-                                >
-                                    <motion.div 
-                                        animate={{ x: isOnline ? 32 : 4 }} 
-                                        className={`absolute top-1 size-7 rounded-[14px] flex items-center justify-center shadow-lg transition-colors ${
-                                            isOnline ? 'bg-emerald-400' : 'bg-white/10'
-                                        }`}
-                                    >
-                                        <div className={`size-1.5 rounded-full ${isOnline ? 'bg-white animate-pulse' : 'bg-white/5'}`} />
-                                    </motion.div>
-                                </button>
-                            </div>
-                            <button 
-                                onClick={handleLogout} 
-                                className="w-full py-5 border border-red-500/10 text-red-500/40 rounded-[28px] text-[10px] font-black uppercase tracking-[0.4em] hover:bg-red-500/5 transition-all active:scale-95 shadow-inner"
-                            >
-                                Encerrar SessÃƒÂ£o
-                            </button>
-                            <p className="text-[8px] font-black text-white/10 uppercase tracking-[0.6em] text-center italic">Izi Delivery v3.4</p>
-                        </div>
-                    </motion.div>
-                </>
-            )}
-        </AnimatePresence>
+                            <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-0'} transition-all text-center`}>
+                                {item.label}
+                            </span>
+                        </button> );
+                })}
+            </div>
+        </nav>
     );
 
-    const renderDashboard = () => (
+const renderDashboard = () => (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-32">
             <main className="px-6 space-y-10 pt-6">
                 {/* Refined Profile Card */}
@@ -3054,13 +2654,13 @@ function App() {
             </header>
 
             <div className="space-y-4">
-                {ordersHistory.length === 0 ? (
+                {history.length === 0 ? (
                     <div className="py-20 bg-white/[0.02] border border-white/5 border-dashed rounded-[32px] flex flex-col items-center gap-4 text-center">
                         <Icon name="history" className="text-4xl text-white/10" />
                         <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Nenhuma corrida finalizada</p>
                     </div>
                 ) : (
-                    ordersHistory.map((order: any, i: number) => (
+                    history.map((order: any, i: number) => (
                         <div key={order.id} className="bg-white/[0.03] border border-white/5 rounded-[32px] p-6 space-y-4">
                             <div className="flex items-center justify-between">
                                 <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">#{order.id.slice(0, 8).toUpperCase()}</span>
@@ -3559,9 +3159,9 @@ function App() {
 
     const renderSOS = () => (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="fixed inset-0 z-[200] bg-red-950 flex flex-col items-center justify-center p-8 text-center">
-            <div className="size-28 bg-red-500/20 border border-red-500/30 rounded-full flex items-center justify-center mb-8 animate-pulse"><Icon name="emergency_share" className="text-6xl text-red-400" /></div>
+            <div className="size-28 clay-fab-sos rounded-full flex items-center justify-center mb-8 animate-pulse"><Icon name="emergency_share" className="text-6xl text-red-400" /></div>
             <h1 className="text-4xl font-black text-white uppercase tracking-tight mb-3">SOS Ativado</h1>
-            <p className="text-white/60 text-sm mb-10 max-w-xs leading-relaxed">Sua localizaÃƒÂ§ÃƒÂ£o estÃƒÂ¡ sendo compartilhada com a central Izi.</p>
+            <p className="text-white/60 text-sm mb-10 max-w-xs leading-relaxed">Sua localização está sendo compartilhada com a central Izi.</p>
             <div className="w-full max-w-sm space-y-4">
                 <button onClick={() => { window.open('tel:190'); setIsSOSActive(false); }} className="w-full h-16 bg-white text-red-600 rounded-[24px] flex items-center justify-center gap-4 font-black text-lg uppercase tracking-tight shadow-2xl active:scale-95 transition-all"><Icon name="local_police" className="text-3xl" />Ligar 190</button>
                 <button onClick={() => { toastSuccess('Apoio mecÃƒÂ¢nico acionado.'); setIsSOSActive(false); }} className="w-full h-16 bg-white/10 border border-white/20 text-white rounded-[24px] flex items-center justify-center gap-4 font-black text-base uppercase active:scale-95 transition-all"><Icon name="build" className="text-2xl" />Apoio MecÃƒÂ¢nico</button>
@@ -3636,19 +3236,19 @@ function App() {
                     <div key="app" className="flex flex-col h-full overflow-hidden">
                         <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
                         <AnimatePresence>{activeTab === 'active_mission' && renderActiveMissionView()}</AnimatePresence>
-                        {renderNavigationDrawer()}
+                        {renderBottomNavigation()}
                         <div className="flex flex-col h-full overflow-hidden">
                              {activeTab !== 'dashboard' && renderHeader()}
                             <AnimatePresence>
                                 {activeMission && activeTab !== 'active_mission' && (
-                                    <motion.button key="mission-btn" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }} onClick={() => setActiveTab('active_mission')} className="fixed bottom-8 left-5 right-5 z-[60] bg-primary text-slate-900 rounded-[28px] h-18 flex items-center justify-between px-7 shadow-[0_20px_40px_rgba(250,204,21,0.3)] border-t border-white/40">
+                                    <motion.button key="mission-btn" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }} onClick={() => setActiveTab('active_mission')} className="fixed bottom-28 left-5 right-5 z-[60] bg-primary text-slate-900 rounded-[28px] h-18 flex items-center justify-between px-7 shadow-[0_20px_40px_rgba(250,204,21,0.3)] border-t border-white/40">
                                         <div className="flex items-center gap-4"><div className="size-3.5 bg-slate-950 rounded-full animate-ping" /><span className="font-black text-xs uppercase tracking-[0.2em] italic">Missão em Andamento</span></div>
                                         <div className="size-10 bg-slate-950/10 rounded-full flex items-center justify-center"><Icon name="arrow_forward" className="text-slate-950 text-xl font-black" /></div>
                                     </motion.button>
                                 )}
                             </AnimatePresence>
                             {!activeMission && (
-                                <div className="fixed bottom-8 right-6 z-[90] flex flex-col items-center gap-2">
+                                <div className="fixed bottom-32 right-6 z-[90] flex flex-col items-center gap-2">
                                     <motion.button 
                                         initial={{ scale: 0, y: 50 }} 
                                         animate={{ scale: 1, y: 0 }} 
