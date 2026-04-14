@@ -1765,11 +1765,13 @@ function App() {
             if (orders) { setHistory(orders);
                 const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
                 const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate() - (startOfWeek.getDay() || 7) + 1); startOfWeek.setHours(0,0,0,0);
+                const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate() - (startOfWeek.getDay() || 7) + 1); startOfWeek.setHours(0,0,0,0);
                 missionCount = orders.length;
                 orders.forEach((o: any) => {
                     const fee = getNetEarnings(o);
                     totalGanhos += fee;
                     if (new Date(o.created_at) >= startOfDay) todaySum += fee;
+                    if (new Date(o.created_at) >= startOfWeek) weeklySum += fee;
                     if (new Date(o.created_at) >= startOfWeek) weeklySum += fee;
                 });
             }
@@ -1908,7 +1910,8 @@ function App() {
             <div className="clay-card-dark rounded-[32px] p-2 flex items-center justify-between border-white/5 backdrop-blur-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.5)] pointer-events-auto">
                 {[
                     { id: 'dashboard', label: 'Início', icon: 'grid_view' },
-                    { id: 'scheduled', label: 'Agenda', icon: 'event', badge: scheduledOrders.length },
+                    { id: 'active_mission', label: 'Missão', icon: 'route' },
+                    { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length },
                     { id: 'earnings', label: 'Financeiro', icon: 'payments' },
                     { id: 'history', label: 'Histórico', icon: 'history' },
                     { id: 'profile', label: 'Perfil', icon: 'person' }
@@ -1975,8 +1978,9 @@ const renderDashboard = () => (
                             <p className="text-xl font-black text-stone-950 truncate italic leading-none">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
                             <div className="flex items-center gap-1 mt-1.5 opacity-60">
                                 <span className="text-[7px] font-black uppercase text-stone-800 tracking-tighter">Na Semana:</span>
-                                <span className="text-[10px] font-black text-stone-900">R$ {stats.weekly.toFixed(2).replace('.', ',')}</span>
+                                <span className="text-[9px] font-black text-stone-900">R$ {stats.weekly.toFixed(2).replace('.', ',')}</span>
                             </div>
+                        </div>
                         </div>
                         <div className="clay-profile-inner rounded-3xl p-4 border border-white/20">
                             <p className="text-stone-800 text-[9px] font-bold uppercase tracking-[0.1em] mb-1">Status</p>
@@ -2056,7 +2060,11 @@ const renderDashboard = () => (
                         <button onClick={() => setActiveTab('dedicated')} className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-4 py-2 rounded-full">Ver Todas</button>
                     </div>
                     <div className="grid gap-4">
-                        {dedicatedSlots.slice(0, 2).map((slot: any) => (
+                        {<div className="flex-1 min-w-0">
+                                    <h4 className="text-white font-black text-lg truncate italic leading-tight capitalize">{slot.admin_users?.store_name || 'Parceiro Izi'}</h4>
+                                    <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">{slot.title}</p>
+                                    <p className="text-[10px] text-white/30 font-bold italic mt-0.5">{slot.working_hours}</p>
+                                </div>dedicatedSlots.slice(0, 2).map((slot: any) => (
                             <motion.button 
                                 key={slot.id}
                                 onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
@@ -2082,7 +2090,7 @@ const renderDashboard = () => (
                 {/* Seção de Agendamentos no Dashboard */}
                 <section className="space-y-6">
                     <div className="flex justify-between items-end">
-                        <h3 className="text-2xl font-bold text-white tracking-tight">Sua Agenda</h3>
+                        <h3 className="text-2xl font-bold text-white tracking-tight">Agendamentos</h3>
                         <button onClick={() => setActiveTab('scheduled')} className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-4 py-2 rounded-full">Ver Calendário</button>
                     </div>
                     {scheduledOrders.length > 0 ? (
@@ -2255,7 +2263,7 @@ const renderDashboard = () => (
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-zinc-500 font-bold uppercase tracking-[0.4em] text-[10px] mb-1">Próximas Entregas</p>
-                            <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase">Agenda Semanal</h2>
+                            <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase">Agendamentos Disponíveis</h2>
                         </div>
                         <div className="bg-zinc-900/50 px-5 py-2.5 rounded-full border border-white/5 backdrop-blur-md">
                             <span className="text-yellow-400 font-black text-lg">{scheduledOrders.length}</span>
