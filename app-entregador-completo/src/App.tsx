@@ -529,7 +529,7 @@ function App() {
     const [history, setHistory] = useState<Order[]>([]);
     const [selectedHistoryOrder, setSelectedHistoryOrder] = useState<any>(null);
     const [merchantCoords, setMerchantCoords] = useState<{lat: number, lng: number} | null>(null);
-    const [stats, setStats] = useState({ balance: 0, today: 0, totalEarnings: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
+    const [stats, setStats] = useState({ balance: 0, today: 0, weekly: 0, totalEarnings: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
     const [earningsHistory, setEarningsHistory] = useState<Order[]>([]);
     const [withdrawHistory, setWithdrawHistory] = useState<any[]>([]);
     const [isFinanceLoading, setIsFinanceLoading] = useState(false);
@@ -1761,18 +1761,20 @@ function App() {
                 setWithdrawHistory(txs.filter((t: any) => t.type === 'saque'));
             }
 
-            let todaySum = 0; let totalGanhos = 0; let missionCount = 0;
+            let todaySum = 0; let weeklySum = 0; let totalGanhos = 0; let missionCount = 0;
             if (orders) { setHistory(orders);
                 const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+                const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate() - (startOfWeek.getDay() || 7) + 1); startOfWeek.setHours(0,0,0,0);
                 missionCount = orders.length;
                 orders.forEach((o: any) => {
                     const fee = getNetEarnings(o);
                     totalGanhos += fee;
                     if (new Date(o.created_at) >= startOfDay) todaySum += fee;
+                    if (new Date(o.created_at) >= startOfWeek) weeklySum += fee;
                 });
             }
 
-            setStats(prev => ({ ...prev, balance, today: todaySum, totalEarnings: totalGanhos, count: missionCount, level: Math.floor(missionCount / 10) + 1 }));
+            setStats(prev => ({ ...prev, balance, today: todaySum, weekly: weeklySum, totalEarnings: totalGanhos, count: missionCount, level: Math.floor(missionCount / 10) + 1 }));
 
             const { data: sets } = await fetchWithTimeout(`${supabaseUrl}/rest/v1/admin_settings_delivery?limit=1`).then(r => r?.ok ? r.json() : {ok: false}).catch(() => { return { ok: false }; });
             if (sets && sets[0]) setAppSettings(sets[0]);
@@ -1970,7 +1972,11 @@ const renderDashboard = () => (
                     <div className="grid grid-cols-2 gap-4">
                         <div className="clay-profile-inner rounded-3xl p-4 border border-white/20">
                             <p className="text-stone-800 text-[9px] font-bold uppercase tracking-[0.1em] mb-1">Ganhos Hoje</p>
-                            <p className="text-xl font-black text-stone-950 truncate italic">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
+                            <p className="text-xl font-black text-stone-950 truncate italic leading-none">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
+                            <div className="flex items-center gap-1 mt-1.5 opacity-60">
+                                <span className="text-[7px] font-black uppercase text-stone-800 tracking-tighter">Na Semana:</span>
+                                <span className="text-[10px] font-black text-stone-900">R$ {stats.weekly.toFixed(2).replace('.', ',')}</span>
+                            </div>
                         </div>
                         <div className="clay-profile-inner rounded-3xl p-4 border border-white/20">
                             <p className="text-stone-800 text-[9px] font-bold uppercase tracking-[0.1em] mb-1">Status</p>

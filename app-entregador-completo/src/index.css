@@ -10,7 +10,7 @@
 
 @layer base {
   body {
-    @apply antialiased bg-[#020617] text-white overflow-x-hidden;
+    @apply antialiased bg-[#000000] text-white overflow-x-hidden;
     font-family: 'Plus Jakarta Sans', sans-serif;
   }
 }
@@ -75,10 +75,13 @@
   }
 
   .clay-card-dark {
-    @apply bg-stone-900 border border-white/[0.05] rounded-[2rem] transition-all duration-300;
+    background: linear-gradient(135deg, #111111, #000000);
     box-shadow: 
-        inset 4px 4px 10px rgba(255, 255, 255, 0.05),
-        inset -4px -4px 10px rgba(0, 0, 0, 0.4);
+        inset 6px 6px 12px rgba(255, 255, 255, 0.03),
+        inset -6px -6px 12px rgba(0, 0, 0, 0.7),
+        0 20px 40px rgba(0, 0, 0, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: 2.5rem;
   }
 
   .clay-card-yellow {
@@ -87,16 +90,6 @@
         inset 4px 4px 8px rgba(255, 255, 255, 0.6),
         inset -4px -4px 8px rgba(0, 0, 0, 0.2),
         8px 8px 24px rgba(0, 0, 0, 0.5);
-    border-radius: 2.5rem;
-  }
-
-  .clay-card-dark {
-    background: #18181b;
-    box-shadow: 
-        inset 2px 2px 4px rgba(255, 255, 255, 0.1),
-        inset -2px -2px 4px rgba(0, 0, 0, 0.5),
-        8px 8px 24px rgba(0, 0, 0, 0.8);
-    border: 2px solid #facc15;
     border-radius: 2.5rem;
   }
 
