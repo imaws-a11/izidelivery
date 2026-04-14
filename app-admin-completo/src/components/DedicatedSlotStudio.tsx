@@ -251,6 +251,10 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
     setAvailableSpecialties(prev => prev.filter(s => s.id !== id));
   };
 
+  const updateDefaultSpecialty = (id: string, newLabel: string) => {
+    setAvailableSpecialties(prev => prev.map(s => s.id === id ? { ...s, label: newLabel } : s));
+  };
+
   const addBairroExtra = () => {
     if (!newBairro.trim()) return;
     const current = editingItem.metadata?.bairros_extras || [];
@@ -411,17 +415,38 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
                       <div className="flex flex-wrap gap-2">
                         {availableSpecialties.map(spec => (
                           <div key={spec.id} className="relative group/spec">
-                            <button
-                              onClick={() => toggleSpecialty(spec.id)}
+                            <div
                               className={`px-4 py-2.5 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
                                 (editingItem.metadata?.required_specialties || []).includes(spec.id)
                                   ? 'bg-primary/20 border-primary text-primary'
                                   : 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10'
                               }`}
                             >
-                              <span className="material-symbols-outlined text-sm">{spec.icon}</span>
-                              {spec.label}
-                            </button>
+                              <span 
+                                className="material-symbols-outlined text-sm cursor-pointer"
+                                onClick={() => toggleSpecialty(spec.id)}
+                              >
+                                {spec.icon}
+                              </span>
+                              
+                              {editingDefaultSpecialtyId === spec.id ? (
+                                <input 
+                                  autoFocus
+                                  className="bg-transparent border-none text-[9px] font-black uppercase tracking-widest text-primary outline-none w-20"
+                                  value={spec.label}
+                                  onChange={(e) => updateDefaultSpecialty(spec.id, e.target.value)}
+                                  onBlur={() => setEditingDefaultSpecialtyId(null)}
+                                  onKeyDown={(e) => e.key === 'Enter' && setEditingDefaultSpecialtyId(null)}
+                                />
+                              ) : (
+                                <span 
+                                  onClick={() => setEditingDefaultSpecialtyId(spec.id)}
+                                  className="cursor-text"
+                                >
+                                  {spec.label}
+                                </span>
+                              )}
+                            </div>
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
