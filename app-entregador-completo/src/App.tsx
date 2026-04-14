@@ -521,6 +521,7 @@ function App() {
     const [filter, setFilter] = useState<ServiceType | 'all'>('all');
     const [orders, setOrders] = useState<Order[]>([]);
     const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
+    const [myApplications, setMyApplications] = useState<any[]>([]);
     const [scheduledOrders, setScheduledOrders] = useState<any[]>([]);
     const [history, setHistory] = useState<Order[]>([]);
     const [selectedHistoryOrder, setSelectedHistoryOrder] = useState<any>(null);
@@ -1052,9 +1053,8 @@ function App() {
     useEffect(() => {
         if (!isAuthenticated) return;
         const fetchDedicatedSlotsRealtime = async () => {
-            const declinedIds = JSON.parse(localStorage.getItem('Izi_declined_slots') || '[]');
             const { data } = await supabase.from('dedicated_slots_delivery').select('*, admin_users(store_name, store_logo, store_address, store_phone)').eq('is_active', true).order('created_at', { ascending: false });
-            setDedicatedSlots((data || []).filter((s: any) => !declinedIds.includes(s.id)));
+            setDedicatedSlots(data || []);
         };
         fetchDedicatedSlotsRealtime();
         const slotsChannel = supabase.channel('dedicated_slots_realtime')
@@ -1073,6 +1073,15 @@ function App() {
             .subscribe();
         return () => { supabase.removeChannel(slotsChannel); };
     }, [isAuthenticated]);
+    // Buscar candidaturas
+    useEffect(() => {
+        if (!isAuthenticated || !driverId) return;
+        const fetchApps = async () => {
+            const { data } = await supabase.from('slot_applications').select('*').eq('driver_id', driverId);
+            setMyApplications(data || []);
+        };
+        fetchApps();
+    }, [isAuthenticated, driverId]);
 
     // Buscar agendamentos disponíveis e aceitos
     useEffect(() => {
@@ -2394,40 +2403,147 @@ function App() {
                     </div>
                 ) : (
                     <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-2 -mx-2">
-                        {dedicatedSlots.map((slot: any) => (
-                            <motion.div
-                                key={slot.id}
-                                whileTap={{ scale: 0.96 }}
-                                onClick={() => setActiveTab('dedicated')}
-                                className="min-w-[280px] clay-card p-6 cursor-pointer relative overflow-hidden group border-white/5"
-                            >
-                                <div className="flex items-start gap-4 mb-5">
-                                    <div className="size-12 rounded-2xl bg-white/5 border border-white/10 p-1.5 shrink-0 overflow-hidden shadow-inner">
-                                        <img src={slot.admin_users?.store_logo || 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png'} className="w-full h-full object-contain filter grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500" alt="" />
+                        {dedicatedSlots.map((slot: any) => {
+                            const benefits = slot.metadata?.benefits || ['Pagamento Adiantado', 'Acesso VIP'];
+                            const customBenefits = slot.metadata?.custom_benefits || [];
+                            const hasApplied = myApplications.some(app => app.slot_id === slot.id);
+                            const application = myApplications.find(app => app.slot_id === slot.id);
+
+                            return (
+                                <motion.div
+                                    key={slot.id}
+                                    whileTap={{ scale: 0.98 }}
+                                    className="min-w-[320px] relative bg-gradient-to-br from-zinc-900 via-zinc-900 to-black border border-white/5 rounded-[40px] overflow-hidden shadow-2xl group flex-shrink-0"
+                                >
+                                    <div className="absolute top-0 right-0 w-60 h-60 bg-primary/5 rounded-full blur-[80px] pointer-events-none -mt-20 -mr-20" />
+                                    <div className="absolute bottom-0 left-0 w-60 h-60 bg-emerald-500/5 rounded-full blur-[80px] pointer-events-none -mb-20 -ml-20" />
+
+                                    {/* Overlay de Candidatura */}
+                                    {hasApplied && (
+                                        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center border-[2px] border-black/50 rounded-[40px]">
+                                            <div className={`size-16 rounded-full flex items-center justify-center mb-4 border-[3px] border-black ${application?.status === 'accepted' ? 'bg-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.4)]' : 'bg-primary shadow-[0_0_30px_rgba(250,204,21,0.3)]'}`}>
+                                                <span className="material-symbols-outlined font-black text-slate-950 text-3xl">
+                                                    {application?.status === 'accepted' ? 'verified' : 'hourglass_empty'}
+                                                </span>
+                                            </div>
+                                            <h3 className="text-white font-black text-lg italic tracking-tight">{application?.status === 'accepted' ? 'Aprovado!' : 'Em Análise'}</h3>
+                                            <p className="text-[10px] text-white/50 mt-1 max-w-[200px]">{application?.status === 'accepted' ? 'Você é o parceiro oficial dessa loja!' : 'O lojista está avaliando seu perfil.'}</p>
+                                        </div>
+                                    )}
+
+                                    <div className="p-6 relative z-10">
+                                        {/* Header da Vaga */}
+                                        <div className="flex items-start justify-between mb-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="size-14 rounded-[20px] bg-white/5 border border-white/10 p-1 shrink-0 overflow-hidden shadow-inner flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
+                                                    {slot.admin_users?.store_logo ? (
+                                                        <img src={slot.admin_users?.store_logo} className="w-full h-full object-contain rounded-[16px]" alt="" />
+                                                    ) : (
+                                                        <Icon name="storefront" size={24} className="text-white/20" />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-0.5">{slot.admin_users?.store_name || 'Loja Parceira'}</p>
+                                                    <h3 className="text-xl font-black text-white italic tracking-tight leading-none">{slot.title}</h3>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Ganhos em Destaque */}
+                                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-[24px] p-5 mb-4 relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                                                <Icon name="payments" size={80} />
+                                            </div>
+                                            <div className="relative z-10 flex flex-col gap-1">
+                                                <p className="text-[10px] font-black text-emerald-400/80 uppercase tracking-widest flex items-center gap-2">
+                                                    <Icon name="account_balance_wallet" size={14} />
+                                                    Ganho Garantido
+                                                </p>
+                                                <div className="flex items-end gap-2">
+                                                    <p className="text-4xl font-black text-emerald-400 italic tracking-tighter">
+                                                        R$ {parseFloat(slot.fee_per_day || 0).toFixed(0)}
+                                                    </p>
+                                                    <span className="text-[10px] text-emerald-400/60 font-bold mb-1.5 uppercase tracking-widest">/ diária</span>
+                                                </div>
+                                                
+                                                {slot.metadata?.base_deliveries && slot.metadata?.fee_per_extra_delivery && (
+                                                    <div className="mt-3 pt-3 border-t border-emerald-500/20 flex gap-3 items-center">
+                                                        <div className="size-8 bg-amber-500/20 rounded-full flex items-center justify-center flex-shrink-0 shadow-inner">
+                                                            <Icon name="rocket_launch" size={14} className="text-amber-400" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[9px] font-black text-amber-500/80 uppercase tracking-widest leading-tight mb-0.5">Bônus de Super Meta</p>
+                                                            <p className="text-[11px] font-black text-amber-300 leading-tight">
+                                                                Passando da cota diária de <span className="text-amber-400 text-sm whitespace-nowrap border-b border-amber-400/30 pb-0.5">{slot.metadata.base_deliveries} entregas</span>, ganhe <span className="text-amber-400 text-sm whitespace-nowrap">+ R$ {parseFloat(slot.metadata.fee_per_extra_delivery).toFixed(2)}</span> por entrega extra!
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                {!slot.metadata?.base_deliveries && (
+                                                    <div className="mt-4 pt-4 border-t border-emerald-500/20 flex gap-3 items-center">
+                                                        <div className="size-8 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0 shadow-inner">
+                                                            <Icon name="airport_shuttle" size={14} className="text-emerald-400" />
+                                                        </div>
+                                                        <p className="text-[10px] font-bold text-emerald-300/70">Pagamento unificado para o turno contratado</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Valores e Specs Extra */}
+                                        <div className="mb-5">
+                                            <div className="bg-white/[0.03] rounded-2xl p-3 border border-white/5 flex items-center gap-3">
+                                                <div className="size-10 rounded-[14px] bg-blue-500/10 flex items-center justify-center shrink-0 shadow-inner">
+                                                    <Icon name="schedule" className="text-blue-400" size={18} />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mb-0.5">Horário do Turno</p>
+                                                    <p className="text-[12px] font-black text-white truncate">{slot.working_hours || 'A Combinar'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Tabela de Adicionais */}
+                                        {customBenefits && customBenefits.length > 0 && (
+                                            <div className="mb-6 space-y-2">
+                                                <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] px-1">Adicionais Cadastrados</p>
+                                                {customBenefits.map((ben: any, idx: number) => (
+                                                    <div key={idx} className="flex items-center justify-between bg-emerald-500/5 p-3 rounded-2xl border border-emerald-500/10">
+                                                        <span className="text-[11px] font-black text-emerald-100 tracking-widest uppercase truncate max-w-[180px]">{ben.label || ben.title || ben}</span>
+                                                        <span className="text-sm font-black text-emerald-400 whitespace-nowrap">+ R$ {parseFloat(ben.value || 0).toFixed(2)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Benefits Ticker */}
+                                        {benefits && benefits.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mb-6">
+                                                {benefits.map((ben: any, idx: number) => (
+                                                    <span key={idx} className="text-[10px] font-black text-slate-950 bg-primary px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-[0_4px_12px_rgba(250,204,21,0.2)]">
+                                                        <Icon name="check_circle" size={12} className="text-slate-950/70" />
+                                                        {typeof ben === 'object' ? (ben.label || JSON.stringify(ben)) : ben}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Ação */}
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveTab('dedicated');
+                                            }}
+                                            className="w-full h-12 bg-white/5 hover:bg-primary/10 text-white hover:text-primary border border-white/10 hover:border-primary/20 font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl flex items-center justify-center gap-2 transition-all"
+                                        >
+                                            Ver Detalhes e Candidatar
+                                            <Icon name="arrow_forward" size={14} />
+                                        </button>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[10px] font-black text-white/20 uppercase tracking-widest truncate">{slot.admin_users?.store_name || 'Loja Parceira'}</p>
-                                        <p className="text-base font-black text-white truncate italic tracking-tight">{slot.title}</p>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3 mb-5">
-                                    <div className="flex items-center gap-2 bg-white/5 py-2 px-3 rounded-xl border border-white/5 shadow-inner">
-                                        <Icon name="schedule" className="text-white/20 text-xs" />
-                                        <span className="text-[9px] font-black text-white/40 uppercase">{slot.working_hours || 'Flexível'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 bg-primary/10 py-2 px-3 rounded-xl border border-primary/10 shadow-inner">
-                                        <span className="text-xs font-black text-primary">R$ {parseFloat(slot.fee_per_day || 0).toFixed(0)}<span className="text-[8px] opacity-40 ml-0.5">/D</span></span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2">
-                                        <div className="size-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
-                                        Disponível
-                                    </span>
-                                    <Icon name="chevron_right" className="text-primary text-xs" />
-                                </div>
-                            </motion.div>
-                        ))}
+                                </motion.div>
+                            );
+                        })}
                     </div>
                 )}
             </div>
