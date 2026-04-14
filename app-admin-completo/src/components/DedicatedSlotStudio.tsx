@@ -49,13 +49,7 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
   const [activeTab, setActiveTab] = useState<'config' | 'candidates'>('config');
   const [applications, setApplications] = useState<any[]>([]);
   const [isLoadingApps, setIsLoadingApps] = useState(false);
-  const [availableSpecialties, setAvailableSpecialties] = useState([
-    { id: 'termica', label: 'Bag Térmica', icon: 'ac_unit' },
-    { id: 'maquininha', label: 'Maquininha Própria', icon: 'credit_card' },
-    { id: 'epi', label: 'EPI Completo', icon: 'engineering' },
-    { id: 'refrigerado', label: 'Baú Refrigerado', icon: 'kitchen' },
-    { id: 'documentos', label: 'Entrega de Documentos', icon: 'description' }
-  ]);
+  const [availableSpecialties, setAvailableSpecialties] = useState([]);
 
   const toNumber = (val: string) => {
     const n = parseFloat(val);
@@ -146,6 +140,15 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
     }
   };
 
+  const openWhatsApp = (phone: string, name: string) => {
+    if (!phone) {
+      toastError('Telefone não cadastrado');
+      return;
+    }
+    const text = `Olá ${name}, vi sua candidatura para a nossa vaga dedicada no IziDelivery. Podemos conversar?`;
+    window.open(`https://wa.me/55${phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
   const handleLocalSave = async () => {
     if (!editingItem.title?.trim()) {
       toastError('O título da vaga é obrigatório.');
@@ -167,17 +170,7 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
     }
   };
 
-  const toggleBenefit = (benefit: string) => {
-    const currentBenefits = editingItem.metadata?.benefits || [];
-    const newBenefits = currentBenefits.includes(benefit)
-      ? currentBenefits.filter((b: string) => b !== benefit)
-      : [...currentBenefits, benefit];
-    
-    setEditingItem({
-      ...editingItem,
-      metadata: { ...editingItem.metadata, benefits: newBenefits }
-    });
-  };
+
 
   const toggleSpecialty = (specId: string) => {
     const currentSpecs = editingItem.metadata?.required_specialties || [];
@@ -193,12 +186,14 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
 
   const addCustomBenefit = () => {
     if (!newCustomBenefit.trim()) return;
-    const current = editingItem.metadata?.custom_benefits || [];
+    const currentMetadata = editingItem.metadata || {};
+    const currentBenefits = currentMetadata.custom_benefits || [];
+    
     setEditingItem({
       ...editingItem,
       metadata: {
-        ...editingItem.metadata,
-        custom_benefits: [...current, { 
+        ...currentMetadata,
+        custom_benefits: [...currentBenefits, { 
           label: newCustomBenefit.trim(), 
           value: toNumber(newCustomBenefitValue) 
         }]
@@ -219,23 +214,27 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
 
   const addCustomSpecialty = () => {
     if (!newCustomSpecialty.trim()) return;
-    const current = editingItem.metadata?.custom_specialties || [];
+    const currentMetadata = editingItem.metadata || {};
+    const currentSpecs = currentMetadata.custom_specialties || [];
+    
     setEditingItem({
       ...editingItem,
       metadata: {
-        ...editingItem.metadata,
-        custom_specialties: [...current, newCustomSpecialty.trim()]
+        ...currentMetadata,
+        custom_specialties: [...currentSpecs, newCustomSpecialty.trim()]
       }
     });
     setNewCustomSpecialty('');
   };
 
   const removeCustomSpecialty = (index: number) => {
-    const current = editingItem.metadata?.custom_specialties || [];
-    const updated = current.filter((_: any, i: number) => i !== index);
+    const currentMetadata = editingItem.metadata || {};
+    const currentSpecs = currentMetadata.custom_specialties || [];
+    const updated = currentSpecs.filter((_: any, i: number) => i !== index);
+    
     setEditingItem({
       ...editingItem,
-      metadata: { ...editingItem.metadata, custom_specialties: updated }
+      metadata: { ...currentMetadata, custom_specialties: updated }
     });
   };
 
@@ -257,12 +256,14 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
 
   const addBairroExtra = () => {
     if (!newBairro.trim()) return;
-    const current = editingItem.metadata?.bairros_extras || [];
+    const currentMetadata = editingItem.metadata || {};
+    const currentBairros = currentMetadata.bairros_extras || [];
+    
     setEditingItem({
       ...editingItem,
       metadata: {
-        ...editingItem.metadata,
-        bairros_extras: [...current, { 
+        ...currentMetadata,
+        bairros_extras: [...currentBairros, { 
           label: newBairro.trim(), 
           fee: toNumber(newBairroFee) 
         }]
@@ -273,19 +274,17 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
   };
 
   const removeBairroExtra = (index: number) => {
-    const current = editingItem.metadata?.bairros_extras || [];
-    const updated = current.filter((_: any, i: number) => i !== index);
+    const currentMetadata = editingItem.metadata || {};
+    const currentBairros = currentMetadata.bairros_extras || [];
+    const updated = currentBairros.filter((_: any, i: number) => i !== index);
+    
     setEditingItem({
       ...editingItem,
-      metadata: { ...editingItem.metadata, bairros_extras: updated }
+      metadata: { ...currentMetadata, bairros_extras: updated }
     });
   };
 
-  const benefitsList = [
-    { id: 'bag', label: 'Levar Bag Própria', icon: 'shopping_bag' },
-    { id: 'meal', label: 'Lanche Incluso', icon: 'restaurant' },
-    { id: 'bonus', label: 'Bônus Performance', icon: 'workspace_premium' },
-  ];
+
 
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 md:p-10 text-white overflow-hidden">
@@ -394,6 +393,7 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
                     </div>
                   </div>
 
+
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Horário</label>
                     <button onClick={() => setShowTimePicker(true)} className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 flex items-center justify-between hover:bg-white/10 transition-all">
@@ -401,106 +401,85 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
                       <span className="material-symbols-outlined text-slate-600">schedule</span>
                     </button>
                   </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Incentivos Financeiros</label>
+                    <button onClick={() => setShowCockpit(true)} className="w-full p-6 rounded-3xl border border-dashed border-primary/40 bg-primary/5 text-primary flex items-center justify-center gap-3 hover:bg-primary/10 transition-all group">
+                      <span className="material-symbols-outlined group-hover:rotate-90 transition-transform">add_circle</span>
+                      <span className="text-[11px] font-black uppercase tracking-widest">Gerenciar Bônus e Benefícios</span>
+                    </button>
+                    {(editingItem.metadata?.custom_benefits || []).length > 0 && (
+                      <div className="mt-4 flex flex-wrap gap-2 ml-4">
+                        {editingItem.metadata.custom_benefits.map((b: any, i: number) => (
+                          <span key={i} className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-500 uppercase tracking-widest">
+                            + {typeof b === 'string' ? b : b.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-10">
                   <div className="grid grid-cols-2 gap-4">
-                    {benefitsList.map((b) => (
-                      <button key={b.id} onClick={() => toggleBenefit(b.id)} className={`p-5 rounded-3xl border transition-all text-left ${(editingItem.metadata?.benefits || []).includes(b.id) ? 'bg-primary/20 border-primary' : 'bg-white/5 border-white/5 text-slate-500'}`}>
-                        <span className="text-[10px] font-black uppercase tracking-widest">{b.label}</span>
-                      </button>
-                    ))}
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Especialidades Desejadas</label>
-                      <div className="flex flex-wrap gap-2">
-                        {availableSpecialties.map(spec => (
-                          <div key={spec.id} className="relative group/spec">
-                            <div
-                              className={`px-4 py-2.5 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
-                                (editingItem.metadata?.required_specialties || []).includes(spec.id)
-                                  ? 'bg-primary/20 border-primary text-primary'
-                                  : 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10'
-                              }`}
+                    <div className="space-y-4 col-span-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Requisitos e Especialidades</label>
+                      
+                      <div className="bg-black/20 rounded-[32px] p-6 border border-white/5">
+                        <div className="flex flex-wrap gap-3 mb-6">
+                          {(editingItem.metadata?.custom_specialties || []).length === 0 && (
+                            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest py-4 px-4">Nenhum requisito específico adicionado</p>
+                          )}
+                          {(editingItem.metadata?.custom_specialties || []).map((spec: string, idx: number) => (
+                            <motion.div 
+                              layout
+                              key={idx} 
+                              className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary group"
                             >
-                              <span 
-                                className="material-symbols-outlined text-sm cursor-pointer"
-                                onClick={() => toggleSpecialty(spec.id)}
-                              >
-                                {spec.icon}
-                              </span>
-                              
-                              {editingDefaultSpecialtyId === spec.id ? (
+                              {editingSpecialtyIdx === idx ? (
                                 <input 
                                   autoFocus
-                                  className="bg-transparent border-none text-[9px] font-black uppercase tracking-widest text-primary outline-none w-20"
-                                  value={spec.label}
-                                  onChange={(e) => updateDefaultSpecialty(spec.id, e.target.value)}
-                                  onBlur={() => setEditingDefaultSpecialtyId(null)}
-                                  onKeyDown={(e) => e.key === 'Enter' && setEditingDefaultSpecialtyId(null)}
+                                  className="bg-transparent border-none text-[11px] font-black uppercase tracking-widest text-primary outline-none min-w-[100px]"
+                                  value={spec}
+                                  onChange={(e) => updateCustomSpecialty(idx, e.target.value)}
+                                  onBlur={() => setEditingSpecialtyIdx(null)}
+                                  onKeyDown={(e) => e.key === 'Enter' && setEditingSpecialtyIdx(null)}
                                 />
                               ) : (
                                 <span 
-                                  onClick={() => setEditingDefaultSpecialtyId(spec.id)}
-                                  className="cursor-text"
+                                  onClick={() => setEditingSpecialtyIdx(idx)}
+                                  className="text-[11px] font-black uppercase tracking-widest cursor-text"
                                 >
-                                  {spec.label}
+                                  {spec}
                                 </span>
                               )}
-                            </div>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeAvailableSpecialty(spec.id);
-                              }}
-                              className="absolute -top-2 -right-2 size-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/spec:opacity-100 transition-opacity hover:bg-red-600 z-10"
-                            >
-                              <span className="material-symbols-outlined text-[10px]">close</span>
-                            </button>
-                          </div>
-                        ))}
+                              <button onClick={() => removeCustomSpecialty(idx)} className="size-6 rounded-full bg-primary/20 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all">
+                                <span className="material-symbols-outlined text-[14px]">close</span>
+                              </button>
+                            </motion.div>
+                          ))}
+                        </div>
 
-                        {(editingItem.metadata?.custom_specialties || []).map((spec: string, idx: number) => (
-                          <div key={idx} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-primary/50 bg-primary/10 text-primary">
-                            {editingSpecialtyIdx === idx ? (
-                              <input 
-                                autoFocus
-                                className="bg-transparent border-none text-[9px] font-black uppercase tracking-widest text-primary outline-none w-20"
-                                value={spec}
-                                onChange={(e) => updateCustomSpecialty(idx, e.target.value)}
-                                onBlur={() => setEditingSpecialtyIdx(null)}
-                                onKeyDown={(e) => e.key === 'Enter' && setEditingSpecialtyIdx(null)}
-                              />
-                            ) : (
-                              <span 
-                                onClick={() => setEditingSpecialtyIdx(idx)}
-                                className="text-[9px] font-black uppercase tracking-widest cursor-text"
-                              >
-                                {spec}
-                              </span>
-                            )}
-                            <button onClick={() => removeCustomSpecialty(idx)} className="hover:scale-125 transition-transform">
-                              <span className="material-symbols-outlined text-xs">close</span>
-                            </button>
-                          </div>
-                        ))}
-
-                        <div className="flex items-center gap-2 ml-2">
+                        <div className="relative group">
                           <input 
                             type="text"
                             value={newCustomSpecialty}
                             onChange={e => setNewCustomSpecialty(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && addCustomSpecialty()}
-                            placeholder="+ Custom"
-                            className="bg-transparent border-b border-white/10 text-[9px] font-black uppercase tracking-widest text-white outline-none w-16 px-1 focus:border-primary transition-all"
+                            placeholder="Adicionar novo requisito (ex: Moto Própria, Disponibilidade Imediata...)"
+                            className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary/50 transition-all pr-16 placeholder:text-slate-600"
                           />
+                          <button 
+                            onClick={addCustomSpecialty}
+                            className="absolute right-2 top-2 bottom-2 px-4 bg-primary text-slate-950 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all"
+                          >
+                            Adicionar
+                          </button>
                         </div>
                       </div>
                     </div>
 
-                    <button onClick={() => setShowCockpit(true)} className="w-full p-5 rounded-3xl border border-dashed border-primary/40 bg-primary/5 text-primary flex items-center justify-center gap-3 hover:bg-primary/10 transition-all">
-                      <span className="material-symbols-outlined">add_circle</span>
-                      <span className="text-[10px] font-black uppercase tracking-widest">Outros Adicionais & Custos</span>
-                    </button>
+
                   </div>
 
                   <div className="space-y-4">
@@ -611,26 +590,56 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
                       )}
 
                       <div className="flex gap-3 relative z-10">
-                        {app.status === 'pending' ? (
-                          <>
+                         {app.status === 'pending' ? (
+                          <div className="flex flex-col gap-3 w-full">
+                            <div className="flex gap-3">
+                              <button 
+                                onClick={() => handleApplicationAction(app.id, 'rejected')} 
+                                className="flex-1 h-12 bg-white/5 text-rose-500 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-white/5 hover:bg-rose-500/10 transition-all"
+                              >
+                                Recusar
+                              </button>
+                              <button 
+                                onClick={() => handleApplicationAction(app.id, 'accepted')} 
+                                className="flex-[2] h-12 bg-primary text-slate-950 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all text-center"
+                              >
+                                Aceitar Piloto
+                              </button>
+                            </div>
                             <button 
-                              onClick={() => handleApplicationAction(app.id, 'rejected')} 
-                              className="flex-1 h-14 bg-white/5 text-rose-500 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border border-white/5 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all font-sans"
+                                onClick={() => openWhatsApp(app.driver?.phone, app.driver?.full_name)}
+                                className="w-full h-12 bg-emerald-500/10 text-emerald-500 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center justify-center gap-2 hover:bg-emerald-500/20 transition-all"
                             >
-                              Recusar
+                                <span className="material-symbols-outlined text-sm">chat</span> Entrevistar via WhatsApp
                             </button>
-                            <button 
-                              onClick={() => handleApplicationAction(app.id, 'accepted')} 
-                              className="flex-1 h-14 bg-primary text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-center font-sans"
-                            >
-                              Aceitar Candidato
-                            </button>
-                          </>
+                          </div>
                         ) : (
-                          <div className={`w-full py-4 text-center text-[10px] font-black uppercase tracking-[0.2em] italic rounded-2xl border ${
-                            app.status === 'accepted' ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/20' : 'bg-white/5 text-slate-500 border-white/5'
-                          }`}>
-                             {app.status === 'accepted' ? '✓ Candidato Selecionado' : 'Candidatura Arquivada'}
+                          <div className="flex flex-col gap-3 w-full">
+                            <div className={`w-full py-4 text-center text-[10px] font-black uppercase tracking-[0.2em] italic rounded-2xl border flex items-center justify-center gap-2 ${
+                              app.status === 'accepted' ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/20' : 'bg-white/5 text-slate-500 border-white/5'
+                            }`}>
+                               <span className="material-symbols-outlined text-sm">
+                                 {app.status === 'accepted' ? 'verified' : 'archive'}
+                               </span>
+                               {app.status === 'accepted' ? 'Candidato Selecionado' : 'Candidatura Arquivada'}
+                            </div>
+                            {app.status === 'accepted' && (
+                              <div className="flex gap-3">
+                                <button 
+                                  onClick={() => openWhatsApp(app.driver?.phone, app.driver?.full_name)}
+                                  className="flex-1 h-12 bg-emerald-500 text-slate-950 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+                                >
+                                  <span className="material-symbols-outlined text-sm">call</span> Contato
+                                </button>
+                                <button 
+                                  onClick={() => handleApplicationAction(app.id, 'pending')}
+                                  className="px-4 h-12 bg-white/5 text-white/40 rounded-2xl text-[9px] font-black uppercase hover:text-rose-500 transition-all"
+                                  title="Remover da Vaga"
+                                >
+                                  <span className="material-symbols-outlined text-sm">logout</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
