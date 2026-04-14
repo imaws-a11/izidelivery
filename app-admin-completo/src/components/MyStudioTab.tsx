@@ -70,6 +70,7 @@ export default function MyStudioTab() {
 
   const [isLocating, setIsLocating] = React.useState(false);
   const [newSpecialtyTag, setNewSpecialtyTag] = React.useState('');
+  const [editingTagIdx, setEditingTagIdx] = React.useState<number | null>(null);
   const [suggestedTags, setSuggestedTags] = React.useState(['Pizza', 'Hambúrguer', 'Comida Japonesa', 'Brasileira', 'Saudável', 'Açaí', 'Bebidas', 'Doces & Bolos', 'Mercado', 'Farmácia']);
   
   const removeSuggestedTag = (tag: string) => {
@@ -293,19 +294,43 @@ export default function MyStudioTab() {
                             </div>
                           ))}
 
-                          {(targetItem.metadata?.specialties || []).filter((t: string) => !suggestedTags.includes(t)).map(tag => (
-                             <button
-                               key={tag}
-                               onClick={() => {
-                                 const current = targetItem.metadata?.specialties || [];
-                                 const newTags = current.filter((t2: string) => t2 !== tag);
-                                 updateItem({...targetItem, metadata: {...targetItem.metadata, specialties: newTags}});
-                               }}
-                               className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border bg-primary border-primary text-slate-950 shadow-lg shadow-primary/20 transition-all flex items-center gap-2"
-                             >
-                               {tag}
-                               <span className="material-symbols-outlined text-[10px]">close</span>
-                             </button>
+                          {(targetItem.metadata?.specialties || []).filter((t: string) => !suggestedTags.includes(t)).map((tag: string, idx: number) => (
+                             <div key={tag} className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border bg-primary border-primary text-slate-950 shadow-lg shadow-primary/20 transition-all">
+                               {editingTagIdx === idx ? (
+                                 <input 
+                                   autoFocus
+                                   className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest text-slate-950 outline-none w-20"
+                                   value={tag}
+                                   onChange={(e) => {
+                                      const current = [...(targetItem.metadata?.specialties || [])];
+                                      const tagIdx = current.indexOf(tag);
+                                      if (tagIdx > -1) {
+                                        current[tagIdx] = e.target.value;
+                                        updateItem({...targetItem, metadata: {...targetItem.metadata, specialties: current}});
+                                      }
+                                   }}
+                                   onBlur={() => setEditingTagIdx(null)}
+                                   onKeyDown={(e) => e.key === 'Enter' && setEditingTagIdx(null)}
+                                 />
+                               ) : (
+                                 <span 
+                                   onClick={() => setEditingTagIdx(idx)}
+                                   className="cursor-text"
+                                 >
+                                   {tag}
+                                 </span>
+                               )}
+                               <button 
+                                 onClick={() => {
+                                   const current = targetItem.metadata?.specialties || [];
+                                   const newTags = current.filter((t2: string) => t2 !== tag);
+                                   updateItem({...targetItem, metadata: {...targetItem.metadata, specialties: newTags}});
+                                 }}
+                                 className="hover:scale-125 transition-transform"
+                               >
+                                 <span className="material-symbols-outlined text-[10px]">close</span>
+                               </button>
+                             </div>
                           ))}
 
                           <div className="flex items-center gap-2 ml-2">
@@ -1524,7 +1549,7 @@ export default function MyStudioTab() {
                   await handleUpdateDedicatedSlot(slotData);
                   setEditingSlotId(null);
                 }}
-                merchantId={merchantProfile?.id || ''}
+                merchantId={targetItem?.id || ''}
               />
             )}
           </motion.div>
