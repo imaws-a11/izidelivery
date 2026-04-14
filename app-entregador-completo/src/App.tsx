@@ -1765,13 +1765,11 @@ function App() {
             if (orders) { setHistory(orders);
                 const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
                 const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate() - (startOfWeek.getDay() || 7) + 1); startOfWeek.setHours(0,0,0,0);
-                const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate() - (startOfWeek.getDay() || 7) + 1); startOfWeek.setHours(0,0,0,0);
                 missionCount = orders.length;
                 orders.forEach((o: any) => {
                     const fee = getNetEarnings(o);
                     totalGanhos += fee;
                     if (new Date(o.created_at) >= startOfDay) todaySum += fee;
-                    if (new Date(o.created_at) >= startOfWeek) weeklySum += fee;
                     if (new Date(o.created_at) >= startOfWeek) weeklySum += fee;
                 });
             }
@@ -1981,7 +1979,6 @@ const renderDashboard = () => (
                                 <span className="text-[9px] font-black text-stone-900">R$ {stats.weekly.toFixed(2).replace('.', ',')}</span>
                             </div>
                         </div>
-                        </div>
                         <div className="clay-profile-inner rounded-3xl p-4 border border-white/20">
                             <p className="text-stone-800 text-[9px] font-bold uppercase tracking-[0.1em] mb-1">Status</p>
                             <p className="text-xl font-black text-stone-950 truncate italic">
@@ -2060,11 +2057,9 @@ const renderDashboard = () => (
                         <button onClick={() => setActiveTab('dedicated')} className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-4 py-2 rounded-full">Ver Todas</button>
                     </div>
                     <div className="grid gap-4">
-                        {<div className="flex-1 min-w-0">
-                                    <h4 className="text-white font-black text-lg truncate italic leading-tight capitalize">{slot.admin_users?.store_name || 'Parceiro Izi'}</h4>
-                                    <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">{slot.title}</p>
-                                    <p className="text-[10px] text-white/30 font-bold italic mt-0.5">{slot.working_hours}</p>
-                                </div>dedicatedSlots.slice(0, 2).map((slot: any) => (
+                        {dedicatedSlots.length === 0 ? (
+                            <p className="text-[10px] text-white/30 font-black uppercase tracking-widest text-center py-4">Nenhuma vaga no momento</p>
+                        ) : dedicatedSlots.slice(0, 2).map((slot: any) => (
                             <motion.button 
                                 key={slot.id}
                                 onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
