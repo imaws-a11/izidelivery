@@ -227,32 +227,32 @@ function IziRealTimeMap({ driverCoords, pickupCoords, pickupAddress, pickupName,
   );
 }
 
-// Normaliza aliases variados de service_type que vêm do banco de dados para os tipos canônicos
+// Normaliza aliases variados de service_type que vÃªm do banco de dados para os tipos canÃ´nicos
 const normalizeServiceType = (raw: string | undefined | null): string => {
     if (!raw) return 'delivery';
     const t = raw.toLowerCase().trim();
     // Tipos de comida / restaurante
     if (['restaurant', 'restaurante', 'food', 'hamburguer', 'hamburger', 'burger',
          'lanchonete', 'lanche', 'pizzaria', 'pizza', 'sushi', 'japanese',
-         'churrasco', 'grill', 'culinaria', 'culinária', 'refeicao', 'refeição'].includes(t)) return 'restaurant';
+         'churrasco', 'grill', 'culinaria', 'culinÃ¡ria', 'refeicao', 'refeiÃ§Ã£o'].includes(t)) return 'restaurant';
     // Mercado / supermercado
     if (['market', 'mercado', 'supermercado', 'hortifruti'].includes(t)) return 'market';
-    // Farmácia / saúde
-    if (['pharmacy', 'farmacia', 'farmácia', 'saude', 'saúde', 'health'].includes(t)) return 'pharmacy';
+    // FarmÃ¡cia / saÃºde
+    if (['pharmacy', 'farmacia', 'farmÃ¡cia', 'saude', 'saÃºde', 'health'].includes(t)) return 'pharmacy';
     // Bebidas
     if (['beverages', 'bebidas', 'drinks', 'bar'].includes(t)) return 'beverages';
     // Mobilidade
     if (['mototaxi', 'moto_taxi', 'motortaxi'].includes(t)) return 'mototaxi';
     if (['car_ride', 'carro', 'taxi', 'car', 'ride'].includes(t)) return 'car_ride';
     if (['motorista_particular', 'motorista particular', 'chauffeur'].includes(t)) return 'motorista_particular';
-    // Logística
+    // LogÃ­stica
     if (['van'].includes(t)) return 'van';
     if (['utilitario', 'utilitario leve', 'utility'].includes(t)) return 'utilitario';
     if (['logistica', 'logistics'].includes(t)) return 'logistica';
-    if (['frete', 'carreto', 'freight', 'mudanca', 'mudança'].includes(t)) return 'frete';
+    if (['frete', 'carreto', 'freight', 'mudanca', 'mudanÃ§a'].includes(t)) return 'frete';
     if (['motoboy', 'courier'].includes(t)) return 'motoboy';
     if (['package', 'pacote', 'encomenda', 'express', 'delivery'].includes(t)) return 'package';
-    return t; // retorna o tipo original se não houver mapeamento
+    return t; // retorna o tipo original se nÃ£o houver mapeamento
 };
 
 const getTypeDetails = (rawType: string) => {
@@ -391,7 +391,7 @@ const getServicePresentation = (order: any) => {
 
     let summary = '';
     if (itemCount > 0) {
-        summary = itemNames.slice(0, 2).join(' • ');
+        summary = itemNames.slice(0, 2).join(' â€¢ ');
         if (itemCount > 2) summary += ` +${itemCount - 2}`;
     } else if (addressMeta) {
         summary = addressMeta
@@ -445,7 +445,7 @@ function App() {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         try {
-            // Busca configurações gerais
+            // Busca configuraÃ§Ãµes gerais
             const res = await fetch(`${supabaseUrl}/rest/v1/app_settings_delivery?select=*`, {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
             });
@@ -454,7 +454,7 @@ function App() {
                 if (data && data[0]) setAppSettings(data[0]);
             }
 
-            // Busca taxas dinâmicas (especialmente os valores base como food_min)
+            // Busca taxas dinÃ¢micas (especialmente os valores base como food_min)
             const resRates = await fetch(`${supabaseUrl}/rest/v1/dynamic_rates_delivery?type=eq.base_values&select=*`, {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
             });
@@ -463,11 +463,11 @@ function App() {
                 if (dataRates && dataRates[0]) setDynamicRates(dataRates[0].metadata);
             }
         } catch (e) {
-            console.error('[SETTINGS] Erro ao buscar configurações:', e);
+            console.error('[SETTINGS] Erro ao buscar configuraÃ§Ãµes:', e);
         }
     }, []);
 
-    // Efeito para persistir dados básicos de autenticação no localStorage
+    // Efeito para persistir dados bÃ¡sicos de autenticaÃ§Ã£o no localStorage
     useEffect(() => {
         if (isAuthenticated && driverId) {
             localStorage.setItem('izi_driver_authenticated', 'true');
@@ -496,7 +496,7 @@ function App() {
     const [isOnline, setIsOnline] = useState(() => localStorage.getItem('Izi_online') === 'true');
     const isFirstRender = useRef(true);
     const hasLoadedOnlineStatus = useRef(false); // Impede que refreshes de token sobrescrevam o status
-    const hasBootedRef = useRef(false); // Garante que syncMissionWithDB e restauração só ocorrem 1x por sessão
+    const hasBootedRef = useRef(false); // Garante que syncMissionWithDB e restauraÃ§Ã£o sÃ³ ocorrem 1x por sessÃ£o
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSOSActive, setIsSOSActive] = useState(false);
     const [missionSheetState, setMissionSheetState] = useState<"collapsed" | "half" | "expanded">("half");
@@ -522,6 +522,7 @@ function App() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
     const [myApplications, setMyApplications] = useState<any[]>([]);
+    const [selectedSlot, setSelectedSlot] = useState<any | null>(null);
     const [scheduledOrders, setScheduledOrders] = useState<any[]>([]);
     const [history, setHistory] = useState<Order[]>([]);
     const [selectedHistoryOrder, setSelectedHistoryOrder] = useState<any>(null);
@@ -559,7 +560,7 @@ function App() {
     useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
     const clearDriverSessionState = useCallback(() => {
-        console.log('[AUTH] Executando limpeza de sessão (Logout)');
+        console.log('[AUTH] Executando limpeza de sessÃ£o (Logout)');
         setIsMenuOpen(false);
         setIsAuthenticated(false);
         setDriverId(null);
@@ -579,7 +580,7 @@ function App() {
         setAuthPassword('');
         setAuthError('');
 
-        // Remove chaves críticas de sessão
+        // Remove chaves crÃ­ticas de sessÃ£o
         const keysToRemove = [
             'izi_driver_authenticated',
             'izi_driver_uid',
@@ -595,11 +596,11 @@ function App() {
 
     // WATCHDOG DE STATUS ONLINE
     // Se o estado isOnline divergir do localStorage por qualquer motivo (race condition, re-render),
-    // este efeito força a reconciliação com a intenção do motorista.
+    // este efeito forÃ§a a reconciliaÃ§Ã£o com a intenÃ§Ã£o do motorista.
     useEffect(() => {
         const localIntent = localStorage.getItem('Izi_online') === 'true';
         if (localIntent && !isOnline) {
-            console.warn('[WATCHDOG] Detectada divergência de status! Forçando ONLINE conforme localStorage.');
+            console.warn('[WATCHDOG] Detectada divergÃªncia de status! ForÃ§ando ONLINE conforme localStorage.');
             setIsOnline(true);
         }
     }, [isOnline]);
@@ -660,7 +661,7 @@ function App() {
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
-        // Permite GPS se estiver ONLINE ou em uma MISSÃO ATIVA
+        // Permite GPS se estiver ONLINE ou em uma MISSÃƒO ATIVA
         if (!isOnline && !activeMission) return;
         
         const updateLocation = async (lat: number, lng: number) => {
@@ -668,7 +669,7 @@ function App() {
           await supabase.from('drivers_delivery').update({ lat, lng }).eq('id', driverId);
         };
 
-        // Obter posição IMEDIATA para agilizar o mapa
+        // Obter posiÃ§Ã£o IMEDIATA para agilizar o mapa
         navigator.geolocation.getCurrentPosition(
             (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
             (err) => console.log("Init GPS Error (ignoring):", err),
@@ -687,11 +688,11 @@ function App() {
     useEffect(() => {
         const ensureDriverRecord = async (userId: string, email: string, name: string) => {
             // Busca o registro atual, mesmo que esteja marcado como deletado
-            // Nota: Se houver RLS impedindo a leitura de is_deleted=true, o data virá null
+            // Nota: Se houver RLS impedindo a leitura de is_deleted=true, o data virÃ¡ null
             const { data } = await supabase.from('drivers_delivery').select('id, name, lat, lng, is_deleted, is_online').eq('id', userId).maybeSingle();
             
-            // Se NÃO existe o ID no banco OU se o registro existe mas foi deletado, NÃO recriamos se o objetivo for deletar
-            // Mas aqui, só criamos se for um usuário COMPLETAMENTE novo (sem registro nenhum)
+            // Se NÃƒO existe o ID no banco OU se o registro existe mas foi deletado, NÃƒO recriamos se o objetivo for deletar
+            // Mas aqui, sÃ³ criamos se for um usuÃ¡rio COMPLETAMENTE novo (sem registro nenhum)
             if (!data) {
                 await supabase.from('drivers_delivery').upsert({
                     id: userId, 
@@ -703,13 +704,13 @@ function App() {
                     vehicle_type: 'mototaxi'
                 });
             } else {
-                // Se o registro existe, não fazemos o upsert para não "ressuscitar"
+                // Se o registro existe, nÃ£o fazemos o upsert para nÃ£o "ressuscitar"
                 if (data.name) {
                     setDriverName(data.name);
                     localStorage.setItem('izi_driver_name', data.name);
                 }
                 // REMOVIDO: setIsOnline daqui. O controle de is_online agora
-                // é feito exclusivamente pelo useEffect de restauração de sessão.
+                // Ã© feito exclusivamente pelo useEffect de restauraÃ§Ã£o de sessÃ£o.
                 const lat = Number(data.lat);
                 const lng = Number(data.lng);
                 if (isFinite(lat) && isFinite(lng) && lat !== 0 && lng !== 0) setDriverCoords({ lat, lng });
@@ -736,7 +737,7 @@ function App() {
             setAuthInitLoading(false);
         });
 
-        // Timeout de segurança: garante que o app saia da tela de boot mesmo se houver erro de rede/supabase
+        // Timeout de seguranÃ§a: garante que o app saia da tela de boot mesmo se houver erro de rede/supabase
         const authTimeout = setTimeout(() => setAuthInitLoading(false), 5000);
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -745,12 +746,12 @@ function App() {
                 setDriverId(user.id);
                 setIsAuthenticated(true);
 
-                // BOOT ÚNICO: só executa restauração completa na primeira vez
+                // BOOT ÃšNICO: sÃ³ executa restauraÃ§Ã£o completa na primeira vez
                 if (!hasBootedRef.current) {
                     hasBootedRef.current = true;
                     console.log('[AUTH] Primeiro boot detectado. Carregando perfil...');
 
-                    // Buscar perfil apenas para nome e chave pix (NÃO tocar no is_online aqui)
+                    // Buscar perfil apenas para nome e chave pix (NÃƒO tocar no is_online aqui)
                     const { data: profile } = await supabase
                         .from('drivers_delivery')
                         .select('name, bank_info')
@@ -770,12 +771,12 @@ function App() {
                     fetchMissionHistory();
                     syncMissionWithDB();
                 } else {
-                    // Renovações de token (TOKEN_REFRESHED): NÃO alterar nenhum estado
-                    console.log('[AUTH] Renovação de token. Ignorando reset de estado.');
+                    // RenovaÃ§Ãµes de token (TOKEN_REFRESHED): NÃƒO alterar nenhum estado
+                    console.log('[AUTH] RenovaÃ§Ã£o de token. Ignorando reset de estado.');
                 }
             } else {
                 if (hasBootedRef.current) {
-                    console.warn('[AUTH] SIGNED_OUT detectado. Limpando sessão...');
+                    console.warn('[AUTH] SIGNED_OUT detectado. Limpando sessÃ£o...');
                     hasBootedRef.current = false;
                     setDriverId(null);
                     setIsAuthenticated(false);
@@ -816,7 +817,7 @@ function App() {
     const handleAuthRegister = async () => {
         setAuthLoading(true); setAuthError('');
         if (!authName.trim()) { setAuthError('Informe seu nome completo.'); setAuthLoading(false); return; }
-        if (authPassword.length < 6) { setAuthError('A senha deve ter no mínimo 6 caracteres.'); setAuthLoading(false); return; }
+        if (authPassword.length < 6) { setAuthError('A senha deve ter no mÃ­nimo 6 caracteres.'); setAuthLoading(false); return; }
         try {
             const { data, error } = await supabase.auth.signUp({
                 email: authEmail,
@@ -845,7 +846,7 @@ function App() {
                 setDriverName(authName.trim());
             }
         } catch (e: any) {
-            setAuthError(e.message?.includes('already registered') ? 'Este email já está cadastrado. Faça login.' : e.message);
+            setAuthError(e.message?.includes('already registered') ? 'Este email jÃ¡ estÃ¡ cadastrado. FaÃ§a login.' : e.message);
         } finally { setAuthLoading(false); }
     };
 
@@ -854,9 +855,9 @@ function App() {
 
 
     // =====================================================================
-    // RESTAURAÇÃO DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
-    // Este é o ÚNICO lugar onde o is_online é restaurado após login/refresh.
-    // Ele dispara quando driverId e isAuthenticated ficam disponíveis.
+    // RESTAURAÃ‡ÃƒO DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
+    // Este Ã© o ÃšNICO lugar onde o is_online Ã© restaurado apÃ³s login/refresh.
+    // Ele dispara quando driverId e isAuthenticated ficam disponÃ­veis.
     // =====================================================================
     useEffect(() => {
         if (!driverId || !isAuthenticated) return;
@@ -868,7 +869,7 @@ function App() {
         setIsOnline(localWantsOnline);
 
         if (localWantsOnline) {
-            // Sincronizar banco em background para garantir consistência
+            // Sincronizar banco em background para garantir consistÃªncia
             supabase.from('drivers_delivery')
                 .update({ is_online: true, last_seen_at: new Date().toISOString() })
                 .eq('id', driverId)
@@ -879,7 +880,7 @@ function App() {
         }
     }, [driverId, isAuthenticated]);
 
-    // Sincronização entre múltiplos dispositivos (Online status, Carteira, Perfil)
+    // SincronizaÃ§Ã£o entre mÃºltiplos dispositivos (Online status, Carteira, Perfil)
     useEffect(() => {
         if (!driverId || !isAuthenticated) return;
         const dId = String(driverId).trim();
@@ -892,12 +893,12 @@ function App() {
                 filter: `id=eq.${dId}` 
             }, (payload) => {
                 const updated = payload.new;
-                console.log('[REALTIME] Sincronização multi-dispositivo:', updated);
+                console.log('[REALTIME] SincronizaÃ§Ã£o multi-dispositivo:', updated);
                 
-                // Sincronização multi-dispositivo de perfil e financeira
-                // REMOVIDO: Sincronização de is_online do banco para cá.
-                // O localStorage é a autoridade absoluta sobre a intenção do motorista.
-                // A única forma de ser ejetado é via is_active (Remote Eject) ou Logout manual.
+                // SincronizaÃ§Ã£o multi-dispositivo de perfil e financeira
+                // REMOVIDO: SincronizaÃ§Ã£o de is_online do banco para cÃ¡.
+                // O localStorage Ã© a autoridade absoluta sobre a intenÃ§Ã£o do motorista.
+                // A Ãºnica forma de ser ejetado Ã© via is_active (Remote Eject) ou Logout manual.
                 
                 // Recarregar dados financeiros se o saldo mudou por outro dispositivo
                 fetchFinanceData();
@@ -905,7 +906,7 @@ function App() {
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, [driverId, isAuthenticated]); // REMOVIDO isOnline das deps - evita re-subscrição que dispara snapshot do banco
+    }, [driverId, isAuthenticated]); // REMOVIDO isOnline das deps - evita re-subscriÃ§Ã£o que dispara snapshot do banco
 
     // Heartbeat: enquanto online, atualiza last_seen_at a cada 5 segundos
     useEffect(() => {
@@ -932,7 +933,7 @@ function App() {
     const handleToggleOnline = async () => {
         const nextState = !isOnline;
 
-        // SALVA NO LOCALSTORAGE IMEDIATAMENTE — antes de qualquer chamada ao banco
+        // SALVA NO LOCALSTORAGE IMEDIATAMENTE â€” antes de qualquer chamada ao banco
         // Isso garante que F5 sempre restaura o status correto, independente de rede
         localStorage.setItem('Izi_online', nextState.toString());
         setIsOnline(nextState);
@@ -946,7 +947,7 @@ function App() {
                 console.log(`[STATUS] ${nextState ? 'ONLINE' : 'OFFLINE'} - banco e storage sincronizados`);
             } catch (e: any) {
                 console.warn('[STATUS] Falha ao sincronizar banco (storage preservado):', e.message);
-                // NÃO reverte — o localStorage já salvou a intenção e o heartbeat sincronizará o banco
+                // NÃƒO reverte â€” o localStorage jÃ¡ salvou a intenÃ§Ã£o e o heartbeat sincronizarÃ¡ o banco
             }
         }
     };
@@ -967,11 +968,11 @@ function App() {
             }, (payload) => {
                 // Se is_active mudar para false, ejeta na hora
                 if (payload.new && payload.new.is_active === false) {
-                    console.error('[EJECT] Sessão ejetada remotamente! Motivo: Motorista desativado no painel Admin.');
+                    console.error('[EJECT] SessÃ£o ejetada remotamente! Motivo: Motorista desativado no painel Admin.');
                     toastError('Sua conta foi desativada pelo administrador.');
                     handleLogout();
                 }
-                // Se o banco forçar is_online=false MAS o motorista quer estar online, 
+                // Se o banco forÃ§ar is_online=false MAS o motorista quer estar online, 
                 // o heartbeat (useEffect abaixo) vai corrigir o banco em 5 segundos.
             })
             .subscribe();
@@ -982,7 +983,7 @@ function App() {
     const syncMissionWithDB = useCallback(async () => {
         if (!driverId || !isAuthenticated) return;
         try {
-            console.log('[SYNC] Sincronizando missão ativa do banco...');
+            console.log('[SYNC] Sincronizando missÃ£o ativa do banco...');
             const dId = String(driverId).trim();
             const { data: orders, error: qErr } = await supabase.from('orders_delivery')
                 .select('*')
@@ -996,7 +997,7 @@ function App() {
             const activeOrder = orders?.find((o: any) => 
                 !['concluido', 'cancelado', 'pendente_pagamento', 'finalizado', 'entregue'].includes(o.status) &&
                 !financialTypes.includes(o.service_type) &&
-                o.driver_id === dId // RIGOROSO: Só é missão ativa se for MINHA
+                o.driver_id === dId // RIGOROSO: SÃ³ Ã© missÃ£o ativa se for MINHA
             );
 
             if (activeOrder) {
@@ -1014,12 +1015,12 @@ function App() {
                 setActiveMission(mission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                 setActiveTab('active_mission');
-                console.log('[SYNC] Missão restaurada do banco:', mission.realId);
+                console.log('[SYNC] MissÃ£o restaurada do banco:', mission.realId);
             } else {
-                console.log('[SYNC] Nenhuma missão ativa no banco para o motorista:', driverId);
+                console.log('[SYNC] Nenhuma missÃ£o ativa no banco para o motorista:', driverId);
 
-                // PROTEÇÃO: Só apaga o cache local se a missão for ANTIGA (> 30 min)
-                // Isso evita apagar uma missão que acabou de ser aceita mas ainda não propagou no banco
+                // PROTEÃ‡ÃƒO: SÃ³ apaga o cache local se a missÃ£o for ANTIGA (> 30 min)
+                // Isso evita apagar uma missÃ£o que acabou de ser aceita mas ainda nÃ£o propagou no banco
                 const cachedMissionRaw = localStorage.getItem('Izi_active_mission');
                 if (cachedMissionRaw) {
                     try {
@@ -1028,11 +1029,11 @@ function App() {
                         const ageMs = Date.now() - createdAt;
                         const thirtyMinutes = 30 * 60 * 1000;
                         if (ageMs > thirtyMinutes) {
-                            console.log('[SYNC] Missão antiga no cache (> 30 min). Limpando...');
+                            console.log('[SYNC] MissÃ£o antiga no cache (> 30 min). Limpando...');
                             setActiveMission(null);
                             localStorage.removeItem('Izi_active_mission');
                         } else {
-                            console.log('[SYNC] Missão recente no cache. Mantendo estado local por precaução.');
+                            console.log('[SYNC] MissÃ£o recente no cache. Mantendo estado local por precauÃ§Ã£o.');
                         }
                     } catch {
                         setActiveMission(null);
@@ -1041,7 +1042,7 @@ function App() {
                 }
             }
         } catch (err: any) {
-            console.error('[SYNC] Falha ao sincronizar missão:', err.message);
+            console.error('[SYNC] Falha ao sincronizar missÃ£o:', err.message);
         }
     }, [driverId, isAuthenticated]);
 
@@ -1049,7 +1050,7 @@ function App() {
         syncMissionWithDB();
     }, [driverId, isAuthenticated, syncMissionWithDB]);
 
-    // Canal separado para vagas dedicadas — funciona independente do status online
+    // Canal separado para vagas dedicadas â€” funciona independente do status online
     useEffect(() => {
         if (!isAuthenticated) return;
         const fetchDedicatedSlotsRealtime = async () => {
@@ -1083,7 +1084,7 @@ function App() {
         fetchApps();
     }, [isAuthenticated, driverId]);
 
-    // Buscar agendamentos disponíveis e aceitos
+    // Buscar agendamentos disponÃ­veis e aceitos
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
 
@@ -1160,7 +1161,7 @@ function App() {
                 const now = Date.now();
                 const currentMission = activeMissionRef.current;
 
-                // 1. Sincronizar Missão Ativa (Se o Admin me deu um pedido ou aceitei em outro lugar)
+                // 1. Sincronizar MissÃ£o Ativa (Se o Admin me deu um pedido ou aceitei em outro lugar)
                 const myAssignment = data.find((o: any) => 
                     o.driver_id && String(o.driver_id).trim() === String(driverId).trim() &&
                     !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)
@@ -1179,13 +1180,13 @@ function App() {
                         pickup_lat: merchant?.latitude || myAssignment.pickup_lat,
                         pickup_lng: merchant?.longitude || myAssignment.pickup_lng
                     };
-                    console.log('[COLETA-DEBUG] Missão Ativa Sincronizada:', mission.pickup_address);
+                    console.log('[COLETA-DEBUG] MissÃ£o Ativa Sincronizada:', mission.pickup_address);
                     setActiveMission(mission);
                     localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                     if (activeTabRef.current !== 'active_mission') setActiveTab('active_mission');
                 }
 
-                // 2. Disponíveis no Dashboard
+                // 2. DisponÃ­veis no Dashboard
                 const available = data.filter((o: any) => {
                     const isMerchantOrder = !!o.merchant_id || !!o.admin_users;
                     const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted'].includes(o.status);
@@ -1201,7 +1202,7 @@ function App() {
                 setOrders(available.map((o: any) => {
                     const merchant = o.admin_users;
                     if (merchant) {
-                        console.log(`[COLETA-DEBUG] Loja: ${merchant.store_name} | Endereço: ${merchant.store_address} | Coords: ${merchant.latitude},${merchant.longitude}`);
+                        console.log(`[COLETA-DEBUG] Loja: ${merchant.store_name} | EndereÃ§o: ${merchant.store_address} | Coords: ${merchant.latitude},${merchant.longitude}`);
                     }
                     return {
                         ...o,
@@ -1234,7 +1235,7 @@ function App() {
         };
         fetchOrders(); fetchDedicatedSlots();
 
-        // Polling a cada 5s para garantir que pedidos reapareçam após rejeição
+        // Polling a cada 5s para garantir que pedidos reapareÃ§am apÃ³s rejeiÃ§Ã£o
         const pollInterval = setInterval(fetchOrders, 5000);
         
         const channel = supabase.channel('realtime_orders')
@@ -1242,7 +1243,7 @@ function App() {
                 const o = payload.new;
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
                 
-                // Filtros de segurança e status
+                // Filtros de seguranÃ§a e status
                 const isMerchantOrder = !!o.merchant_id;
                 const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted'].includes(o.status);
                 const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status);
@@ -1254,15 +1255,15 @@ function App() {
                 }
                 if (Date.now() - (declinedMap[o.id] || 0) < 1800000) return;
                 
-                // Ignorar transações financeiras (Izi Coin, Assinatura) que não são missões
+                // Ignorar transaÃ§Ãµes financeiras (Izi Coin, Assinatura) que nÃ£o sÃ£o missÃµes
                 const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
                 if (financialTypes.includes(o.service_type)) return;
 
                 // Restringir sons por categoria e status (Evitar barulho precoce em Food)
                 const availabilityType = normalizeServiceType(o.service_type);
                 const isMobility = ['mototaxi', 'car_ride', 'frete', 'van', 'utilitario', 'logistica', 'motorista_particular', 'package', 'motoboy'].includes(availabilityType);
-                // Só toca som se: (É Mobilidade) OU (É Food e está em um status visível/acionável)
-                // E também somente se o pagamento já foi aprovado ou é em dinheiro
+                // SÃ³ toca som se: (Ã‰ Mobilidade) OU (Ã‰ Food e estÃ¡ em um status visÃ­vel/acionÃ¡vel)
+                // E tambÃ©m somente se o pagamento jÃ¡ foi aprovado ou Ã© em dinheiro
                 const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted'];
                 const isPaidOrCash = o.payment_method === 'cash' || o.payment_status === 'paid' || o.payment_method === 'dinheiro';
                 const shouldSound = actionableStatuses.includes(o.status) && isPaidOrCash;
@@ -1271,12 +1272,12 @@ function App() {
                 setOrders(prev => {
                     if (prev.find(x => x.realId === o.id)) return prev;
                     
-                    // Só toca som se estiver online e passar no filtro de categoria
+                    // SÃ³ toca som se estiver online e passar no filtro de categoria
                     if (isOnline && shouldSound) {
                         playIziSound('driver');
                         if (Notification.permission === 'granted') {
-                            new Notification('🚀 Nova Missão Izi!', { 
-                                body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
+                            new Notification('ðŸš€ Nova MissÃ£o Izi!', { 
+                                body: `${servicePreview.headline} â€¢ ${servicePreview.pickupText || o.pickup_address}`, 
                                 icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
                             });
                         }
@@ -1298,7 +1299,7 @@ function App() {
                         preparation_status: o.preparation_status
                     };
 
-                    // Se o pedido já veio atribuído a mim (ex: admin atribuiu), define como missão ativa na hora
+                    // Se o pedido jÃ¡ veio atribuÃ­do a mim (ex: admin atribuiu), define como missÃ£o ativa na hora
                     if (o.driver_id && String(o.driver_id).trim() === String(driverId).trim()) {
                         setActiveMission(mapped);
                         localStorage.setItem('Izi_active_mission', JSON.stringify(mapped));
@@ -1306,7 +1307,7 @@ function App() {
                         return prev;
                     }
 
-                    // Se o pedido tem motorista mas NÃO SOU EU, ignora (foi aceito por outro)
+                    // Se o pedido tem motorista mas NÃƒO SOU EU, ignora (foi aceito por outro)
                     if (o.driver_id && String(o.driver_id).trim() !== '') {
                         return prev;
                     }
@@ -1318,14 +1319,14 @@ function App() {
                 const o = payload.new as any;
                 const currentMission = activeMissionRef.current;
                 
-                // Sincronização Global de Missão Ativa (Multi-dispositivos)
+                // SincronizaÃ§Ã£o Global de MissÃ£o Ativa (Multi-dispositivos)
                 const dId = String(driverId).trim();
                 if (o.driver_id === dId) {
-                    console.log('[REALTIME] Sincronizando mudança de status da minha missão:', o.status);
+                    console.log('[REALTIME] Sincronizando mudanÃ§a de status da minha missÃ£o:', o.status);
                     
-                    // Lógica de Limpeza: Se o pedido foi cancelado ou concluído em outro dispositivo
+                    // LÃ³gica de Limpeza: Se o pedido foi cancelado ou concluÃ­do em outro dispositivo
                     if (['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)) {
-                        console.log('[REALTIME] Missão finalizada detectada. Limpando estado local.');
+                        console.log('[REALTIME] MissÃ£o finalizada detectada. Limpando estado local.');
                         setActiveMission(null);
                         localStorage.removeItem('Izi_active_mission');
                         if (activeTabRef.current === 'active_mission') setActiveTab('dashboard');
@@ -1338,12 +1339,12 @@ function App() {
 
                         if (wasPreparing && isNowReady) {
                             playIziSound('driver');
-                            toastSuccess('🔥 O Pedido está PRONTO para coleta!');
-                            if (Notification.permission === 'granted') new Notification('📦 Pedido Pronto!', { body: 'O estabelecimento finalizou o preparo. Pode coletar!' });
+                            toastSuccess('ðŸ”¥ O Pedido estÃ¡ PRONTO para coleta!');
+                            if (Notification.permission === 'granted') new Notification('ðŸ“¦ Pedido Pronto!', { body: 'O estabelecimento finalizou o preparo. Pode coletar!' });
                         }
 
-                        // Sincronizar o status da missão ativa com o servidor
-                        // MANTÉM OS DADOS DO LOJISTA DE BRUMADINHO (Join admin_users) - Prioridade Total
+                        // Sincronizar o status da missÃ£o ativa com o servidor
+                        // MANTÃ‰M OS DADOS DO LOJISTA DE BRUMADINHO (Join admin_users) - Prioridade Total
                         const mission: any = { 
                             ...o, 
                             realId: o.id, 
@@ -1363,7 +1364,7 @@ function App() {
                         setActiveMission(mission);
                         localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                         
-                        // Se não estivermos na tela de missão, mudar para lá automaticamente
+                        // Se nÃ£o estivermos na tela de missÃ£o, mudar para lÃ¡ automaticamente
                         if (activeTabRef.current !== 'active_mission') {
                             setActiveTab('active_mission');
                         }
@@ -1381,11 +1382,11 @@ function App() {
                     setOrders(prev => {
                         const isNew = !prev.find(x => x.realId === o.id);
                         if (isNew) {
-                            // Ignorar transações financeiras
+                            // Ignorar transaÃ§Ãµes financeiras
                             const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
                             if (financialTypes.includes(o.service_type)) return prev;
 
-                            // Alerta para qualquer pedido novo disponível para o entregador (Mobilidade ou Food)
+                            // Alerta para qualquer pedido novo disponÃ­vel para o entregador (Mobilidade ou Food)
                             const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted'];
                             const isPaidOrCash = o.payment_method === 'cash' || o.payment_status === 'paid' || o.payment_method === 'dinheiro';
                             const shouldSound = actionableStatuses.includes(o.status) && isPaidOrCash;
@@ -1394,8 +1395,8 @@ function App() {
                             if (isOnline && shouldSound) {
                                 playIziSound('driver');
                                 if (Notification.permission === 'granted') {
-                                    new Notification('📦 Pedido Disponível!', { 
-                                        body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
+                                    new Notification('ðŸ“¦ Pedido DisponÃ­vel!', { 
+                                        body: `${servicePreview.headline} â€¢ ${servicePreview.pickupText || o.pickup_address}`, 
                                         icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
                                     });
                                 }
@@ -1442,7 +1443,7 @@ function App() {
         if (isSyncing) return;
         setIsSyncing(true);
         console.group('[DEBUG-REST-SYNC]');
-        console.log('1. Iniciando teste de conexão via REST DIRETO...');
+        console.log('1. Iniciando teste de conexÃ£o via REST DIRETO...');
 
         try {
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -1476,11 +1477,11 @@ function App() {
             console.log('4. Dados recebidos com SUCESSO via REST!', allRecent.length, 'itens');
             
             if (!allRecent || allRecent.length === 0) {
-                toastError('O banco está vazio (vias REST).');
+                toastError('O banco estÃ¡ vazio (vias REST).');
                 return;
             }
 
-            // Filtros de exibição
+            // Filtros de exibiÃ§Ã£o
             const available = allRecent.filter((o: any) => 
                 !o.driver_id && 
                 !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)
@@ -1503,19 +1504,19 @@ function App() {
             );
 
             if (myActive) {
-                console.log('5. Missão ativa encontrada via REST:', myActive.id);
+                console.log('5. MissÃ£o ativa encontrada via REST:', myActive.id);
                 const mission = { ...myActive, realId: myActive.id, type: myActive.service_type, customer: myActive.user_name || 'Cliente Izi' };
                 setActiveMission(mission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                 setActiveTab('active_mission');
-                toastSuccess('Conectado via REST! Missão recuperada.');
+                toastSuccess('Conectado via REST! MissÃ£o recuperada.');
             } else {
                 toastSuccess(`Conectado! ${available.length} chamadas via REST.`);
             }
 
         } catch (e: any) {
-            console.error('ERRO CRÍTICO NO REST SYNC:', e);
-            toastError('Falha na conexão rest: ' + e.message);
+            console.error('ERRO CRÃTICO NO REST SYNC:', e);
+            toastError('Falha na conexÃ£o rest: ' + e.message);
         } finally {
             console.groupEnd();
             setIsSyncing(false);
@@ -1524,12 +1525,12 @@ function App() {
 
 
 
-    // Startup / Session Recovery: Buscar missão ativa no banco se o driverId estiver presente
+    // Startup / Session Recovery: Buscar missÃ£o ativa no banco se o driverId estiver presente
     useEffect(() => {
         const recoverActiveMission = async () => {
             if (!driverId || activeMission) return;
             
-            console.log('[RECOVERY] Buscando missão ativa no servidor...');
+            console.log('[RECOVERY] Buscando missÃ£o ativa no servidor...');
             const { data, error } = await supabase
                 .from('orders_delivery')
                 .select('*')
@@ -1540,7 +1541,7 @@ function App() {
             if (error) console.error('[RECOVERY] Erro na query:', error);
 
             if (data && !error) {
-                console.log('[RECOVERY] Missão encontrada:', data.id);
+                console.log('[RECOVERY] MissÃ£o encontrada:', data.id);
                 const mission = { 
                     ...data, 
                     realId: data.id, 
@@ -1607,11 +1608,11 @@ function App() {
         console.group('[handleAccept] Processando aceite de pedido');
         
         try {
-            // Validar UUID — order.id é o ID curto (8 chars), order.realId é o UUID completo
+            // Validar UUID â€” order.id Ã© o ID curto (8 chars), order.realId Ã© o UUID completo
             const targetId = order.realId || order.id;
             console.log('Target ID Identificado:', targetId, { orderId: order.id, realId: order.realId });
             
-            // Validação de segurança básica: Relaxada para suportar listagens que usam apenas ID curto
+            // ValidaÃ§Ã£o de seguranÃ§a bÃ¡sica: Relaxada para suportar listagens que usam apenas ID curto
             if (!targetId) {
                  console.error('ID do pedido ausente na tentativa de aceite.');
                  toastError('Ocorreu um erro ao identificar o pedido.');
@@ -1636,11 +1637,11 @@ function App() {
             const ordersList = await checkRes.json();
             const realOrder = ordersList[0];
 
-            if (!realOrder) throw new Error('Pedido não encontrado.');
+            if (!realOrder) throw new Error('Pedido nÃ£o encontrado.');
             
-            // Verificar se ainda está disponível
+            // Verificar se ainda estÃ¡ disponÃ­vel
             if (realOrder.driver_id && String(realOrder.driver_id).trim() !== '') {
-                toastError('Este pedido já foi aceito por outro piloto.');
+                toastError('Este pedido jÃ¡ foi aceito por outro piloto.');
                 setOrders(prev => prev.filter(o => (o.realId || o.id) !== targetId));
                 return;
             }
@@ -1692,7 +1693,7 @@ function App() {
         const targetId = order.realId || order.id;
         console.log('[LOG-DRIVER] Recusando pedido:', targetId);
         
-        // Salva no localStorage para ignorar este pedido por 30 minutos (ou até limpar cache)
+        // Salva no localStorage para ignorar este pedido por 30 minutos (ou atÃ© limpar cache)
         const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
         declinedMap[targetId] = Date.now();
         localStorage.setItem('Izi_declined_timed', JSON.stringify(declinedMap));
@@ -1706,7 +1707,7 @@ function App() {
     const handleUpdateStatus = async (newStatus: string) => {
         if (!activeMission || isAccepting) return;
 
-        // Validação de pagamento se estiver finalizando
+        // ValidaÃ§Ã£o de pagamento se estiver finalizando
         const isFinishing = ['concluido', 'entregue', 'finalizado', 'delivered'].includes(newStatus.toLowerCase());
         const isPaid = activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago';
         
@@ -1719,7 +1720,7 @@ function App() {
         
         try {
             const missionId = activeMission.realId || activeMission.id;
-            if (!missionId) throw new Error('Identificador da missão não encontrado.');
+            if (!missionId) throw new Error('Identificador da missÃ£o nÃ£o encontrado.');
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -1758,7 +1759,7 @@ function App() {
             console.log('[STATUS] Sucesso:', updatedData);
             toastSuccess(`Status alterado para: ${newStatus}`);
 
-            // Lógica de Finalização
+            // LÃ³gica de FinalizaÃ§Ã£o
             const finishStatus = ['concluido', 'entregue', 'finalizado', 'delivered'];
             if (finishStatus.includes(newStatus.toLowerCase())) {
                 try {
@@ -1773,15 +1774,15 @@ function App() {
                                 user_id: driverId,
                                 amount: netEarnings,
                                 type: 'deposito',
-                                description: `Ganhos: Missão #${missionId.slice(0, 8).toUpperCase()} (Líquido)`
+                                description: `Ganhos: MissÃ£o #${missionId.slice(0, 8).toUpperCase()} (LÃ­quido)`
                             })
                         });
                     }
 
-                    // 2. Crédito do Lojista (NOVO)
+                    // 2. CrÃ©dito do Lojista (NOVO)
                     if (activeMission.merchant_id && (Number(activeMission.total_price) || 0) > 0) {
                         try {
-                            // Buscar comissão do lojista
+                            // Buscar comissÃ£o do lojista
                             const commRes = await fetch(`${supabaseUrl}/rest/v1/admin_users?select=commission_percent&id=eq.${activeMission.merchant_id}&limit=1`, {
                                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
                             });
@@ -1801,7 +1802,7 @@ function App() {
                                         p_user_id: activeMission.merchant_id,
                                         p_amount: merchantNet,
                                         p_type: 'venda',
-                                        p_description: `Venda Pedido #${missionId.slice(0, 8).toUpperCase()} (Líquido)`,
+                                        p_description: `Venda Pedido #${missionId.slice(0, 8).toUpperCase()} (LÃ­quido)`,
                                         p_status: 'concluido'
                                     })
                                 });
@@ -1811,20 +1812,20 @@ function App() {
                         }
                     }
 
-                    // Chamada REST manual também para evitar bloqueio no sync
-                    fetchFinanceData(); // Sem await para não bloquear a UI, deixa atualizar no fundo
+                    // Chamada REST manual tambÃ©m para evitar bloqueio no sync
+                    fetchFinanceData(); // Sem await para nÃ£o bloquear a UI, deixa atualizar no fundo
                 } catch (finalizeErr) {
                     console.error('[FINALIZE] Erro interno no processamento financeiro:', finalizeErr);
                 }
 
-                toastSuccess('Missão concluída com sucesso!');
+                toastSuccess('MissÃ£o concluÃ­da com sucesso!');
                 const grossEarnings = getGrossEarnings(activeMission);
                 const netEarnings = getNetEarnings(activeMission);
                 
                 const rawType = activeMission.service_type || activeMission.type || 'generic';
                 const type = normalizeServiceType(rawType);
                 
-                // Cálculo do breakdown do valor real
+                // CÃ¡lculo do breakdown do valor real
                 const baseValue = Number(dynamicRates?.[`${type}_min`] || appSettings?.baseFee || 7);
                 const distance = Number(activeMission.route_distance_km || 0);
                 const kmRate = Number(dynamicRates?.[`${type}_km`] || 1);
@@ -1841,7 +1842,7 @@ function App() {
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
                 setActiveTab('dashboard');
-                // Chamada não bloqueante
+                // Chamada nÃ£o bloqueante
                 fetchMissionHistory();
             }  
             // 3. Se for CANCELAMENTO
@@ -1851,7 +1852,7 @@ function App() {
                 setActiveTab('dashboard');
                 toastSuccess('Pedido cancelado.');
             }
-            // 4. Status intermediário (A caminho, etc)
+            // 4. Status intermediÃ¡rio (A caminho, etc)
             else {
                 const updatedMission = { ...activeMission, status: newStatus };
                 setActiveMission(updatedMission);
@@ -1862,7 +1863,7 @@ function App() {
             console.error('[STATUS] Erro ao atualizar:', e);
             toastError('Erro ao atualizar status: ' + (e.message || 'Tente novamente.'));
             
-            // Se o erro for que o pedido não existe mais ou algo fatal, limpa a tela
+            // Se o erro for que o pedido nÃ£o existe mais ou algo fatal, limpa a tela
             if (e.message?.includes('not found') || e.message?.includes('invalid input syntax')) {
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
@@ -1888,7 +1889,7 @@ function App() {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` }
             });
 
-            if (!res.ok) throw new Error('Falha ao buscar histórico');
+            if (!res.ok) throw new Error('Falha ao buscar histÃ³rico');
             const data = await res.json();
 
             if (data) {
@@ -1921,7 +1922,7 @@ function App() {
         const headers = { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` };
 
         try {
-            // Timeout de 10 segundos para cada requisição
+            // Timeout de 10 segundos para cada requisiÃ§Ã£o
             const fetchWithTimeout = (url: string) => 
                 fetch(url, { headers, signal: AbortSignal.timeout(10000) });
 
@@ -1929,13 +1930,13 @@ function App() {
             const txsRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/wallet_transactions_delivery?user_id=eq.${driverId}&order=created_at.desc`).catch(() => null);
             const txs = (txsRes && txsRes.ok) ? await txsRes.json() : null;
 
-            // Busca Informações do Motorista (Chave PIX no bank_info)
+            // Busca InformaÃ§Ãµes do Motorista (Chave PIX no bank_info)
             const driverRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}&select=bank_info,name`).catch(() => null);
             const driverData = (driverRes && driverRes.ok) ? await driverRes.json() : null;
             
             if (driverData && driverData[0]) {
                 const bankInfo = driverData[0].bank_info;
-                // O bank_info é um JSON que contém { pix_key: "..." }
+                // O bank_info Ã© um JSON que contÃ©m { pix_key: "..." }
                 const savedPix = bankInfo?.pix_key || '';
                 if (savedPix) {
                     setPixKey(savedPix);
@@ -1984,7 +1985,7 @@ function App() {
                 level: Math.floor(missionCount / 10) + 1
             }));
 
-            // Aproveitar e atualizar configurações globais
+            // Aproveitar e atualizar configuraÃ§Ãµes globais
             const { data: sets } = await fetchWithTimeout(`${supabaseUrl}/rest/v1/admin_settings_delivery?limit=1`).then(r => r?.ok ? r.json() : {ok: false}).catch(() => ({}));
             if (sets && sets[0]) {
                 setAppSettings(sets[0]);
@@ -2002,25 +2003,25 @@ function App() {
         
         // 1. Validar PIX
         if (!pixKey || pixKey.trim().length < 3) {
-            toastError('Cadastre uma chave PIX válida antes de sacar.');
+            toastError('Cadastre uma chave PIX vÃ¡lida antes de sacar.');
             setIsEditingPix(true);
             return;
         }
 
         // 2. Validar saldo
         if (stats.balance <= 0) {
-            toastError('Você não possui saldo disponível para saque.');
+            toastError('VocÃª nÃ£o possui saldo disponÃ­vel para saque.');
             return;
         }
 
-        // 3. Validar Saque Mínimo
+        // 3. Validar Saque MÃ­nimo
         const minAmount = Number(appSettings?.minwithdrawalamount ?? 0);
         if (stats.balance < minAmount) {
-            toastError(`O valor mínimo para saque é de R$ ${minAmount.toFixed(2).replace('.', ',')}`);
+            toastError(`O valor mÃ­nimo para saque Ã© de R$ ${minAmount.toFixed(2).replace('.', ',')}`);
             return;
         }
 
-        // 4. Abrir modal de confirmação
+        // 4. Abrir modal de confirmaÃ§Ã£o
         setShowWithdrawModal(true);
     };
 
@@ -2036,11 +2037,11 @@ function App() {
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
             
-            // 1. Obter ID do motorista (prioriza o que está no estado/localStorage)
+            // 1. Obter ID do motorista (prioriza o que estÃ¡ no estado/localStorage)
             const uid = driverId || localStorage.getItem('izi_driver_uid');
             
             if (!uid) {
-                throw new Error('Identificação do motorista ignorada (ID Vazio). Tente sair e entrar novamente.');
+                throw new Error('IdentificaÃ§Ã£o do motorista ignorada (ID Vazio). Tente sair e entrar novamente.');
             }
 
             // 2. Obter Token (Manualmente para evitar travamentos do supabase-js)
@@ -2056,7 +2057,7 @@ function App() {
                 console.warn('[WITHDRAW] Falha ao extrair token do LocalStorage');
             }
 
-            console.log('>>> [WITHDRAW] Enviando requisição para:', uid);
+            console.log('>>> [WITHDRAW] Enviando requisiÃ§Ã£o para:', uid);
 
             // 3. Chamada REST com Timeout de 10s
             const controller = new AbortController();
@@ -2107,7 +2108,7 @@ function App() {
             }, 4500);
 
         } catch (err: any) {
-            console.error('>>> [WITHDRAW] FALHA CRÍTICA:', err);
+            console.error('>>> [WITHDRAW] FALHA CRÃTICA:', err);
             const msg = err.name === 'AbortError' 
                 ? 'O servidor demorou muito para responder. Tente novamente.' 
                 : (err.message || 'Erro desconhecido ao processar saque.');
@@ -2121,8 +2122,8 @@ function App() {
     const handleSavePix = async (val?: string) => {
 
         const keyToSave = (val || pixKey).trim();
-        if (!keyToSave) return toastError('Digite uma chave PIX válida');
-        if (!driverId) return toastError('Entregador não identificado');
+        if (!keyToSave) return toastError('Digite uma chave PIX vÃ¡lida');
+        if (!driverId) return toastError('Entregador nÃ£o identificado');
 
         setIsSavingPix(true);
         try {
@@ -2162,13 +2163,13 @@ function App() {
         // Garante que o status online seja resetado NO STORAGE apenas em logout MANUAL
         localStorage.removeItem('Izi_online');
 
-        // Limpa sessão completo
+        // Limpa sessÃ£o completo
         clearDriverSessionState();
 
         try {
             await supabase.auth.signOut({ scope: 'local' });
         } catch (e) {
-            console.error('[LOGOUT] Erro ao encerrar sessão:', e);
+            console.error('[LOGOUT] Erro ao encerrar sessÃ£o:', e);
         } finally {
             console.log('[LOGOUT] Redirecionando...');
             window.location.href = '/';
@@ -2224,7 +2225,7 @@ function App() {
                                 <h3 className="text-base font-black text-white truncate italic tracking-tight">{driverName}</h3>
                                 <div className="flex items-center gap-2 mt-1 bg-white/5 px-3 py-1 rounded-full border border-white/5 w-fit">
                                     <div className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Nível {stats.level}</span>
+                                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">NÃ­vel {stats.level}</span>
                                 </div>
                             </div>
                         </div>
@@ -2245,10 +2246,10 @@ function App() {
                             <p className="text-[9px] font-black text-white/10 uppercase tracking-[0.5em] px-4 mb-4 italic">Menu do Piloto</p>
                             {[
                                 { id: 'dashboard', label: 'Painel', icon: 'grid_view' },
-                                { id: 'active_mission', label: 'Missão Ativa', icon: 'route', badge: activeMission ? 1 : 0 },
+                                { id: 'active_mission', label: 'MissÃ£o Ativa', icon: 'route', badge: activeMission ? 1 : 0 },
                                 { id: 'dedicated', label: 'Vagas Dedicadas', icon: 'stars' },
                                 { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length },
-                                { id: 'history', label: 'Histórico', icon: 'history' },
+                                { id: 'history', label: 'HistÃ³rico', icon: 'history' },
                                 { id: 'earnings', label: 'Financeiro', icon: 'payments' },
                                 { id: 'support', label: 'Suporte Izi', icon: 'support_agent', onClick: () => { window.open('https://wa.me/55...', '_blank'); setIsMenuOpen(false); } },
                                 { id: 'profile', label: 'Meu Perfil', icon: 'person' }
@@ -2311,7 +2312,7 @@ function App() {
                                 onClick={handleLogout} 
                                 className="w-full py-5 border border-red-500/10 text-red-500/40 rounded-[28px] text-[10px] font-black uppercase tracking-[0.4em] hover:bg-red-500/5 transition-all active:scale-95 shadow-inner"
                             >
-                                Encerrar Sessão
+                                Encerrar SessÃ£o
                             </button>
                             <p className="text-[8px] font-black text-white/10 uppercase tracking-[0.6em] text-center italic">Izi Delivery v3.4</p>
                         </div>
@@ -2350,7 +2351,7 @@ function App() {
                 
                 <div className="grid grid-cols-2 gap-4 relative z-10">
                     <div className="bg-white/[0.03] rounded-3xl p-4 border border-white/5 shadow-inner">
-                        <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-1">Nível {stats.level}</p>
+                        <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-1">NÃ­vel {stats.level}</p>
                         <p className="text-sm font-black text-white uppercase italic">{stats.level >= 10 ? 'Comandante' : stats.level >= 5 ? 'Veterano' : 'Soldado'}</p>
                         <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
                             <motion.div 
@@ -2372,7 +2373,7 @@ function App() {
                 </div>
             </div>
 
-            {/* Vagas Dedicadas - Secao Principal */}
+            {/* Vagas Dedicadas - Lista Compacta */}
             <div className="space-y-4">
                 <div className="flex items-center justify-between px-2">
                     <div className="flex items-center gap-3">
@@ -2398,150 +2399,42 @@ function App() {
                         </div>
                         <div>
                             <p className="text-[11px] font-black text-white/30 uppercase tracking-widest">Nenhuma vaga ativa</p>
-                            <p className="text-[10px] text-white/15 mt-1 max-w-[180px]">Estamos buscando parcerias exclusivas para você agora mesmo.</p>
+                            <p className="text-[10px] text-white/15 mt-1 max-w-[180px]">Estamos buscando parcerias exclusivas para vocÃª agora mesmo.</p>
                         </div>
                     </div>
                 ) : (
-                    <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 px-2 -mx-2">
-                        {dedicatedSlots.map((slot: any) => {
-                            const benefits = slot.metadata?.benefits || ['Pagamento Adiantado', 'Acesso VIP'];
-                            const customBenefits = slot.metadata?.custom_benefits || [];
+                    <div className="space-y-3">
+                        {dedicatedSlots.slice(0, 3).map((slot: any) => {
                             const hasApplied = myApplications.some(app => app.slot_id === slot.id);
                             const application = myApplications.find(app => app.slot_id === slot.id);
-
                             return (
-                                <motion.div
+                                <motion.button
                                     key={slot.id}
-                                    whileTap={{ scale: 0.98 }}
-                                    className="min-w-[320px] relative bg-gradient-to-br from-zinc-900 via-zinc-900 to-black border border-white/5 rounded-[40px] overflow-hidden shadow-2xl group flex-shrink-0"
+                                    whileTap={{ scale: 0.97 }}
+                                    onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
+                                    className="w-full text-left flex items-center gap-4 p-4 rounded-3xl border border-white/[0.06] bg-white/[0.02] hover:border-primary/20 hover:bg-primary/[0.03] transition-all group"
                                 >
-                                    <div className="absolute top-0 right-0 w-60 h-60 bg-primary/5 rounded-full blur-[80px] pointer-events-none -mt-20 -mr-20" />
-                                    <div className="absolute bottom-0 left-0 w-60 h-60 bg-emerald-500/5 rounded-full blur-[80px] pointer-events-none -mb-20 -ml-20" />
-
-                                    {/* Overlay de Candidatura */}
-                                    {hasApplied && (
-                                        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center border-[2px] border-black/50 rounded-[40px]">
-                                            <div className={`size-16 rounded-full flex items-center justify-center mb-4 border-[3px] border-black ${application?.status === 'accepted' ? 'bg-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.4)]' : 'bg-primary shadow-[0_0_30px_rgba(250,204,21,0.3)]'}`}>
-                                                <span className="material-symbols-outlined font-black text-slate-950 text-3xl">
-                                                    {application?.status === 'accepted' ? 'verified' : 'hourglass_empty'}
-                                                </span>
-                                            </div>
-                                            <h3 className="text-white font-black text-lg italic tracking-tight">{application?.status === 'accepted' ? 'Aprovado!' : 'Em Análise'}</h3>
-                                            <p className="text-[10px] text-white/50 mt-1 max-w-[200px]">{application?.status === 'accepted' ? 'Você é o parceiro oficial dessa loja!' : 'O lojista está avaliando seu perfil.'}</p>
-                                        </div>
-                                    )}
-
-                                    <div className="p-6 relative z-10">
-                                        {/* Header da Vaga */}
-                                        <div className="flex items-start justify-between mb-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className="size-14 rounded-[20px] bg-white/5 border border-white/10 p-1 shrink-0 overflow-hidden shadow-inner flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
-                                                    {slot.admin_users?.store_logo ? (
-                                                        <img src={slot.admin_users?.store_logo} className="w-full h-full object-contain rounded-[16px]" alt="" />
-                                                    ) : (
-                                                        <Icon name="storefront" size={24} className="text-white/20" />
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-0.5">{slot.admin_users?.store_name || 'Loja Parceira'}</p>
-                                                    <h3 className="text-xl font-black text-white italic tracking-tight leading-none">{slot.title}</h3>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Ganhos em Destaque */}
-                                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-[24px] p-5 mb-4 relative overflow-hidden">
-                                            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                                                <Icon name="payments" size={80} />
-                                            </div>
-                                            <div className="relative z-10 flex flex-col gap-1">
-                                                <p className="text-[10px] font-black text-emerald-400/80 uppercase tracking-widest flex items-center gap-2">
-                                                    <Icon name="account_balance_wallet" size={14} />
-                                                    Ganho Garantido
-                                                </p>
-                                                <div className="flex items-end gap-2">
-                                                    <p className="text-4xl font-black text-emerald-400 italic tracking-tighter">
-                                                        R$ {parseFloat(slot.fee_per_day || 0).toFixed(0)}
-                                                    </p>
-                                                    <span className="text-[10px] text-emerald-400/60 font-bold mb-1.5 uppercase tracking-widest">/ diária</span>
-                                                </div>
-                                                
-                                                {slot.metadata?.base_deliveries && slot.metadata?.fee_per_extra_delivery && (
-                                                    <div className="mt-3 pt-3 border-t border-emerald-500/20 flex gap-3 items-center">
-                                                        <div className="size-8 bg-amber-500/20 rounded-full flex items-center justify-center flex-shrink-0 shadow-inner">
-                                                            <Icon name="rocket_launch" size={14} className="text-amber-400" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-[9px] font-black text-amber-500/80 uppercase tracking-widest leading-tight mb-0.5">Bônus de Super Meta</p>
-                                                            <p className="text-[11px] font-black text-amber-300 leading-tight">
-                                                                Passando da cota diária de <span className="text-amber-400 text-sm whitespace-nowrap border-b border-amber-400/30 pb-0.5">{slot.metadata.base_deliveries} entregas</span>, ganhe <span className="text-amber-400 text-sm whitespace-nowrap">+ R$ {parseFloat(slot.metadata.fee_per_extra_delivery).toFixed(2)}</span> por entrega extra!
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                
-                                                {!slot.metadata?.base_deliveries && (
-                                                    <div className="mt-4 pt-4 border-t border-emerald-500/20 flex gap-3 items-center">
-                                                        <div className="size-8 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0 shadow-inner">
-                                                            <Icon name="airport_shuttle" size={14} className="text-emerald-400" />
-                                                        </div>
-                                                        <p className="text-[10px] font-bold text-emerald-300/70">Pagamento unificado para o turno contratado</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Valores e Specs Extra */}
-                                        <div className="mb-5">
-                                            <div className="bg-white/[0.03] rounded-2xl p-3 border border-white/5 flex items-center gap-3">
-                                                <div className="size-10 rounded-[14px] bg-blue-500/10 flex items-center justify-center shrink-0 shadow-inner">
-                                                    <Icon name="schedule" className="text-blue-400" size={18} />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mb-0.5">Horário do Turno</p>
-                                                    <p className="text-[12px] font-black text-white truncate">{slot.working_hours || 'A Combinar'}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Tabela de Adicionais */}
-                                        {customBenefits && customBenefits.length > 0 && (
-                                            <div className="mb-6 space-y-2">
-                                                <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] px-1">Adicionais Cadastrados</p>
-                                                {customBenefits.map((ben: any, idx: number) => (
-                                                    <div key={idx} className="flex items-center justify-between bg-emerald-500/5 p-3 rounded-2xl border border-emerald-500/10">
-                                                        <span className="text-[11px] font-black text-emerald-100 tracking-widest uppercase truncate max-w-[180px]">{ben.label || ben.title || ben}</span>
-                                                        <span className="text-sm font-black text-emerald-400 whitespace-nowrap">+ R$ {parseFloat(ben.value || 0).toFixed(2)}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Benefits Ticker */}
-                                        {benefits && benefits.length > 0 && (
-                                            <div className="flex flex-wrap gap-2 mb-6">
-                                                {benefits.map((ben: any, idx: number) => (
-                                                    <span key={idx} className="text-[10px] font-black text-slate-950 bg-primary px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-[0_4px_12px_rgba(250,204,21,0.2)]">
-                                                        <Icon name="check_circle" size={12} className="text-slate-950/70" />
-                                                        {typeof ben === 'object' ? (ben.label || JSON.stringify(ben)) : ben}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Ação */}
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setActiveTab('dedicated');
-                                            }}
-                                            className="w-full h-12 bg-white/5 hover:bg-primary/10 text-white hover:text-primary border border-white/10 hover:border-primary/20 font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl flex items-center justify-center gap-2 transition-all"
-                                        >
-                                            Ver Detalhes e Candidatar
-                                            <Icon name="arrow_forward" size={14} />
-                                        </button>
+                                    <div className="size-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
+                                        {slot.admin_users?.store_logo
+                                            ? <img src={slot.admin_users.store_logo} className="w-full h-full object-contain" alt="" />
+                                            : <Icon name="stars" size={22} className="text-primary" />}
                                     </div>
-                                </motion.div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[9px] font-black text-primary/70 uppercase tracking-widest truncate">{slot.admin_users?.store_name || 'Loja Parceira'}</p>
+                                        <p className="text-sm font-black text-white truncate leading-tight mt-0.5">{slot.title}</p>
+                                        <p className="text-[10px] text-white/30 mt-0.5">{slot.working_hours || 'HorÃ¡rio a combinar'}</p>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                        <p className="text-lg font-black text-primary">R$ {parseFloat(slot.fee_per_day || 0).toFixed(0)}</p>
+                                        <p className="text-[8px] text-white/20 uppercase tracking-widest">/dia</p>
+                                        {hasApplied && (
+                                            <span className={`text-[8px] font-black uppercase tracking-widest mt-1 block ${application?.status === 'accepted' ? 'text-emerald-400' : 'text-primary/60'}`}>
+                                                {application?.status === 'accepted' ? 'âœ“ Aprovado' : 'â³ Em anÃ¡lise'}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <Icon name="chevron_right" size={16} className="text-white/20 group-hover:text-primary/50 transition-colors shrink-0" />
+                                </motion.button>
                             );
                         })}
                     </div>
@@ -2587,7 +2480,7 @@ function App() {
                                             <div className="flex items-center gap-2 mb-2 bg-blue-500/10 w-fit px-3 py-1 rounded-full border border-blue-500/20">
                                                 <Icon name="schedule" className="text-blue-400 text-[10px]" />
                                                 <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">
-                                                    {dt.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} às {dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                    {dt.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} Ã s {dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
                                             <p className="text-base font-black text-white truncate italic tracking-tight">{order.delivery_address?.split(',')[0]}</p>
@@ -2688,7 +2581,7 @@ function App() {
                         </div>
                         <div className="space-y-2">
                             <h3 className="text-base font-black text-white/30 uppercase tracking-[0.3em]">Scanner Desativado</h3>
-                            <p className="text-xs text-white/15 font-bold">Fique online para começar a receber chamadas em tempo real.</p>
+                            <p className="text-xs text-white/15 font-bold">Fique online para comeÃ§ar a receber chamadas em tempo real.</p>
                         </div>
                         <button 
                             onClick={handleToggleOnline} 
@@ -2785,7 +2678,7 @@ function App() {
 
     const renderHistoryView = () => (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-10 pt-4">
-            <div><p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Histórico</p><h2 className="text-3xl font-black text-white tracking-tight mt-1">Missões Concluídas</h2></div>
+            <div><p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">HistÃ³rico</p><h2 className="text-3xl font-black text-white tracking-tight mt-1">MissÃµes ConcluÃ­das</h2></div>
             {history.length === 0 ? (
                 <div className="py-20 bg-white/[0.02] border border-white/5 border-dashed rounded-[32px] flex flex-col items-center gap-4 text-center">
                     <Icon name="history_edu" className="text-4xl text-white/10" /><p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Nenhum registro ainda</p>
@@ -2804,9 +2697,9 @@ function App() {
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-black text-white truncate">{order.destination?.split(',')[0] || 'Destino ignorado'}</p>
                                     <div className="flex items-center gap-2 mt-0.5">
-                                        <span className="text-[8px] font-black text-white/30 uppercase">{formattedDate} às {formattedTime}</span>
+                                        <span className="text-[8px] font-black text-white/30 uppercase">{formattedDate} Ã s {formattedTime}</span>
                                         <div className="size-1 rounded-full bg-emerald-400/30" />
-                                        <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Concluída</span>
+                                        <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">ConcluÃ­da</span>
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
@@ -2850,9 +2743,9 @@ function App() {
                             </button>
                            
                            <div className="relative">
-                               <p className="text-[9px] font-black text-primary uppercase tracking-[0.4em]">Recibo da Missão</p>
+                               <p className="text-[9px] font-black text-primary uppercase tracking-[0.4em]">Recibo da MissÃ£o</p>
                                <h3 className="text-2xl font-black text-white mt-1">#{selectedHistoryOrder.displayId || selectedHistoryOrder.id?.slice(0,8)}</h3>
-                               <p className="text-xs font-bold text-white/40 mt-1">{new Date(selectedHistoryOrder.created_at).toLocaleDateString('pt-BR')} às {new Date(selectedHistoryOrder.created_at).toLocaleTimeString('pt-BR')}</p>
+                               <p className="text-xs font-bold text-white/40 mt-1">{new Date(selectedHistoryOrder.created_at).toLocaleDateString('pt-BR')} Ã s {new Date(selectedHistoryOrder.created_at).toLocaleTimeString('pt-BR')}</p>
                            </div>
 
                            <div className="space-y-4 bg-white/[0.02] border border-white/5 p-5 rounded-[24px] relative">
@@ -2869,7 +2762,7 @@ function App() {
 
                            <div className="grid grid-cols-2 gap-3">
                                <div className="bg-white/[0.03] border border-white/5 rounded-2xl px-5 py-3 shadow-[inset_1px_1px_4px_rgba(255,255,255,0.02)]">
-                                   <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">Distância Percorrida</p>
+                                   <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">DistÃ¢ncia Percorrida</p>
                                    <div className="flex items-center gap-2">
                                        <Icon name="route" size={14} className="text-primary" />
                                        <span className="text-sm font-bold text-white">{selectedHistoryOrder.distance || '---'}</span>
@@ -2919,7 +2812,7 @@ function App() {
                                                <span className="text-xl font-black text-white italic">R$ {totalGross.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                            </div>
                                            <div className="flex justify-between items-center pt-2 border-t border-white/5 mt-2">
-                                               <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Seu Ganho Líquido</span>
+                                               <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Seu Ganho LÃ­quido</span>
                                                <span className="text-sm font-black text-primary italic">R$ {getNetEarnings(selectedHistoryOrder).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                            </div>
                                        </>
@@ -2947,7 +2840,7 @@ function App() {
                 <div className="absolute top-0 right-0 p-6 opacity-5"><Icon name="account_balance_wallet" className="text-[140px] text-primary -rotate-12" /></div>
                 
                 <div className="relative z-10">
-                    <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.5em] mb-1">Saldo Disponível</p>
+                    <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.5em] mb-1">Saldo DisponÃ­vel</p>
                     <div className="flex items-baseline gap-2">
                         <span className="text-2xl font-black text-primary opacity-50">R$</span>
                         <p className="text-5xl font-black text-white tracking-tighter drop-shadow-lg">{stats.balance.toFixed(2).replace('.', ',')}</p>
@@ -2967,7 +2860,7 @@ function App() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                {[{ label: 'Hoje', value: `R$ ${stats.today.toFixed(0)}`, icon: 'today', color: 'text-primary' }, { label: 'Total Ganhos', value: `R$ ${stats.totalEarnings.toFixed(0)}`, icon: 'account_balance', color: 'text-emerald-400' }, { label: 'Corridas', value: stats.count.toString(), icon: 'route', color: 'text-blue-400' }, { label: 'Nível', value: stats.level.toString(), icon: 'military_tech', color: 'text-yellow-400' }].map((stat, i) => (
+                {[{ label: 'Hoje', value: `R$ ${stats.today.toFixed(0)}`, icon: 'today', color: 'text-primary' }, { label: 'Total Ganhos', value: `R$ ${stats.totalEarnings.toFixed(0)}`, icon: 'account_balance', color: 'text-emerald-400' }, { label: 'Corridas', value: stats.count.toString(), icon: 'route', color: 'text-blue-400' }, { label: 'NÃ­vel', value: stats.level.toString(), icon: 'military_tech', color: 'text-yellow-400' }].map((stat, i) => (
                     <div key={i} className="bg-[#151c2c] border border-white/5 rounded-[32px] p-6 flex flex-col justify-between shadow-[inset_0_-4px_12px_rgba(0,0,0,0.3),_inset_0_2px_8px_rgba(255,255,255,0.03),_0_12px_24px_rgba(0,0,0,0.5)]">
                         <div className={`size-10 rounded-2xl bg-slate-900 shadow-[inset_0_-2px_6px_rgba(0,0,0,0.5),_inset_0_2px_4px_rgba(255,255,255,0.05)] flex items-center justify-center border border-white/5 mb-4`}>
                             <Icon name={stat.icon} className={`${stat.color} text-lg drop-shadow-md`} />
@@ -3001,7 +2894,7 @@ function App() {
                                             <Icon name={isWithdraw ? 'arrow_outward' : 'add_circle'} size={20} />
                                         </div>
                                         <div>
-                                            <p className="text-xs font-black text-white">{isWithdraw ? 'Saque' : (item.description || 'Depósito')}</p>
+                                            <p className="text-xs font-black text-white">{isWithdraw ? 'Saque' : (item.description || 'DepÃ³sito')}</p>
                                             <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest">{new Date(item.created_at).toLocaleDateString('pt-BR')}  {new Date(item.created_at).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</p>
                                         </div>
                                     </div>
@@ -3016,12 +2909,12 @@ function App() {
                         })
                     }
                     {earningsHistory.length === 0 && withdrawHistory.length === 0 && (
-                        <p className="text-[10px] text-white/20 text-center py-4">Nenhuma transação registrada</p>
+                        <p className="text-[10px] text-white/20 text-center py-4">Nenhuma transaÃ§Ã£o registrada</p>
                     )}
                 </div>
             </div>
 
-            {/* Gestão de Chave PIX */}
+            {/* GestÃ£o de Chave PIX */}
             <div className="bg-[#151c2c] border border-white/5 rounded-[32px] p-6 space-y-4 shadow-[inset_0_-4px_12px_rgba(0,0,0,0.3),_0_10px_20px_rgba(0,0,0,0.4)]">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -3079,15 +2972,15 @@ function App() {
     const renderScheduledView = () => (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-10 pt-4">
             <div>
-                <p className="text-[9px] font-black text-blue-400 uppercase tracking-[0.5em]">Calendário</p>
+                <p className="text-[9px] font-black text-blue-400 uppercase tracking-[0.5em]">CalendÃ¡rio</p>
                 <h2 className="text-3xl font-black text-white tracking-tight mt-1">Agendamentos</h2>
-                <p className="text-xs text-white/30 mt-1">Pedidos agendados disponíveis e aceitos.</p>
+                <p className="text-xs text-white/30 mt-1">Pedidos agendados disponÃ­veis e aceitos.</p>
             </div>
 
             {scheduledOrders.length === 0 ? (
                 <div className="py-20 bg-white/[0.02] border border-white/5 border-dashed rounded-[32px] flex flex-col items-center gap-4 text-center">
                     <Icon name="event_available" className="text-4xl text-white/10" />
-                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Nenhum agendamento disponível</p>
+                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Nenhum agendamento disponÃ­vel</p>
                     <p className="text-[10px] text-white/10 mt-1">Novos agendamentos aparecem aqui em tempo real</p>
                 </div>
             ) : scheduledOrders.map((order: any, i: number) => {
@@ -3096,10 +2989,10 @@ function App() {
                 const isAccepted = order.driver_id === driverId;
                 const isMyAccepted = isAccepted;
                 const statusColor = isMyAccepted ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : isPending ? 'text-blue-400 bg-blue-400/10 border-blue-400/20' : 'text-white/40 bg-white/5 border-white/10';
-                const statusLabel = isMyAccepted ? '✓ Aceito por você' : isPending ? 'Disponível' : order.status;
+                const statusLabel = isMyAccepted ? 'âœ“ Aceito por vocÃª' : isPending ? 'DisponÃ­vel' : order.status;
                 const isToday = dt.toDateString() === new Date().toDateString();
                 const isTomorrow = dt.toDateString() === new Date(Date.now() + 86400000).toDateString();
-                const dateLabel = isToday ? 'Hoje' : isTomorrow ? 'Amanhã' : dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+                const dateLabel = isToday ? 'Hoje' : isTomorrow ? 'AmanhÃ£' : dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
 
                 return (
                     <motion.div key={order.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
@@ -3119,7 +3012,7 @@ function App() {
                             </div>
                         </div>
 
-                        {/* Endereços */}
+                        {/* EndereÃ§os */}
                         <div className="space-y-2">
                             <div className="flex items-start gap-3">
                                 <div className="size-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
@@ -3171,7 +3064,7 @@ function App() {
                         {isMyAccepted && (
                             <div className="flex items-center justify-center gap-2 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
                                 <Icon name="verified" className="text-emerald-400 text-lg" />
-                                <span className="text-[11px] font-black text-emerald-400 uppercase tracking-widest">Você aceitou esta corrida</span>
+                                <span className="text-[11px] font-black text-emerald-400 uppercase tracking-widest">VocÃª aceitou esta corrida</span>
                             </div>
                         )}
                     </motion.div>
@@ -3180,51 +3073,337 @@ function App() {
         </motion.div>
     );
 
-    const renderDedicatedView = () => (
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-10 pt-4">
-            <div><p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Exclusivo</p><h2 className="text-3xl font-black text-white tracking-tight mt-1">Vagas Dedicadas</h2><p className="text-xs text-white/30 mt-1">Seja piloto exclusivo de um parceiro Izi.</p></div>
-            {dedicatedSlots.length === 0 ? (
-                <div className="py-20 bg-white/[0.02] border border-white/5 border-dashed rounded-[32px] flex flex-col items-center gap-4 text-center">
-                    <Icon name="sentiment_dissatisfied" className="text-4xl text-white/10" /><p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Nenhuma vaga disponível</p>
-                </div>
-            ) : dedicatedSlots.map((slot: any, i: number) => (
-                <motion.div key={slot.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className="bg-white/[0.03] border border-white/8 rounded-[32px] p-6 space-y-5">
-                    <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="size-14 rounded-[20px] bg-white/5 border border-white/10 overflow-hidden p-2 shrink-0"><img src={slot.admin_users?.store_logo || 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png'} className="w-full h-full object-contain" alt="" /></div>
-                            <div><p className="text-[9px] font-black text-white/30 uppercase tracking-widest">{slot.admin_users?.store_name}</p><h3 className="text-base font-black text-white">{slot.title}</h3></div>
+    const renderDedicatedView = () => {
+        // Se nenhum slot selecionado: mostra lista de vagas
+        if (!selectedSlot) {
+            return (
+                <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-10 pt-4">
+                    <div>
+                        <p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Exclusivo</p>
+                        <h2 className="text-3xl font-black text-white tracking-tight mt-1">Vagas Dedicadas</h2>
+                        <p className="text-xs text-white/30 mt-1">Seja piloto exclusivo de um parceiro Izi.</p>
+                    </div>
+                    {dedicatedSlots.length === 0 ? (
+                        <div className="py-20 bg-white/[0.02] border border-white/5 border-dashed rounded-[32px] flex flex-col items-center gap-4 text-center">
+                            <Icon name="sentiment_dissatisfied" className="text-4xl text-white/10" />
+                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Nenhuma vaga disponÃ­vel</p>
                         </div>
-                        <div className="text-right shrink-0"><p className="text-xl font-black text-primary">R$ {parseFloat(slot.fee_per_day).toFixed(0)}</p><p className="text-[8px] text-white/20 uppercase tracking-widest">/dia garantido</p></div>
+                    ) : (
+                        <div className="space-y-4">
+                            {dedicatedSlots.map((slot: any, i: number) => {
+                                const hasApplied = myApplications.some(app => app.slot_id === slot.id);
+                                const application = myApplications.find(app => app.slot_id === slot.id);
+                                return (
+                                    <motion.button
+                                        key={slot.id}
+                                        whileTap={{ scale: 0.97 }}
+                                        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
+                                        onClick={() => setSelectedSlot(slot)}
+                                        className="w-full text-left flex items-center gap-4 p-5 rounded-3xl border border-white/[0.06] bg-white/[0.02] hover:border-primary/20 hover:bg-primary/[0.03] transition-all group"
+                                    >
+                                        <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
+                                            {slot.admin_users?.store_logo
+                                                ? <img src={slot.admin_users.store_logo} className="w-full h-full object-contain" alt="" />
+                                                : <Icon name="stars" size={26} className="text-primary" />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[9px] font-black text-primary/70 uppercase tracking-widest">{slot.admin_users?.store_name || 'Parceiro Izi'}</p>
+                                            <p className="text-base font-black text-white truncate">{slot.title}</p>
+                                            <p className="text-[10px] text-white/30 mt-0.5">{slot.working_hours || 'HorÃ¡rio a combinar'}</p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="text-xl font-black text-primary">R$ {parseFloat(slot.fee_per_day || 0).toFixed(0)}</p>
+                                            <p className="text-[8px] text-white/20 uppercase tracking-widest">/dia</p>
+                                            {hasApplied && (
+                                                <span className={`text-[8px] font-black uppercase tracking-widest mt-1 block ${application?.status === 'accepted' ? 'text-emerald-400' : 'text-primary/60'}`}>
+                                                    {application?.status === 'accepted' ? 'âœ“ Aprovado' : 'â³ AnÃ¡lise'}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <Icon name="chevron_right" size={16} className="text-white/20 group-hover:text-primary/50 transition-colors shrink-0" />
+                                    </motion.button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </motion.div>
+            );
+        }
+
+        // =========== TELA DE DETALHES DA VAGA ===========
+        const slot = selectedSlot;
+        const customBenefits: any[] = slot.metadata?.custom_benefits || [];
+        const neighborhoodExtras: any[] = slot.metadata?.neighborhood_extras || [];
+        const requirements: any[] = slot.metadata?.requirements || [
+            { label: 'CNH Categoria A Definitiva', detail: 'DocumentaÃ§Ã£o em dia Ã© obrigatÃ³ria' },
+            { label: 'BaÃº ou Mochila TÃ©rmica', detail: 'Equipamento prÃ³prio para entregas' },
+        ];
+        const hasApplied = myApplications.some(app => app.slot_id === slot.id);
+        const application = myApplications.find(app => app.slot_id === slot.id);
+
+        // â”€â”€ Estilos Clay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        const sClayDark: React.CSSProperties = {
+            background: '#1A1A1A',
+            borderRadius: '2.5rem',
+            boxShadow: '8px 8px 16px rgba(0,0,0,0.4), inset 4px 4px 8px rgba(255,255,255,0.05), inset -4px -4px 8px rgba(0,0,0,0.5)',
+        };
+        const sClayYellow: React.CSSProperties = {
+            background: '#FFD700',
+            borderRadius: '2.5rem',
+            boxShadow: '0 10px 25px rgba(255,215,0,0.3), inset 6px 6px 12px rgba(255,255,255,0.6), inset -6px -6px 12px rgba(0,0,0,0.2)',
+        };
+        const sClayIcon: React.CSSProperties = {
+            background: '#1A1A1A',
+            boxShadow: '4px 4px 8px rgba(0,0,0,0.3), inset 2px 2px 4px rgba(255,255,255,0.05), inset -2px -2px 4px rgba(0,0,0,0.4)',
+        };
+
+        return (
+            <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="pb-32" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", backgroundColor: '#000', color: '#fff', minHeight: '100vh' }}>
+
+                {/* â”€â”€ Header fixo â”€â”€ */}
+                <div style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.05)' }} className="flex items-center px-6 h-16">
+                    <button
+                        onClick={() => setSelectedSlot(null)}
+                        className="active:scale-90 transition-transform flex items-center justify-center w-10 h-10 rounded-full"
+                        style={sClayIcon}
+                    >
+                        <Icon name="arrow_back" size={20} className="text-primary" />
+                    </button>
+                    <h1 className="ml-4 text-lg font-bold tracking-tight text-white">Detalhes da Vaga</h1>
+                </div>
+
+                {/* â”€â”€ ConteÃºdo principal â”€â”€ */}
+                <div className="pt-6 pb-12 space-y-10">
+
+                    {/* Profile Header */}
+                    <section className="flex flex-col items-center text-center space-y-4 px-6">
+                        <div className="relative">
+                            <div className="w-28 h-28 p-1.5 flex items-center justify-center overflow-hidden" style={{ ...sClayDark, borderRadius: '9999px' }}>
+                                {slot.admin_users?.store_logo
+                                    ? <img src={slot.admin_users.store_logo} className="w-full h-full rounded-full object-cover grayscale brightness-110" alt="Logo" />
+                                    : <Icon name="stars" size={44} className="text-primary" />}
+                            </div>
+                            <div
+                                className="absolute -bottom-1 -right-1 w-8 h-8 flex items-center justify-center text-black"
+                                style={{ ...sClayYellow, borderRadius: '9999px' }}
+                            >
+                                <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1", fontSize: '18px' }}>verified</span>
+                            </div>
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-extrabold tracking-tight text-white">{slot.admin_users?.store_name || 'Parceiro Izi'}</h2>
+                            <p className="font-bold tracking-widest uppercase mt-1 opacity-90" style={{ color: '#FFD700', fontSize: '10px' }}>{slot.title}</p>
+                        </div>
+                    </section>
+
+                    {/* Main Financial Card */}
+                    <div className="px-6">
+                        <div className="p-8 text-black relative overflow-hidden" style={sClayYellow}>
+                            <div className="relative z-10">
+                                <p className="font-black uppercase opacity-60" style={{ fontSize: '10px', letterSpacing: '0.2em' }}>Ganho Garantido</p>
+                                <div className="flex items-baseline gap-1 mt-1">
+                                    <span className="text-xl font-bold">R$</span>
+                                    <span className="text-6xl font-black tracking-tighter">{parseFloat(slot.fee_per_day || 0).toFixed(0)}</span>
+                                    <span className="text-lg font-bold opacity-80">/diÃ¡ria</span>
+                                </div>
+                            </div>
+                            <span className="material-symbols-outlined absolute -right-6 -bottom-6 opacity-10 pointer-events-none" style={{ fontSize: '120px', fontVariationSettings: "'FILL' 1" }}>payments</span>
+                        </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-black/20 rounded-2xl p-3"><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Horário</p><p className="text-xs font-black text-white mt-0.5">{slot.working_hours}</p></div>
-                        {slot.admin_users?.store_address && <div className="bg-black/20 rounded-2xl p-3"><p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Local</p><p className="text-xs font-black text-white mt-0.5 truncate">{slot.admin_users.store_address.split(',')[0]}</p></div>}
+
+                    {/* Turno e Meta Extra */}
+                    <div className="grid grid-cols-2 gap-4 px-6">
+                        {/* Turno */}
+                        <div className="p-6 flex flex-col items-center text-center" style={sClayDark}>
+                            <div className="w-10 h-10 rounded-2xl flex items-center justify-center mb-3" style={sClayIcon}>
+                                <span className="material-symbols-outlined text-primary" style={{ fontSize: '20px' }}>schedule</span>
+                            </div>
+                            <p className="font-bold uppercase mb-1" style={{ fontSize: '10px', color: '#A0A0A0', letterSpacing: '0.1em' }}>Turno</p>
+                            <p className="text-lg font-extrabold text-white">{slot.working_hours || 'A combinar'}</p>
+                        </div>
+                        {/* Meta Extra ou Local */}
+                        {slot.metadata?.base_deliveries && slot.metadata?.fee_per_extra_delivery ? (
+                            <div className="p-6 flex flex-col items-center text-center" style={sClayDark}>
+                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center mb-3" style={sClayIcon}>
+                                    <span className="material-symbols-outlined text-primary" style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>rocket_launch</span>
+                                </div>
+                                <p className="font-bold uppercase mb-1" style={{ fontSize: '10px', color: '#A0A0A0', letterSpacing: '0.1em' }}>Meta Extra</p>
+                                <p className="text-lg font-extrabold" style={{ color: '#FFD700' }}>R$ {parseFloat(slot.metadata.fee_per_extra_delivery).toFixed(2)}</p>
+                                <p className="mt-1" style={{ fontSize: '9px', color: '#A0A0A0' }}>ApÃ³s {slot.metadata.base_deliveries} entregas</p>
+                            </div>
+                        ) : (
+                            <div className="p-6 flex flex-col items-center text-center" style={sClayDark}>
+                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center mb-3" style={sClayIcon}>
+                                    <span className="material-symbols-outlined text-primary" style={{ fontSize: '20px' }}>location_on</span>
+                                </div>
+                                <p className="font-bold uppercase mb-1" style={{ fontSize: '10px', color: '#A0A0A0', letterSpacing: '0.1em' }}>Local</p>
+                                <p className="text-base font-extrabold text-white leading-tight">{slot.admin_users?.store_address?.split(',')[0] || 'Ver detalhes'}</p>
+                            </div>
+                        )}
                     </div>
-                    {slot.description && <p className="text-xs text-white/40 leading-relaxed border-l-2 border-primary/20 pl-4">{slot.description}</p>}
-                    <div className="flex gap-3">
-                        {slot.admin_users?.store_phone && (
-                            <button onClick={() => window.open(`https://wa.me/55${slot.admin_users.store_phone.replace(/\D/g, '')}`, '_blank')} className="flex-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-black text-[10px] uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all py-3">
-                                <Icon name="chat" className="text-lg" />WhatsApp
+
+                    {/* â”€â”€ BÃ´nus extras â”€â”€ */}
+                    {customBenefits.length > 0 && (
+                        <section className="space-y-4 pt-4">
+                            <div className="flex items-center justify-between px-6">
+                                <h3 className="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full" style={{ background: '#FFD700' }}></span>
+                                    BÃ´nus extras
+                                </h3>
+                                <span className="px-3 py-1 font-black uppercase" style={{ ...sClayDark, fontSize: '9px', color: '#FFD700', letterSpacing: '0.1em', borderRadius: '9999px' }}>
+                                    {customBenefits.length} {customBenefits.length === 1 ? 'Item' : 'Itens'}
+                                </span>
+                            </div>
+                            <div className="overflow-x-auto flex gap-4 px-6 pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}>
+                                {customBenefits.map((ben: any, idx: number) => (
+                                    <div key={idx} className="flex-shrink-0 w-32 p-5 flex flex-col items-center text-center space-y-3" style={sClayDark}>
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={sClayIcon}>
+                                            <span className="material-symbols-outlined text-primary" style={{ fontSize: '20px' }}>stars</span>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                            <p className="font-bold uppercase" style={{ fontSize: '9px', color: '#A0A0A0' }}>{ben.label || ben.title || ben}</p>
+                                            <p className="text-sm font-black" style={{ color: '#FFD700' }}>+ R$ {parseFloat(ben.value || 0).toFixed(2)}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
+                    {/* â”€â”€ Bairros extras â”€â”€ */}
+                    <section className="px-6 space-y-5">
+                        <h4 className="font-bold text-white flex items-center gap-3">
+                            <span className="w-8 h-8 rounded-xl flex items-center justify-center" style={sClayIcon}>
+                                <span className="material-symbols-outlined text-primary" style={{ fontSize: '18px' }}>location_on</span>
+                            </span>
+                            Bairros extras
+                        </h4>
+                        {neighborhoodExtras.length > 0 ? (
+                            <div className="overflow-x-auto flex gap-4 pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}>
+                                {neighborhoodExtras.map((nb: any, idx: number) => (
+                                    <div key={idx} className="flex-shrink-0 w-32 p-5 flex flex-col items-center text-center space-y-3" style={sClayDark}>
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={sClayIcon}>
+                                            <span className="material-symbols-outlined text-primary" style={{ fontSize: '20px' }}>map</span>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                            <p className="font-bold uppercase" style={{ fontSize: '9px', color: '#A0A0A0' }}>{nb.label || nb.name || nb}</p>
+                                            <p className="text-sm font-black" style={{ color: '#FFD700' }}>+ R$ {parseFloat(nb.value || 0).toFixed(2)}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="p-4 flex items-center gap-3" style={{ ...sClayDark, borderRadius: '1.5rem' }}>
+                                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={sClayIcon}>
+                                    <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#FFD700', opacity: 0.5 }}>map</span>
+                                </div>
+                                <p className="text-sm" style={{ color: '#A0A0A0' }}>Sem bairros com taxa adicional</p>
+                            </div>
+                        )}
+                    </section>
+
+                    {/* â”€â”€ Requisitos â”€â”€ */}
+                    <section className="px-6 space-y-6">
+                        <h4 className="font-bold text-white flex items-center gap-3">
+                            <span className="w-8 h-8 rounded-xl flex items-center justify-center" style={sClayIcon}>
+                                <span className="material-symbols-outlined text-primary" style={{ fontSize: '18px' }}>verified_user</span>
+                            </span>
+                            Requisitos NecessÃ¡rios
+                        </h4>
+                        <div className="space-y-4">
+                            {requirements.map((req: any, idx: number) => (
+                                <div key={idx} className="flex items-center gap-4 p-4" style={sClayDark}>
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={sClayIcon}>
+                                        <span className="material-symbols-outlined text-primary" style={{ fontSize: '18px' }}>check</span>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-white leading-tight">{typeof req === 'string' ? req : req.label}</p>
+                                        {req.detail && <p className="mt-0.5" style={{ fontSize: '11px', color: '#A0A0A0' }}>{req.detail}</p>}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+
+                    {/* DescriÃ§Ã£o (se houver) */}
+                    {slot.description && (
+                        <section className="px-6">
+                            <div className="p-4" style={{ ...sClayDark, borderRadius: '1.5rem', borderLeft: '3px solid rgba(255,215,0,0.4)' }}>
+                                <p className="text-xs leading-relaxed" style={{ color: '#A0A0A0' }}>{slot.description}</p>
+                            </div>
+                        </section>
+                    )}
+                </div>
+
+                {/* â”€â”€ Sticky Bottom â”€â”€ */}
+                <nav
+                    className="fixed bottom-0 left-0 w-full flex flex-col items-center z-50"
+                    style={{ background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.05)' }}
+                >
+                    <div className="w-full pt-5 pb-8 px-6">
+                        {hasApplied ? (
+                            <div
+                                className="flex items-center justify-center gap-3 py-5 px-8 w-full font-black text-sm uppercase"
+                                style={{
+                                    ...(application?.status === 'accepted'
+                                        ? { background: '#10b981', boxShadow: '0 10px 25px rgba(16,185,129,0.3), inset 6px 6px 12px rgba(255,255,255,0.2), inset -6px -6px 12px rgba(0,0,0,0.2)' }
+                                        : { ...sClayDark, color: '#FFD700' }
+                                    ),
+                                    borderRadius: '2.5rem',
+                                    letterSpacing: '0.15em',
+                                    color: application?.status === 'accepted' ? '#fff' : '#FFD700',
+                                }}
+                            >
+                                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+                                    {application?.status === 'accepted' ? 'verified' : 'schedule'}
+                                </span>
+                                {application?.status === 'accepted' ? 'Candidatura Aprovada!' : 'Em AnÃ¡lise...'}
+                            </div>
+                        ) : (
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const { error } = await supabase.from('slot_applications').insert({
+                                            slot_id: slot.id,
+                                            driver_id: driverId,
+                                            status: 'pending',
+                                            created_at: new Date().toISOString()
+                                        });
+                                        if (error && error.code !== '42P01') throw error;
+                                        toastSuccess('Candidatura enviada!');
+                                        setSelectedSlot(null);
+                                        setActiveTab('dashboard');
+                                    } catch { toastError('Erro ao candidatar. Tente pelo WhatsApp.'); }
+                                }}
+                                className="flex items-center justify-center gap-3 py-5 px-8 w-full font-black text-sm uppercase text-black active:scale-[0.97] transition-all"
+                                style={{ ...sClayYellow, letterSpacing: '0.15em' }}
+                            >
+                                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>assignment_turned_in</span>
+                                Candidatar-se Agora
                             </button>
                         )}
-                        <button onClick={async () => { try { const { error } = await supabase.from('slot_applications').insert({ slot_id: slot.id, driver_id: driverId, status: 'pending', created_at: new Date().toISOString() }); if (error && error.code !== '42P01') throw error; toastSuccess('Candidatura enviada!'); setDedicatedSlots(prev => prev.filter((s: any) => s.id !== slot.id)); } catch { toastError('Erro ao candidatar. Tente pelo WhatsApp.'); } }} className="flex-1 bg-primary text-slate-900 font-black text-[10px] uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-primary/20 py-3">
-                            <Icon name="check_circle" className="text-lg" />Candidatar
-                        </button>
-                        <button onClick={() => { const d = JSON.parse(localStorage.getItem('Izi_declined_slots') || '[]'); localStorage.setItem('Izi_declined_slots', JSON.stringify([...d, slot.id])); setDedicatedSlots(prev => prev.filter((s: any) => s.id !== slot.id)); toast('Vaga ignorada.'); }} className="bg-white/5 text-red-400 border border-red-500/10 rounded-2xl flex items-center justify-center active:scale-95 transition-all px-4 py-3">
-                            <Icon name="close" className="text-xl" />
-                        </button>
+                        {slot.admin_users?.store_phone && (
+                            <button
+                                onClick={() => window.open(`https://wa.me/55${slot.admin_users.store_phone.replace(/\D/g, '')}`, '_blank')}
+                                className="w-full mt-3 flex items-center justify-center gap-2 py-3 font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all"
+                                style={{ ...sClayDark, color: '#4ade80', borderRadius: '1.5rem' }}
+                            >
+                                <Icon name="chat" size={14} />WhatsApp
+                            </button>
+                        )}
                     </div>
-                </motion.div>
-            ))}
-        </motion.div>
-    );
+                </nav>
+            </motion.div>
+        );
+    };
+
 
     const renderProfileView = () => (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-10 pt-4">
             <div className="flex flex-col items-center pt-4 pb-2">
                 <div className="size-24 rounded-[32px] bg-gradient-to-br from-primary/30 to-primary/5 border border-primary/20 flex items-center justify-center mb-4"><Icon name="person" className="text-primary text-5xl" /></div>
                 <h2 className="text-2xl font-black text-white tracking-tight">{driverName}</h2>
-                <div className="flex items-center gap-2 mt-1.5"><Icon name="verified" className="text-primary text-sm" /><span className="text-[10px] font-black text-primary uppercase tracking-widest">Piloto Izi • Nível {stats.level}</span></div>
+                <div className="flex items-center gap-2 mt-1.5"><Icon name="verified" className="text-primary text-sm" /><span className="text-[10px] font-black text-primary uppercase tracking-widest">Piloto Izi â€¢ NÃ­vel {stats.level}</span></div>
                 <div className="flex items-center gap-4 py-2 mt-4">
                     <div className="flex items-center gap-1.5 bg-white/5 px-4 py-2 rounded-2xl border border-white/5"><Icon name="star" className="text-primary text-sm" /><span className="text-sm font-black text-white">4.98</span></div>
                     <div className="flex items-center gap-1.5 bg-white/5 px-4 py-2 rounded-2xl border border-white/5"><Icon name="route" className="text-emerald-400 text-sm" /><span className="text-sm font-black text-white">{stats.count} corridas</span></div>
@@ -3233,8 +3412,8 @@ function App() {
 
             <div className="bg-red-500/5 border border-red-500/10 rounded-[32px] p-6 space-y-4">
                 <div>
-                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1">Zona de Recuperação</p>
-                    <p className="text-[11px] text-white/40 leading-relaxed">Se o app estiver travado em uma missão antiga ou invisível, use os botões abaixo para sincronizar ou forçar limpeza.</p>
+                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1">Zona de RecuperaÃ§Ã£o</p>
+                    <p className="text-[11px] text-white/40 leading-relaxed">Se o app estiver travado em uma missÃ£o antiga ou invisÃ­vel, use os botÃµes abaixo para sincronizar ou forÃ§ar limpeza.</p>
                 </div>
                 <div className="flex flex-col gap-2">
                   <div className="flex gap-2">
@@ -3245,20 +3424,20 @@ function App() {
                         }}
                         className="flex-1 h-12 bg-white/5 border border-white/10 text-white/70 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
                     >
-                        Sincronizar Missão
+                        Sincronizar MissÃ£o
                     </button>
                     <button 
                         onClick={() => {
-                            if (confirm('Deseja forçar a limpeza da missão atual do seu celular?')) {
+                            if (confirm('Deseja forÃ§ar a limpeza da missÃ£o atual do seu celular?')) {
                                 setActiveMission(null);
                                 localStorage.removeItem('Izi_active_mission');
                                 setActiveTab('dashboard');
-                                toastSuccess('Limpeza concluída!');
+                                toastSuccess('Limpeza concluÃ­da!');
                             }
                         }}
                         className="flex-1 h-12 bg-red-500/10 border border-red-500/20 text-red-500 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
                     >
-                        Forçar Finalização
+                        ForÃ§ar FinalizaÃ§Ã£o
                     </button>
                   </div>
                   <button 
@@ -3274,7 +3453,7 @@ function App() {
             </div>
 
             <div className="space-y-3">
-                {[{ label: 'Dados do Veículo', icon: 'directions_car', color: 'text-primary' }, { label: 'Documentos e CNH', icon: 'badge', color: 'text-blue-400' }, { label: 'Suporte Izi', icon: 'support_agent', color: 'text-emerald-400' }, { label: 'Configurações', icon: 'settings', color: 'text-white/40' }].map((item, i) => (
+                {[{ label: 'Dados do VeÃ­culo', icon: 'directions_car', color: 'text-primary' }, { label: 'Documentos e CNH', icon: 'badge', color: 'text-blue-400' }, { label: 'Suporte Izi', icon: 'support_agent', color: 'text-emerald-400' }, { label: 'ConfiguraÃ§Ãµes', icon: 'settings', color: 'text-white/40' }].map((item, i) => (
                     <button key={i} className="w-full bg-white/[0.03] border border-white/5 rounded-[24px] p-5 flex items-center justify-between group hover:bg-white/[0.06] transition-all active:scale-[0.98]">
                         <div className="flex items-center gap-4"><div className={`size-11 rounded-[16px] bg-white/5 flex items-center justify-center border border-white/10 ${item.color}`}><Icon name={item.icon} className="text-xl" /></div><span className="text-sm font-black text-white">{item.label}</span></div>
                         <Icon name="chevron_right" className="text-white/20 group-hover:text-white/40 transition-colors" />
@@ -3294,8 +3473,8 @@ function App() {
                     <div className="size-24 rounded-[40px] bg-white/5 border border-white/10 flex items-center justify-center mb-6">
                         <Icon name="route" size={40} className="text-white/20" />
                     </div>
-                    <h2 className="text-xl font-black text-white uppercase tracking-tight mb-2">Sem Missão Ativa</h2>
-                    <p className="text-sm text-white/40 leading-relaxed mb-8">Você não possui nenhuma corrida em andamento no momento. Vá ao Dashboard para aceitar novos pedidos.</p>
+                    <h2 className="text-xl font-black text-white uppercase tracking-tight mb-2">Sem MissÃ£o Ativa</h2>
+                    <p className="text-sm text-white/40 leading-relaxed mb-8">VocÃª nÃ£o possui nenhuma corrida em andamento no momento. VÃ¡ ao Dashboard para aceitar novos pedidos.</p>
                     
                     <div className="flex flex-col gap-3 w-full max-w-xs">
                         <button 
@@ -3360,7 +3539,7 @@ function App() {
 
         return (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-[#020617] flex flex-col overflow-hidden">
-                {/* BACKGROUND SEM MAPA - BOTÃO DE NAVEGAÇÃO CENTRAL */}
+                {/* BACKGROUND SEM MAPA - BOTÃƒO DE NAVEGAÃ‡ÃƒO CENTRAL */}
                 <div className="absolute inset-0 z-0 bg-[#020617] flex flex-col items-center justify-center p-8">
                     <div className="relative mb-12">
                         <div className="absolute inset-0 bg-primary/20 blur-[80px] rounded-full animate-pulse" />
@@ -3387,7 +3566,7 @@ function App() {
                     </button>
                     
                     <p className="mt-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.3em] text-center max-w-[240px] leading-relaxed">
-                        Toque no botão acima para abrir o seu GPS favorito e seguir a rota.
+                        Toque no botÃ£o acima para abrir o seu GPS favorito e seguir a rota.
                     </p>
 
                     <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80 pointer-events-none" />
@@ -3402,7 +3581,7 @@ function App() {
                         <Icon name="arrow_back" />
                     </button>
                     <div className="text-right">
-                        <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.4em] mb-1">Missão Ativa</p>
+                        <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.4em] mb-1">MissÃ£o Ativa</p>
                         <h2 className="text-xl font-black text-white tracking-tighter leading-none mb-1 shadow-sm">
                             #{activeMission.realId?.slice(0,8).toUpperCase()}
                         </h2>
@@ -3467,7 +3646,7 @@ function App() {
                                         <Icon name="check" size={24} className="text-black font-black" />
                                     </div>
                                     <div>
-                                        <h4 className="text-base font-black text-emerald-400 uppercase tracking-tight">Pedido está Pronto!</h4>
+                                        <h4 className="text-base font-black text-emerald-400 uppercase tracking-tight">Pedido estÃ¡ Pronto!</h4>
                                         <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Pode retirar no estabelecimento</p>
                                     </div>
                                 </div>
@@ -3483,11 +3662,11 @@ function App() {
                                     </div>
                                     <div>
                                         <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Cliente</p>
-                                        <h3 className="text-lg font-black text-white">{activeMission.user_name || activeMission.customer || 'Usuário Izi'}</h3>
+                                        <h3 className="text-lg font-black text-white">{activeMission.user_name || activeMission.customer || 'UsuÃ¡rio Izi'}</h3>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[9px] font-black text-primary uppercase tracking-widest">Ganho Líquido</p>
+                                    <p className="text-[9px] font-black text-primary uppercase tracking-widest">Ganho LÃ­quido</p>
                                     <p className="text-2xl font-black text-white italic">R$ {getNetEarnings(activeMission).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                 </div>
                             </div>
@@ -3502,7 +3681,7 @@ function App() {
                                         <Icon name={activeMission.payment_method === 'dinheiro' ? 'payments' : 'account_balance_wallet'} size={20} />
                                     </div>
                                     <div className="flex-1">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Fluxo de Cobrança</p>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Fluxo de CobranÃ§a</p>
                                         <h4 className="text-sm font-black text-white mt-1 uppercase italic tracking-tight">
                                             {activeMission.payment_method === 'dinheiro' 
                                                 ? <><span className="text-amber-400">Receber R$ {activeMission.total_price?.toFixed(2)}</span> em DINHEIRO</>
@@ -3578,7 +3757,7 @@ function App() {
                                 <div className="space-y-3">
                                     {orderItems.map((item: any, idx: number) => (
                                         <div key={idx} className="flex justify-between items-center text-xs font-bold text-white/60">
-                                            <span>• {item.quantity ? `${item.quantity}x ` : ''}{item.name}</span>
+                                            <span>â€¢ {item.quantity ? `${item.quantity}x ` : ''}{item.name}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -3586,7 +3765,7 @@ function App() {
                         )}
                     </div>
 
-                    {/* Footer com Botão de Ação */}
+                    {/* Footer com BotÃ£o de AÃ§Ã£o */}
                     <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-[#030712] via-[#030712] to-transparent pt-20 pointer-events-none">
                         <div className="pointer-events-auto w-full space-y-3">
                             {/* BOTOES DE ACAO CENTRALIZADOS */}
@@ -3622,7 +3801,7 @@ function App() {
                                     onClick={() => handleUpdateStatus('no_local')} 
                                     className="w-full h-20 bg-blue-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(37,99,235,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
                                 >
-                                    <Icon name="person_pin_circle" /> Tô no Destino
+                                    <Icon name="person_pin_circle" /> TÃ´ no Destino
                                 </button>
                             )}
 
@@ -3638,10 +3817,10 @@ function App() {
                             {/* CANCELAR SEMPRE DISCRETO */}
                             {['a_caminho_coleta', 'saiu_para_coleta', 'aceito'].includes(activeMission.status || '') && (
                                 <button 
-                                    onClick={async () => { if (await showConfirm({ message: 'Cancelar missão?' })) handleUpdateStatus('cancelado'); }}
+                                    onClick={async () => { if (await showConfirm({ message: 'Cancelar missÃ£o?' })) handleUpdateStatus('cancelado'); }}
                                     className="w-full py-2 text-red-500/40 text-[9px] font-black uppercase tracking-[0.4em]"
                                 >
-                                    Cancelar Missão
+                                    Cancelar MissÃ£o
                                 </button>
                             )}
                         </div>
@@ -3655,10 +3834,10 @@ function App() {
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="fixed inset-0 z-[200] bg-red-950 flex flex-col items-center justify-center p-8 text-center">
             <div className="size-28 bg-red-500/20 border border-red-500/30 rounded-full flex items-center justify-center mb-8 animate-pulse"><Icon name="emergency_share" className="text-6xl text-red-400" /></div>
             <h1 className="text-4xl font-black text-white uppercase tracking-tight mb-3">SOS Ativado</h1>
-            <p className="text-white/60 text-sm mb-10 max-w-xs leading-relaxed">Sua localização está sendo compartilhada com a central Izi.</p>
+            <p className="text-white/60 text-sm mb-10 max-w-xs leading-relaxed">Sua localizaÃ§Ã£o estÃ¡ sendo compartilhada com a central Izi.</p>
             <div className="w-full max-w-sm space-y-4">
                 <button onClick={() => { window.open('tel:190'); setIsSOSActive(false); }} className="w-full h-16 bg-white text-red-600 rounded-[24px] flex items-center justify-center gap-4 font-black text-lg uppercase tracking-tight shadow-2xl active:scale-95 transition-all"><Icon name="local_police" className="text-3xl" />Ligar 190</button>
-                <button onClick={() => { toastSuccess('Apoio mecânico acionado.'); setIsSOSActive(false); }} className="w-full h-16 bg-white/10 border border-white/20 text-white rounded-[24px] flex items-center justify-center gap-4 font-black text-base uppercase active:scale-95 transition-all"><Icon name="build" className="text-2xl" />Apoio Mecânico</button>
+                <button onClick={() => { toastSuccess('Apoio mecÃ¢nico acionado.'); setIsSOSActive(false); }} className="w-full h-16 bg-white/10 border border-white/20 text-white rounded-[24px] flex items-center justify-center gap-4 font-black text-base uppercase active:scale-95 transition-all"><Icon name="build" className="text-2xl" />Apoio MecÃ¢nico</button>
                 <button onClick={() => setIsSOSActive(false)} className="text-white/30 font-black uppercase tracking-widest text-sm mt-4">Cancelar</button>
             </div>
         </motion.div>
@@ -3678,7 +3857,7 @@ function App() {
                     <div className="text-center space-y-3">
                         <div className="inline-flex items-center justify-center size-16 bg-primary/10 border border-primary/20 rounded-[24px] mb-2"><Icon name="two_wheeler" className="text-primary text-3xl" /></div>
                         <h1 className="text-4xl font-black text-white tracking-tight uppercase">Terminal <span className="text-primary">Izi</span></h1>
-                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.5em]">{authMode === 'login' ? 'Autenticação do Entregador' : 'Cadastro de Novo Piloto'}</p>
+                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.5em]">{authMode === 'login' ? 'AutenticaÃ§Ã£o do Entregador' : 'Cadastro de Novo Piloto'}</p>
                     </div>
                     {authError && <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-500/20 rounded-2xl px-5 py-3 text-red-400 text-xs font-bold text-center">{authError}</motion.div>}
                     <div className="space-y-4">
@@ -3696,10 +3875,10 @@ function App() {
                         <button onClick={authMode === 'login' ? handleAuthLogin : handleAuthRegister} disabled={authLoading} className="w-full h-14 bg-primary text-slate-900 font-black text-sm uppercase tracking-widest rounded-[20px] shadow-2xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50">
                             {authLoading ? <div className="size-5 border-2 border-slate-900/20 border-t-slate-900 rounded-full animate-spin" /> : <>{authMode === 'login' ? 'Entrar' : 'Criar Conta'}<Icon name="arrow_forward" className="text-xl" /></>}
                         </button>
-                        <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-white/[0.03] border border-white/5 text-white/30 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-white/50 hover:bg-white/[0.05] transition-all">{authMode === 'login' ? 'Criar nova conta' : 'Já tenho conta'}</button>
+                        <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-white/[0.03] border border-white/5 text-white/30 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-white/50 hover:bg-white/[0.05] transition-all">{authMode === 'login' ? 'Criar nova conta' : 'JÃ¡ tenho conta'}</button>
                     </div>
                 </div>
-                <p className="absolute bottom-8 text-[8px] font-black text-white/10 uppercase tracking-[0.4em]">Izi v5.0 • Conexão Segura</p>
+                <p className="absolute bottom-8 text-[8px] font-black text-white/10 uppercase tracking-[0.4em]">Izi v5.0 â€¢ ConexÃ£o Segura</p>
             </motion.div>
         );
     };
@@ -3724,7 +3903,7 @@ function App() {
                             <AnimatePresence>
                                 {activeMission && activeTab !== 'active_mission' && (
                                     <motion.button key="mission-btn" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }} onClick={() => setActiveTab('active_mission')} className="fixed bottom-8 left-5 right-5 z-[60] bg-primary text-slate-900 rounded-[24px] h-16 flex items-center justify-between px-6 shadow-2xl shadow-primary/30">
-                                        <div className="flex items-center gap-3"><div className="size-3 bg-slate-900 rounded-full animate-pulse" /><span className="font-black text-sm uppercase tracking-widest">Missão em Andamento</span></div>
+                                        <div className="flex items-center gap-3"><div className="size-3 bg-slate-900 rounded-full animate-pulse" /><span className="font-black text-sm uppercase tracking-widest">MissÃ£o em Andamento</span></div>
                                         <Icon name="arrow_forward" className="text-slate-900 text-xl font-black" />
                                     </motion.button>
                                 )}
@@ -3759,7 +3938,7 @@ function App() {
                 )}
             </AnimatePresence>
 
-            {/* Modal de Confirmação de Saque */}
+            {/* Modal de ConfirmaÃ§Ã£o de Saque */}
             <AnimatePresence>
                 {showWithdrawModal && (
                     <motion.div
@@ -3798,17 +3977,17 @@ function App() {
                                     </>
                                 )}
                                 <div className="flex justify-between items-center text-primary font-black">
-                                    <span className="text-xs uppercase tracking-widest">Líquido a Receber</span>
+                                    <span className="text-xs uppercase tracking-widest">LÃ­quido a Receber</span>
                                     <span className="text-sm">R$ {(stats.balance * (1 - (Number(appSettings?.withdrawalfeepercent ?? 0) / 100))).toFixed(2).replace('.', ',')}</span>
                                 </div>
                                 <div className="h-px bg-white/5" />
                                 <div className="flex justify-between items-center">
                                     <span className="text-xs font-bold text-white/40">Status</span>
-                                    <span className="text-xs font-black text-amber-400">Aguarda aprovação admin</span>
+                                    <span className="text-xs font-black text-amber-400">Aguarda aprovaÃ§Ã£o admin</span>
                                 </div>
                             </div>
                             
-                            <p className="text-[10px] text-center text-white/20 italic">Os saques são processados em até {appSettings?.withdrawal_period_h ?? 24}h.</p>
+                            <p className="text-[10px] text-center text-white/20 italic">Os saques sÃ£o processados em atÃ© {appSettings?.withdrawal_period_h ?? 24}h.</p>
                             <div className="flex gap-3 pt-2">
                                 <button
                                     onClick={() => setShowWithdrawModal(false)}
@@ -3877,7 +4056,7 @@ function App() {
                             transition={{ delay: 0.3 }}
                             className="text-slate-400 font-bold text-sm mt-4 max-w-xs leading-relaxed"
                         >
-                            Sua solicitação de PIX foi enviada e já aparece no painel administrativo para aprovação.
+                            Sua solicitaÃ§Ã£o de PIX foi enviada e jÃ¡ aparece no painel administrativo para aprovaÃ§Ã£o.
                         </motion.p>
                         
                         <motion.div 
@@ -3892,7 +4071,7 @@ function App() {
                 )}
             </AnimatePresence>
 
-            {/* Modal de Confirmação de Pagamento Pendente */}
+            {/* Modal de ConfirmaÃ§Ã£o de Pagamento Pendente */}
             <AnimatePresence>
                 {confirmPaymentState?.show && (
                     <motion.div 
@@ -3911,10 +4090,10 @@ function App() {
                                 <span className="material-symbols-outlined text-amber-500 text-3xl">payments</span>
                             </div>
 
-                            <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2 italic">Atenção Piloto!</h3>
+                            <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2 italic">AtenÃ§Ã£o Piloto!</h3>
                             <p className="text-slate-400 font-medium text-sm leading-relaxed mb-8">
-                                Este pedido ainda <span className="text-rose-500 font-bold">não foi pago</span> via App. 
-                                Confirme como você recebeu o valor de <span className="text-white font-black">R$ {Number(confirmPaymentState.mission.total_price || 0).toFixed(2).replace('.', ',')}</span>:
+                                Este pedido ainda <span className="text-rose-500 font-bold">nÃ£o foi pago</span> via App. 
+                                Confirme como vocÃª recebeu o valor de <span className="text-white font-black">R$ {Number(confirmPaymentState.mission.total_price || 0).toFixed(2).replace('.', ',')}</span>:
                             </p>
 
                             <div className="space-y-3">
@@ -3934,7 +4113,7 @@ function App() {
                                     }}
                                     className="w-full py-4 rounded-2xl bg-slate-800 text-white font-black text-[11px] uppercase tracking-widest border border-white/5 hover:bg-slate-700 transition-all active:scale-95"
                                 >
-                                    Recebi via Pix / Cartão
+                                    Recebi via Pix / CartÃ£o
                                 </button>
                                 <button 
                                     onClick={() => {
@@ -3943,7 +4122,7 @@ function App() {
                                     }}
                                     className="w-full py-4 rounded-2xl text-slate-500 font-black text-[10px] uppercase tracking-widest"
                                 >
-                                    Ainda não recebi
+                                    Ainda nÃ£o recebi
                                 </button>
                             </div>
                         </motion.div>
@@ -3951,7 +4130,7 @@ function App() {
                 )}
             </AnimatePresence>
 
-            {/* Modal de Feedback Visual de Conclusão de Missão (Ganhos) */}
+            {/* Modal de Feedback Visual de ConclusÃ£o de MissÃ£o (Ganhos) */}
             <AnimatePresence>
                 {finishedMissionData?.show && (
                     <motion.div 
@@ -3960,7 +4139,7 @@ function App() {
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-[250] bg-slate-950/98 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center overflow-hidden"
                     >
-                        {/* Partículas de Brilho ao Fundo */}
+                        {/* PartÃ­culas de Brilho ao Fundo */}
                         <div className="absolute inset-0 pointer-events-none opacity-20">
                            <div className="absolute top-1/4 left-1/4 size-64 bg-primary/20 blur-[120px] rounded-full animate-pulse" />
                            <div className="absolute bottom-1/4 right-1/4 size-64 bg-emerald-500/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
@@ -3974,7 +4153,7 @@ function App() {
                         >
                             <span className="material-symbols-outlined text-zinc-950 text-7xl font-black">celebration</span>
                             
-                            {/* Anéis de Pulso */}
+                            {/* AnÃ©is de Pulso */}
                             <motion.div 
                                 animate={{ scale: [1, 1.4], opacity: [0.5, 0] }}
                                 transition={{ duration: 2, repeat: Infinity }}
@@ -3989,10 +4168,10 @@ function App() {
                             className="space-y-4"
                         >
                             <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">
-                                Parabéns! <br />
-                                <span className="text-primary">Missão Concluída</span>
+                                ParabÃ©ns! <br />
+                                <span className="text-primary">MissÃ£o ConcluÃ­da</span>
                             </h2>
-                            <p className="text-slate-400 font-bold text-sm tracking-wide uppercase opacity-60">Você acaba de faturar:</p>
+                            <p className="text-slate-400 font-bold text-sm tracking-wide uppercase opacity-60">VocÃª acaba de faturar:</p>
                         </motion.div>
 
                         <motion.div 
@@ -4032,7 +4211,7 @@ function App() {
                                 </div>
 
                                 <div className="flex items-center justify-between px-2 pt-2">
-                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Ganho Líquido</span>
+                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Ganho LÃ­quido</span>
                                     <span className="text-sm font-black text-primary italic">
                                         R$ {finishedMissionData.amount.toFixed(2).replace('.', ',')}
                                     </span>
@@ -4048,7 +4227,7 @@ function App() {
                         >
                             <p className="text-emerald-400 font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
                                 <span className="material-symbols-outlined text-xs">account_balance_wallet</span>
-                                Já disponível na sua carteira
+                                JÃ¡ disponÃ­vel na sua carteira
                             </p>
 
                             <button
@@ -4059,7 +4238,7 @@ function App() {
                             </button>
                         </motion.div>
 
-                        {/* Detalhe Estético Inferior */}
+                        {/* Detalhe EstÃ©tico Inferior */}
                         <div className="absolute bottom-10 left-0 right-0 flex justify-center opacity-30">
                             <div className="w-12 h-1.5 bg-white/10 rounded-full" />
                         </div>
