@@ -2060,7 +2060,7 @@ const renderDashboard = () => (
                             <motion.button 
                                 key={slot.id}
                                 onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
-                                className="w-full clay-card-dark p-6 flex items-center gap-6 text-left active:scale-[0.98] transition-all"
+                                className="w-full clay-card-dark p-6 flex items-center gap-6 text-left active:scale-[0.98] transition-all border-l-4 border-yellow-400"
                             >
                                 <div className="size-16 rounded-2xl bg-yellow-400/10 flex items-center justify-center shrink-0">
                                     <Icon name="stars" className="text-yellow-400" size={32} />
