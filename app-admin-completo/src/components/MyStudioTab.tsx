@@ -8,6 +8,7 @@ import type { Merchant, MerchantProfile, Product, MenuCategory } from '../lib/ty
 import { showConfirm, toastError, toastSuccess } from '../lib/useToast';
 import { supabase } from '../lib/supabase';
 import { ProductStudio } from './ProductStudio';
+import { DedicatedSlotStudio } from './DedicatedSlotStudio';
 import FlashOffersSection from './FlashOffersSection';
 import PromotionStudio from './PromotionStudio';
 import { AddressSearchInput } from './AddressSearchInput';
@@ -1251,226 +1252,150 @@ export default function MyStudioTab() {
             )}
 
             {activePreviewTab === 'dedicated_slots' && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
-                <div className="flex flex-col md:flex-row justify-between md:items-center gap-6 mb-8">
-                  <div>
-                    <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
-                      <span className="material-symbols-outlined text-primary text-3xl">stars</span>
-                      Vagas Dedicadas (Exclusivas)
-                    </h3>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Contrate motoboys exclusivos para o seu estabelecimento</p>
-                  </div>
-                  <button 
-                    onClick={handleCreateDedicatedSlot}
-                    className="bg-primary text-slate-900 px-8 py-4 rounded-[24px] font-black text-[10px] uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all flex items-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-lg">add_circle</span>
-                    Criar Nova Vaga
-                  </button>
+              <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-700 pb-20">
+                {/* Board Header */}
+                <div className="relative group">
+                   <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-transparent blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+                   <div className="relative flex flex-col md:flex-row justify-between md:items-end gap-8 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-10 rounded-[48px] border border-white/20 shadow-2xl">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-4 mb-4">
+                           <div className="size-12 rounded-2xl bg-primary flex items-center justify-center text-slate-950 shadow-lg shadow-primary/20">
+                              <span className="material-symbols-outlined text-2xl font-black">verified_user</span>
+                           </div>
+                           <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                             Vagas Dedicadas
+                           </h3>
+                        </div>
+                        <p className="text-sm font-medium text-slate-500 max-w-xl leading-relaxed">
+                          Garanta a exclusividade de entregadores para o seu negócio. Vagas dedicadas permitem que os motoristas aceitem trabalhar em turnos fixos apenas para você.
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => setEditingSlotId('new')}
+                        className="group/btn relative bg-slate-950 text-white dark:bg-primary dark:text-slate-950 px-10 py-5 rounded-[28px] font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl hover:scale-105 active:scale-95 transition-all overflow-hidden"
+                      >
+                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500"></div>
+                        <span className="relative flex items-center gap-3">
+                           <span className="material-symbols-outlined text-xl">add_box</span>
+                           Anunciar Vaga
+                        </span>
+                      </button>
+                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {myDedicatedSlots.map((slot, i) => {
-                    const isEditing = editingSlotId === slot.id;
-                    return (
-                        <div key={slot.id || i} className={`bg-white dark:bg-slate-800 rounded-[48px] border ${isEditing ? 'border-primary shadow-[0_0_40px_rgba(255,217,0,0.1)]' : 'border-slate-100 dark:border-slate-800'} shadow-2xl overflow-hidden group flex flex-col transition-all duration-500`}>
-                           <div className="p-8 pb-4 flex-1">
-                              <div className="flex justify-between items-start mb-6">
-                                 <div className="flex-1">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Título da Vaga / Cargo</label>
-                                    {isEditing ? (
-                                       <input 
-                                          className="bg-transparent font-black text-xl text-slate-900 dark:text-white focus:outline-none w-full border-b border-white/10 focus:border-primary transition-all pb-1"
-                                          defaultValue={slot.title}
-                                          placeholder="Ex: Entregador Noturno"
-                                          onChange={(e) => {
-                                             slot._tempTitle = e.target.value;
-                                          }}
-                                          autoFocus
-                                       />
-                                    ) : (
-                                       <h3 className="text-xl font-black text-slate-900 dark:text-white italic uppercase tracking-tighter">{slot.title || 'Novo Entregador Dedicado'}</h3>
-                                    )}
-                                 </div>
-                                 <div className="flex gap-2">
-                                  {!isEditing && (
-                                    <button 
-                                      onClick={() => setEditingSlotId(slot.id)}
-                                      className="p-3 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-2xl transition-all"
-                                      title="Editar esta vaga"
-                                    >
-                                      <span className="material-symbols-outlined">edit</span>
-                                    </button>
-                                   )}
+                {/* Slots Board */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                   {myDedicatedSlots.length === 0 ? (
+                      <div className="col-span-full py-32 flex flex-col items-center justify-center bg-white/10 dark:bg-slate-900/20 rounded-[64px] border-2 border-dashed border-slate-200 dark:border-slate-800/50 group hover:border-primary/50 transition-colors">
+                         <div className="size-24 bg-white dark:bg-slate-800 rounded-[32px] flex items-center justify-center mb-8 shadow-xl border border-slate-100 dark:border-slate-700 group-hover:scale-110 transition-transform duration-500">
+                            <span className="material-symbols-outlined text-5xl text-slate-200 dark:text-slate-700 animate-bounce">rocket</span>
+                         </div>
+                         <h4 className="text-2xl font-black text-slate-400 italic mb-2">Sua frota exclusiva começa aqui</h4>
+                         <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] font-black">Clique no botão acima para criar sua primeira vaga</p>
+                      </div>
+                   ) : (
+                     myDedicatedSlots.map((slot) => (
+                       <div 
+                         key={slot.id} 
+                         className="group bg-white dark:bg-slate-900/60 backdrop-blur-sm rounded-[48px] border border-slate-100 dark:border-white/5 shadow-2xl overflow-hidden hover:shadow-primary/5 transition-all duration-500 flex flex-col h-full"
+                       >
+                          <div className="p-10 flex-1 flex flex-col">
+                             <div className="flex justify-between items-start mb-10">
+                                <div className="space-y-3">
+                                   <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-2 ${slot.is_active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-500'}`}>
+                                      <span className={`size-1.5 rounded-full ${slot.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'}`}></span>
+                                      {slot.is_active ? 'Ativa & Visível' : 'Pausada'}
+                                   </div>
+                                   <h3 className="text-2xl font-black text-slate-900 dark:text-white leading-tight pr-4">
+                                     {slot.title}
+                                   </h3>
+                                </div>
+                                <div className="flex gap-3">
+                                   <button 
+                                     onClick={() => setEditingSlotId(slot.id)}
+                                     className="size-12 rounded-2xl bg-slate-50 dark:bg-white/5 flex items-center justify-center text-slate-400 hover:text-primary transition-all"
+                                   >
+                                      <span className="material-symbols-outlined text-xl">edit</span>
+                                   </button>
                                    <button 
                                      onClick={() => handleDeleteDedicatedSlot(slot.id)}
-                                     className="p-3 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-2xl transition-all"
-                                     title="Excluir esta vaga"
+                                     className="size-12 rounded-2xl bg-rose-500/5 flex items-center justify-center text-rose-500/50 hover:text-rose-500 hover:bg-rose-500/10 transition-all"
                                    >
-                                     <span className="material-symbols-outlined">delete</span>
+                                      <span className="material-symbols-outlined text-xl">delete</span>
                                    </button>
-                                 </div>
-                              </div>
-
-                              <div className="grid grid-cols-1 gap-6 mb-6">
-                                 <div className={`bg-slate-50 dark:bg-slate-900/50 rounded-3xl p-6 border ${isEditing ? 'border-primary/10' : 'border-slate-100 dark:border-slate-800'}`}>
-                                    <div className="flex items-center gap-3 mb-4">
-                                       <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                                          <span className="material-symbols-outlined text-xl">store</span>
-                                       </div>
-                                       <div className="flex-1">
-                                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estabelecimento</h4>
-                                          <p className="text-sm font-bold text-slate-900 dark:text-white">{merchantProfile?.store_name}</p>
-                                       </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 mb-4">
-                                       <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
-                                          <span className="material-symbols-outlined text-xl">location_on</span>
-                                       </div>
-                                       <div className="flex-1">
-                                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Endereço de Coleta</h4>
-                                          <p className="text-xs font-bold text-slate-600 dark:text-slate-400">{merchantProfile?.store_address || 'Não informado'}</p>
-                                       </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                       <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                                          <span className="material-symbols-outlined text-xl">chat</span>
-                                       </div>
-                                       <div className="flex-1">
-                                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">WhatsApp de Contato</h4>
-                                          <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{merchantProfile?.store_phone || 'Não informado'}</p>
-                                       </div>
-                                    </div>
-                                 </div>
-
-                                 <div>
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Descrição e Requisitos</label>
-                                    {isEditing ? (
-                                      <textarea 
-                                         className="w-full bg-slate-50 dark:bg-slate-900/50 rounded-3xl p-6 text-xs font-bold text-slate-600 dark:text-slate-300 focus:outline-none border border-slate-100 dark:border-slate-800 focus:border-primary/30 min-h-[120px]"
-                                         defaultValue={slot.description}
-                                         placeholder="Descreva as funções, benefícios e requisitos da vaga..."
-                                         onChange={(e) => {
-                                            slot._tempDesc = e.target.value;
-                                         }}
-                                      />
-                                    ) : (
-                                      <div className="w-full bg-slate-50 dark:bg-slate-900/50 rounded-3xl p-6 text-xs text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-800 min-h-[120px]">
-                                        {slot.description || 'Nenhuma descrição informada.'}
-                                      </div>
-                                    )}
-                                 </div>
-                                 
-                                 <div className="grid grid-cols-2 gap-6">
-                                    <div>
-                                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Valor Diária (R$)</label>
-                                       {isEditing ? (
-                                         <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">R$</span>
-                                            <input 
-                                               type="number"
-                                               className="w-full bg-slate-50 dark:bg-slate-900/50 rounded-2xl py-4 pl-10 pr-4 text-xs font-black text-slate-900 dark:text-white focus:outline-none border border-slate-100 dark:border-slate-800 focus:border-primary/30"
-                                               defaultValue={slot.fee_per_day}
-                                               onChange={(e) => {
-                                                  slot._tempFee = parseFloat(e.target.value);
-                                               }}
-                                            />
-                                         </div>
-                                       ) : (
-                                         <div className="w-full bg-slate-50 dark:bg-slate-900/50 rounded-2xl py-4 px-6 text-xs font-black text-slate-900 dark:text-white border border-slate-100 dark:border-slate-800">
-                                            R$ {parseFloat(slot.fee_per_day || 0).toFixed(2).replace('.', ',')}
-                                         </div>
-                                       )}
-                                    </div>
-                                    <div>
-                                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Horário de Trabalho</label>
-                                       {isEditing ? (
-                                         <input 
-                                            type="text"
-                                            className="w-full bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 text-xs font-black text-slate-900 dark:text-white focus:outline-none border border-slate-100 dark:border-slate-800 focus:border-primary/30"
-                                            defaultValue={slot.working_hours}
-                                            placeholder="Ex: 18h às 23h"
-                                            onChange={(e) => {
-                                               slot._tempHours = e.target.value;
-                                            }}
-                                         />
-                                       ) : (
-                                          <div className="w-full bg-slate-50 dark:bg-slate-900/50 rounded-2xl py-4 px-6 text-xs font-black text-slate-900 dark:text-white border border-slate-100 dark:border-slate-800 italic uppercase">
-                                            {slot.working_hours || 'Não informado'}
-                                          </div>
-                                       )}
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
-
-                           <div className="bg-slate-50 dark:bg-slate-900/80 p-6 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
-                              <div className="flex items-center gap-4">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status:</span>
-                                <button
-                                  onClick={() => handleUpdateDedicatedSlot({ 
-                                    ...slot, 
-                                    is_active: !slot.is_active 
-                                  })}
-                                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${slot.is_active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-slate-200 text-slate-500'}`}
-                                >
-                                  <span className="material-symbols-outlined text-sm">{slot.is_active ? 'visibility' : 'visibility_off'}</span>
-                                  {slot.is_active ? 'Ativa' : 'Pausada'}
-                                </button>
-                              </div>
-
-                              {isEditing ? (
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => {
-                                      if (slot._isNew) {
-                                        setMyDedicatedSlots(prev => prev.filter(s => s.id !== slot.id));
-                                      }
-                                      setEditingSlotId(null);
-                                    }}
-                                    className="bg-slate-200 text-slate-600 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-300 transition-all"
-                                  >
-                                    Cancelar
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      const updatedSlot = {
-                                        ...slot,
-                                        title: slot._tempTitle !== undefined ? slot._tempTitle : slot.title,
-                                        description: slot._tempDesc !== undefined ? slot._tempDesc : slot.description,
-                                        fee_per_day: slot._tempFee !== undefined ? slot._tempFee : slot.fee_per_day,
-                                        working_hours: slot._tempHours !== undefined ? slot._tempHours : slot.working_hours
-                                      };
-                                      handleUpdateDedicatedSlot(updatedSlot);
-                                    }}
-                                    className="bg-primary text-slate-900 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-110 active:scale-95 transition-all shadow-xl shadow-primary/20 flex items-center gap-2"
-                                  >
-                                    <span className="material-symbols-outlined text-sm">check_circle</span>
-                                    Salvar Alterações
-                                  </button>
                                 </div>
-                              ) : (
-                                <button
-                                  onClick={() => setEditingSlotId(slot.id)}
-                                  className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-2"
-                                >
-                                  <span className="material-symbols-outlined text-sm">edit</span>
-                                  Editar Vaga
-                                </button>
-                              )}
-                           </div>
-                        </div>
-                    );
-                  })}
-                  {myDedicatedSlots.length === 0 && (
-                    <div className="col-span-2 py-20 text-center">
-                       <span className="material-symbols-outlined text-5xl text-slate-200 dark:text-slate-800 block mb-4">stars</span>
-                       <p className="text-sm font-black text-slate-400 italic">Nenhuma vaga dedicada ativa.</p>
-                       <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">Crie uma vaga para atrair entregadores exclusivos.</p>
-                    </div>
-                  )}
+                             </div>
+
+                             <div className="flex-1 space-y-8">
+                                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-3 italic">
+                                   "{slot.description || 'Sem descrição detalhada.'}"
+                                </p>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                   <div className="bg-slate-50 dark:bg-white/5 rounded-3xl p-6 border border-slate-100 dark:border-white/5 group-hover:bg-primary/5 transition-colors duration-500">
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pagamento / Dia</p>
+                                      <p className="text-xl font-black text-primary leading-tight">R$ {slot.fee_per_day}</p>
+                                      {slot.metadata?.base_deliveries > 0 && (
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Até {slot.metadata.base_deliveries} entregas</p>
+                                      )}
+                                   </div>
+                                   <div className="bg-slate-50 dark:bg-white/5 rounded-3xl p-6 border border-slate-100 dark:border-white/5 group-hover:bg-primary/5 transition-colors duration-500">
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Horário / Turno</p>
+                                      <p className="text-sm font-black text-slate-900 dark:text-white uppercase truncate">{slot.working_hours || 'A definir'}</p>
+                                      {slot.metadata?.benefits?.length > 0 && (
+                                        <div className="flex gap-1 mt-1.5 overflow-hidden">
+                                          {slot.metadata.benefits.slice(0, 3).map((b: string) => (
+                                             <span key={b} className="size-4 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                                               <span className="material-symbols-outlined text-[10px]">
+                                                 {b === 'bag' ? 'shopping_bag' : b === 'meal' ? 'restaurant' : b === 'bonus' ? 'workspace_premium' : 'add_circle'}
+                                               </span>
+                                             </span>
+                                          ))}
+                                          {slot.metadata.benefits.length > 3 && <span className="text-[8px] font-black text-slate-400">+{slot.metadata.benefits.length - 3}</span>}
+                                        </div>
+                                      )}
+                                   </div>
+                                </div>
+                             </div>
+
+                             <div className="mt-10 pt-8 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                                <div className="flex -space-x-4">
+                                   {[1,2,3].map(n => (
+                                     <div key={n} className="size-10 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+                                        <span className="material-symbols-outlined text-xs text-slate-400">person</span>
+                                     </div>
+                                   ))}
+                                   <div className="size-10 rounded-full border-2 border-white dark:border-slate-900 bg-slate-950 text-white flex items-center justify-center text-[8px] font-black italic">
+                                      +12
+                                   </div>
+                                </div>
+                                <span className="text-[10px] font-black text-primary uppercase tracking-widest animate-pulse">Candidatos Verificados</span>
+                             </div>
+                          </div>
+                          
+                          <button 
+                             onClick={() => setEditingSlotId(slot.id)}
+                             className="w-full py-6 bg-slate-50 dark:bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:bg-primary hover:text-slate-950 transition-all border-t border-slate-100 dark:border-white/5"
+                          >
+                             Gerenciar Vaga & Candidaturas
+                          </button>
+                       </div>
+                     ))
+                   )}
                 </div>
               </div>
+            )}
+
+            {editingSlotId && (
+              <DedicatedSlotStudio 
+                slot={editingSlotId === 'new' ? { id: 'new' } : myDedicatedSlots.find((s: any) => s.id === editingSlotId)}
+                onClose={() => setEditingSlotId(null)}
+                onSave={async (slotData: any) => {
+                  await handleUpdateDedicatedSlot(slotData);
+                  setEditingSlotId(null);
+                }}
+                merchantId={merchantProfile?.id || ''}
+              />
             )}
           </motion.div>
         </AnimatePresence>
