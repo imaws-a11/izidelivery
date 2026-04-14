@@ -75,11 +75,48 @@
   }
 
   .clay-card-dark {
-    @apply bg-slate-900/80 backdrop-blur-2xl border border-white/[0.08] rounded-[40px] transition-all duration-300;
+    @apply bg-stone-900 border border-white/[0.05] rounded-[2rem] transition-all duration-300;
     box-shadow: 
-      20px 20px 40px rgba(0, 0, 0, 0.6),
-      -6px -6px 20px rgba(255, 255, 255, 0.01),
-      inset 6px 6px 15px rgba(255, 255, 255, 0.03),
-      inset -15px -15px 30px rgba(0, 0, 0, 0.5);
+        inset 4px 4px 10px rgba(255, 255, 255, 0.05),
+        inset -4px -4px 10px rgba(0, 0, 0, 0.4);
+  }
+
+  .clay-card-yellow {
+    background-color: #facc15;
+    box-shadow: 
+        inset 8px 8px 16px rgba(255, 255, 255, 0.4),
+        inset -8px -8px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  .clay-profile-card {
+    background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+    box-shadow: 
+        inset 12px 12px 24px rgba(255, 255, 255, 0.6),
+        inset -12px -12px 24px rgba(0, 0, 0, 0.15),
+        0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  .clay-profile-inner {
+    background-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 
+        inset 4px 4px 8px rgba(255, 255, 255, 0.3),
+        inset -4px -4px 8px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(8px);
+  }
+
+  .clay-fab-online {
+    background-color: #22c55e;
+    box-shadow: 
+        inset 10px 10px 20px rgba(255, 255, 255, 0.4),
+        inset -10px -10px 20px rgba(0, 0, 0, 0.2),
+        0 0 30px rgba(34, 197, 94, 0.5);
+  }
+
+  .clay-fab-offline {
+    background-color: #44403c;
+    box-shadow: 
+        inset 8px 8px 16px rgba(255, 255, 255, 0.1),
+        inset -8px -8px 16px rgba(0, 0, 0, 0.4),
+        0 10px 20px rgba(0, 0, 0, 0.4);
   }
 }
