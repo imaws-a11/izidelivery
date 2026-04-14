@@ -3126,7 +3126,7 @@ const renderDashboard = () => (
                     </div>
                 </div>
 
-                <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent pt-20 pointer-events-none">
+                <div className="absolute bottom-[90px] left-0 right-0 p-8 pb-6 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent pt-20 pointer-events-none">
                     <div className="pointer-events-auto w-full space-y-3">
                         {(['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando', 'aceito', 'atribuido'].includes(activeMission.status || '')) && (
                             <button 
