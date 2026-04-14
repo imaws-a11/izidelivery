@@ -1853,8 +1853,14 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const handleUpdateDedicatedSlot = useCallback(async (slot: any) => {
     try {
-      const { error } = await supabase.from('dedicated_slots_delivery').upsert(slot);
+      // Remove id 'new' to let database generate a real one
+      const { id, ...saveData } = slot;
+      const payload = id === 'new' ? saveData : slot;
+
+      const { error } = await supabase.from('dedicated_slots_delivery').upsert(payload);
       if (error) throw error;
+      
+      toastSuccess(id === 'new' ? 'Vaga criada com sucesso!' : 'Vaga atualizada!');
       fetchMyDedicatedSlots();
     } catch (err: any) {
       toastError(err.message);
