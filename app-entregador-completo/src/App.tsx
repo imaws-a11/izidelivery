@@ -498,24 +498,6 @@ function App() {
     const hasBootedRef = useRef(false); // Garante que syncMissionWithDB e restauração s³ ocorrem 1x por sessão
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSOSActive, setIsSOSActive] = useState(false);
-    const [missionSheetState, setMissionSheetState] = useState<"collapsed" | "half" | "expanded">("half");
-
-    const missionSheetVariants = {
-        collapsed: { y: "85%", transition: { type: "spring", damping: 30, stiffness: 200 } },
-        half: { y: "45%", transition: { type: "spring", damping: 30, stiffness: 200 } },
-        expanded: { y: "0%", transition: { type: "spring", damping: 30, stiffness: 200 } }
-    };
-
-    const handleMissionDragEnd = (_: any, info: any) => {
-        const threshold = 50;
-        if (info.offset.y > threshold) {
-            if (missionSheetState === "expanded") setMissionSheetState("half");
-            else setMissionSheetState("collapsed");
-        } else if (info.offset.y < -threshold) {
-            if (missionSheetState === "collapsed") setMissionSheetState("half");
-            else setMissionSheetState("expanded");
-        }
-    };
     const [isAccepting, setIsAccepting] = useState(false);
     const [filter, setFilter] = useState<ServiceType | 'all'>('all');
     const [orders, setOrders] = useState<Order[]>([]);
@@ -1981,11 +1963,16 @@ function App() {
                                 {[
                                     { id: 'dashboard', label: 'Início', icon: 'grid_view' },
                                     { id: 'active_mission', label: 'Missão', icon: 'route' },
-                                    { id: 'scheduled', label: 'Agenda', icon: 'event', badge: scheduledOrders.length },
+                                    { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length },
                                     { id: 'earnings', label: 'Financeiro', icon: 'payments' },
                                     { id: 'history', label: 'Histórico', icon: 'history' },
                                     { id: 'profile', label: 'Perfil', icon: 'person' }
-                                ].map((item) => {
+                                ].filter(item => {
+                                    if (item.id === 'scheduled' || item.id === 'active_mission') {
+                                        return isOnline || !!activeMission;
+                                    }
+                                    return true;
+                                }).map((item) => {
                                     const isActive = activeTab === item.id;
                                     return (
                                         <button
@@ -2239,8 +2226,9 @@ const renderDashboard = () => (
                     </div>
                 </section>
 
-                {/* Seção de Agendamentos no Dashboard */}
-                <section className="space-y-6">
+                {/* Seção de Agendamentos no Dashboard - Visível apenas quando Online ou se houver agendamentos */}
+                {(isOnline || scheduledOrders.length > 0) && (
+                    <section className="space-y-6">
                     <div className="flex justify-between items-end">
                         <h3 className="text-2xl font-bold text-white tracking-tight">Agendamentos</h3>
                         <button onClick={() => setActiveTab('scheduled')} className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-4 py-2 rounded-full">Ver Calendário</button>
@@ -2275,7 +2263,8 @@ const renderDashboard = () => (
                             <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma escala programada</p>
                         </div>
                     )}
-                </section>
+                    </section>
+                )}
             </main>
         </motion.div>
     );
@@ -2993,22 +2982,6 @@ const renderDashboard = () => (
             return [];
         };
 
-        const orderItems = getOrderItems();
-        const rawAddr = (activeMission.delivery_address || activeMission.destination || '');
-        let addressOnly = rawAddr.split('| ITENS:')[0].trim();
-        if (addressOnly && !addressOnly.toLowerCase().includes('brumadinho')) {
-            addressOnly += ', Brumadinho - MG, Brasil';
-        } else if (addressOnly && !addressOnly.toLowerCase().includes('brasil')) {
-            addressOnly += ', Brasil';
-        }
-
-        let pickupOnly = (activeMission.origin || activeMission.pickup_address || '').split('| ITENS:')[0].trim();
-        if (pickupOnly && !pickupOnly.toLowerCase().includes('brumadinho')) {
-            pickupOnly += ', Brumadinho - MG, Brasil';
-        } else if (pickupOnly && !pickupOnly.toLowerCase().includes('brasil')) {
-            pickupOnly += ', Brasil';
-        }
-
         const getStatusDisplay = () => {
             switch(activeMission.status) {
                 case 'saiu_para_coleta':
@@ -3025,228 +2998,191 @@ const renderDashboard = () => (
 
         const statusDisplay = getStatusDisplay();
 
-        return (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-[#020617] flex flex-col overflow-hidden">
-                <div className="absolute inset-0 z-0 bg-[#020617] flex flex-col items-center justify-center p-8">
-                    <div className="relative mb-12">
-                        <div className="absolute inset-0 bg-primary/20 blur-[80px] rounded-full animate-pulse" />
-                        <div className="size-32 rounded-[45px] bg-white/5 border border-white/10 flex items-center justify-center relative z-10">
-                            <Icon name="route" size={48} className="text-primary" />
-                        </div>
-                    </div>
+        const orderItems = getOrderItems();
+        const rawAddr = (activeMission.delivery_address || activeMission.destination || '');
+        let addressOnly = rawAddr.split('| ITENS:')[0].trim();
+        if (addressOnly && !addressOnly.toLowerCase().includes('brumadinho')) {
+            addressOnly += ', Brumadinho - MG, Brasil';
+        } else if (addressOnly && !addressOnly.toLowerCase().includes('brasil')) {
+            addressOnly += ', Brasil';
+        }
 
-                    <button 
-                        onClick={() => {
-                            const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega';
-                            const lat = isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat;
-                            const lng = isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng;
-                            const addr = isDeliveryPhase ? addressOnly : pickupOnly;
-                            const destination = (lat && lng) ? `${lat},${lng}` : encodeURIComponent(addr);
-                            window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
-                        }}
-                        className="w-full max-w-xs h-20 bg-primary text-slate-900 rounded-[30px] flex items-center justify-center gap-4 shadow-2xl shadow-primary/20 active:scale-95 transition-all group"
-                    >
-                        <div className="size-10 rounded-2xl bg-slate-900/10 flex items-center justify-center group-hover:bg-slate-900/20">
-                            <Icon name="navigation" size={20} />
-                        </div>
-                        <span className="text-base font-black uppercase tracking-widest">Ir para a Rota</span>
-                    </button>
-                    
-                    <p className="mt-6 text-[10px] font-bold text-white/20 uppercase tracking-[0.3em] text-center max-w-[240px] leading-relaxed">
-                        Toque no botão acima para abrir o seu GPS favorito e seguir a rota.
-                    </p>
-
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80 pointer-events-none" />
-                </div>
-
-                <header className="relative z-50 flex items-center justify-between px-6 pt-10">
+        let pickupOnly = (activeMission.origin || activeMission.pickup_address || '').split('| ITENS:')[0].trim();
+        if (pickupOnly && !pickupOnly.toLowerCase().includes('brumadinho')) {
+            pickupOnly += ', Brumadinho - MG, Brasil';
+        } else if (pickupOnly && !pickupOnly.toLowerCase().includes('brasil')) {
+            pickupOnly += ', Brasil';
+        }        return (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="fixed inset-0 z-[100] bg-[#020617] flex flex-col overflow-hidden">
+                <header className="relative z-50 flex items-center justify-between px-6 pt-12 pb-6 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5">
                     <button 
                         onClick={() => setActiveTab('dashboard')}
-                        className="size-12 bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl flex items-center justify-center text-white active:scale-90 transition-all shadow-2xl"
+                        className="size-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-white active:scale-90 transition-all shadow-xl"
                     >
                         <Icon name="arrow_back" />
                     </button>
                     <div className="text-right">
-                        <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.4em] mb-1">Missão Ativa</p>
-                        <h2 className="text-xl font-black text-white tracking-tighter leading-none mb-1 shadow-sm">
+                        <div className="flex items-center justify-end gap-2 mb-1">
+                            <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.4em]">Missão Ativa</p>
+                            <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        </div>
+                        <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
                             #{activeMission.realId?.slice(0,8).toUpperCase()}
                         </h2>
-                        <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-primary/10 border border-primary/20">
-                            <Icon name={statusDisplay.icon} size={10} className={`${statusDisplay.color} animate-pulse`} />
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/5 shadow-inner">
+                            <Icon name={statusDisplay.icon} size={10} className={`${statusDisplay.color}`} />
                             <span className={`text-[8px] font-black uppercase tracking-widest ${statusDisplay.color}`}>{statusDisplay.label}</span>
                         </div>
                     </div>
                 </header>
 
-                <motion.div 
-                    variants={missionSheetVariants}
-                    initial="half"
-                    animate={missionSheetState}
-                    drag="y"
-                    dragConstraints={{ top: 0, bottom: 0 }}
-                    dragElastic={0.1}
-                    onDragEnd={handleMissionDragEnd}
-                    className="relative z-40 mt-auto bg-[#030712] border-t-4 border-white/5 flex flex-col rounded-t-[60px] shadow-[-20px_-20px_60px_rgba(255,255,255,0.02),20px_20px_60px_rgba(0,0,0,0.8),inset_4px_4px_12px_rgba(255,255,255,0.05),inset_-4px_-4px_12px_rgba(0,0,0,0.3)] touch-none"
-                    style={{ height: "100dvh" }}
-                >
-                    <div 
-                        className="flex items-center justify-between px-8 pt-5 pb-3 cursor-grab active:cursor-grabbing border-b border-white/5"
-                        onClick={() => {
-                            if (missionSheetState === "collapsed") setMissionSheetState("half");
-                            else if (missionSheetState === "half") setMissionSheetState("expanded");
-                            else setMissionSheetState("collapsed");
-                        }}
-                    >
-                        <button 
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveTab('dashboard');
-                            }}
-                            className="bg-zinc-800/50 border border-white/5 px-4 h-9 rounded-2xl flex items-center justify-center gap-2 active:scale-90 transition-all shadow-inner"
+                <div className="flex-1 overflow-y-auto no-scrollbar p-8 pb-40 space-y-8">
+                    {activeMission.preparation_status === 'pronto' && (
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0 }} 
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-gradient-to-r from-emerald-500 to-teal-500 p-[1px] rounded-[35px] shadow-[0_20px_40px_rgba(16,185,129,0.2)]"
                         >
-                            <span className="material-symbols-outlined text-white/50 text-[18px]">arrow_back</span>
-                            <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Minimizar</span>
-                        </button>
-                        
-                        <div className="w-12 h-1.5 bg-white/10 rounded-full" />
-                        
-                        <div className="size-8" />
-                    </div>
+                            <div className="bg-[#030712]/90 backdrop-blur-xl rounded-[34px] p-6 flex items-center gap-5">
+                                <div className="size-14 rounded-[22px] bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center relative overflow-hidden">
+                                    <motion.div 
+                                        animate={{ x: [-40, 60] }}
+                                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                                        className="absolute inset-0 w-8 bg-white/20 skew-x-12 blur-md"
+                                    />
+                                    <Icon name="check" size={24} className="text-black font-black" />
+                                </div>
+                                <div>
+                                    <h4 className="text-base font-black text-emerald-400 uppercase tracking-tight">Pedido está Pronto!</h4>
+                                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Pode retirar no estabelecimento</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
 
-                    <div className="p-8 pb-40 overflow-y-auto no-scrollbar flex-1 space-y-8">
-                        {activeMission.preparation_status === 'pronto' && (
-                            <motion.div 
-                                initial={{ scale: 0.9, opacity: 0 }} 
-                                animate={{ scale: 1, opacity: 1 }}
-                                className="bg-gradient-to-r from-emerald-500 to-teal-500 p-[1px] rounded-[35px] shadow-[0_20px_40px_rgba(16,185,129,0.2)]"
+                    <div className="space-y-6">
+                        <div className="bg-zinc-900 border-none rounded-[40px] p-8 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)] relative">
+                            <button 
+                                onClick={() => {
+                                    const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega';
+                                    const lat = isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat;
+                                    const lng = isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng;
+                                    const addr = isDeliveryPhase ? addressOnly : pickupOnly;
+                                    const destination = (lat && lng) ? `${lat},${lng}` : encodeURIComponent(addr);
+                                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
+                                }}
+                                className="absolute right-6 top-6 size-12 bg-primary rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all z-20"
                             >
-                                <div className="bg-[#030712]/90 backdrop-blur-xl rounded-[34px] p-6 flex items-center gap-5">
-                                    <div className="size-14 rounded-[22px] bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center relative overflow-hidden">
-                                        <motion.div 
-                                            animate={{ x: [-40, 60] }}
-                                            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                                            className="absolute inset-0 w-8 bg-white/20 skew-x-12 blur-md"
-                                        />
-                                        <Icon name="check" size={24} className="text-black font-black" />
-                                    </div>
-                                    <div>
-                                        <h4 className="text-base font-black text-emerald-400 uppercase tracking-tight">Pedido está Pronto!</h4>
-                                        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Pode retirar no estabelecimento</p>
+                                <Icon name="navigation" size={20} className="text-black" />
+                            </button>
+
+                            <div className="space-y-8 relative">
+                                <div className="absolute left-[13px] top-8 bottom-8 w-[2px] bg-white/5" />
+                                
+                                <div className="flex gap-5">
+                                    <div className="size-7 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center relative z-10"><div className="size-2 bg-blue-400 rounded-full" /></div>
+                                    <div className="flex-1">
+                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Ponto de Coleta</p>
+                                        <p className="text-xs font-bold text-white tracking-tight leading-relaxed">{pickupOnly}</p>
                                     </div>
                                 </div>
-                            </motion.div>
+
+                                <div className="flex gap-5">
+                                    <div className="size-7 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center relative z-10"><div className="size-2 bg-emerald-400 rounded-full" /></div>
+                                    <div className="flex-1">
+                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Destino Final</p>
+                                        <p className="text-xs font-bold text-white tracking-tight leading-relaxed">{addressOnly}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-zinc-900 border-none rounded-[40px] p-8 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
+                            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-6">Valores da Missão</p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-3xl">
+                                    <p className="text-[8px] font-black text-white/20 uppercase tracking-tighter mb-1">Seu Ganho</p>
+                                    <p className="text-xl font-black text-primary">R$ {parseFloat(activeMission.delivery_fee || '0').toFixed(2)}</p>
+                                </div>
+                                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-3xl">
+                                    <p className="text-[8px] font-black text-white/20 uppercase tracking-tighter mb-1">Distância</p>
+                                    <p className="text-xl font-black text-white">{(parseFloat(activeMission.distance_km || '0')).toFixed(1)} km</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {orderItems.length > 0 && (
+                            <div className="bg-zinc-900 border-none rounded-[40px] p-8 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
+                                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-4">Lista de Itens</p>
+                                <div className="space-y-3">
+                                    {orderItems.map((item: any, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-center text-xs font-bold text-white/60">
+                                            <span>• {item.quantity ? `${item.quantity}x ` : ''}{item.name}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent pt-20 pointer-events-none">
+                    <div className="pointer-events-auto w-full space-y-3">
+                        {(['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando', 'aceito', 'atribuido'].includes(activeMission.status || '')) && (
+                            <button 
+                                onClick={() => handleUpdateStatus('chegou_coleta')} 
+                                className="w-full h-20 bg-blue-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(37,99,235,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
+                            >
+                                <Icon name="location_on" /> Cheguei na Coleta
+                            </button>
                         )}
 
-                        <div className="space-y-6">
-                            <div className="bg-zinc-900 border-none rounded-[40px] p-8 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
-                                <div className="space-y-8 relative">
-                                    <div className="absolute left-[13px] top-8 bottom-8 w-[2px] bg-white/5" />
-                                    
-                                    <div className="flex gap-5">
-                                        <div className="size-7 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center relative z-10"><div className="size-2 bg-blue-400 rounded-full" /></div>
-                                        <div className="flex-1">
-                                            <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Ponto de Coleta</p>
-                                            <p className="text-xs font-bold text-white tracking-tight leading-relaxed">{pickupOnly}</p>
-                                        </div>
-                                    </div>
+                        {(['chegou_coleta', 'no_local_coleta', 'waiting_driver'].includes(activeMission.status || '') || activeMission.status === 'pronto') && (
+                            <button 
+                                onClick={() => handleUpdateStatus('picked_up')} 
+                                className="w-full h-20 bg-emerald-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(5,150,105,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
+                            >
+                                <Icon name="package_2" /> Confirmar Coleta
+                            </button>
+                        )}
 
-                                    <div className="flex gap-5">
-                                        <div className="size-7 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center relative z-10"><div className="size-2 bg-emerald-400 rounded-full" /></div>
-                                        <div className="flex-1">
-                                            <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Destino Final</p>
-                                            <p className="text-xs font-bold text-white tracking-tight leading-relaxed">{addressOnly}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        {activeMission.status === 'picked_up' && (
+                            <button 
+                                onClick={() => handleUpdateStatus('a_caminho')} 
+                                className="w-full h-20 bg-primary text-slate-950 font-black text-base uppercase tracking-widest rounded-[40px] shadow-[0_15px_35px_rgba(250,204,21,0.25),inset_4px_4px_10px_rgba(255,255,255,0.6),inset_-4px_-4px_10px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
+                            >
+                                <Icon name="moped" /> Iniciar Entrega
+                            </button>
+                        )}
 
-                            <div className="bg-zinc-900 border-none rounded-[40px] p-8 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
-                                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-6">Valores da Missão</p>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 bg-white/[0.02] border border-white/5 rounded-3xl">
-                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-tighter mb-1">Seu Ganho</p>
-                                        <p className="text-xl font-black text-primary">R$ {parseFloat(activeMission.delivery_fee || '0').toFixed(2)}</p>
-                                    </div>
-                                    <div className="p-4 bg-white/[0.02] border border-white/5 rounded-3xl">
-                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-tighter mb-1">DistÃƒÆ’¢ncia</p>
-                                        <p className="text-xl font-black text-white">{(parseFloat(activeMission.distance_km || '0')).toFixed(1)} km</p>
-                                    </div>
-                                </div>
-                            </div>
+                        {(activeMission.status === 'a_caminho' || activeMission.status === 'em_rota') && (
+                            <button 
+                                onClick={() => handleUpdateStatus('no_local')} 
+                                className="w-full h-20 bg-blue-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(37,99,235,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
+                            >
+                                <Icon name="person_pin_circle" /> Tô no Destino
+                            </button>
+                        )}
 
-                            {orderItems.length > 0 && (
-                                <div className="bg-zinc-900 border-none rounded-[40px] p-8 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
-                                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-4">Lista de Itens</p>
-                                    <div className="space-y-3">
-                                        {orderItems.map((item: any, idx: number) => (
-                                            <div key={idx} className="flex justify-between items-center text-xs font-bold text-white/60">
-                                                <span>ÃƒÂ¢Ã¢€¢ {item.quantity ? `${item.quantity}x ` : ''}{item.name}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        {(activeMission.status === 'no_local' || activeMission.status === 'saiu_para_entrega') && (
+                            <button 
+                                onClick={() => handleUpdateStatus('concluido')} 
+                                className="w-full h-20 bg-emerald-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(5,150,105,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
+                            >
+                                <Icon name="check_circle" /> {isMobility ? 'Encerrar Corrida' : 'Finalizar Entrega'}
+                            </button>
+                        )}
+
+                        {['a_caminho_coleta', 'saiu_para_coleta', 'aceito'].includes(activeMission.status || '') && (
+                            <button 
+                                onClick={async () => { if (await showConfirm({ message: 'Cancelar missão?' })) handleUpdateStatus('cancelado'); }}
+                                className="w-full py-2 text-red-500/40 text-[9px] font-black uppercase tracking-[0.4em]"
+                            >
+                                Cancelar Missão
+                            </button>
+                        )}
                     </div>
-
-                    <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-[#030712] via-[#030712] to-transparent pt-20 pointer-events-none">
-                        <div className="pointer-events-auto w-full space-y-3">
-                            {(['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando', 'aceito', 'atribuido'].includes(activeMission.status || '')) && (
-                                <button 
-                                    onClick={() => handleUpdateStatus('chegou_coleta')} 
-                                    className="w-full h-20 bg-blue-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(37,99,235,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
-                                >
-                                    <Icon name="location_on" /> Cheguei na Coleta
-                                </button>
-                            )}
-
-                            {(['chegou_coleta', 'no_local_coleta', 'waiting_driver'].includes(activeMission.status || '') || activeMission.status === 'pronto') && (
-                                <button 
-                                    onClick={() => handleUpdateStatus('picked_up')} 
-                                    className="w-full h-20 bg-emerald-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(5,150,105,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
-                                >
-                                    <Icon name="package_2" /> Confirmar Coleta
-                                </button>
-                            )}
-
-                            {activeMission.status === 'picked_up' && (
-                                <button 
-                                    onClick={() => handleUpdateStatus('a_caminho')} 
-                                    className="w-full h-20 bg-primary text-slate-950 font-black text-base uppercase tracking-widest rounded-[40px] shadow-[0_15px_35px_rgba(250,204,21,0.25),inset_4px_4px_10px_rgba(255,255,255,0.6),inset_-4px_-4px_10px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
-                                >
-                                    <Icon name="moped" /> Iniciar Entrega
-                                </button>
-                            )}
-
-                            {(activeMission.status === 'a_caminho' || activeMission.status === 'em_rota') && (
-                                <button 
-                                    onClick={() => handleUpdateStatus('no_local')} 
-                                    className="w-full h-20 bg-blue-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(37,99,235,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
-                                >
-                                    <Icon name="person_pin_circle" /> TÃƒÆ’ó no Destino
-                                </button>
-                            )}
-
-                            {(activeMission.status === 'no_local' || activeMission.status === 'saiu_para_entrega') && (
-                                <button 
-                                    onClick={() => handleUpdateStatus('concluido')} 
-                                    className="w-full h-20 bg-emerald-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(5,150,105,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
-                                >
-                                    <Icon name="check_circle" /> {isMobility ? 'Encerrar Corrida' : 'Finalizar Entrega'}
-                                </button>
-                            )}
-
-                            {['a_caminho_coleta', 'saiu_para_coleta', 'aceito'].includes(activeMission.status || '') && (
-                                <button 
-                                    onClick={async () => { if (await showConfirm({ message: 'Cancelar missão?' })) handleUpdateStatus('cancelado'); }}
-                                    className="w-full py-2 text-red-500/40 text-[9px] font-black uppercase tracking-[0.4em]"
-                                >
-                                    Cancelar Missão
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </motion.div>
+                </div>
             </motion.div>
         );
     };
@@ -3258,7 +3194,7 @@ const renderDashboard = () => (
             <p className="text-white/60 text-sm mb-10 max-w-xs leading-relaxed">Sua localização está sendo compartilhada com a central Izi.</p>
             <div className="w-full max-w-sm space-y-4">
                 <button onClick={() => { window.open('tel:190'); setIsSOSActive(false); }} className="w-full h-16 bg-white text-red-600 rounded-[24px] flex items-center justify-center gap-4 font-black text-lg uppercase tracking-tight shadow-2xl active:scale-95 transition-all"><Icon name="local_police" className="text-3xl" />Ligar 190</button>
-                <button onClick={() => { toastSuccess('Apoio mecÃƒÆ’¢nico acionado.'); setIsSOSActive(false); }} className="w-full h-16 bg-white/10 border border-white/20 text-white rounded-[24px] flex items-center justify-center gap-4 font-black text-base uppercase active:scale-95 transition-all"><Icon name="build" className="text-2xl" />Apoio MecÃƒÆ’¢nico</button>
+                <button onClick={() => { toastSuccess('Apoio mecânico acionado.'); setIsSOSActive(false); }} className="w-full h-16 bg-white/10 border border-white/20 text-white rounded-[24px] flex items-center justify-center gap-4 font-black text-base uppercase active:scale-95 transition-all"><Icon name="build" className="text-2xl" />Apoio Mecânico</button>
                 <button onClick={() => setIsSOSActive(false)} className="text-white/30 font-black uppercase tracking-widest text-sm mt-4">Cancelar</button>
             </div>
         </motion.div>
@@ -3278,7 +3214,7 @@ const renderDashboard = () => (
                     <div className="text-center space-y-3">
                         <div className="inline-flex items-center justify-center size-16 bg-primary/10 border border-primary/20 rounded-[24px] mb-2"><Icon name="two_wheeler" className="text-primary text-3xl" /></div>
                         <h1 className="text-4xl font-black text-white tracking-tight uppercase">Terminal <span className="text-primary">Izi</span></h1>
-                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.5em]">{authMode === 'login' ? 'AutenticaÃƒÆ’çÃƒÆ’ão do Entregador' : 'Cadastro de Novo Piloto'}</p>
+                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.5em]">{authMode === 'login' ? 'Autenticação do Entregador' : 'Cadastro de Novo Piloto'}</p>
                     </div>
                     {authError && <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-500/20 rounded-2xl px-5 py-3 text-red-400 text-xs font-bold text-center">{authError}</motion.div>}
                     <div className="space-y-4">
@@ -3308,10 +3244,10 @@ const renderDashboard = () => (
                         <button onClick={authMode === 'login' ? handleAuthLogin : handleAuthRegister} disabled={authLoading} className="w-full h-14 bg-primary text-slate-900 font-black text-sm uppercase tracking-widest rounded-[20px] shadow-2xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50">
                             {authLoading ? <div className="size-5 border-2 border-slate-900/20 border-t-slate-900 rounded-full animate-spin" /> : <>{authMode === 'login' ? 'Entrar' : 'Criar Conta'}<Icon name="arrow_forward" className="text-xl" /></>}
                         </button>
-                        <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-white/[0.03] border border-white/5 text-white/30 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-white/50 hover:bg-white/[0.05] transition-all">{authMode === 'login' ? 'Criar nova conta' : 'JÃƒÆ’á tenho conta'}</button>
+                        <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-white/[0.03] border border-white/5 text-white/30 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-white/50 hover:bg-white/[0.05] transition-all">{authMode === 'login' ? 'Criar nova conta' : 'Já tenho conta'}</button>
                     </div>
                 </div>
-                <p className="absolute bottom-8 text-[8px] font-black text-white/10 uppercase tracking-[0.4em]">Izi v5.0ÃƒÂ¢Ã¢€¢ ConexÃƒÆ’ão Segura</p>
+                <p className="absolute bottom-8 text-[8px] font-black text-white/10 uppercase tracking-[0.4em]">Izi v5.0 • Conexão Segura</p>
             </motion.div>
         );
     };
@@ -3327,82 +3263,50 @@ const renderDashboard = () => (
                 )}
                 {!isAuthenticated && !authInitLoading && <div key="login">{renderLoginView()}</div>}
                 {isAuthenticated && (
-                    <div key="app" className="flex flex-col h-full overflow-hidden">
+                    <div key="app" className="flex flex-col h-full overflow-hidden bg-black">
                         <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
-                        <AnimatePresence>{activeTab === 'active_mission' && renderActiveMissionView()}
-                {showSlotAppliedSuccess && (
-                    <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[300] bg-slate-950/98 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center"
-                    >
-                        <motion.div 
-                            initial={{ scale: 0.5, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="size-28 rounded-[42px] bg-primary flex items-center justify-center shadow-[0_20px_40px_rgba(250,204,21,0.3)] mb-8"
-                        >
-                            <span className="material-symbols-outlined text-zinc-950 text-5xl font-black">stars</span>
-                        </motion.div>
-                        
-                        <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none mb-4">
-                            Candidatura <br />
-                            <span className="text-primary">Enviada!</span>
-                        </h2>
-                        
-                        <p className="text-slate-400 font-bold text-sm tracking-wide mb-12 max-w-xs uppercase opacity-70">
-                            Seu perfil está agora com o lojista parceiro. Você será notificado se for selecionado!
-                        </p>
+                        <AnimatePresence>{activeTab === 'active_mission' && renderActiveMissionView()}</AnimatePresence>
 
-                        <button
-                            onClick={() => {
-                                setShowSlotAppliedSuccess(false);
-                                setSelectedSlot(null);
-                            }}
-                            className="w-full max-w-xs h-16 rounded-[28px] bg-white text-zinc-950 font-black text-xs uppercase tracking-[0.3em] active:scale-95 transition-all"
-                        >
-                            Voltar para Vagas
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-            {renderBottomNavigation()}
+                        {showSlotAppliedSuccess && (
+                            <motion.div 
+                                initial={{ opacity: 0 }} 
+                                animate={{ opacity: 1 }} 
+                                exit={{ opacity: 0 }}
+                                className="fixed inset-0 z-[300] bg-slate-950/98 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center"
+                            >
+                                <motion.div 
+                                    initial={{ scale: 0.5, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="size-28 rounded-[42px] bg-primary flex items-center justify-center shadow-[0_20px_40px_rgba(250,204,21,0.3)] mb-8"
+                                >
+                                    <span className="material-symbols-outlined text-zinc-950 text-5xl font-black">stars</span>
+                                </motion.div>
+                                
+                                <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none mb-4">
+                                    Candidatura <br />
+                                    <span className="text-primary">Enviada!</span>
+                                </h2>
+                                
+                                <p className="text-slate-400 font-bold text-sm tracking-wide mb-12 max-w-xs uppercase opacity-70">
+                                    Seu perfil está agora com o lojista parceiro. Você será notificado se for selecionado!
+                                </p>
+
+                                <button
+                                    onClick={() => {
+                                        setShowSlotAppliedSuccess(false);
+                                        setSelectedSlot(null);
+                                    }}
+                                    className="w-full max-w-xs h-16 rounded-[28px] bg-white text-zinc-950 font-black text-xs uppercase tracking-[0.3em] active:scale-95 transition-all"
+                                >
+                                    Voltar para Vagas
+                                </button>
+                            </motion.div>
+                        )}
 
                         <div className="flex flex-col h-full overflow-hidden">
-                             {activeTab !== 'dashboard' && renderHeader()}
-                            <AnimatePresence>
-                                {activeMission && activeTab !== 'active_mission' && (
-                                    <motion.button key="mission-btn" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }} onClick={() => setActiveTab('active_mission')} className="fixed bottom-28 left-5 right-5 z-[60] bg-primary text-slate-900 rounded-[28px] h-18 flex items-center justify-between px-7 shadow-[0_20px_40px_rgba(250,204,21,0.3)] border-t border-white/40">
-                                        <div className="flex items-center gap-4"><div className="size-3.5 bg-slate-950 rounded-full animate-ping" /><span className="font-black text-xs uppercase tracking-[0.2em] italic">Missão em Andamento</span></div>
-                                        <div className="size-10 bg-slate-950/10 rounded-full flex items-center justify-center"><Icon name="arrow_forward" className="text-slate-950 text-xl font-black" /></div>
-                                    </motion.button>
-                                )}
-                            </AnimatePresence>
-                            {!activeMission && (
-                                <div className="fixed bottom-32 right-6 z-[90] flex flex-col items-center gap-2">
-                                    <motion.button 
-                                        initial={{ scale: 0, y: 50 }} 
-                                        animate={{ scale: 1, y: 0 }} 
-                                        whileTap={{ scale: 0.9 }} 
-                                        onClick={handleToggleOnline} 
-                                        className={`size-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl ${
-                                            isOnline ? 'clay-fab-online' : 'clay-fab-offline'
-                                        }`}
-                                    >
-                                        <Icon 
-                                            name={isOnline ? 'radar' : 'power_settings_new'} 
-                                            size={40} 
-                                            className="text-white" 
-                                        />
-                                    </motion.button>
-                                    <div className="bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 shadow-lg">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-white">
-                                            {isOnline ? 'Online' : 'Offline'}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-                            <main className="flex-1 overflow-y-auto no-scrollbar">
+                            {activeTab !== 'dashboard' && renderHeader()}
+                            
+                            <main className="flex-1 overflow-y-auto no-scrollbar relative">
                                 <AnimatePresence mode="wait">
                                     {activeTab === 'dashboard' && <div key="dash">{renderDashboard()}</div>}
                                     {activeTab === 'history' && <div key="hist">{renderHistoryView()}</div>}
@@ -3411,7 +3315,42 @@ const renderDashboard = () => (
                                     {activeTab === 'dedicated' && <div key="dedi">{renderDedicatedView()}</div>}
                                     {activeTab === 'scheduled' && <div key="sched">{renderScheduledView()}</div>}
                                 </AnimatePresence>
+
+                                <AnimatePresence>
+                                    {activeMission && activeTab !== 'active_mission' && (
+                                        <motion.button key="mission-btn" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }} onClick={() => setActiveTab('active_mission')} className="fixed bottom-28 left-5 right-5 z-[60] bg-primary text-slate-900 rounded-[28px] h-18 flex items-center justify-between px-7 shadow-[0_20px_40px_rgba(250,204,21,0.3)] border-t border-white/40">
+                                            <div className="flex items-center gap-4"><div className="size-3.5 bg-slate-950 rounded-full animate-ping" /><span className="font-black text-xs uppercase tracking-[0.2em] italic">Missão em Andamento</span></div>
+                                            <div className="size-10 bg-slate-950/10 rounded-full flex items-center justify-center"><Icon name="arrow_forward" className="text-slate-950 text-xl font-black" /></div>
+                                        </motion.button>
+                                    )}
+                                </AnimatePresence>
+
+                                {!activeMission && (
+                                    <div className="fixed bottom-32 right-6 z-[90] flex flex-col items-center gap-2">
+                                        <motion.button 
+                                            initial={{ scale: 0, y: 50 }} 
+                                            animate={{ scale: 1, y: 0 }} 
+                                            whileTap={{ scale: 0.9 }} 
+                                            onClick={handleToggleOnline} 
+                                            className={`size-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl ${
+                                                isOnline ? 'clay-fab-online' : 'clay-fab-offline'
+                                            }`}
+                                        >
+                                            <Icon 
+                                                name={isOnline ? 'radar' : 'power_settings_new'} 
+                                                size={40} 
+                                                className="text-white" 
+                                            />
+                                        </motion.button>
+                                        <div className="bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 shadow-lg">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-white">
+                                                {isOnline ? 'Online' : 'Offline'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </main>
+                            {renderBottomNavigation()}
                         </div>
                     </div>
                 )}
