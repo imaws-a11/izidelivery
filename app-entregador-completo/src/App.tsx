@@ -76,6 +76,7 @@ function Icon({ name, className = "", size = 20 }: any) {
     'settings': BespokeIcons.Menu,
     'volume_up': BespokeIcons.Notifications,
     'visibility': BespokeIcons.History,
+    'arrow_back': BespokeIcons.ChevronLeft,
   };
 
   const IconComp = icons[name] || BespokeIcons.Help;
@@ -228,32 +229,32 @@ function IziRealTimeMap({ driverCoords, pickupCoords, pickupAddress, pickupName,
   );
 }
 
-// Normaliza aliases variados de service_type que vÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âªm do banco de dados para os tipos canÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â´nicos
+// Normaliza aliases variados de service_type que vêm do banco de dados para os tipos canónicos
 const normalizeServiceType = (raw: string | undefined | null): string => {
     if (!raw) return 'delivery';
     const t = raw.toLowerCase().trim();
     // Tipos de comida / restaurante
     if (['restaurant', 'restaurante', 'food', 'hamburguer', 'hamburger', 'burger',
          'lanchonete', 'lanche', 'pizzaria', 'pizza', 'sushi', 'japanese',
-         'churrasco', 'grill', 'culinaria', 'culinÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ria', 'refeicao', 'refeiÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o'].includes(t)) return 'restaurant';
+         'churrasco', 'grill', 'culinaria', 'culinária', 'refeicao', 'refeição'].includes(t)) return 'restaurant';
     // Mercado / supermercado
     if (['market', 'mercado', 'supermercado', 'hortifruti'].includes(t)) return 'market';
-    // FarmÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡cia / saÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âºde
-    if (['pharmacy', 'farmacia', 'farmÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡cia', 'saude', 'saÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âºde', 'health'].includes(t)) return 'pharmacy';
+    // Farmácia / saúde
+    if (['pharmacy', 'farmacia', 'farmácia', 'saude', 'saúde', 'health'].includes(t)) return 'pharmacy';
     // Bebidas
     if (['beverages', 'bebidas', 'drinks', 'bar'].includes(t)) return 'beverages';
     // Mobilidade
     if (['mototaxi', 'moto_taxi', 'motortaxi'].includes(t)) return 'mototaxi';
     if (['car_ride', 'carro', 'taxi', 'car', 'ride'].includes(t)) return 'car_ride';
     if (['motorista_particular', 'motorista particular', 'chauffeur'].includes(t)) return 'motorista_particular';
-    // LogÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­stica
+    // Logística
     if (['van'].includes(t)) return 'van';
     if (['utilitario', 'utilitario leve', 'utility'].includes(t)) return 'utilitario';
     if (['logistica', 'logistics'].includes(t)) return 'logistica';
-    if (['frete', 'carreto', 'freight', 'mudanca', 'mudanÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§a'].includes(t)) return 'frete';
+    if (['frete', 'carreto', 'freight', 'mudanca', 'mudança'].includes(t)) return 'frete';
     if (['motoboy', 'courier'].includes(t)) return 'motoboy';
     if (['package', 'pacote', 'encomenda', 'express', 'delivery'].includes(t)) return 'package';
-    return t; // retorna o tipo original se nÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o houver mapeamento
+    return t; // retorna o tipo original se não houver mapeamento
 };
 
 const getTypeDetails = (rawType: string) => {
@@ -392,7 +393,7 @@ const getServicePresentation = (order: any) => {
 
     let summary = '';
     if (itemCount > 0) {
-        summary = itemNames.slice(0, 2).join(' ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ ');
+        summary = itemNames.slice(0, 2).join(' ¢¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬¢ ');
         if (itemCount > 2) summary += ` +${itemCount - 2}`;
     } else if (addressMeta) {
         summary = addressMeta
@@ -446,7 +447,7 @@ function App() {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         try {
-            // Busca configuraÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes gerais
+            // Busca configurações gerais
             const res = await fetch(`${supabaseUrl}/rest/v1/app_settings_delivery?select=*`, {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
             });
@@ -455,7 +456,7 @@ function App() {
                 if (data && data[0]) setAppSettings(data[0]);
             }
 
-            // Busca taxas dinÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢micas (especialmente os valores base como food_min)
+            // Busca taxas din¢micas (especialmente os valores base como food_min)
             const resRates = await fetch(`${supabaseUrl}/rest/v1/dynamic_rates_delivery?type=eq.base_values&select=*`, {
                 headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
             });
@@ -464,11 +465,11 @@ function App() {
                 if (dataRates && dataRates[0]) setDynamicRates(dataRates[0].metadata);
             }
         } catch (e) {
-            console.error('[SETTINGS] Erro ao buscar configuraÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes:', e);
+            console.error('[SETTINGS] Erro ao buscar configurações:', e);
         }
     }, []);
 
-    // Efeito para persistir dados bÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡sicos de autenticaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o no localStorage
+    // Efeito para persistir dados básicos de autenticação no localStorage
     useEffect(() => {
         if (isAuthenticated && driverId) {
             localStorage.setItem('izi_driver_authenticated', 'true');
@@ -497,7 +498,7 @@ function App() {
     const [isOnline, setIsOnline] = useState(() => localStorage.getItem('Izi_online') === 'true');
     const isFirstRender = useRef(true);
     const hasLoadedOnlineStatus = useRef(false); // Impede que refreshes de token sobrescrevam o status
-    const hasBootedRef = useRef(false); // Garante que syncMissionWithDB e restauraÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o sÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³ ocorrem 1x por sessÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
+    const hasBootedRef = useRef(false); // Garante que syncMissionWithDB e restauração s³ ocorrem 1x por sessão
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSOSActive, setIsSOSActive] = useState(false);
     const [missionSheetState, setMissionSheetState] = useState<"collapsed" | "half" | "expanded">("half");
@@ -562,7 +563,7 @@ function App() {
     useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
     const clearDriverSessionState = useCallback(() => {
-        console.log('[AUTH] Executando limpeza de sessÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o (Logout)');
+        console.log('[AUTH] Executando limpeza de sessão (Logout)');
         setIsMenuOpen(false);
         setIsAuthenticated(false);
         setDriverId(null);
@@ -582,7 +583,7 @@ function App() {
         setAuthPassword('');
         setAuthError('');
 
-        // Remove chaves crÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­ticas de sessÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
+        // Remove chaves críticas de sessão
         const keysToRemove = [
             'izi_driver_authenticated',
             'izi_driver_uid',
@@ -598,11 +599,11 @@ function App() {
 
     // WATCHDOG DE STATUS ONLINE
     // Se o estado isOnline divergir do localStorage por qualquer motivo (race condition, re-render),
-    // este efeito forÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§a a reconciliaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o com a intenÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o do motorista.
+    // este efeito força a reconciliação com a intenção do motorista.
     useEffect(() => {
         const localIntent = localStorage.getItem('Izi_online') === 'true';
         if (localIntent && !isOnline) {
-            console.warn('[WATCHDOG] Detectada divergÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âªncia de status! ForÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ando ONLINE conforme localStorage.');
+            console.warn('[WATCHDOG] Detectada divergência de status! Forçando ONLINE conforme localStorage.');
             setIsOnline(true);
         }
     }, [isOnline]);
@@ -663,7 +664,7 @@ function App() {
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
-        // Permite GPS se estiver ONLINE ou em uma MISSÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢O ATIVA
+        // Permite GPS se estiver ONLINE ou em uma MISSÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O ATIVA
         if (!isOnline && !activeMission) return;
         
         const updateLocation = async (lat: number, lng: number) => {
@@ -671,7 +672,7 @@ function App() {
           await supabase.from('drivers_delivery').update({ lat, lng }).eq('id', driverId);
         };
 
-        // Obter posiÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o IMEDIATA para agilizar o mapa
+        // Obter posição IMEDIATA para agilizar o mapa
         navigator.geolocation.getCurrentPosition(
             (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
             (err) => console.log("Init GPS Error (ignoring):", err),
@@ -690,11 +691,11 @@ function App() {
     useEffect(() => {
         const ensureDriverRecord = async (userId: string, email: string, name: string) => {
             // Busca o registro atual, mesmo que esteja marcado como deletado
-            // Nota: Se houver RLS impedindo a leitura de is_deleted=true, o data virÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ null
+            // Nota: Se houver RLS impedindo a leitura de is_deleted=true, o data virá null
             const { data } = await supabase.from('drivers_delivery').select('id, name, lat, lng, is_deleted, is_online').eq('id', userId).maybeSingle();
             
-            // Se NÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢O existe o ID no banco OU se o registro existe mas foi deletado, NÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢O recriamos se o objetivo for deletar
-            // Mas aqui, sÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³ criamos se for um usuÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡rio COMPLETAMENTE novo (sem registro nenhum)
+            // Se NÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O existe o ID no banco OU se o registro existe mas foi deletado, NÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O recriamos se o objetivo for deletar
+            // Mas aqui, s³ criamos se for um usuário COMPLETAMENTE novo (sem registro nenhum)
             if (!data) {
                 await supabase.from('drivers_delivery').upsert({
                     id: userId, 
@@ -706,13 +707,13 @@ function App() {
                     vehicle_type: 'mototaxi'
                 });
             } else {
-                // Se o registro existe, nÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o fazemos o upsert para nÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o "ressuscitar"
+                // Se o registro existe, não fazemos o upsert para não "ressuscitar"
                 if (data.name) {
                     setDriverName(data.name);
                     localStorage.setItem('izi_driver_name', data.name);
                 }
                 // REMOVIDO: setIsOnline daqui. O controle de is_online agora
-                // ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© feito exclusivamente pelo useEffect de restauraÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o de sessÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o.
+                // é feito exclusivamente pelo useEffect de restauração de sessão.
                 const lat = Number(data.lat);
                 const lng = Number(data.lng);
                 if (isFinite(lat) && isFinite(lng) && lat !== 0 && lng !== 0) setDriverCoords({ lat, lng });
@@ -739,7 +740,7 @@ function App() {
             setAuthInitLoading(false);
         });
 
-        // Timeout de seguranÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§a: garante que o app saia da tela de boot mesmo se houver erro de rede/supabase
+        // Timeout de segurança: garante que o app saia da tela de boot mesmo se houver erro de rede/supabase
         const authTimeout = setTimeout(() => setAuthInitLoading(false), 5000);
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -748,12 +749,12 @@ function App() {
                 setDriverId(user.id);
                 setIsAuthenticated(true);
 
-                // BOOT ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡NICO: sÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³ executa restauraÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o completa na primeira vez
+                // BOOT ÃƒÂ¢Ã¢€¦áNICO: s³ executa restauração completa na primeira vez
                 if (!hasBootedRef.current) {
                     hasBootedRef.current = true;
                     console.log('[AUTH] Primeiro boot detectado. Carregando perfil...');
 
-                    // Buscar perfil apenas para nome e chave pix (NÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢O tocar no is_online aqui)
+                    // Buscar perfil apenas para nome e chave pix (NÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O tocar no is_online aqui)
                     const { data: profile } = await supabase
                         .from('drivers_delivery')
                         .select('name, bank_info')
@@ -773,12 +774,12 @@ function App() {
                     
                     syncMissionWithDB();
                 } else {
-                    // RenovaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes de token (TOKEN_REFRESHED): NÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢O alterar nenhum estado
-                    console.log('[AUTH] RenovaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o de token. Ignorando reset de estado.');
+                    // Renovações de token (TOKEN_REFRESHED): NÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O alterar nenhum estado
+                    console.log('[AUTH] Renovação de token. Ignorando reset de estado.');
                 }
             } else {
                 if (hasBootedRef.current) {
-                    console.warn('[AUTH] SIGNED_OUT detectado. Limpando sessÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o...');
+                    console.warn('[AUTH] SIGNED_OUT detectado. Limpando sessão...');
                     hasBootedRef.current = false;
                     setDriverId(null);
                     setIsAuthenticated(false);
@@ -819,7 +820,7 @@ function App() {
     const handleAuthRegister = async () => {
         setAuthLoading(true); setAuthError('');
         if (!authName.trim()) { setAuthError('Informe seu nome completo.'); setAuthLoading(false); return; }
-        if (authPassword.length < 6) { setAuthError('A senha deve ter no mÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­nimo 6 caracteres.'); setAuthLoading(false); return; }
+        if (authPassword.length < 6) { setAuthError('A senha deve ter no mínimo 6 caracteres.'); setAuthLoading(false); return; }
         try {
             const { data, error } = await supabase.auth.signUp({
                 email: authEmail,
@@ -848,7 +849,7 @@ function App() {
                 setDriverName(authName.trim());
             }
         } catch (e: any) {
-            setAuthError(e.message?.includes('already registered') ? 'Este email jÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ estÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ cadastrado. FaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§a login.' : e.message);
+            setAuthError(e.message?.includes('already registered') ? 'Este email já está cadastrado. Faça login.' : e.message);
         } finally { setAuthLoading(false); }
     };
 
@@ -857,9 +858,9 @@ function App() {
 
 
     // =====================================================================
-    // RESTAURAÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢O DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
-    // Este ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© o ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡NICO lugar onde o is_online ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© restaurado apÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³s login/refresh.
-    // Ele dispara quando driverId e isAuthenticated ficam disponÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­veis.
+    // RESTAURA¢ÃƒÆ’¢¬áÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O DE STATUS ONLINE: useEffect EXCLUSIVO e AUTORITATIVO
+    // Este é o ÃƒÂ¢Ã¢€¦áNICO lugar onde o is_online é restaurado ap³s login/refresh.
+    // Ele dispara quando driverId e isAuthenticated ficam disponíveis.
     // =====================================================================
     useEffect(() => {
         if (!driverId || !isAuthenticated) return;
@@ -871,7 +872,7 @@ function App() {
         setIsOnline(localWantsOnline);
 
         if (localWantsOnline) {
-            // Sincronizar banco em background para garantir consistÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âªncia
+            // Sincronizar banco em background para garantir consistência
             supabase.from('drivers_delivery')
                 .update({ is_online: true, last_seen_at: new Date().toISOString() })
                 .eq('id', driverId)
@@ -882,7 +883,7 @@ function App() {
         }
     }, [driverId, isAuthenticated]);
 
-    // SincronizaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o entre mÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âºltiplos dispositivos (Online status, Carteira, Perfil)
+    // Sincronização entre múltiplos dispositivos (Online status, Carteira, Perfil)
     useEffect(() => {
         if (!driverId || !isAuthenticated) return;
         const dId = String(driverId).trim();
@@ -895,12 +896,12 @@ function App() {
                 filter: `id=eq.${dId}` 
             }, (payload) => {
                 const updated = payload.new;
-                console.log('[REALTIME] SincronizaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o multi-dispositivo:', updated);
+                console.log('[REALTIME] Sincronização multi-dispositivo:', updated);
                 
-                // SincronizaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o multi-dispositivo de perfil e financeira
-                // REMOVIDO: SincronizaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o de is_online do banco para cÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡.
-                // O localStorage ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© a autoridade absoluta sobre a intenÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o do motorista.
-                // A ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âºnica forma de ser ejetado ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© via is_active (Remote Eject) ou Logout manual.
+                // Sincronização multi-dispositivo de perfil e financeira
+                // REMOVIDO: Sincronização de is_online do banco para cá.
+                // O localStorage é a autoridade absoluta sobre a intenção do motorista.
+                // A única forma de ser ejetado é via is_active (Remote Eject) ou Logout manual.
                 
                 // Recarregar dados financeiros se o saldo mudou por outro dispositivo
                 refreshFinanceData();
@@ -908,7 +909,7 @@ function App() {
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, [driverId, isAuthenticated]); // REMOVIDO isOnline das deps - evita re-subscriÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o que dispara snapshot do banco
+    }, [driverId, isAuthenticated]); // REMOVIDO isOnline das deps - evita re-subscrição que dispara snapshot do banco
 
     // Heartbeat: enquanto online, atualiza last_seen_at a cada 5 segundos
     useEffect(() => {
@@ -935,7 +936,7 @@ function App() {
     const handleToggleOnline = async () => {
         const nextState = !isOnline;
 
-        // SALVA NO LOCALSTORAGE IMEDIATAMENTE ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â antes de qualquer chamada ao banco
+        // SALVA NO LOCALSTORAGE IMEDIATAMENTE ¢¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬¢ÃƒÆ’¢¬ antes de qualquer chamada ao banco
         // Isso garante que F5 sempre restaura o status correto, independente de rede
         localStorage.setItem('Izi_online', nextState.toString());
         setIsOnline(nextState);
@@ -949,7 +950,7 @@ function App() {
                 console.log(`[STATUS] ${nextState ? 'ONLINE' : 'OFFLINE'} - banco e storage sincronizados`);
             } catch (e: any) {
                 console.warn('[STATUS] Falha ao sincronizar banco (storage preservado):', e.message);
-                // NÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢O reverte ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â o localStorage jÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ salvou a intenÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o e o heartbeat sincronizarÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ o banco
+                // NÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O reverte ¢¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬¢ÃƒÆ’¢¬ o localStorage já salvou a intenção e o heartbeat sincronizará o banco
             }
         }
     };
@@ -970,11 +971,11 @@ function App() {
             }, (payload) => {
                 // Se is_active mudar para false, ejeta na hora
                 if (payload.new && payload.new.is_active === false) {
-                    console.error('[EJECT] SessÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o ejetada remotamente! Motivo: Motorista desativado no painel Admin.');
+                    console.error('[EJECT] Sessão ejetada remotamente! Motivo: Motorista desativado no painel Admin.');
                     toastError('Sua conta foi desativada pelo administrador.');
                     handleLogout();
                 }
-                // Se o banco forÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ar is_online=false MAS o motorista quer estar online, 
+                // Se o banco forçar is_online=false MAS o motorista quer estar online, 
                 // o heartbeat (useEffect abaixo) vai corrigir o banco em 5 segundos.
             })
             .subscribe();
@@ -985,7 +986,7 @@ function App() {
     const syncMissionWithDB = useCallback(async () => {
         if (!driverId || !isAuthenticated) return;
         try {
-            console.log('[SYNC] Sincronizando missÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o ativa do banco...');
+            console.log('[SYNC] Sincronizando missão ativa do banco...');
             const dId = String(driverId).trim();
             const { data: orders, error: qErr } = await supabase.from('orders_delivery')
                 .select('*')
@@ -999,7 +1000,7 @@ function App() {
             const activeOrder = orders?.find((o: any) => 
                 !['concluido', 'cancelado', 'pendente_pagamento', 'finalizado', 'entregue'].includes(o.status) &&
                 !financialTypes.includes(o.service_type) &&
-                o.driver_id === dId // RIGOROSO: SÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³ ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© missÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o ativa se for MINHA
+                o.driver_id === dId // RIGOROSO: S³ é missão ativa se for MINHA
             );
 
             if (activeOrder) {
@@ -1017,12 +1018,12 @@ function App() {
                 setActiveMission(mission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                 setActiveTab('active_mission');
-                console.log('[SYNC] MissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o restaurada do banco:', mission.realId);
+                console.log('[SYNC] Missão restaurada do banco:', mission.realId);
             } else {
-                console.log('[SYNC] Nenhuma missÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o ativa no banco para o motorista:', driverId);
+                console.log('[SYNC] Nenhuma missão ativa no banco para o motorista:', driverId);
 
-                // PROTEÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢O: SÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³ apaga o cache local se a missÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o for ANTIGA (> 30 min)
-                // Isso evita apagar uma missÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o que acabou de ser aceita mas ainda nÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o propagou no banco
+                // PROTE¢ÃƒÆ’¢¬áÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O: S³ apaga o cache local se a missão for ANTIGA (> 30 min)
+                // Isso evita apagar uma missão que acabou de ser aceita mas ainda não propagou no banco
                 const cachedMissionRaw = localStorage.getItem('Izi_active_mission');
                 if (cachedMissionRaw) {
                     try {
@@ -1031,11 +1032,11 @@ function App() {
                         const ageMs = Date.now() - createdAt;
                         const thirtyMinutes = 30 * 60 * 1000;
                         if (ageMs > thirtyMinutes) {
-                            console.log('[SYNC] MissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o antiga no cache (> 30 min). Limpando...');
+                            console.log('[SYNC] Missão antiga no cache (> 30 min). Limpando...');
                             setActiveMission(null);
                             localStorage.removeItem('Izi_active_mission');
                         } else {
-                            console.log('[SYNC] MissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o recente no cache. Mantendo estado local por precauÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o.');
+                            console.log('[SYNC] Missão recente no cache. Mantendo estado local por precaução.');
                         }
                     } catch {
                         setActiveMission(null);
@@ -1044,7 +1045,7 @@ function App() {
                 }
             }
         } catch (err: any) {
-            console.error('[SYNC] Falha ao sincronizar missÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o:', err.message);
+            console.error('[SYNC] Falha ao sincronizar missão:', err.message);
         }
     }, [driverId, isAuthenticated]);
 
@@ -1052,7 +1053,7 @@ function App() {
         syncMissionWithDB();
     }, [driverId, isAuthenticated, syncMissionWithDB]);
 
-    // Canal separado para vagas dedicadas ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â funciona independente do status online
+    // Canal separado para vagas dedicadas ¢¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬¢ÃƒÆ’¢¬ funciona independente do status online
     useEffect(() => {
         if (!isAuthenticated) return;
         const fetchDedicatedSlotsRealtime = async () => {
@@ -1104,7 +1105,7 @@ function App() {
         refreshFinanceData();
     }, [isAuthenticated, driverId]);
 
-    // Buscar Agendamentos disponÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­veis e aceitos
+    // Buscar Agendamentos disponíveis e aceitos
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
 
@@ -1177,7 +1178,7 @@ function App() {
                 const now = Date.now();
                 const currentMission = activeMissionRef.current;
 
-                // 1. Sincronizar MissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o Ativa (Se o Admin me deu um pedido ou aceitei em outro lugar)
+                // 1. Sincronizar Missão Ativa (Se o Admin me deu um pedido ou aceitei em outro lugar)
                 const myAssignment = data.find((o: any) => 
                     o.driver_id && String(o.driver_id).trim() === String(driverId).trim() &&
                     !['concluido', 'cancelado', 'finalizado', 'entregue', 'confirmado', 'confirmed'].includes(o.status)
@@ -1196,13 +1197,13 @@ function App() {
                         pickup_lat: merchant?.latitude || myAssignment.pickup_lat,
                         pickup_lng: merchant?.longitude || myAssignment.pickup_lng
                     };
-                    console.log('[COLETA-DEBUG] MissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o Ativa Sincronizada:', mission.pickup_address);
+                    console.log('[COLETA-DEBUG] Missão Ativa Sincronizada:', mission.pickup_address);
                     setActiveMission(mission);
                     localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                     if (activeTabRef.current !== 'active_mission') setActiveTab('active_mission');
                 }
 
-                // 2. DisponÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­veis no Dashboard
+                // 2. Disponíveis no Dashboard
                 const available = data.filter((o: any) => {
                     const isMerchantOrder = !!o.merchant_id || !!o.admin_users;
                     const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted'].includes(o.status);
@@ -1219,7 +1220,7 @@ function App() {
                 setOrders(available.map((o: any) => {
                     const merchant = o.admin_users;
                     if (merchant) {
-                        console.log(`[COLETA-DEBUG] Loja: ${merchant.store_name} | EndereÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§o: ${merchant.store_address} | Coords: ${merchant.latitude},${merchant.longitude}`);
+                        console.log(`[COLETA-DEBUG] Loja: ${merchant.store_name} | Endereço: ${merchant.store_address} | Coords: ${merchant.latitude},${merchant.longitude}`);
                     }
                     return {
                         ...o,
@@ -1252,7 +1253,7 @@ function App() {
         };
         fetchOrders(); fetchDedicatedSlots();
 
-        // Polling a cada 5s para garantir que pedidos reapareÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§am apÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³s rejeiÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
+        // Polling a cada 5s para garantir que pedidos reapareçam ap³s rejeição
         const pollInterval = setInterval(fetchOrders, 5000);
         
         const channel = supabase.channel('realtime_orders')
@@ -1261,7 +1262,7 @@ function App() {
                 if (o.scheduled_at) return; // Ignorar agendados no dashboard de missoes imediatas
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
                 
-                // Filtros de seguranÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§a e status
+                // Filtros de segurança e status
                 const isMerchantOrder = !!o.merchant_id;
                 const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted'].includes(o.status);
                 const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status);
@@ -1273,15 +1274,15 @@ function App() {
                 }
                 if (Date.now() - (declinedMap[o.id] || 0) < 1800000) return;
                 
-                // Ignorar transaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes financeiras (Izi Coin, Assinatura) que nÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o sÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o missÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes
+                // Ignorar transações financeiras (Izi Coin, Assinatura) que não são missões
                 const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
                 if (financialTypes.includes(o.service_type)) return;
 
                 // Restringir sons por categoria e status (Evitar barulho precoce em Food)
                 const availabilityType = normalizeServiceType(o.service_type);
                 const isMobility = ['mototaxi', 'car_ride', 'frete', 'van', 'utilitario', 'logistica', 'motorista_particular', 'package', 'motoboy'].includes(availabilityType);
-                // SÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³ toca som se: (ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â° Mobilidade) OU (ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â° Food e estÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ em um status visÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­vel/acionÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡vel)
-                // E tambÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©m somente se o pagamento jÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ foi aprovado ou ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© em dinheiro
+                // S³ toca som se: (¢ÃƒÆ’¢¬° Mobilidade) OU (¢ÃƒÆ’¢¬° Food e está em um status visível/acionável)
+                // E também somente se o pagamento já foi aprovado ou é em dinheiro
                 const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted'];
                 const isPaidOrCash = o.payment_method === 'cash' || o.payment_status === 'paid' || o.payment_method === 'dinheiro';
                 const shouldSound = actionableStatuses.includes(o.status) && isPaidOrCash;
@@ -1290,12 +1291,12 @@ function App() {
                 setOrders(prev => {
                     if (prev.find(x => x.realId === o.id)) return prev;
                     
-                    // SÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³ toca som se estiver online e passar no filtro de categoria
+                    // S³ toca som se estiver online e passar no filtro de categoria
                     if (isOnline && shouldSound) {
                         playIziSound('driver');
                         if (Notification.permission === 'granted') {
-                            new Notification('ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ Nova MissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o Izi!', { 
-                                body: `${servicePreview.headline} ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ ${servicePreview.pickupText || o.pickup_address}`, 
+                            new Notification('°ÃƒÂ¢Ã¢€¦¸ÃƒÂ¢Ã¢€¦á¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬ Nova Missão Izi!', { 
+                                body: `${servicePreview.headline} ¢¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬¢ ${servicePreview.pickupText || o.pickup_address}`, 
                                 icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
                             });
                         }
@@ -1317,7 +1318,7 @@ function App() {
                         preparation_status: o.preparation_status
                     };
 
-                    // Se o pedido jÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ veio atribuÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­do a mim (ex: admin atribuiu), define como missÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o ativa na hora
+                    // Se o pedido já veio atribuído a mim (ex: admin atribuiu), define como missão ativa na hora
                     if (o.driver_id && String(o.driver_id).trim() === String(driverId).trim()) {
                         setActiveMission(mapped);
                         localStorage.setItem('Izi_active_mission', JSON.stringify(mapped));
@@ -1325,7 +1326,7 @@ function App() {
                         return prev;
                     }
 
-                    // Se o pedido tem motorista mas NÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢O SOU EU, ignora (foi aceito por outro)
+                    // Se o pedido tem motorista mas NÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O SOU EU, ignora (foi aceito por outro)
                     if (o.driver_id && String(o.driver_id).trim() !== '') {
                         return prev;
                     }
@@ -1338,14 +1339,14 @@ function App() {
                 if (o.scheduled_at) return; // Ignorar agendados no dashboard de missoes imediatas
                 const currentMission = activeMissionRef.current;
                 
-                // SincronizaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o Global de MissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o Ativa (Multi-dispositivos)
+                // Sincronização Global de Missão Ativa (Multi-dispositivos)
                 const dId = String(driverId).trim();
                 if (o.driver_id === dId) {
-                    console.log('[REALTIME] Sincronizando mudanÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§a de status da minha missÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o:', o.status);
+                    console.log('[REALTIME] Sincronizando mudança de status da minha missão:', o.status);
                     
-                    // LÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³gica de Limpeza: Se o pedido foi cancelado ou concluÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­do em outro dispositivo
+                    // L³gica de Limpeza: Se o pedido foi cancelado ou concluído em outro dispositivo
                     if (['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)) {
-                        console.log('[REALTIME] MissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o finalizada detectada. Limpando estado local.');
+                        console.log('[REALTIME] Missão finalizada detectada. Limpando estado local.');
                         setActiveMission(null);
                         localStorage.removeItem('Izi_active_mission');
                         if (activeTabRef.current === 'active_mission') setActiveTab('dashboard');
@@ -1358,12 +1359,12 @@ function App() {
 
                         if (wasPreparing && isNowReady) {
                             playIziSound('driver');
-                            toastSuccess('ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¥ O Pedido estÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ PRONTO para coleta!');
-                            if (Notification.permission === 'granted') new Notification('ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ Pedido Pronto!', { body: 'O estabelecimento finalizou o preparo. Pode coletar!' });
+                            toastSuccess('°ÃƒÂ¢Ã¢€¦¸¢ÃƒÆ’¢¬¥ O Pedido está PRONTO para coleta!');
+                            if (Notification.permission === 'granted') new Notification('°ÃƒÂ¢Ã¢€¦¸¢ÃƒÆ’¢¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢€Ã…â€œ¦ Pedido Pronto!', { body: 'O estabelecimento finalizou o preparo. Pode coletar!' });
                         }
 
-                        // Sincronizar o status da missÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o ativa com o servidor
-                        // MANTÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°M OS DADOS DO LOJISTA DE BRUMADINHO (Join admin_users) - Prioridade Total
+                        // Sincronizar o status da missão ativa com o servidor
+                        // MANT¢ÃƒÆ’¢¬°M OS DADOS DO LOJISTA DE BRUMADINHO (Join admin_users) - Prioridade Total
                         const mission: any = { 
                             ...o, 
                             realId: o.id, 
@@ -1383,7 +1384,7 @@ function App() {
                         setActiveMission(mission);
                         localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                         
-                        // Se nÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o estivermos na tela de missÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o, mudar para lÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ automaticamente
+                        // Se não estivermos na tela de missão, mudar para lá automaticamente
                         if (activeTabRef.current !== 'active_mission') {
                             setActiveTab('active_mission');
                         }
@@ -1401,11 +1402,11 @@ function App() {
                     setOrders(prev => {
                         const isNew = !prev.find(x => x.realId === o.id);
                         if (isNew) {
-                            // Ignorar transaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes financeiras
+                            // Ignorar transações financeiras
                             const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
                             if (financialTypes.includes(o.service_type)) return prev;
 
-                            // Alerta para qualquer pedido novo disponÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­vel para o entregador (Mobilidade ou Food)
+                            // Alerta para qualquer pedido novo disponível para o entregador (Mobilidade ou Food)
                             const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted'];
                             const isPaidOrCash = o.payment_method === 'cash' || o.payment_status === 'paid' || o.payment_method === 'dinheiro';
                             const shouldSound = actionableStatuses.includes(o.status) && isPaidOrCash;
@@ -1414,8 +1415,8 @@ function App() {
                             if (isOnline && shouldSound) {
                                 playIziSound('driver');
                                 if (Notification.permission === 'granted') {
-                                    new Notification('ÃƒÆ’Ã‚Â Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ Pedido DisponÃƒÆ’Ã‚Â Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­vel!', { 
-                                        body: `${servicePreview.headline} ÃƒÆ’Ã‚Â Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ ${servicePreview.pickupText || o.pickup_address}`, 
+                                    new Notification('ÃƒÃ‚ °ÃƒÂ¢Ã¢€¦¸¢ÃƒÆ’¢¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢€Ã…â€œ¦ Pedido DisponÃƒÃ‚ível!', { 
+                                        body: `${servicePreview.headline}ÃƒÃ‚ ¢¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬¢ ${servicePreview.pickupText || o.pickup_address}`, 
                                         icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
                                     });
                                 }
@@ -1440,7 +1441,7 @@ function App() {
         return () => { clearInterval(pollInterval); supabase.removeChannel(channel); };
     }, [isOnline, isAuthenticated, driverId]);
 
-    // Alerta de som para novas chamadas (Apenas uma vez quando a lista aumenta e estÃ¡ online)
+    // Alerta de som para novas chamadas (Apenas uma vez quando a lista aumenta e estÃƒÂá online)
     useEffect(() => {
         if (isOnline && orders.length > 0 && !activeMission) {
             playIziSound('driver');
@@ -1452,7 +1453,7 @@ function App() {
         if (isSyncing) return;
         setIsSyncing(true);
         console.group('[DEBUG-REST-SYNC]');
-        console.log('1. Iniciando teste de conexÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o via REST DIRETO...');
+        console.log('1. Iniciando teste de conexão via REST DIRETO...');
 
         try {
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -1486,11 +1487,11 @@ function App() {
             console.log('4. Dados recebidos com SUCESSO via REST!', allRecent.length, 'itens');
             
             if (!allRecent || allRecent.length === 0) {
-                toastError('O banco estÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ vazio (vias REST).');
+                toastError('O banco está vazio (vias REST).');
                 return;
             }
 
-            // Filtros de exibiÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
+            // Filtros de exibição
             const available = allRecent.filter((o: any) => 
                 !o.driver_id && 
                 !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)
@@ -1513,19 +1514,19 @@ function App() {
             );
 
             if (myActive) {
-                console.log('5. MissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o ativa encontrada via REST:', myActive.id);
+                console.log('5. Missão ativa encontrada via REST:', myActive.id);
                 const mission = { ...myActive, realId: myActive.id, type: myActive.service_type, customer: myActive.user_name || 'Cliente Izi' };
                 setActiveMission(mission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                 setActiveTab('active_mission');
-                toastSuccess('Conectado via REST! MissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o recuperada.');
+                toastSuccess('Conectado via REST! Missão recuperada.');
             } else {
                 toastSuccess(`Conectado! ${available.length} chamadas via REST.`);
             }
 
         } catch (e: any) {
-            console.error('ERRO CRÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂTICO NO REST SYNC:', e);
-            toastError('Falha na conexÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o rest: ' + e.message);
+            console.error('ERRO CRTICO NO REST SYNC:', e);
+            toastError('Falha na conexão rest: ' + e.message);
         } finally {
             console.groupEnd();
             setIsSyncing(false);
@@ -1534,12 +1535,12 @@ function App() {
 
 
 
-    // Startup / Session Recovery: Buscar missÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o ativa no banco se o driverId estiver presente
+    // Startup / Session Recovery: Buscar missão ativa no banco se o driverId estiver presente
     useEffect(() => {
         const recoverActiveMission = async () => {
             if (!driverId || activeMission) return;
             
-            console.log('[RECOVERY] Buscando missÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o ativa no servidor...');
+            console.log('[RECOVERY] Buscando missão ativa no servidor...');
             const { data, error } = await supabase
                 .from('orders_delivery')
                 .select('*')
@@ -1550,7 +1551,7 @@ function App() {
             if (error) console.error('[RECOVERY] Erro na query:', error);
 
             if (data && !error) {
-                console.log('[RECOVERY] MissÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o encontrada:', data.id);
+                console.log('[RECOVERY] Missão encontrada:', data.id);
                 const mission = { 
                     ...data, 
                     realId: data.id, 
@@ -1617,11 +1618,11 @@ function App() {
         console.group('[handleAccept] Processando aceite de pedido');
         
         try {
-            // Validar UUID ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â order.id ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© o ID curto (8 chars), order.realId ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© o UUID completo
+            // Validar UUID ¢¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬¢ÃƒÆ’¢¬ order.id é o ID curto (8 chars), order.realId é o UUID completo
             const targetId = order.realId || order.id;
             console.log('Target ID Identificado:', targetId, { orderId: order.id, realId: order.realId });
             
-            // ValidaÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o de seguranÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§a bÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡sica: Relaxada para suportar listagens que usam apenas ID curto
+            // Validação de segurança básica: Relaxada para suportar listagens que usam apenas ID curto
             if (!targetId) {
                  console.error('ID do pedido ausente na tentativa de aceite.');
                  toastError('Ocorreu um erro ao identificar o pedido.');
@@ -1646,11 +1647,11 @@ function App() {
             const ordersList = await checkRes.json();
             const realOrder = ordersList[0];
 
-            if (!realOrder) throw new Error('Pedido nÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o encontrado.');
+            if (!realOrder) throw new Error('Pedido não encontrado.');
             
-            // Verificar se ainda estÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ disponÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­vel
+            // Verificar se ainda está disponível
             if (realOrder.driver_id && String(realOrder.driver_id).trim() !== '') {
-                toastError('Este pedido jÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ foi aceito por outro piloto.');
+                toastError('Este pedido já foi aceito por outro piloto.');
                 setOrders(prev => prev.filter(o => (o.realId || o.id) !== targetId));
                 return;
             }
@@ -1711,7 +1712,7 @@ function App() {
         const targetId = order.realId || order.id;
         console.log('[LOG-DRIVER] Recusando pedido:', targetId);
         
-        // Salva no localStorage para ignorar este pedido por 30 minutos (ou atÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© limpar cache)
+        // Salva no localStorage para ignorar este pedido por 30 minutos (ou até limpar cache)
         const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
         declinedMap[targetId] = Date.now();
         localStorage.setItem('Izi_declined_timed', JSON.stringify(declinedMap));
@@ -1774,7 +1775,19 @@ function App() {
                 });
             }
 
-            setStats(prev => ({ ...prev, balance, today: todaySum, weekly: weeklySum, totalEarnings: totalGanhos, count: missionCount, level: Math.floor(missionCount / 10) + 1 }));
+            const totalXp = missionCount * 15;
+            const currentLevel = Math.floor(totalXp / 100) + 1;
+            setStats(prev => ({ 
+                ...prev, 
+                balance, 
+                today: todaySum, 
+                weekly: weeklySum, 
+                totalEarnings: totalGanhos, 
+                count: missionCount, 
+                xp: totalXp,
+                level: currentLevel,
+                nextXp: currentLevel * 100
+            }));
 
             const { data: sets } = await fetchWithTimeout(`${supabaseUrl}/rest/v1/admin_settings_delivery?limit=1`).then(r => r?.ok ? r.json() : {ok: false}).catch(() => { return { ok: false }; });
             if (sets && sets[0]) setAppSettings(sets[0]);
@@ -1819,7 +1832,8 @@ function App() {
                     amount: activeMission.price || 0,
                     bonus: 0,
                     extraKm: 0,
-                    extraKmValue: 0
+                    extraKmValue: 0,
+                    xpGained: 15
                 });
                 setActiveMission(null);
                 refreshFinanceData();
@@ -1890,57 +1904,145 @@ function App() {
     }, [clearDriverSessionState]);
 
     const renderHeader = () => (
-        <header className="px-6 py-6 flex items-center justify-between sticky top-0 z-50 bg-black/80 backdrop-blur-3xl border-b border-white/5 shrink-0">
-            <div className="size-12" />
-            <div className="flex flex-col items-center">
-                <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.5em] mb-0.5">Terminal Operacional</span>
-                <h1 className="text-xl font-black text-white tracking-tighter uppercase leading-none">Izi Pilot</h1>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/5 bg-white/5">
-                <div className={`size-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{isOnline ? 'On' : 'Off'}</span>
-            </div>
+        <header className="px-6 py-6 flex items-center justify-center sticky top-0 z-50 bg-transparent shrink-0">
+            <h1 className="text-xl font-black text-white tracking-tighter uppercase leading-none">Izi Entregador</h1>
         </header>
     );
 
-    const renderBottomNavigation = () => (
-        <nav className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-6 pt-2 pointer-events-none">
-            <div className="clay-card-dark rounded-[32px] p-2 flex items-center justify-between border-white/5 backdrop-blur-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.5)] pointer-events-auto">
-                {[
-                    { id: 'dashboard', label: 'Início', icon: 'grid_view' },
-                    { id: 'active_mission', label: 'Missão', icon: 'route' },
-                    { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length },
-                    { id: 'earnings', label: 'Financeiro', icon: 'payments' },
-                    { id: 'history', label: 'Histórico', icon: 'history' },
-                    { id: 'profile', label: 'Perfil', icon: 'person' }
-                ].map((item) => {
-                    const isActive = activeTab === item.id;
-                    return (
-                        <button
-                            key={item.id}
-                            onClick={() => setActiveTab(item.id as any)}
-                            className={`flex flex-col items-center gap-1.5 py-3 px-3 rounded-3xl transition-all relative flex-1 ${
-                                isActive ? 'text-primary' : 'text-white/30'
-                            }`}
-                        >
-                            <div className={`size-10 rounded-2xl flex items-center justify-center transition-all ${
-                                isActive ? 'bg-primary/10 border border-primary/20 scale-110' : 'bg-transparent'
-                            }`}>
-                                <Icon name={item.icon} size={isActive ? 24 : 22} className={isActive ? 'text-primary' : 'text-white/20'} />
-                                {item.badge > 0 && (
-                                    <span className="absolute top-1 right-2 size-4 bg-primary text-slate-900 text-[8px] font-black rounded-full flex items-center justify-center border border-black shadow-lg">
-                                        {item.badge}
-                                    </span>
-                                )}
-                            </div>
-                            <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-0'} transition-all text-center`}>
-                                {item.label}
-                            </span>
-                        </button> );
-                })}
-            </div>
-        </nav>
-    );
+    const renderBottomNavigation = () => {
+        const isSlotDetailActive = !!selectedSlot;
+
+        return (
+            <nav className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-6 pt-2 pointer-events-none">
+                <motion.div 
+                    layout
+                    initial={false}
+                    className="clay-card-dark rounded-[32px] p-2 flex items-center justify-between border-white/5 backdrop-blur-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.5)] pointer-events-auto overflow-hidden"
+                >
+                    <AnimatePresence mode="wait">
+                        {!isSlotDetailActive ? (
+                            <motion.div 
+                                key="nav-items"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                className="flex items-center justify-between w-full"
+                            >
+                                {[
+                                    { id: 'dashboard', label: 'Início', icon: 'grid_view' },
+                                    { id: 'active_mission', label: 'Missão', icon: 'route' },
+                                    { id: 'scheduled', label: 'Agenda', icon: 'event', badge: scheduledOrders.length },
+                                    { id: 'earnings', label: 'Financeiro', icon: 'payments' },
+                                    { id: 'history', label: 'Histórico', icon: 'history' },
+                                    { id: 'profile', label: 'Perfil', icon: 'person' }
+                                ].map((item) => {
+                                    const isActive = activeTab === item.id;
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => setActiveTab(item.id as any)}
+                                            className={`flex flex-col items-center gap-1.5 py-3 px-1 rounded-3xl transition-all relative flex-1 ${
+                                                isActive ? 'text-primary' : 'text-white/30'
+                                            }`}
+                                        >
+                                            <div className={`size-10 rounded-2xl flex items-center justify-center transition-all ${
+                                                isActive ? 'bg-primary/10 border border-primary/20 scale-110' : 'bg-transparent'
+                                            }`}>
+                                                <Icon name={item.icon} size={isActive ? 24 : 22} className={isActive ? 'text-primary' : 'text-white/20'} />
+                                                {item.badge > 0 && (
+                                                    <span className="absolute top-1 right-1 size-4 bg-primary text-slate-900 text-[8px] font-black rounded-full flex items-center justify-center border border-black shadow-lg">
+                                                        {item.badge}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-0'} transition-all text-center`}>
+                                                {item.label}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </motion.div>
+                        ) : (
+                            <motion.div 
+                                key="action-button"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className="w-full flex items-center gap-3 p-1"
+                            >
+                                <button 
+                                    onClick={() => setSelectedSlot(null)}
+                                    className="size-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all"
+                                >
+                                    <Icon name="close" size={24} />
+                                </button>
+                                
+                                {(() => {
+                                    const sClayDark: React.CSSProperties = {
+                                        background: '#121212',
+                                        borderRadius: '2.5rem',
+                                        boxShadow: '8px 8px 16px rgba(0,0,0,0.6), inset 4px 4px 8px rgba(255,255,255,0.02), inset -4px -4px 8px rgba(0,0,0,0.8)',
+                                    };
+                                    const sClayYellow: React.CSSProperties = {
+                                        background: '#FACD05',
+                                        borderRadius: '2.5rem',
+                                        boxShadow: '0 10px 25px rgba(250,204,21,0.3), inset 6px 6px 12px rgba(255,255,255,0.6), inset -6px -6px 12px rgba(0,0,0,0.2)',
+                                    };
+
+                                    const hasApplied = myApplications.some((app: any) => app.slot_id === selectedSlot?.id);
+                                    const application = myApplications.find((app: any) => app.slot_id === selectedSlot?.id);
+                                    
+                                    if (hasApplied) {
+                                        return (
+                                            <div
+                                                className="flex-1 flex items-center justify-center gap-3 h-14 font-black text-xs uppercase"
+                                                style={{
+                                                    ...(application?.status === 'accepted'
+                                                        ? { background: '#10b981', boxShadow: '0 10px 25px rgba(16,185,129,0.3)' }
+                                                        : { ...sClayDark, color: '#FFD700' }
+                                                    ),
+                                                    borderRadius: '1.2rem',
+                                                    letterSpacing: '0.1em',
+                                                    color: application?.status === 'accepted' ? '#fff' : '#FFD700',
+                                                }}
+                                            >
+                                                <Icon name={application?.status === 'accepted' ? 'verified' : 'today'} size={18} />
+                                                {application?.status === 'accepted' ? 'Candidatura Aprovada!' : 'Em Análise...'}
+                                            </div>
+                                        );
+                                    }
+                                    
+                                    return (
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const { error } = await supabase.from('slot_applications').insert({
+                                                        slot_id: selectedSlot.id,
+                                                        driver_id: driverId,
+                                                        status: 'pending',
+                                                        created_at: new Date().toISOString()
+                                                    });
+                                                    if (error) throw error;
+                                                    toastSuccess('Candidatura enviada!');
+                                                    setSelectedSlot(null);
+                                                    setActiveTab('dashboard');
+                                                } catch { toastError('Erro ao candidatar.'); }
+                                            }}
+                                            className="flex-1 flex items-center justify-center gap-3 h-14 font-black text-xs uppercase text-stone-950 active:scale-[0.98] transition-all"
+                                            style={{ ...sClayYellow, borderRadius: '1.2rem', letterSpacing: '0.15em' }}
+                                        >
+                                            <Icon name="verified" size={18} />
+                                            Candidatar-se à Vaga
+                                        </button>
+                                    );
+                                })()}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </motion.div>
+            </nav>
+        );
+    };
 
 const renderDashboard = () => (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-32">
@@ -1980,10 +2082,21 @@ const renderDashboard = () => (
                             </div>
                         </div>
                         <div className="clay-profile-inner rounded-3xl p-4 border border-white/20">
-                            <p className="text-stone-800 text-[9px] font-bold uppercase tracking-[0.1em] mb-1">Status</p>
-                            <p className="text-xl font-black text-stone-950 truncate italic">
-                                {isOnline ? 'On-line' : 'Off-line'}
-                            </p>
+                            <div className="flex justify-between items-center mb-1">
+                                <p className="text-stone-800 text-[9px] font-bold uppercase tracking-[0.1em]">ExperiÃência</p>
+                                <p className="text-stone-800 text-[8px] font-black uppercase tracking-tighter">Lv. {stats.level}</p>
+                            </div>
+                            <div className="flex items-baseline gap-1 leading-none">
+                                <span className="text-xl font-black text-stone-950 italic">{stats.xp}</span>
+                                <span className="text-[9px] font-bold text-stone-800/50 uppercase">XP</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-stone-950/10 rounded-full mt-2 overflow-hidden">
+                                <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${(stats.xp % 100)}%` }}
+                                    className="h-full bg-stone-950 rounded-full"
+                                />
+                            </div>
                         </div>
                     </div>
                 </header>
@@ -2039,7 +2152,7 @@ const renderDashboard = () => (
                                                 <p className="text-sm font-bold text-white truncate italic">{order.pickup_address?.split(',')[0]}</p>
                                                 <div className="flex items-center gap-2">
                                                     <Icon name="near_me" size={12} className="text-yellow-400" />
-                                                    <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">--- km • --- min</p>
+                                                    <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">--- kmâ€¢ --- min</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -2065,13 +2178,19 @@ const renderDashboard = () => (
                                 onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
                                 className="w-full clay-card-dark p-6 flex items-center gap-6 text-left active:scale-[0.98] transition-all border-l-4 border-yellow-400"
                             >
-                                <div className="size-16 rounded-2xl bg-yellow-400/10 flex items-center justify-center shrink-0">
-                                    <Icon name="stars" className="text-yellow-400" size={32} />
+                                <div className="size-16 rounded-2xl bg-yellow-400/10 flex items-center justify-center shrink-0 overflow-hidden border border-yellow-400/20">
+                                    {slot.admin_users?.store_logo ? (
+                                        <img src={slot.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
+                                    ) : (
+                                        <Icon name="stars" className="text-yellow-400" size={32} />
+                                    )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest">{slot.admin_users?.store_name || 'Parceiro Izi'}</p>
+                                    <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest">
+                                        {slot.title.toLowerCase().includes((slot.admin_users?.store_name || '').toLowerCase()) ? 'Vaga Exclusiva' : (slot.admin_users?.store_name || 'Parceiro Izi')}
+                                    </p>
                                     <h4 className="text-white font-black text-lg truncate italic leading-tight">{slot.title}</h4>
-                                    <p className="text-[10px] text-white/30 font-bold italic">{slot.working_hours}</p>
+                                    <p className="text-[10px] text-white/70 font-bold italic">{slot.working_hours}</p>
                                 </div>
                                 <div className="text-right shrink-0">
                                     <p className="text-2xl font-black text-yellow-400 italic">R$ {parseFloat(slot.fee_per_day || 0).toFixed(0)}</p>
@@ -2186,7 +2305,7 @@ const renderDashboard = () => (
                                     <div className="flex items-start gap-3">
                                         <Icon name="explore" size={20} className="mt-1" />
                                         <div>
-                                            <p className="text-[10px] font-black uppercase opacity-40 mb-1">Área de Atuação</p>
+                                            <p className="text-[10px] font-black uppercase opacity-40 mb-1">Ãrea de Atuação</p>
                                             <p className="font-bold text-sm leading-tight italic">{order.delivery_address?.split(',')[0]} e região</p>
                                         </div>
                                     </div>
@@ -2200,9 +2319,9 @@ const renderDashboard = () => (
                             <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Regras do Agendamento</h4>
                         </div>
                         <ul className="space-y-3">
-                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">•</span> Comparecer ao local com 15 min de antecedência.</li>
-                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">•</span> Estar com bateria do celular acima de 80%.</li>
-                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">•</span> Traje profissional e baú limpo.</li>
+                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">â€¢</span> Comparecer ao local com 15 min de antecedÃência.</li>
+                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">â€¢</span> Estar com bateria do celular acima de 80%.</li>
+                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">â€¢</span> Traje profissional e baú limpo.</li>
                         </ul>
                      </div>
                 </main>
@@ -2325,7 +2444,7 @@ const renderDashboard = () => (
                                         <div className={`space-y-4 mb-8 ${textColor}`}>
                                             <div className="flex items-start gap-3">
                                                 <Icon name="location_on" size={18} className={`${isOdd ? 'text-yellow-400/70' : 'opacity-60'}`} />
-                                                <p className="font-bold text-sm leading-tight italic">{order.pickup_address?.split(',')[0]} → {order.delivery_address?.split(',')[0]}</p>
+                                                <p className="font-bold text-sm leading-tight italic">{order.pickup_address?.split(',')[0]}â†’ {order.delivery_address?.split(',')[0]}</p>
                                             </div>
                                         </div>
 
@@ -2346,48 +2465,68 @@ const renderDashboard = () => (
 
 
     const renderDedicatedView = () => {
-        if (!selectedSlot) {
+        const slot = selectedSlot;
+        
+        if (!slot) {
             return (
-                <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-10 pt-4">
-                    <div>
+                <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-40 pt-4">
+                    <header>
                         <p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Exclusivo</p>
-                        <h2 className="text-3xl font-black text-white tracking-tight mt-1">Vagas Dedicadas</h2>
+                        <h2 className="text-3xl font-black text-white tracking-tight mt-1 italic">Vagas Dedicadas</h2>
                         <p className="text-xs text-white/30 mt-1">Seja piloto exclusivo de um parceiro Izi.</p>
-                    </div>
+                    </header>
+
                     {dedicatedSlots.length === 0 ? (
-                        <div className="py-20 bg-white/[0.02] border border-white/5 border-dashed rounded-[32px] flex flex-col items-center gap-4 text-center">
+                        <div className="py-20 bg-white/[0.02] border border-white/5 border-dashed rounded-[40px] flex flex-col items-center gap-4 text-center">
                             <Icon name="sentiment_dissatisfied" className="text-4xl text-white/10" />
                             <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Nenhuma vaga disponível</p>
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {dedicatedSlots.map((slot: any, i: number) => {
-                                const hasApplied = myApplications.some(app => app.slot_id === slot.id);
-                                const application = myApplications.find(app => app.slot_id === slot.id);
+                            {dedicatedSlots.map((s: any, i: number) => {
+                                const hasApplied = myApplications.some(app => app.slot_id === s.id);
+                                const application = myApplications.find(app => app.slot_id === s.id);
+                                
+                                const sClayDark: React.CSSProperties = {
+                                    background: '#121212',
+                                    borderRadius: '2.5rem',
+                                    boxShadow: '8px 8px 16px rgba(0,0,0,0.6), inset 4px 4px 8px rgba(255,255,255,0.02), inset -4px -4px 8px rgba(0,0,0,0.8)',
+                                };
+
                                 return (
-                                    <motion.button key={slot.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}
-                                        onClick={() => setSelectedSlot(slot)}
-                                        className="w-full bg-white/[0.03] border border-white/5 hover:bg-white/[0.06] transition-all rounded-[32px] p-6 flex items-center gap-5 group text-left relative overflow-hidden active:scale-[0.98]">
+                                    <motion.button 
+                                        key={s.id} 
+                                        initial={{ opacity: 0, scale: 0.9 }} 
+                                        animate={{ opacity: 1, scale: 1 }} 
+                                        transition={{ delay: i * 0.05 }}
+                                        onClick={() => setSelectedSlot(s)}
+                                        className="w-full transition-all p-6 flex items-center gap-5 group text-left relative overflow-hidden active:scale-[0.98]"
+                                        style={sClayDark}
+                                    >
                                         <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
-                                            {slot.admin_users?.store_logo
-                                                ? <img src={slot.admin_users.store_logo} className="w-full h-full object-contain" alt="" />
+                                            {s.admin_users?.store_logo
+                                                ? <img src={s.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
                                                 : <Icon name="stars" size={26} className="text-primary" />}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[9px] font-black text-primary/70 uppercase tracking-widest">{slot.admin_users?.store_name || 'Parceiro Izi'}</p>
-                                            <p className="text-base font-black text-white truncate">{slot.title}</p>
-                                            <p className="text-[10px] text-white/30 mt-0.5">{slot.working_hours || 'Horário a combinar'}</p>
+                                            <p className="text-[9px] font-black text-primary/70 uppercase tracking-widest">
+                                                {s.title.toLowerCase().includes((s.admin_users?.store_name || '').toLowerCase()) ? 'Vaga Exclusiva' : (s.admin_users?.store_name || 'Parceiro Izi')}
+                                            </p>
+                                            <p className="text-base font-black text-white truncate italic">{s.title}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <Icon name="schedule" size={10} className="text-white/20" />
+                                                <p className="text-[10px] text-white/40 font-bold">{s.working_hours || 'Horário a combinar'}</p>
+                                            </div>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <p className="text-xl font-black text-primary">R$ {parseFloat(slot.fee_per_day || 0).toFixed(0)}</p>
+                                            <p className="text-xl font-black text-primary italic">R$ {parseFloat(s.fee_per_day || 0).toFixed(0)}</p>
                                             <p className="text-[8px] text-white/20 uppercase tracking-widest">/dia</p>
                                             {hasApplied && (
                                                 <span className={`text-[8px] font-black uppercase tracking-widest mt-1 block ${application?.status === 'accepted' ? 'text-emerald-400' : 'text-primary/60'}`}>
-                                                    {application?.status === 'accepted' ? '✓ Aprovado' : '⌛ Análise'}
+                                                    {application?.status === 'accepted' ? '✓ Aprovado' : '⌛ Analise'}
                                                 </span>
                                             )}
                                         </div>
-                                        <Icon name="chevron_right" size={16} className="text-white/20 group-hover:text-primary/50 transition-colors shrink-0" />
                                     </motion.button>
                                 );
                             })}
@@ -2396,129 +2535,125 @@ const renderDashboard = () => (
                 </motion.div>
             );
         }
-
-        const slot = selectedSlot;
-        const customBenefits: any[] = slot.metadata?.custom_benefits || [];
-        const neighborhoodExtras: any[] = slot.metadata?.neighborhood_extras || [];
-        const requirements: any[] = slot.metadata?.requirements || [
-            { label: "CNH Categoria A Definitiva", detail: "Documentação em dia é obrigatória" },
-            { label: "Baú ou Mochila Térmica", detail: "Equipamento próprio para entregas" },
-        ];
+        
         const hasApplied = myApplications.some(app => app.slot_id === slot.id);
         const application = myApplications.find(app => app.slot_id === slot.id);
+        
+        const requirements = slot.metadata?.requirements || [
+            { label: "CNH Categoria A Definitiva", detail: "Documentação em dia é obrigatória" },
+            { label: "Baú ou Mochila Térmica", detail: "Equipamento próprio para entregas" }
+        ];
+        const customBenefits = slot.metadata?.custom_benefits || [];
+        const neighborhoodExtras = slot.metadata?.neighborhood_extras || [];
 
         const sClayDark: React.CSSProperties = {
-            background: '#1A1A1A',
+            background: '#121212',
             borderRadius: '2.5rem',
-            boxShadow: '8px 8px 16px rgba(0,0,0,0.4), inset 4px 4px 8px rgba(255,255,255,0.05), inset -4px -4px 8px rgba(0,0,0,0.5)',
-        };
-        const sClayYellow: React.CSSProperties = {
-            background: '#FFD700',
-            borderRadius: '2.5rem',
-            boxShadow: '0 10px 25px rgba(255,215,0,0.3), inset 6px 6px 12px rgba(255,255,255,0.6), inset -6px -6px 12px rgba(0,0,0,0.2)',
+            boxShadow: '8px 8px 16px rgba(0,0,0,0.6), inset 4px 4px 8px rgba(255,255,255,0.02), inset -4px -4px 8px rgba(0,0,0,0.8)',
         };
         const sClayIcon: React.CSSProperties = {
             background: '#1A1A1A',
-            boxShadow: '4px 4px 8px rgba(0,0,0,0.3), inset 2px 2px 4px rgba(255,255,255,0.05), inset -2px -2px 4px rgba(0,0,0,0.4)',
+            boxShadow: '4px 4px 8px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(255,255,255,0.05), inset -2px -2px 4px rgba(0,0,0,0.4)',
         };
 
         return (
-            <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="pb-32" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", backgroundColor: '#000', color: '#fff', minHeight: '100vh' }}>
-
-                {/* Header fixo */}
-                <div style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.05)' }} className="flex items-center px-6 h-16">
-                    <button
+            <motion.div 
+                initial={{ opacity: 0, y: 30 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: 30 }} 
+                className="fixed inset-0 z-[150] bg-black overflow-y-auto no-scrollbar pb-48"
+            >
+                {/* Hero Header */}
+                <header className="relative h-80 w-full shrink-0">
+                    {slot.admin_users?.store_banner ? (
+                        <img src={slot.admin_users.store_banner} className="w-full h-full object-cover" alt="" />
+                    ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-stone-900 via-zinc-950 to-black" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                    
+                    <button 
                         onClick={() => setSelectedSlot(null)}
-                        className="active:scale-90 transition-transform flex items-center justify-center w-10 h-10 rounded-full"
-                        style={sClayIcon}
+                        className="absolute top-8 left-6 size-12 rounded-2xl bg-black/60 backdrop-blur-2xl border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all z-20"
                     >
-                        <Icon name="arrow_back" size={20} className="text-primary" />
+                        <Icon name="arrow_back" size={24} />
                     </button>
-                    <h1 className="ml-4 text-lg font-bold tracking-tight text-white">Detalhes da Vaga</h1>
-                </div>
 
-                {/* Conteúdo principal */}
-                <div className="pt-6 pb-12 space-y-10">
-
-                    {/* Profile Header */}
-                    <section className="flex flex-col items-center text-center space-y-4 px-6">
-                        <div className="relative">
-                            <div className="w-28 h-28 p-1.5 flex items-center justify-center overflow-hidden" style={{ ...sClayDark, borderRadius: '9999px' }}>
-                                {slot.admin_users?.store_logo
-                                    ? <img src={slot.admin_users.store_logo} className="w-full h-full rounded-full object-cover grayscale brightness-110" alt="Logo" />
-                                    : <Icon name="stars" size={44} className="text-primary" />}
+                    <div className="absolute bottom-10 left-6 right-6">
+                        <div className="flex items-end gap-5">
+                            <div className="size-24 rounded-[32px] bg-yellow-400 p-1.5 shadow-[0_20px_40px_rgba(0,0,0,0.5)] overflow-hidden border-2 border-white/10 shrink-0">
+                                {slot.admin_users?.store_logo ? (
+                                    <img src={slot.admin_users.store_logo} className="w-full h-full object-cover rounded-[22px]" alt="" />
+                                ) : (
+                                    <Icon name="stars" className="text-black" size={48} />
+                                )}
                             </div>
-                            <div
-                                className="absolute -bottom-1 -right-1 w-8 h-8 flex items-center justify-center text-black"
-                                style={{ ...sClayYellow, borderRadius: '9999px' }}
-                            >
-                                <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1", fontSize: '18px' }}>verified</span>
-                            </div>
-                        </div>
-                        <div>
-                            <h2 className="text-2xl font-extrabold tracking-tight text-white">{slot.admin_users?.store_name || 'Parceiro Izi'}</h2>
-                            <p className="font-bold tracking-widest uppercase mt-1 opacity-90" style={{ color: '#FFD700', fontSize: '10px' }}>{slot.title}</p>
-                        </div>
-                    </section>
-
-                    {/* Main Financial Card */}
-                    <div className="px-6">
-                        <div className="p-8 text-black relative overflow-hidden" style={sClayYellow}>
-                            <div className="relative z-10">
-                                <p className="font-black uppercase opacity-60" style={{ fontSize: '10px', letterSpacing: '0.2em' }}>Ganho Garantido</p>
-                                <div className="flex items-baseline gap-1 mt-1">
-                                    <span className="text-xl font-bold">R$</span>
-                                    <span className="text-6xl font-black tracking-tighter">{parseFloat(slot.fee_per_day || 0).toFixed(0)}</span>
-                                    <span className="text-lg font-bold opacity-80">/diária</span>
+                            <div className="flex-1 min-w-0 pb-2">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="px-2.5 py-1 rounded-full bg-yellow-400/20 border border-yellow-400/20 text-yellow-400 text-[8px] font-black uppercase tracking-widest">Verificado</span>
                                 </div>
+                                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">{slot.admin_users?.store_name || 'Parceiro Izi'}</p>
+                                <h2 className="text-4xl font-black text-white italic tracking-tighter leading-none">{slot.title}</h2>
                             </div>
-                            <span className="material-symbols-outlined absolute -right-6 -bottom-6 opacity-10 pointer-events-none" style={{ fontSize: '120px', fontVariationSettings: "'FILL' 1" }}>payments</span>
+                        </div>
+                    </div>
+                </header>
+
+                <div className="px-6 space-y-10 py-10">
+                    {/* Ganho Card */}
+                    <div className="p-8 rounded-[40px] bg-yellow-400 text-stone-950 relative overflow-hidden shadow-[0_30px_60px_rgba(250,204,21,0.2)]">
+                        <div className="relative z-10">
+                            <p className="font-black uppercase opacity-40 text-[10px] tracking-[0.3em] mb-2">Diária Garantida</p>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-2xl font-black italic">R$</span>
+                                <span className="text-7xl font-black tracking-tighter italic leading-none">{parseFloat(slot.fee_per_day || 0).toFixed(0)}</span>
+                            </div>
+                            <div className="mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-stone-950/5 w-fit px-4 py-2 rounded-full border border-stone-950/10">
+                                <Icon name="event" size={14} className="text-stone-950" />
+                                {slot.working_hours}
+                            </div>
+                        </div>
+                        <Icon name="payments" size={160} className="absolute -right-8 -bottom-8 opacity-10 rotate-12" />
+                    </div>
+
+                    {/* Benefícios e Extras */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="p-6 flex flex-col items-center text-center space-y-3" style={sClayDark}>
+                            <div className="size-12 rounded-2xl flex items-center justify-center border border-white/5" style={sClayIcon}>
+                                <Icon name="location_on" size={20} className="text-primary" />
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Cidade/Base</p>
+                                <p className="text-sm font-black text-white truncate w-full italic">{slot.city || 'Sua Região'}</p>
+                            </div>
+                        </div>
+                        <div className="p-6 flex flex-col items-center text-center space-y-3" style={sClayDark}>
+                            <div className="size-12 rounded-2xl flex items-center justify-center border border-white/5" style={sClayIcon}>
+                                <Icon name="analytics" size={20} className="text-primary" />
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Extra Entrega</p>
+                                <p className="text-sm font-black text-white italic">R$ {parseFloat(slot.metadata?.fee_per_extra_delivery || 0).toFixed(2).replace('.', ',')}</p>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Extras */}
-                    <div className="px-6 grid grid-cols-2 gap-4">
-                        {slot.metadata?.fee_per_extra_delivery ? (
-                            <div className="p-6 flex flex-col items-center text-center" style={sClayDark}>
-                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center mb-3" style={sClayIcon}>
-                                    <span className="material-symbols-outlined text-primary" style={{ fontSize: '20px' }}>add_circle</span>
-                                </div>
-                                <p className="font-bold uppercase mb-1" style={{ fontSize: '10px', color: '#A0A0A0', letterSpacing: '0.1em' }}>Extra por entrega</p>
-                                <p className="text-lg font-extrabold" style={{ color: '#FFD700' }}>R$ {parseFloat(slot.metadata.fee_per_extra_delivery).toFixed(2)}</p>
-                                <p className="mt-1" style={{ fontSize: "9px", color: "#A0A0A0" }}>Após {slot.metadata.base_deliveries} entregas</p>
-                            </div>
-                        ) : (
-                            <div className="p-6 flex flex-col items-center text-center" style={sClayDark}>
-                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center mb-3" style={sClayIcon}>
-                                    <span className="material-symbols-outlined text-primary" style={{ fontSize: '20px' }}>location_on</span>
-                                </div>
-                                <p className="font-bold uppercase mb-1" style={{ fontSize: '10px', color: '#A0A0A0', letterSpacing: '0.1em' }}>Local</p>
-                                <p className="text-base font-extrabold text-white leading-tight">{slot.admin_users?.store_address?.split(',')[0] || 'Ver detalhes'}</p>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ BÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â´nus extras ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ */}
+                    {/* Bonus Extra */}
                     {customBenefits.length > 0 && (
-                        <section className="space-y-4 pt-4">
-                            <div className="flex items-center justify-between px-6">
-                                <h3 className="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full" style={{ background: '#FFD700' }}></span>
-                                    BÃƒÂ´nus extras
-                                </h3>
-                                <span className="px-3 py-1 font-black uppercase" style={{ ...sClayDark, fontSize: '9px', color: '#FFD700', letterSpacing: '0.1em', borderRadius: '9999px' }}>
-                                    {customBenefits.length} {customBenefits.length === 1 ? 'Item' : 'Itens'}
-                                </span>
-                            </div>
-                            <div className="overflow-x-auto flex gap-4 px-6 pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}>
+                        <section className="space-y-6">
+                            <h3 className="text-xl font-black text-white italic tracking-tight flex items-center gap-3">
+                                <span className="size-2 rounded-full bg-primary" />
+                                Bônus e Extras
+                            </h3>
+                            <div className="flex overflow-x-auto gap-4 -mx-6 px-6 no-scrollbar pb-2">
                                 {customBenefits.map((ben: any, idx: number) => (
-                                    <div key={idx} className="flex-shrink-0 w-32 p-5 flex flex-col items-center text-center space-y-3" style={sClayDark}>
-                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={sClayIcon}>
-                                            <span className="material-symbols-outlined text-primary" style={{ fontSize: '20px' }}>stars</span>
+                                    <div key={idx} className="flex-shrink-0 w-40 p-6 flex flex-col gap-4 border border-white/5" style={sClayDark}>
+                                        <div className="size-10 rounded-xl flex items-center justify-center" style={sClayIcon}>
+                                            <Icon name="star" className="text-primary" size={20} />
                                         </div>
-                                        <div className="space-y-0.5">
-                                            <p className="font-bold uppercase" style={{ fontSize: '9px', color: '#A0A0A0' }}>{ben.label || ben.title || ben}</p>
-                                            <p className="text-sm font-black" style={{ color: '#FFD700' }}>+ R$ {parseFloat(ben.value || 0).toFixed(2)}</p>
+                                        <div className="space-y-1">
+                                            <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">{ben.label || ben.title || 'Incentivo'}</p>
+                                            <p className="text-lg font-black text-primary italic leading-none">+ R$ {parseFloat(ben.value || 0).toFixed(2).replace('.', ',')}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -2526,136 +2661,48 @@ const renderDashboard = () => (
                         </section>
                     )}
 
-                    {/* ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ Bairros extras ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ */}
-                    <section className="px-6 space-y-5">
-                        <h4 className="font-bold text-white flex items-center gap-3">
-                            <span className="w-8 h-8 rounded-xl flex items-center justify-center" style={sClayIcon}>
-                                <span className="material-symbols-outlined text-primary" style={{ fontSize: '18px' }}>location_on</span>
-                            </span>
-                            Bairros extras
-                        </h4>
-                        {neighborhoodExtras.length > 0 ? (
-                            <div className="overflow-x-auto flex gap-4 pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}>
-                                {neighborhoodExtras.map((nb: any, idx: number) => (
-                                    <div key={idx} className="flex-shrink-0 w-32 p-5 flex flex-col items-center text-center space-y-3" style={sClayDark}>
-                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={sClayIcon}>
-                                            <span className="material-symbols-outlined text-primary" style={{ fontSize: '20px' }}>map</span>
-                                        </div>
-                                        <div className="space-y-0.5">
-                                            <p className="font-bold uppercase" style={{ fontSize: '9px', color: '#A0A0A0' }}>{nb.label || nb.name || nb}</p>
-                                            <p className="text-sm font-black" style={{ color: '#FFD700' }}>+ R$ {parseFloat(nb.value || 0).toFixed(2)}</p>
-                                        </div>
-                                    </div>
-                                ))}
+                    {/* Descrição */}
+                    {slot.description && (
+                        <section className="space-y-6">
+                             <h3 className="text-xl font-black text-white italic tracking-tight flex items-center gap-3">
+                                <span className="size-2 rounded-full bg-primary" />
+                                Sobre a Vaga
+                            </h3>
+                            <div className="p-6 border border-white/5 leading-relaxed" style={sClayDark}>
+                                <p className="text-sm font-medium text-white/60">{slot.description}</p>
                             </div>
-                        ) : (
-                            <div className="p-4 flex items-center gap-3" style={{ ...sClayDark, borderRadius: '1.5rem' }}>
-                                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={sClayIcon}>
-                                    <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#FFD700', opacity: 0.5 }}>map</span>
-                                </div>
-                                <p className="text-sm" style={{ color: '#A0A0A0' }}>Sem bairros com taxa adicional</p>
-                            </div>
-                        )}
-                    </section>
+                        </section>
+                    )}
 
-                    {/* ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ Requisitos ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ */}
-                    <section className="px-6 space-y-6">
-                        <h4 className="font-bold text-white flex items-center gap-3">
-                            <span className="w-8 h-8 rounded-xl flex items-center justify-center" style={sClayIcon}>
-                                <span className="material-symbols-outlined text-primary" style={{ fontSize: '18px' }}>verified_user</span>
-                            </span>
-                            Requisitos Necessários
-                        </h4>
-                        <div className="space-y-4">
+                    {/* Requisitos */}
+                    <section className="space-y-6">
+                        <h3 className="text-xl font-black text-white italic tracking-tight flex items-center gap-3">
+                            <span className="size-2 rounded-full bg-primary" />
+                            Requisitos
+                        </h3>
+                        <div className="grid gap-4">
                             {requirements.map((req: any, idx: number) => (
-                                <div key={idx} className="flex items-center gap-4 p-4" style={sClayDark}>
-                                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={sClayIcon}>
-                                        <span className="material-symbols-outlined text-primary" style={{ fontSize: '18px' }}>check</span>
+                                <div key={idx} className="p-2 pr-6 flex items-center gap-5 border border-white/5" style={sClayDark}>
+                                    <div className="size-12 rounded-[20px] flex items-center justify-center shrink-0" style={sClayIcon}>
+                                        <Icon name="check" size={20} className="text-primary" />
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-white leading-tight">{typeof req === 'string' ? req : req.label}</p>
-                                        {req.detail && <p className="mt-0.5" style={{ fontSize: '11px', color: '#A0A0A0' }}>{req.detail}</p>}
+                                    <div className="flex-1 py-2">
+                                        <p className="text-xs font-black text-white uppercase tracking-wide">{typeof req === 'string' ? req : req.label}</p>
+                                        {req.detail && <p className="text-[10px] font-medium text-white/30 mt-0.5">{req.detail}</p>}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </section>
-
-                    {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ DescriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o (se houver) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
-                    {slot.description && (
-                        <section className="px-6">
-                            <div className="p-4" style={{ ...sClayDark, borderRadius: '1.5rem', borderLeft: '3px solid rgba(255,215,0,0.4)' }}>
-                                <p className="text-xs leading-relaxed" style={{ color: '#A0A0A0' }}>{slot.description}</p>
-                            </div>
-                        </section>
-                    )}
                 </div>
-
-                {/* ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ Sticky Bottom ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ */}
-                <nav
-                    className="fixed bottom-0 left-0 w-full flex flex-col items-center z-50"
-                    style={{ background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.05)' }}
-                >
-                    <div className="w-full pt-5 pb-8 px-6">
-                        {hasApplied ? (
-                            <div
-                                className="flex items-center justify-center gap-3 py-5 px-8 w-full font-black text-sm uppercase"
-                                style={{
-                                    ...(application?.status === 'accepted'
-                                        ? { background: '#10b981', boxShadow: '0 10px 25px rgba(16,185,129,0.3), inset 6px 6px 12px rgba(255,255,255,0.2), inset -6px -6px 12px rgba(0,0,0,0.2)' }
-                                        : { ...sClayDark, color: '#FFD700' }
-                                    ),
-                                    borderRadius: '2.5rem',
-                                    letterSpacing: '0.15em',
-                                    color: application?.status === 'accepted' ? '#fff' : '#FFD700',
-                                }}
-                            >
-                                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-                                    {application?.status === 'accepted' ? 'verified' : 'schedule'}
-                                </span>
-                                {application?.status === 'accepted' ? 'Candidatura Aprovada!' : 'Em Análise...'}
-                            </div>
-                        ) : (
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        const { error } = await supabase.from('slot_applications').insert({
-                                            slot_id: slot.id,
-                                            driver_id: driverId,
-                                            status: 'pending',
-                                            created_at: new Date().toISOString()
-                                        });
-                                        if (error && error.code !== '42P01') throw error;
-                                        toastSuccess('Candidatura enviada!');
-                                        setSelectedSlot(null);
-                                        setActiveTab('dashboard');
-                                    } catch { toastError('Erro ao candidatar. Tente pelo WhatsApp.'); }
-                                }}
-                                className="flex items-center justify-center gap-3 py-5 px-8 w-full font-black text-sm uppercase text-black active:scale-[0.97] transition-all"
-                                style={{ ...sClayYellow, letterSpacing: '0.15em' }}
-                            >
-                                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>assignment_turned_in</span>
-                                Candidatar-se Agora
-                            </button>
-                        )}
-                        {slot.admin_users?.store_phone && (
-                            <button
-                                onClick={() => window.open(`https://wa.me/55${slot.admin_users.store_phone.replace(/\D/g, '')}`, '_blank')}
-                                className="w-full mt-3 flex items-center justify-center gap-2 py-3 font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all"
-                                style={{ ...sClayDark, color: '#4ade80', borderRadius: '1.5rem' }}
-                            >
-                                <Icon name="chat" size={14} />WhatsApp
-                            </button>
-                        )}
-                    </div>
-                </nav>
             </motion.div>
         );
     };
 
 
+
     const renderHistoryView = () => (
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-24 pt-4">
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-40 pt-4">
             <header>
                 <p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Histórico</p>
                 <h2 className="text-3xl font-black text-white tracking-tight mt-1">Sua Jornada</h2>
@@ -2677,7 +2724,7 @@ const renderDashboard = () => (
                             </div>
                             <div className="space-y-2">
                                 <p className="text-sm font-bold text-white leading-tight">{order.delivery_address || order.destination}</p>
-                                <p className="text-[10px] text-white/30">{new Date(order.created_at).toLocaleDateString('pt-BR')} às {new Date(order.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                                <p className="text-[10px] text-white/30">{new Date(order.created_at).toLocaleDateString('pt-BR')}às {new Date(order.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
                             </div>
                             <div className="flex items-center justify-between pt-2 border-t border-white/5">
                                 <span className="text-[9px] font-black text-white/20 uppercase">{order.service_type || 'Entrega'}</span>
@@ -2791,7 +2838,7 @@ const renderDashboard = () => (
                 </div>
                 <h2 className="text-2xl font-black text-white tracking-tight">{driverName}</h2>
                 <div className="flex items-center gap-2 mt-2">
-                    <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Piloto Izi • Nível {stats.level}</span>
+                    <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Piloto Iziâ€¢ Nível {stats.level}</span>
                 </div>
                 
                 <div className="flex items-center gap-4 mt-8">
@@ -2843,7 +2890,7 @@ const renderDashboard = () => (
             <div className="space-y-3">
                 {[
                     { label: 'Dados Bancários', icon: 'account_balance', color: 'text-emerald-400' },
-                    { label: 'Preferências', icon: 'settings', color: 'text-primary' },
+                    { label: 'PreferÃências', icon: 'settings', color: 'text-primary' },
                     { label: 'Ajuda & Suporte', icon: 'support_agent', color: 'text-blue-400' }
                 ].map((item, i) => (
                     <button key={i} className="w-full bg-white/[0.02] border border-white/5 rounded-[24px] p-6 flex items-center justify-between group hover:bg-white/[0.05] transition-all active:scale-[0.98]">
@@ -3083,7 +3130,7 @@ const renderDashboard = () => (
                                         <p className="text-xl font-black text-primary">R$ {parseFloat(activeMission.delivery_fee || '0').toFixed(2)}</p>
                                     </div>
                                     <div className="p-4 bg-white/[0.02] border border-white/5 rounded-3xl">
-                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-tighter mb-1">DistÃƒÂ¢ncia</p>
+                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-tighter mb-1">DistÃƒÆ’¢ncia</p>
                                         <p className="text-xl font-black text-white">{(parseFloat(activeMission.distance_km || '0')).toFixed(1)} km</p>
                                     </div>
                                 </div>
@@ -3095,7 +3142,7 @@ const renderDashboard = () => (
                                     <div className="space-y-3">
                                         {orderItems.map((item: any, idx: number) => (
                                             <div key={idx} className="flex justify-between items-center text-xs font-bold text-white/60">
-                                                <span>Ã¢â‚¬Â¢ {item.quantity ? `${item.quantity}x ` : ''}{item.name}</span>
+                                                <span>ÃƒÂ¢Ã¢€¢ {item.quantity ? `${item.quantity}x ` : ''}{item.name}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -3138,7 +3185,7 @@ const renderDashboard = () => (
                                     onClick={() => handleUpdateStatus('no_local')} 
                                     className="w-full h-20 bg-blue-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(37,99,235,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
                                 >
-                                    <Icon name="person_pin_circle" /> TÃƒÂ´ no Destino
+                                    <Icon name="person_pin_circle" /> TÃƒÆ’ó no Destino
                                 </button>
                             )}
 
@@ -3153,10 +3200,10 @@ const renderDashboard = () => (
 
                             {['a_caminho_coleta', 'saiu_para_coleta', 'aceito'].includes(activeMission.status || '') && (
                                 <button 
-                                    onClick={async () => { if (await showConfirm({ message: 'Cancelar missÃƒÂ£o?' })) handleUpdateStatus('cancelado'); }}
+                                    onClick={async () => { if (await showConfirm({ message: 'Cancelar missão?' })) handleUpdateStatus('cancelado'); }}
                                     className="w-full py-2 text-red-500/40 text-[9px] font-black uppercase tracking-[0.4em]"
                                 >
-                                    Cancelar MissÃƒÂ£o
+                                    Cancelar Missão
                                 </button>
                             )}
                         </div>
@@ -3173,7 +3220,7 @@ const renderDashboard = () => (
             <p className="text-white/60 text-sm mb-10 max-w-xs leading-relaxed">Sua localização está sendo compartilhada com a central Izi.</p>
             <div className="w-full max-w-sm space-y-4">
                 <button onClick={() => { window.open('tel:190'); setIsSOSActive(false); }} className="w-full h-16 bg-white text-red-600 rounded-[24px] flex items-center justify-center gap-4 font-black text-lg uppercase tracking-tight shadow-2xl active:scale-95 transition-all"><Icon name="local_police" className="text-3xl" />Ligar 190</button>
-                <button onClick={() => { toastSuccess('Apoio mecÃƒÂ¢nico acionado.'); setIsSOSActive(false); }} className="w-full h-16 bg-white/10 border border-white/20 text-white rounded-[24px] flex items-center justify-center gap-4 font-black text-base uppercase active:scale-95 transition-all"><Icon name="build" className="text-2xl" />Apoio MecÃƒÂ¢nico</button>
+                <button onClick={() => { toastSuccess('Apoio mecÃƒÆ’¢nico acionado.'); setIsSOSActive(false); }} className="w-full h-16 bg-white/10 border border-white/20 text-white rounded-[24px] flex items-center justify-center gap-4 font-black text-base uppercase active:scale-95 transition-all"><Icon name="build" className="text-2xl" />Apoio MecÃƒÆ’¢nico</button>
                 <button onClick={() => setIsSOSActive(false)} className="text-white/30 font-black uppercase tracking-widest text-sm mt-4">Cancelar</button>
             </div>
         </motion.div>
@@ -3193,7 +3240,7 @@ const renderDashboard = () => (
                     <div className="text-center space-y-3">
                         <div className="inline-flex items-center justify-center size-16 bg-primary/10 border border-primary/20 rounded-[24px] mb-2"><Icon name="two_wheeler" className="text-primary text-3xl" /></div>
                         <h1 className="text-4xl font-black text-white tracking-tight uppercase">Terminal <span className="text-primary">Izi</span></h1>
-                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.5em]">{authMode === 'login' ? 'AutenticaÃƒÂ§ÃƒÂ£o do Entregador' : 'Cadastro de Novo Piloto'}</p>
+                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.5em]">{authMode === 'login' ? 'AutenticaÃƒÆ’çÃƒÆ’ão do Entregador' : 'Cadastro de Novo Piloto'}</p>
                     </div>
                     {authError && <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-500/20 rounded-2xl px-5 py-3 text-red-400 text-xs font-bold text-center">{authError}</motion.div>}
                     <div className="space-y-4">
@@ -3223,10 +3270,10 @@ const renderDashboard = () => (
                         <button onClick={authMode === 'login' ? handleAuthLogin : handleAuthRegister} disabled={authLoading} className="w-full h-14 bg-primary text-slate-900 font-black text-sm uppercase tracking-widest rounded-[20px] shadow-2xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50">
                             {authLoading ? <div className="size-5 border-2 border-slate-900/20 border-t-slate-900 rounded-full animate-spin" /> : <>{authMode === 'login' ? 'Entrar' : 'Criar Conta'}<Icon name="arrow_forward" className="text-xl" /></>}
                         </button>
-                        <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-white/[0.03] border border-white/5 text-white/30 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-white/50 hover:bg-white/[0.05] transition-all">{authMode === 'login' ? 'Criar nova conta' : 'JÃƒÂ¡ tenho conta'}</button>
+                        <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthError(''); }} className="w-full h-12 bg-white/[0.03] border border-white/5 text-white/30 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-white/50 hover:bg-white/[0.05] transition-all">{authMode === 'login' ? 'Criar nova conta' : 'JÃƒÆ’á tenho conta'}</button>
                     </div>
                 </div>
-                <p className="absolute bottom-8 text-[8px] font-black text-white/10 uppercase tracking-[0.4em]">Izi v5.0 Ã¢â‚¬Â¢ ConexÃƒÂ£o Segura</p>
+                <p className="absolute bottom-8 text-[8px] font-black text-white/10 uppercase tracking-[0.4em]">Izi v5.0ÃƒÂ¢Ã¢€¢ ConexÃƒÆ’ão Segura</p>
             </motion.div>
         );
     };
@@ -3333,17 +3380,17 @@ const renderDashboard = () => (
                                     </>
                                 )}
                                 <div className="flex justify-between items-center text-primary font-black">
-                                    <span className="text-xs uppercase tracking-widest">LÃƒÂ­quido a Receber</span>
+                                    <span className="text-xs uppercase tracking-widest">Líquido a Receber</span>
                                     <span className="text-sm">R$ {(stats.balance * (1 - (Number(appSettings?.withdrawalfeepercent ?? 0) / 100))).toFixed(2).replace('.', ',')}</span>
                                 </div>
                                 <div className="h-px bg-white/5" />
                                 <div className="flex justify-between items-center">
                                     <span className="text-xs font-bold text-white/40">Status</span>
-                                    <span className="text-xs font-black text-amber-400">Aguarda aprovaÃƒÂ§ÃƒÂ£o admin</span>
+                                    <span className="text-xs font-black text-amber-400">Aguarda aprovação admin</span>
                                 </div>
                             </div>
                             
-                            <p className="text-[10px] text-center text-white/20 italic">Os saques sÃƒÂ£o processados em atÃƒÂ© {appSettings?.withdrawal_period_h ?? 24}h.</p>
+                            <p className="text-[10px] text-center text-white/20 italic">Os saques são processados em até {appSettings?.withdrawal_period_h ?? 24}h.</p>
                             <div className="flex gap-3 pt-2">
                                 <button
                                     onClick={() => setShowWithdrawModal(false)}
@@ -3410,7 +3457,7 @@ const renderDashboard = () => (
                             transition={{ delay: 0.3 }}
                             className="text-slate-400 font-bold text-sm mt-4 max-w-xs leading-relaxed"
                         >
-                            Sua solicitaÃƒÂ§ÃƒÂ£o de PIX foi enviada e jÃƒÂ¡ aparece no painel administrativo para aprovaÃƒÂ§ÃƒÂ£o.
+                            Sua solicitação de PIX foi enviada e já aparece no painel administrativo para aprovação.
                         </motion.p>
                         
                         <motion.div 
@@ -3446,7 +3493,7 @@ const renderDashboard = () => (
                             <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2 italic">Atenção Piloto!</h3>
                             <p className="text-slate-400 font-medium text-sm leading-relaxed mb-8">
                                 Este pedido ainda <span className="text-rose-500 font-bold">não foi pago</span> via App. 
-                                Confirme como você recebeu o valor de <span className="text-white font-black">R$ {Number(confirmPaymentState.mission.total_price || 0).toFixed(2).replace('.', ',')}</span>:
+                                Confirme como vocÃê recebeu o valor de <span className="text-white font-black">R$ {Number(confirmPaymentState.mission.total_price || 0).toFixed(2).replace('.', ',')}</span>:
                             </p>
 
                             <div className="space-y-3">
@@ -3544,22 +3591,23 @@ const renderDashboard = () => (
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3 pt-6 border-t border-white/5">
-                                    <div className="bg-white/5 p-3 rounded-2xl border border-white/5">
-                                        <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Base</span>
+                                    <div className="bg-white/5 p-3 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
+                                        <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Ganho Financeiro</span>
                                         <span className="text-lg font-black text-white italic">
-                                            R$ {(finishedMissionData.baseValue || 0).toFixed(2).replace('.', ',')}
+                                            R$ {(finishedMissionData.amount || 0).toFixed(2).replace('.', ',')}
                                         </span>
                                     </div>
-                                    <div className="bg-white/5 p-3 rounded-2xl border border-white/5">
-                                        <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Adicional Km</span>
-                                        <span className="text-lg font-black text-emerald-400 italic">
-                                            + R$ {(finishedMissionData.extraKmValue || 0).toFixed(2).replace('.', ',')}
-                                        </span>
+                                    <div className="bg-white/5 p-3 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
+                                        <span className="block text-[8px] font-black text-primary uppercase tracking-widest mb-1">XP Ganhos</span>
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-lg font-black text-primary italic">+{finishedMissionData.xpGained || 15}</span>
+                                            <span className="text-[10px] font-black text-primary/50 italic">XP</span>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center justify-between px-2 pt-2">
-                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Ganho LÃƒÂ­quido</span>
+                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Ganho Líquido</span>
                                     <span className="text-sm font-black text-primary italic">
                                         R$ {finishedMissionData.amount.toFixed(2).replace('.', ',')}
                                     </span>
@@ -3586,7 +3634,7 @@ const renderDashboard = () => (
                             </button>
                         </motion.div>
 
-                        {/* Detalhe EstÃƒÆ’Ã‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©tico Inferior */}
+                        {/* Detalhe Estético Inferior */}
                         <div className="absolute bottom-10 left-0 right-0 flex justify-center opacity-30">
                             <div className="w-12 h-1.5 bg-white/10 rounded-full" />
                         </div>
