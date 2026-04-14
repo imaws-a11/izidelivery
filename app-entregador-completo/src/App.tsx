@@ -483,10 +483,7 @@ function App() {
         }
     }, [isAuthenticated, driverId, driverName, authInitLoading]);
 
-    const [activeTab, setActiveTab] = useState<View>(() => {
-        const saved = localStorage.getItem('Izi_active_mission');
-        return saved ? 'active_mission' : 'dashboard';
-    });
+    const [activeTab, setActiveTab] = useState<View>('dashboard');
     const [finishedMissionData, setFinishedMissionData] = useState<{
         show: boolean, 
         amount: number,
@@ -525,6 +522,8 @@ function App() {
     const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
     const [myApplications, setMyApplications] = useState<any[]>([]);
     const [selectedSlot, setSelectedSlot] = useState<any | null>(null);
+    const [applyingSlotId, setApplyingSlotId] = useState<string | null>(null);
+    const [showSlotAppliedSuccess, setShowSlotAppliedSuccess] = useState(false);
     const [scheduledOrders, setScheduledOrders] = useState<any[]>([]);
     const [selectedScheduledOrder, setSelectedScheduledOrder] = useState<any | null>(null);
     const [history, setHistory] = useState<Order[]>([]);
@@ -1909,11 +1908,62 @@ function App() {
         </header>
     );
 
+    
+    const handleApplyToSlot = async (slot: any) => {
+        if (!driverId) {
+            toastError("Erro: ID do entregador não encontrado.");
+            return;
+        }
+
+        setApplyingSlotId(slot.id);
+        
+        try {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            
+            const payload = {
+                slot_id: slot.id,
+                driver_id: driverId,
+                status: 'pending',
+                merchant_id: slot.merchant_id
+            };
+
+            const response = await fetch(`${supabaseUrl}/rest/v1/slot_applications`, {
+                method: 'POST',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error("Supabase API Error:", errorData);
+                throw new Error(errorData.message || 'Erro ao enviar candidatura');
+            }
+
+            console.log("Candidatura enviada via REST!");
+            setShowSlotAppliedSuccess(true);
+            
+            // Recarrega as vagas para atualizar a lista
+            await fetchFromDB('slot_applications');
+            
+        } catch (err: any) {
+            console.error('Erro detalhado:', err);
+            toastError('Falha ao registrar candidatura. ' + (err.message || ''));
+        } finally {
+            setApplyingSlotId(null);
+        }
+    };
+
     const renderBottomNavigation = () => {
         const isSlotDetailActive = !!selectedSlot;
 
         return (
-            <nav className="fixed bottom-0 left-0 right-0 z-[100] px-4 pb-6 pt-2 pointer-events-none">
+            <nav className="fixed bottom-0 left-0 right-0 z-[200] px-4 pb-6 pt-2 pointer-events-none">
                 <motion.div 
                     layout
                     initial={false}
@@ -2014,25 +2064,13 @@ function App() {
                                     
                                     return (
                                         <button
-                                            onClick={async () => {
-                                                try {
-                                                    const { error } = await supabase.from('slot_applications').insert({
-                                                        slot_id: selectedSlot.id,
-                                                        driver_id: driverId,
-                                                        status: 'pending',
-                                                        created_at: new Date().toISOString()
-                                                    });
-                                                    if (error) throw error;
-                                                    toastSuccess('Candidatura enviada!');
-                                                    setSelectedSlot(null);
-                                                    setActiveTab('dashboard');
-                                                } catch { toastError('Erro ao candidatar.'); }
-                                            }}
-                                            className="flex-1 flex items-center justify-center gap-3 h-14 font-black text-xs uppercase text-stone-950 active:scale-[0.98] transition-all"
+                                            onClick={() => handleApplyToSlot(selectedSlot)}
+                                            disabled={applyingSlotId === selectedSlot.id}
+                                            className={`flex-1 flex items-center justify-center gap-3 h-14 font-black text-xs uppercase text-stone-950 active:scale-[0.98] transition-all ${applyingSlotId === selectedSlot.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             style={{ ...sClayYellow, borderRadius: '1.2rem', letterSpacing: '0.15em' }}
                                         >
-                                            <Icon name="verified" size={18} />
-                                            Candidatar-se à Vaga
+                                            <Icon name={applyingSlotId === selectedSlot.id ? 'sync' : 'stars'} size={18} className={applyingSlotId === selectedSlot.id ? 'animate-spin' : ''} />
+                                            {applyingSlotId === selectedSlot.id ? 'Enviando...' : 'Candidatar-se à Vaga'}
                                         </button>
                                     );
                                 })()}
@@ -3291,8 +3329,45 @@ const renderDashboard = () => (
                 {isAuthenticated && (
                     <div key="app" className="flex flex-col h-full overflow-hidden">
                         <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
-                        <AnimatePresence>{activeTab === 'active_mission' && renderActiveMissionView()}</AnimatePresence>
-                        {renderBottomNavigation()}
+                        <AnimatePresence>{activeTab === 'active_mission' && renderActiveMissionView()}
+                {showSlotAppliedSuccess && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[300] bg-slate-950/98 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.5, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="size-28 rounded-[42px] bg-primary flex items-center justify-center shadow-[0_20px_40px_rgba(250,204,21,0.3)] mb-8"
+                        >
+                            <span className="material-symbols-outlined text-zinc-950 text-5xl font-black">stars</span>
+                        </motion.div>
+                        
+                        <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none mb-4">
+                            Candidatura <br />
+                            <span className="text-primary">Enviada!</span>
+                        </h2>
+                        
+                        <p className="text-slate-400 font-bold text-sm tracking-wide mb-12 max-w-xs uppercase opacity-70">
+                            Seu perfil está agora com o lojista parceiro. Você será notificado se for selecionado!
+                        </p>
+
+                        <button
+                            onClick={() => {
+                                setShowSlotAppliedSuccess(false);
+                                setSelectedSlot(null);
+                            }}
+                            className="w-full max-w-xs h-16 rounded-[28px] bg-white text-zinc-950 font-black text-xs uppercase tracking-[0.3em] active:scale-95 transition-all"
+                        >
+                            Voltar para Vagas
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            {renderBottomNavigation()}
+
                         <div className="flex flex-col h-full overflow-hidden">
                              {activeTab !== 'dashboard' && renderHeader()}
                             <AnimatePresence>
