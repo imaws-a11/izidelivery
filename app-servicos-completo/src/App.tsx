@@ -1744,15 +1744,11 @@ function App() {
   };
 
   const calculateDeliveryFee = () => {
-    // 1. Prioridade Total: Configuração do Lojista Selecionado
+    // 1. Prioridade Máxima: Frete Grátis do Lojista (Configurado no Painel do Lojista)
     if (selectedShop) {
       if (selectedShop.free_delivery === true || selectedShop.freeDelivery === true) {
+        console.log(`[DELIVERY] Frete Grátis aplicado pela loja: ${selectedShop.name}`);
         return 0;
-      }
-      
-      // Se houver uma taxa de serviço específica do lojista, use-a
-      if (selectedShop.service_fee !== undefined && selectedShop.service_fee !== null) {
-        return Number(selectedShop.service_fee);
       }
     }
 
@@ -1767,27 +1763,24 @@ function App() {
        }, 0);
        
        if (minOrderIziBlack === 0 || subtotal >= minOrderIziBlack) {
+         console.log(`[DELIVERY] Frete Grátis aplicado via Izi Black Master (Subtotal: ${subtotal} >= Min: ${minOrderIziBlack})`);
          return 0;
        }
     }
 
-    // 3. Fallback: Taxa de Entrega informada no primeiro item (Legado/Compatibilidade)
+    // 3. Fallback: Taxa de Entrega informada no item (Legado/Compatibilidade)
     if (cart.length > 0) {
        const first = cart[0];
-       
-       // Verificamos se o lojista deste item especificou frete grátis no momento da adição
        if (first.merchant_free_delivery === true) {
            return 0;
        }
-       
-       // Se o item tem uma taxa fixa (ex: produtos de marketplace com frete próprio)
-       if (first.service_fee !== undefined && first.service_fee !== null) {
-         return Number(first.service_fee);
-       }
     }
 
-    // 4. Último Recurso: Taxa Base Global do Aplicativo
-    return Number(globalSettings?.base_fee || 5.90);
+    // 4. PADRÃO: Taxa Base configurada pelo ADMIN no PAINEL MASTER
+    // Removemos qualquer override individual de taxa fixa do lojista para seguir a regra do admin.
+    const masterBaseFee = Number(globalSettings?.base_fee || appSettings?.baseFee || 5.90);
+    console.log(`[DELIVERY] Aplicando Taxa Master configurada pelo Admin: R$ ${masterBaseFee}`);
+    return masterBaseFee;
   };
 
   const handlePlaceOrder = async (useCoins = false) => {
@@ -2238,6 +2231,7 @@ const navigateSubView = (target: string) => {
             freeDelivery: !!m.free_delivery,
             free_delivery: !!m.free_delivery,
             service_fee: m.free_delivery ? 0 : (m.service_fee !== undefined && m.service_fee !== null ? Number(m.service_fee) : undefined),
+            fee: m.free_delivery ? "Grátis" : `R$ ${Number(globalSettings?.base_fee || appSettings?.baseFee || 5.90).toFixed(2).replace('.', ',')}`,
             type: normalizedType,
             foodCategory: m.food_category || "all",
             description: m.store_description || "",
@@ -2250,7 +2244,7 @@ const navigateSubView = (target: string) => {
         setESTABLISHMENTS(sortedEstabs);
     } catch (err) {
     }
-  }, [isStoreOpen]);
+  }, [isStoreOpen, globalSettings, appSettings]);
 
   useEffect(() => {
     fetchRealEstablishments();

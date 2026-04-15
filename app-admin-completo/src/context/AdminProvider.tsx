@@ -716,6 +716,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => { fetchDriversRef.current = fetchDrivers; }, [fetchDrivers]);
   useEffect(() => { fetchMyDriversRef.current = fetchMyDrivers; }, [fetchMyDrivers]);
 
+  const merchantProfileRef = useRef(merchantProfile);
+  useEffect(() => { merchantProfileRef.current = merchantProfile; }, [merchantProfile]);
+
   // Canal Global de Tempo Real (Admin e Lojista)
   useEffect(() => {
     if (!session?.user?.id || !userRole) return;
@@ -733,8 +736,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if ((payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') && payload.new) {
             const updatedOrder = payload.new as Order;
             
-            // Ignorar se não for deste merchant (segurança adicional)
-            if (userRole === 'merchant' && updatedOrder.merchant_id !== merchantProfile?.id) return;
+            // Ignorar se não for deste merchant (segurança adicional via Ref)
+            if (userRole === 'merchant' && updatedOrder.merchant_id !== merchantProfileRef.current?.id) return;
 
             setAllOrders(prev => {
               const exists = prev.find(o => o.id === updatedOrder.id);
@@ -758,15 +761,19 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const isActionable = actionableStatuses.includes(updatedOrder.status);
             
             if (isActionable) {
-              console.log(`[REALTIME-ACTIONABLE] Pedido detectado (${payload.eventType}):`, updatedOrder.id, 'Status:', updatedOrder.status);
-              
               // Só toca som e mostra notificação se for realmente uma transição para um estado acionável
               // ou se for um novo registro (INSERT)
+              // Nota: payload.old pode vir incompleto dependendo da config do banco, por isso validamos com cautela
               const oldStatus = (payload.old as any)?.status;
-              if (payload.eventType === 'INSERT' || (oldStatus && oldStatus !== updatedOrder.status)) {
+              const isStatusNew = payload.eventType === 'INSERT';
+              const isStatusChanged = oldStatus !== undefined && oldStatus !== updatedOrder.status;
+              
+              // Fallback: Se não temos o status antigo (DB sem FULL replication), mas o pedido acabou de entrar 
+              // no radar de "ação pendente" ou é um UPDATE em um pedido que ainda não tínhamos no cache, avisamos.
+              if (isStatusNew || isStatusChanged || !oldStatus) {
                 setNewOrderNotification({ show: true, orderId: updatedOrder.id });
                 playIziSound('merchant');
-                console.log('[REALTIME-SOUND] Som disparado para o merchant');
+                console.log(`[REALTIME-ALERT] Alerta disparado para o pedido ${updatedOrder.id} (${updatedOrder.status})`);
               }
             }
           }
