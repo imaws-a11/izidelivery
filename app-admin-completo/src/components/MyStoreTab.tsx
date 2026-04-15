@@ -34,12 +34,13 @@ export default function MyStoreTab() {
   const [coverageMode, setCoverageMode] = useState<'radius' | 'neighborhoods'>(
     merchantProfile?.delivery_coverage_mode || 'radius'
   );
-  const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<string[]>(
-    Array.isArray(merchantProfile?.delivery_neighborhoods) ? merchantProfile.delivery_neighborhoods : []
-  );
   const [cityNeighborhoods, setCityNeighborhoods] = useState<string[]>([]);
+  // mapa: bairro -> { active, price }
+  const [deliveryZones, setDeliveryZones] = useState<Record<string, { active: boolean; price: number }>>({});
+  const [zonesLoading, setZonesLoading] = useState(false);
+  const [zonesSaving, setZonesSaving] = useState(false);
 
-  // Busca bairros ativos do banco
+  // Busca bairros ativos da cidade
   useEffect(() => {
     supabase
       .from('city_neighborhoods_delivery')
@@ -51,15 +52,61 @@ export default function MyStoreTab() {
       });
   }, []);
 
-  // Sync coverageMode/neighborhoods se merchantProfile mudar depois do mount
+  // Busca zonas configuradas pelo lojista
+  useEffect(() => {
+    if (!merchantProfile?.id) return;
+    setZonesLoading(true);
+    supabase
+      .from('merchant_delivery_zones')
+      .select('neighborhood_name, delivery_price, active')
+      .eq('merchant_id', merchantProfile.id)
+      .then(({ data }) => {
+        const map: Record<string, { active: boolean; price: number }> = {};
+        (data || []).forEach((z: any) => {
+          map[z.neighborhood_name] = { active: z.active, price: Number(z.delivery_price) };
+        });
+        setDeliveryZones(map);
+        setZonesLoading(false);
+      });
+  }, [merchantProfile?.id]);
+
+  // Sync coverageMode se merchantProfile mudar depois do mount
   useEffect(() => {
     if (merchantProfile?.delivery_coverage_mode) {
       setCoverageMode(merchantProfile.delivery_coverage_mode);
     }
-    if (Array.isArray(merchantProfile?.delivery_neighborhoods)) {
-      setSelectedNeighborhoods(merchantProfile.delivery_neighborhoods);
-    }
   }, [merchantProfile?.id]);
+
+  const handleSaveZones = async () => {
+    if (!merchantProfile?.id) return;
+    setZonesSaving(true);
+    const rows = Object.entries(deliveryZones).map(([neighborhood_name, z]) => ({
+      merchant_id: merchantProfile.id,
+      neighborhood_name,
+      delivery_price: z.price,
+      active: z.active,
+    }));
+    await supabase
+      .from('merchant_delivery_zones')
+      .upsert(rows, { onConflict: 'merchant_id,neighborhood_name' });
+    setZonesSaving(false);
+  };
+
+  const toggleZone = (name: string) => {
+    setDeliveryZones(prev => ({
+      ...prev,
+      [name]: { active: !(prev[name]?.active ?? false), price: prev[name]?.price ?? 0 },
+    }));
+  };
+
+  const setZonePrice = (name: string, price: number) => {
+    setDeliveryZones(prev => ({
+      ...prev,
+      [name]: { active: prev[name]?.active ?? true, price },
+    }));
+  };
+
+  const activeZonesCount = Object.values(deliveryZones).filter(z => z.active).length;
 
   if (!merchantProfile) {
     return (
@@ -440,78 +487,103 @@ export default function MyStoreTab() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="space-y-5"
+                    className="space-y-4"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Bairros Atendidos</p>
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                        selectedNeighborhoods.length > 0
-                          ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                      }`}>
-                        {selectedNeighborhoods.length} selecionados
-                      </span>
+                    {/* Header de contagem */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Zonas de Entrega</p>
+                      <div className="flex items-center gap-2">
+                        {activeZonesCount > 0 && (
+                          <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                            {activeZonesCount} ativo{activeZonesCount !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-400">
+                          {cityNeighborhoods.length} bairros
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      {cityNeighborhoods.length === 0 ? (
-                        <div className="w-full flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
-                          <span className="material-symbols-outlined text-slate-300 animate-spin text-xl">sync</span>
-                          <p className="text-xs font-bold text-slate-400">Carregando bairros...</p>
-                        </div>
-                      ) : (
-                        cityNeighborhoods.map((bairro) => {
-                          const isSelected = selectedNeighborhoods.includes(bairro);
+                    {/* Lista de bairros com preço */}
+                    {zonesLoading || cityNeighborhoods.length === 0 ? (
+                      <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
+                        <span className="material-symbols-outlined text-slate-300 animate-spin text-xl">sync</span>
+                        <p className="text-xs font-bold text-slate-400">Carregando bairros...</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[360px] overflow-y-auto pr-1">
+                        {cityNeighborhoods.map((nome) => {
+                          const zone = deliveryZones[nome];
+                          const isActive = zone?.active ?? false;
+                          const price = zone?.price ?? 0;
                           return (
-                            <button
-                              key={bairro}
-                              onClick={() => {
-                                const next = isSelected
-                                  ? selectedNeighborhoods.filter((b) => b !== bairro)
-                                  : [...selectedNeighborhoods, bairro];
-                                setSelectedNeighborhoods(next);
-                              }}
-                              className={`px-4 py-2 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all border ${
-                                isSelected
-                                  ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20 scale-105'
-                                  : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700 hover:border-violet-300 hover:text-violet-500'
+                            <div
+                              key={nome}
+                              className={`flex items-center justify-between gap-2 p-3 rounded-2xl border transition-all ${
+                                isActive
+                                  ? 'bg-white dark:bg-slate-800 border-violet-200 dark:border-violet-500/30 shadow-sm'
+                                  : 'bg-slate-50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-700 opacity-60'
                               }`}
                             >
-                              {isSelected && <span className="material-symbols-outlined text-[12px] mr-1 align-middle">check</span>}
-                              {bairro}
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
+                              {/* Lado Esquerdo: Toggle + Nome */}
+                              <div className="flex items-center gap-2 min-w-0">
+                                <PremiumToggle
+                                  active={isActive}
+                                  onClick={() => toggleZone(nome)}
+                                  color="emerald"
+                                />
+                                <p className={`truncate text-xs font-black ${
+                                  isActive ? 'text-slate-800 dark:text-white' : 'text-slate-400'
+                                }`} title={nome}>
+                                  {nome}
+                                </p>
+                              </div>
 
-                    {selectedNeighborhoods.length > 0 && (
-                      <div className="p-4 bg-violet-50 dark:bg-violet-500/10 rounded-[28px] border border-violet-100 dark:border-violet-500/20">
-                        <p className="text-[10px] font-black text-violet-600 dark:text-violet-400 uppercase tracking-widest mb-2">Cobertura ativa em:</p>
-                        <p className="text-xs font-bold text-violet-700 dark:text-violet-300 leading-relaxed">
-                          {selectedNeighborhoods.join(' • ')}
-                        </p>
+                              {/* Lado Direito: Preço */}
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[10px] font-black text-slate-400">R$</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.50"
+                                  value={price}
+                                  onChange={(e) => setZonePrice(nome, parseFloat(e.target.value) || 0)}
+                                  disabled={!isActive}
+                                  className="w-16 h-8 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-center text-xs font-black text-slate-900 dark:text-white focus:border-violet-400 focus:ring-1 focus:ring-violet-400 outline-none transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                  placeholder="0.00"
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
 
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => {
-                          setSelectedNeighborhoods([]);
-                        }}
-                        className="flex-1 py-4 bg-slate-50 dark:bg-slate-800 text-slate-500 font-black text-xs uppercase tracking-widest rounded-2xl border border-slate-100 dark:border-slate-700 hover:bg-slate-100 transition-all"
-                      >
-                        Limpar Tudo
-                      </button>
-                      <button
-                        onClick={() => updateProfileField('delivery_neighborhoods', selectedNeighborhoods)}
-                        disabled={isSaving}
-                        className="flex-[2] py-4 bg-violet-500 hover:bg-violet-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-violet-500/20 transition-all active:scale-95 disabled:grayscale flex items-center justify-center gap-2"
-                      >
-                        <span className="material-symbols-outlined text-base">save</span>
-                        {isSaving ? 'Salvando...' : 'Confirmar Bairros'}
-                      </button>
-                    </div>
+                    {/* Rodapé com resumo e salvar */}
+                    {activeZonesCount > 0 && (
+                      <div className="p-4 bg-violet-50 dark:bg-violet-500/10 rounded-[24px] border border-violet-100 dark:border-violet-500/20">
+                        <p className="text-[10px] font-black text-violet-600 dark:text-violet-400 uppercase tracking-widest mb-2">Previsão de entrega</p>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(deliveryZones)
+                            .filter(([, z]) => z.active)
+                            .sort(([a], [b]) => a.localeCompare(b))
+                            .map(([nome, z]) => (
+                              <span key={nome} className="px-2.5 py-1 bg-white dark:bg-slate-800 rounded-xl text-[10px] font-black text-violet-600 dark:text-violet-300 border border-violet-100 dark:border-violet-500/20">
+                                {nome} · R$ {z.price.toFixed(2)}
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleSaveZones}
+                      disabled={zonesSaving}
+                      className="w-full py-4 bg-violet-500 hover:bg-violet-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-violet-500/20 transition-all active:scale-95 disabled:grayscale flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-base">save</span>
+                      {zonesSaving ? 'Salvando...' : 'Salvar Zonas de Entrega'}
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
