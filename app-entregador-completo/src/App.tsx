@@ -2690,7 +2690,7 @@ const renderDashboard = () => (
             { label: "Baú ou Mochila Térmica", detail: "Equipamento próprio para entregas" }
         ];
         const customBenefits = slot.metadata?.custom_benefits || [];
-        const neighborhoodExtras = slot.metadata?.neighborhood_extras || [];
+        const neighborhoodExtras = slot.metadata?.bairros_extras || slot.metadata?.neighborhood_extras || [];
 
         const sClayDark: React.CSSProperties = {
             background: '#121212',
@@ -2802,6 +2802,29 @@ const renderDashboard = () => (
                                         <div className="space-y-1">
                                             <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">{ben.label || ben.title || 'Incentivo'}</p>
                                             <p className="text-lg font-black text-primary italic leading-none">+ R$ {parseFloat(ben.value || 0).toFixed(2).replace('.', ',')}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+                    
+                    {/* Regiões Extras */}
+                    {neighborhoodExtras.length > 0 && (
+                        <section className="space-y-6">
+                            <h3 className="text-xl font-black text-white italic tracking-tight flex items-center gap-3">
+                                <span className="size-2 rounded-full bg-primary" />
+                                Taxas por Região
+                            </h3>
+                            <div className="flex overflow-x-auto gap-4 -mx-6 px-6 no-scrollbar pb-2">
+                                {neighborhoodExtras.map((item: any, idx: number) => (
+                                    <div key={idx} className="flex-shrink-0 w-40 p-6 flex flex-col gap-4 border border-white/5" style={sClayDark}>
+                                        <div className="size-10 rounded-xl flex items-center justify-center" style={sClayIcon}>
+                                            <Icon name="location_on" className="text-primary" size={20} />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">{item.label}</p>
+                                            <p className="text-lg font-black text-primary italic leading-none">+ R$ {parseFloat(item.fee || item.value || 0).toFixed(2).replace('.', ',')}</p>
                                         </div>
                                     </div>
                                 ))}
