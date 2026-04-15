@@ -39,6 +39,7 @@ export default function MyStoreTab() {
   const [deliveryZones, setDeliveryZones] = useState<Record<string, { active: boolean; price: number }>>({});
   const [zonesLoading, setZonesLoading] = useState(false);
   const [zonesSaving, setZonesSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Busca bairros ativos da cidade
   useEffect(() => {
@@ -80,16 +81,22 @@ export default function MyStoreTab() {
   const handleSaveZones = async () => {
     if (!merchantProfile?.id) return;
     setZonesSaving(true);
+    setSaveSuccess(false);
+    
     const rows = Object.entries(deliveryZones).map(([neighborhood_name, z]) => ({
       merchant_id: merchantProfile.id,
       neighborhood_name,
       delivery_price: z.price,
       active: z.active,
     }));
+    
     await supabase
       .from('merchant_delivery_zones')
       .upsert(rows, { onConflict: 'merchant_id,neighborhood_name' });
+      
     setZonesSaving(false);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2500);
   };
 
   const toggleZone = (name: string) => {
@@ -578,11 +585,17 @@ export default function MyStoreTab() {
 
                     <button
                       onClick={handleSaveZones}
-                      disabled={zonesSaving}
-                      className="w-full py-4 bg-violet-500 hover:bg-violet-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-violet-500/20 transition-all active:scale-95 disabled:grayscale flex items-center justify-center gap-2"
+                      disabled={zonesSaving || saveSuccess}
+                      className={`w-full py-4 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl transition-all active:scale-95 disabled:grayscale flex items-center justify-center gap-2 ${
+                        saveSuccess 
+                          ? 'bg-emerald-500 shadow-emerald-500/20' 
+                          : 'bg-violet-500 hover:bg-violet-600 shadow-violet-500/20'
+                      }`}
                     >
-                      <span className="material-symbols-outlined text-base">save</span>
-                      {zonesSaving ? 'Salvando...' : 'Salvar Zonas de Entrega'}
+                      <span className="material-symbols-outlined text-base">
+                        {saveSuccess ? 'check_circle' : 'save'}
+                      </span>
+                      {saveSuccess ? 'Zonas Salvas!' : zonesSaving ? 'Salvando...' : 'Salvar Zonas de Entrega'}
                     </button>
                   </motion.div>
                 )}
