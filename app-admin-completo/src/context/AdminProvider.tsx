@@ -2355,7 +2355,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isLoaded,
     fetchStats, fetchUsers, fetchDrivers, fetchMyDrivers, fetchProducts, fetchMenuCategories, 
     fetchAllOrders, fetchSubscriptionOrders, fetchCategories, fetchDynamicRates, 
-    fetchPromotions, fetchAuditLogs, fetchMerchants, fetchPartners, fetchAppSettings, fetchGlobalSettings, saveGlobalSettings, fetchMyDedicatedSlots, 
+    fetchPromotions, fetchAuditLogs, fetchMerchants, fetchPartners, fetchAppSettings, saveGlobalSettings, fetchMyDedicatedSlots, 
     openMerchantPreview, handleAddCredit, handleApplyCredit, handleUpdateDriver, 
     handleUpdateCategory, handleUpdateMyDriver, handleDeleteMyDriver, handleUpdateUser, 
     handleUpdateMyProduct, handleUpdateMenuCategory, handleDeleteMenuCategory, handleDeleteProduct, handleCreateNewProduct, 

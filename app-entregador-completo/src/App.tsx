@@ -2262,43 +2262,43 @@ const renderDashboard = () => (
                     </div>
                 </section>
 
-                {/* Seção de Agendamentos no Dashboard - Visível apenas quando Online ou se houver agendamentos */}
-                {(isOnline || scheduledOrders.length > 0) && (
+                {/* Seção de Agendamentos no Dashboard - Filtrado para mostrar APENAS os disponíveis conforme solicitação */}
+                {(isOnline || scheduledOrders.some(o => !o.driver_id)) && (
                     <section className="space-y-6">
-                    <div className="flex justify-between items-end">
-                        <h3 className="text-2xl font-bold text-white tracking-tight">Agendamentos</h3>
-                        <button onClick={() => setActiveTab('scheduled')} className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-4 py-2 rounded-full">Ver Calendário</button>
-                    </div>
-                    {scheduledOrders.length > 0 ? (
-                        <div className="space-y-4">
-                            {scheduledOrders.slice(0, 2).map((order: any) => {
-                                const dt = new Date(order.scheduled_at);
-                                return (
-                                    <div key={order.id} className="clay-card-dark p-6 flex items-center justify-between border-l-4 border-yellow-400">
-                                        <div className="flex items-center gap-5">
-                                            <div className="text-center bg-white/5 p-2 rounded-xl min-w-[50px]">
-                                                <p className="text-[9px] font-black text-yellow-400 uppercase">{dt.toLocaleDateString('pt-BR', { weekday: 'short' })}</p>
-                                                <p className="text-lg font-black text-white italic">{dt.getDate()}</p>
+                        <div className="flex justify-between items-end">
+                            <h3 className="text-2xl font-bold text-white tracking-tight">Agendamentos</h3>
+                            <button onClick={() => setActiveTab('scheduled')} className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-4 py-2 rounded-full">Ver Calendário</button>
+                        </div>
+                        {scheduledOrders.filter(o => !o.driver_id).length > 0 ? (
+                            <div className="space-y-4">
+                                {scheduledOrders.filter(o => !o.driver_id).slice(0, 3).map((order: any) => { // Aumentado para 3 disponiveis
+                                    const dt = new Date(order.scheduled_at);
+                                    return (
+                                        <div key={order.id} className="clay-card-dark p-6 flex items-center justify-between border-l-4 border-yellow-400">
+                                            <div className="flex items-center gap-5">
+                                                <div className="text-center bg-white/5 p-2 rounded-xl min-w-[50px]">
+                                                    <p className="text-[9px] font-black text-yellow-400 uppercase">{dt.toLocaleDateString('pt-BR', { weekday: 'short' })}</p>
+                                                    <p className="text-lg font-black text-white italic">{dt.getDate()}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold text-white italic truncate w-32">{order.pickup_address?.split(',')[0] || 'Coleta'}</p>
+                                                    <p className="text-[10px] text-white/30 font-black uppercase">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-xs font-bold text-white italic truncate w-32">{order.pickup_address?.split(',')[0]}</p>
-                                                <p className="text-[10px] text-white/30 font-black uppercase">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h</p>
+                                            <div className="text-right">
+                                                <p className="text-xs font-bold text-yellow-400 uppercase tracking-tighter">Disponível</p>
+                                                <p className="text-base font-black text-white italic">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-xs font-bold text-emerald-400 uppercase">Confirmado</p>
-                                            <p className="text-base font-black text-white italic">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div className="p-10 rounded-[32px] border border-white/5 border-dashed flex flex-col items-center gap-3 text-center opacity-40">
-                            <Icon name="calendar_month" size={32} />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma escala programada</p>
-                        </div>
-                    )}
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="p-10 rounded-[32px] border border-white/5 border-dashed flex flex-col items-center gap-3 text-center opacity-40">
+                                <Icon name="calendar_month" size={32} />
+                                <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma escala disponível</p>
+                            </div>
+                        )}
                     </section>
                 )}
             </main>
