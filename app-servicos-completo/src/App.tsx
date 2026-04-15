@@ -1744,10 +1744,16 @@ function App() {
   };
 
   const calculateDeliveryFee = () => {
-    // 1. Prioridade Máxima: Frete Grátis do Lojista (Configurado no Painel do Lojista)
-    if (selectedShop) {
-      if (selectedShop.free_delivery === true || selectedShop.freeDelivery === true) {
-        console.log(`[DELIVERY] Frete Grátis aplicado pela loja: ${selectedShop.name}`);
+    // [Comentario Limpo pelo Sistema]
+    // 1. Identificar o Lojista Atual (Prioridade para selectedShop, fallback mapeando pelo carrinho para persistência pós-refresh)
+    const activeShop = selectedShop || (cart.length > 0 ? ESTABLISHMENTS.find(e => e.id === cart[0].merchant_id || e.id === cart[0].store_id) : null);
+
+    if (activeShop) {
+      // Prioridade Máxima: Frete Grátis do Lojista (Configurado no Painel do Lojista via Toggle ou Taxa Zero explícita)
+      const isExplicitlyFree = activeShop.free_delivery === true || activeShop.freeDelivery === true || (activeShop.service_fee !== null && Number(activeShop.service_fee) === 0);
+      
+      if (isExplicitlyFree) {
+        console.log(`[DELIVERY] Frete Grátis aplicado pela loja: ${activeShop.name}`);
         return 0;
       }
     }
@@ -1771,16 +1777,20 @@ function App() {
     // 3. Fallback: Taxa de Entrega informada no item (Legado/Compatibilidade)
     if (cart.length > 0) {
        const first = cart[0];
-       if (first.merchant_free_delivery === true) {
+       if (first.merchant_free_delivery === true || first.free_delivery === true) {
            return 0;
        }
     }
 
-    // 4. PADRÃO: Taxa Base configurada pelo ADMIN no PAINEL MASTER
-    // Removemos qualquer override individual de taxa fixa do lojista para seguir a regra do admin.
+    // 4. PADRÃO: Taxa da Loja ou Taxa Base Master
+    const shopFee = activeShop?.service_fee !== undefined && activeShop?.service_fee !== null ? Number(activeShop.service_fee) : null;
     const masterBaseFee = Number(globalSettings?.base_fee || appSettings?.baseFee || 5.90);
-    console.log(`[DELIVERY] Aplicando Taxa Master configurada pelo Admin: R$ ${masterBaseFee}`);
-    return masterBaseFee;
+    
+    // Se a loja tem uma taxa específica, usamos ela. Caso contrário, usamos a master do admin.
+    const finalFee = shopFee !== null ? shopFee : masterBaseFee;
+    
+    console.log(`[DELIVERY] Aplicando Taxa: R$ ${finalFee} (${shopFee !== null ? 'Loja: ' + activeShop?.name : 'Master Admin'})`);
+    return finalFee;
   };
 
   const handlePlaceOrder = async (useCoins = false) => {
@@ -2228,10 +2238,10 @@ const navigateSubView = (target: string) => {
             time: m.estimated_time || "30-45 min",
             img: m.store_logo || "",
             banner: m.store_banner || "",
-            freeDelivery: !!m.free_delivery,
-            free_delivery: !!m.free_delivery,
-            service_fee: m.free_delivery ? 0 : (m.service_fee !== undefined && m.service_fee !== null ? Number(m.service_fee) : undefined),
-            fee: m.free_delivery ? "Grátis" : `R$ ${Number(globalSettings?.base_fee || appSettings?.baseFee || 5.90).toFixed(2).replace('.', ',')}`,
+            freeDelivery: !!m.free_delivery || (m.service_fee !== null && Number(m.service_fee) === 0),
+            free_delivery: !!m.free_delivery || (m.service_fee !== null && Number(m.service_fee) === 0),
+            service_fee: m.free_delivery ? 0 : (m.service_fee !== undefined && m.service_fee !== null ? Number(m.service_fee) : null),
+            fee: m.free_delivery || Number(m.service_fee) === 0 ? "Grátis" : `R$ ${Number(m.service_fee ?? globalSettings?.base_fee ?? appSettings?.baseFee ?? 5.90).toFixed(2).replace('.', ',')}`,
             type: normalizedType,
             foodCategory: m.food_category || "all",
             description: m.store_description || "",
