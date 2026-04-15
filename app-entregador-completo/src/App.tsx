@@ -3681,35 +3681,59 @@ const renderDashboard = () => (
                     <section className="space-y-3">
                         <div className="flex justify-between items-end px-2">
                             <h2 className="text-neutral-400 font-bold text-sm uppercase tracking-widest">Itens do Pedido</h2>
-                            <span className="text-yellow-400 text-xs font-bold uppercase">{selectedOrder.items?.length || 1} Itens</span>
+                            <span className="text-yellow-400 text-xs font-bold uppercase">
+                                {(() => {
+                                    const items = Array.isArray(selectedOrder.items) ? selectedOrder.items : 
+                                                 (typeof selectedOrder.items === 'string' ? JSON.parse(selectedOrder.items || '[]') : []);
+                                    return items.length;
+                                })()} Itens
+                            </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            {/* Layout de itens dinâmico vs mock conforme solicitado */}
-                            <div className={`bg-neutral-900 ${clayCardDark} rounded-xl p-4 flex flex-col items-center text-center gap-2 border border-neutral-800/50`}>
-                                <div className="w-16 h-16 relative">
-                                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJUkwlbRXrrQf5wxSmeh95QbiWA695C8a9GIWpPVxm2xT4DimxAsljCg8dyZ0h4vYqrjgYgeWzgwXCW3_GHuhXiLFhRvPwGGnLPOgdhkX5vdKjhtCRrjgLLEKWY2paf4tDtEuziddJ8bW43c_1hYWnUj0WLIr26lMgJaR55ODyB3JfYkjQ8ktflcvZ9oLat4Y1LRPs7bpzMmQbIy5XWqFL7qNYqCbmPzaok3Md1M6cnO4ru-X2s3TD5lgwvlwxfKCxYKW-VGbetd0" className="w-full h-full object-cover rounded-full shadow-2xl" alt="Item" />
-                                    <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-lg">1x</span>
-                                </div>
-                                <span className="text-white font-bold text-sm">{presentation.title}</span>
-                            </div>
-                            <div className={`bg-neutral-900 ${clayCardDark} rounded-xl p-4 flex flex-col items-center text-center gap-2 border border-neutral-800/50`}>
-                                <div className="w-16 h-16 relative">
-                                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuC42A7afygeWS8yGW_iAKWPwFIhipo9zmNZDnkQQeumFpBrqor_ZwcrGo_BAPLtbscmotM2fiw7xFrqVmxLAikagOwLLZdKmbE024GetgufS3V6hL9trgM1r0INs9IzrcP13XyhjmLuAfNyZaqkq0EkZ4QVTKvb_-B7vpXj1CTTqVk-vMOFNI2jnaSjrqYcKygxBOM2xURv57HCSG51a-4_dwK7xwzP0ViQZmVDDMzPZ2FG8oVv8lWxSG25w4LG3Xp3TES-KuAJRYA" className="w-full h-full object-cover rounded-full shadow-2xl" alt="Soda" />
-                                    <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-lg">1x</span>
-                                </div>
-                                <span className="text-white font-bold text-sm">Coca-Cola 350ml</span>
-                            </div>
-                            {/* Horizontal Card */}
-                            <div className={`bg-neutral-900 ${clayCardDark} rounded-xl p-4 flex items-center gap-4 col-span-2 border border-neutral-800/50`}>
-                                <div className="w-14 h-14 relative flex-shrink-0">
-                                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuk8p52HQWwpR_wuk3TNwin3lv0PgotwugDnu2096J4W2od0SpPmzQR04uYsHnHyefMPAbu_LxocDYNFSBypC7KBNA68zy6PJZmKdz5Lbo3kL_9DQHae86xPcDGo9FVpI3NoQWjiQW_Cu30pemF5m_2jZMYH2BsJx1XCnixxIHyADJ4XuLpFblXF_Hb0GSi2pX2NRBVwcXb25TelTJBsy7IJzwkxpYvbzqs9rzQPXF_N2K2rqKtlFsXMFMbj8D1KlMTpW9UuiCvm8" className="w-full h-full object-cover rounded-full shadow-2xl" alt="Extra" />
-                                    <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg">1x</span>
-                                </div>
-                                <div>
-                                    <span className="text-white font-bold text-sm block">Acompanhamento Extra</span>
-                                    <span className="text-neutral-500 text-xs italic">Verificar itens na retirada</span>
-                                </div>
-                            </div>
+                        <div className="flex flex-col gap-4">
+                            {(() => {
+                                let items = [];
+                                try {
+                                    items = Array.isArray(selectedOrder.items) ? selectedOrder.items : 
+                                            (typeof selectedOrder.items === 'string' ? JSON.parse(selectedOrder.items || '[]') : []);
+                                } catch (e) { items = []; }
+
+                                if (items.length === 0) {
+                                    return (
+                                        <div className={`bg-neutral-900 ${clayCardDark} rounded-xl p-5 flex items-center gap-4 border border-neutral-800/50`}>
+                                            <div className="w-14 h-14 rounded-full bg-yellow-400/10 flex items-center justify-center">
+                                                <Icon name="package" className="text-yellow-400" />
+                                            </div>
+                                            <div>
+                                                <span className="text-white font-bold text-sm block">{presentation.title}</span>
+                                                <span className="text-neutral-500 text-xs italic">Verificar detalhes na coleta</span>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                return items.map((item: any, idx: number) => (
+                                    <div key={idx} className={`bg-neutral-900 ${clayCardDark} rounded-xl p-4 flex items-center gap-4 border border-neutral-800/50`}>
+                                        <div className="w-14 h-14 relative flex-shrink-0">
+                                            <img 
+                                                src={item.image || item.photo_url || "https://lh3.googleusercontent.com/aida-public/AB6AXuAuk8p52HQWwpR_wuk3TNwin3lv0PgotwugDnu2096J4W2od0SpPmzQR04uYsHnHyefMPAbu_LxocDYNFSBypC7KBNA68zy6PJZmKdz5Lbo3kL_9DQHae86xPcDGo9FVpI3NoQWjiQW_Cu30pemF5m_2jZMYH2BsJx1XCnixxIHyADJ4XuLpFblXF_Hb0GSi2pX2NRBVwcXb25TelTJBsy7IJzwkxpYvbzqs9rzQPXF_N2K2rqKtlFsXMFMbj8D1KlMTpW9UuiCvm8"} 
+                                                className="w-full h-full object-cover rounded-full shadow-2xl" 
+                                                alt={item.name} 
+                                            />
+                                            <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-lg">
+                                                {item.quantity}x
+                                            </span>
+                                        </div>
+                                        <div className="flex-1">
+                                            <span className="text-white font-bold text-sm block">{item.name || item.product_name}</span>
+                                            {item.observation && <span className="text-neutral-500 text-xs italic line-clamp-1">{item.observation}</span>}
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-yellow-400/60 text-[10px] font-bold block uppercase">Preço</span>
+                                            <span className="text-white font-black text-xs italic">R$ {((item.price || 0) * (item.quantity || 1)).toFixed(2).replace('.', ',')}</span>
+                                        </div>
+                                    </div>
+                                ));
+                            })()}
                         </div>
                     </section>
 
@@ -3722,12 +3746,14 @@ const renderDashboard = () => (
                                     <Icon name="payments" className="text-yellow-400" />
                                     <span className="text-white font-bold">Total a receber</span>
                                 </div>
-                                <span className="text-yellow-400 text-2xl font-black">R$ {grossEarnings.toFixed(2).replace('.', ',')}</span>
+                                <span className="text-yellow-400 text-2xl font-black">
+                                    R$ {(isPaid ? 0 : Number(selectedOrder.total_price || 0)).toFixed(2).replace('.', ',')}
+                                </span>
                             </div>
                             {needsChange && (
                                 <div className="bg-neutral-950/50 rounded-lg p-3 flex items-center gap-3">
                                     <Icon name="account_balance_wallet" className="text-yellow-400/60" />
-                                    <p className="text-neutral-300 text-sm">Troco necessário para <span className="font-bold text-white">R$ {selectedOrder.change_for.toFixed(2).replace('.', ',')}</span></p>
+                                    <p className="text-neutral-300 text-sm">Troco necessário para <span className="font-bold text-white">R$ {Number(selectedOrder.change_for || 0).toFixed(2).replace('.', ',')}</span></p>
                                 </div>
                             )}
                         </div>
@@ -3748,7 +3774,7 @@ const renderDashboard = () => (
                                         {isPaid && <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded uppercase">Pago</span>}
                                     </div>
                                     <p className="text-neutral-500 text-sm mt-1">
-                                        {selectedOrder.payment_method === 'online' ? 'Não é necessário cobrar no local.' : `Cobrar R$ ${grossEarnings.toFixed(2).replace('.', ',')} no local.`}
+                                        {selectedOrder.payment_method === 'online' || isPaid ? 'Não é necessário cobrar no local.' : `Cobrar R$ ${Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')} no local.`}
                                     </p>
                                 </div>
                             </div>
