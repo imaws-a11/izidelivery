@@ -710,14 +710,19 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchStatsRef = useRef(fetchStats);
   const fetchDriversRef = useRef(fetchDrivers);
   const fetchMyDriversRef = useRef(fetchMyDrivers);
+  const allOrdersRef = useRef(allOrders);
 
   useEffect(() => { fetchAllOrdersRef.current = fetchAllOrders; }, [fetchAllOrders]);
   useEffect(() => { fetchStatsRef.current = fetchStats; }, [fetchStats]);
   useEffect(() => { fetchDriversRef.current = fetchDrivers; }, [fetchDrivers]);
   useEffect(() => { fetchMyDriversRef.current = fetchMyDrivers; }, [fetchMyDrivers]);
+  useEffect(() => { allOrdersRef.current = allOrders; }, [allOrders]);
 
   const merchantProfileRef = useRef(merchantProfile);
   useEffect(() => { merchantProfileRef.current = merchantProfile; }, [merchantProfile]);
+
+  const selectedMerchantPreviewRef = useRef(selectedMerchantPreview);
+  useEffect(() => { selectedMerchantPreviewRef.current = selectedMerchantPreview; }, [selectedMerchantPreview]);
 
   // Canal Global de Tempo Real (Admin e Lojista)
   useEffect(() => {
@@ -736,15 +741,37 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if ((payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') && payload.new) {
             const updatedOrder = payload.new as Order;
             
-            // Ignorar se não for deste merchant (segurança adicional via Ref)
-            if (userRole === 'merchant' && updatedOrder.merchant_id !== merchantProfileRef.current?.id) return;
+            // Identificar o Merchant ID de forma robusta (suporta string ou null payload)
+            const currentMID = String(merchantProfileRef.current?.merchant_id || merchantProfileRef.current?.id || '');
+            const orderMID = String(updatedOrder.merchant_id || '');
 
+            // Log de depuração para o lojista validar no console se o evento chegou
+            if (userRole === 'merchant') {
+               console.log(`[REALTIME-DEBUG] Pedido ${updatedOrder.id} - MID Ordem: ${orderMID} - Meu MID: ${currentMID}`);
+            }
+
+            // Ignorar se não for deste merchant (segurança adicional)
+            if (userRole === 'merchant') {
+              // Se o merchant_id veio vazio no payload, tentamos recuperar do cache local
+              let effectiveOrderMID = orderMID;
+              if (!effectiveOrderMID) {
+                const existing = allOrdersRef.current.find(o => o.id === updatedOrder.id);
+                if (existing) effectiveOrderMID = String(existing.merchant_id || '');
+              }
+
+              if (effectiveOrderMID !== currentMID) {
+                console.log(`[REALTIME-SKIP] Pedido ignorado: Merchant mismatch (${effectiveOrderMID} !== ${currentMID})`);
+                return;
+              }
+            }
+
+            // Atualização do Estado Local (Imediata)
             setAllOrders(prev => {
               const exists = prev.find(o => o.id === updatedOrder.id);
               if (exists) {
+                // Preservamos o objeto 'user' e outros joins que o realtime não traz
                 return prev.map(o => o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o);
               }
-              // Se é novo ou mudou para um status relevante, adiciona no topo
               return [updatedOrder, ...prev];
             });
 
@@ -760,27 +787,27 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const actionableStatuses = ['novo', 'waiting_merchant', 'paid', 'pago', 'confirmado', 'confirmed'];
             const isActionable = actionableStatuses.includes(updatedOrder.status);
             
-            if (isActionable) {
-              // Só toca som e mostra notificação se for realmente uma transição para um estado acionável
-              // ou se for um novo registro (INSERT)
-              // Nota: payload.old pode vir incompleto dependendo da config do banco, por isso validamos com cautela
+            if (isActionable && userRole === 'merchant') {
+              const isNewMessage = !allOrdersRef.current.find(o => o.id === updatedOrder.id);
               const oldStatus = (payload.old as any)?.status;
-              const isStatusNew = payload.eventType === 'INSERT';
               const isStatusChanged = oldStatus !== undefined && oldStatus !== updatedOrder.status;
               
-              // Fallback: Se não temos o status antigo (DB sem FULL replication), mas o pedido acabou de entrar 
-              // no radar de "ação pendente" ou é um UPDATE em um pedido que ainda não tínhamos no cache, avisamos.
-              if (isStatusNew || isStatusChanged || !oldStatus) {
+              // Disparar alerta se: 
+              // 1. É um pedido que acabou de entrar na lista (INSERT ou UPDATE que o tornou visível)
+              // 2. O status mudou para algo acionável (ex: pendente -> novo)
+              if (payload.eventType === 'INSERT' || isNewMessage || isStatusChanged) {
                 setNewOrderNotification({ show: true, orderId: updatedOrder.id });
                 playIziSound('merchant');
-                console.log(`[REALTIME-ALERT] Alerta disparado para o pedido ${updatedOrder.id} (${updatedOrder.status})`);
+                console.log(`[REALTIME-ALERT] Alerta sonoro disparado para o pedido: ${updatedOrder.id}`);
               }
             }
           }
 
-          // Busca dados atualizados para garantir consistência total
-          fetchStatsRef.current(true);
-          fetchAllOrdersRef.current(undefined, true);
+          // Busca dados atualizados do banco para consistência (com pequeno delay para o DB "respirar")
+          setTimeout(() => {
+            fetchStatsRef.current(true);
+            fetchAllOrdersRef.current(undefined, true);
+          }, 500);
         }
       )
       .on(
@@ -800,25 +827,18 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             });
 
             if (userRole === 'merchant') {
-              const belongsToMerchant = updated.merchant_id === merchantProfile?.id && !updated.is_deleted;
-              const belongedToMerchant = old?.merchant_id === merchantProfile?.id;
+              const currentMID = String(merchantProfileRef.current?.id || '');
+              const updatedMID = String(updated.merchant_id || '');
+              const belongsToMerchant = updatedMID === currentMID && !updated.is_deleted;
+              
+              const oldMID = String(old?.merchant_id || '');
+              const belongedToMerchant = oldMID === currentMID;
 
               if (belongsToMerchant) {
                 setMyDriversList(prev => upsertDriverInList(prev, updated));
               } else if (belongedToMerchant) {
                 setMyDriversList(prev => removeDriverFromList(prev, updated.id));
               }
-            }
-
-            // Só re-busca pesado se houver mudança estrutural/cadastral
-            if (
-              old?.is_active !== updated.is_active ||
-              old?.is_deleted !== updated.is_deleted ||
-              old?.merchant_id !== updated.merchant_id
-            ) {
-              fetchStatsRef.current(true);
-              fetchDriversRef.current(true);
-              if (userRole === 'merchant') fetchMyDriversRef.current(true);
             }
           } else if (payload.eventType === 'INSERT') {
             const inserted = payload.new as Driver;
@@ -829,8 +849,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               return nextDrivers;
             });
 
-            if (userRole === 'merchant' && inserted.merchant_id === merchantProfile?.id && !inserted.is_deleted) {
-              setMyDriversList(prev => upsertDriverInList(prev, inserted));
+            if (userRole === 'merchant') {
+              const currentMID = String(merchantProfileRef.current?.id || '');
+              const insertedMID = String(inserted.merchant_id || '');
+              if (insertedMID === currentMID && !inserted.is_deleted) {
+                setMyDriversList(prev => upsertDriverInList(prev, inserted));
+              }
             }
           } else if (payload.eventType === 'DELETE') {
             const removed = payload.old as Driver;
@@ -841,8 +865,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               return nextDrivers;
             });
 
-            if (userRole === 'merchant' && removed.merchant_id === merchantProfile?.id) {
-              setMyDriversList(prev => removeDriverFromList(prev, removed.id));
+            if (userRole === 'merchant') {
+              const currentMID = String(merchantProfileRef.current?.id || '');
+              const removedMID = String(removed.merchant_id || '');
+              if (removedMID === currentMID) {
+                setMyDriversList(prev => removeDriverFromList(prev, removed.id));
+              }
             }
           }
         }
@@ -852,9 +880,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         { event: 'INSERT', schema: 'public', table: 'wallet_transactions_delivery' },
         (payload) => {
           const newTx = payload.new as any;
-          const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
           
-          if (newTx.user_id === idToUse) {
+          const currentMID = String(merchantProfileRef.current?.id || '');
+          const previewMID = String(selectedMerchantPreviewRef.current?.id || '');
+          const idToUse = userRole === 'merchant' ? currentMID : previewMID;
+          
+          if (String(newTx.user_id) === idToUse) {
             if (newTx.type === 'deposito' || newTx.type === 'venda') {
               toastSuccess(`Pagamento Recebido: R$ ${parseFloat(newTx.amount).toFixed(2)} - ${newTx.description}`);
               fetchMerchantFinance();
