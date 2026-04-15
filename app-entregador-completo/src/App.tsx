@@ -2216,93 +2216,120 @@ const renderDashboard = () => (
                                         key={order.id} 
                                         initial={{ opacity: 0, x: 50 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        className="flex-shrink-0 w-[350px] bg-neutral-900/90 rounded-[40px] p-0 h-auto relative overflow-hidden group border border-white/5"
-                                        style={{
-                                            boxShadow: 'inset 4px 4px 12px rgba(255, 255, 255, 0.03), inset -4px -4px 12px rgba(0, 0, 0, 0.5), 0 20px 40px rgba(0,0,0,0.4)'
-                                        }}
+                                        className="flex-shrink-0 w-[360px] relative pt-12 pb-4"
                                     >
-                                        <div className="absolute -right-6 -top-6 opacity-10 transform rotate-12 group-hover:scale-110 transition-all duration-700">
-                                            <Icon name={presentation.details.icon} size={160} />
-                                        </div>
-
-                                        <div className="p-6 flex justify-between items-start border-b border-white/[0.03]">
-                                            <div className="space-y-2">
-                                                <div className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${presentation.details.bg} ${presentation.details.color}`}>
-                                                    {presentation.details.label}
-                                                </div>
-                                                <div className="flex gap-1.5 flex-wrap">
-                                                    {presentation.badges.map((badge, idx) => (
-                                                        <span key={idx} className="bg-white/5 text-white/50 text-[8px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter border border-white/5">{badge}</span>
-                                                    ))}
-                                                </div>
+                                        <div className="bg-[#1a1a1a] rounded-[32px] p-8 relative flex flex-col items-center text-center border border-white/5"
+                                             style={{
+                                                 boxShadow: 'inset 4px 4px 12px rgba(255, 255, 255, 0.03), inset -4px -4px 12px rgba(0, 0, 0, 0.5), 0 20px 40px rgba(0,0,0,0.4)'
+                                             }}
+                                        >
+                                            {/* Floating 3D Icon Overlay */}
+                                            <div className="absolute -top-12 bg-yellow-400 w-24 h-24 rounded-full flex items-center justify-center shadow-2xl transition-all"
+                                                 style={{
+                                                     boxShadow: 'inset 4px 4px 8px rgba(255, 255, 255, 0.4), inset -4px -4px 8px rgba(0, 0, 0, 0.2)'
+                                                 }}
+                                            >
+                                                <Icon name={presentation.details.icon} className="text-black text-[48px]" />
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-[10px] text-white/30 font-black uppercase tracking-tighter leading-none mb-1">Você ganha</p>
-                                                <p className="text-3xl font-black text-yellow-400 italic leading-none drop-shadow-lg">
-                                                    R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}
+
+                                            <div className="mt-8 w-full">
+                                                {/* Status Tag */}
+                                                <div className={`inline-block px-4 py-1.5 rounded-full ${presentation.details.bg} ${presentation.details.color} text-[10px] font-bold uppercase tracking-widest mb-4`}>
+                                                    NOVA OPORTUNIDADE
+                                                </div>
+
+                                                <h1 className="text-2xl font-extrabold text-white leading-tight tracking-tight mb-2">
+                                                    Nova Entrega Disponível
+                                                </h1>
+                                                <p className="text-white/50 text-[11px] mb-8 px-2 leading-relaxed">
+                                                    Uma missão de entrega de alta prioridade foi atribuída à sua proximidade.
                                                 </p>
-                                            </div>
-                                        </div>
 
-                                        <div className="p-6 space-y-5">
-                                            <div className="space-y-4 relative">
-                                                <div className="absolute left-[7px] top-3 bottom-1 w-[1.5px] bg-gradient-to-b from-yellow-400/30 via-white/5 to-emerald-400/30" />
-                                                
-                                                <div className="flex items-start gap-4">
-                                                    <div className="size-4 rounded-full bg-yellow-400 flex-shrink-0 mt-1 shadow-[0_0_15px_rgba(250,204,21,0.6)] border-4 border-neutral-900" />
-                                                    <div className="min-w-0 flex-1">
-                                                        <p className="text-[9px] text-white/30 font-black uppercase tracking-[0.2em] mb-0.5">{presentation.pickupLabel}</p>
-                                                        {order.merchant_name && (
-                                                            <p className="text-[14px] font-black text-white italic leading-tight uppercase tracking-tight">{order.merchant_name}</p>
-                                                        )}
-                                                        <p className="text-[11px] font-bold text-neutral-400 truncate italic leading-relaxed">
-                                                            {presentation.pickupText || 'Endereço não informado'}
-                                                        </p>
+                                                {/* Payment Highlight Box */}
+                                                <div className="bg-[#121212] rounded-2xl p-6 border border-white/5 mb-8 shadow-inner">
+                                                    <p className="text-white/30 text-[10px] uppercase tracking-widest font-bold mb-2">Você ganha</p>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <span className="text-yellow-400 text-4xl font-black drop-shadow-xl italic">
+                                                            R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}
+                                                        </span>
+                                                        <Icon name="local_fire_department" className="text-yellow-400 text-3xl" />
                                                     </div>
+                                                    <p className="text-white/20 text-[9px] mt-2">+ Gorjeta do cliente (se houver)</p>
                                                 </div>
 
-                                                <div className="flex items-start gap-4">
-                                                    <div className="size-4 rounded-full bg-emerald-400 flex-shrink-0 mt-1 shadow-[0_0_15px_rgba(52,211,153,0.6)] border-4 border-neutral-900" />
-                                                    <div className="min-w-0 flex-1">
-                                                        <p className="text-[9px] text-white/30 font-black uppercase tracking-[0.2em] mb-0.5">{presentation.destinationLabel}</p>
-                                                        <p className="text-[12px] font-black text-white/90 truncate italic uppercase leading-tight">
+                                                {/* Delivery Details Grid */}
+                                                <div className="grid grid-cols-2 gap-4 text-left w-full mb-8">
+                                                    <div className="flex flex-col bg-white/[0.02] p-3 rounded-xl border border-white/5 col-span-2">
+                                                        <span className="text-[9px] uppercase font-bold text-yellow-400/80 tracking-widest mb-1">{presentation.pickupLabel}</span>
+                                                        <span className="text-yellow-400 text-sm font-black leading-tight uppercase italic mb-1" title={order.store_name || order.merchant_name}>
+                                                            {order.store_name || order.merchant_name || 'Estabelecimento Parceiro'}
+                                                        </span>
+                                                        <span className="text-white/90 text-xs font-medium leading-relaxed drop-shadow-md">
+                                                            {order.origin || presentation.pickupText || order.pickup_address || 'Endereço de coleta não informado no sistema'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex flex-col bg-white/[0.02] p-3 rounded-xl border border-white/5">
+                                                        <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest mb-1">Destino Final</span>
+                                                        <span className="text-white text-[11px] font-bold leading-tight truncate italic">
                                                             {presentation.destinationText || 'Destino não informado'}
-                                                        </p>
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex flex-col items-end text-right bg-white/[0.02] p-3 rounded-xl border border-white/5">
+                                                        <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest mb-1">Distância Estimada</span>
+                                                        <span className="text-white text-xs font-black leading-tight bg-white/10 px-2 py-1 rounded-md">
+                                                            {order.distance_km ? `${parseFloat(order.distance_km).toFixed(1)} km` : (order.distance ? `${order.distance}` : 'Trajeto Direto')}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Actions */}
+                                                <div className="flex flex-col gap-3 w-full">
+                                                    <button 
+                                                        onClick={() => {
+                                                            setSelectedOrder(order);
+                                                            handleAccept(order);
+                                                        }}
+                                                        disabled={isAccepting}
+                                                        className="w-full py-5 rounded-2xl bg-yellow-400 hover:bg-yellow-500 text-black font-black uppercase text-[13px] tracking-widest flex items-center justify-center gap-2 active:scale-[0.97] transition-all shadow-[0_10px_30px_rgba(250,204,21,0.2)] disabled:opacity-50"
+                                                        style={{
+                                                            boxShadow: 'inset 4px 4px 8px rgba(255, 255, 255, 0.4), inset -4px -4px 8px rgba(0, 0, 0, 0.2)'
+                                                        }}
+                                                    >
+                                                        {isAcceptingThis ? (
+                                                            <div className="size-5 border-4 border-black/20 border-t-black rounded-full animate-spin" />
+                                                        ) : (
+                                                            <>
+                                                                <Icon name="check" className="text-lg" />
+                                                                {presentation.ctaLabel}
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                    
+                                                    <div className="flex gap-2 w-full mt-2">
+                                                        <button 
+                                                            onClick={() => {
+                                                                setSelectedOrder(order);
+                                                                setShowOrderModal(true);
+                                                            }}
+                                                            className="flex-1 py-3 rounded-xl text-white/50 font-bold uppercase text-[10px] tracking-widest active:scale-95 transition-all hover:text-white hover:bg-white/5"
+                                                        >
+                                                            Recibo & Detalhes
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => {
+                                                                if(window.confirm('Recusar remove esta entrega da sua lista temporariamente. Tem certeza?')) {
+                                                                    toastSuccess('Missão ocultada (Função em breve)');
+                                                                }
+                                                            }}
+                                                            className="flex-[0.5] py-3 rounded-xl text-red-500/50 font-bold uppercase text-[10px] tracking-widest active:scale-95 transition-all hover:text-red-400 hover:bg-red-500/10"
+                                                        >
+                                                            Recusar
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-
-                                        <div className="p-4 pt-0 flex gap-3">
-                                            <button 
-                                                onClick={() => {
-                                                    setSelectedOrder(order);
-                                                    setShowOrderModal(true);
-                                                }}
-                                                className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest rounded-3xl transition-all border border-white/5 active:scale-95"
-                                            >
-                                                Detalhes
-                                            </button>
-                                            <button 
-                                                onClick={() => {
-                                                    setSelectedOrder(order);
-                                                    handleAccept(order);
-                                                }}
-                                                disabled={isAccepting}
-                                                className="flex-[2] py-4 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-black font-black text-[10px] uppercase tracking-widest rounded-3xl transition-all shadow-xl shadow-yellow-400/20 active:scale-95 flex items-center justify-center gap-2"
-                                                style={{
-                                                    boxShadow: 'inset 4px 4px 8px rgba(255,255,255,0.4), 0 10px 20px rgba(250,204,21,0.2)'
-                                                }}
-                                            >
-                                                {isAcceptingThis ? (
-                                                    <div className="size-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                                                ) : (
-                                                    <>
-                                                        <Icon name="check" size={16} />
-                                                        {presentation.ctaLabel}
-                                                    </>
-                                                )}
-                                            </button>
                                         </div>
                                     </motion.div>
                                 );

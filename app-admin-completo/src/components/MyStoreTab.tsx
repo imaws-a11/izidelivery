@@ -40,6 +40,8 @@ export default function MyStoreTab() {
   const [zonesLoading, setZonesLoading] = useState(false);
   const [zonesSaving, setZonesSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [radiusSaving, setRadiusSaving] = useState(false);
+  const [radiusSaveSuccess, setRadiusSaveSuccess] = useState(false);
 
   // Busca bairros ativos da cidade
   useEffect(() => {
@@ -97,6 +99,16 @@ export default function MyStoreTab() {
     setZonesSaving(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
+  };
+
+  const handleSaveRadius = async () => {
+    setRadiusSaving(true);
+    const success = await updateProfileField('delivery_radius', localRadius);
+    setRadiusSaving(false);
+    if (success) {
+      setRadiusSaveSuccess(true);
+      setTimeout(() => setRadiusSaveSuccess(false), 2500);
+    }
   };
 
   const toggleZone = (name: string) => {
@@ -466,11 +478,15 @@ export default function MyStoreTab() {
                         />
                         <div className="absolute right-4">
                           <button
-                            onClick={() => updateProfileField('delivery_radius', localRadius)}
-                            disabled={isSaving}
-                            className="px-8 h-12 bg-violet-500 hover:bg-violet-600 text-white font-black rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-violet-500/20 disabled:grayscale"
+                            onClick={handleSaveRadius}
+                            disabled={radiusSaving || isSaving}
+                            className={`px-8 h-12 text-white font-black rounded-2xl transition-all shadow-xl disabled:grayscale ${
+                              radiusSaveSuccess
+                                ? 'bg-emerald-500 shadow-emerald-500/20 scale-105'
+                                : 'bg-violet-500 hover:bg-violet-600 hover:scale-105 active:scale-95 shadow-violet-500/20'
+                            }`}
                           >
-                            {isSaving ? '...' : 'Salvar'}
+                            {radiusSaving ? '...' : radiusSaveSuccess ? 'Salvo!' : 'Salvar'}
                           </button>
                         </div>
                       </div>
