@@ -1782,14 +1782,49 @@ function App() {
        }
     }
 
-    // 4. PADRÃO: Taxa da Loja ou Taxa Base Master
-    const shopFee = activeShop?.service_fee !== undefined && activeShop?.service_fee !== null ? Number(activeShop.service_fee) : null;
-    const masterBaseFee = Number(globalSettings?.base_fee || appSettings?.baseFee || 5.90);
+    // 4. PADRÃO: Modo Lojista (Raio vs Bairros)
+    if (activeShop.coverageMode === 'neighborhoods' && activeShop.zones) {
+       const userAddrLower = (userLocation.address || "").toLowerCase();
+       // Simplest match: verifica se algum bairro ativo está na string de endereço
+       const matchedZone = Object.entries(activeShop.zones as Record<string, {active: boolean, price: number}>)
+           .find(([zName, cfg]) => cfg.active && userAddrLower.includes(zName.toLowerCase()));
+           
+       if (matchedZone) {
+          console.log(`[DELIVERY] Zona de bairro encontrada: ${matchedZone[0]} -> R$ ${matchedZone[1].price}`);
+          return matchedZone[1].price;
+       }
+    }
+
+    // 5. MODO RAIO (Taxa Base + KM) ou Fallback
+    const bv = marketConditions.settings.baseValues;
+    const surge = bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0;
     
-    // Se a loja tem uma taxa específica, usamos ela. Caso contrário, usamos a master do admin.
-    const finalFee = shopFee !== null ? shopFee : masterBaseFee;
+    const typeMapping: Record<string, {min: string, km: string, int: string}> = {
+      "restaurant": { min: 'food_min', km: 'food_km', int: 'food_km_interval' },
+      "market": { min: 'market_min', km: 'market_km', int: 'market_km_interval' },
+      "pharmacy": { min: 'pharmacy_min', km: 'pharmacy_km', int: 'pharmacy_km_interval' },
+      "beverages": { min: 'beverage_min', km: 'beverage_km', int: 'beverage_km_interval' },
+    };
     
-    console.log(`[DELIVERY] Aplicando Taxa: R$ ${finalFee} (${shopFee !== null ? 'Loja: ' + activeShop?.name : 'Master Admin'})`);
+    const metric = typeMapping[activeShop.type] || typeMapping["restaurant"];
+    const fallbackBase = globalSettings?.base_fee ?? appSettings?.baseFee ?? 5.90;
+    
+    // Usa os valores do Admin, ou fallback
+    const baseFare = parseFloat(String(bv[metric.min] ?? fallbackBase));
+    const distRate = parseFloat(String(bv[metric.km] ?? 2.5));
+    const distInt  = Math.max(0.1, parseFloat(String(bv[metric.int] ?? 1.0)));
+    
+    let distKm = activeShop.distKm || 1.5;
+    
+    // Se a loja não usar frete do app (configuração rígida dela de fallback legacy)
+    const fixedShopFee = activeShop.service_fee !== undefined && activeShop.service_fee !== null ? Number(activeShop.service_fee) : null;
+    
+    // Se tiver radius e valores de admin, aplicamos a dinamica
+    const dynamicCalculated = parseFloat((baseFare + (distRate * Math.ceil(distKm / distInt) * surge)).toFixed(2));
+    
+    const finalFee = activeShop.coverageMode === 'radius' ? dynamicCalculated : (fixedShopFee !== null ? fixedShopFee : dynamicCalculated);
+
+    console.log(`[DELIVERY] Aplicando Taxa (Modo: ${activeShop.coverageMode}): R$ ${finalFee}`);
     return finalFee;
   };
 
@@ -2213,8 +2248,35 @@ const navigateSubView = (target: string) => {
         
       if (error) throw error;
       
+      const { data: zonesData } = await supabase.from('merchant_delivery_zones').select('*');
+      const zonesByMerchant: Record<string, Record<string, {active: boolean, price: number}>> = {};
+      if (zonesData) {
+        zonesData.forEach(z => {
+           if (!zonesByMerchant[z.merchant_id]) zonesByMerchant[z.merchant_id] = {};
+           zonesByMerchant[z.merchant_id][z.neighborhood] = {
+             active: z.is_active,
+             price: z.price
+           };
+        });
+      }
+
+      const getDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371; 
+        const dLat = (lat2 - lat1) * (Math.PI / 180);
+        const dLon = (lon2 - lon1) * (Math.PI / 180);
+        const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*(Math.PI/180))*Math.cos(lat2*(Math.PI/180))*Math.sin(dLon/2)*Math.sin(dLon/2);
+        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+      };
+      
         const realEstabs = data?.map(m => {
           const isOpen = isStoreOpen(m.opening_hours, m.is_open, m.opening_mode);
+          
+          let distKm = 1.5; // fallback
+          if (userLocation.lat && userLocation.lng && m.latitude && m.longitude) {
+            distKm = getDistanceKm(userLocation.lat, userLocation.lng, m.latitude, m.longitude);
+            // Multiplique por 1.3 por causa de conversão (distância de ruas vs linha reta)
+            distKm = distKm * 1.3;
+          }
           
           // Mapeamento de tipos do banco para os filtros do App
           const rawType = (m.store_type || "restaurant").toLowerCase().trim();
@@ -2234,7 +2296,8 @@ const navigateSubView = (target: string) => {
             mode: m.opening_mode || 'auto',
             opening_hours: m.opening_hours,
             rating: "4.9",
-            dist: "1.5 km",
+            dist: `${distKm.toFixed(1)} km`,
+            distKm: distKm,
             time: m.estimated_time || "30-45 min",
             img: m.store_logo || "",
             banner: m.store_banner || "",
@@ -2245,6 +2308,10 @@ const navigateSubView = (target: string) => {
             type: normalizedType,
             foodCategory: m.food_category || "all",
             description: m.store_description || "",
+            latitude: m.latitude,
+            longitude: m.longitude,
+            coverageMode: m.delivery_coverage_mode || 'radius',
+            zones: zonesByMerchant[m.id] || {}
           };
         }) || [];
 
@@ -2599,23 +2666,33 @@ const navigateSubView = (target: string) => {
         }
           const bv = marketConditions.settings.baseValues;
           const surge = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
+          
           const mototaxi_min   = parseFloat(String(bv.mototaxi_min))   || 6.0;
           const mototaxi_km    = parseFloat(String(bv.mototaxi_km))    || 2.5;
+          const mototaxi_int   = Math.max(0.1, parseFloat(String(bv.mototaxi_km_interval)) || 1.0);
+          
           const carro_min      = parseFloat(String(bv.carro_min))      || 14.0;
           const carro_km       = parseFloat(String(bv.carro_km))       || 4.5;
+          const carro_int      = Math.max(0.1, parseFloat(String(bv.carro_km_interval)) || 1.0);
+          
           const van_min        = parseFloat(String(bv.van_min))        || 35.0;
           const van_km         = parseFloat(String(bv.van_km))         || 8.0;
+          const van_int        = Math.max(0.1, parseFloat(String(bv.van_km_interval)) || 1.0);
+          
           const utilitario_min = parseFloat(String(bv.utilitario_min)) || 10.0;
           const utilitario_km  = parseFloat(String(bv.utilitario_km))  || 3.0;
+          const utilitario_int = Math.max(0.1, parseFloat(String(bv.utilitario_km_interval)) || 1.0);
+          
           const logistica_min  = parseFloat(String(bv.logistica_min))  || 45.0;
           const logistica_km   = parseFloat(String(bv.logistica_km))   || 8.0;
+          const logistica_int  = Math.max(0.1, parseFloat(String(bv.logistica_km_interval)) || 1.0);
 
           const newPrices = {
-            mototaxi:   parseFloat((mototaxi_min   + (mototaxi_km   * distKm * surge)).toFixed(2)),
-            carro:      parseFloat((carro_min      + (carro_km      * distKm * surge)).toFixed(2)),
-            van:        parseFloat((van_min        + (van_km        * distKm * surge)).toFixed(2)),
-            utilitario: parseFloat((utilitario_min + (utilitario_km * distKm * surge)).toFixed(2)),
-            logistica:  parseFloat((logistica_min  + (logistica_km  * distKm * surge)).toFixed(2)),
+            mototaxi:   parseFloat((mototaxi_min   + (mototaxi_km   * Math.ceil(distKm / mototaxi_int)   * surge)).toFixed(2)),
+            carro:      parseFloat((carro_min      + (carro_km      * Math.ceil(distKm / carro_int)      * surge)).toFixed(2)),
+            van:        parseFloat((van_min        + (van_km        * Math.ceil(distKm / van_int)        * surge)).toFixed(2)),
+            utilitario: parseFloat((utilitario_min + (utilitario_km * Math.ceil(distKm / utilitario_int) * surge)).toFixed(2)),
+            logistica:  parseFloat((logistica_min  + (logistica_km  * Math.ceil(distKm / logistica_int)  * surge)).toFixed(2)),
           };
           setDistancePrices(newPrices);
           // Atualizar estPrice no transitData para uso no pagamento
@@ -2683,22 +2760,24 @@ const navigateSubView = (target: string) => {
     const surgeMultiplier = bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0;
 
     if (transitData.type === 'logistica' || transitData.type === 'frete') {
-       const vehicleConfigs: Record<string, { min: string, km: string }> = {
-         "Fiorino": { min: 'fiorino_min', km: 'fiorino_km' },
-         "Caminhonete": { min: 'caminhonete_min', km: 'caminhonete_km' },
-         "Caminhão Baú Pequeno": { min: 'bau_p_min', km: 'bau_p_km' },
-         "Caminhão Baú Médio": { min: 'bau_m_min', km: 'bau_m_km' },
-         "Caminhão Baú Grande": { min: 'bau_g_min', km: 'bau_g_km' },
-         "Caminhão Aberto": { min: 'aberto_min', km: 'aberto_km' }
+       const vehicleConfigs: Record<string, { min: string, km: string, int: string }> = {
+         "Fiorino": { min: 'fiorino_min', km: 'fiorino_km', int: 'fiorino_km_interval' },
+         "Caminhonete": { min: 'caminhonete_min', km: 'caminhonete_km', int: 'caminhonete_km_interval' },
+         "Caminhão Baú Pequeno": { min: 'bau_p_min', km: 'bau_p_km', int: 'bau_p_km_interval' },
+         "Caminhão Baú Médio": { min: 'bau_m_min', km: 'bau_m_km', int: 'bau_m_km_interval' },
+         "Caminhão Baú Grande": { min: 'bau_g_min', km: 'bau_g_km', int: 'bau_g_km_interval' },
+         "Caminhão Aberto": { min: 'aberto_min', km: 'aberto_km', int: 'aberto_km_interval' }
        };
 
        const configKeys = vehicleConfigs[transitData.vehicleCategory];
        let baseFare = parseFloat(String(bv.logistica_min || 45));
        let distanceRate = parseFloat(String(bv.logistica_km || 4.5));
+       let logistica_int = Math.max(0.1, parseFloat(String(bv.logistica_km_interval)) || 1.0);
 
        if (configKeys && bv[configKeys.min] && parseFloat(String(bv[configKeys.min])) > 0) {
           baseFare = parseFloat(String(bv[configKeys.min]));
           distanceRate = parseFloat(String(bv[configKeys.km]));
+          logistica_int = Math.max(0.1, parseFloat(String(bv[configKeys.int])) || 1.0);
        } else {
           const vehicleMultipliers: Record<string, number> = {
             "Fiorino": 1.0,
@@ -2715,7 +2794,7 @@ const navigateSubView = (target: string) => {
 
        finalPrice = calculateFreightPrice({
           baseFare: baseFare * surgeMultiplier,
-          distanceInKm: distanceValueKm || 1,
+          distanceInKm: Math.ceil((distanceValueKm || 1) / logistica_int),
           distanceRate: distanceRate * surgeMultiplier,
           helperCount: transitData.helpers || 0,
           helperRate: parseFloat(String(bv.logistica_helper || 50)),
@@ -2723,9 +2802,10 @@ const navigateSubView = (target: string) => {
           stairsFee: parseFloat(String(bv.logistica_stairs || 30))
        }).totalPrice;
     } else if (transitData.type === 'van') {
+       const van_int = Math.max(0.1, parseFloat(String(bv.van_km_interval)) || 1.0);
        finalPrice = calculateVanPrice({
           baseFare: parseFloat(String(bv.van_min || 35)),
-          distanceInKm: distanceValueKm || 1,
+          distanceInKm: Math.ceil((distanceValueKm || 1) / van_int),
           distanceRate: parseFloat(String(bv.van_km || 8)) * surgeMultiplier,
           stopCount: transitData.stops?.length || 0,
           stopRate: 15, // Mover para settings se necessário

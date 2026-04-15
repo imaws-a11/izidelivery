@@ -303,7 +303,21 @@ export default function DynamicRatesTab() {
                   </div>
 
                   <div className="space-y-1 relative group">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Por KM (Global)</label>
+                    <div className="flex items-center justify-between ml-1 mb-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Add a cada</label>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          value={dynamicRatesState.baseValues?.[`${cat.kmKey}_interval`] || '1'}
+                          onChange={(e) => {
+                            const newBase = { ...dynamicRatesState.baseValues, [`${cat.kmKey}_interval`]: e.target.value };
+                            setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
+                          }}
+                          className="w-8 text-center bg-transparent border-b border-slate-300 dark:border-slate-600 outline-none font-black text-primary text-[10px] pb-0.5"
+                        />
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">km</span>
+                      </div>
+                    </div>
                     <div className="relative">
                       <input
                         type="text"
@@ -361,7 +375,21 @@ export default function DynamicRatesTab() {
                                 />
                               </div>
                               <div className="space-y-1">
-                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">KM (R$)</label>
+                                <div className="flex items-center justify-between ml-1 mb-0.5 mt-[-4px]">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Add a cada</label>
+                                  <div className="flex items-center gap-0.5">
+                                    <input
+                                      type="text"
+                                      value={dynamicRatesState.baseValues?.[`${v.kmKey}_interval`] || '1'}
+                                      onChange={(e) => {
+                                        const newBase = { ...dynamicRatesState.baseValues, [`${v.kmKey}_interval`]: e.target.value };
+                                        setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
+                                      }}
+                                      className="w-6 text-center bg-transparent border-b border-slate-300 dark:border-slate-600 outline-none font-black text-primary text-[9px] p-0 leading-none"
+                                    />
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">km</span>
+                                  </div>
+                                </div>
                                 <input
                                   type="text"
                                   value={dynamicRatesState.baseValues?.[v.kmKey] || '0.00'}
@@ -369,7 +397,7 @@ export default function DynamicRatesTab() {
                                     const newBase = { ...dynamicRatesState.baseValues, [v.kmKey]: e.target.value };
                                     setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
                                   }}
-                                  className="w-full text-right bg-slate-50 dark:bg-slate-800 border-none outline-none font-black text-primary text-xs rounded-xl py-2 px-3 shadow-inner"
+                                  className="w-full text-right bg-slate-50 dark:bg-slate-800 border-none outline-none font-black text-primary text-xs rounded-xl py-2 px-3 shadow-inner mt-1"
                                 />
                               </div>
                            </div>
