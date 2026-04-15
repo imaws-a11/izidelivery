@@ -77,6 +77,7 @@ function Icon({ name, className = "", size = 20 }: any) {
     'volume_up': BespokeIcons.Notifications,
     'visibility': BespokeIcons.History,
     'arrow_back': BespokeIcons.ChevronLeft,
+    'sync': BespokeIcons.History,
   };
 
   const IconComp = icons[name] || BespokeIcons.Help;
@@ -533,6 +534,7 @@ function App() {
     const [isSavingPix, setIsSavingPix] = useState(false);
     const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
     const [confirmPaymentState, setConfirmPaymentState] = useState<{
         show: boolean,
         resolve: (confirmed: boolean) => void,
@@ -1014,6 +1016,7 @@ function App() {
         // Isso garante que F5 sempre restaura o status correto, independente de rede
         localStorage.setItem('Izi_online', nextState.toString());
         setIsOnline(nextState);
+        if (!nextState) setOrders([]);
         
         if (driverId) {
             try {
@@ -1213,6 +1216,7 @@ function App() {
         // Realtime para Agendamentos
         const scheduledChannel = supabase.channel('scheduled_orders_realtime')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders_delivery' }, (payload) => {
+                if (!isOnlineRef.current) return;
                 const o = payload.new as any;
                 if (o.scheduled_at) {
                     if (isOnlineRef.current) playIziSound('driver'); // Som unico para Agendamento
@@ -1242,103 +1246,104 @@ function App() {
         return () => { supabase.removeChannel(scheduledChannel); };
     }, [isAuthenticated, fetchFromDB]);
 
+    const fetchOrders = useCallback(async () => {
+        if (!isOnline) {
+            setOrders([]);
+            return;
+        }
+        setIsSyncing(true);
+        try {
+            const data = await fetchFromDB('orders_delivery', 'select=*,admin_users(store_name,store_address,latitude,longitude)&status=not.in.(concluido,cancelado)&order=created_at.desc&limit=20');
+            
+            const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
+            const now = Date.now();
+            const currentMission = activeMissionRef.current;
+
+            const myAssignment = data.find((o: any) => 
+                o.driver_id && String(o.driver_id).trim() === String(driverId).trim() &&
+                !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)
+            );
+
+            if (myAssignment && (!currentMission || currentMission.realId !== myAssignment.id)) {
+                const merchant = myAssignment.admin_users;
+                const mission = { 
+                    ...myAssignment, 
+                    realId: myAssignment.id, 
+                    type: myAssignment.service_type, 
+                    customer: myAssignment.user_name || 'Cliente Izi',
+                    store_name: merchant?.store_name || myAssignment.store_name || 'Loja Parceira',
+                    pickup_address: merchant?.store_address || myAssignment.pickup_address,
+                    pickup_lat: merchant?.latitude || myAssignment.pickup_lat,
+                    pickup_lng: merchant?.longitude || myAssignment.pickup_lng
+                };
+                setActiveMission(mission);
+                localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
+            }
+
+            const available = data.filter((o: any) => {
+                const isMerchantOrder = !!o.merchant_id || !!o.admin_users;
+                const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted', 'confirmado', 'confirmed'].includes(o.status);
+                const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'confirmado', 'confirmed'].includes(o.status);
+                const statusOk = isMerchantOrder ? merchantAccepted : p2pAllowed;
+                const notMyAssignment = !o.driver_id || String(o.driver_id).trim() === '';
+                const notDeclined = !(now - (declinedMap[o.id] || 0) < 5000);
+                const notFinancial = !['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'].includes(o.service_type);
+                const notScheduled = !o.scheduled_at || o.driver_id === driverId;
+                return statusOk && notMyAssignment && notDeclined && notFinancial && notScheduled;
+            });
+
+            setOrders(available.map((o: any) => ({
+                ...o,
+                id: o.id.slice(0, 8).toUpperCase(), 
+                realId: o.id, 
+                type: o.service_type, 
+                origin: o.admin_users?.store_address || o.pickup_address, 
+                destination: o.delivery_address, 
+                price: o.total_price,
+                pickup_lat: o.admin_users?.latitude || o.pickup_lat,
+                pickup_lng: o.admin_users?.longitude || o.pickup_lng,
+                delivery_lat: o.delivery_lat,
+                delivery_lng: o.delivery_lng,
+                store_name: o.admin_users?.store_name || o.store_name || 'Loja Parceira',
+                customer: 'Cliente Izi'
+            })));
+        } catch (err) {
+            console.warn('[POLL-ERROR]', err);
+        } finally {
+            setIsSyncing(false);
+        }
+    }, [isOnline, driverId, fetchFromDB]);
+
+    useEffect(() => {
+        if (!isAuthenticated || !driverId) return;
+        fetchOrders();
+        const interval = setInterval(fetchOrders, 30000);
+        return () => clearInterval(interval);
+    }, [isAuthenticated, driverId, fetchOrders]);
+
+    const fetchDedicatedSlots = useCallback(async () => {
+        try {
+            const declinedIds = JSON.parse(localStorage.getItem('Izi_declined_slots') || '[]');
+            const data = await fetchFromDB('dedicated_slots_delivery', 'select=*,admin_users(store_name,store_logo,store_address,store_phone),slot_applications(status)&is_active=eq.true&order=created_at.desc');
+            const available = (data || []).filter((s: any) => 
+                !declinedIds.includes(s.id) && 
+                !s.slot_applications?.some((app: any) => app.status === 'accepted')
+            );
+            setDedicatedSlots(available);
+        } catch (e) {}
+    }, [fetchFromDB]);
+
+    useEffect(() => {
+        if (!isAuthenticated || !driverId) return;
+        fetchDedicatedSlots();
+    }, [isAuthenticated, driverId, fetchDedicatedSlots]);
+        
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
 
-        const fetchOrders = async () => {
-            try {
-                // Busca ampla incluindo dados vivos do lojista. Sintaxe corrigida para garantir o JOIN.
-                const data = await fetchFromDB('orders_delivery', 'select=*,admin_users(store_name,store_address,latitude,longitude)&status=not.in.(concluido,cancelado)&order=created_at.desc&limit=20');
-                console.log('[POLL-DEBUG] Dados recebidos:', data?.length, 'primeiro item tem admin_users?', !!data?.[0]?.admin_users);
-                
-                const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
-                const now = Date.now();
-                const currentMission = activeMissionRef.current;
-
-                // 1. Sincronizar Missão Ativa (Se o Admin me deu um pedido ou aceitei em outro lugar)
-                const myAssignment = data.find((o: any) => 
-                    o.driver_id && String(o.driver_id).trim() === String(driverId).trim() &&
-                    !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)
-                );
-
-                if (myAssignment && (!currentMission || currentMission.realId !== myAssignment.id)) {
-                    const merchant = myAssignment.admin_users;
-                    const mission = { 
-                        ...myAssignment, 
-                        realId: myAssignment.id, 
-                        type: myAssignment.service_type, 
-                        customer: myAssignment.user_name || 'Cliente Izi',
-                        store_name: merchant?.store_name || myAssignment.store_name || 'Paladar Distribuidora',
-                        pickup_address: merchant?.store_address || myAssignment.pickup_address,
-                        origin: merchant?.store_address || myAssignment.pickup_address,
-                        pickup_lat: merchant?.latitude || myAssignment.pickup_lat,
-                        pickup_lng: merchant?.longitude || myAssignment.pickup_lng
-                    };
-                    console.log('[COLETA-DEBUG] Missão Ativa Sincronizada:', mission.pickup_address);
-                    setActiveMission(mission);
-                    localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
-                    if (activeTabRef.current !== 'active_mission') setActiveTab('active_mission');
-                }
-
-                // 2. Disponíveis no Dashboard
-                const available = data.filter((o: any) => {
-                    const isMerchantOrder = !!o.merchant_id || !!o.admin_users;
-                    const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted', 'confirmado', 'confirmed'].includes(o.status);
-                    const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'confirmado', 'confirmed'].includes(o.status);
-                    
-                    const statusOk = isMerchantOrder ? merchantAccepted : p2pAllowed;
-                    const notMyAssignment = !o.driver_id || String(o.driver_id).trim() === '';
-                    const notDeclined = !(now - (declinedMap[o.id] || 0) < 5000);
-                    const notFinancial = !['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'].includes(o.service_type);
-                    const notScheduled = !o.scheduled_at || o.driver_id === driverId; // Se for agendado e sem motorista, cai na lista de Agendamentos, nao aqui
-                    return statusOk && notMyAssignment && notDeclined && notFinancial && notScheduled;
-                });
-
-                setOrders(available.map((o: any) => {
-                    const merchant = o.admin_users;
-                    if (merchant) {
-                        console.log(`[COLETA-DEBUG] Loja: ${merchant.store_name} | Endereço: ${merchant.store_address} | Coords: ${merchant.latitude},${merchant.longitude}`);
-                    }
-                    return {
-                        ...o,
-                        id: o.id.slice(0, 8).toUpperCase(), 
-                        realId: o.id, 
-                        type: o.service_type, 
-                        origin: merchant?.store_address || o.pickup_address, 
-                        destination: o.delivery_address, 
-                        price: o.total_price,
-                        status: o.status,
-                        pickup_lat: merchant?.latitude || o.pickup_lat,
-                        pickup_lng: merchant?.longitude || o.pickup_lng,
-                        delivery_lat: o.delivery_lat,
-                        delivery_lng: o.delivery_lng,
-                        store_name: merchant?.store_name || o.store_name || 'Paladar Distribuidora',
-                        customer: 'Izi' 
-                    };
-                }));
-            } catch (err) {
-                console.warn('[POLL] Falha na rede:', err);
-            }
-        };
-
-        const fetchDedicatedSlots = async () => {
-            try {
-                const declinedIds = JSON.parse(localStorage.getItem('Izi_declined_slots') || '[]');
-                const data = await fetchFromDB('dedicated_slots_delivery', 'select=*,admin_users(store_name,store_logo,store_address,store_phone),slot_applications(status)&is_active=eq.true&order=created_at.desc');
-                const available = (data || []).filter((s: any) => 
-                    !declinedIds.includes(s.id) && 
-                    !s.slot_applications?.some((app: any) => app.status === 'accepted')
-                );
-                setDedicatedSlots(available);
-            } catch (e) {}
-        };
-        fetchOrders(); fetchDedicatedSlots();
-
-        // Polling a cada 5s para garantir que pedidos reapareçam ap³s rejeição
-        const pollInterval = setInterval(fetchOrders, 5000);
-        
         const channel = supabase.channel('realtime_orders')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders_delivery' }, (payload) => {
+                if (!isOnlineRef.current) return;
                 const o = payload.new;
                 if (o.scheduled_at) return;
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
@@ -1498,96 +1503,12 @@ function App() {
             })
             .subscribe();
 
-        return () => { clearInterval(pollInterval); supabase.removeChannel(channel); };
-    }, [isAuthenticated]); // Removido dependency de isOnline e driverId pois agora usamos Refs
+        return () => { supabase.removeChannel(channel); };
+    }, [isAuthenticated, driverId]);
 
     // O som agora é disparado DIRETAMENTE pelo listener Realtime (acima)
     // para maior precisão e evitar disparos duplicados ou atrasados.
 
-    const [isSyncing, setIsSyncing] = useState(false);
-    const handleManualSync = async () => {
-        if (isSyncing) return;
-        setIsSyncing(true);
-        console.group('[DEBUG-REST-SYNC]');
-        console.log('1. Iniciando teste de conexão via REST DIRETO...');
-
-        try {
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-            
-            console.log('2. URL Alvo:', `${supabaseUrl}/rest/v1/orders_delivery?select=*&limit=5`);
-
-            let token = supabaseKey;
-            try {
-                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
-                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
-            } catch(e) {}
-
-            // Fazendo a busca manualmente sem usar a biblioteca Supabase para evitar hangs
-            const response = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?select=*&order=created_at.desc&limit=10`, {
-                headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            console.log('3. Status da Resposta:', response.status, response.statusText);
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Erro na API: ${response.status} - ${errorText}`);
-            }
-
-            const allRecent = await response.json();
-            console.log('4. Dados recebidos com SUCESSO via REST!', allRecent.length, 'itens');
-            
-            if (!allRecent || allRecent.length === 0) {
-                toastError('O banco está vazio (vias REST).');
-                return;
-            }
-
-            // Filtros de exibição
-            const available = allRecent.filter((o: any) => 
-                !o.driver_id && 
-                !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)
-            );
-
-            setOrders(available.map((o: any) => ({ 
-                ...o,
-                id: o.id.slice(0, 8).toUpperCase(), 
-                realId: o.id, 
-                type: o.service_type, 
-                origin: o.pickup_address, 
-                destination: o.delivery_address, 
-                price: o.total_price, 
-                customer: 'REST: ' + o.status
-            })));
-
-            const myActive = allRecent.find((o: any) => 
-                o.driver_id && String(o.driver_id).trim() === String(driverId || '').trim() &&
-                !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)
-            );
-
-            if (myActive) {
-                console.log('5. Missão ativa encontrada via REST:', myActive.id);
-                const mission = { ...myActive, realId: myActive.id, type: myActive.service_type, customer: myActive.user_name || 'Cliente Izi' };
-                setActiveMission(mission);
-                localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
-                setActiveTab('active_mission');
-                toastSuccess('Conectado via REST! Missão recuperada.');
-            } else {
-                toastSuccess(`Conectado! ${available.length} chamadas via REST.`);
-            }
-
-        } catch (e: any) {
-            console.error('ERRO CRTICO NO REST SYNC:', e);
-            toastError('Falha na conexão rest: ' + e.message);
-        } finally {
-            console.groupEnd();
-            setIsSyncing(false);
-        }
-    };
 
 
 
@@ -2251,7 +2172,27 @@ const renderDashboard = () => (
 
                 <section className="space-y-6">
                     <div className="flex justify-between items-end">
-                        <h3 className="text-2xl font-bold text-white tracking-tight">Novos Pedidos</h3>
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-2xl font-bold text-white tracking-tight">Novos Pedidos</h3>
+                            <button 
+                                onClick={() => fetchOrders()}
+                                disabled={isSyncing || !isOnline}
+                                className={`size-10 flex items-center justify-center rounded-xl transition-all ${
+                                    isOnline 
+                                        ? isSyncing 
+                                            ? 'bg-yellow-400 text-black shadow-[inset_2px_2px_6px_rgba(255,255,255,0.5),inset_-2px_-2px_6px_rgba(0,0,0,0.2)]' 
+                                            : 'bg-neutral-800 text-neutral-400 shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.5)] hover:bg-neutral-700/80' 
+                                        : 'bg-neutral-900/50 text-neutral-700 cursor-not-allowed opacity-50'
+                                } border border-white/5 active:scale-90`}
+                            >
+                                <motion.div
+                                    animate={isSyncing ? { rotate: 360 } : { rotate: 0 }}
+                                    transition={isSyncing ? { repeat: Infinity, duration: 1.2, ease: "linear" } : { duration: 0.3 }}
+                                >
+                                    <Icon name="sync" size={20} />
+                                </motion.div>
+                            </button>
+                        </div>
                         <div className="flex items-center gap-2 bg-yellow-400/5 px-3 py-1 rounded-full border border-yellow-400/10">
                             <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
                             <p className="text-yellow-400 font-bold text-[10px] uppercase tracking-widest">Radar Ativo</p>
@@ -2275,58 +2216,70 @@ const renderDashboard = () => (
                                         key={order.id} 
                                         initial={{ opacity: 0, x: 50 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        className="flex-shrink-0 w-[320px] clay-card-dark p-0 h-auto relative overflow-hidden group border border-white/5"
+                                        className="flex-shrink-0 w-[350px] bg-neutral-900/90 rounded-[40px] p-0 h-auto relative overflow-hidden group border border-white/5"
+                                        style={{
+                                            boxShadow: 'inset 4px 4px 12px rgba(255, 255, 255, 0.03), inset -4px -4px 12px rgba(0, 0, 0, 0.5), 0 20px 40px rgba(0,0,0,0.4)'
+                                        }}
                                     >
                                         <div className="absolute -right-6 -top-6 opacity-10 transform rotate-12 group-hover:scale-110 transition-all duration-700">
-                                            <Icon name={presentation.details.icon} size={140} />
+                                            <Icon name={presentation.details.icon} size={160} />
                                         </div>
 
-                                        <div className="p-5 flex justify-between items-start border-b border-white/[0.03]">
-                                            <div className="space-y-1.5">
-                                                <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${presentation.details.bg} ${presentation.details.color}`}>
+                                        <div className="p-6 flex justify-between items-start border-b border-white/[0.03]">
+                                            <div className="space-y-2">
+                                                <div className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${presentation.details.bg} ${presentation.details.color}`}>
                                                     {presentation.details.label}
                                                 </div>
-                                                <div className="flex gap-1">
+                                                <div className="flex gap-1.5 flex-wrap">
                                                     {presentation.badges.map((badge, idx) => (
-                                                        <span key={idx} className="bg-white/5 text-white/40 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase">{badge}</span>
+                                                        <span key={idx} className="bg-white/5 text-white/50 text-[8px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter border border-white/5">{badge}</span>
                                                     ))}
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-[9px] text-white/30 font-black uppercase tracking-tighter">Você ganha</p>
-                                                <p className="text-2xl font-black text-yellow-400 italic">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
+                                                <p className="text-[10px] text-white/30 font-black uppercase tracking-tighter leading-none mb-1">Você ganha</p>
+                                                <p className="text-3xl font-black text-yellow-400 italic leading-none drop-shadow-lg">
+                                                    R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}
+                                                </p>
                                             </div>
                                         </div>
 
-                                        <div className="p-5 space-y-4">
-                                            <div className="space-y-3 relative">
-                                                <div className="absolute left-1.5 top-3 bottom-0 w-[1px] bg-gradient-to-b from-yellow-400/50 via-white/10 to-emerald-400/50" />
+                                        <div className="p-6 space-y-5">
+                                            <div className="space-y-4 relative">
+                                                <div className="absolute left-[7px] top-3 bottom-1 w-[1.5px] bg-gradient-to-b from-yellow-400/30 via-white/5 to-emerald-400/30" />
                                                 
                                                 <div className="flex items-start gap-4">
-                                                    <div className="size-3 rounded-full bg-yellow-400 flex-shrink-0 mt-1 shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
-                                                    <div className="min-w-0">
-                                                        <p className="text-[8px] text-white/30 font-black uppercase tracking-widest">{presentation.pickupLabel}</p>
-                                                        <p className="text-[11px] font-bold text-white/90 truncate italic">{presentation.pickupText || 'Origem não informada'}</p>
+                                                    <div className="size-4 rounded-full bg-yellow-400 flex-shrink-0 mt-1 shadow-[0_0_15px_rgba(250,204,21,0.6)] border-4 border-neutral-900" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-[9px] text-white/30 font-black uppercase tracking-[0.2em] mb-0.5">{presentation.pickupLabel}</p>
+                                                        {order.merchant_name && (
+                                                            <p className="text-[14px] font-black text-white italic leading-tight uppercase tracking-tight">{order.merchant_name}</p>
+                                                        )}
+                                                        <p className="text-[11px] font-bold text-neutral-400 truncate italic leading-relaxed">
+                                                            {presentation.pickupText || 'Endereço não informado'}
+                                                        </p>
                                                     </div>
                                                 </div>
 
                                                 <div className="flex items-start gap-4">
-                                                    <div className="size-3 rounded-full bg-emerald-400 flex-shrink-0 mt-1 shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
-                                                    <div className="min-w-0">
-                                                        <p className="text-[8px] text-white/30 font-black uppercase tracking-widest">{presentation.destinationLabel}</p>
-                                                        <p className="text-[11px] font-bold text-white/90 truncate italic">{presentation.destinationText || 'Destino não informado'}</p>
+                                                    <div className="size-4 rounded-full bg-emerald-400 flex-shrink-0 mt-1 shadow-[0_0_15px_rgba(52,211,153,0.6)] border-4 border-neutral-900" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-[9px] text-white/30 font-black uppercase tracking-[0.2em] mb-0.5">{presentation.destinationLabel}</p>
+                                                        <p className="text-[12px] font-black text-white/90 truncate italic uppercase leading-tight">
+                                                            {presentation.destinationText || 'Destino não informado'}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="p-4 pt-0 flex gap-2">
+                                        <div className="p-4 pt-0 flex gap-3">
                                             <button 
                                                 onClick={() => {
                                                     setSelectedOrder(order);
                                                     setShowOrderModal(true);
                                                 }}
-                                                className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl transition-all border border-white/5"
+                                                className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest rounded-3xl transition-all border border-white/5 active:scale-95"
                                             >
                                                 Detalhes
                                             </button>
@@ -2336,7 +2289,10 @@ const renderDashboard = () => (
                                                     handleAccept(order);
                                                 }}
                                                 disabled={isAccepting}
-                                                className="flex-[2] py-3.5 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-black font-black text-[10px] uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-yellow-400/10 active:scale-95 flex items-center justify-center gap-2"
+                                                className="flex-[2] py-4 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-black font-black text-[10px] uppercase tracking-widest rounded-3xl transition-all shadow-xl shadow-yellow-400/20 active:scale-95 flex items-center justify-center gap-2"
+                                                style={{
+                                                    boxShadow: 'inset 4px 4px 8px rgba(255,255,255,0.4), 0 10px 20px rgba(250,204,21,0.2)'
+                                                }}
                                             >
                                                 {isAcceptingThis ? (
                                                     <div className="size-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
@@ -3456,16 +3412,19 @@ const renderDashboard = () => (
 
                     {/* Detalhes do Pagamento */}
                     <section className="space-y-4">
-                        <h2 className="text-neutral-500 font-black text-[9px] uppercase tracking-[0.3em] px-2">Pagamento e Operação</h2>
+                        <h2 className="text-neutral-500 font-black text-[9px] uppercase tracking-[0.3em] px-2">Pagamento e Lucro</h2>
                         <div className="bg-neutral-900 rounded-[35px] p-8 border-l-4 border-yellow-400 space-y-6" style={sClayDark}>
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-3">
                                     <div className="size-10 rounded-xl bg-yellow-400/10 flex items-center justify-center">
                                         <Icon name="payments" size={20} className="text-yellow-400" />
                                     </div>
-                                    <span className="text-white/60 font-black text-[10px] uppercase tracking-widest">Taxa de Entrega</span>
+                                    <div className="flex flex-col">
+                                        <span className="text-white font-black text-xs uppercase tracking-tight italic">Seu Lucro na Corrida</span>
+                                        <span className="text-neutral-500 text-[9px] font-black uppercase tracking-widest">Líquido já com taxas</span>
+                                    </div>
                                 </div>
-                                <span className="text-yellow-400 text-3xl font-black italic tracking-tighter">R$ {driverEarnings.toFixed(2).replace('.', ',')}</span>
+                                <span className="text-yellow-400 text-3xl font-black italic tracking-tighter shadow-sm">R$ {driverEarnings.toFixed(2).replace('.', ',')}</span>
                             </div>
                             
                             <div className="h-px bg-white/5 w-full" />
@@ -3473,18 +3432,37 @@ const renderDashboard = () => (
                             <div className="flex flex-col gap-4">
                                 <div className="flex items-start gap-4">
                                      <div className="bg-yellow-400/10 p-2 rounded-xl">
-                                        <Icon name="credit_card" size={18} className="text-yellow-400" />
+                                        <Icon name={activeMission.payment_method === 'online' ? 'verified_user' : 'payments'} size={18} className="text-yellow-400" />
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex justify-between items-center">
-                                            <span className="text-white font-black text-xs uppercase italic">{activeMission.payment_method === 'online' ? 'Pagamento Direto App' : 'Pagamento no Local'}</span>
-                                            {activeMission.payment_status === 'paid' && (
-                                                <span className="bg-emerald-500/20 text-emerald-400 text-[8px] font-black px-2 py-1 rounded-full border border-emerald-500/20 uppercase">Pago</span>
+                                            <span className="text-white font-black text-xs uppercase italic">{activeMission.payment_method === 'online' ? 'Já Pago (Online)' : `Cobrar do Cliente (${paymentLabel})`}</span>
+                                            {(activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago') && (
+                                                <span className="bg-emerald-500/20 text-emerald-400 text-[8px] font-black px-2 py-1 rounded-full border border-emerald-500/20 uppercase">Liquidado</span>
                                             )}
                                         </div>
-                                        <p className="text-neutral-500 text-[10px] font-bold mt-1 uppercase tracking-tight">
-                                            {activeMission.payment_method === 'online' ? 'Não é necessário cobrar o cliente.' : `Cobrar R$ ${parseFloat(activeMission.total_price || 0).toFixed(2).replace('.', ',')} do cliente.`}
-                                        </p>
+                                        <div className="mt-2 space-y-1">
+                                            {!(activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago') && activeMission.payment_method !== 'online' ? (
+                                                <div className="bg-black/20 p-4 rounded-2xl border border-white/5 space-y-2">
+                                                    <div className="flex justify-between text-[10px] font-bold text-neutral-400">
+                                                        <span>Subtotal Pedido:</span>
+                                                        <span>R$ {(Number(activeMission.total_price || 0) - Number(activeMission.delivery_fee || 0)).toFixed(2).replace('.', ',')}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-[10px] font-bold text-neutral-400 pb-2 border-b border-white/5">
+                                                        <span>Taxa de Entrega:</span>
+                                                        <span>R$ {Number(activeMission.delivery_fee || 0).toFixed(2).replace('.', ',')}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-sm font-black text-white pt-1">
+                                                        <span className="uppercase italic tracking-tighter">Total a Cobrar:</span>
+                                                        <span className="text-yellow-400">R$ {parseFloat(activeMission.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="text-emerald-400/60 text-[10px] font-bold uppercase tracking-tight">
+                                                    Não é necessário cobrar no local. Receba seu lucro ao finalizar.
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -3778,65 +3756,92 @@ const renderDashboard = () => (
 
                     {/* Pagamento Section */}
                     <section className="space-y-3">
-                        <h2 className="text-neutral-400 font-bold text-sm uppercase tracking-widest px-2">Pagamento</h2>
-                        <div className={`bg-neutral-900 ${clayCardDark} rounded-xl p-6 border-l-4 border-yellow-400`}>
-                            <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-neutral-400 font-bold text-sm uppercase tracking-widest px-2">Pagamento e Operação</h2>
+                        
+                        <div className={`bg-neutral-900 ${clayCardDark} rounded-xl p-6 border-l-4 border-yellow-400 space-y-4`}>
+                            <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-3">
-                                    <Icon name="payments" className="text-yellow-400" />
-                                    <span className="text-white font-bold">Total a receber</span>
+                                    <Icon name="stars" className="text-yellow-400" />
+                                    <span className="text-white font-black text-xs uppercase tracking-tight">Seu Lucro Estimado</span>
                                 </div>
-                                <span className="text-yellow-400 text-2xl font-black">
-                                    R$ {(isPaid ? 0 : Number(selectedOrder.total_price || 0)).toFixed(2).replace('.', ',')}
+                                <span className="text-yellow-400 text-2xl font-black italic">
+                                    R$ {netEarnings.toFixed(2).replace('.', ',')}
                                 </span>
                             </div>
+
+                            <div className="h-px bg-white/5 w-full" />
+
+                            <div className="space-y-1">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-neutral-500 font-bold text-xs">Forma de Pagamento</span>
+                                    <span className="text-white font-black text-[10px] uppercase tracking-widest bg-white/5 px-2 py-1 rounded-md">{paymentLabel}</span>
+                                </div>
+                                
+                                <div className="mt-4">
+                                    {isPaid || selectedOrder.payment_method === 'online' ? (
+                                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-center gap-3">
+                                            <Icon name="verified" className="text-emerald-400" />
+                                            <p className="text-emerald-400 text-[10px] font-black uppercase tracking-tight">Pedido já pago. Não cobrar no local.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-black/30 rounded-xl p-4 space-y-2 border border-white/5">
+                                            <div className="flex justify-between text-[10px] font-bold text-neutral-500 uppercase tracking-tighter">
+                                                <span>Subtotal Itens:</span>
+                                                <span className="text-neutral-300">R$ {(Number(selectedOrder.total_price || 0) - Number(selectedOrder.delivery_fee || 0)).toFixed(2).replace('.', ',')}</span>
+                                            </div>
+                                            <div className="flex justify-between text-[10px] font-bold text-neutral-500 uppercase tracking-tighter pb-2 border-b border-white/5">
+                                                <span>Taxa de Entrega:</span>
+                                                <span className="text-neutral-300">R$ {Number(selectedOrder.delivery_fee || 0).toFixed(2).replace('.', ',')}</span>
+                                            </div>
+                                            <div className="flex justify-between items-end pt-1">
+                                                <span className="text-white font-black text-xs uppercase italic">Total a Cobrar</span>
+                                                <span className="text-yellow-400 text-xl font-black italic">R$ {Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             {needsChange && (
-                                <div className="bg-neutral-950/50 rounded-lg p-3 flex items-center gap-3">
-                                    <Icon name="account_balance_wallet" className="text-yellow-400/60" />
-                                    <p className="text-neutral-300 text-sm">Troco necessário para <span className="font-bold text-white">R$ {Number(selectedOrder.change_for || 0).toFixed(2).replace('.', ',')}</span></p>
+                                <div className="bg-neutral-950/50 rounded-xl p-4 flex items-center gap-3 border border-yellow-400/20">
+                                    <Icon name="account_balance_wallet" className="text-yellow-400" />
+                                    <p className="text-neutral-300 text-[11px] font-bold">
+                                        Troco para <span className="font-black text-white bg-yellow-400/20 px-1.5 py-0.5 rounded">R$ {Number(selectedOrder.change_for || 0).toFixed(2).replace('.', ',')}</span>
+                                    </p>
                                 </div>
                             )}
                         </div>
                     </section>
 
-                    {/* Detalhes Operacionais Group */}
-                    <section className={`bg-neutral-900 ${clayCard} rounded-xl border border-neutral-800/50 overflow-hidden`}>
-                        <div className="p-5 space-y-4">
-                            <h3 className="text-neutral-400 text-xs font-black uppercase tracking-[0.2em] mb-2">Detalhes Operacionais</h3>
-                            {/* Payment Logic */}
-                            <div className="flex items-start gap-4 p-4 bg-neutral-950/50 rounded-lg border border-neutral-800/30">
-                                <div className="bg-yellow-400/10 p-2 rounded-full">
-                                    <Icon name="payments" className="text-yellow-400" />
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-white font-bold">{paymentLabel}</span>
-                                        {isPaid && <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded uppercase">Pago</span>}
-                                    </div>
-                                    <p className="text-neutral-500 text-sm mt-1">
-                                        {selectedOrder.payment_method === 'online' || isPaid ? 'Não é necessário cobrar no local.' : `Cobrar R$ ${Number(selectedOrder.total_price || 0).toFixed(2).replace('.', ',')} no local.`}
-                                    </p>
-                                </div>
-                            </div>
+                    {/* Observações e Ações Group */}
+                    <section className={`bg-neutral-900 ${clayCard} rounded-[28px] border border-neutral-800/50 overflow-hidden`}>
+                        <div className="p-6 space-y-5">
+                            <h3 className="text-neutral-500 text-[9px] font-black uppercase tracking-[0.3em] mb-2 px-1">Notas da Missão</h3>
+                            
                             {/* Observations */}
-                            <div className="flex items-start gap-4 p-4 bg-neutral-950/50 rounded-lg border border-neutral-800/30">
-                                <div className="bg-yellow-400/10 p-2 rounded-full">
-                                    <Icon name="error_outline" className="text-yellow-400" />
+                            <div className="flex items-start gap-4 p-5 bg-neutral-950/50 rounded-2xl border border-neutral-800/30">
+                                <div className="bg-yellow-400/10 p-2.5 rounded-xl">
+                                    <Icon name="description" className="text-yellow-400" />
                                 </div>
                                 <div className="flex-1">
-                                    <span className="text-white font-bold">Observações</span>
-                                    <p className="text-neutral-400 text-sm mt-1 leading-relaxed italic">"{selectedOrder.notes || 'Sem observações especiais.'}"</p>
+                                    <span className="text-white font-black text-[11px] uppercase tracking-widest italic opacity-60">Instruções</span>
+                                    <p className="text-neutral-300 text-sm mt-1 leading-relaxed italic">"{selectedOrder.notes || 'Sem observações especiais dos produtos.'}"</p>
                                 </div>
                             </div>
                         </div>
+
                         {/* Quick Actions */}
                         <div className="grid grid-cols-2 border-t border-neutral-800/50">
-                            <button className="py-4 text-white font-bold flex items-center justify-center gap-2 hover:bg-neutral-800/50 active:scale-95 transition-all">
+                            <button className="py-5 text-white font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-neutral-800/50 active:scale-95 transition-all">
                                 <Icon name="chat" className="text-yellow-400" />
                                 Chat
                             </button>
-                            <button className="py-4 text-white font-bold flex items-center justify-center gap-2 border-l border-neutral-800/50 hover:bg-neutral-800/50 active:scale-95 transition-all">
+                            <button 
+                                onClick={() => window.open(`tel:${selectedOrder.customer_phone || selectedOrder.phone || ''}`)}
+                                className="py-5 text-white font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 border-l border-neutral-800/50 hover:bg-neutral-800/50 active:scale-95 transition-all"
+                            >
                                 <Icon name="call" className="text-yellow-400" />
-                                Ligar
+                                Central
                             </button>
                         </div>
                     </section>
