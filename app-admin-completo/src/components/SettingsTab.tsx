@@ -203,7 +203,11 @@ export default function SettingsTab() {
                 type="number"
                 step="0.01"
                 value={appSettings.baseFee}
-                onChange={(e) => setAppSettings({ ...appSettings, baseFee: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value) || 0;
+                  setAppSettings({ ...appSettings, baseFee: val });
+                  handleUpdateGlobalFinance('base_fee', val);
+                }}
               />
             </div>
           </div>
