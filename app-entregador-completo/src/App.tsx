@@ -1039,8 +1039,10 @@ function App() {
     useEffect(() => {
         if (!isAuthenticated) return;
         const fetchDedicatedSlotsRealtime = async () => {
-            const { data } = await supabase.from('dedicated_slots_delivery').select('*, admin_users(store_name, store_logo, store_address, store_phone)').eq('is_active', true).order('created_at', { ascending: false });
-            setDedicatedSlots(data || []);
+            const { data } = await supabase.from('dedicated_slots_delivery').select('*, admin_users(store_name, store_logo, store_address, store_phone), slot_applications(status)').eq('is_active', true).order('created_at', { ascending: false });
+            // Filtrar apenas vagas que NÃO possuem nenhum candidato aceito
+            const available = (data || []).filter((s: any) => !s.slot_applications?.some((app: any) => app.status === 'accepted'));
+            setDedicatedSlots(available);
         };
         fetchDedicatedSlotsRealtime();
         const slotsChannel = supabase.channel('dedicated_slots_realtime')
@@ -1056,6 +1058,7 @@ function App() {
             .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'dedicated_slots_delivery' }, (payload) => {
                 setDedicatedSlots(prev => prev.filter((s: any) => s.id !== (payload.old as any).id));
             })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'slot_applications' }, fetchDedicatedSlotsRealtime)
             .subscribe();
         return () => { supabase.removeChannel(slotsChannel); };
     }, [isAuthenticated]);
@@ -1229,8 +1232,12 @@ function App() {
         const fetchDedicatedSlots = async () => {
             try {
                 const declinedIds = JSON.parse(localStorage.getItem('Izi_declined_slots') || '[]');
-                const data = await fetchFromDB('dedicated_slots_delivery', 'select=*,admin_users(store_name,store_logo,store_address,store_phone)&is_active=eq.true&order=created_at.desc');
-                setDedicatedSlots((data || []).filter((s: any) => !declinedIds.includes(s.id)));
+                const data = await fetchFromDB('dedicated_slots_delivery', 'select=*,admin_users(store_name,store_logo,store_address,store_phone),slot_applications(status)&is_active=eq.true&order=created_at.desc');
+                const available = (data || []).filter((s: any) => 
+                    !declinedIds.includes(s.id) && 
+                    !s.slot_applications?.some((app: any) => app.status === 'accepted')
+                );
+                setDedicatedSlots(available);
             } catch (e) {}
         };
         fetchOrders(); fetchDedicatedSlots();
@@ -1745,16 +1752,24 @@ function App() {
             }
 
             let todaySum = 0; let weeklySum = 0; let totalGanhos = 0; let missionCount = 0;
-            if (orders) { setHistory(orders);
-                const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
-                const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate() - (startOfWeek.getDay() || 7) + 1); startOfWeek.setHours(0,0,0,0);
-                missionCount = orders.length;
-                orders.forEach((o: any) => {
-                    const fee = getNetEarnings(o);
-                    totalGanhos += fee;
-                    if (new Date(o.created_at) >= startOfDay) todaySum += fee;
-                    if (new Date(o.created_at) >= startOfWeek) weeklySum += fee;
+            const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+            const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate() - (startOfWeek.getDay() || 7) + 1); startOfWeek.setHours(0, 0, 0, 0);
+
+            if (txs) {
+                txs.forEach((t: any) => {
+                    const tDate = new Date(t.created_at);
+                    const amount = Number(t.amount);
+                    if (['venda', 'vaga_dedicada', 'bonus', 'deposito', 'reembolso'].includes(t.type)) {
+                        totalGanhos += amount;
+                        if (tDate >= startOfDay) todaySum += amount;
+                        if (tDate >= startOfWeek) weeklySum += amount;
+                    }
                 });
+            }
+
+            if (orders) { 
+                setHistory(orders);
+                missionCount = orders.length;
             }
 
             const totalXp = missionCount * 15;
@@ -2326,7 +2341,21 @@ const renderDashboard = () => (
                         </h1>
                     </div>
                 </header>
-
+                
+                {/* Estilos Claymorphism */}
+                {(() => {
+                    const sClayDark: React.CSSProperties = {
+                        background: '#121212',
+                        borderRadius: '2.5rem',
+                        boxShadow: '8px 8px 16px rgba(0,0,0,0.6), inset 4px 4px 8px rgba(255,255,255,0.02), inset -4px -4px 8px rgba(0,0,0,0.8)',
+                    };
+                    const sClayIcon: React.CSSProperties = {
+                        background: '#1A1A1A',
+                        boxShadow: '4px 4px 8px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(255,255,255,0.02)',
+                    };
+                
+                    return (
+                        <>
                 <main className="pt-24 px-6 space-y-8 overflow-y-auto pb-40 no-scrollbar">
                      <div className="clay-card-yellow p-8 text-black relative overflow-hidden">
                         <div className="absolute -right-4 -top-4 opacity-10 transform rotate-12">
@@ -2378,15 +2407,30 @@ const renderDashboard = () => (
                             </div>
                         </div>
                      </div>
-                     <div className="bg-zinc-900/50 p-6 rounded-[32px] border border-white/5 backdrop-blur-md">
-                        <div className="flex items-center gap-3 mb-4">
-                            <Icon name="info" size={20} className="text-yellow-400" />
-                            <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Regras do Agendamento</h4>
+                     <div className="p-8 border border-white/5 backdrop-blur-md" style={sClayDark}>
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="size-10 rounded-xl flex items-center justify-center border border-white/5" style={sClayIcon}>
+                                <Icon name="info" size={18} className="text-yellow-400" />
+                            </div>
+                            <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Regras do Agendamento</h4>
                         </div>
-                        <ul className="space-y-3">
-                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">•</span> Comparecer ao local com 15 min de antecedência.</li>
-                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">•</span> Estar com bateria do celular acima de 80%.</li>
-                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">•</span> Traje profissional e baú limpo.</li>
+                        <ul className="space-y-4">
+                            <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed font-italic uppercase tracking-tight">
+                                <span className="text-yellow-400 font-black">•</span> 
+                                Comparecer ao local com 15 min de antecedência.
+                            </li>
+                            <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed font-italic uppercase tracking-tight">
+                                <span className="text-yellow-400 font-black">•</span> 
+                                Estar com bateria do celular acima de 80%.
+                            </li>
+                            <li className="flex gap-4 text-xs text-white/50 font-bold items-start line-clamp-2 leading-relaxed font-italic uppercase tracking-tight">
+                                <span className="text-yellow-400 font-black">•</span> 
+                                Traje profissional e baú limpo.
+                            </li>
+                            <li className="flex gap-4 text-xs text-yellow-400/70 font-black items-start italic leading-relaxed uppercase tracking-tight">
+                                <span className="text-yellow-400 font-black">•</span> 
+                                O início da missão só é liberado no horário exato.
+                            </li>
                         </ul>
                      </div>
                 </main>
@@ -2416,25 +2460,48 @@ const renderDashboard = () => (
                             Confirmar Escala Agora
                         </button>
                     ) : isMine ? (
-                        <button 
-                            onClick={() => {
-                                // Ao iniciar um agendamento, ele se torna a missão ativa
-                                const mission = { 
-                                    ...order, 
-                                    realId: order.id,
-                                    type: order.service_type || 'generic',
-                                    customer: 'Cliente Izi'
-                                };
-                                setActiveMission(mission);
-                                localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
-                                setSelectedScheduledOrder(null);
-                                setActiveTab('active_mission');
-                            }}
-                            className="w-full h-20 bg-emerald-500 text-white rounded-[28px] font-black text-xl uppercase tracking-tighter shadow-[0_20px_40px_rgba(16,185,129,0.3)] active:scale-95 transition-all flex items-center justify-center gap-3"
-                        >
-                            <Icon name="play_arrow" size={32} />
-                            Iniciar Missão
-                        </button>
+                        (() => {
+                            const now = new Date();
+                            const scheduledDate = new Date(order.scheduled_at);
+                            // Permite iniciar a partir do horário exato do agendamento
+                            const canStartVisible = now.getTime() >= scheduledDate.getTime();
+                            
+                            if (!canStartVisible) {
+                                return (
+                                    <div className="w-full h-20 border border-white/5 flex flex-col items-center justify-center gap-1 backdrop-blur-md opacity-70" style={sClayDark}>
+                                        <div className="flex items-center gap-2">
+                                            <Icon name="schedule" className="text-yellow-400" size={18} />
+                                            <span className="text-yellow-400 font-bold uppercase tracking-widest text-[11px]">Início Bloqueado</span>
+                                        </div>
+                                        <p className="text-[10px] font-black text-white/50 uppercase tracking-tighter italic">
+                                            Disponível em {scheduledDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h do dia {scheduledDate.getDate()}/{scheduledDate.getMonth()+1}
+                                        </p>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <button 
+                                    onClick={() => {
+                                        // Ao iniciar um agendamento, ele se torna a missão ativa
+                                        const mission = { 
+                                            ...order, 
+                                            realId: order.id,
+                                            type: order.service_type || 'generic',
+                                            customer: 'Cliente Izi'
+                                        };
+                                        setActiveMission(mission);
+                                        localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
+                                        setSelectedScheduledOrder(null);
+                                        setActiveTab('active_mission');
+                                    }}
+                                    className="w-full h-20 bg-emerald-500 text-white rounded-[28px] font-black text-xl uppercase tracking-tighter shadow-[0_20px_40px_rgba(16,185,129,0.3)] active:scale-95 transition-all flex items-center justify-center gap-3"
+                                >
+                                    <Icon name="play_arrow" size={32} />
+                                    Iniciar Missão
+                                </button>
+                            );
+                        })()
                     ) : isAccepted ? (
                         <div className="w-full h-20 rounded-[28px] border-2 border-emerald-500/30 bg-emerald-500/10 flex items-center justify-center gap-3 backdrop-blur-md">
                             <Icon name="verified" className="text-emerald-400" size={28} />
@@ -2449,6 +2516,9 @@ const renderDashboard = () => (
                         </button>
                     )}
                 </div>
+                        </>
+                    );
+                })()}
             </motion.div>
         );
     };
@@ -3085,8 +3155,6 @@ const renderDashboard = () => (
         </motion.div>
     );
 
-    const [isMapOnly, setIsMapOnly] = useState(false);
-
     const renderActiveMissionView = () => {
         if (!activeMission) {
             return (
@@ -3116,7 +3184,6 @@ const renderDashboard = () => (
         }
 
         const isMobility = activeMission.type === 'mototaxi' || activeMission.type === 'car_ride';
-        
         const getOrderItems = () => {
             if (activeMission.items && Array.isArray(activeMission.items)) return activeMission.items;
             const address = activeMission.delivery_address || activeMission.destination || '';
@@ -3141,195 +3208,222 @@ const renderDashboard = () => (
         };
 
         const statusDisplay = getStatusDisplay();
-
         const orderItems = getOrderItems();
         const rawAddr = (activeMission.delivery_address || activeMission.destination || '');
         let addressOnly = rawAddr.split('| ITENS:')[0].trim();
-        if (addressOnly && !addressOnly.toLowerCase().includes('brumadinho')) {
-            addressOnly += ', Brumadinho - MG, Brasil';
-        } else if (addressOnly && !addressOnly.toLowerCase().includes('brasil')) {
-            addressOnly += ', Brasil';
-        }
+        if (addressOnly && !addressOnly.toLowerCase().includes('brumadinho')) { addressOnly += ', Brumadinho - MG'; }
 
         let pickupOnly = (activeMission.origin || activeMission.pickup_address || '').split('| ITENS:')[0].trim();
-        if (pickupOnly && !pickupOnly.toLowerCase().includes('brumadinho')) {
-            pickupOnly += ', Brumadinho - MG, Brasil';
-        } else if (pickupOnly && !pickupOnly.toLowerCase().includes('brasil')) {
-            pickupOnly += ', Brasil';
-        }        return (
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="fixed inset-0 z-[100] bg-[#020617] flex flex-col overflow-hidden">
-                <header className="relative z-50 flex items-center justify-between px-6 pt-12 pb-6 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5">
-                    <button 
-                        onClick={() => setActiveTab('dashboard')}
-                        className="size-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-white active:scale-90 transition-all shadow-xl"
-                    >
-                        <Icon name="arrow_back" />
+        if (pickupOnly && !pickupOnly.toLowerCase().includes('brumadinho')) { pickupOnly += ', Brumadinho - MG'; }
+
+        const getMainBtnData = () => {
+            const s = activeMission.status || '';
+            if (['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando', 'aceito', 'atribuido', 'accepted', 'waiting_driver', 'pending'].includes(s)) 
+                return { label: 'Ir para a Coleta', action: () => handleUpdateStatus('chegou_coleta'), icon: 'navigation' };
+            if (['chegou_coleta', 'no_local_coleta'].includes(s) || activeMission.status === 'pronto') 
+                return { label: 'Confirmar Coleta', action: () => handleUpdateStatus('picked_up'), icon: 'package_2' };
+            if (s === 'picked_up') 
+                return { label: 'Iniciar Entrega', action: () => handleUpdateStatus('a_caminho'), icon: 'moped' };
+            if (s === 'a_caminho' || s === 'em_rota') 
+                return { label: 'Tô no Destino', action: () => handleUpdateStatus('no_local'), icon: 'person_pin_circle' };
+            if (s === 'no_local' || s === 'saiu_para_entrega') 
+                return { label: isMobility ? 'Encerrar Corrida' : 'Finalizar Entrega', action: () => handleUpdateStatus('concluido'), icon: 'check_circle' };
+            return { label: 'Ir Para a Coleta', action: () => {}, icon: 'arrow_forward' };
+        };
+
+        const btn = getMainBtnData();
+        const driverEarnings = getNetEarnings(activeMission);
+
+        const sClayDark: React.CSSProperties = {
+            background: '#121212',
+            boxShadow: 'inset 2px 2px 8px rgba(255, 255, 255, 0.05), inset -2px -2px 8px rgba(0, 0, 0, 0.4)',
+        };
+        const sClayYellow: React.CSSProperties = {
+            boxShadow: 'inset 4px 4px 10px rgba(255, 255, 255, 0.4), inset -4px -4px 10px rgba(0, 0, 0, 0.1)',
+        };
+
+        return (
+            <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="fixed inset-0 z-[100] bg-[#0c0f10] flex flex-col overflow-hidden text-[#f5f6f7]">
+                {/* TopAppBar */}
+                <header className="bg-neutral-950/70 backdrop-blur-xl fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 border-b border-white/5">
+                    <button onClick={() => setActiveTab('dashboard')} className="active:scale-95 transition-transform duration-200 hover:bg-neutral-800/50 p-2 rounded-full flex items-center justify-center">
+                        <Icon name="arrow_back" className="text-yellow-400" />
                     </button>
-                    <div className="text-right">
-                        <div className="flex items-center justify-end gap-2 mb-1">
-                            <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.4em]">Missão Ativa</p>
-                            <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        </div>
-                        <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">
-                            #{activeMission.realId?.slice(0,8).toUpperCase()}
-                        </h2>
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/5 shadow-inner">
-                            <Icon name={statusDisplay.icon} size={10} className={`${statusDisplay.color}`} />
-                            <span className={`text-[8px] font-black uppercase tracking-widest ${statusDisplay.color}`}>{statusDisplay.label}</span>
-                        </div>
-                    </div>
+                    <h1 className="text-yellow-400 font-bold tracking-tight text-lg uppercase italic">Missão em Andamento</h1>
+                    <button className="active:scale-95 transition-transform duration-200 hover:bg-neutral-800/50 p-2 rounded-full flex items-center justify-center">
+                        <Icon name="more_vert" className="text-yellow-400" />
+                    </button>
                 </header>
 
-                <div className="flex-1 overflow-y-auto no-scrollbar p-8 pb-40 space-y-8">
-                    {activeMission.preparation_status === 'pronto' && (
-                        <motion.div 
-                            initial={{ scale: 0.9, opacity: 0 }} 
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="bg-gradient-to-r from-emerald-500 to-teal-500 p-[1px] rounded-[35px] shadow-[0_20px_40px_rgba(16,185,129,0.2)]"
-                        >
-                            <div className="bg-[#030712]/90 backdrop-blur-xl rounded-[34px] p-6 flex items-center gap-5">
-                                <div className="size-14 rounded-[22px] bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center relative overflow-hidden">
-                                    <motion.div 
-                                        animate={{ x: [-40, 60] }}
-                                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                                        className="absolute inset-0 w-8 bg-white/20 skew-x-12 blur-md"
-                                    />
-                                    <Icon name="check" size={24} className="text-black font-black" />
-                                </div>
-                                <div>
-                                    <h4 className="text-base font-black text-emerald-400 uppercase tracking-tight">Pedido está Pronto!</h4>
-                                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Pode retirar no estabelecimento</p>
-                                </div>
+                <main className="flex-1 overflow-y-auto pt-24 px-4 pb-40 space-y-8 no-scrollbar">
+                    {/* Status & Identity */}
+                    <section className="bg-neutral-900 rounded-[32px] p-6 flex items-center gap-4 border border-neutral-800/50" style={sClayDark}>
+                        <div className="relative">
+                            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.2)] bg-zinc-800 flex items-center justify-center">
+                                <Icon name="person" size={32} className="text-white/20" />
                             </div>
-                        </motion.div>
+
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h2 className="text-lg font-black text-white tracking-tight truncate">{driverName}</h2>
+                            <p className="text-yellow-400/80 font-bold text-[10px] flex items-center gap-1 uppercase tracking-widest">
+                                <Icon name="stars" size={12} />
+                                Nível {stats.level}
+                            </p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-neutral-500 text-[8px] uppercase tracking-widest font-black">Hoje</p>
+                            <p className="text-xl font-black text-yellow-400 italic">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                    </section>
+
+                    {/* Route Details - Map Section */}
+                    <section className="relative rounded-[40px] overflow-hidden h-52 bg-neutral-800 shadow-2xl group border border-white/5">
+                        <img alt="Map" className="w-full h-full object-cover opacity-60 grayscale brightness-50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8tC-1KmGTzsVyocvSlvHVwK4QILUSYQmQqs4seBdKXmXSggP094WuI33uogqXon3XnCuk-W1mmHlUDASG4c7aMEvu8lUTQLope6XV0C2Y4i__azso3rFhm-rm8_ENRNu6QkQYOC7qN5i8L7zcuXjIqBjxZI5ax4tORU_CXPHFhBBJkAj0fLRpiVSOb6-Dnkg5uypCgzaXsQnG9LqOBmA45nrGWd0x3Gzsp9ZkHWjnfISNmRMgbxKgGvvIJ891Wj9oZQpxf5SW2hc"/>
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0c0f10] via-transparent to-transparent"></div>
+                        
+                        <button 
+                             onClick={() => {
+                                const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega';
+                                const lat = isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat;
+                                const lng = isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng;
+                                const addr = isDeliveryPhase ? addressOnly : pickupOnly;
+                                const destination = (lat && lng) ? `${lat},${lng}` : encodeURIComponent(addr);
+                                window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
+                            }}
+                            className="absolute top-4 right-4 size-12 bg-yellow-400 rounded-2xl flex items-center justify-center shadow-xl active:scale-90 transition-all z-20"
+                        >
+                            <Icon name="navigation" size={24} className="text-black" />
+                        </button>
+
+                        <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end">
+                            <div className="bg-neutral-950/80 backdrop-blur-xl p-4 rounded-3xl border border-white/5 max-w-[70%]">
+                                <p className="text-neutral-500 text-[8px] font-black uppercase tracking-widest mb-1">Passo Atual</p>
+                                <p className="text-white font-black text-xs leading-tight line-clamp-2 italic">
+                                    {(activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho') ? addressOnly : pickupOnly}
+                                </p>
+                            </div>
+                            <div className="bg-yellow-400 px-4 py-2.5 rounded-full font-black text-xs text-black flex items-center gap-2 shadow-lg" style={sClayYellow}>
+                                <Icon name="route" size={16} />
+                                {(parseFloat(activeMission.distance_km || '0')).toFixed(1)} KM
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Itens do Pedido */}
+                    {orderItems.length > 0 && (
+                        <section className="space-y-4">
+                            <div className="flex justify-between items-end px-2">
+                                <h2 className="text-neutral-500 font-black text-[9px] uppercase tracking-[0.3em]">Itens do Pedido</h2>
+                                <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest">{orderItems.length} Itens</span>
+                            </div>
+                            <div className="grid gap-3">
+                                {orderItems.map((item: any, idx: number) => (
+                                    <div key={idx} className="bg-neutral-900 clay-card-dark rounded-3xl p-5 flex items-center gap-4 border border-neutral-800/50" style={sClayDark}>
+                                        <div className="w-14 h-14 relative flex-shrink-0">
+                                            <div className="w-full h-full bg-neutral-950 rounded-2xl flex items-center justify-center border border-white/5">
+                                                <Icon name={isMobility ? 'person' : 'package_2'} className="text-white/20" size={28} />
+                                            </div>
+                                            {(item.quantity > 1) && (
+                                                <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-lg border-2 border-neutral-900">{item.quantity}x</span>
+                                            )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <span className="text-white font-black text-[13px] block truncate italic uppercase">{item.name}</span>
+                                            {item.options && <span className="text-neutral-500 text-[10px] font-bold italic truncate block">{item.options}</span>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
                     )}
 
-                    <div className="space-y-6">
-                        <div className="bg-zinc-900 border-none rounded-[40px] p-8 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)] relative">
-                            <button 
-                                onClick={() => {
-                                    const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega';
-                                    const lat = isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat;
-                                    const lng = isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng;
-                                    const addr = isDeliveryPhase ? addressOnly : pickupOnly;
-                                    const destination = (lat && lng) ? `${lat},${lng}` : encodeURIComponent(addr);
-                                    window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
-                                }}
-                                className="absolute right-6 top-6 size-12 bg-primary rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all z-20"
-                            >
-                                <Icon name="navigation" size={20} className="text-black" />
-                            </button>
-
-                            <div className="space-y-8 relative">
-                                <div className="absolute left-[13px] top-8 bottom-8 w-[2px] bg-white/5" />
-                                
-                                <div className="flex gap-5">
-                                    <div className="size-7 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center relative z-10"><div className="size-2 bg-blue-400 rounded-full" /></div>
-                                    <div className="flex-1">
-                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Ponto de Coleta</p>
-                                        <p className="text-xs font-bold text-white tracking-tight leading-relaxed">{pickupOnly}</p>
+                    {/* Detalhes do Pagamento */}
+                    <section className="space-y-4">
+                        <h2 className="text-neutral-500 font-black text-[9px] uppercase tracking-[0.3em] px-2">Pagamento e Operação</h2>
+                        <div className="bg-neutral-900 rounded-[35px] p-8 border-l-4 border-yellow-400 space-y-6" style={sClayDark}>
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="size-10 rounded-xl bg-yellow-400/10 flex items-center justify-center">
+                                        <Icon name="payments" size={20} className="text-yellow-400" />
                                     </div>
+                                    <span className="text-white/60 font-black text-[10px] uppercase tracking-widest">Taxa de Entrega</span>
                                 </div>
+                                <span className="text-yellow-400 text-3xl font-black italic tracking-tighter">R$ {driverEarnings.toFixed(2).replace('.', ',')}</span>
+                            </div>
+                            
+                            <div className="h-px bg-white/5 w-full" />
 
-                                <div className="flex gap-5">
-                                    <div className="size-7 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center relative z-10"><div className="size-2 bg-emerald-400 rounded-full" /></div>
-                                    <div className="flex-1">
-                                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Destino Final</p>
-                                        <p className="text-xs font-bold text-white tracking-tight leading-relaxed">{addressOnly}</p>
+                            <div className="flex flex-col gap-4">
+                                <div className="flex items-start gap-4">
+                                     <div className="bg-yellow-400/10 p-2 rounded-xl">
+                                        <Icon name="credit_card" size={18} className="text-yellow-400" />
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-zinc-900 border-none rounded-[40px] p-8 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
-                            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-6">Valores da Missão</p>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-3xl">
-                                    <p className="text-[8px] font-black text-white/20 uppercase tracking-tighter mb-1">Seu Ganho</p>
-                                    <p className="text-xl font-black text-primary">R$ {parseFloat(activeMission.delivery_fee || '0').toFixed(2)}</p>
-                                </div>
-                                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-3xl">
-                                    <p className="text-[8px] font-black text-white/20 uppercase tracking-tighter mb-1">Distância</p>
-                                    <p className="text-xl font-black text-white">{(parseFloat(activeMission.distance_km || '0')).toFixed(1)} km</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {orderItems.length > 0 && (
-                            <div className="bg-zinc-900 border-none rounded-[40px] p-8 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
-                                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-4">Lista de Itens</p>
-                                <div className="space-y-3">
-                                    {orderItems.map((item: any, idx: number) => (
-                                        <div key={idx} className="flex justify-between items-center text-xs font-bold text-white/60">
-                                            <span>• {item.quantity ? `${item.quantity}x ` : ''}{item.name}</span>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-white font-black text-xs uppercase italic">{activeMission.payment_method === 'online' ? 'Pagamento Direto App' : 'Pagamento no Local'}</span>
+                                            {activeMission.payment_status === 'paid' && (
+                                                <span className="bg-emerald-500/20 text-emerald-400 text-[8px] font-black px-2 py-1 rounded-full border border-emerald-500/20 uppercase">Pago</span>
+                                            )}
                                         </div>
-                                    ))}
+                                        <p className="text-neutral-500 text-[10px] font-bold mt-1 uppercase tracking-tight">
+                                            {activeMission.payment_method === 'online' ? 'Não é necessário cobrar o cliente.' : `Cobrar R$ ${parseFloat(activeMission.total_price || 0).toFixed(2).replace('.', ',')} do cliente.`}
+                                        </p>
+                                    </div>
                                 </div>
+
+                                {activeMission.observations && (
+                                    <div className="flex items-start gap-4 bg-neutral-950/40 p-5 rounded-3xl border border-white/5">
+                                        <Icon name="error_outline" size={18} className="text-yellow-400 shrink-0" />
+                                        <p className="text-neutral-400 text-[11px] leading-relaxed italic font-medium">"{activeMission.observations}"</p>
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
-                </div>
+                        </div>
+                    </section>
 
-                <div className="absolute bottom-[90px] left-0 right-0 p-8 pb-6 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent pt-20 pointer-events-none">
-                    <div className="pointer-events-auto w-full space-y-3">
-                        {(['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando', 'aceito', 'atribuido', 'accepted', 'waiting_driver', 'pending'].includes(activeMission.status || '')) && (
+                    {/* Quick Actions */}
+                    <section className="bg-neutral-900 rounded-[35px] border border-neutral-800/50 overflow-hidden" style={sClayDark}>
+                        <div className="grid grid-cols-2">
                             <button 
-                                onClick={() => handleUpdateStatus('chegou_coleta')} 
-                                disabled={isAccepting}
-                                className="w-full h-20 bg-blue-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(37,99,235,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none disabled:opacity-50"
+                                onClick={() => toastSuccess('Chat em breve!')}
+                                className="py-6 text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-neutral-800/50 active:scale-95 transition-all border-r border-white/5"
                             >
-                                <Icon name="location_on" /> 
-                                {isAccepting ? 'Atualizando...' : 'Cheguei na Coleta'}
+                                <Icon name="chat" size={20} className="text-yellow-400" />
+                                Chat
                             </button>
-                        )}
+                            <button 
+                                onClick={() => window.open(`tel:${activeMission.customer_phone || activeMission.phone || ''}`)}
+                                className="py-6 text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-neutral-800/50 active:scale-95 transition-all"
+                            >
+                                <Icon name="call" size={20} className="text-yellow-400" />
+                                Ligar
+                            </button>
+                        </div>
+                    </section>
 
-                        {(['chegou_coleta', 'no_local_coleta'].includes(activeMission.status || '') || activeMission.status === 'pronto') && (
-                            <button 
-                                onClick={() => handleUpdateStatus('picked_up')} 
-                                disabled={isAccepting}
-                                className="w-full h-20 bg-emerald-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(5,150,105,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none disabled:opacity-50"
-                            >
-                                <Icon name="package_2" /> 
-                                {isAccepting ? 'Atualizando...' : 'Confirmar Coleta'}
-                            </button>
-                        )}
+                    {/* Botão de Cancelamento Discreto */}
+                     {['a_caminho_coleta', 'saiu_para_coleta', 'aceito', 'confirmado'].includes(activeMission.status || '') && (
+                        <button 
+                            onClick={async () => { if (await showConfirm({ message: 'Deseja realmente cancelar esta missão?' })) handleUpdateStatus('cancelado'); }}
+                            className="w-full py-4 text-red-500/30 text-[9px] font-black uppercase tracking-[0.4em] hover:text-red-500/50 transition-colors"
+                        >
+                            Cancelar Missão Ativa
+                        </button>
+                    )}
+                </main>
 
-                        {activeMission.status === 'picked_up' && (
-                            <button 
-                                onClick={() => handleUpdateStatus('a_caminho')} 
-                                className="w-full h-20 bg-primary text-slate-950 font-black text-base uppercase tracking-widest rounded-[40px] shadow-[0_15px_35px_rgba(250,204,21,0.25),inset_4px_4px_10px_rgba(255,255,255,0.6),inset_-4px_-4px_10px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
-                            >
-                                <Icon name="moped" /> Iniciar Entrega
-                            </button>
-                        )}
-
-                        {(activeMission.status === 'a_caminho' || activeMission.status === 'em_rota') && (
-                            <button 
-                                onClick={() => handleUpdateStatus('no_local')} 
-                                className="w-full h-20 bg-blue-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(37,99,235,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
-                            >
-                                <Icon name="person_pin_circle" /> Tô no Destino
-                            </button>
-                        )}
-
-                        {(activeMission.status === 'no_local' || activeMission.status === 'saiu_para_entrega') && (
-                            <button 
-                                onClick={() => handleUpdateStatus('concluido')} 
-                                className="w-full h-20 bg-emerald-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(5,150,105,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
-                            >
-                                <Icon name="check_circle" /> {isMobility ? 'Encerrar Corrida' : 'Finalizar Entrega'}
-                            </button>
-                        )}
-
-                        {['a_caminho_coleta', 'saiu_para_coleta', 'aceito'].includes(activeMission.status || '') && (
-                            <button 
-                                onClick={async () => { if (await showConfirm({ message: 'Cancelar missão?' })) handleUpdateStatus('cancelado'); }}
-                                className="w-full py-2 text-red-500/40 text-[9px] font-black uppercase tracking-[0.4em]"
-                            >
-                                Cancelar Missão
-                            </button>
-                        )}
-                    </div>
+                {/* Bottom Fixed Action Button Container */}
+                <div className="fixed bottom-0 left-0 w-full p-8 bg-gradient-to-t from-[#0c0f10] via-[#0c0f10] to-transparent z-[110]">
+                    <button 
+                        onClick={btn.action}
+                        disabled={isAccepting}
+                        className="w-full h-20 bg-yellow-400 py-6 rounded-full flex items-center justify-center gap-4 active:scale-[0.97] transition-all shadow-[0_20px_60px_rgba(250,204,21,0.3)] disabled:opacity-50" 
+                        style={sClayYellow}
+                    >
+                        <span className="text-black font-black text-xl tracking-tighter uppercase italic">{isAccepting ? 'Sincronizando...' : btn.label}</span>
+                        <Icon name={isAccepting ? 'sync' : btn.icon} className={`text-black font-black ${isAccepting ? 'animate-spin' : ''}`} size={28} />
+                    </button>
                 </div>
             </motion.div>
         );
