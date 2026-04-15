@@ -427,6 +427,9 @@ const getServicePresentation = (order: any) => {
 };
 
 function App() {
+    const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+    const { isLoaded } = useJsApiLoader({ id: GOOGLE_MAPS_ID, googleMapsApiKey: mapsKey, libraries: GOOGLE_MAPS_LIBRARIES, language: 'pt-BR', region: 'BR' });
+
     const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('izi_driver_authenticated') === 'true');
     const [driverId, setDriverId] = useState<string | null>(() => localStorage.getItem('izi_driver_uid'));
     const [driverCoords, setDriverCoords] = useState<{lat: number, lng: number} | null>(null);
@@ -520,6 +523,7 @@ function App() {
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [calculatedDistance, setCalculatedDistance] = useState<string | null>(null);
+    const [modalDirections, setModalDirections] = useState<google.maps.DirectionsResult | null>(null);
     const [merchantCoords, setMerchantCoords] = useState<{lat: number, lng: number} | null>(null);
     const [stats, setStats] = useState({ balance: 0, today: 0, weekly: 0, totalEarnings: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
     const [earningsHistory, setEarningsHistory] = useState<Order[]>([]);
@@ -599,36 +603,49 @@ function App() {
         }
     }, [isOnline]);
     
-    // Efeito para calcular distância quando um pedido é selecionado
+    // Efeito para calcular distância e rota quando um pedido é selecionado
     useEffect(() => {
         if (!selectedOrder || !showOrderModal) {
             setCalculatedDistance(null);
+            setModalDirections(null);
             return;
         }
 
-        const fetchDistance = async () => {
+        const fetchDistanceAndRoute = async () => {
             try {
                 if (!window.google || !driverCoords) return;
                 
-                const service = new google.maps.DistanceMatrixService();
+                const directionsService = new google.maps.DirectionsService();
+                
                 const origin = new google.maps.LatLng(driverCoords.lat, driverCoords.lng);
                 
                 // Ponto de interesse (coleta ou entrega dependendo do contexto)
-                // Para novos pedidos no dashboard, o primeiro ponto é a coleta
-                const destLat = selectedOrder.pickup_lat || selectedOrder.latitude;
-                const destLng = selectedOrder.pickup_lng || selectedOrder.longitude;
+                const isAtDelivery = ['picked_up', 'em_rota', 'saiu_para_entrega'].includes(selectedOrder.status);
                 
-                if (!destLat || !destLng) return;
+                const targetLat = isAtDelivery 
+                    ? (selectedOrder.customer_lat || selectedOrder.latitude) 
+                    : (selectedOrder.merchant_lat || selectedOrder.pickup_lat);
                 
-                const destination = new google.maps.LatLng(destLat, destLng);
+                const targetLng = isAtDelivery 
+                    ? (selectedOrder.customer_lng || selectedOrder.longitude) 
+                    : (selectedOrder.merchant_lng || selectedOrder.pickup_lng);
+                
+                if (!targetLat || !targetLng) return;
+                
+                const destination = new google.maps.LatLng(targetLat, targetLng);
 
-                service.getDistanceMatrix({
-                    origins: [origin],
-                    destinations: [destination],
-                    travelMode: google.maps.TravelMode.DRIVING,
-                }, (response, status) => {
-                    if (status === 'OK' && response?.rows[0]?.elements[0]?.status === 'OK') {
-                        setCalculatedDistance(response.rows[0].elements[0].distance.text);
+                directionsService.route({
+                    origin: origin,
+                    destination: destination,
+                    travelMode: google.maps.DirectionsTravelMode.DRIVING,
+                }, (result, status) => {
+                    if (status === google.maps.DirectionsStatus.OK && result) {
+                        setModalDirections(result);
+                        if (result.routes[0]?.legs[0]?.distance?.text) {
+                            setCalculatedDistance(result.routes[0].legs[0].distance.text);
+                        }
+                    } else {
+                        console.error('[DIRECTIONS] Falha ao buscar rota:', status);
                     }
                 });
             } catch (err) {
@@ -636,7 +653,7 @@ function App() {
             }
         };
 
-        fetchDistance();
+        fetchDistanceAndRoute();
     }, [selectedOrder, showOrderModal, driverCoords]);
 
     // Limpar modal ao trocar de aba ou sair
@@ -3658,21 +3675,43 @@ const renderDashboard = () => (
                     </section>
 
                     {/* Route Details - Map Section */}
-                    <section className="relative rounded-xl overflow-hidden h-48 bg-neutral-800 shadow-2xl">
-                        <img 
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8tC-1KmGTzsVyocvSlvHVwK4QILUSYQmQqs4seBdKXmXSggP094WuI33uogqXon3XnCuk-W1mmHlUDASG4c7aMEvu8lUTQLope6XV0C2Y4i__azso3rFhm-rm8_ENRNu6QkQYOC7qN5i8L7zcuXjIqBjxZI5ax4tORU_CXPHFhBBJkAj0fLRpiVSOb6-Dnkg5uypCgzaXsQnG9LqOBmA45nrGWd0x3Gzsp9ZkHWjnfISNmRMgbxKgGvvIJ891Wj9oZQpxf5SW2hc" 
-                            className="w-full h-full object-cover opacity-60" 
-                            alt="Route Map" 
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent"></div>
-                        <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                            <div className="bg-neutral-900/80 backdrop-blur-md p-3 rounded-lg border border-neutral-700/50 max-w-[65%]">
-                                <p className="text-neutral-400 text-[10px] font-bold uppercase mb-1">Destino Atual</p>
-                                <p className="text-white font-bold text-sm line-clamp-1">{presentation.destinationText}</p>
+                    <section className="relative rounded-xl overflow-hidden h-56 bg-neutral-900 shadow-2xl border border-neutral-800/50">
+                        {isLoaded ? (
+                            <GoogleMap
+                                mapContainerStyle={{ width: '100%', height: '100%' }}
+                                center={driverCoords || { lat: -23.55052, lng: -46.633308 }}
+                                zoom={15}
+                                options={mapOptions}
+                            >
+                                {modalDirections && (
+                                    <DirectionsRenderer
+                                        directions={modalDirections}
+                                        options={{
+                                            suppressMarkers: false,
+                                            polylineOptions: {
+                                                strokeColor: '#FACD05',
+                                                strokeWeight: 6,
+                                                strokeOpacity: 0.9
+                                            }
+                                        }}
+                                    />
+                                )}
+                            </GoogleMap>
+                        ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-900 gap-3">
+                                <div className="size-8 border-4 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin" />
+                                <span className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Carregando Mapa...</span>
                             </div>
-                            <div className={`bg-yellow-400 ${clayYellow} text-black px-4 py-2 rounded-full font-black text-sm flex items-center gap-2`}>
+                        )}
+                        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-neutral-950/80 to-transparent pointer-events-none"></div>
+                        <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                            <div className="bg-neutral-900/90 backdrop-blur-xl p-3 rounded-xl border border-white/5 shadow-2xl max-w-[65%]">
+                                <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mb-1">Destino Atual</p>
+                                <p className="text-white font-bold text-xs line-clamp-1 italic">{presentation.destinationText}</p>
+                            </div>
+                            <div className={`bg-yellow-400 ${clayYellow} text-black px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2 shadow-[0_10px_30px_rgba(250,204,21,0.3)]`}>
                                 <Icon name="navigation" className="text-lg" />
-                                {displayDistance}
+                                <span className="uppercase italic tracking-tight">{displayDistance}</span>
                             </div>
                         </div>
                     </section>
