@@ -309,7 +309,8 @@ export default function OrdersMerchantTab() {
                       }`}>
                         {o.status === 'preparando' ? 'Preparando' : 
                          o.status === 'waiting_driver' || o.status === 'pending' ? 'Buscando Entregador' : 
-                         ['accepted', 'a_caminho_coleta', 'no_local_coleta', 'chegou_coleta'].includes(o.status) ? 'Vindo coletar' :
+                         ['accepted', 'a_caminho_coleta', 'no_local_coleta'].includes(o.status) ? 'Vindo coletar' :
+                         o.status === 'chegou_coleta' ? 'Entregador no Local' :
                          ['picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega'].includes(o.status) ? 'Saiu para Entrega' : 
                          o.status === 'pronto' ? 'Pronto p/ Retirada' : o.status}
                       </span>
@@ -531,7 +532,8 @@ export default function OrdersMerchantTab() {
                                            selectedOrderDetails.status === 'waiting_merchant' ? 'Aguardando Aprovação' : 
                                            selectedOrderDetails.status === 'preparando' ? 'Em Preparação' : 
                                            selectedOrderDetails.status === 'waiting_driver' || selectedOrderDetails.status === 'pending' ? 'Buscando Entregador' : 
-                                           ['accepted', 'a_caminho_coleta', 'no_local_coleta', 'chegou_coleta'].includes(selectedOrderDetails.status) ? 'Entregador vindo coletar' :
+                                           ['accepted', 'a_caminho_coleta', 'no_local_coleta'].includes(selectedOrderDetails.status) ? 'Entregador vindo coletar' :
+                                           selectedOrderDetails.status === 'chegou_coleta' ? 'Entregador no Estabelecimento' :
                                            ['picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega'].includes(selectedOrderDetails.status) ? 'Pedido saiu para entrega' :
                                            selectedOrderDetails.status === 'concluido' ? 'Pedido Finalizado' : selectedOrderDetails.status}
                                       </p>

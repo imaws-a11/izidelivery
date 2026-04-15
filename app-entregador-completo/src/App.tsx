@@ -507,6 +507,7 @@ function App() {
     const [applyingSlotId, setApplyingSlotId] = useState<string | null>(null);
     const [showSlotAppliedSuccess, setShowSlotAppliedSuccess] = useState(false);
     const [scheduledOrders, setScheduledOrders] = useState<any[]>([]);
+    const [subTabScheduled, setSubTabScheduled] = useState<'available' | 'confirmed'>('confirmed');
     const [selectedScheduledOrder, setSelectedScheduledOrder] = useState<any | null>(null);
     const [history, setHistory] = useState<Order[]>([]);
     const [selectedHistoryOrder, setSelectedHistoryOrder] = useState<any>(null);
@@ -1152,7 +1153,7 @@ function App() {
         const fetchOrders = async () => {
             try {
                 // Busca ampla incluindo dados vivos do lojista. Sintaxe corrigida para garantir o JOIN.
-                const data = await fetchFromDB('orders_delivery', 'select=*,admin_users(store_name,store_address,latitude,longitude)&order=created_at.desc&limit=20');
+                const data = await fetchFromDB('orders_delivery', 'select=*,admin_users(store_name,store_address,latitude,longitude)&status=not.in.(concluido,cancelado)&order=created_at.desc&limit=20');
                 console.log('[POLL-DEBUG] Dados recebidos:', data?.length, 'primeiro item tem admin_users?', !!data?.[0]?.admin_users);
                 
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
@@ -1162,7 +1163,7 @@ function App() {
                 // 1. Sincronizar Missão Ativa (Se o Admin me deu um pedido ou aceitei em outro lugar)
                 const myAssignment = data.find((o: any) => 
                     o.driver_id && String(o.driver_id).trim() === String(driverId).trim() &&
-                    !['concluido', 'cancelado', 'finalizado', 'entregue', 'confirmado', 'confirmed'].includes(o.status)
+                    !['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)
                 );
 
                 if (myAssignment && (!currentMission || currentMission.realId !== myAssignment.id)) {
@@ -1187,8 +1188,8 @@ function App() {
                 // 2. Disponíveis no Dashboard
                 const available = data.filter((o: any) => {
                     const isMerchantOrder = !!o.merchant_id || !!o.admin_users;
-                    const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted'].includes(o.status);
-                    const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status);
+                    const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted', 'confirmado', 'confirmed'].includes(o.status);
+                    const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'confirmado', 'confirmed'].includes(o.status);
                     
                     const statusOk = isMerchantOrder ? merchantAccepted : p2pAllowed;
                     const notMyAssignment = !o.driver_id || String(o.driver_id).trim() === '';
@@ -1796,30 +1797,65 @@ function App() {
             const missionId = activeMission.realId || activeMission.id;
             if (!missionId) throw new Error('Identificador da missão não encontrado.');
             
-            const { error: updateError } = await supabase
-                .from('orders_delivery')
-                .update({ 
+            // Atualização Otimista
+            const updatedMission = { ...activeMission, status: newStatus.toLowerCase(), updated_at: new Date().toISOString() };
+            if (!isFinishing) {
+                setActiveMission(updatedMission);
+                localStorage.setItem('Izi_active_mission', JSON.stringify(updatedMission));
+            }
+
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            
+            let token = supabaseKey;
+            try {
+                const lsKey = `sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`;
+                const ls = localStorage.getItem(lsKey);
+                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
+            } catch(e) {}
+
+            const response = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${missionId}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({
                     status: newStatus.toLowerCase(),
                     updated_at: new Date().toISOString()
                 })
-                .eq('id', missionId);
+            });
 
-            if (updateError) throw updateError;
+            if (!response.ok) {
+                const errorText = await response.text();
+                // Rollback otimista se falhar
+                if (!isFinishing) {
+                    setActiveMission(activeMission);
+                    localStorage.setItem('Izi_active_mission', JSON.stringify(activeMission));
+                }
+                throw new Error(`Erro na API (${response.status}): ${errorText}`);
+            }
 
-            toastSuccess(`Status atualizado para: ${newStatus}`);
+            toastSuccess(`Status atualizado: ${newStatus === 'chegou_coleta' ? 'Chegada na Coleta' : newStatus}`);
             
             if (isFinishing) {
                 setFinishedMissionData({
+                    show: true,
                     amount: activeMission.price || 0,
+                    grossAmount: activeMission.price || 0,
                     bonus: 0,
                     extraKm: 0,
                     extraKmValue: 0,
                     xpGained: 15
                 });
                 setActiveMission(null);
+                localStorage.removeItem('Izi_active_mission');
                 refreshFinanceData();
             } else {
-                setActiveMission(prev => prev ? { ...prev, status: newStatus.toLowerCase() } : null);
+                // Sincronizar com o banco para garantir metadados extras
+                setTimeout(() => syncMissionWithDB(), 2000);
             }
         } catch (e: any) {
             console.error("[UPDATE_STATUS] Error:", e);
@@ -2285,7 +2321,9 @@ const renderDashboard = () => (
                         <button onClick={() => setSelectedScheduledOrder(null)} className="text-yellow-400 p-2 rounded-full active:scale-95 transition-all">
                             <span className="material-symbols-outlined text-3xl">arrow_back</span>
                         </button>
-                        <h1 className="font-black text-yellow-400 text-xl tracking-tighter uppercase italic">Confirmar Agendamento</h1>
+                        <h1 className="font-black text-yellow-400 text-xl tracking-tighter uppercase italic">
+                            {isMine ? 'Detalhes do Agendamento' : 'Confirmar Agendamento'}
+                        </h1>
                     </div>
                 </header>
 
@@ -2298,7 +2336,7 @@ const renderDashboard = () => (
                             <div className="flex justify-between items-start mb-8">
                                 <div className="bg-black/10 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Detalhes da Escala</div>
                                 <div className="text-right">
-                                    <p className="text-[10px] font-black opacity-60 uppercase">Ganho Garantido</p>
+                                    <p className="text-[10px] font-black opacity-60 uppercase">Ganho Líquido</p>
                                     <p className="text-4xl font-black italic">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
                                 </div>
                             </div>
@@ -2332,7 +2370,7 @@ const renderDashboard = () => (
                                     <div className="flex items-start gap-3">
                                         <Icon name="explore" size={20} className="mt-1" />
                                         <div>
-                                            <p className="text-[10px] font-black uppercase opacity-40 mb-1">Ãrea de Atuação</p>
+                                            <p className="text-[10px] font-black uppercase opacity-40 mb-1">Área de Atuação</p>
                                             <p className="font-bold text-sm leading-tight italic">{order.delivery_address?.split(',')[0]} e região</p>
                                         </div>
                                     </div>
@@ -2346,9 +2384,9 @@ const renderDashboard = () => (
                             <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Regras do Agendamento</h4>
                         </div>
                         <ul className="space-y-3">
-                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">â€¢</span> Comparecer ao local com 15 min de antecedÃência.</li>
-                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">â€¢</span> Estar com bateria do celular acima de 80%.</li>
-                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">â€¢</span> Traje profissional e baú limpo.</li>
+                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">•</span> Comparecer ao local com 15 min de antecedência.</li>
+                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">•</span> Estar com bateria do celular acima de 80%.</li>
+                            <li className="flex gap-3 text-xs text-white/50 font-bold"><span className="text-yellow-400">•</span> Traje profissional e baú limpo.</li>
                         </ul>
                      </div>
                 </main>
@@ -2377,6 +2415,26 @@ const renderDashboard = () => (
                         >
                             Confirmar Escala Agora
                         </button>
+                    ) : isMine ? (
+                        <button 
+                            onClick={() => {
+                                // Ao iniciar um agendamento, ele se torna a missão ativa
+                                const mission = { 
+                                    ...order, 
+                                    realId: order.id,
+                                    type: order.service_type || 'generic',
+                                    customer: 'Cliente Izi'
+                                };
+                                setActiveMission(mission);
+                                localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
+                                setSelectedScheduledOrder(null);
+                                setActiveTab('active_mission');
+                            }}
+                            className="w-full h-20 bg-emerald-500 text-white rounded-[28px] font-black text-xl uppercase tracking-tighter shadow-[0_20px_40px_rgba(16,185,129,0.3)] active:scale-95 transition-all flex items-center justify-center gap-3"
+                        >
+                            <Icon name="play_arrow" size={32} />
+                            Iniciar Missão
+                        </button>
                     ) : isAccepted ? (
                         <div className="w-full h-20 rounded-[28px] border-2 border-emerald-500/30 bg-emerald-500/10 flex items-center justify-center gap-3 backdrop-blur-md">
                             <Icon name="verified" className="text-emerald-400" size={28} />
@@ -2398,59 +2456,113 @@ const renderDashboard = () => (
     const renderScheduledView = () => {
         if (selectedScheduledOrder) return renderScheduledDetailView();
         
+        const myAgenda = scheduledOrders.filter((o: any) => o.driver_id && String(o.driver_id).trim() === String(driverId).trim());
+        const availableAgenda = scheduledOrders.filter((o: any) => !o.driver_id || String(o.driver_id).trim() === '');
+        
+        const currentList = subTabScheduled === 'confirmed' ? myAgenda : availableAgenda;
+
         return (
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="pb-32 px-4 max-w-2xl mx-auto space-y-8 pt-4">
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="pb-32 px-4 max-w-2xl mx-auto space-y-6 pt-4">
                 <section className="px-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-4">
                         <div>
-                            <p className="text-zinc-500 font-bold uppercase tracking-[0.4em] text-[10px] mb-1">Próximas Entregas</p>
-                            <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase">Agendamentos Disponíveis</h2>
+                            <p className="text-zinc-500 font-bold uppercase tracking-[0.4em] text-[10px] mb-1">Planejamento</p>
+                            <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase">Agenda de Entregas</h2>
                         </div>
-                        <div className="bg-zinc-900/50 px-5 py-2.5 rounded-full border border-white/5 backdrop-blur-md">
-                            <span className="text-yellow-400 font-black text-lg">{scheduledOrders.length}</span>
-                            <span className="text-zinc-400 text-[10px] font-black uppercase tracking-widest ml-2">Ativos</span>
+                        
+                        {/* Tab Selector */}
+                        <div className="flex bg-black/40 backdrop-blur-xl p-1.5 rounded-[24px] border border-white/5 shadow-inner">
+                            <button 
+                                onClick={() => setSubTabScheduled('confirmed')}
+                                className={`flex-1 h-12 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
+                                    subTabScheduled === 'confirmed' 
+                                    ? 'bg-yellow-400 text-black shadow-[0_4px_15px_rgba(250,204,21,0.3)]' 
+                                    : 'text-zinc-500 hover:text-zinc-400'
+                                }`}
+                            >
+                                <Icon name="event_available" size={16} />
+                                Minha Agenda
+                                {myAgenda.length > 0 && (
+                                    <span className={`size-5 rounded-full flex items-center justify-center text-[9px] font-black ${
+                                        subTabScheduled === 'confirmed' ? 'bg-black text-yellow-400' : 'bg-zinc-800 text-zinc-500'
+                                    }`}>
+                                        {myAgenda.length}
+                                    </span>
+                                )}
+                            </button>
+                            <button 
+                                onClick={() => setSubTabScheduled('available')}
+                                className={`flex-1 h-12 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
+                                    subTabScheduled === 'available' 
+                                    ? 'bg-yellow-400 text-black shadow-[0_4px_15px_rgba(250,204,21,0.3)]' 
+                                    : 'text-zinc-500 hover:text-zinc-400'
+                                }`}
+                            >
+                                <Icon name="explore" size={16} />
+                                Disponíveis
+                                {availableAgenda.length > 0 && (
+                                    <span className={`size-5 rounded-full flex items-center justify-center text-[9px] font-black ${
+                                        subTabScheduled === 'available' ? 'bg-black text-yellow-400' : 'bg-zinc-800 text-zinc-500'
+                                    }`}>
+                                        {availableAgenda.length}
+                                    </span>
+                                )}
+                            </button>
                         </div>
                     </div>
                 </section>
 
                 <div className="space-y-6">
-                    {scheduledOrders.length === 0 ? (
-                        <div className="py-20 bg-white/[0.02] border border-white/5 border-dashed rounded-[40px] flex flex-col items-center gap-4 text-center">
-                            <Icon name="event_available" className="text-4xl text-white/10" />
-                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Nenhum Agendamento disponível</p>
+                    {currentList.length === 0 ? (
+                        <div className="py-24 bg-white/[0.02] border border-white/5 border-dashed rounded-[40px] flex flex-col items-center gap-6 text-center px-8">
+                            <div className="size-20 rounded-full bg-white/5 flex items-center justify-center">
+                                <Icon name={subTabScheduled === 'confirmed' ? 'calendar_today' : 'search'} className="text-4xl text-white/20" />
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">
+                                    {subTabScheduled === 'confirmed' ? 'Sua agenda está vazia' : 'Nenhum agendamento aberto'}
+                                </p>
+                                <p className="text-xs text-white/20 px-6 leading-relaxed">
+                                    {subTabScheduled === 'confirmed' 
+                                        ? 'Confirme entregas agendadas na aba Disponíveis para organizar seu dia.' 
+                                        : 'Fique de olho! Novos agendamentos podem aparecer a qualquer momento.'}
+                                </p>
+                            </div>
                         </div>
                     ) : (
-                        scheduledOrders.map((order: any, i: number) => {
+                        currentList.map((order: any, i: number) => {
                             const dt = new Date(order.scheduled_at);
+                            const isConfirmed = !!order.driver_id;
                             const isOdd = i % 2 !== 0; 
-                            const cardClass = isOdd ? "clay-card-dark" : "clay-card-yellow";
-                            const textColor = isOdd ? "text-white" : "text-black";
-                            const iconBg = isOdd ? "bg-yellow-400 text-black" : "bg-black text-yellow-400";
-                            const btnClass = isOdd 
-                                ? "bg-yellow-400 text-black shadow-[0_4px_15px_rgba(250,204,21,0.3)]" 
-                                : "bg-black text-yellow-400 shadow-lg";
+                            const cardClass = isConfirmed ? "clay-card-yellow" : (isOdd ? "clay-card-dark" : "clay-card-yellow");
+                            const textColor = isConfirmed ? "text-black" : (isOdd ? "text-white" : "text-black");
+                            const iconBg = isConfirmed ? "bg-black text-yellow-400" : (isOdd ? "bg-yellow-400 text-black" : "bg-black text-yellow-400");
+                            const btnClass = isConfirmed 
+                                ? "bg-black text-yellow-400 shadow-lg"
+                                : (isOdd ? "bg-yellow-400 text-black shadow-[0_4px_15px_rgba(250,204,21,0.3)]" : "bg-black text-yellow-400 shadow-lg");
 
                             return (
                                 <motion.div 
                                     key={order.id}
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: i * 0.1 }}
+                                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    transition={{ delay: i * 0.05 }}
                                     className={`${cardClass} p-8 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all`}
                                     onClick={() => setSelectedScheduledOrder(order)}
                                 >
-                                    <div className={`absolute -right-4 -top-4 opacity-[0.08] transform rotate-12 group-hover:scale-110 transition-transform duration-500 ${isOdd ? 'text-yellow-400' : 'text-black'}`}>
+                                    <div className={`absolute -right-4 -top-4 opacity-[0.08] transform rotate-12 group-hover:scale-110 transition-transform duration-500 ${textColor}`}>
                                         <Icon name={order.service_type === 'package' ? 'package_2' : 'local_shipping'} size={140} />
                                     </div>
 
                                     <div className="relative z-10">
                                         <div className="flex justify-between items-start mb-6">
-                                            <div className={`${isOdd ? 'bg-yellow-400 text-black' : 'bg-black/10 text-black'} px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest`}>
+                                            <div className={`${isConfirmed || !isOdd ? 'bg-black/10 text-black' : 'bg-yellow-400 text-black'} px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2`}>
+                                                <div className={`size-1.5 rounded-full ${isConfirmed ? 'bg-green-600 animate-pulse' : 'bg-yellow-500'}`} />
                                                 {order.service_type || 'Entrega Expressa'}
                                             </div>
                                             <div className="text-right">
-                                                <p className={`text-[8px] font-black uppercase tracking-widest ${isOdd ? 'text-zinc-500' : 'opacity-60'}`}>Valor Estimado</p>
-                                                <p className={`text-2xl font-black italic ${isOdd ? 'text-yellow-400' : 'text-black'}`}>R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
+                                                <p className={`text-[8px] font-black uppercase tracking-widest opacity-60`}>Valor Líquido</p>
+                                                <p className={`text-2xl font-black italic`}>R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
                                             </div>
                                         </div>
 
@@ -2462,7 +2574,7 @@ const renderDashboard = () => (
                                                 <p className="font-black text-lg leading-none italic uppercase tracking-tighter">
                                                     {dt.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' }).replace('.', '')}
                                                 </p>
-                                                <p className={`text-sm font-bold mt-1 ${isOdd ? 'text-zinc-400' : 'opacity-70'}`}>
+                                                <p className={`text-sm font-bold mt-1 opacity-70`}>
                                                     {dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                                 </p>
                                             </div>
@@ -2470,14 +2582,21 @@ const renderDashboard = () => (
 
                                         <div className={`space-y-4 mb-8 ${textColor}`}>
                                             <div className="flex items-start gap-3">
-                                                <Icon name="location_on" size={18} className={`${isOdd ? 'text-yellow-400/70' : 'opacity-60'}`} />
-                                                <p className="font-bold text-sm leading-tight italic">{order.pickup_address?.split(',')[0]}â†’ {order.delivery_address?.split(',')[0]}</p>
+                                                <Icon name="location_on" size={18} className="opacity-60" />
+                                                <div className="space-y-1">
+                                                    <p className="text-[8px] font-black uppercase tracking-widest opacity-50">Rotas de Coleta/Entrega</p>
+                                                    <p className="font-bold text-sm leading-tight italic">{order.pickup_address?.split(',')[0]} → {order.delivery_address?.split(',')[0]}</p>
+                                                </div>
                                             </div>
                                         </div>
 
                                         <div className="flex gap-4">
-                                            <button className={`flex-1 ${btnClass} font-black text-[10px] uppercase tracking-[0.2em] py-4 rounded-[22px] active:scale-95 transition-all`}>
-                                                Ver Detalhes
+                                            <button className={`flex-1 ${btnClass} font-black text-[10px] uppercase tracking-[0.2em] py-4 rounded-[22px] active:scale-95 transition-all flex items-center justify-center gap-3`}>
+                                                {isConfirmed ? (
+                                                    <><Icon name="task_alt" size={18} /> Ver Minha Agenda</>
+                                                ) : (
+                                                    <><Icon name="arrow_forward" size={18} /> Avaliar Oferta</>
+                                                )}
                                             </button>
                                         </div>
                                     </div>
@@ -3128,21 +3247,25 @@ const renderDashboard = () => (
 
                 <div className="absolute bottom-[90px] left-0 right-0 p-8 pb-6 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent pt-20 pointer-events-none">
                     <div className="pointer-events-auto w-full space-y-3">
-                        {(['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando', 'aceito', 'atribuido'].includes(activeMission.status || '')) && (
+                        {(['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando', 'aceito', 'atribuido', 'accepted', 'waiting_driver', 'pending'].includes(activeMission.status || '')) && (
                             <button 
                                 onClick={() => handleUpdateStatus('chegou_coleta')} 
-                                className="w-full h-20 bg-blue-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(37,99,235,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
+                                disabled={isAccepting}
+                                className="w-full h-20 bg-blue-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(37,99,235,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none disabled:opacity-50"
                             >
-                                <Icon name="location_on" /> Cheguei na Coleta
+                                <Icon name="location_on" /> 
+                                {isAccepting ? 'Atualizando...' : 'Cheguei na Coleta'}
                             </button>
                         )}
 
-                        {(['chegou_coleta', 'no_local_coleta', 'waiting_driver'].includes(activeMission.status || '') || activeMission.status === 'pronto') && (
+                        {(['chegou_coleta', 'no_local_coleta'].includes(activeMission.status || '') || activeMission.status === 'pronto') && (
                             <button 
                                 onClick={() => handleUpdateStatus('picked_up')} 
-                                className="w-full h-20 bg-emerald-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(5,150,105,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none"
+                                disabled={isAccepting}
+                                className="w-full h-20 bg-emerald-600 text-white font-black text-base uppercase tracking-widest rounded-[35px] shadow-[0_15px_30px_rgba(5,150,105,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-none disabled:opacity-50"
                             >
-                                <Icon name="package_2" /> Confirmar Coleta
+                                <Icon name="package_2" /> 
+                                {isAccepting ? 'Atualizando...' : 'Confirmar Coleta'}
                             </button>
                         )}
 

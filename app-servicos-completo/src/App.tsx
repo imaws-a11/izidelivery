@@ -697,6 +697,7 @@ function App() {
               'waiting_driver': 'Pedido aceito! Buscando o melhor entregador para você. 🛵',
               'pronto': 'Pedido pronto! Aguardando o motoboy para coleta. 📦',
               'saiu_para_coleta': 'O motoboy aceitou e está indo retirar seu pedido! 🛵',
+              'chegou_coleta': 'O motoboy chegou ao estabelecimento para retirar seu pedido! 🛵',
               'picked_up': 'Pedido coletado! O motoboy iniciou a entrega para você. 🚀',
               'a_caminho': 'Motoboy a caminho! Sua entrega está em rota. 🛵',
               'saiu_para_entrega': 'Fique atento! Seu pedido saiu para entrega! 🛵',
@@ -1544,7 +1545,7 @@ function App() {
   const getOrderStatusTone = (status?: string) => {
     if (status === "concluido") return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
     if (status === "cancelado") return "bg-red-500/10 text-red-400 border-red-500/20";
-    if (["waiting_driver", "a_caminho", "em_rota", "saiu_para_entrega", "no_local"].includes(status || "")) {
+    if (["waiting_driver", "a_caminho_coleta", "chegou_coleta", "a_caminho", "em_rota", "saiu_para_entrega", "no_local"].includes(status || "")) {
       return "bg-blue-500/10 text-blue-400 border-blue-500/20";
     }
     return "bg-yellow-400/10 text-yellow-400 border-yellow-400/20";
