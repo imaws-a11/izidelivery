@@ -519,6 +519,7 @@ function App() {
     const [selectedHistoryOrder, setSelectedHistoryOrder] = useState<any>(null);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [showOrderModal, setShowOrderModal] = useState(false);
+    const [calculatedDistance, setCalculatedDistance] = useState<string | null>(null);
     const [merchantCoords, setMerchantCoords] = useState<{lat: number, lng: number} | null>(null);
     const [stats, setStats] = useState({ balance: 0, today: 0, weekly: 0, totalEarnings: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
     const [earningsHistory, setEarningsHistory] = useState<Order[]>([]);
@@ -597,6 +598,72 @@ function App() {
             setIsOnline(true);
         }
     }, [isOnline]);
+    
+    // Efeito para calcular distância quando um pedido é selecionado
+    useEffect(() => {
+        if (!selectedOrder || !showOrderModal) {
+            setCalculatedDistance(null);
+            return;
+        }
+
+        const fetchDistance = async () => {
+            try {
+                if (!window.google || !driverCoords) return;
+                
+                const service = new google.maps.DistanceMatrixService();
+                const origin = new google.maps.LatLng(driverCoords.lat, driverCoords.lng);
+                
+                // Ponto de interesse (coleta ou entrega dependendo do contexto)
+                // Para novos pedidos no dashboard, o primeiro ponto é a coleta
+                const destLat = selectedOrder.pickup_lat || selectedOrder.latitude;
+                const destLng = selectedOrder.pickup_lng || selectedOrder.longitude;
+                
+                if (!destLat || !destLng) return;
+                
+                const destination = new google.maps.LatLng(destLat, destLng);
+
+                service.getDistanceMatrix({
+                    origins: [origin],
+                    destinations: [destination],
+                    travelMode: google.maps.TravelMode.DRIVING,
+                }, (response, status) => {
+                    if (status === 'OK' && response?.rows[0]?.elements[0]?.status === 'OK') {
+                        setCalculatedDistance(response.rows[0].elements[0].distance.text);
+                    }
+                });
+            } catch (err) {
+                console.error('[DISTANCE] Erro ao calcular:', err);
+            }
+        };
+
+        fetchDistance();
+    }, [selectedOrder, showOrderModal, driverCoords]);
+
+    // Limpar modal ao trocar de aba ou sair
+    useEffect(() => {
+        if (activeTab !== 'dashboard') {
+            setShowOrderModal(false);
+            setSelectedOrder(null);
+        }
+    }, [activeTab]);
+
+    const getPaymentLabel = (order: any) => {
+        if (!order) return 'Não informado';
+        if (order.payment_method === 'online') return 'Pagamento Online';
+        
+        // Mapeamento comum
+        const map: Record<string, string> = {
+            'dinheiro': 'Dinheiro (Local)',
+            'pix': 'PIX (Local)',
+            'cartao_credito': 'Cartão de Crédito',
+            'cartao_debito': 'Cartão de Débito',
+            'maquininha': 'Cartão (Maquininha)',
+            'wallet': 'Carteira Izi',
+            'not_required': 'Não requerido'
+        };
+        
+        return map[order.payment_method] || order.payment_method_label || (order.payment_method ? order.payment_method.charAt(0).toUpperCase() + order.payment_method.slice(1).replace('_', ' ') : 'Local');
+    };
 
     const getGrossEarnings = useCallback((order: any) => {
         if (!order) return 0;
@@ -3532,139 +3599,198 @@ const renderDashboard = () => (
         const presentation = getServicePresentation(selectedOrder);
         const grossEarnings = getGrossEarnings(selectedOrder);
         const netEarnings = getNetEarnings(selectedOrder);
+        const displayDistance = calculatedDistance || selectedOrder.distance || 'Calculando...';
 
-        const sClayDark: React.CSSProperties = {
-            background: '#121212',
-            boxShadow: 'inset 2px 2px 8px rgba(255, 255, 255, 0.05), inset -2px -2px 8px rgba(0, 0, 0, 0.4)',
-        };
+        const isPaid = selectedOrder.payment_status === 'paid' || selectedOrder.payment_status === 'pago';
+        const paymentLabel = getPaymentLabel(selectedOrder);
+        const needsChange = !isPaid && selectedOrder.change_for > 0;
+
+        // Estilos Claymorphic via classes Tailwind inline para garantir consistência
+        const clayCard = "shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)]";
+        const clayCardDark = "shadow-[inset_4px_4px_12px_rgba(255,255,255,0.1),inset_-4px_-4px_12px_rgba(0,0,0,0.4)]";
+        const clayYellow = "shadow-[inset_4px_4px_10px_rgba(255,255,255,0.4),inset_-4px_-4px_10px_rgba(0,0,0,0.1)]";
 
         return (
             <motion.div 
                 initial={{ opacity: 0, y: 100 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 exit={{ opacity: 0, y: 100 }}
-                className="fixed inset-0 z-[160] bg-[#0c0f10] flex flex-col overflow-hidden"
+                className="fixed inset-0 z-[300] bg-[#0c0f10] flex flex-col overflow-y-auto no-scrollbar pb-40"
             >
-                {/* Header Estilizado */}
-                <header className="px-6 py-6 flex justify-between items-center border-b border-white/5 bg-black/50 backdrop-blur-xl shrink-0">
+                {/* TopAppBar */}
+                <header className="bg-neutral-950/70 backdrop-blur-xl fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4">
                     <button 
                         onClick={() => setShowOrderModal(false)}
-                        className="size-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 active:scale-90 transition-all"
+                        className="active:scale-95 transition-transform duration-200 hover:bg-neutral-800/50 p-2 rounded-full flex items-center justify-center"
                     >
-                        <Icon name="close" className="text-white" size={24} />
+                        <Icon name="arrow_back" className="text-yellow-400" />
                     </button>
-                    <div className="flex flex-col items-center">
-                        <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Detalhes</span>
-                        <span className="text-white font-black text-sm uppercase italic">Nova Missão</span>
-                    </div>
-                    <div className="size-12" /> {/* Spacer */}
+                    <h1 className="text-yellow-400 font-bold tracking-tight text-xl">Missão em Andamento</h1>
+                    <button className="active:scale-95 transition-transform duration-200 hover:bg-neutral-800/50 p-2 rounded-full flex items-center justify-center">
+                        <Icon name="more_vert" className="text-yellow-400" />
+                    </button>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar pb-40">
-                    {/* Visualização de Lucro */}
-                    <section className="bg-gradient-to-br from-primary to-yellow-600 rounded-[40px] p-8 shadow-[0_20px_60px_rgba(250,204,21,0.2)] relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 blur-3xl -mr-16 -mt-16 rounded-full" />
-                        <div className="relative z-10 flex flex-col items-center text-black">
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-2">Você Ganhara</span>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-black italic">R$</span>
-                                <span className="text-6xl font-black tracking-tighter italic leading-none">{netEarnings.toFixed(2).replace('.', ',')}</span>
+                <main className="pt-24 px-4 space-y-6">
+                    {/* Status & Identity */}
+                    <section className={`bg-neutral-900 ${clayCard} rounded-xl p-6 flex items-center gap-4 border border-neutral-800/50`}>
+                        <div className="relative">
+                            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.2)]">
+                                {selectedOrder.merchant_logo ? (
+                                    <img src={selectedOrder.merchant_logo} alt="Merchant" className="w-full h-full object-cover" />
+                                ) : (
+                                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYxpnY-TE8kq8rAiqIZ0MDJv0whuOcZ68gW9LTX1OLedIkfWL5vyqj8DxA7AWD833Rw_ESqxubctb1TPfarS_LJQGqq4zPrDGqaRGFONH69ahOpOdzQkc85gPFBNrp_kHOvwFGhQeLGaITBQiqQLKgFz0WvBDvcihMOwEnfqknpGE4I6ltHrYedUAzi6mavIOlQdc9RDG1gmjJsJ-rd2_X8kS3y8EoP7xJxJgxu4ce3l4UTh3wyEZVF_eqLrb_7ndw4K6xLtar5no" alt="Rider" className="w-full h-full object-cover" />
+                                )}
                             </div>
-                            <div className="mt-4 px-4 py-1.5 bg-black/10 rounded-full flex items-center gap-2">
-                                <Icon name="bolt" size={14} className="text-black" />
-                                <span className="text-[9px] font-black uppercase tracking-widest">Valor total: R$ {grossEarnings.toFixed(2).replace('.', ',')}</span>
+                            <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase italic">VIP</div>
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-white tracking-tight truncate max-w-[120px]">{selectedOrder.merchant_name || 'Rider Yellow'}</h2>
+                            <p className="text-yellow-400/80 font-semibold text-sm flex items-center gap-1">
+                                <Icon name="star" className="text-sm" fill />
+                                Nível Diamante
+                            </p>
+                        </div>
+                        <div className="ml-auto text-right">
+                            <p className="text-neutral-500 text-xs uppercase tracking-widest font-bold">Ganhos</p>
+                            <p className="text-2xl font-black text-yellow-400">R$ {netEarnings.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                    </section>
+
+                    {/* Route Details - Map Section */}
+                    <section className="relative rounded-xl overflow-hidden h-48 bg-neutral-800 shadow-2xl">
+                        <img 
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8tC-1KmGTzsVyocvSlvHVwK4QILUSYQmQqs4seBdKXmXSggP094WuI33uogqXon3XnCuk-W1mmHlUDASG4c7aMEvu8lUTQLope6XV0C2Y4i__azso3rFhm-rm8_ENRNu6QkQYOC7qN5i8L7zcuXjIqBjxZI5ax4tORU_CXPHFhBBJkAj0fLRpiVSOb6-Dnkg5uypCgzaXsQnG9LqOBmA45nrGWd0x3Gzsp9ZkHWjnfISNmRMgbxKgGvvIJ891Wj9oZQpxf5SW2hc" 
+                            className="w-full h-full object-cover opacity-60" 
+                            alt="Route Map" 
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent"></div>
+                        <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                            <div className="bg-neutral-900/80 backdrop-blur-md p-3 rounded-lg border border-neutral-700/50 max-w-[65%]">
+                                <p className="text-neutral-400 text-[10px] font-bold uppercase mb-1">Destino Atual</p>
+                                <p className="text-white font-bold text-sm line-clamp-1">{presentation.destinationText}</p>
+                            </div>
+                            <div className={`bg-yellow-400 ${clayYellow} text-black px-4 py-2 rounded-full font-black text-sm flex items-center gap-2`}>
+                                <Icon name="navigation" className="text-lg" />
+                                {displayDistance}
                             </div>
                         </div>
                     </section>
 
-                    {/* Rota Visualization */}
-                    <section className="space-y-4">
-                        <h2 className="text-white/30 font-black text-[10px] uppercase tracking-[0.3em] px-2">Itinerário</h2>
-                        <div className="bg-neutral-900 rounded-[32px] p-6 border border-white/5 space-y-6" style={sClayDark}>
-                            <div className="flex gap-4">
-                                <div className="flex flex-col items-center gap-1 mt-1">
-                                    <div className="size-4 rounded-full bg-primary border-4 border-black shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
-                                    <div className="w-[1.5px] h-10 bg-white/10" />
+                    {/* Itens do Pedido */}
+                    <section className="space-y-3">
+                        <div className="flex justify-between items-end px-2">
+                            <h2 className="text-neutral-400 font-bold text-sm uppercase tracking-widest">Itens do Pedido</h2>
+                            <span className="text-yellow-400 text-xs font-bold uppercase">{selectedOrder.items?.length || 1} Itens</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* Layout de itens dinâmico vs mock conforme solicitado */}
+                            <div className={`bg-neutral-900 ${clayCardDark} rounded-xl p-4 flex flex-col items-center text-center gap-2 border border-neutral-800/50`}>
+                                <div className="w-16 h-16 relative">
+                                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJUkwlbRXrrQf5wxSmeh95QbiWA695C8a9GIWpPVxm2xT4DimxAsljCg8dyZ0h4vYqrjgYgeWzgwXCW3_GHuhXiLFhRvPwGGnLPOgdhkX5vdKjhtCRrjgLLEKWY2paf4tDtEuziddJ8bW43c_1hYWnUj0WLIr26lMgJaR55ODyB3JfYkjQ8ktflcvZ9oLat4Y1LRPs7bpzMmQbIy5XWqFL7qNYqCbmPzaok3Md1M6cnO4ru-X2s3TD5lgwvlwxfKCxYKW-VGbetd0" className="w-full h-full object-cover rounded-full shadow-2xl" alt="Item" />
+                                    <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-lg">1x</span>
                                 </div>
-                                <div className="flex-1">
-                                    <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">{presentation.pickupLabel}</p>
-                                    <p className="text-white font-bold text-[13px] leading-tight line-clamp-2 italic">{presentation.pickupText || 'Local de coleta não informado'}</p>
-                                </div>
+                                <span className="text-white font-bold text-sm">{presentation.title}</span>
                             </div>
-
-                            <div className="flex gap-4">
-                                <div className="flex flex-col items-center gap-1 mt-1">
-                                    <div className="size-4 rounded-full bg-white/20 border-4 border-black" />
+                            <div className={`bg-neutral-900 ${clayCardDark} rounded-xl p-4 flex flex-col items-center text-center gap-2 border border-neutral-800/50`}>
+                                <div className="w-16 h-16 relative">
+                                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuC42A7afygeWS8yGW_iAKWPwFIhipo9zmNZDnkQQeumFpBrqor_ZwcrGo_BAPLtbscmotM2fiw7xFrqVmxLAikagOwLLZdKmbE024GetgufS3V6hL9trgM1r0INs9IzrcP13XyhjmLuAfNyZaqkq0EkZ4QVTKvb_-B7vpXj1CTTqVk-vMOFNI2jnaSjrqYcKygxBOM2xURv57HCSG51a-4_dwK7xwzP0ViQZmVDDMzPZ2FG8oVv8lWxSG25w4LG3Xp3TES-KuAJRYA" className="w-full h-full object-cover rounded-full shadow-2xl" alt="Soda" />
+                                    <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-lg">1x</span>
                                 </div>
-                                <div className="flex-1">
-                                    <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1">{presentation.destinationLabel}</p>
-                                    <p className="text-white font-bold text-[13px] leading-tight line-clamp-2 italic">{presentation.destinationText || 'Destino não informado'}</p>
-                                </div>
+                                <span className="text-white font-bold text-sm">Coca-Cola 350ml</span>
                             </div>
-                        </div>
-                    </section>
-
-                    {/* Info Card */}
-                    <section className="grid grid-cols-2 gap-4">
-                        <div className="bg-neutral-900 rounded-[28px] p-5 border border-white/5 space-y-1" style={sClayDark}>
-                            <Icon name="route" size={18} className="text-primary mb-2" />
-                            <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Distância</p>
-                            <p className="text-white font-black italic">{selectedOrder.distance || 'Calculando...'}</p>
-                        </div>
-                        <div className="bg-neutral-900 rounded-[28px] p-5 border border-white/5 space-y-1" style={sClayDark}>
-                            <Icon name="payments" size={18} className="text-primary mb-2" />
-                            <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Pagamento</p>
-                            <p className="text-white font-black italic uppercase truncate">{selectedOrder.payment_method === 'online' ? 'App (Online)' : 'Local'}</p>
-                        </div>
-                    </section>
-
-                    {/* Detalhes Adicionais */}
-                    <section className="space-y-4">
-                        <h2 className="text-white/30 font-black text-[10px] uppercase tracking-[0.3em] px-2">Importante</h2>
-                        <div className="bg-neutral-900 rounded-[32px] p-6 border border-white/5 space-y-6" style={sClayDark}>
-                            <div className="flex items-start gap-4">
-                                <div className="size-10 rounded-2xl bg-white/5 flex items-center justify-center shrink-0">
-                                    <Icon name="person" className="text-white/40" />
+                            {/* Horizontal Card */}
+                            <div className={`bg-neutral-900 ${clayCardDark} rounded-xl p-4 flex items-center gap-4 col-span-2 border border-neutral-800/50`}>
+                                <div className="w-14 h-14 relative flex-shrink-0">
+                                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuk8p52HQWwpR_wuk3TNwin3lv0PgotwugDnu2096J4W2od0SpPmzQR04uYsHnHyefMPAbu_LxocDYNFSBypC7KBNA68zy6PJZmKdz5Lbo3kL_9DQHae86xPcDGo9FVpI3NoQWjiQW_Cu30pemF5m_2jZMYH2BsJx1XCnixxIHyADJ4XuLpFblXF_Hb0GSi2pX2NRBVwcXb25TelTJBsy7IJzwkxpYvbzqs9rzQPXF_N2K2rqKtlFsXMFMbj8D1KlMTpW9UuiCvm8" className="w-full h-full object-cover rounded-full shadow-2xl" alt="Extra" />
+                                    <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg">1x</span>
                                 </div>
                                 <div>
-                                    <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">Cliente / Local</p>
-                                    <p className="text-white font-bold text-sm italic">{selectedOrder.user_name || selectedOrder.merchant_name || 'Particular'}</p>
+                                    <span className="text-white font-bold text-sm block">Acompanhamento Extra</span>
+                                    <span className="text-neutral-500 text-xs italic">Verificar itens na retirada</span>
                                 </div>
                             </div>
+                        </div>
+                    </section>
 
-                            {selectedOrder.notes && (
-                                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                                    <p className="text-[8px] font-black text-primary uppercase tracking-widest mb-2">Observações</p>
-                                    <p className="text-white/70 text-xs italic leading-relaxed">{selectedOrder.notes}</p>
+                    {/* Pagamento Section */}
+                    <section className="space-y-3">
+                        <h2 className="text-neutral-400 font-bold text-sm uppercase tracking-widest px-2">Pagamento</h2>
+                        <div className={`bg-neutral-900 ${clayCardDark} rounded-xl p-6 border-l-4 border-yellow-400`}>
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="flex items-center gap-3">
+                                    <Icon name="payments" className="text-yellow-400" />
+                                    <span className="text-white font-bold">Total a receber</span>
+                                </div>
+                                <span className="text-yellow-400 text-2xl font-black">R$ {grossEarnings.toFixed(2).replace('.', ',')}</span>
+                            </div>
+                            {needsChange && (
+                                <div className="bg-neutral-950/50 rounded-lg p-3 flex items-center gap-3">
+                                    <Icon name="account_balance_wallet" className="text-yellow-400/60" />
+                                    <p className="text-neutral-300 text-sm">Troco necessário para <span className="font-bold text-white">R$ {selectedOrder.change_for.toFixed(2).replace('.', ',')}</span></p>
                                 </div>
                             )}
                         </div>
                     </section>
+
+                    {/* Detalhes Operacionais Group */}
+                    <section className={`bg-neutral-900 ${clayCard} rounded-xl border border-neutral-800/50 overflow-hidden`}>
+                        <div className="p-5 space-y-4">
+                            <h3 className="text-neutral-400 text-xs font-black uppercase tracking-[0.2em] mb-2">Detalhes Operacionais</h3>
+                            {/* Payment Logic */}
+                            <div className="flex items-start gap-4 p-4 bg-neutral-950/50 rounded-lg border border-neutral-800/30">
+                                <div className="bg-yellow-400/10 p-2 rounded-full">
+                                    <Icon name="payments" className="text-yellow-400" />
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-white font-bold">{paymentLabel}</span>
+                                        {isPaid && <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded uppercase">Pago</span>}
+                                    </div>
+                                    <p className="text-neutral-500 text-sm mt-1">
+                                        {selectedOrder.payment_method === 'online' ? 'Não é necessário cobrar no local.' : `Cobrar R$ ${grossEarnings.toFixed(2).replace('.', ',')} no local.`}
+                                    </p>
+                                </div>
+                            </div>
+                            {/* Observations */}
+                            <div className="flex items-start gap-4 p-4 bg-neutral-950/50 rounded-lg border border-neutral-800/30">
+                                <div className="bg-yellow-400/10 p-2 rounded-full">
+                                    <Icon name="error_outline" className="text-yellow-400" />
+                                </div>
+                                <div className="flex-1">
+                                    <span className="text-white font-bold">Observações</span>
+                                    <p className="text-neutral-400 text-sm mt-1 leading-relaxed italic">"{selectedOrder.notes || 'Sem observações especiais.'}"</p>
+                                </div>
+                            </div>
+                        </div>
+                        {/* Quick Actions */}
+                        <div className="grid grid-cols-2 border-t border-neutral-800/50">
+                            <button className="py-4 text-white font-bold flex items-center justify-center gap-2 hover:bg-neutral-800/50 active:scale-95 transition-all">
+                                <Icon name="chat" className="text-yellow-400" />
+                                Chat
+                            </button>
+                            <button className="py-4 text-white font-bold flex items-center justify-center gap-2 border-l border-neutral-800/50 hover:bg-neutral-800/50 active:scale-95 transition-all">
+                                <Icon name="call" className="text-yellow-400" />
+                                Ligar
+                            </button>
+                        </div>
+                    </section>
                 </main>
 
-                {/* Ação de Aceite */}
-                <div className="fixed bottom-0 left-0 w-full p-8 bg-gradient-to-t from-[#0c0f10] via-[#0c0f10] to-transparent z-[170]">
+                {/* Bottom Fixed Action Button Container */}
+                <div className="fixed bottom-0 left-0 w-full p-6 bg-gradient-to-t from-neutral-950 via-neutral-950/95 to-transparent z-50">
                     <button 
                         onClick={() => {
                             setShowOrderModal(false);
                             handleAccept(selectedOrder);
                         }}
                         disabled={isAccepting}
-                        className="w-full h-20 bg-primary py-6 rounded-full flex items-center justify-center gap-4 active:scale-[0.97] transition-all shadow-[0_20px_60px_rgba(250,204,21,0.3)] disabled:opacity-50"
-                        style={{
-                            boxShadow: 'inset 4px 4px 10px rgba(255, 255, 255, 0.4), inset -4px -4px 10px rgba(0, 0, 0, 0.1)',
-                        }}
+                        className={`w-full bg-yellow-400 ${clayYellow} py-6 rounded-full flex items-center justify-center gap-3 active:scale-[0.97] transition-transform shadow-[0_10px_40px_rgba(250,204,21,0.25)] disabled:opacity-50`}
                     >
-                        <span className="text-black font-black text-xl tracking-tighter uppercase italic">
-                            {isAccepting ? 'Confirmando...' : presentation.ctaLabel}
+                        <span className="text-black font-black text-lg tracking-tighter uppercase">
+                            {isAccepting ? 'Confirmando...' : 'Ir Para a Coleta'}
                         </span>
-                        <Icon name="check_circle" className="text-black" size={28} />
-                    </button>
-                    <button 
-                        onClick={() => setShowOrderModal(false)}
-                        className="w-full py-4 text-white/30 text-[10px] font-black uppercase tracking-[0.3em]"
-                    >
-                        Ignorar por agora
+                        <Icon name="arrow_forward" className="text-black font-bold" />
                     </button>
                 </div>
             </motion.div>
