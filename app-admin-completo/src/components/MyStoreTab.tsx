@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAdmin } from '../context/AdminContext';
 import { supabase } from '../lib/supabase';
@@ -31,6 +31,35 @@ export default function MyStoreTab() {
   } = useAdmin();
 
   const [localRadius, setLocalRadius] = useState(merchantProfile?.delivery_radius || 0);
+  const [coverageMode, setCoverageMode] = useState<'radius' | 'neighborhoods'>(
+    merchantProfile?.delivery_coverage_mode || 'radius'
+  );
+  const [selectedNeighborhoods, setSelectedNeighborhoods] = useState<string[]>(
+    Array.isArray(merchantProfile?.delivery_neighborhoods) ? merchantProfile.delivery_neighborhoods : []
+  );
+  const [cityNeighborhoods, setCityNeighborhoods] = useState<string[]>([]);
+
+  // Busca bairros ativos do banco
+  useEffect(() => {
+    supabase
+      .from('city_neighborhoods_delivery')
+      .select('name')
+      .eq('active', true)
+      .order('name', { ascending: true })
+      .then(({ data }) => {
+        if (data) setCityNeighborhoods(data.map((r: any) => r.name));
+      });
+  }, []);
+
+  // Sync coverageMode/neighborhoods se merchantProfile mudar depois do mount
+  useEffect(() => {
+    if (merchantProfile?.delivery_coverage_mode) {
+      setCoverageMode(merchantProfile.delivery_coverage_mode);
+    }
+    if (Array.isArray(merchantProfile?.delivery_neighborhoods)) {
+      setSelectedNeighborhoods(merchantProfile.delivery_neighborhoods);
+    }
+  }, [merchantProfile?.id]);
 
   if (!merchantProfile) {
     return (
@@ -311,52 +340,182 @@ export default function MyStoreTab() {
              </div>
           </section>
 
-          {/* LOGÍSTICA & RAIO */}
-          <section className="bg-white dark:bg-slate-900 p-10 rounded-[56px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
-             <div className="relative z-10 text-left">
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 text-left">Gestão de Cobertura</h3>
-                <p className="text-slate-400 text-sm font-medium mb-10 text-left">Defina o alcance máximo das suas entregas no mapa.</p>
-                
-                <div className="flex flex-col md:flex-row items-center gap-10">
-                  <div className="flex-1 w-full space-y-6">
-                    <div className="space-y-2">
-                       <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Raio de Operação (km)</label>
-                       <div className="relative flex items-center">
-                          <input 
-                            type="number" 
-                            step="0.1"
-                            value={localRadius}
-                            onChange={(e) => setLocalRadius(parseFloat(e.target.value) || 0)}
-                            className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-[32px] px-8 h-20 text-3xl font-black text-slate-900 dark:text-white focus:border-primary transition-all pr-32"
-                            placeholder="0"
-                          />
-                          <div className="absolute right-4 text-left">
-                             <button 
-                               onClick={() => updateProfileField('delivery_radius', localRadius)}
-                               disabled={isSaving}
-                               className="px-8 h-12 bg-primary text-slate-900 font-black rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20 disabled:grayscale"
-                             >
-                               {isSaving ? '...' : 'Salvar'}
-                             </button>
-                          </div>
-                       </div>
-                    </div>
-                    <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[32px] flex items-start gap-4 border border-slate-100 dark:border-white/5">
-                       <span className="material-symbols-outlined text-blue-500">info</span>
-                       <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed text-left">
-                          Clientes localizados a mais de <span className="text-primary font-black">{localRadius}km</span> da sua loja não conseguirão visualizar seu card no aplicativo. Use com sabedoria para garantir a qualidade térmica dos seus produtos.
-                       </p>
-                    </div>
-                  </div>
-                  
-                  <div className="relative shrink-0 flex items-center justify-center p-12 bg-primary/5 dark:bg-primary/10 rounded-[56px] border-2 border-dashed border-primary/20 group-hover:border-primary/40 transition-all">
-                     <span className="material-symbols-outlined text-8xl text-primary animate-pulse opacity-50">radar</span>
-                     <div className="absolute inset-0 flex items-center justify-center text-left">
-                        <div className="size-32 rounded-full border border-primary/30 animate-ping opacity-20" />
-                     </div>
-                  </div>
+          {/* LOGÍSTICA & COBERTURA - MODO DUAL */}
+          <section className="bg-white dark:bg-slate-900 p-10 rounded-[56px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+            <div className="relative z-10">
+              <div className="flex items-start justify-between mb-8">
+                <div>
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-1">Gestão de Cobertura</h3>
+                  <p className="text-slate-400 text-sm font-medium">Escolha como definir a área de entrega do seu estabelecimento.</p>
                 </div>
-             </div>
+                <div className="size-14 rounded-3xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-violet-500 text-2xl">radar</span>
+                </div>
+              </div>
+
+              {/* Seletor de Modo */}
+              <div className="grid grid-cols-2 gap-3 mb-8 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-[32px] border border-slate-100 dark:border-white/5">
+                {[
+                  { id: 'radius', icon: 'radar', label: 'Por Raio de Entrega', desc: 'Distância em km do estabelecimento' },
+                  { id: 'neighborhoods', icon: 'location_city', label: 'Por Bairros', desc: 'Selecione os bairros atendidos' },
+                ].map((mode) => (
+                  <button
+                    key={mode.id}
+                    onClick={() => {
+                      setCoverageMode(mode.id as 'radius' | 'neighborhoods');
+                      updateProfileField('delivery_coverage_mode', mode.id);
+                    }}
+                    className={`flex items-center gap-4 p-5 rounded-[24px] font-black text-left transition-all ${
+                      coverageMode === mode.id
+                        ? 'bg-white dark:bg-slate-900 shadow-md border border-violet-200 dark:border-violet-500/30 text-violet-600 dark:text-violet-400'
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 border border-transparent'
+                    }`}
+                  >
+                    <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
+                      coverageMode === mode.id ? 'bg-violet-100 dark:bg-violet-500/20' : 'bg-slate-100 dark:bg-slate-700'
+                    }`}>
+                      <span className={`material-symbols-outlined text-xl ${coverageMode === mode.id ? 'text-violet-500' : 'text-slate-400'}`}>{mode.icon}</span>
+                    </div>
+                    <div>
+                      <p className={`text-xs uppercase tracking-widest font-black ${coverageMode === mode.id ? 'text-violet-600 dark:text-violet-400' : 'text-slate-500'}`}>{mode.label}</p>
+                      <p className="text-[10px] font-bold text-slate-400 mt-0.5 normal-case tracking-normal">{mode.desc}</p>
+                    </div>
+                    {coverageMode === mode.id && (
+                      <div className="ml-auto size-5 rounded-full bg-violet-500 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-white text-sm">check</span>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Conteúdo condicional */}
+              <AnimatePresence mode="wait">
+                {coverageMode === 'radius' ? (
+                  <motion.div
+                    key="radius"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-5"
+                  >
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Raio de Operação (km)</label>
+                      <div className="relative flex items-center">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={localRadius}
+                          onChange={(e) => setLocalRadius(parseFloat(e.target.value) || 0)}
+                          className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-[32px] px-8 h-20 text-3xl font-black text-slate-900 dark:text-white focus:border-violet-400 transition-all pr-32"
+                          placeholder="0"
+                        />
+                        <div className="absolute right-4">
+                          <button
+                            onClick={() => updateProfileField('delivery_radius', localRadius)}
+                            disabled={isSaving}
+                            className="px-8 h-12 bg-violet-500 hover:bg-violet-600 text-white font-black rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-violet-500/20 disabled:grayscale"
+                          >
+                            {isSaving ? '...' : 'Salvar'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center justify-center p-8 bg-violet-500/5 dark:bg-violet-500/10 rounded-[40px] border border-dashed border-violet-200 dark:border-violet-500/20">
+                        <div className="text-center">
+                          <span className="text-5xl font-black text-violet-500">{localRadius}</span>
+                          <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest mt-1">km raio</p>
+                        </div>
+                      </div>
+                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed flex-1">
+                        Clientes a mais de <span className="text-violet-500 font-black">{localRadius}km</span> não verão seu card. Use com sabedoria para garantir qualidade na entrega.
+                      </p>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="neighborhoods"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-5"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Bairros Atendidos</p>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                        selectedNeighborhoods.length > 0
+                          ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                      }`}>
+                        {selectedNeighborhoods.length} selecionados
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {cityNeighborhoods.length === 0 ? (
+                        <div className="w-full flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
+                          <span className="material-symbols-outlined text-slate-300 animate-spin text-xl">sync</span>
+                          <p className="text-xs font-bold text-slate-400">Carregando bairros...</p>
+                        </div>
+                      ) : (
+                        cityNeighborhoods.map((bairro) => {
+                          const isSelected = selectedNeighborhoods.includes(bairro);
+                          return (
+                            <button
+                              key={bairro}
+                              onClick={() => {
+                                const next = isSelected
+                                  ? selectedNeighborhoods.filter((b) => b !== bairro)
+                                  : [...selectedNeighborhoods, bairro];
+                                setSelectedNeighborhoods(next);
+                              }}
+                              className={`px-4 py-2 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all border ${
+                                isSelected
+                                  ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20 scale-105'
+                                  : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700 hover:border-violet-300 hover:text-violet-500'
+                              }`}
+                            >
+                              {isSelected && <span className="material-symbols-outlined text-[12px] mr-1 align-middle">check</span>}
+                              {bairro}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {selectedNeighborhoods.length > 0 && (
+                      <div className="p-4 bg-violet-50 dark:bg-violet-500/10 rounded-[28px] border border-violet-100 dark:border-violet-500/20">
+                        <p className="text-[10px] font-black text-violet-600 dark:text-violet-400 uppercase tracking-widest mb-2">Cobertura ativa em:</p>
+                        <p className="text-xs font-bold text-violet-700 dark:text-violet-300 leading-relaxed">
+                          {selectedNeighborhoods.join(' • ')}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          setSelectedNeighborhoods([]);
+                        }}
+                        className="flex-1 py-4 bg-slate-50 dark:bg-slate-800 text-slate-500 font-black text-xs uppercase tracking-widest rounded-2xl border border-slate-100 dark:border-slate-700 hover:bg-slate-100 transition-all"
+                      >
+                        Limpar Tudo
+                      </button>
+                      <button
+                        onClick={() => updateProfileField('delivery_neighborhoods', selectedNeighborhoods)}
+                        disabled={isSaving}
+                        className="flex-[2] py-4 bg-violet-500 hover:bg-violet-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-violet-500/20 transition-all active:scale-95 disabled:grayscale flex items-center justify-center gap-2"
+                      >
+                        <span className="material-symbols-outlined text-base">save</span>
+                        {isSaving ? 'Salvando...' : 'Confirmar Bairros'}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </section>
 
           {/* AI ANALYTICS CARD */}

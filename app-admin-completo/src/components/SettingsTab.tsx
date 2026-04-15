@@ -1,11 +1,77 @@
+import { useState, useEffect } from 'react';
 import { useAdmin } from '../context/AdminContext';
+import { supabase } from '../lib/supabase';
 
 // Configurações do Sistema
+
 export default function SettingsTab() {
   const {
     appSettings, setAppSettings, autoSaveStatus, fetchAppSettings, handleSaveAppSettings, isSaving,
     globalSettings, saveGlobalSettings
   } = useAdmin();
+
+  // --- Gerenciamento de Bairros ---
+  const [neighborhoods, setNeighborhoods] = useState<any[]>([]);
+  const [neighborhoodsLoading, setNeighborhoodsLoading] = useState(false);
+  const [newNeighborhoodName, setNewNeighborhoodName] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [neighborhoodSaving, setNeighborhoodSaving] = useState(false);
+
+  const fetchNeighborhoods = async () => {
+    setNeighborhoodsLoading(true);
+    const { data } = await supabase
+      .from('city_neighborhoods_delivery')
+      .select('*')
+      .order('name', { ascending: true });
+    setNeighborhoods(data || []);
+    setNeighborhoodsLoading(false);
+  };
+
+  useEffect(() => { fetchNeighborhoods(); }, []);
+
+  const handleAddNeighborhood = async () => {
+    const name = newNeighborhoodName.trim();
+    if (!name) return;
+    setNeighborhoodSaving(true);
+    const { error } = await supabase
+      .from('city_neighborhoods_delivery')
+      .insert({ name, city: 'Brumadinho', state: 'MG' });
+    if (!error) {
+      setNewNeighborhoodName('');
+      await fetchNeighborhoods();
+    }
+    setNeighborhoodSaving(false);
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    const name = editingName.trim();
+    if (!name) return;
+    setNeighborhoodSaving(true);
+    const { error } = await supabase
+      .from('city_neighborhoods_delivery')
+      .update({ name })
+      .eq('id', id);
+    if (!error) {
+      setEditingId(null);
+      await fetchNeighborhoods();
+    }
+    setNeighborhoodSaving(false);
+  };
+
+  const handleToggleActive = async (id: string, current: boolean) => {
+    await supabase
+      .from('city_neighborhoods_delivery')
+      .update({ active: !current })
+      .eq('id', id);
+    await fetchNeighborhoods();
+  };
+
+  const handleDeleteNeighborhood = async (id: string, name: string) => {
+    if (!confirm(`Excluir o bairro "${name}"?\n\nLojistas que o usavam perderão essa configuração.`)) return;
+    await supabase.from('city_neighborhoods_delivery').delete().eq('id', id);
+    await fetchNeighborhoods();
+  };
 
   const handleUpdateGlobalFinance = async (key: string, value: number) => {
     if (!globalSettings) return;
@@ -410,6 +476,162 @@ export default function SettingsTab() {
             );
           })}
         </div>
+      </section>
+
+      {/* Gerenciamento de Bairros */}
+      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="p-3 rounded-2xl bg-violet-50 text-violet-500 border border-violet-100 dark:bg-violet-500/10 dark:border-violet-500/20">
+            <span className="material-symbols-outlined">location_city</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Bairros da Cidade</h2>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gerencie os bairros disponíveis para cobertura dos lojistas</p>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+              neighborhoods.filter(n => n.active).length > 0
+                ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+            }`}>
+              {neighborhoods.filter(n => n.active).length} ativos
+            </span>
+            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-400">
+              {neighborhoods.length} total
+            </span>
+          </div>
+        </div>
+
+        {/* Adicionar Novo Bairro */}
+        <div className="flex gap-3 mb-6">
+          <div className="relative flex-1">
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">add_location_alt</span>
+            <input
+              type="text"
+              value={newNeighborhoodName}
+              onChange={(e) => setNewNeighborhoodName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddNeighborhood()}
+              placeholder="Nome do novo bairro..."
+              className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-violet-400 text-sm font-bold dark:text-white transition-all"
+            />
+          </div>
+          <button
+            onClick={handleAddNeighborhood}
+            disabled={neighborhoodSaving || !newNeighborhoodName.trim()}
+            className="px-6 py-4 bg-violet-500 hover:bg-violet-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-violet-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-base">add</span>
+            Adicionar
+          </button>
+        </div>
+
+        {/* Lista de Bairros */}
+        {neighborhoodsLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="size-8 border-4 border-violet-200 border-t-violet-500 rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {neighborhoods.map((n) => (
+              <div
+                key={n.id}
+                className="flex items-center gap-3 p-4 rounded-[24px] bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 transition-all hover:shadow-sm"
+              >
+                {/* Ícone */}
+                <div className="size-10 rounded-2xl bg-slate-50 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-slate-400 text-lg">location_on</span>
+                </div>
+
+                {/* Nome + status */}
+                <div className="flex-1 min-w-0">
+                  {editingId === n.id ? (
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveEdit(n.id);
+                        if (e.key === 'Escape') setEditingId(null);
+                      }}
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-violet-300 rounded-xl px-3 py-1.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-violet-400 outline-none"
+                    />
+                  ) : (
+                    <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">{n.name}</p>
+                  )}
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className={`inline-block w-1.5 h-1.5 rounded-full ${n.active ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      {n.active ? 'Ativo' : 'Inativo'} · {n.city}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Botões de ação */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {editingId === n.id ? (
+                    <>
+                      <button
+                        onClick={() => handleSaveEdit(n.id)}
+                        disabled={neighborhoodSaving}
+                        className="size-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-all active:scale-95"
+                        title="Salvar"
+                      >
+                        <span className="material-symbols-outlined text-sm">check</span>
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="size-8 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-all active:scale-95"
+                        title="Cancelar"
+                      >
+                        <span className="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleToggleActive(n.id, n.active)}
+                        title={n.active ? 'Desativar' : 'Ativar'}
+                        className={`size-8 rounded-xl flex items-center justify-center transition-all active:scale-95 ${
+                          n.active
+                            ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 hover:bg-emerald-100'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-slate-200'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-sm">
+                          {n.active ? 'toggle_on' : 'toggle_off'}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => { setEditingId(n.id); setEditingName(n.name); }}
+                        className="size-8 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-400 flex items-center justify-center hover:bg-violet-50 hover:text-violet-600 transition-all active:scale-95 border border-slate-100 dark:border-slate-600"
+                        title="Renomear"
+                      >
+                        <span className="material-symbols-outlined text-sm">edit</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteNeighborhood(n.id, n.name)}
+                        className="size-8 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-95 border border-slate-100 dark:border-slate-600"
+                        title="Excluir"
+                      >
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+
+
+            {neighborhoods.length === 0 && (
+              <div className="col-span-full flex flex-col items-center justify-center py-16 gap-4">
+                <span className="material-symbols-outlined text-5xl text-slate-300">location_off</span>
+                <p className="text-slate-400 font-bold text-sm">Nenhum bairro cadastrado</p>
+                <p className="text-slate-300 text-xs">Use o campo acima para adicionar o primeiro bairro</p>
+              </div>
+            )}
+          </div>
+        )}
       </section>
     </div>
   );
