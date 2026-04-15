@@ -2769,8 +2769,10 @@ const renderDashboard = () => (
                                 <Icon name="location_on" size={20} className="text-primary" />
                             </div>
                             <div className="space-y-1">
-                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Cidade/Base</p>
-                                <p className="text-sm font-black text-white truncate w-full italic">{slot.city || 'Sua Região'}</p>
+                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Endereço Base</p>
+                                <p className="text-sm font-black text-white truncate w-full italic" title={slot.admin_users?.store_address || slot.city}>
+                                    {slot.admin_users?.store_address || slot.city || 'Sua Região'}
+                                </p>
                             </div>
                         </div>
                         <div className="p-6 flex flex-col items-center text-center space-y-3" style={sClayDark}>
@@ -2778,8 +2780,8 @@ const renderDashboard = () => (
                                 <Icon name="analytics" size={20} className="text-primary" />
                             </div>
                             <div className="space-y-1">
-                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Extra Entrega</p>
-                                <p className="text-sm font-black text-white italic">R$ {parseFloat(slot.metadata?.fee_per_extra_delivery || 0).toFixed(2).replace('.', ',')}</p>
+                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Após {slot.metadata?.base_deliveries || 0} saídas</p>
+                                <p className="text-sm font-black text-white italic">R$ {parseFloat(slot.metadata?.fee_per_extra_delivery || 0).toFixed(2).replace('.', ',')} extra</p>
                             </div>
                         </div>
                     </div>
