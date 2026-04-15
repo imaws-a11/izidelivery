@@ -302,6 +302,7 @@ export default function OrdersAdminTab() {
                      o.status === 'waiting_merchant' ? 'Esperando Lojista' :
                      o.status === 'pendente_pagamento' ? 'Aguardando PIX' :
                      o.status === 'preparando' ? 'Em Preparo' :
+                     o.status === 'chegou_coleta' ? 'Entregador no Estabelecimento' :
                      o.status === 'a_caminho' ? 'Em Rota' : o.status}
                   </span>
                 </td>
@@ -402,6 +403,7 @@ export default function OrdersAdminTab() {
                                           {selectedOrderDetails.status === 'pendente_pagamento' ? 'Aguardando Confirmação do Pagamento' :
                                            selectedOrderDetails.status === 'waiting_merchant' ? 'Aguardando Aprovação' : 
                                            selectedOrderDetails.status === 'preparando' ? 'Em Preparação' : 
+                                           selectedOrderDetails.status === 'chegou_coleta' ? 'Entregador no Estabelecimento' : 
                                            selectedOrderDetails.status === 'waiting_driver' ? 'Aguardando Entregador' : 
                                            selectedOrderDetails.status === 'concluido' ? 'Pedido Finalizado' : selectedOrderDetails.status}
                                       </p>
