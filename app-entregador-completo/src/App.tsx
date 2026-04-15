@@ -493,6 +493,12 @@ function App() {
         distance?: number
     } | null>(null);
     const [isOnline, setIsOnline] = useState(() => localStorage.getItem('Izi_online') === 'true');
+    const isOnlineRef = useRef(isOnline);
+    useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
+
+    const driverIdRef = useRef(driverId);
+    useEffect(() => { driverIdRef.current = driverId; }, [driverId]);
+
     const isFirstRender = useRef(true);
     const hasLoadedOnlineStatus = useRef(false); // Impede que refreshes de token sobrescrevam o status
     const hasBootedRef = useRef(false); // Garante que syncMissionWithDB e restauração s³ ocorrem 1x por sessão
@@ -511,6 +517,8 @@ function App() {
     const [selectedScheduledOrder, setSelectedScheduledOrder] = useState<any | null>(null);
     const [history, setHistory] = useState<Order[]>([]);
     const [selectedHistoryOrder, setSelectedHistoryOrder] = useState<any>(null);
+    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [showOrderModal, setShowOrderModal] = useState(false);
     const [merchantCoords, setMerchantCoords] = useState<{lat: number, lng: number} | null>(null);
     const [stats, setStats] = useState({ balance: 0, today: 0, weekly: 0, totalEarnings: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
     const [earningsHistory, setEarningsHistory] = useState<Order[]>([]);
@@ -1123,7 +1131,7 @@ function App() {
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 const o = payload.new as any;
                 if (o.scheduled_at) {
-                    if (isOnline) playIziSound('driver'); // Som unico para Agendamento
+                    if (isOnlineRef.current) playIziSound('driver'); // Som unico para Agendamento
                     setScheduledOrders(prev => [...prev, o].sort((a, b) =>
                         new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
                     ));
@@ -1134,7 +1142,7 @@ function App() {
                 if (o.scheduled_at) {
                     if (['concluido', 'cancelado', 'finalizado', 'delivered'].includes(o.status)) {
                         setScheduledOrders(prev => prev.filter(s => s.id !== o.id));
-                    } else if (o.driver_id && String(o.driver_id).trim() !== String(driverId).trim()) {
+                    } else if (o.driver_id && String(o.driver_id).trim() !== String(driverIdRef.current || '').trim()) {
                         // Se outro motorista aceitou, remove da minha lista
                         setScheduledOrders(prev => prev.filter(s => s.id !== o.id));
                     } else {
@@ -1148,7 +1156,7 @@ function App() {
             .subscribe();
 
         return () => { supabase.removeChannel(scheduledChannel); };
-    }, [isAuthenticated, driverId, isOnline, fetchFromDB]);
+    }, [isAuthenticated, fetchFromDB]);
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
@@ -1248,10 +1256,9 @@ function App() {
         const channel = supabase.channel('realtime_orders')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 const o = payload.new;
-                if (o.scheduled_at) return; // Ignorar agendados no dashboard de missoes imediatas
+                if (o.scheduled_at) return;
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
                 
-                // Filtros de segurança e status
                 const isMerchantOrder = !!o.merchant_id;
                 const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted'].includes(o.status);
                 const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status);
@@ -1263,29 +1270,24 @@ function App() {
                 }
                 if (Date.now() - (declinedMap[o.id] || 0) < 1800000) return;
                 
-                // Ignorar transações financeiras (Izi Coin, Assinatura) que não são missões
                 const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
                 if (financialTypes.includes(o.service_type)) return;
 
-                // Restringir sons por categoria e status (Evitar barulho precoce em Food)
-                const availabilityType = normalizeServiceType(o.service_type);
-                const isMobility = ['mototaxi', 'car_ride', 'frete', 'van', 'utilitario', 'logistica', 'motorista_particular', 'package', 'motoboy'].includes(availabilityType);
-                // S³ toca som se: (¢ÃƒÆ’¢¬° Mobilidade) OU (¢ÃƒÆ’¢¬° Food e está em um status visível/acionável)
-                // E também somente se o pagamento já foi aprovado ou é em dinheiro
                 const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted'];
-                const isPaidOrCash = o.payment_method === 'cash' || o.payment_status === 'paid' || o.payment_method === 'dinheiro';
+                const pStatus = String(o.payment_status || '').toLowerCase();
+                const pMethod = String(o.payment_method || '').toLowerCase();
+                const isPaidOrCash = ['cash', 'dinheiro'].includes(pMethod) || ['paid', 'pago', 'approved', 'aprovado'].includes(pStatus);
                 const shouldSound = actionableStatuses.includes(o.status) && isPaidOrCash;
                 const servicePreview = getServicePresentation(o);
 
                 setOrders(prev => {
                     if (prev.find(x => x.realId === o.id)) return prev;
                     
-                    // S³ toca som se estiver online e passar no filtro de categoria
-                    if (isOnline && shouldSound) {
+                    if (isOnlineRef.current && shouldSound && !activeMissionRef.current) {
                         playIziSound('driver');
                         if (Notification.permission === 'granted') {
-                            new Notification('°ÃƒÂ¢Ã¢€¦¸ÃƒÂ¢Ã¢€¦á¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬ Nova Missão Izi!', { 
-                                body: `${servicePreview.headline} ¢¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬¢ ${servicePreview.pickupText || o.pickup_address}`, 
+                            new Notification('🚀 Nova Missão Izi!', { 
+                                body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
                                 icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
                             });
                         }
@@ -1307,15 +1309,14 @@ function App() {
                         preparation_status: o.preparation_status
                     };
 
-                    // Se o pedido já veio atribuído a mim (ex: admin atribuiu), define como missão ativa na hora
-                    if (o.driver_id && String(o.driver_id).trim() === String(driverId).trim()) {
+                    const currentDriverId = String(driverIdRef.current || '').trim();
+                    if (o.driver_id && String(o.driver_id).trim() === currentDriverId && currentDriverId !== '') {
                         setActiveMission(mapped);
                         localStorage.setItem('Izi_active_mission', JSON.stringify(mapped));
                         setActiveTab('active_mission');
                         return prev;
                     }
 
-                    // Se o pedido tem motorista mas NÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O SOU EU, ignora (foi aceito por outro)
                     if (o.driver_id && String(o.driver_id).trim() !== '') {
                         return prev;
                     }
@@ -1325,17 +1326,12 @@ function App() {
             })
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders_delivery' }, (payload) => {
                 const o = payload.new as any;
-                if (o.scheduled_at) return; // Ignorar agendados no dashboard de missoes imediatas
+                if (o.scheduled_at) return;
                 const currentMission = activeMissionRef.current;
                 
-                // Sincronização Global de Missão Ativa (Multi-dispositivos)
-                const dId = String(driverId).trim();
-                if (o.driver_id === dId) {
-                    console.log('[REALTIME] Sincronizando mudança de status da minha missão:', o.status);
-                    
-                    // L³gica de Limpeza: Se o pedido foi cancelado ou concluído em outro dispositivo
+                const dId = String(driverIdRef.current || '').trim();
+                if (o.driver_id && String(o.driver_id).trim() === dId && dId !== '') {
                     if (['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)) {
-                        console.log('[REALTIME] Missão finalizada detectada. Limpando estado local.');
                         setActiveMission(null);
                         localStorage.removeItem('Izi_active_mission');
                         if (activeTabRef.current === 'active_mission') setActiveTab('dashboard');
@@ -1348,12 +1344,9 @@ function App() {
 
                         if (wasPreparing && isNowReady) {
                             playIziSound('driver');
-                            toastSuccess('°ÃƒÂ¢Ã¢€¦¸¢ÃƒÆ’¢¬¥ O Pedido está PRONTO para coleta!');
-                            if (Notification.permission === 'granted') new Notification('°ÃƒÂ¢Ã¢€¦¸¢ÃƒÆ’¢¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢€Ã…â€œ¦ Pedido Pronto!', { body: 'O estabelecimento finalizou o preparo. Pode coletar!' });
+                            toastSuccess('🔔 O Pedido está PRONTO para coleta!');
                         }
 
-                        // Sincronizar o status da missão ativa com o servidor
-                        // MANT¢ÃƒÆ’¢¬°M OS DADOS DO LOJISTA DE BRUMADINHO (Join admin_users) - Prioridade Total
                         const mission: any = { 
                             ...o, 
                             realId: o.id, 
@@ -1373,8 +1366,7 @@ function App() {
                         setActiveMission(mission);
                         localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                         
-                        // Se não estivermos na tela de missão, mudar para lá automaticamente
-                        if (activeTabRef.current !== 'active_mission') {
+                        if (activeTabRef.current !== 'active_mission' && !['concluido', 'cancelado'].includes(o.status)) {
                             setActiveTab('active_mission');
                         }
                         return;
@@ -1391,35 +1383,30 @@ function App() {
                     setOrders(prev => {
                         const isNew = !prev.find(x => x.realId === o.id);
                         if (isNew) {
-                            // Ignorar transações financeiras
                             const financialTypes = ['izi_coin_recharge', 'vip_subscription', 'izi_coin', 'subscription'];
                             if (financialTypes.includes(o.service_type)) return prev;
 
-                            // Alerta para qualquer pedido novo disponível para o entregador (Mobilidade ou Food)
                             const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted'];
-                            const isPaidOrCash = o.payment_method === 'cash' || o.payment_status === 'paid' || o.payment_method === 'dinheiro';
+                            const pStatus = String(o.payment_status || '').toLowerCase();
+                            const pMethod = String(o.payment_method || '').toLowerCase();
+                            const isPaidOrCash = ['cash', 'dinheiro'].includes(pMethod) || ['paid', 'pago', 'approved', 'aprovado'].includes(pStatus);
                             const shouldSound = actionableStatuses.includes(o.status) && isPaidOrCash;
                             const servicePreview = getServicePresentation(o);
 
-                            if (isOnline && shouldSound) {
+                            if (isOnlineRef.current && shouldSound && !activeMissionRef.current) {
                                 playIziSound('driver');
                                 if (Notification.permission === 'granted') {
-                                    new Notification('ÃƒÃ‚ °ÃƒÂ¢Ã¢€¦¸¢ÃƒÆ’¢¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢€Ã…â€œ¦ Pedido DisponÃƒÃ‚ível!', { 
-                                        body: `${servicePreview.headline}ÃƒÃ‚ ¢¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬¢ ${servicePreview.pickupText || o.pickup_address}`, 
+                                    new Notification('🔔 Pedido Disponível!', { 
+                                        body: `${servicePreview.headline} • ${servicePreview.pickupText || o.pickup_address}`, 
                                         icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png' 
                                     });
                                 }
                             }
                             return [{ ...o, id: o.id.slice(0, 8).toUpperCase(), realId: o.id, type: o.service_type, origin: o.pickup_address, destination: o.delivery_address, price: o.total_price, customer: 'Cliente Izi' }, ...prev];
                         }
-                        return prev;
+                        return prev.map(x => x.realId === o.id ? { ...x, ...o } : x);
                     });
                 } else {
-                    const isMerchantOrder = !!o.merchant_id;
-                    const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted'].includes(o.status);
-                    const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status);
-                    const statusOk = isMerchantOrder ? merchantAccepted : p2pAllowed;
-
                     if (!statusOk && (!currentMission || o.id !== currentMission.id)) {
                         setOrders(prev => prev.filter((order: any) => order.realId !== o.id));
                     }
@@ -1428,14 +1415,10 @@ function App() {
             .subscribe();
 
         return () => { clearInterval(pollInterval); supabase.removeChannel(channel); };
-    }, [isOnline, isAuthenticated, driverId]);
+    }, [isAuthenticated]); // Removido dependency de isOnline e driverId pois agora usamos Refs
 
-    // Alerta de som para novas chamadas (Apenas uma vez quando a lista aumenta e estÃƒÂá online)
-    useEffect(() => {
-        if (isOnline && orders.length > 0 && !activeMission) {
-            playIziSound('driver');
-        }
-    }, [isOnline, orders.length > 0, !!activeMission]);
+    // O som agora é disparado DIRETAMENTE pelo listener Realtime (acima)
+    // para maior precisão e evitar disparos duplicados ou atrasados.
 
     const [isSyncing, setIsSyncing] = useState(false);
     const handleManualSync = async () => {
@@ -2200,37 +2183,86 @@ const renderDashboard = () => (
                             </div>
                         ) : (
                             filteredOrders.map((order) => {
-                                const details = getTypeDetails(order.type);
+                                const presentation = getServicePresentation(order);
+                                const isAcceptingThis = isAccepting && (selectedOrder?.realId === (order.realId || order.id) || selectedOrder?.id === order.id);
+                                
                                 return (
                                     <motion.div 
                                         key={order.id} 
-                                        className="flex-shrink-0 w-72 clay-card-dark p-6 relative overflow-hidden group cursor-pointer"
-                                        whileTap={{ scale: 0.98 }}
-                                        onClick={() => {
-                                            setSelectedOrder(order);
-                                            setShowOrderModal(true);
-                                        }}
+                                        initial={{ opacity: 0, x: 50 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        className="flex-shrink-0 w-[320px] clay-card-dark p-0 h-auto relative overflow-hidden group border border-white/5"
                                     >
-                                        <div className="absolute -right-4 -top-4 opacity-10 transform rotate-12 group-hover:scale-110 transition-transform duration-500">
-                                            <Icon name={details.icon} size={120} />
+                                        <div className="absolute -right-6 -top-6 opacity-10 transform rotate-12 group-hover:scale-110 transition-all duration-700">
+                                            <Icon name={presentation.details.icon} size={140} />
                                         </div>
-                                        
-                                        <div className="relative z-10 space-y-4">
-                                            <div className="flex justify-between items-start">
-                                                <div className="bg-yellow-400 text-black px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">{details.label}</div>
-                                                <div className="text-right">
-                                                    <p className="text-[10px] text-white/40 font-bold uppercase">Estimativa</p>
-                                                    <p className="text-xl font-bold text-white italic">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
+
+                                        <div className="p-5 flex justify-between items-start border-b border-white/[0.03]">
+                                            <div className="space-y-1.5">
+                                                <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${presentation.details.bg} ${presentation.details.color}`}>
+                                                    {presentation.details.label}
+                                                </div>
+                                                <div className="flex gap-1">
+                                                    {presentation.badges.map((badge, idx) => (
+                                                        <span key={idx} className="bg-white/5 text-white/40 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase">{badge}</span>
+                                                    ))}
                                                 </div>
                                             </div>
-                                            
-                                            <div className="space-y-1">
-                                                <p className="text-sm font-bold text-white truncate italic">{order.pickup_address?.split(',')[0]}</p>
-                                                <div className="flex items-center gap-2">
-                                                    <Icon name="near_me" size={12} className="text-yellow-400" />
-                                                    <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">--- kmâ€¢ --- min</p>
+                                            <div className="text-right">
+                                                <p className="text-[9px] text-white/30 font-black uppercase tracking-tighter">Você ganha</p>
+                                                <p className="text-2xl font-black text-yellow-400 italic">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-5 space-y-4">
+                                            <div className="space-y-3 relative">
+                                                <div className="absolute left-1.5 top-3 bottom-0 w-[1px] bg-gradient-to-b from-yellow-400/50 via-white/10 to-emerald-400/50" />
+                                                
+                                                <div className="flex items-start gap-4">
+                                                    <div className="size-3 rounded-full bg-yellow-400 flex-shrink-0 mt-1 shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
+                                                    <div className="min-w-0">
+                                                        <p className="text-[8px] text-white/30 font-black uppercase tracking-widest">{presentation.pickupLabel}</p>
+                                                        <p className="text-[11px] font-bold text-white/90 truncate italic">{presentation.pickupText || 'Origem não informada'}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-start gap-4">
+                                                    <div className="size-3 rounded-full bg-emerald-400 flex-shrink-0 mt-1 shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
+                                                    <div className="min-w-0">
+                                                        <p className="text-[8px] text-white/30 font-black uppercase tracking-widest">{presentation.destinationLabel}</p>
+                                                        <p className="text-[11px] font-bold text-white/90 truncate italic">{presentation.destinationText || 'Destino não informado'}</p>
+                                                    </div>
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        <div className="p-4 pt-0 flex gap-2">
+                                            <button 
+                                                onClick={() => {
+                                                    setSelectedOrder(order);
+                                                    setShowOrderModal(true);
+                                                }}
+                                                className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl transition-all border border-white/5"
+                                            >
+                                                Detalhes
+                                            </button>
+                                            <button 
+                                                onClick={() => {
+                                                    setSelectedOrder(order);
+                                                    handleAccept(order);
+                                                }}
+                                                disabled={isAccepting}
+                                                className="flex-[2] py-3.5 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-black font-black text-[10px] uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-yellow-400/10 active:scale-95 flex items-center justify-center gap-2"
+                                            >
+                                                {isAcceptingThis ? (
+                                                    <div className="size-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                                                ) : (
+                                                    <>
+                                                        <Icon name="check" size={16} />
+                                                        {presentation.ctaLabel}
+                                                    </>
+                                                )}
+                                            </button>
                                         </div>
                                     </motion.div>
                                 );
@@ -3494,6 +3526,151 @@ const renderDashboard = () => (
         );
     };
 
+    const renderOrderDetailsModal = () => {
+        if (!selectedOrder || !showOrderModal) return null;
+
+        const presentation = getServicePresentation(selectedOrder);
+        const grossEarnings = getGrossEarnings(selectedOrder);
+        const netEarnings = getNetEarnings(selectedOrder);
+
+        const sClayDark: React.CSSProperties = {
+            background: '#121212',
+            boxShadow: 'inset 2px 2px 8px rgba(255, 255, 255, 0.05), inset -2px -2px 8px rgba(0, 0, 0, 0.4)',
+        };
+
+        return (
+            <motion.div 
+                initial={{ opacity: 0, y: 100 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: 100 }}
+                className="fixed inset-0 z-[160] bg-[#0c0f10] flex flex-col overflow-hidden"
+            >
+                {/* Header Estilizado */}
+                <header className="px-6 py-6 flex justify-between items-center border-b border-white/5 bg-black/50 backdrop-blur-xl shrink-0">
+                    <button 
+                        onClick={() => setShowOrderModal(false)}
+                        className="size-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 active:scale-90 transition-all"
+                    >
+                        <Icon name="close" className="text-white" size={24} />
+                    </button>
+                    <div className="flex flex-col items-center">
+                        <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Detalhes</span>
+                        <span className="text-white font-black text-sm uppercase italic">Nova Missão</span>
+                    </div>
+                    <div className="size-12" /> {/* Spacer */}
+                </header>
+
+                <main className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar pb-40">
+                    {/* Visualização de Lucro */}
+                    <section className="bg-gradient-to-br from-primary to-yellow-600 rounded-[40px] p-8 shadow-[0_20px_60px_rgba(250,204,21,0.2)] relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 blur-3xl -mr-16 -mt-16 rounded-full" />
+                        <div className="relative z-10 flex flex-col items-center text-black">
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-2">Você Ganhara</span>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-2xl font-black italic">R$</span>
+                                <span className="text-6xl font-black tracking-tighter italic leading-none">{netEarnings.toFixed(2).replace('.', ',')}</span>
+                            </div>
+                            <div className="mt-4 px-4 py-1.5 bg-black/10 rounded-full flex items-center gap-2">
+                                <Icon name="bolt" size={14} className="text-black" />
+                                <span className="text-[9px] font-black uppercase tracking-widest">Valor total: R$ {grossEarnings.toFixed(2).replace('.', ',')}</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Rota Visualization */}
+                    <section className="space-y-4">
+                        <h2 className="text-white/30 font-black text-[10px] uppercase tracking-[0.3em] px-2">Itinerário</h2>
+                        <div className="bg-neutral-900 rounded-[32px] p-6 border border-white/5 space-y-6" style={sClayDark}>
+                            <div className="flex gap-4">
+                                <div className="flex flex-col items-center gap-1 mt-1">
+                                    <div className="size-4 rounded-full bg-primary border-4 border-black shadow-[0_0_10px_rgba(250,204,21,0.5)]" />
+                                    <div className="w-[1.5px] h-10 bg-white/10" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">{presentation.pickupLabel}</p>
+                                    <p className="text-white font-bold text-[13px] leading-tight line-clamp-2 italic">{presentation.pickupText || 'Local de coleta não informado'}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="flex flex-col items-center gap-1 mt-1">
+                                    <div className="size-4 rounded-full bg-white/20 border-4 border-black" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1">{presentation.destinationLabel}</p>
+                                    <p className="text-white font-bold text-[13px] leading-tight line-clamp-2 italic">{presentation.destinationText || 'Destino não informado'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Info Card */}
+                    <section className="grid grid-cols-2 gap-4">
+                        <div className="bg-neutral-900 rounded-[28px] p-5 border border-white/5 space-y-1" style={sClayDark}>
+                            <Icon name="route" size={18} className="text-primary mb-2" />
+                            <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Distância</p>
+                            <p className="text-white font-black italic">{selectedOrder.distance || 'Calculando...'}</p>
+                        </div>
+                        <div className="bg-neutral-900 rounded-[28px] p-5 border border-white/5 space-y-1" style={sClayDark}>
+                            <Icon name="payments" size={18} className="text-primary mb-2" />
+                            <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Pagamento</p>
+                            <p className="text-white font-black italic uppercase truncate">{selectedOrder.payment_method === 'online' ? 'App (Online)' : 'Local'}</p>
+                        </div>
+                    </section>
+
+                    {/* Detalhes Adicionais */}
+                    <section className="space-y-4">
+                        <h2 className="text-white/30 font-black text-[10px] uppercase tracking-[0.3em] px-2">Importante</h2>
+                        <div className="bg-neutral-900 rounded-[32px] p-6 border border-white/5 space-y-6" style={sClayDark}>
+                            <div className="flex items-start gap-4">
+                                <div className="size-10 rounded-2xl bg-white/5 flex items-center justify-center shrink-0">
+                                    <Icon name="person" className="text-white/40" />
+                                </div>
+                                <div>
+                                    <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">Cliente / Local</p>
+                                    <p className="text-white font-bold text-sm italic">{selectedOrder.user_name || selectedOrder.merchant_name || 'Particular'}</p>
+                                </div>
+                            </div>
+
+                            {selectedOrder.notes && (
+                                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                                    <p className="text-[8px] font-black text-primary uppercase tracking-widest mb-2">Observações</p>
+                                    <p className="text-white/70 text-xs italic leading-relaxed">{selectedOrder.notes}</p>
+                                </div>
+                            )}
+                        </div>
+                    </section>
+                </main>
+
+                {/* Ação de Aceite */}
+                <div className="fixed bottom-0 left-0 w-full p-8 bg-gradient-to-t from-[#0c0f10] via-[#0c0f10] to-transparent z-[170]">
+                    <button 
+                        onClick={() => {
+                            setShowOrderModal(false);
+                            handleAccept(selectedOrder);
+                        }}
+                        disabled={isAccepting}
+                        className="w-full h-20 bg-primary py-6 rounded-full flex items-center justify-center gap-4 active:scale-[0.97] transition-all shadow-[0_20px_60px_rgba(250,204,21,0.3)] disabled:opacity-50"
+                        style={{
+                            boxShadow: 'inset 4px 4px 10px rgba(255, 255, 255, 0.4), inset -4px -4px 10px rgba(0, 0, 0, 0.1)',
+                        }}
+                    >
+                        <span className="text-black font-black text-xl tracking-tighter uppercase italic">
+                            {isAccepting ? 'Confirmando...' : presentation.ctaLabel}
+                        </span>
+                        <Icon name="check_circle" className="text-black" size={28} />
+                    </button>
+                    <button 
+                        onClick={() => setShowOrderModal(false)}
+                        className="w-full py-4 text-white/30 text-[10px] font-black uppercase tracking-[0.3em]"
+                    >
+                        Ignorar por agora
+                    </button>
+                </div>
+            </motion.div>
+        );
+    };
+
     return (
         <div className="w-full h-[100dvh] bg-black font-sans overflow-hidden relative">
             <AnimatePresence mode="wait">
@@ -3507,6 +3684,7 @@ const renderDashboard = () => (
                 {isAuthenticated && (
                     <div key="app" className="flex flex-col h-full overflow-hidden bg-black">
                         <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
+                        <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
                         <AnimatePresence>{activeTab === 'active_mission' && renderActiveMissionView()}</AnimatePresence>
 
                         {showSlotAppliedSuccess && (
