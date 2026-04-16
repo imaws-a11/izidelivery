@@ -34,40 +34,22 @@ const playTone = (
   osc.stop(ctx.currentTime + startOffset + duration);
 };
 
-/**
- * Fala um texto usando síntese de voz nativa
- */
-const speak = (text: string) => {
-  try {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); // Cancela falas anteriores para evitar fila
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'pt-BR';
-      utterance.rate = 1.0;
-      utterance.volume = 1.0;
-      window.speechSynthesis.speak(utterance);
-    }
-  } catch (e) {
-    console.warn('Falha na síntese de voz:', e);
-  }
-};
-
 export const playIziSound = async (role: 'merchant' | 'driver' | 'payment') => {
   const ctx = getAudioContext();
   if (ctx && ctx.state === 'suspended') {
     try { await ctx.resume(); } catch (e) { console.warn('Falha ao resumir AudioContext:', e); }
   }
 
-  // 1. Tentar Avisar por Voz (Muito eficaz para lojistas distraídos)
-  if (role === 'merchant') {
-    speak('Atenção: Novo pedido recebido!');
-  } else if (role === 'payment') {
-    speak('Pagamento confirmado!');
+  if (ctx) {
+     // Beep inicial rápido para "acordar" o sistema e o usuário
+     playTone(ctx, 440, 'sine', 0, 0.1, 0.2);
   }
 
-  // 2. URLs de fallback para sons de notificação (MP3)
+  // URLs de fallback para sons de notificação (MP3)
+  // O primeiro é o arquivo local que o usuário deve colocar na pasta /public/sounds/
   const soundUrls = [
-    'https://cdn.pixabay.com/audio/2022/10/04/audio_79bd7a4d75.mp3', // Principal (Ding Dong)
+    '/sounds/notification.mp3', // ARQUIVO LOCAL (Recomendado)
+    'https://cdn.pixabay.com/audio/2022/10/04/audio_79bd7a4d75.mp3', // Fallback Principal (Ding Dong)
     'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3', // Fallback 1
     'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'  // Fallback 2
   ];
@@ -84,7 +66,7 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'payment') => {
         playPromise
           .then(() => resolve(true))
           .catch(() => {
-            console.warn(`Som de fallback ${index} falhou, tentando próximo...`);
+            console.warn(`Som ${soundUrls[index]} falhou, tentando próximo...`);
             resolve(tryPlay(index + 1));
           });
       } else {
@@ -96,7 +78,7 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'payment') => {
   const success = await tryPlay(0);
   
   if (!success && ctx) {
-    console.log('Todos os sons externos falharam. Usando sintetizador interno...');
+    console.log('Todos os sons externos e arquivos falharam. Usando sintetizador interno...');
     playModernChime(ctx);
   }
 };
@@ -107,12 +89,12 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'payment') => {
  */
 function playModernChime(ctx: AudioContext) {
   // Primeiro tom (Ding) - Agudo e brilhante
-  playTone(ctx, 880, 'sine', 0, 1.2, 0.3);      // A5
-  playTone(ctx, 1318.51, 'sine', 0, 0.8, 0.1); // E6
+  playTone(ctx, 880, 'sine', 0, 1.2, 0.6);      // A5
+  playTone(ctx, 1318.51, 'sine', 0, 0.8, 0.2); // E6
   
   // Segundo tom (Dong) - Mais grave e ressonante
-  playTone(ctx, 698.46, 'sine', 0.5, 1.5, 0.3);  // F5
-  playTone(ctx, 1046.50, 'sine', 0.5, 1.0, 0.1); // C6
+  playTone(ctx, 698.46, 'sine', 0.5, 1.5, 0.6);  // F5
+  playTone(ctx, 1046.50, 'sine', 0.5, 1.0, 0.2); // C6
 }
 
 // Habilitar AudioContext após primeira interação do usuário (Obrigatório em navegadores modernos)
