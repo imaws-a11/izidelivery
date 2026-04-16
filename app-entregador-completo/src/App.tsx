@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase';
 import { playIziSound } from './lib/iziSounds';
 import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
+import { Geolocation } from '@capacitor/geolocation';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline, DirectionsService } from '@react-google-maps/api';
 
 const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
@@ -832,20 +833,43 @@ function App() {
           await supabase.from('drivers_delivery').update({ lat, lng }).eq('id', driverId);
         };
 
-        // Obter posição IMEDIATA para agilizar o mapa
-        navigator.geolocation.getCurrentPosition(
-            (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
-            (err) => console.log("Init GPS Error (ignoring):", err),
-            { enableHighAccuracy: true }
-        );
+        let watchId: string | undefined;
 
-        const watchId = navigator.geolocation.watchPosition(
-            (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude),
-            (err) => console.error("GPS Error:", err),
-            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-        );
+        const startNativeTracking = async () => {
+            try {
+                // 1. Requerendo permissões nativas para mobile
+                const permissions = await Geolocation.checkPermissions();
+                if (permissions.location !== 'granted') {
+                    await Geolocation.requestPermissions();
+                }
+
+                // 2. Obter posição IMEDIATA para agilizar a primeira abertura do mapa
+                const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+                await updateLocation(pos.coords.latitude, pos.coords.longitude);
+
+                // 3. Assistindo ativamente as coordenadas enviando para o Supabase
+                watchId = await Geolocation.watchPosition(
+                    { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 },
+                    (position, err) => {
+                        if (position) {
+                            updateLocation(position.coords.latitude, position.coords.longitude);
+                        } else if (err) {
+                            console.error("Native GPS Error:", err);
+                        }
+                    }
+                );
+            } catch (err) {
+                console.error("GPS Tracking Error (Native):", err);
+            }
+        };
+
+        startNativeTracking();
         
-        return () => navigator.geolocation.clearWatch(watchId);
+        return () => {
+             if (watchId) {
+                 Geolocation.clearWatch({ id: watchId });
+             }
+        };
     }, [isAuthenticated, driverId, isOnline, activeMission]);
 
     useEffect(() => {

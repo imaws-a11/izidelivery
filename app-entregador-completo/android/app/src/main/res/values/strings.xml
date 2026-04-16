@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Izi Entregador</string>
+    <string name="title_activity_main">Izi Entregador</string>
+    <string name="package_name">com.izidelivery.entregador</string>
+    <string name="custom_url_scheme">com.izidelivery.entregador</string>
+</resources>
