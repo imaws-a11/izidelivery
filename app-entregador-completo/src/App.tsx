@@ -6,6 +6,7 @@ import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
 import { Geolocation } from '@capacitor/geolocation';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { Capacitor } from '@capacitor/core';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline, DirectionsService } from '@react-google-maps/api';
 
@@ -859,6 +860,10 @@ function App() {
         if (!isAuthenticated || !driverId) return;
         
         const registerPush = async () => {
+             if (!Capacitor.isNativePlatform()) {
+                 console.log('[PUSH] Pulando registro: ambiente WEB detectado.');
+                 return;
+             }
              try {
                  // Verificamos permissões antes
                  let permStatus = await PushNotifications.checkPermissions();
@@ -898,7 +903,9 @@ function App() {
         registerPush();
 
         return () => {
-             PushNotifications.removeAllListeners();
+             if (Capacitor.isNativePlatform()) {
+                 PushNotifications.removeAllListeners();
+             }
         };
     }, [isAuthenticated, driverId]);
 
@@ -1540,18 +1547,7 @@ function App() {
         fetchDedicatedSlots();
     }, [isAuthenticated, driverId, fetchDedicatedSlots]);
         
-    const getServicePresentation = (order: any) => {
-        const typeLabels: any = {
-            motoboy: 'Entrega Motoboy',
-            mototaxi: 'Viagem MotoTáxi',
-            frete: 'Serviço de Frete',
-            package: 'Entrega de Pacote'
-        };
-        return {
-            headline: typeLabels[order.service_type] || 'Pedido Izi Delivery',
-            pickupText: order.pickup_address || 'Retirada no Local'
-        };
-    };
+                                
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;

@@ -36,7 +36,9 @@ const playTone = (
 
 export const playIziSound = async (role: 'merchant' | 'driver' | 'payment') => {
   const ctx = getAudioContext();
-  if (ctx && ctx.state === 'suspended') {
+  console.log(`[AUDIO-CHECK] playIziSound chamada para: ${role}, Contexto: ${ctx?.state}`);
+  
+  if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) {
     try { await ctx.resume(); } catch (e) { console.warn('Falha ao resumir AudioContext:', e); }
   }
 
@@ -45,45 +47,32 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'payment') => {
      playTone(ctx, 440, 'sine', 0, 0.1, 0.2);
   }
 
-  // URLs de fallback para sons de notificação (MP3)
-  // O primeiro é o arquivo local que o usuário deve colocar na pasta /public/sounds/
-  const soundUrls = [
-    '/sounds/notification.mp3', // ARQUIVO LOCAL (Recomendado)
-    'https://cdn.pixabay.com/audio/2022/10/04/audio_79bd7a4d75.mp3', // Fallback Principal (Ding Dong)
-    'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3', // Fallback 1
-    'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3'  // Fallback 2
-  ];
-
-  const tryPlay = async (index: number): Promise<boolean> => {
-    if (index >= soundUrls.length) return false;
+  // Lista de URLs prioritárias
+  const soundUrls = ['/sounds/notification.mp3', 'https://cdn.pixabay.com/audio/2021/08/04/audio_06dce69623.mp3'];
+  
+  const playFromBuffer = async (url: number): Promise<boolean> => {
+    if (url >= soundUrls.length || !ctx) return false;
     
-    console.log(`[AUDIO] Tentando reproduzir: ${soundUrls[index]}`);
-    
-    return new Promise((resolve) => {
-      const audio = new Audio(soundUrls[index]);
-      audio.volume = 1.0;
-      audio.preload = 'auto';
+    try {
+      const response = await fetch(soundUrls[url]);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
       
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => resolve(true))
-          .catch((err) => {
-            if (err.name === 'NotAllowedError') {
-                console.error('⚠️ [AUDIO] O navegador bloqueou o som. Por favor, CLIQUE em qualquer lugar da tela para habilitar o áudio.');
-            }
-            resolve(tryPlay(index + 1));
-          });
-      } else {
-        resolve(false);
-      }
-    });
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+      source.start(0);
+      return true;
+    } catch (err) {
+      console.warn(`[AUDIO] Falha ao carregar ${soundUrls[url]}, tentando próxima...`);
+      return playFromBuffer(url + 1);
+    }
   };
 
-  const success = await tryPlay(0);
+  const success = await playFromBuffer(0);
   
   if (!success && ctx) {
-    console.log('[AUDIO] Todos os sons externos falharam. Usando sintetizador local...');
+    console.log('[AUDIO] Todos os MP3 falharam. Usando sintetizador local...');
     playModernChime(ctx);
   }
 };
@@ -114,8 +103,6 @@ if (typeof window !== 'undefined') {
     if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) {
       ctx.resume().then(() => {
         console.log('🔊 [AUDIO] Sistema de áudio desbloqueado e pronto.');
-        // Beep de confirmação discreto
-        playTone(ctx, 523.25, 'sine', 0, 0.05, 0.05);
       });
     }
   };
