@@ -726,11 +726,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchDriversRef = useRef(fetchDrivers);
   const fetchMyDriversRef = useRef(fetchMyDrivers);
 
-  // Mapeamento de refs para funções voláteis usadas no Realtime (evita reconnect do canal)
-  const fetchAllOrdersRef = useRef(fetchAllOrders);
-  const fetchStatsRef = useRef(fetchStats);
-  const fetchDriversRef = useRef(fetchDrivers);
-  const fetchMyDriversRef = useRef(fetchMyDrivers);
+
   const allOrdersRef = useRef(allOrders);
 
   useEffect(() => { fetchAllOrdersRef.current = fetchAllOrders; }, [fetchAllOrders]);
