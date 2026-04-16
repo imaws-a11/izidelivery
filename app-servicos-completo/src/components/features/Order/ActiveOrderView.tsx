@@ -41,7 +41,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
 
   const steps = isMobility
     ? [
-        { id: "procurando", label: "Buscando Motorista", icon: "search", status: ["waiting_driver", "novo"] },
+        { id: "procurando", label: "Procurando IZI parceiro nas proximidades", icon: "search", status: ["waiting_driver", "novo"] },
         { id: "confirmed", label: "Motorista Confirmado", icon: "check_circle", status: ["aceito", "confirmado"] },
         { id: "a_caminho", label: "Motorista em Rota", icon: "directions_bike", status: ["a_caminho", "at_pickup"] },
         {
@@ -78,7 +78,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
         },
         {
           id: "aceito_ent",
-          label: "Buscando o Pedido",
+          label: "Procurando IZI entregador nas proximidades",
           icon: "moped",
           status: [
             "a_caminho_coleta", "saiu_para_coleta", "chegou_coleta", "picked_up", "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
@@ -142,27 +142,27 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
       >
         {/* ÁREA DE CABEÇALHO (STATUS RÁPIDO - CLAY STYLE) */}
         <div className="shrink-0 px-6 pb-6 mt-4">
-            <div className="bg-zinc-800 p-6 rounded-[40px] flex items-center gap-5 shadow-[12px_12px_24px_rgba(0,0,0,0.4),-12px_-12px_24px_rgba(255,255,255,0.02),inset_8px_8px_16px_rgba(255,255,255,0.03),inset_-8px_-8px_16px_rgba(0,0,0,0.4)] border-none relative overflow-hidden group active:scale-[0.98] transition-all">
-              <div className="absolute top-0 right-0 size-24 bg-yellow-400/5 blur-3xl rounded-full" />
+            <div className="bg-yellow-400 p-6 rounded-[40px] flex items-center gap-5 shadow-[12px_12px_32px_rgba(0,0,0,0.25),inset_4px_4px_8px_rgba(255,255,255,0.4)] border-none relative overflow-hidden active:scale-[0.98] transition-all">
+              <div className="absolute top-0 right-0 size-32 bg-white/10 blur-3xl rounded-full translate-x-12 -translate-y-12" />
               
-              <div className="size-16 rounded-[24px] bg-yellow-400 flex items-center justify-center shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4),inset_-4px_-4px_8px_rgba(0,0,0,0.2)]">
-                <span className="material-symbols-outlined text-black text-3xl animate-bounce">
+              <div className="size-16 rounded-[24px] bg-black flex items-center justify-center shadow-[inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.5)]">
+                <span className="material-symbols-outlined text-yellow-400 text-3xl animate-bounce">
                   {steps[currentIdx]?.icon || "sync"}
                 </span>
               </div>
               
               <div className="flex-1">
-                <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mb-1">
+                <p className="text-[10px] font-black text-black/50 uppercase tracking-[0.3em] mb-1">
                   {isMobility ? "Sua Viagem" : "Seu Pedido"}
                 </p>
-                <h3 className="text-xl font-black text-white tracking-tighter leading-none">
+                <h3 className="text-xl font-black text-black tracking-tighter leading-none">
                   {steps[currentIdx]?.label || "Sintonizando..."}
                 </h3>
               </div>
               
-              <div className="px-4 py-2 rounded-2xl bg-zinc-900/50 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_4px_rgba(255,255,255,0.02)]">
-                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-0.5 text-center">Chega em</p>
-                <p className="text-xl font-black text-yellow-400 italic leading-none">{selectedItem.delivery_time || "15-25"}</p>
+              <div className="px-4 py-2 rounded-2xl bg-black/10 border border-black/5 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.05)]">
+                <p className="text-[8px] font-black text-black/40 uppercase tracking-widest mb-0.5 text-center">Tempo médio</p>
+                <p className="text-xl font-black text-black italic leading-none">{selectedItem.delivery_time || "15-25"}</p>
               </div>
             </div>
           </div>
