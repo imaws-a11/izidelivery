@@ -2480,23 +2480,32 @@ function App() {
                                         <button
                                             key={item.id}
                                             onClick={() => setActiveTab(item.id as any)}
-                                            className={`flex flex-col items-center gap-1.5 py-3 px-1 rounded-3xl transition-all relative flex-1 ${
-                                                isActive ? 'text-primary' : 'text-white/30'
+                                            className={`flex flex-col items-center gap-1.5 py-2 px-1 rounded-[24px] transition-all relative flex-1 ${
+                                                isActive ? 'text-primary' : 'text-white/30 hover:bg-white/5'
                                             }`}
                                         >
-                                            <div className={`size-10 rounded-2xl flex items-center justify-center transition-all ${
-                                                isActive ? 'bg-primary/10 border border-primary/20 scale-110' : 'bg-transparent'
+                                            <div className={`size-12 rounded-[20px] flex items-center justify-center transition-all duration-300 ${
+                                                isActive 
+                                                    ? 'bg-primary shadow-[inset_2px_2px_6px_rgba(255,255,255,0.6),_inset_-3px_-3px_8px_rgba(0,0,0,0.2),_0_8px_20px_rgba(250,204,21,0.4)] scale-110 border border-yellow-300' 
+                                                    : 'bg-transparent'
                                             }`}>
-                                                <Icon name={item.icon} size={isActive ? 24 : 22} className={isActive ? 'text-primary' : 'text-white/20'} />
+                                                <Icon 
+                                                    name={item.icon} 
+                                                    size={isActive ? 26 : 24} 
+                                                    className={isActive ? 'text-zinc-950 drop-shadow-sm' : 'text-white/30'} 
+                                                />
                                                 {item.badge > 0 && (
-                                                    <span className="absolute top-1 right-1 size-4 bg-primary text-slate-900 text-[8px] font-black rounded-full flex items-center justify-center border border-black shadow-lg">
+                                                    <span className="absolute top-0 right-0 size-4 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-[inset_1px_1px_3px_rgba(255,255,255,0.4)]">
                                                         {item.badge}
                                                     </span>
                                                 )}
                                             </div>
-                                            <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-0'} transition-all text-center`}>
+                                            <span className={`text-[8px] font-black uppercase tracking-widest transition-all text-center pb-1 ${
+                                                isActive ? 'opacity-100 drop-shadow-[0_2px_8px_rgba(250,204,21,0.5)]' : 'opacity-0 h-0 hidden'
+                                            }`}>
                                                 {item.label}
                                             </span>
+                                            {isActive && <div className="absolute -bottom-1 size-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(250,204,21,0.8)]" />}
                                         </button>
                                     );
                                 })}
@@ -3541,17 +3550,22 @@ const renderDashboard = () => (
 
         return (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-40 pt-4">
-            <header>
-                <p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Histórico</p>
-                <h2 className="text-3xl font-black text-white tracking-tight mt-1">Sua Jornada</h2>
-                <p className="text-xs text-white/30 mt-1">Registro completo de suas corridas e entregas.</p>
+            <header className="flex flex-col gap-1">
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Histórico</p>
+                <h2 className="text-3xl font-black text-white tracking-tight italic">Sua Jornada</h2>
+                <p className="text-xs text-white/40 mt-1 italic">Registro consolidado de suas corridas e ganhos.</p>
             </header>
 
             <div className="space-y-4">
                 {history.length === 0 ? (
-                    <div className="py-20 bg-white/[0.02] border border-white/5 border-dashed rounded-[32px] flex flex-col items-center gap-4 text-center">
-                        <Icon name="history" className="text-4xl text-white/10" />
-                        <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Nenhuma corrida finalizada</p>
+                    <div className="py-24 clay-card-dark rounded-[40px] flex flex-col items-center gap-6 text-center shadow-2xl relative overflow-hidden">
+                        <div className="size-20 rounded-full bg-[#1A1616] border border-white/5 flex items-center justify-center shadow-[inset_3px_3px_10px_rgba(0,0,0,0.4)]">
+                            <Icon name="history_toggle_off" className="text-4xl text-primary/50" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-black text-white uppercase tracking-widest italic mb-1">Nenhuma Jornada</p>
+                            <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Você ainda não completou corridas</p>
+                        </div>
                     </div>
                 ) : (
                     history.map((order: any, i: number) => {
@@ -3571,33 +3585,57 @@ const renderDashboard = () => (
                         }
 
                         return (
-                        <div key={order.id} className="bg-white/[0.03] border border-white/5 rounded-[32px] p-6 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">#{order.id.slice(0, 8).toUpperCase()}</span>
-                                <span className="text-[10px] font-black text-emerald-400 uppercase bg-emerald-400/10 px-3 py-1.5 rounded-full border border-emerald-400/20">Finalizado</span>
+                        <div key={order.id} className="clay-card-dark rounded-[32px] p-6 space-y-5 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl -mr-16 -mt-16 rounded-full transition-opacity group-hover:bg-primary/20" />
+                            
+                            <div className="flex items-center justify-between relative z-10">
+                                <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] bg-black/20 px-3 py-1 rounded-full shadow-inner">
+                                    #{order.id.slice(0, 8).toUpperCase()}
+                                </span>
+                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5 drop-shadow-[0_2px_10px_rgba(52,211,153,0.3)]">
+                                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                    Finalizado
+                                </span>
                             </div>
-                            <div className="space-y-2">
-                                <p className="text-sm font-bold text-white leading-tight">{order.delivery_address || order.destination || 'Endereço não informado'}</p>
-                                <div className="flex items-center gap-3">
-                                    <p className="text-[10px] text-white/30">
-                                        {new Date(completedAt).toLocaleDateString('pt-BR')} às {new Date(completedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                    <span className="size-1 rounded-full bg-white/10"></span>
-                                    <p className="text-[10px] text-white/30 font-bold">{serviceTypeLabel(order.service_type)}</p>
+
+                            <div className="bg-[#120F0F] rounded-3xl p-5 border border-white/5 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.5)] relative z-10">
+                                <div className="space-y-4">
+                                    <div className="flex items-start gap-4">
+                                        <div className="flex flex-col items-center gap-1 mt-1">
+                                            <div className="size-2 rounded-full border-2 border-primary bg-[#120F0F]" />
+                                            <div className="w-[1px] h-6 border-l border-dashed border-white/10" />
+                                            <div className="size-2 rounded-full border-2 border-white/20 bg-[#120F0F]" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-0.5">{serviceTypeLabel(order.service_type)}</p>
+                                            <p className="text-sm font-black text-white leading-tight italic">{order.delivery_address || order.destination || 'Endereço Indisponível'}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-3 pt-3 mt-3 border-t border-white/5">
+                                        <Icon name="event" size={14} className="text-white/20" />
+                                        <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">
+                                            {new Date(completedAt).toLocaleDateString('pt-BR')} <span className="mx-1 opacity-40">•</span> {new Date(completedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                                <div>
-                                    <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-0.5">
-                                        Seu ganho {isCashPaid && totalOrderPrice > 0 ? '(Descontado Dinheiro)' : 'líquido'}
-                                    </p>
-                                    <span className={`text-base font-black italic ${isNegative ? 'text-rose-400' : 'text-primary'}`}>
+                            
+                            <div className="grid grid-cols-2 gap-3 relative z-10">
+                                <div className="bg-[#120F0F] p-4 rounded-[20px] border border-white/5 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)] flex flex-col justify-between">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] line-clamp-1 mt-0.5">Lucro Líquido</p>
+                                        <span className={`text-[7px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${isCashPaid ? 'text-rose-400 bg-rose-400/10 border-rose-400/20' : 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20'}`}>
+                                            {isCashPaid ? 'Dinheiro' : 'Online'}
+                                        </span>
+                                    </div>
+                                    <span className={`text-xl font-black italic tracking-tighter ${isNegative ? 'text-rose-400 drop-shadow-[0_2px_10px_rgba(251,113,133,0.3)]' : 'text-primary drop-shadow-[0_2px_10px_rgba(250,204,21,0.3)]'}`}>
                                         {netEarningsLabel}
                                     </span>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-0.5">Total pedido</p>
-                                    <span className="text-xs font-bold text-white/40">R$ {parseFloat(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                <div className="bg-white/5 p-4 rounded-[20px] border border-white/10 text-right flex flex-col justify-center shadow-lg">
+                                    <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Total Pedido</p>
+                                    <span className="text-sm font-black text-white italic opacity-80">R$ {parseFloat(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
                                 </div>
                             </div>
                         </div>
