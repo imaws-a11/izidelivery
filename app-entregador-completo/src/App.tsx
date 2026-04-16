@@ -123,7 +123,7 @@ interface Order {
 }
 const isValidCoord = (c: any) => c && typeof c.lat === 'number' && Math.abs(c.lat) > 0.01;
 
-function MissionRouteMap({ pickup, delivery }: { pickup: any, delivery: any }) {
+function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, driverCoords, onRouteInfo }: { pickup: any, delivery: any, pickupAddress?: string, deliveryAddress?: string, driverCoords?: any, onRouteInfo?: (info: any) => void }) {
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const { isLoaded } = useJsApiLoader({ 
     id: GOOGLE_MAPS_ID, 
@@ -134,74 +134,129 @@ function MissionRouteMap({ pickup, delivery }: { pickup: any, delivery: any }) {
   });
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
 
+  const vPickup = isValidCoord(pickup) ? pickup : null;
+  const vDelivery = isValidCoord(delivery) ? delivery : null;
+
   useEffect(() => {
-    console.log('MissionRouteMap: isLoaded=', isLoaded, 'pickup=', pickup, 'delivery=', delivery);
-    if (isLoaded && pickup?.lat && delivery?.lat && !isNaN(pickup.lat) && !isNaN(delivery.lat)) {
+    if (isLoaded && (vPickup || pickupAddress) && (vDelivery || deliveryAddress)) {
       const service = new google.maps.DirectionsService();
+      
+      // Fallback para garantir Brumadinho na busca textual se as coordenadas falharem
+      const origin = vPickup || (pickupAddress && !pickupAddress.toLowerCase().includes('brumadinho') ? `${pickupAddress}, Brumadinho - MG` : pickupAddress);
+      const destination = vDelivery || (deliveryAddress && !deliveryAddress.toLowerCase().includes('brumadinho') ? `${deliveryAddress}, Brumadinho - MG` : deliveryAddress);
+
       service.route(
         {
-          origin: pickup,
-          destination: delivery,
+          origin,
+          destination,
           travelMode: google.maps.TravelMode.DRIVING,
+          optimizeWaypoints: true,
+          provideRouteAlternatives: false
         },
         (result, status) => {
-          console.log('MissionRouteMap: directions status=', status);
           if (status === 'OK' && result) {
             setDirections(result);
+            if (onRouteInfo) {
+              const leg = result.routes[0].legs[0];
+              onRouteInfo({
+                distanceText: leg.distance?.text || '0 km',
+                distanceValue: (leg.distance?.value || 0) / 1000,
+                durationText: leg.duration?.text || ''
+              });
+            }
           } else {
             console.error('MissionRouteMap: directions failed=', status);
           }
         }
       );
     }
-  }, [isLoaded, pickup.lat, pickup.lng, delivery.lat, delivery.lng]);
+  }, [isLoaded, vPickup?.lat, vPickup?.lng, vDelivery?.lat, vDelivery?.lng, pickupAddress, deliveryAddress]);
 
-  if (!isLoaded) return <div className="w-full h-full bg-neutral-900/50 animate-pulse flex items-center justify-center text-xs text-white/20">Carregando Mapa...</div>;
+  const mapStyle = [
+    { "featureType": "all", "elementType": "labels.text.fill", "stylers": [{ "color": "#444444" }] },
+    { "featureType": "all", "elementType": "labels.text.stroke", "stylers": [{ "visibility": "off" }] },
+    { "featureType": "all", "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
+    { "featureType": "administrative", "elementType": "geometry.fill", "stylers": [{ "color": "#000000" }] },
+    { "featureType": "landscape", "elementType": "geometry", "stylers": [{ "color": "#080808" }] },
+    { "featureType": "poi", "stylers": [{ "visibility": "off" }] },
+    { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#111111" }] },
+    { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#111111" }, { "lightness": -20 }] },
+    { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{ "color": "#1a1a1a" }] },
+    { "featureType": "transit", "stylers": [{ "visibility": "off" }] },
+    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#050505" }] }
+  ];
 
-  const isValid = pickup?.lat && delivery?.lat && !isNaN(pickup.lat) && !isNaN(delivery.lat);
-  if (!isValid) return <div className="w-full h-full bg-neutral-900/50 flex items-center justify-center text-xs text-rose-500/50">Coordenadas Inválidas</div>;
+  if (!isLoaded) return <div className="w-full h-full bg-black animate-pulse" />;
+
+  const startLoc = directions?.routes[0]?.legs[0]?.start_location;
+  const mapCenter = startLoc || vPickup || vDelivery || { lat: -19.9167, lng: -43.9345 };
 
   return (
     <GoogleMap
       mapContainerStyle={{ width: '100%', height: '100%' }}
-      center={pickup}
-      zoom={15}
+      center={mapCenter}
+      zoom={directions ? 15 : 14}
       options={{
-        ...mapOptions,
-        gestureHandling: 'greedy', // Mudei para greedy para permitir algum controle se necessário
+        disableDefaultUI: true,
+        styles: mapStyle,
+        backgroundColor: '#000000',
+        gestureHandling: 'greedy',
         zoomControl: false,
-        mapTypeControl: false,
         streetViewControl: false,
+        mapTypeControl: false,
         fullscreenControl: false
       }}
     >
       {directions && (
-        <DirectionsRenderer 
-          directions={directions} 
-          options={{ 
-            suppressMarkers: true,
-            polylineOptions: {
-              strokeColor: '#FACD05',
-              strokeOpacity: 0.9,
-              strokeWeight: 5,
-            }
-          }} 
-        />
+        <>
+          <DirectionsRenderer 
+            directions={directions} 
+            options={{ 
+              suppressMarkers: true,
+              polylineOptions: {
+                strokeColor: '#FACD05',
+                strokeOpacity: 0.9,
+                strokeWeight: 5,
+              }
+            }} 
+          />
+          {/* Marcador do Entregador (Motorista) */}
+          {driverCoords && isValidCoord(driverCoords) && (
+            <OverlayView position={driverCoords} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+              <div className="relative flex items-center justify-center">
+                <div className="absolute size-8 rounded-full bg-emerald-500/20" />
+                <div className="size-8 rounded-2xl bg-emerald-500 border-2 border-black shadow-xl flex items-center justify-center rotate-45">
+                   <div className="-rotate-45">
+                     <Icon name="two_wheeler" size={16} className="text-black" />
+                   </div>
+                </div>
+              </div>
+            </OverlayView>
+          )}
+
+          {/* Marcador de Origem (Lojista/Coleta) */}
+          <OverlayView position={directions.routes[0].legs[0].start_location} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+            <div className="relative flex items-center justify-center group">
+              <div className="absolute size-10 rounded-full bg-yellow-400/20 animate-ping" />
+              <div className="size-10 rounded-2xl bg-yellow-400 border-2 border-black shadow-lg flex items-center justify-center relative z-10">
+                <Icon name="package_2" size={18} className="text-black" />
+              </div>
+              <div className="absolute top-12 bg-black/80 px-2 py-1 rounded text-[8px] font-black text-white uppercase whitespace-nowrap border border-white/10">LOJISTA</div>
+            </div>
+          </OverlayView>
+
+          {/* Marcador de Destino (Cliente) */}
+          <OverlayView position={directions.routes[0].legs[0].end_location} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+            <div className="relative flex items-center justify-center">
+              <div className="size-10 rounded-full bg-white border-2 border-black shadow-xl flex items-center justify-center relative translate-y-[-5px]">
+                <Icon name="person" size={18} className="text-black" />
+                <div className="absolute -bottom-1 size-3 rounded-full bg-blue-500 border-2 border-black" />
+              </div>
+              <div className="absolute top-10 bg-black/80 px-2 py-1 rounded text-[8px] font-black text-white uppercase whitespace-nowrap border border-white/10">CLIENTE</div>
+            </div>
+          </OverlayView>
+        </>
       )}
-      <Marker 
-        position={pickup} 
-        icon={{
-          url: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-          scaledSize: new window.google.maps.Size(30, 30)
-        }}
-      />
-      <Marker 
-        position={delivery} 
-        icon={{
-          url: 'https://cdn-icons-png.flaticon.com/512/9131/9131546.png',
-          scaledSize: new window.google.maps.Size(30, 30)
-        }}
-      />
     </GoogleMap>
   );
 }
@@ -535,6 +590,7 @@ function App() {
     const [authInitLoading, setAuthInitLoading] = useState(true);
     const [appSettings, setAppSettings] = useState<any>(null);
     const [dynamicRates, setDynamicRates] = useState<any>(null);
+    const [realTimeRoute, setRealTimeRoute] = useState<{distanceText: string, distanceValue: number} | null>(null);
 
     const fetchGlobalSettings = useCallback(async () => {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -562,6 +618,14 @@ function App() {
         }
     }, []);
 
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [activeMission, setActiveMission] = useState<Order | null>(() => {
+        const saved = localStorage.getItem('Izi_active_mission');
+        return saved ? JSON.parse(saved) : null;
+    });
+    const activeMissionRef = useRef(activeMission);
+    useEffect(() => { activeMissionRef.current = activeMission; }, [activeMission]);
+
     // Efeito para persistir dados básicos de autenticação no localStorage
     useEffect(() => {
         if (isAuthenticated && driverId) {
@@ -576,7 +640,57 @@ function App() {
         }
     }, [isAuthenticated, driverId, driverName, authInitLoading]);
 
-    const [activeTab, setActiveTab] = useState<View>('dashboard');
+    const [activeTab, setActiveTab] = useState<View>(() => (localStorage.getItem('izi_driver_active_tab') as View) || 'dashboard');
+    const activeTabRef = useRef(activeTab);
+    useEffect(() => { 
+        activeTabRef.current = activeTab; 
+        localStorage.setItem('izi_driver_active_tab', activeTab);
+    }, [activeTab]);
+
+    const isOnlineRef = useRef(false);
+    const [isOnline, setIsOnline] = useState(() => {
+        const val = localStorage.getItem('izi_driver_online') === 'true';
+        isOnlineRef.current = val;
+        return val;
+    });
+    useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
+
+    // Vigilante de Som (Padrão Lojista)
+    const heardOrderIds = useRef<Set<string>>(new Set());
+    const isFirstLoad = useRef(true);
+
+    useEffect(() => {
+        if (!isAuthenticated || !orders.length) return;
+
+        // Se for o primeiro carregamento da sessão, apenas absorve os IDs existentes sem tocar som
+        if (isFirstLoad.current) {
+            orders.forEach(o => heardOrderIds.current.add(o.realId || o.id));
+            isFirstLoad.current = false;
+            console.log(`[SOM-WATCHER] Inicializado com ${heardOrderIds.current.size} missões conhecidas.`);
+            return;
+        }
+
+        const newOrders = orders.filter(o => !heardOrderIds.current.has(o.realId || o.id));
+        if (newOrders.length > 0) {
+            console.log(`[SOM-WATCHER] 🔊 ${newOrders.length} novas missões detectadas na lista.`);
+            
+            // Marcar como conhecidas
+            newOrders.forEach(o => heardOrderIds.current.add(o.realId || o.id));
+
+            // Tocar som se estiver online e disponível
+            if (isOnlineRef.current && !activeMissionRef.current) {
+                playIziSound('driver');
+                
+                if (window.Notification && Notification.permission === 'granted') {
+                    new Notification('🚀 Nova Missão Izi!', {
+                        body: `R$ ${newOrders[0].price?.toFixed(2) || '0,00'} • ${newOrders[0].origin || 'Entrega nova'}`,
+                        icon: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png'
+                    });
+                }
+            }
+        }
+    }, [orders, isAuthenticated]);
+
     const [finishedMissionData, setFinishedMissionData] = useState<{
         show: boolean, 
         amount: number,
@@ -585,9 +699,6 @@ function App() {
         extraKmValue?: number,
         distance?: number
     } | null>(null);
-    const [isOnline, setIsOnline] = useState(() => localStorage.getItem('Izi_online') === 'true');
-    const isOnlineRef = useRef(isOnline);
-    useEffect(() => { isOnlineRef.current = isOnline; }, [isOnline]);
 
     const driverIdRef = useRef(driverId);
     useEffect(() => { driverIdRef.current = driverId; }, [driverId]);
@@ -600,7 +711,6 @@ function App() {
     const [isScanning, setIsScanning] = useState(false);
     const [isAccepting, setIsAccepting] = useState(false);
     const [filter, setFilter] = useState<ServiceType | 'all'>('all');
-    const [orders, setOrders] = useState<Order[]>([]);
     const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
     const [myApplications, setMyApplications] = useState<any[]>([]);
     const [selectedSlot, setSelectedSlot] = useState<any | null>(null);
@@ -640,15 +750,8 @@ function App() {
     const [pixKey, setPixKey] = useState(() => localStorage.getItem('izi_driver_pix') || '');
     const [isEditingPix, setIsEditingPix] = useState(false);
 
-    const [activeMission, setActiveMission] = useState<Order | null>(() => {
-        const saved = localStorage.getItem('Izi_active_mission');
-        return saved ? JSON.parse(saved) : null;
-    });
-    const activeMissionRef = useRef(activeMission);
-    useEffect(() => { activeMissionRef.current = activeMission; }, [activeMission]);
     
-    const activeTabRef = useRef(activeTab);
-    useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+
 
     const clearDriverSessionState = useCallback(() => {
         console.log('[AUTH] Executando limpeza de sessão (Logout)');
@@ -1275,11 +1378,68 @@ function App() {
             );
 
             if (activeOrder) {
+                // NOVO: Buscar endereço oficial e atualizado do Lojista no banco de dados
+                let officialPickupAddress = activeOrder.pickup_address || 'Origem';
+                let officialPickupLat = activeOrder.pickup_lat;
+                let officialPickupLng = activeOrder.pickup_lng;
+
+                if (activeOrder.merchant_id || activeOrder.merchant_name) {
+                    try {
+                        let mData = null;
+                        
+                        // 1. Tentar por ID (Mais preciso)
+                        if (activeOrder.merchant_id) {
+                            const { data } = await supabase
+                                .from('admin_users')
+                                .select('store_address, latitude, longitude, store_name')
+                                .eq('id', activeOrder.merchant_id)
+                                .maybeSingle();
+                            mData = data;
+                        }
+                        
+                        // 2. Tentar por Nome (Fallback caso ID falhe ou mude)
+                        if (!mData && activeOrder.merchant_name) {
+                            const { data } = await supabase
+                                .from('admin_users')
+                                .select('store_address, latitude, longitude, store_name')
+                                .ilike('store_name', `%${activeOrder.merchant_name}%`)
+                                .limit(1)
+                                .maybeSingle();
+                            mData = data;
+                        }
+                        
+                        if (mData) {
+                            if (mData.store_address) officialPickupAddress = mData.store_address;
+                            if (mData.latitude && mData.longitude) {
+                                officialPickupLat = Number(mData.latitude);
+                                officialPickupLng = Number(mData.longitude);
+                                console.log('[SYNC] Coordenadas oficiais encontradas:', officialPickupLat, officialPickupLng);
+                            }
+                        }
+
+                        // 3. Fallback Crítico para "Paladar" (Segurança contra redirecionamento RS)
+                        if (!officialPickupLat || Math.abs(Number(officialPickupLat)) < 0.1) {
+                            const nameLower = (activeOrder.merchant_name || activeOrder.pickup_address || "").toLowerCase();
+                            if (nameLower.includes('paladar')) {
+                                console.log('[SYNC] Aplicando hard-fallback para Paladar Brumadinho');
+                                officialPickupLat = -20.1435361;
+                                officialPickupLng = -44.2169737;
+                                officialPickupAddress = "R. Henri Karam, 640 - Presidente Barroca, Brumadinho - MG";
+                            }
+                        }
+                    } catch (mErr) {
+                        console.warn('[SYNC] Falha ao buscar endereço atualizado do lojista:', mErr);
+                    }
+                }
+
                 const mission: any = { 
                     ...activeOrder, 
                     realId: activeOrder.id, 
                     type: activeOrder.service_type || 'delivery', 
-                    origin: activeOrder.pickup_address || 'Origem', 
+                    origin: officialPickupAddress, 
+                    pickup_address: officialPickupAddress,
+                    pickup_lat: officialPickupLat,
+                    pickup_lng: officialPickupLng,
                     destination: activeOrder.delivery_address || 'Destino', 
                     price: activeOrder.total_price || 0, 
                     status: activeOrder.status, 
@@ -1362,11 +1522,22 @@ function App() {
             if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
         } catch(e) {}
 
-        const res = await fetch(`${supabaseUrl}/rest/v1/${table}?${queryParams}`, {
-            headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-        });
-        if (!res.ok) throw new Error(`DB Error: ${res.status}`);
-        return await res.json();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+        try {
+            const res = await fetch(`${supabaseUrl}/rest/v1/${table}?${queryParams}`, {
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (!res.ok) throw new Error(`DB Error: ${res.status}`);
+            return await res.json();
+        } catch (error: any) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') throw new Error('Timeout na conexão com o banco');
+            throw error;
+        }
     }, []);
 
     useEffect(() => {
@@ -1491,7 +1662,8 @@ function App() {
 
             const available = data.filter((o: any) => {
                 const isMerchantOrder = !!o.merchant_id || !!o.admin_users;
-                const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted', 'confirmado', 'confirmed'].includes(o.status);
+                // Atualizado para incluir novo e pendente, conforme regra do painel lojista solicitada
+                const merchantAccepted = ['novo', 'pendente', 'waiting_driver', 'preparando', 'pronto', 'accepted', 'confirmado', 'confirmed'].includes(o.status);
                 const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'confirmado', 'confirmed'].includes(o.status);
                 const statusOk = isMerchantOrder ? merchantAccepted : p2pAllowed;
                 const notMyAssignment = !o.driver_id || String(o.driver_id).trim() === '';
@@ -1560,8 +1732,8 @@ function App() {
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
                 
                 const isMerchantOrder = !!o.merchant_id;
-                const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted'].includes(o.status);
-                const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant'].includes(o.status);
+                const merchantAccepted = ['novo', 'pendente', 'waiting_driver', 'preparando', 'pronto', 'accepted', 'confirmado', 'confirmed'].includes(o.status);
+                const p2pAllowed = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'confirmado', 'confirmed'].includes(o.status);
                 
                 if (isMerchantOrder) {
                     if (!merchantAccepted) return;
@@ -3780,6 +3952,10 @@ const renderDashboard = () => (
                             <MissionRouteMap 
                                 pickup={{ lat: Number(activeMission.pickup_lat), lng: Number(activeMission.pickup_lng) }}
                                 delivery={{ lat: Number(activeMission.delivery_lat), lng: Number(activeMission.delivery_lng) }}
+                                pickupAddress={pickupOnly}
+                                deliveryAddress={addressOnly}
+                                driverCoords={driverCoords}
+                                onRouteInfo={(info) => setRealTimeRoute(info)}
                             />
                         </div>
                         <div className="absolute inset-0 bg-gradient-to-t from-[#0c0f10] via-transparent to-transparent pointer-events-none"></div>
@@ -3787,10 +3963,31 @@ const renderDashboard = () => (
                         <button 
                              onClick={() => {
                                 const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega';
-                                const lat = isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat;
-                                const lng = isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng;
-                                const addr = isDeliveryPhase ? addressOnly : pickupOnly;
-                                const destination = (lat && lng) ? `${lat},${lng}` : encodeURIComponent(addr);
+                                let lat = Number(isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat);
+                                let lng = Number(isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng);
+                                let addr = isDeliveryPhase ? addressOnly : pickupOnly;
+
+                                // Fallback Robusto para Paladar Brumadinho
+                                if (!isDeliveryPhase) {
+                                    const pickupName = (activeMission.merchant_name || activeMission.pickup_address || "").toLowerCase();
+                                    if (pickupName.includes('paladar')) {
+                                        if (isNaN(lat) || Math.abs(lat) < 0.1) {
+                                            lat = -20.1435361;
+                                            lng = -44.2169737;
+                                            addr = "R. Henri Karam, 640 - Presidente Barroca, Brumadinho - MG";
+                                        }
+                                    }
+                                }
+
+                                const hasValidCoords = !isNaN(lat) && !isNaN(lng) && Math.abs(lat) > 0.01;
+                                const addressOnlyClean = String(addr || "Destino").split("| ITENS:")[0].split("| OBS:")[0].trim();
+                                
+                                let queryAddr = addressOnlyClean;
+                                if (!queryAddr.toLowerCase().includes('brumadinho')) {
+                                    queryAddr += ', Brumadinho - MG';
+                                }
+
+                                const destination = hasValidCoords ? `${lat},${lng}` : encodeURIComponent(queryAddr);
                                 window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
                             }}
                             className="absolute top-4 right-4 size-12 bg-yellow-400 rounded-2xl flex items-center justify-center shadow-xl active:scale-90 transition-all z-20"
@@ -3807,7 +4004,7 @@ const renderDashboard = () => (
                             </div>
                             <div className="bg-yellow-400 px-4 py-2.5 rounded-full font-black text-xs text-black flex items-center gap-2 shadow-lg" style={sClayYellow}>
                                 <Icon name="route" size={16} />
-                                {(parseFloat(activeMission.distance_km || '0')).toFixed(1)} KM
+                                {realTimeRoute ? realTimeRoute.distanceText : `${(parseFloat(activeMission.distance_km || '0')).toFixed(1)} KM`}
                             </div>
                         </div>
                     </section>
