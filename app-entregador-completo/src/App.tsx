@@ -2511,10 +2511,27 @@ const renderDashboard = () => (
                                             </div>
 
                                             <div className="mt-8 w-full">
-                                                {/* Status Tag */}
-                                                <div className={`inline-block px-4 py-1.5 rounded-full ${presentation.details.bg} ${presentation.details.color} text-[10px] font-bold uppercase tracking-widest mb-4`}>
+                                                <div className={`inline-block px-4 py-1.5 rounded-full ${presentation.details.bg} ${presentation.details.color} text-[10px] font-bold uppercase tracking-widest mb-2`}>
                                                     NOVA OPORTUNIDADE
                                                 </div>
+
+                                                {/* NOVO: Feedback de Preparo */}
+                                                {(order.preparation_status || order.status) && (
+                                                    <div className="flex justify-center mb-4">
+                                                        <div className={`px-3 py-1 rounded-lg flex items-center gap-2 border ${
+                                                            (order.preparation_status === 'pronto' || order.status === 'pronto')
+                                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                                                                : 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+                                                        }`}>
+                                                            <div className={`size-1.5 rounded-full animate-pulse ${
+                                                                (order.preparation_status === 'pronto' || order.status === 'pronto') ? 'bg-emerald-400' : 'bg-orange-400'
+                                                            }`} />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest">
+                                                                {(order.preparation_status === 'pronto' || order.status === 'pronto') ? 'Pronto para Retirada' : 'Em Preparo'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
 
                                                 <h1 className="text-2xl font-extrabold text-white leading-tight tracking-tight mb-2">
                                                     Nova Entrega Disponível
@@ -3840,6 +3857,22 @@ const renderDashboard = () => (
                                 <span className="text-yellow-400 text-3xl font-black italic tracking-tighter shadow-sm">R$ {driverEarnings.toFixed(2).replace('.', ',')}</span>
                             </div>
                             
+                            <div className="h-px bg-white/5 w-full" />
+
+                            <div className="flex justify-between items-center px-2">
+                                <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Forma de Pagamento</span>
+                                <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
+                                    <Icon 
+                                        name={activeMission.payment_method === 'online' ? 'verified_user' : 'payments'} 
+                                        size={14} 
+                                        className="text-yellow-400" 
+                                    />
+                                    <span className="text-white font-black text-[11px] uppercase italic">
+                                        {getPaymentLabel(activeMission)}
+                                    </span>
+                                </div>
+                            </div>
+
                             <div className="h-px bg-white/5 w-full" />
 
                             <div className="flex flex-col gap-4">
