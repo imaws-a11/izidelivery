@@ -886,7 +886,7 @@ function App() {
 
                  PushNotifications.addListener('pushNotificationReceived', (notification) => {
                      console.log('Push recebida via Firebase', notification);
-                     playIziSound();
+                     playIziSound('driver');
                      toastSuccess(`Nova Chamada: ${notification.title || ''}`, { position: 'top-center' });
                  });
 
@@ -1621,6 +1621,8 @@ function App() {
                 const currentMission = activeMissionRef.current;
                 
                 const dId = String(driverIdRef.current || '').trim();
+                
+                // Se o pedido já tem este motorista (Missão Ativa)
                 if (o.driver_id && String(o.driver_id).trim() === dId && dId !== '') {
                     if (['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)) {
                         setActiveMission(null);
@@ -1628,6 +1630,28 @@ function App() {
                         if (activeTabRef.current === 'active_mission') setActiveTab('dashboard');
                         return;
                     }
+                    // Continue para atualizar a missão ativa...
+                }
+
+                // Se o pedido NÃO tem motorista, checar se ele se tornou uma "Nova Missão" disponível agora
+                if (!o.driver_id && !o.scheduled_at && isOnlineRef.current && !activeMissionRef.current) {
+                    const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted'];
+                    const pStatus = String(o.payment_status || '').toLowerCase();
+                    const pMethod = String(o.payment_method || '').toLowerCase();
+                    const isPaidOrCash = ['cash', 'dinheiro'].includes(pMethod) || ['paid', 'pago', 'approved', 'aprovado'].includes(pStatus);
+                    
+                    if (actionableStatuses.includes(o.status) && isPaidOrCash) {
+                        // Só toca som se o pedido ainda não estava na lista (para evitar sons repetidos em updates irrelevantes)
+                        setOrders(prev => {
+                            const alreadyInList = prev.some(x => x.realId === o.id);
+                            if (!alreadyInList) {
+                                playIziSound('driver');
+                                console.log(`[REALTIME-DRIVER] Novo pedido disponível via UPDATE: ${o.id}`);
+                            }
+                            return prev;
+                        });
+                    }
+                }
 
                     if (!currentMission || o.id === currentMission.id) {
                         const wasPreparing = currentMission?.preparation_status !== 'pronto';
@@ -2355,7 +2379,7 @@ function App() {
     };
 
 const renderDashboard = () => (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-60">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-80">
             <main className="px-6 space-y-10 pt-6">
                 {/* Refined Profile Card */}
                 <header className="clay-profile-card rounded-[2.5rem] flex flex-col gap-8 relative overflow-hidden p-6">
@@ -2644,8 +2668,8 @@ const renderDashboard = () => (
                                             {/* Info */}
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-[9px] font-black text-stone-700 uppercase tracking-widest">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h</p>
-                                                <p className="text-sm font-bold text-stone-950 italic leading-snug line-clamp-2">{order.pickup_address?.split(',').slice(0,2).join(',') || 'Coleta'}</p>
-                                                <p className="text-[10px] text-stone-600 font-bold">Agendamento</p>
+                                                <p className="text-sm font-black text-stone-950 italic leading-snug line-clamp-2">{order.pickup_address || 'Endereço Indisponível'}</p>
+                                                <p className="text-[10px] text-stone-600 font-bold">Reserva de Agendamento</p>
                                             </div>
                                             {/* Valor */}
                                             <div className="text-right shrink-0 flex flex-col justify-center">
