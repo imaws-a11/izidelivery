@@ -324,6 +324,46 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [previewProducts, setPreviewProducts] = useState<Product[]>([]);
   const [previewCategories, setPreviewCategories] = useState<MenuCategory[]>([]);
 
+  // SISTEMA DE SOM REDUNDANTE (Vigilante de Pedidos)
+  const heardOrderIds = useRef<Set<string>>(new Set());
+  const isFirstLoad = useRef(true);
+
+  useEffect(() => {
+    if (userRole !== 'merchant' || !allOrders.length) return;
+
+    // Se for o primeiro carregamento da lista, apenas preenchemos os IDs ouvidos e ignoramos o som
+    if (isFirstLoad.current) {
+      allOrders.forEach(order => heardOrderIds.current.add(order.id));
+      isFirstLoad.current = false;
+      console.log(`[SOM-WATCHER] Inicializado com ${heardOrderIds.current.size} pedidos conhecidos.`);
+      return;
+    }
+
+    const actionableStatuses = ['novo', 'waiting_merchant', 'waiting_payment', 'pendente', 'pendente_pagamento', 'paid', 'pago', 'confirmed', 'confirmado', 'pago_finalizado'];
+    
+    // Identificar pedidos que surgiram agora na lista
+    const newActionableOrders = allOrders.filter(order => {
+      const status = String(order.status || '').toLowerCase();
+      const isActionable = actionableStatuses.includes(status);
+      const isNew = !heardOrderIds.current.has(order.id);
+      return isActionable && isNew;
+    });
+
+    if (newActionableOrders.length > 0) {
+      console.log(`[SOM-WATCHER] 🔊 Novos pedidos detectados!`, newActionableOrders.length);
+      
+      // Marcar como ouvidos imediatamente para evitar loop
+      newActionableOrders.forEach(order => heardOrderIds.current.add(order.id));
+      
+      // DISPARA O SOM
+      playIziSound('merchant');
+      
+      if (newActionableOrders.length === 1) {
+        setNewOrderNotification({ show: true, orderId: newActionableOrders[0].id });
+      }
+    }
+  }, [allOrders, userRole]);
+
   // Establishment Types
    const [establishmentTypes, setEstablishmentTypes] = useState<EstablishmentType[]>([]);
 
@@ -784,22 +824,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               return [updatedOrder, ...prev];
             });
 
-            // Notificação Sonora Lojista
-            const actionableStatuses = ['novo', 'waiting_merchant', 'waiting_payment', 'pendente', 'pendente_pagamento', 'paid', 'pago', 'confirmed', 'confirmado', 'pago_finalizado'];
-            const currentStatus = String(updatedOrder.status || '').toLowerCase();
-            const isActionable = actionableStatuses.includes(currentStatus);
-            
-            const existingOrder = allOrdersRef.current.find(o => o.id === updatedOrder.id);
-            const wasActionableBefore = existingOrder ? actionableStatuses.includes(String(existingOrder.status || '').toLowerCase()) : false;
-            const isStatusChanged = existingOrder ? existingOrder.status !== updatedOrder.status : true;
-
-            if (isActionable && userRole === 'merchant') {
-              if (!existingOrder || (isStatusChanged && !wasActionableBefore)) {
-                setNewOrderNotification({ show: true, orderId: updatedOrder.id });
-                playIziSound('merchant');
-              }
-            }
-
+            // Atualização de estatísticas após mudança no pedido
             setTimeout(() => {
               fetchStatsRef.current(true);
               fetchAllOrdersRef.current(undefined, true);
