@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAdmin } from '../context/AdminContext';
 import { toastSuccess, toastError, showConfirm } from '../lib/useToast';
-import { uploadToCloudinary } from '../lib/cloudinary';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import FlashOfferTimerModal from './FlashOfferTimerModal';
@@ -20,7 +19,7 @@ interface PromotionStudioProps {
 type PromoType = 'banner' | 'coupon' | 'flash';
 
 export default function PromotionStudio({ merchantId = null, userRole, onClose, isModal = false }: PromotionStudioProps) {
-  const { fetchPromotions, promotionsList, stats, appSettings, setAppSettings } = useAdmin();
+  const { fetchPromotions, promotionsList, stats, appSettings, setAppSettings, handleFileUpload: uploadToSupabase } = useAdmin();
   
   const [activeTab, setActiveTab] = useState<PromoType>('coupon');
   const [showForm, setShowForm] = useState(false);
@@ -117,7 +116,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
     if (!file) return;
     try {
       setIsSaving(true);
-      const url = await uploadToCloudinary(file);
+      const url = await uploadToSupabase(file, 'banners');
       if (url) {
         setFormData({ ...formData, image_url: url });
         toastSuccess('Imagem carregada com sucesso!');
