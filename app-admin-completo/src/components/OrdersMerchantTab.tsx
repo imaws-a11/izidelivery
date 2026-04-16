@@ -95,8 +95,28 @@ export default function OrdersMerchantTab() {
           toastSuccess('Pedido cancelado com sucesso.');
         } else if (newStatus === 'waiting_driver') {
           toastSuccess('Pedido aceito! Chamando entregador...');
+          // Notificar Entregadores
+          supabase.functions.invoke('send-push-notification', {
+            body: {
+              driver_id: 'all',
+              title: '🛵 Nova Entrega IZI!',
+              body: 'Um novo pedido aguarda um entregador na região. Seja rápido!',
+              data: { orderId: id }
+            }
+          }).catch(err => console.error('Erro ao notificar entregadores:', err));
         } else {
           toastSuccess('Status do pedido atualizado.');
+          if (newStatus === 'novo') {
+            // Se for um pedido novo confirmado pagamento, talvez seja o caso de alertar entregadores (opcional)
+             supabase.functions.invoke('send-push-notification', {
+                body: {
+                  driver_id: 'all',
+                  title: '🔔 Novo Pedido IZI',
+                  body: 'Um novo pedido acabou de ser recebido, prepare-se!',
+                  data: { orderId: id }
+                }
+             }).catch(err => console.error('Erro ao notificar entregadores (novo_pedido):', err));
+          }
         }
       }
 

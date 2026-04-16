@@ -63,8 +63,31 @@ export default function OrdersAdminTab() {
       if (!data || data.length === 0) {
         toastError('O pedido foi atualizado, mas as alterações não refletiram.');
       } else {
-        if (newStatus === 'cancelado') toastSuccess('Pedido cancelado com sucesso.');
-        else toastSuccess('Status do pedido atualizado.');
+        if (newStatus === 'cancelado') {
+           toastSuccess('Pedido cancelado com sucesso.');
+        } else if (newStatus === 'waiting_driver') {
+           toastSuccess('Status do pedido atualizado para aguardando motorista.');
+           supabase.functions.invoke('send-push-notification', {
+             body: {
+               driver_id: 'all',
+               title: '🛵 Nova Entrega IZI!',
+               body: 'Um novo pedido aguarda um entregador na região. Seja rápido!',
+               data: { orderId: id }
+             }
+           }).catch(err => console.error('Erro ao notificar entregadores:', err));
+        } else {
+           toastSuccess('Status do pedido atualizado.');
+           if (newStatus === 'novo') {
+             supabase.functions.invoke('send-push-notification', {
+                body: {
+                  driver_id: 'all',
+                  title: '🔔 Novo Pedido IZI',
+                  body: 'Um novo pedido acabou de ser recebido, prepare-se!',
+                  data: { orderId: id }
+                }
+             }).catch(err => console.error('Erro ao notificar entregadores (novo_pedido):', err));
+           }
+        }
       }
 
       // O crédito de moedas para service_type === 'coin_purchase' é processado via trigger.
