@@ -4,7 +4,7 @@ import { supabase } from './lib/supabase';
 import { playIziSound } from './lib/iziSounds';
 import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
-import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline, DirectionsService } from '@react-google-maps/api';
 
 const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 const GOOGLE_MAPS_ID = 'izi-pilot-map';
@@ -118,6 +118,89 @@ interface Order {
     notes?: string;
 }
 const isValidCoord = (c: any) => c && typeof c.lat === 'number' && Math.abs(c.lat) > 0.01;
+
+function MissionRouteMap({ pickup, delivery }: { pickup: any, delivery: any }) {
+  const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const { isLoaded } = useJsApiLoader({ 
+    id: GOOGLE_MAPS_ID, 
+    googleMapsApiKey: mapsKey, 
+    libraries: GOOGLE_MAPS_LIBRARIES, 
+    language: 'pt-BR', 
+    region: 'BR' 
+  });
+  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
+
+  useEffect(() => {
+    console.log('MissionRouteMap: isLoaded=', isLoaded, 'pickup=', pickup, 'delivery=', delivery);
+    if (isLoaded && pickup?.lat && delivery?.lat && !isNaN(pickup.lat) && !isNaN(delivery.lat)) {
+      const service = new google.maps.DirectionsService();
+      service.route(
+        {
+          origin: pickup,
+          destination: delivery,
+          travelMode: google.maps.TravelMode.DRIVING,
+        },
+        (result, status) => {
+          console.log('MissionRouteMap: directions status=', status);
+          if (status === 'OK' && result) {
+            setDirections(result);
+          } else {
+            console.error('MissionRouteMap: directions failed=', status);
+          }
+        }
+      );
+    }
+  }, [isLoaded, pickup.lat, pickup.lng, delivery.lat, delivery.lng]);
+
+  if (!isLoaded) return <div className="w-full h-full bg-neutral-900/50 animate-pulse flex items-center justify-center text-xs text-white/20">Carregando Mapa...</div>;
+
+  const isValid = pickup?.lat && delivery?.lat && !isNaN(pickup.lat) && !isNaN(delivery.lat);
+  if (!isValid) return <div className="w-full h-full bg-neutral-900/50 flex items-center justify-center text-xs text-rose-500/50">Coordenadas Inválidas</div>;
+
+  return (
+    <GoogleMap
+      mapContainerStyle={{ width: '100%', height: '100%' }}
+      center={pickup}
+      zoom={15}
+      options={{
+        ...mapOptions,
+        gestureHandling: 'greedy', // Mudei para greedy para permitir algum controle se necessário
+        zoomControl: false,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false
+      }}
+    >
+      {directions && (
+        <DirectionsRenderer 
+          directions={directions} 
+          options={{ 
+            suppressMarkers: true,
+            polylineOptions: {
+              strokeColor: '#FACD05',
+              strokeOpacity: 0.9,
+              strokeWeight: 5,
+            }
+          }} 
+        />
+      )}
+      <Marker 
+        position={pickup} 
+        icon={{
+          url: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+          scaledSize: new window.google.maps.Size(30, 30)
+        }}
+      />
+      <Marker 
+        position={delivery} 
+        icon={{
+          url: 'https://cdn-icons-png.flaticon.com/512/9131/9131546.png',
+          scaledSize: new window.google.maps.Size(30, 30)
+        }}
+      />
+    </GoogleMap>
+  );
+}
 
 function IziRealTimeMap({ driverCoords, pickupCoords, pickupAddress, pickupName, deliveryCoords, deliveryAddress, deliveryName, currentStatus }: any) {
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -1246,6 +1329,21 @@ function App() {
         return () => { supabase.removeChannel(scheduledChannel); };
     }, [isAuthenticated, fetchFromDB]);
 
+    const handleDeclineOrder = (orderId: string) => {
+        try {
+            const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
+            declinedMap[orderId] = Date.now();
+            localStorage.setItem('Izi_declined_timed', JSON.stringify(declinedMap));
+            
+            // Remove do estado local imediatamente para feedback instantâneo
+            setOrders(prev => prev.filter(o => (o.realId || o.id) !== orderId));
+            
+            toastSuccess('Missão ocultada com sucesso.');
+        } catch (e) {
+            console.error('Erro ao recusar pedido:', e);
+        }
+    };
+
     const fetchOrders = useCallback(async () => {
         if (!isOnline) {
             setOrders([]);
@@ -2269,18 +2367,16 @@ const renderDashboard = () => (
                                                         </span>
                                                     </div>
 
-                                                    <div className="flex flex-col bg-white/[0.02] p-3 rounded-xl border border-white/5">
+                                                    <div className="flex flex-col bg-white/[0.02] p-3 rounded-xl border border-white/5 col-span-2 relative pb-8">
                                                         <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest mb-1">Destino Final</span>
-                                                        <span className="text-white text-[11px] font-bold leading-tight truncate italic">
-                                                            {presentation.destinationText || 'Destino não informado'}
+                                                        <span className="text-white/90 text-xs font-medium leading-relaxed drop-shadow-md break-words pr-12">
+                                                            {order.destination || order.delivery_address || presentation.destinationText || 'Destino não informado'}
                                                         </span>
-                                                    </div>
-
-                                                    <div className="flex flex-col items-end text-right bg-white/[0.02] p-3 rounded-xl border border-white/5">
-                                                        <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest mb-1">Distância Estimada</span>
-                                                        <span className="text-white text-xs font-black leading-tight bg-white/10 px-2 py-1 rounded-md">
-                                                            {order.distance_km ? `${parseFloat(order.distance_km).toFixed(1)} km` : (order.distance ? `${order.distance}` : 'Trajeto Direto')}
-                                                        </span>
+                                                        
+                                                        {/* Floating Distance Badge */}
+                                                        <div className="absolute bottom-2 right-2 bg-yellow-400 text-black px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-tight shadow-md">
+                                                            {order.distance_km ? `${parseFloat(order.distance_km).toFixed(1)} km` : (order.distance ? `${order.distance}` : '')}
+                                                        </div>
                                                     </div>
                                                 </div>
 
@@ -2320,7 +2416,7 @@ const renderDashboard = () => (
                                                         <button 
                                                             onClick={() => {
                                                                 if(window.confirm('Recusar remove esta entrega da sua lista temporariamente. Tem certeza?')) {
-                                                                    toastSuccess('Missão ocultada (Função em breve)');
+                                                                    handleDeclineOrder(order.realId || order.id);
                                                                 }
                                                             }}
                                                             className="flex-[0.5] py-3 rounded-xl text-red-500/50 font-bold uppercase text-[10px] tracking-widest active:scale-95 transition-all hover:text-red-400 hover:bg-red-500/10"
@@ -3378,8 +3474,13 @@ const renderDashboard = () => (
 
                     {/* Route Details - Map Section */}
                     <section className="relative rounded-[40px] overflow-hidden h-52 bg-neutral-800 shadow-2xl group border border-white/5">
-                        <img alt="Map" className="w-full h-full object-cover opacity-60 grayscale brightness-50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8tC-1KmGTzsVyocvSlvHVwK4QILUSYQmQqs4seBdKXmXSggP094WuI33uogqXon3XnCuk-W1mmHlUDASG4c7aMEvu8lUTQLope6XV0C2Y4i__azso3rFhm-rm8_ENRNu6QkQYOC7qN5i8L7zcuXjIqBjxZI5ax4tORU_CXPHFhBBJkAj0fLRpiVSOb6-Dnkg5uypCgzaXsQnG9LqOBmA45nrGWd0x3Gzsp9ZkHWjnfISNmRMgbxKgGvvIJ891Wj9oZQpxf5SW2hc"/>
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0c0f10] via-transparent to-transparent"></div>
+                        <div className="absolute inset-0 z-0">
+                            <MissionRouteMap 
+                                pickup={{ lat: Number(activeMission.pickup_lat), lng: Number(activeMission.pickup_lng) }}
+                                delivery={{ lat: Number(activeMission.delivery_lat), lng: Number(activeMission.delivery_lng) }}
+                            />
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0c0f10] via-transparent to-transparent pointer-events-none"></div>
                         
                         <button 
                              onClick={() => {
@@ -3463,7 +3564,7 @@ const renderDashboard = () => (
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex justify-between items-center">
-                                            <span className="text-white font-black text-xs uppercase italic">{activeMission.payment_method === 'online' ? 'Já Pago (Online)' : `Cobrar do Cliente (${paymentLabel})`}</span>
+                                            <span className="text-white font-black text-xs uppercase italic">{activeMission.payment_method === 'online' ? 'Já Pago (Online)' : `Cobrar do Cliente (${getPaymentLabel(activeMission)})`}</span>
                                             {(activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago') && (
                                                 <span className="bg-emerald-500/20 text-emerald-400 text-[8px] font-black px-2 py-1 rounded-full border border-emerald-500/20 uppercase">Liquidado</span>
                                             )}
@@ -3535,7 +3636,7 @@ const renderDashboard = () => (
                 </main>
 
                 {/* Bottom Fixed Action Button Container */}
-                <div className="fixed bottom-0 left-0 w-full p-8 bg-gradient-to-t from-[#0c0f10] via-[#0c0f10] to-transparent z-[110]">
+                <div className="fixed bottom-28 left-0 w-full p-8 bg-gradient-to-t from-[#0c0f10] via-[#0c0f10] to-transparent z-[210]">
                     <button 
                         onClick={btn.action}
                         disabled={isAccepting}

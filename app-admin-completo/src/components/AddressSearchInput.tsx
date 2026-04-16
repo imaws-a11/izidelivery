@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-
-import { GMAPS_KEY } from '../config';
+import { useAdmin } from "../context/AdminContext";
 
 interface AddressSearchInputProps {
   placeholder: string;
@@ -26,6 +25,7 @@ export const AddressSearchInput = ({
   userCoords,
   extraRightPadding,
 }: AddressSearchInputProps) => {
+  const { isLoaded } = useAdmin();
   const [query, setQuery] = useState(initialValue || "");
   useEffect(() => {
     setQuery(initialValue || "");
@@ -61,7 +61,7 @@ export const AddressSearchInput = ({
   };
 
   const fetchSuggestions = async (input: string) => {
-    if (!input || input.length < 3) {
+    if (!input || input.length < 3 || !isLoaded || !window.google) {
       setSuggestions([]);
       setOpen(false);
       return;
@@ -69,63 +69,33 @@ export const AddressSearchInput = ({
 
     setLoading(true);
     try {
-      const body: Record<string, any> = {
+      const service = new window.google.maps.places.AutocompleteService();
+      const request: google.maps.places.AutocompletionRequest = {
         input,
-        includedRegionCodes: ["br"],
-        languageCode: "pt-BR",
+        componentRestrictions: { country: 'br' },
+        language: 'pt-BR'
       };
 
-      // Adiciona locationBias e origin se temos coordenadas do usuÃ¡rio para ranking e distÃ¢ncia
       if (userCoords?.lat && userCoords?.lng) {
-        body.locationBias = {
-          circle: {
-            center: { latitude: userCoords.lat, longitude: userCoords.lng },
-            radius: 10000, // 10km de raio de preferÃªncia mais forte
-          },
-        };
-        body.origin = {
-          latitude: userCoords.lat,
-          longitude: userCoords.lng,
-        };
+        request.locationBias = new window.google.maps.LatLng(userCoords.lat, userCoords.lng);
+        request.radius = 10000;
       }
 
-      const res = await fetch(
-        `https://places.googleapis.com/v1/places:autocomplete`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": GMAPS_KEY,
-            "X-Goog-FieldMask": "suggestions.placePrediction.text,suggestions.placePrediction.placeId,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.distanceMeters",
-          },
-          body: JSON.stringify(body),
+      service.getPlacePredictions(request, (predictions, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+          setSuggestions(predictions);
+          updateDropdownPos();
+          setOpen(true);
+        } else {
+          setSuggestions([]);
+          setOpen(false);
         }
-      );
-      const data = await res.json();
-      const predictions = (data.suggestions || [])
-        .map((s: any) => ({
-          description: s.placePrediction?.text?.text || "",
-          place_id: s.placePrediction?.placeId || "",
-          distanceMeters: s.placePrediction?.distanceMeters || 0,
-          structured_formatting: {
-            main_text: s.placePrediction?.structuredFormat?.mainText?.text || "",
-            secondary_text: s.placePrediction?.structuredFormat?.secondaryText?.text || "",
-          },
-        }))
-        .filter((p: any) => p.description);
-
-      if (predictions.length > 0) {
-        setSuggestions(predictions);
-        updateDropdownPos();
-        setOpen(true);
-      } else {
-        setSuggestions([]);
-        setOpen(false);
-      }
-    } catch {
+        setLoading(false);
+      });
+    } catch (err) {
+      console.error("Erro ao buscar sugestões:", err);
       setSuggestions([]);
       setOpen(false);
-    } finally {
       setLoading(false);
     }
   };
@@ -143,17 +113,24 @@ export const AddressSearchInput = ({
    * Busca lat/lng do place selecionado via Places API (New) GET
    */
   const fetchPlaceDetails = async (placeId: string): Promise<{ lat: number; lng: number } | null> => {
-    try {
-      const res = await fetch(
-        `https://places.googleapis.com/v1/places/${placeId}?fields=location&key=${GMAPS_KEY}&languageCode=pt-BR`,
-        { method: "GET" }
-      );
-      const data = await res.json();
-      if (data?.location) {
-        return { lat: data.location.latitude, lng: data.location.longitude };
-      }
-    } catch { /* silent */ }
-    return null;
+    if (!isLoaded || !window.google) return null;
+    
+    return new Promise((resolve) => {
+      const service = new window.google.maps.places.PlacesService(document.createElement('div'));
+      service.getDetails({
+        placeId,
+        fields: ['geometry.location']
+      }, (place, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+          resolve({
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng()
+          });
+        } else {
+          resolve(null);
+        }
+      });
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

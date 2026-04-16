@@ -33,7 +33,7 @@ export default function DevicePreview({ targetItem, targetProducts, targetCatego
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
             <div className="absolute bottom-4 left-6 flex items-center gap-3">
               <div className="size-14 rounded-2xl bg-white p-0.5 shadow-lg border-2 border-white overflow-hidden">
-                <img className="w-full h-full object-cover rounded-[14px]" src={targetItem?.store_logo || 'https://via.placeholder.com/150'} />
+                <img className="w-full h-full object-cover rounded-[14px]" src={targetItem?.store_logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(targetItem?.store_name || 'IZI')}&background=FFD900&color=000&size=256&font-size=0.33&font-weight=900`} />
               </div>
               <div className="text-white">
                 <h4 className="text-sm font-black truncate max-w-[150px]">{targetItem?.store_name || 'Minha Loja'}</h4>
@@ -71,7 +71,7 @@ export default function DevicePreview({ targetItem, targetProducts, targetCatego
             {(targetProducts && targetProducts.length > 0 ? targetProducts : [1,2,3]).map((p: any, i: number) => (
               <div key={p.id || i} className="flex gap-4 bg-white dark:bg-slate-800 p-3 rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-sm">
                 <div className="size-20 rounded-[18px] bg-slate-50 dark:bg-slate-900 shrink-0 overflow-hidden">
-                  <img src={p.image_url || 'https://via.placeholder.com/100'} className="w-full h-full object-cover" />
+                  <img src={p.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=500&auto=format&fit=crop'} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                   <h5 className="text-[11px] font-black text-slate-900 dark:text-white truncate">{p.name || `Produto Exemplo ${i+1}`}</h5>

@@ -12,6 +12,7 @@ import { DedicatedSlotStudio } from './DedicatedSlotStudio';
 import FlashOffersSection from './FlashOffersSection';
 import PromotionStudio from './PromotionStudio';
 import { AddressSearchInput } from './AddressSearchInput';
+import MerchantMapSelector from './MerchantMapSelector';
 import PartnerStudio from './PartnerStudio';
 import { GMAPS_KEY } from '../config';
 
@@ -69,6 +70,7 @@ export default function MyStudioTab() {
   } = useAdmin();
 
   const [isLocating, setIsLocating] = React.useState(false);
+  const [isMapSelectorOpen, setIsMapSelectorOpen] = React.useState(false);
   const [newSpecialtyTag, setNewSpecialtyTag] = React.useState('');
   const [editingTagIdx, setEditingTagIdx] = React.useState<number | null>(null);
   const [suggestedTags, setSuggestedTags] = React.useState(['Pizza', 'Hambúrguer', 'Comida Japonesa', 'Brasileira', 'Saudável', 'Açaí', 'Bebidas', 'Doces & Bolos', 'Mercado', 'Farmácia']);
@@ -196,7 +198,7 @@ export default function MyStudioTab() {
                     <div className="space-y-4">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Banner do Estabelecimento</label>
                       <div className="relative aspect-video rounded-[32px] overflow-hidden bg-slate-100 dark:bg-slate-800 group border-4 border-white dark:border-slate-800 shadow-xl">
-                        <img src={targetItem.store_banner || 'https://via.placeholder.com/800x400'} className="w-full h-full object-cover" />
+                        <img src={targetItem.store_banner || 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?q=80&w=1000&auto=format&fit=crop'} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <button className="bg-white text-slate-900 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest">Alterar Banner</button>
                         </div>
@@ -216,7 +218,7 @@ export default function MyStudioTab() {
                     <div className="space-y-4">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Logotipo</label>
                       <div className="relative size-44 rounded-[40px] overflow-hidden bg-slate-100 dark:bg-slate-800 group border-4 border-white dark:border-slate-800 shadow-xl">
-                        <img src={targetItem.store_logo || 'https://via.placeholder.com/200'} className="w-full h-full object-cover" />
+                        <img src={targetItem.store_logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(targetItem.store_name || 'IZI')}&background=FFD900&color=000&size=256&font-size=0.33&font-weight=900`} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <span className="material-symbols-outlined text-white">photo_camera</span>
                         </div>
@@ -375,7 +377,7 @@ export default function MyStudioTab() {
                            type="button"
                            onClick={() => getCurrentLocation(updateItem, targetItem)}
                            disabled={isLocating}
-                           className="absolute right-3 top-1/2 -translate-y-1/2 size-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-all flex items-center justify-center hover:bg-primary/10 group-hover:bg-white dark:group-hover:bg-slate-700 shadow-sm"
+                           className="absolute right-14 top-1/2 -translate-y-1/2 size-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-all flex items-center justify-center hover:bg-primary/10 group-hover:bg-white dark:group-hover:bg-slate-700 shadow-sm"
                            title="Usar localização atual"
                          >
                            {isLocating ? (
@@ -384,7 +386,31 @@ export default function MyStudioTab() {
                              <span className="material-symbols-outlined text-xl">my_location</span>
                            )}
                          </button>
+                         <button
+                           type="button"
+                           onClick={() => setIsMapSelectorOpen(true)}
+                           className="absolute right-3 top-1/2 -translate-y-1/2 size-10 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-slate-900 transition-all flex items-center justify-center shadow-sm"
+                           title="Selecionar no Mapa"
+                         >
+                           <span className="material-symbols-outlined text-xl">map</span>
+                         </button>
                        </div>
+
+                       <MerchantMapSelector 
+                         isOpen={isMapSelectorOpen}
+                         onClose={() => setIsMapSelectorOpen(false)}
+                         initialCoords={targetItem.latitude && targetItem.longitude ? { lat: targetItem.latitude, lng: targetItem.longitude } : undefined}
+                         initialAddress={targetItem.store_address || ''}
+                         onConfirm={(data) => {
+                           updateItem({
+                             ...targetItem,
+                             store_address: data.address,
+                             latitude: data.lat,
+                             longitude: data.lng
+                           });
+                           toastSuccess("Localização definida pelo mapa!");
+                         }}
+                       />
                        {(targetItem.latitude && targetItem.longitude) && (
                          <div className="flex items-center gap-2 ml-4 mt-1 opacity-60">
                            <span className="material-symbols-outlined text-[10px]">location_searching</span>
@@ -1094,7 +1120,7 @@ export default function MyStudioTab() {
                                     </div>
                                   )}
                                   <div className="size-20 rounded-2xl bg-slate-50 dark:bg-slate-900 overflow-hidden shrink-0 border border-slate-100 dark:border-slate-800">
-                                    <img src={p.image_url || 'https://via.placeholder.com/100'} className="w-full h-full object-cover" alt={p.name} />
+                                    <img src={p.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=500&auto=format&fit=crop'} className="w-full h-full object-cover" alt={p.name} />
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start mb-1">
@@ -1583,7 +1609,7 @@ export default function MyStudioTab() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
             <div className="absolute bottom-4 left-6 flex items-center gap-3">
               <div className="size-14 rounded-2xl bg-white p-0.5 shadow-lg border-2 border-white overflow-hidden">
-                <img className="w-full h-full object-cover rounded-[14px]" src={targetItem?.store_logo || 'https://via.placeholder.com/150'} />
+                <img className="w-full h-full object-cover rounded-[14px]" src={targetItem?.store_logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(targetItem?.store_name || 'IZI')}&background=FFD900&color=000&size=256&font-size=0.33&font-weight=900`} />
               </div>
               <div className="text-white">
                 <h4 className="text-sm font-black truncate max-w-[150px]">{targetItem?.store_name || 'Minha Loja'}</h4>
@@ -1621,7 +1647,7 @@ export default function MyStudioTab() {
             {(targetProducts && targetProducts.length > 0 ? targetProducts : [1,2,3]).map((p: any, i: number) => (
               <div key={p.id || i} className="flex gap-4 bg-white dark:bg-slate-800 p-3 rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-sm">
                 <div className="size-20 rounded-[18px] bg-slate-50 dark:bg-slate-900 shrink-0 overflow-hidden">
-                  <img src={p.image_url || 'https://via.placeholder.com/100'} className="w-full h-full object-cover" />
+                  <img src={p.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=500&auto=format&fit=crop'} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                   <h5 className="text-[11px] font-black text-slate-900 dark:text-white truncate">{p.name || `Produto Exemplo ${i+1}`}</h5>
