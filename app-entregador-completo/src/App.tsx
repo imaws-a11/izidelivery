@@ -3486,16 +3486,16 @@ const renderDashboard = () => (
                 </label>
                 <h2 className="text-2xl font-black text-white tracking-tight">{driverName}</h2>
                 <div className="flex items-center gap-2 mt-2">
-                    <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Piloto Iziâ€¢ Nível {stats.level}</span>
+                    <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Piloto Izi • Nível {stats.level}</span>
                 </div>
                 
                 <div className="flex items-center gap-4 mt-8">
-                    <div className="flex flex-col items-center gap-1 bg-white/[0.02] border border-white/5 px-6 py-4 rounded-[28px] min-w-[100px]">
+                    <div className="flex flex-col items-center gap-1 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] px-6 py-4 rounded-[28px] min-w-[100px] border-none">
                         <Icon name="star" className="text-primary text-lg" />
                         <span className="text-lg font-black text-white">4.98</span>
                         <span className="text-[8px] font-black text-white/20 uppercase">Rating</span>
                     </div>
-                    <div className="flex flex-col items-center gap-1 bg-white/[0.02] border border-white/5 px-6 py-4 rounded-[28px] min-w-[100px]">
+                    <div className="flex flex-col items-center gap-1 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] px-6 py-4 rounded-[28px] min-w-[100px] border-none">
                         <Icon name="route" className="text-emerald-400 text-lg" />
                         <span className="text-lg font-black text-white">{stats.count}</span>
                         <span className="text-[8px] font-black text-white/20 uppercase">Viagens</span>
@@ -3503,45 +3503,13 @@ const renderDashboard = () => (
                 </div>
             </div>
 
-            <div className="bg-red-500/5 border border-red-500/10 rounded-[32px] p-8 space-y-5">
-                <div>
-                    <h3 className="text-xs font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
-                        <Icon name="admin_panel_settings" size={16} /> Zona de Segurança
-                    </h3>
-                    <p className="text-[11px] text-white/40 leading-relaxed mt-2">
-                        Use estas ferramentas apenas em caso de erros no sistema ou se precisar resetar seu estado de disponibilidade.
-                    </p>
-                </div>
-                <div className="flex gap-3 pt-2">
-                    <button 
-                        onClick={syncMissionWithDB}
-                        className="flex-1 h-12 bg-white/5 border border-white/10 text-white/60 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
-                    >
-                        Sincronizar
-                    </button>
-                    <button 
-                        onClick={() => {
-                            if (confirm('Deseja forçar a limpeza da missão atual?')) {
-                                setActiveMission(null);
-                                localStorage.removeItem('Izi_active_mission');
-                                setActiveTab('dashboard');
-                                toastSuccess('Limpeza concluída!');
-                            }
-                        }}
-                        className="flex-1 h-12 bg-red-500/10 border border-red-500/20 text-red-500 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
-                    >
-                        Resetar Estado
-                    </button>
-                </div>
-            </div>
-
             <div className="space-y-3">
                 {[
                     { label: 'Dados Bancários', icon: 'account_balance', color: 'text-emerald-400' },
-                    { label: 'PreferÃências', icon: 'settings', color: 'text-primary' },
+                    { label: 'Preferências', icon: 'settings', color: 'text-primary' },
                     { label: 'Ajuda & Suporte', icon: 'support_agent', color: 'text-blue-400' }
                 ].map((item, i) => (
-                    <button key={i} className="w-full bg-white/[0.02] border border-white/5 rounded-[24px] p-6 flex items-center justify-between group hover:bg-white/[0.05] transition-all active:scale-[0.98]">
+                    <button key={i} className="w-full bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] border-none rounded-[24px] p-6 flex items-center justify-between group active:scale-[0.98]">
                         <div className="flex items-center gap-4">
                             <div className={`size-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/10 ${item.color}`}>
                                 <Icon name={item.icon} className="text-xl" />
@@ -3555,10 +3523,43 @@ const renderDashboard = () => (
             
             <button 
                 onClick={handleLogout} 
-                className="w-full py-6 border border-white/5 text-red-400/60 rounded-[32px] font-black text-[11px] uppercase tracking-[0.2em] bg-red-500/[0.02] active:scale-95 transition-all mt-4"
+                className="w-full py-6 mt-4 rounded-[32px] font-black text-[11px] uppercase tracking-[0.2em] bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] border-none text-red-500 active:scale-95 transition-all"
             >
                 Encerrar Sessão
             </button>
+
+            <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] rounded-[32px] p-8 space-y-5 mt-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
+                <div className="relative z-10">
+                    <h3 className="text-xs font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
+                        <Icon name="admin_panel_settings" size={16} /> Zona de Segurança
+                    </h3>
+                    <p className="text-[11px] text-white/40 leading-relaxed mt-2">
+                        Use estas ferramentas apenas em caso de erros no sistema ou se precisar resetar seu estado de disponibilidade.
+                    </p>
+                </div>
+                <div className="flex gap-3 pt-2 relative z-10">
+                    <button 
+                        onClick={syncMissionWithDB}
+                        className="flex-1 h-12 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] text-white/60 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
+                    >
+                        Sincronizar
+                    </button>
+                    <button 
+                        onClick={() => {
+                            if (confirm('Deseja forçar a limpeza da missão atual?')) {
+                                setActiveMission(null);
+                                localStorage.removeItem('Izi_active_mission');
+                                setActiveTab('dashboard');
+                                toastSuccess('Limpeza concluída!');
+                            }
+                        }}
+                        className="flex-1 h-12 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] text-red-500 font-black text-[10px] uppercase tracking-widest rounded-2xl active:scale-[0.98] transition-all"
+                    >
+                        Resetar Estado
+                    </button>
+                </div>
+            </div>
         </motion.div>
     );
 
