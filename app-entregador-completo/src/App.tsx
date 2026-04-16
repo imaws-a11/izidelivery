@@ -5,6 +5,7 @@ import { playIziSound } from './lib/iziSounds';
 import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
 import { Geolocation } from '@capacitor/geolocation';
+import { PushNotifications } from '@capacitor/push-notifications';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline, DirectionsService } from '@react-google-maps/api';
 
 const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
@@ -822,6 +823,53 @@ function App() {
 
         return Number(finalNet.toFixed(2));
     }, [appSettings, dynamicRates, getGrossEarnings]);
+
+    useEffect(() => {
+        if (!isAuthenticated || !driverId) return;
+        
+        const registerPush = async () => {
+             try {
+                 // Verificamos permissões antes
+                 let permStatus = await PushNotifications.checkPermissions();
+                 if (permStatus.receive === 'prompt') {
+                     permStatus = await PushNotifications.requestPermissions();
+                 }
+
+                 if (permStatus.receive !== 'granted') {
+                     console.warn('Permissão de Push Notification negada.');
+                     return;
+                 }
+
+                 await PushNotifications.register();
+
+                 // Listeners do registro nativo
+                 PushNotifications.addListener('registration', async (token) => {
+                     console.log('Firebase Cloud Messaging Token:', token.value);
+                     // Atualiza a coluna no supabase
+                     await supabase.from('drivers_delivery').update({ push_token: token.value }).eq('id', driverId);
+                 });
+
+                 PushNotifications.addListener('registrationError', (error) => {
+                     console.error('Erro no registro do Push Notification:', error);
+                 });
+
+                 PushNotifications.addListener('pushNotificationReceived', (notification) => {
+                     console.log('Push recebida via Firebase', notification);
+                     playIziSound();
+                     toastSuccess(`Nova Chamada: ${notification.title || ''}`, { position: 'top-center' });
+                 });
+
+             } catch (err) {
+                 console.error("Falha ao configurar Push Notifications:", err);
+             }
+        };
+
+        registerPush();
+
+        return () => {
+             PushNotifications.removeAllListeners();
+        };
+    }, [isAuthenticated, driverId]);
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;

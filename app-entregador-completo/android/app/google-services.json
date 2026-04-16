@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "208670327100",
+    "project_id": "izi-delivery-40939",
+    "storage_bucket": "izi-delivery-40939.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:208670327100:android:63beedee84ad9f99771e39",
+        "android_client_info": {
+          "package_name": "com.izidelivery.entregador"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCoLm92kzfF427CSuN1uyRbLMxu85x0Xko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
