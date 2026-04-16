@@ -2248,6 +2248,7 @@ function App() {
                                     { id: 'dashboard', label: 'Início', icon: 'grid_view' },
                                     { id: 'active_mission', label: 'Missão', icon: 'route' },
                                     { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length },
+                                    { id: 'dedicated', label: 'Vagas', icon: 'military_tech', badge: dedicatedSlots.length > 0 ? dedicatedSlots.length : 0 },
                                     { id: 'earnings', label: 'Financeiro', icon: 'payments' },
                                     { id: 'history', label: 'Histórico', icon: 'history' },
                                     { id: 'profile', label: 'Perfil', icon: 'person' }
@@ -2354,7 +2355,7 @@ function App() {
     };
 
 const renderDashboard = () => (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-32">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-52">
             <main className="px-6 space-y-10 pt-6">
                 {/* Refined Profile Card */}
                 <header className="clay-profile-card rounded-[2.5rem] flex flex-col gap-8 relative overflow-hidden p-6">
@@ -2594,25 +2595,25 @@ const renderDashboard = () => (
                             <motion.button 
                                 key={slot.id}
                                 onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
-                                className="w-full clay-card-dark p-6 flex items-center gap-6 text-left active:scale-[0.98] transition-all border-l-4 border-yellow-400"
+                                className="w-full clay-card-yellow p-6 flex items-center gap-6 text-left active:scale-[0.98] transition-all"
                             >
-                                <div className="size-16 rounded-2xl bg-yellow-400/10 flex items-center justify-center shrink-0 overflow-hidden border border-yellow-400/20">
+                                <div className="size-16 rounded-2xl bg-black/10 flex items-center justify-center shrink-0 overflow-hidden border border-black/10">
                                     {slot.admin_users?.store_logo ? (
                                         <img src={slot.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
                                     ) : (
-                                        <Icon name="stars" className="text-yellow-400" size={32} />
+                                        <Icon name="stars" className="text-stone-900" size={32} />
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest">
+                                    <p className="text-[9px] font-black text-stone-700 uppercase tracking-widest">
                                         {slot.title.toLowerCase().includes((slot.admin_users?.store_name || '').toLowerCase()) ? 'Vaga Exclusiva' : (slot.admin_users?.store_name || 'Parceiro Izi')}
                                     </p>
-                                    <h4 className="text-white font-black text-lg truncate italic leading-tight">{slot.title}</h4>
-                                    <p className="text-[10px] text-white/70 font-bold italic">{slot.working_hours}</p>
+                                    <h4 className="text-stone-950 font-black text-lg truncate italic leading-tight">{slot.title}</h4>
+                                    <p className="text-[10px] text-stone-600 font-bold italic">{slot.working_hours}</p>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <p className="text-2xl font-black text-yellow-400 italic">R$ {parseFloat(slot.fee_per_day || 0).toFixed(0)}</p>
-                                    <p className="text-[8px] text-white/40 uppercase font-black">/dia</p>
+                                    <p className="text-2xl font-black text-stone-950 italic">R$ {parseFloat(slot.fee_per_day || 0).toFixed(0)}</p>
+                                    <p className="text-[8px] text-stone-600 uppercase font-black">/dia</p>
                                 </div>
                             </motion.button>
                         ))}
@@ -2631,20 +2632,21 @@ const renderDashboard = () => (
                                 {scheduledOrders.filter(o => !o.driver_id).slice(0, 3).map((order: any) => { // Aumentado para 3 disponiveis
                                     const dt = new Date(order.scheduled_at);
                                     return (
-                                        <div key={order.id} className="clay-card-dark p-6 flex items-center justify-between border-l-4 border-yellow-400">
-                                            <div className="flex items-center gap-5">
-                                                <div className="text-center bg-white/5 p-2 rounded-xl min-w-[50px]">
-                                                    <p className="text-[9px] font-black text-yellow-400 uppercase">{dt.toLocaleDateString('pt-BR', { weekday: 'short' })}</p>
-                                                    <p className="text-lg font-black text-white italic">{dt.getDate()}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-bold text-white italic truncate w-32">{order.pickup_address?.split(',')[0] || 'Coleta'}</p>
-                                                    <p className="text-[10px] text-white/30 font-black uppercase">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h</p>
-                                                </div>
+                                        <div key={order.id} className="clay-card-yellow p-5 flex gap-4">
+                                            {/* Data */}
+                                            <div className="text-center bg-black/10 px-3 py-2 rounded-xl shrink-0 border border-black/10 flex flex-col justify-center min-w-[52px]">
+                                                <p className="text-[9px] font-black text-stone-700 uppercase">{dt.toLocaleDateString('pt-BR', { weekday: 'short' })}</p>
+                                                <p className="text-xl font-black text-stone-950 italic leading-none">{dt.getDate()}</p>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-xs font-bold text-yellow-400 uppercase tracking-tighter">Disponível</p>
-                                                <p className="text-base font-black text-white italic">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
+                                            {/* Info */}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[10px] text-stone-600 font-black uppercase">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h</p>
+                                                <p className="text-sm font-bold text-stone-950 italic leading-snug line-clamp-2">{order.pickup_address?.split(',').slice(0,2).join(',') || 'Coleta'}</p>
+                                            </div>
+                                            {/* Valor */}
+                                            <div className="text-right shrink-0 flex flex-col justify-center">
+                                                <p className="text-[9px] font-bold text-stone-700 uppercase tracking-tighter">Disponível</p>
+                                                <p className="text-base font-black text-stone-950 italic">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
                                             </div>
                                         </div>
                                     );
@@ -3058,29 +3060,28 @@ const renderDashboard = () => (
                                         animate={{ opacity: 1, scale: 1 }} 
                                         transition={{ delay: i * 0.05 }}
                                         onClick={() => setSelectedSlot(s)}
-                                        className="w-full transition-all p-6 flex items-center gap-5 group text-left relative overflow-hidden active:scale-[0.98]"
-                                        style={sClayDark}
+                                        className="w-full clay-card-yellow transition-all p-6 flex items-center gap-5 group text-left relative overflow-hidden active:scale-[0.98]"
                                     >
-                                        <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
+                                        <div className="size-14 rounded-2xl bg-black/10 border border-black/10 flex items-center justify-center shrink-0 overflow-hidden">
                                             {s.admin_users?.store_logo
                                                 ? <img src={s.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
-                                                : <Icon name="stars" size={26} className="text-primary" />}
+                                                : <Icon name="stars" size={26} className="text-stone-900" />}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[9px] font-black text-primary/70 uppercase tracking-widest">
+                                            <p className="text-[9px] font-black text-stone-700 uppercase tracking-widest">
                                                 {s.title.toLowerCase().includes((s.admin_users?.store_name || '').toLowerCase()) ? 'Vaga Exclusiva' : (s.admin_users?.store_name || 'Parceiro Izi')}
                                             </p>
-                                            <p className="text-base font-black text-white truncate italic">{s.title}</p>
+                                            <p className="text-base font-black text-stone-950 truncate italic">{s.title}</p>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <Icon name="schedule" size={10} className="text-white/20" />
-                                                <p className="text-[10px] text-white/40 font-bold">{s.working_hours || 'Horário a combinar'}</p>
+                                                <Icon name="schedule" size={10} className="text-stone-600" />
+                                                <p className="text-[10px] text-stone-600 font-bold">{s.working_hours || 'Horário a combinar'}</p>
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <p className="text-xl font-black text-primary italic">R$ {parseFloat(s.fee_per_day || 0).toFixed(0)}</p>
-                                            <p className="text-[8px] text-white/20 uppercase tracking-widest">/dia</p>
+                                            <p className="text-xl font-black text-stone-950 italic">R$ {parseFloat(s.fee_per_day || 0).toFixed(0)}</p>
+                                            <p className="text-[8px] text-stone-600 uppercase tracking-widest">/dia</p>
                                             {hasApplied && (
-                                                <span className={`text-[8px] font-black uppercase tracking-widest mt-1 block ${application?.status === 'accepted' ? 'text-emerald-400' : 'text-primary/60'}`}>
+                                                <span className={`text-[8px] font-black uppercase tracking-widest mt-1 block ${application?.status === 'accepted' ? 'text-emerald-700' : 'text-stone-600'}`}>
                                                     {application?.status === 'accepted' ? '✓ Aprovado' : '⌛ Analise'}
                                                 </span>
                                             )}
