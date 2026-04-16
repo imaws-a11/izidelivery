@@ -19,7 +19,7 @@ import { countOnlineDrivers, removeDriverFromList, sortDriversByPresence, upsert
 const GOOGLE_MAPS_LIBRARIES: ("places" | "geometry")[] = ['places', 'geometry'];
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { session, logout } = useAuth();
+  const { session, logout, isLoading: isAuthLoading } = useAuth();
   const MASTER_ADMIN_EMAIL = (import.meta.env.VITE_MASTER_ADMIN_EMAIL as string || 'swmcapital@gmail.com').trim().toLowerCase();
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string || '';
 
@@ -471,12 +471,15 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 
   useEffect(() => {
+    if (isAuthLoading) return;
+
     if (session?.user?.email) {
+      setIsInitialLoading(true);
       fetchUserRole(session.user.email);
     } else {
       setIsInitialLoading(false);
     }
-  }, [session, fetchUserRole]);
+  }, [session?.user?.email, fetchUserRole, isAuthLoading]);
 
   // Sincronização em tempo real "mão-dupla" absoluta (Auto-refresh de stats)
   useEffect(() => {
@@ -643,6 +646,16 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const targetPage = page !== undefined ? page : (userRole === 'merchant' ? merchantOrdersPage : ordersPage);
     if (!silent) setIsLoadingList(true);
     try {
+      if (!session?.user?.id) {
+        return;
+      }
+
+      if (userRole === 'merchant' && !merchantProfile?.id) {
+        setAllOrders([]);
+        setMerchantOrdersTotalCount(0);
+        return;
+      }
+
       const from = (targetPage - 1) * ORDERS_PER_PAGE;
       const to = from + ORDERS_PER_PAGE - 1;
 
@@ -650,7 +663,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // Caso seja Lojista, fazemos um fetch padrão + um fetch de segurança para pedidos pendentes
         const { data, error, count } = await supabase
           .from('orders_delivery')
-          .select('*, user:users_delivery(*)', { count: 'exact' })
+          .select('*', { count: 'exact' })
           .eq('merchant_id', merchantProfile.id)
           .order('created_at', { ascending: false })
           .range(from, to);
@@ -664,7 +677,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (targetPage === 1) {
           const { data: actionableData } = await supabase
             .from('orders_delivery')
-            .select('*, user:users_delivery(*)')
+            .select('*')
             .eq('merchant_id', merchantProfile.id)
             .in('status', ['novo', 'waiting_merchant', 'paid', 'pago', 'confirmed', 'confirmado'])
             .order('created_at', { ascending: false });
@@ -705,7 +718,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setIsLoadingList(false);
     }
-  }, [userRole, merchantProfile, merchantOrdersPage, ordersPage]);
+  }, [userRole, merchantProfile, merchantOrdersPage, ordersPage, session?.user?.id]);
 
   // Mapeamento de refs para funções voláteis usadas no Realtime (evita reconnect do canal)
   const fetchAllOrdersRef = useRef(fetchAllOrders);
@@ -729,8 +742,11 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Canal Global de Tempo Real (Admin e Lojista)
   useEffect(() => {
     if (!session?.user?.id || !userRole) return;
+    if (userRole === 'merchant' && !merchantProfile?.id) return;
 
-    const channelName = `admin_sync_${userRole}`;
+    const channelName = userRole === 'merchant'
+      ? `admin_sync_merchant_${merchantProfile?.id}`
+      : `admin_sync_admin_${session.user.id}`;
     console.log(`[REALTIME] Ativando subscrição: ${channelName}`);
     
     const channel = supabase.channel(channelName)
@@ -900,6 +916,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.log(`📡 Status Realtime [${channelName}]:`, status);
       });
 
+    fetchStatsRef.current(true);
+    fetchAllOrdersRef.current(undefined, true);
+    if (userRole === 'merchant') {
+      fetchMyDriversRef.current(true);
+    }
+
     const settingsChannel = supabase.channel('global_settings_sync')
       .on(
         'postgres_changes',
@@ -917,6 +939,43 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       supabase.removeChannel(settingsChannel);
     };
   }, [session?.user?.id, userRole, merchantProfile?.id]);
+
+  useEffect(() => {
+    if (!session?.user?.id || userRole !== 'merchant' || !merchantProfile?.id) return;
+
+    const syncMerchantOrders = () => {
+      fetchAllOrdersRef.current(undefined, true);
+      fetchStatsRef.current(true);
+    };
+
+    const handleFocus = () => {
+      syncMerchantOrders();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncMerchantOrders();
+      }
+    };
+
+    syncMerchantOrders();
+
+    const intervalMs = activeTab === 'orders' ? 5000 : 12000;
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        syncMerchantOrders();
+      }
+    }, intervalMs);
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [activeTab, merchantProfile?.id, session?.user?.id, userRole]);
 
   const fetchMerchantFinance = useCallback(async () => {
     const idToUse = userRole === 'merchant' ? merchantProfile?.id : selectedMerchantPreview?.id;
@@ -1351,7 +1410,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   useEffect(() => {
-    if (!userRole) return;
+    if (isAuthLoading || !session?.user?.id || !userRole) return;
+    if (userRole === 'merchant' && !merchantProfile?.id) return;
 
     fetchAppSettings();
     fetchGlobalSettings();
@@ -1377,7 +1437,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       fetchMyDedicatedSlots();
       fetchMerchantFinance();
     }
-  }, [userRole, fetchAppSettings, fetchStats, fetchUsers, fetchDrivers, fetchMerchants, fetchCategories, fetchPromotions, fetchDynamicRates, fetchAllOrders, fetchSubscriptionOrders, fetchMyDrivers, fetchProducts, fetchMenuCategories, fetchMyDedicatedSlots, fetchMerchantFinance]);
+  }, [isAuthLoading, session?.user?.id, userRole, merchantProfile?.id, fetchAppSettings, fetchStats, fetchUsers, fetchDrivers, fetchMerchants, fetchCategories, fetchPromotions, fetchDynamicRates, fetchAllOrders, fetchSubscriptionOrders, fetchMyDrivers, fetchProducts, fetchMenuCategories, fetchMyDedicatedSlots, fetchMerchantFinance]);
 
   // Real-time: App Settings
   useEffect(() => {

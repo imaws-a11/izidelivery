@@ -2355,7 +2355,7 @@ function App() {
     };
 
 const renderDashboard = () => (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-52">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-60">
             <main className="px-6 space-y-10 pt-6">
                 {/* Refined Profile Card */}
                 <header className="clay-profile-card rounded-[2.5rem] flex flex-col gap-8 relative overflow-hidden p-6">
@@ -2595,25 +2595,28 @@ const renderDashboard = () => (
                             <motion.button 
                                 key={slot.id}
                                 onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
-                                className="w-full clay-card-yellow p-6 flex items-center gap-6 text-left active:scale-[0.98] transition-all"
+                                className="w-full clay-card-yellow p-5 flex items-center gap-4 text-left active:scale-[0.98] transition-all"
                             >
-                                <div className="size-16 rounded-2xl bg-black/10 flex items-center justify-center shrink-0 overflow-hidden border border-black/10">
+                                {/* Ícone */}
+                                <div className="size-14 rounded-2xl bg-black/10 flex items-center justify-center shrink-0 overflow-hidden border border-black/10">
                                     {slot.admin_users?.store_logo ? (
                                         <img src={slot.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
                                     ) : (
-                                        <Icon name="stars" className="text-stone-900" size={32} />
+                                        <Icon name="stars" className="text-stone-900" size={28} />
                                     )}
                                 </div>
+                                {/* Info */}
                                 <div className="flex-1 min-w-0">
                                     <p className="text-[9px] font-black text-stone-700 uppercase tracking-widest">
                                         {slot.title.toLowerCase().includes((slot.admin_users?.store_name || '').toLowerCase()) ? 'Vaga Exclusiva' : (slot.admin_users?.store_name || 'Parceiro Izi')}
                                     </p>
-                                    <h4 className="text-stone-950 font-black text-lg truncate italic leading-tight">{slot.title}</h4>
-                                    <p className="text-[10px] text-stone-600 font-bold italic">{slot.working_hours}</p>
+                                    <p className="text-sm font-black text-stone-950 italic leading-snug truncate">{slot.title}</p>
+                                    <p className="text-[10px] text-stone-600 font-bold">{slot.working_hours}</p>
                                 </div>
-                                <div className="text-right shrink-0">
-                                    <p className="text-2xl font-black text-stone-950 italic">R$ {parseFloat(slot.fee_per_day || 0).toFixed(0)}</p>
-                                    <p className="text-[8px] text-stone-600 uppercase font-black">/dia</p>
+                                {/* Valor */}
+                                <div className="text-right shrink-0 flex flex-col justify-center">
+                                    <p className="text-[9px] font-bold text-stone-700 uppercase tracking-tighter">Diária</p>
+                                    <p className="text-base font-black text-stone-950 italic">R$ {parseFloat(slot.fee_per_day || 0).toFixed(0)}</p>
                                 </div>
                             </motion.button>
                         ))}
@@ -2632,16 +2635,17 @@ const renderDashboard = () => (
                                 {scheduledOrders.filter(o => !o.driver_id).slice(0, 3).map((order: any) => { // Aumentado para 3 disponiveis
                                     const dt = new Date(order.scheduled_at);
                                     return (
-                                        <div key={order.id} className="clay-card-yellow p-5 flex gap-4">
+                                        <div key={order.id} className="clay-card-yellow p-5 flex items-center gap-4">
                                             {/* Data */}
-                                            <div className="text-center bg-black/10 px-3 py-2 rounded-xl shrink-0 border border-black/10 flex flex-col justify-center min-w-[52px]">
+                                            <div className="size-14 rounded-2xl bg-black/10 flex flex-col items-center justify-center shrink-0 border border-black/10">
                                                 <p className="text-[9px] font-black text-stone-700 uppercase">{dt.toLocaleDateString('pt-BR', { weekday: 'short' })}</p>
                                                 <p className="text-xl font-black text-stone-950 italic leading-none">{dt.getDate()}</p>
                                             </div>
                                             {/* Info */}
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-[10px] text-stone-600 font-black uppercase">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h</p>
+                                                <p className="text-[9px] font-black text-stone-700 uppercase tracking-widest">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h</p>
                                                 <p className="text-sm font-bold text-stone-950 italic leading-snug line-clamp-2">{order.pickup_address?.split(',').slice(0,2).join(',') || 'Coleta'}</p>
+                                                <p className="text-[10px] text-stone-600 font-bold">Agendamento</p>
                                             </div>
                                             {/* Valor */}
                                             <div className="text-right shrink-0 flex flex-col justify-center">
@@ -4319,28 +4323,21 @@ const renderDashboard = () => (
                                 </AnimatePresence>
 
                                 {!activeMission && (
-                                    <div className="fixed bottom-32 right-6 z-[90] flex flex-col items-center gap-2">
-                                        <motion.button 
-                                            initial={{ scale: 0, y: 50 }} 
-                                            animate={{ scale: 1, y: 0 }} 
-                                            whileTap={{ scale: 0.9 }} 
-                                            onClick={handleToggleOnline} 
-                                            className={`size-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl ${
-                                                isOnline ? 'clay-fab-online' : 'clay-fab-offline'
-                                            }`}
-                                        >
-                                            <Icon 
-                                                name={isOnline ? 'radar' : 'power_settings_new'} 
-                                                size={40} 
-                                                className="text-white" 
-                                            />
-                                        </motion.button>
-                                        <div className="bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 shadow-lg">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-white">
-                                                {isOnline ? 'Online' : 'Offline'}
-                                            </p>
-                                        </div>
-                                    </div>
+                                    <motion.button 
+                                        initial={{ scale: 0, y: 50 }} 
+                                        animate={{ scale: 1, y: 0 }} 
+                                        whileTap={{ scale: 0.9 }} 
+                                        onClick={handleToggleOnline} 
+                                        className={`fixed bottom-40 right-6 z-[90] size-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl ${
+                                            isOnline ? 'clay-fab-online' : 'clay-fab-offline'
+                                        }`}
+                                    >
+                                        <Icon 
+                                            name="power_settings_new" 
+                                            size={32} 
+                                            className="text-white" 
+                                        />
+                                    </motion.button>
                                 )}
                             </main>
                             {renderBottomNavigation()}
