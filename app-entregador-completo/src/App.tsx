@@ -697,7 +697,9 @@ function App() {
         grossAmount?: number,
         baseValue?: number,
         extraKmValue?: number,
-        distance?: number
+        distance?: number,
+        cashDiscount?: number,
+        xpGained?: number
     } | null>(null);
 
     const driverIdRef = useRef(driverId);
@@ -2229,6 +2231,17 @@ function App() {
                 if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
             } catch(e) {}
 
+            const payload: any = {
+                status: newStatus.toLowerCase(),
+                updated_at: new Date().toISOString()
+            };
+            if (paymentConfirmedMode === 'dinheiro') {
+                payload.payment_method = 'dinheiro';
+                payload.payment_status = 'paid';
+            } else if (paymentConfirmedMode === 'pix_cartao') {
+                payload.payment_status = 'paid';
+            }
+
             const response = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${missionId}`, {
                 method: 'PATCH',
                 headers: {
@@ -2237,10 +2250,7 @@ function App() {
                     'Content-Type': 'application/json',
                     'Prefer': 'return=minimal'
                 },
-                body: JSON.stringify({
-                    status: newStatus.toLowerCase(),
-                    updated_at: new Date().toISOString()
-                })
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
@@ -2274,9 +2284,11 @@ function App() {
                 }
 
                 // 2. INSERIR DÉBITO SE FOI PAGO EM DINHEIRO (o motorista ficou com o troco)
+                let cashDiscountAmount = 0;
                 if (paymentConfirmedMode === 'dinheiro') {
                     const totalOrderPrice = Number(activeMission.total_price || activeMission.price || 0);
                     if (totalOrderPrice > 0) {
+                        cashDiscountAmount = totalOrderPrice;
                         try {
                             await supabase.from('wallet_transactions_delivery').insert({
                                 user_id: driverId,
@@ -2299,7 +2311,8 @@ function App() {
                     bonus: 0,
                     extraKm: 0,
                     extraKmValue: 0,
-                    xpGained: 15
+                    xpGained: 15,
+                    cashDiscount: cashDiscountAmount > 0 ? cashDiscountAmount : undefined
                 });
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
@@ -3542,8 +3555,21 @@ const renderDashboard = () => (
                     </div>
                 ) : (
                     history.map((order: any, i: number) => {
-                        const netEarnings = getNetEarnings(order);
+                        let netEarnings = getNetEarnings(order);
                         const completedAt = order.updated_at || order.created_at;
+                        
+                        const isCashPaid = order.payment_method === 'dinheiro' || order.payment_method === 'cash';
+                        const totalOrderPrice = Number(order.total_price || order.price || 0);
+
+                        let netEarningsLabel = `R$ ${netEarnings.toFixed(2).replace('.', ',')}`;
+                        let isNegative = false;
+
+                        if (isCashPaid && totalOrderPrice > 0) {
+                            netEarnings = netEarnings - totalOrderPrice;
+                            isNegative = netEarnings < 0;
+                            netEarningsLabel = `${isNegative ? '-' : ''} R$ ${Math.abs(netEarnings).toFixed(2).replace('.', ',')}`;
+                        }
+
                         return (
                         <div key={order.id} className="bg-white/[0.03] border border-white/5 rounded-[32px] p-6 space-y-4">
                             <div className="flex items-center justify-between">
@@ -3562,8 +3588,12 @@ const renderDashboard = () => (
                             </div>
                             <div className="flex items-center justify-between pt-2 border-t border-white/5">
                                 <div>
-                                    <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-0.5">Seu ganho líquido</p>
-                                    <span className="text-base font-black text-primary italic">R$ {netEarnings.toFixed(2).replace('.', ',')}</span>
+                                    <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-0.5">
+                                        Seu ganho {isCashPaid && totalOrderPrice > 0 ? '(Descontado Dinheiro)' : 'líquido'}
+                                    </p>
+                                    <span className={`text-base font-black italic ${isNegative ? 'text-rose-400' : 'text-primary'}`}>
+                                        {netEarningsLabel}
+                                    </span>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-0.5">Total pedido</p>
@@ -4913,6 +4943,19 @@ const renderDashboard = () => (
                                         </div>
                                     </div>
                                 </div>
+                                {finishedMissionData.cashDiscount && finishedMissionData.cashDiscount > 0 && (
+                                    <div className="mt-3 bg-rose-500/10 border border-rose-500/20 p-4 rounded-[24px] flex items-center justify-center gap-3">
+                                        <div className="size-8 rounded-full bg-rose-500/20 flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-rose-500 text-sm font-black">payments</span>
+                                        </div>
+                                        <div className="text-left flex-1">
+                                            <span className="block text-[9px] font-black text-rose-400 uppercase tracking-widest mb-0.5">Dinheiro Retido</span>
+                                            <span className="text-sm font-black text-rose-300 italic">
+                                                - R$ {finishedMissionData.cashDiscount.toFixed(2).replace('.', ',')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
 
