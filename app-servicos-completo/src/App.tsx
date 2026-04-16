@@ -1747,6 +1747,7 @@ function App() {
     // [Comentario Limpo pelo Sistema]
     // 1. Identificar o Lojista Atual (Prioridade para selectedShop, fallback mapeando pelo carrinho para persistência pós-refresh)
     const activeShop = selectedShop || (cart.length > 0 ? ESTABLISHMENTS.find(e => e.id === cart[0].merchant_id || e.id === cart[0].store_id) : null);
+    if (!activeShop) return 0;
 
     if (activeShop) {
       // Prioridade Máxima: Frete Grátis do Lojista (Configurado no Painel do Lojista via Toggle ou Taxa Zero explícita)

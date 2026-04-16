@@ -57,16 +57,21 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'payment') => {
   const tryPlay = async (index: number): Promise<boolean> => {
     if (index >= soundUrls.length) return false;
     
+    console.log(`[AUDIO] Tentando reproduzir: ${soundUrls[index]}`);
+    
     return new Promise((resolve) => {
       const audio = new Audio(soundUrls[index]);
       audio.volume = 1.0;
+      audio.preload = 'auto';
       
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise
           .then(() => resolve(true))
-          .catch(() => {
-            console.warn(`Som ${soundUrls[index]} falhou, tentando próximo...`);
+          .catch((err) => {
+            if (err.name === 'NotAllowedError') {
+                console.error('⚠️ [AUDIO] O navegador bloqueou o som. Por favor, CLIQUE em qualquer lugar da tela para habilitar o áudio.');
+            }
             resolve(tryPlay(index + 1));
           });
       } else {
@@ -78,7 +83,7 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'payment') => {
   const success = await tryPlay(0);
   
   if (!success && ctx) {
-    console.log('Todos os sons externos e arquivos falharam. Usando sintetizador interno...');
+    console.log('[AUDIO] Todos os sons externos falharam. Usando sintetizador local...');
     playModernChime(ctx);
   }
 };
@@ -88,31 +93,35 @@ export const playIziSound = async (role: 'merchant' | 'driver' | 'payment') => {
  * Garantido que funciona sem internet e sem arquivos externos.
  */
 function playModernChime(ctx: AudioContext) {
-  // Primeiro tom (Ding) - Agudo e brilhante
-  playTone(ctx, 880, 'sine', 0, 1.2, 0.6);      // A5
-  playTone(ctx, 1318.51, 'sine', 0, 0.8, 0.2); // E6
-  
-  // Segundo tom (Dong) - Mais grave e ressonante
-  playTone(ctx, 698.46, 'sine', 0.5, 1.5, 0.6);  // F5
-  playTone(ctx, 1046.50, 'sine', 0.5, 1.0, 0.2); // C6
+  try {
+    // Primeiro tom (Ding) - Agudo e brilhante
+    playTone(ctx, 880, 'sine', 0, 0.8, 0.4);      // A5
+    playTone(ctx, 1318.51, 'sine', 0.05, 0.5, 0.1); // E6
+    
+    // Segundo tom (Dong) - Mais grave e ressonante
+    playTone(ctx, 698.46, 'sine', 0.4, 1.2, 0.4);  // F5
+    playTone(ctx, 1046.50, 'sine', 0.45, 0.8, 0.1); // C6
+  } catch (e) {
+    console.error('[AUDIO] Erro no sintetizador:', e);
+  }
 }
 
 // Habilitar AudioContext após primeira interação do usuário (Obrigatório em navegadores modernos)
 if (typeof window !== 'undefined') {
   const enableAudio = () => {
+    console.log('[AUDIO] Interação detectada, desbloqueando som...');
     const ctx = getAudioContext();
-    if (ctx && ctx.state === 'suspended') {
+    if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) {
       ctx.resume().then(() => {
-        console.log('🔊 AudioContext/Voz ativados com sucesso.');
+        console.log('🔊 [AUDIO] Sistema de áudio desbloqueado e pronto.');
+        // Beep de confirmação discreto
+        playTone(ctx, 523.25, 'sine', 0, 0.05, 0.05);
       });
-    }
-    // Também dispara uma fala vazia para "acordar" a síntese de voz se necessário
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
     }
   };
   
-  window.addEventListener('mousedown', enableAudio, { once: true });
-  window.addEventListener('touchstart', enableAudio, { once: true });
-  window.addEventListener('keydown', enableAudio, { once: true });
+  // Registrar múltiplos eventos para garantir a captura do gesto
+  ['mousedown', 'touchstart', 'click', 'keydown'].forEach(evt => {
+    window.addEventListener(evt, enableAudio, { once: true, capture: true });
+  });
 }

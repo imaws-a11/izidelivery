@@ -786,17 +786,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
             // Notificação Sonora Lojista
             const actionableStatuses = ['novo', 'waiting_merchant', 'waiting_payment', 'pendente', 'pendente_pagamento', 'paid', 'pago', 'confirmed', 'confirmado', 'pago_finalizado'];
-            const isActionable = actionableStatuses.includes(updatedOrder.status);
+            const currentStatus = String(updatedOrder.status || '').toLowerCase();
+            const isActionable = actionableStatuses.includes(currentStatus);
             
-            if (isActionable && userRole === 'merchant') {
-              const existingOrder = allOrdersRef.current.find(o => o.id === updatedOrder.id);
-              const wasActionableBefore = existingOrder ? actionableStatuses.includes(existingOrder.status) : false;
-              const isStatusChanged = existingOrder ? existingOrder.status !== updatedOrder.status : true;
+            const existingOrder = allOrdersRef.current.find(o => o.id === updatedOrder.id);
+            const wasActionableBefore = existingOrder ? actionableStatuses.includes(String(existingOrder.status || '').toLowerCase()) : false;
+            const isStatusChanged = existingOrder ? existingOrder.status !== updatedOrder.status : true;
 
+            if (isActionable && userRole === 'merchant') {
               if (!existingOrder || (isStatusChanged && !wasActionableBefore)) {
                 setNewOrderNotification({ show: true, orderId: updatedOrder.id });
                 playIziSound('merchant');
-                console.log(`[REALTIME-ALERT] 🔔 Novo Pedido/Status: ${updatedOrder.id} (${updatedOrder.status})`);
               }
             }
 
@@ -861,7 +861,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[REALTIME-STATUS] Canal Pedidos (${channelName}):`, status);
+      });
 
     fetchStatsRef.current(true);
     fetchAllOrdersRef.current(undefined, true);
