@@ -520,6 +520,8 @@ function App() {
     const [driverId, setDriverId] = useState<string | null>(() => localStorage.getItem('izi_driver_uid'));
     const [driverCoords, setDriverCoords] = useState<{lat: number, lng: number} | null>(null);
     const [driverName, setDriverName] = useState(() => localStorage.getItem('izi_driver_name') || 'Entregador');
+    const [driverAvatar, setDriverAvatar] = useState<string | null>(() => localStorage.getItem('izi_driver_avatar') || null);
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
     const [authEmail, setAuthEmail] = useState('');
     const [authPassword, setAuthPassword] = useState('');
@@ -1871,7 +1873,7 @@ function App() {
         toastSuccess('Chamada descartada com sucesso.');
     };
 
-        const refreshFinanceData = async () => {
+    const refreshFinanceData = async () => {
         if (!driverId) return;
         setIsFinanceLoading(true);
         try {
@@ -1891,15 +1893,20 @@ function App() {
             const txsRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/wallet_transactions_delivery?user_id=eq.${driverId}&order=created_at.desc`).catch(() => null);
             const txs = (txsRes && txsRes.ok) ? await txsRes.json() : null;
 
-            const driverRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}&select=bank_info,name`).catch(() => null);
+            const driverRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}&select=bank_info,name,avatar_url`).catch(() => null);
             const driverData = (driverRes && driverRes.ok) ? await driverRes.json() : null;
-            
+
             if (driverData && driverData[0]) {
                 const savedPix = driverData[0].bank_info?.pix_key || '';
                 if (savedPix) { setPixKey(savedPix); localStorage.setItem('izi_driver_pix', savedPix); }
+                // Sincronizar foto de perfil
+                if (driverData[0].avatar_url) {
+                    setDriverAvatar(driverData[0].avatar_url);
+                    localStorage.setItem('izi_driver_avatar', driverData[0].avatar_url);
+                }
             }
 
-            const ordersRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,entregue,finalizado)`).catch(() => null);
+            const ordersRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,entregue,finalizado)&order=updated_at.desc`).catch(() => null);
             const orders = (ordersRes && ordersRes.ok) ? await ordersRes.json() : null;
 
             let balance = 0;
@@ -2016,9 +2023,26 @@ function App() {
             toastSuccess(`Status atualizado: ${newStatus === 'chegou_coleta' ? 'Chegada na Coleta' : newStatus}`);
             
             if (isFinishing) {
-                // INSERIR DESCONTO EM DINHEIRO DIRETAMENTE NO FRONTEND
+                const netEarned = getNetEarnings(activeMission);
+                const ordShortId = missionId.slice(0,8).toUpperCase();
+
+                // 1. REGISTRAR CRÉDITO DE GANHO NA WALLET (sempre que finalizar uma missão)
+                try {
+                    await supabase.from('wallet_transactions_delivery').insert({
+                        user_id: driverId,
+                        amount: netEarned,
+                        type: 'deposito',
+                        status: 'concluido',
+                        description: `Ganhos: Missão #${ordShortId} (Líquido)`,
+                        order_id: missionId
+                    });
+                } catch(err) {
+                    console.error('[WALLET] Erro ao registrar ganho na wallet:', err);
+                }
+
+                // 2. INSERIR DÉBITO SE FOI PAGO EM DINHEIRO (o motorista ficou com o troco)
                 if (paymentConfirmedMode === 'dinheiro') {
-                    const totalOrderPrice = activeMission.price || 0;
+                    const totalOrderPrice = Number(activeMission.total_price || activeMission.price || 0);
                     if (totalOrderPrice > 0) {
                         try {
                             await supabase.from('wallet_transactions_delivery').insert({
@@ -2026,7 +2050,7 @@ function App() {
                                 amount: totalOrderPrice,
                                 type: 'debit',
                                 status: 'concluido',
-                                description: `Desconto de pagamento em Dinheiro. (Pedido ${missionId.slice(0,6).toUpperCase()})`,
+                                description: `Desconto de pagamento em Dinheiro. (Pedido ${ordShortId})`,
                                 order_id: missionId
                             });
                         } catch(err) {
@@ -2037,7 +2061,7 @@ function App() {
 
                 setFinishedMissionData({
                     show: true,
-                    amount: getNetEarnings(activeMission),
+                    amount: netEarned,
                     grossAmount: activeMission.price || 0,
                     bonus: 0,
                     extraKm: 0,
@@ -2046,7 +2070,8 @@ function App() {
                 });
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
-                refreshFinanceData();
+                // Aguarda um momento para garantir que a transação foi inserida antes de buscar
+                setTimeout(() => refreshFinanceData(), 600);
             } else {
                 // Sincronizar com o banco para garantir metadados extras
                 setTimeout(() => syncMissionWithDB(), 2000);
@@ -2307,8 +2332,8 @@ const renderDashboard = () => (
                     <div className="flex items-center gap-6">
                         {/* 3D Claymorphic Profile Picture */}
                         <div className="w-24 h-24 rounded-full border-[8px] border-white/40 overflow-hidden clay-card-yellow shadow-2xl relative">
-                            {localStorage.getItem('izi_driver_avatar') ? (
-                                <img src={localStorage.getItem('izi_driver_avatar')!} alt="Profile" className="w-full h-full object-cover" />
+                            {driverAvatar ? (
+                                <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-stone-900/10">
                                     <Icon name="person" size={48} className="text-stone-950/40" />
@@ -3230,12 +3255,28 @@ const renderDashboard = () => (
 
 
 
-    const renderHistoryView = () => (
+    const renderHistoryView = () => {
+        const serviceTypeLabel = (type: string) => {
+            const t = (type || 'entrega').toLowerCase();
+            if (['restaurant', 'restaurante', 'food'].includes(t)) return 'Restaurante';
+            if (['market', 'mercado'].includes(t)) return 'Mercado';
+            if (['pharmacy', 'farmacia'].includes(t)) return 'Farmácia';
+            if (['mototaxi', 'moto_taxi'].includes(t)) return 'Mototaxi';
+            if (['car_ride'].includes(t)) return 'Corrida Carro';
+            if (['motorista_particular'].includes(t)) return 'Motorista Particular';
+            if (['van'].includes(t)) return 'Van';
+            if (['utilitario'].includes(t)) return 'Utilitário';
+            if (['frete', 'carreto', 'logistica'].includes(t)) return 'Frete';
+            if (['beverages', 'bebidas'].includes(t)) return 'Bebidas';
+            return 'Entrega';
+        };
+
+        return (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-40 pt-4">
             <header>
                 <p className="text-[9px] font-black text-primary uppercase tracking-[0.5em]">Histórico</p>
                 <h2 className="text-3xl font-black text-white tracking-tight mt-1">Sua Jornada</h2>
-                <p className="text-xs text-white/30 mt-1">Confira o registro completo de suas corridas.</p>
+                <p className="text-xs text-white/30 mt-1">Registro completo de suas corridas e entregas.</p>
             </header>
 
             <div className="space-y-4">
@@ -3245,26 +3286,42 @@ const renderDashboard = () => (
                         <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Nenhuma corrida finalizada</p>
                     </div>
                 ) : (
-                    history.map((order: any, i: number) => (
+                    history.map((order: any, i: number) => {
+                        const netEarnings = getNetEarnings(order);
+                        const completedAt = order.updated_at || order.created_at;
+                        return (
                         <div key={order.id} className="bg-white/[0.03] border border-white/5 rounded-[32px] p-6 space-y-4">
                             <div className="flex items-center justify-between">
                                 <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">#{order.id.slice(0, 8).toUpperCase()}</span>
                                 <span className="text-[10px] font-black text-emerald-400 uppercase bg-emerald-400/10 px-3 py-1.5 rounded-full border border-emerald-400/20">Finalizado</span>
                             </div>
                             <div className="space-y-2">
-                                <p className="text-sm font-bold text-white leading-tight">{order.delivery_address || order.destination}</p>
-                                <p className="text-[10px] text-white/30">{new Date(order.created_at).toLocaleDateString('pt-BR')}às {new Date(order.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                                <p className="text-sm font-bold text-white leading-tight">{order.delivery_address || order.destination || 'Endereço não informado'}</p>
+                                <div className="flex items-center gap-3">
+                                    <p className="text-[10px] text-white/30">
+                                        {new Date(completedAt).toLocaleDateString('pt-BR')} às {new Date(completedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                    <span className="size-1 rounded-full bg-white/10"></span>
+                                    <p className="text-[10px] text-white/30 font-bold">{serviceTypeLabel(order.service_type)}</p>
+                                </div>
                             </div>
                             <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                                <span className="text-[9px] font-black text-white/20 uppercase">{order.service_type || 'Entrega'}</span>
-                                <span className="text-base font-black text-primary italic">R$ {parseFloat(order.total_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                <div>
+                                    <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-0.5">Seu ganho líquido</p>
+                                    <span className="text-base font-black text-primary italic">R$ {netEarnings.toFixed(2).replace('.', ',')}</span>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-0.5">Total pedido</p>
+                                    <span className="text-xs font-bold text-white/40">R$ {parseFloat(order.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                </div>
                             </div>
                         </div>
-                    ))
-                )}
+                    )}))
+                }
             </div>
         </motion.div>
     );
+    };
 
     const renderEarningsView = () => (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="px-5 space-y-8 pb-32 pt-6">
@@ -3353,18 +3410,80 @@ const renderDashboard = () => (
         </motion.div>
     );
 
+    const handleAvatarUpload = async (file: File) => {
+        if (!driverId || !file) return;
+        setIsUploadingAvatar(true);
+        try {
+            const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+            const path = `drivers/${driverId}/avatar.${ext}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(path, file, { upsert: true, contentType: file.type });
+
+            if (uploadError) throw uploadError;
+
+            const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
+            const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`; // cache-bust
+
+            // Salvar no banco e no estado local
+            await supabase.from('drivers_delivery').update({ avatar_url: publicUrl }).eq('id', driverId);
+            setDriverAvatar(publicUrl);
+            localStorage.setItem('izi_driver_avatar', publicUrl);
+            toastSuccess('Foto de perfil atualizada!');
+        } catch (err: any) {
+            console.error('[AVATAR] Erro:', err);
+            toastError('Erro ao enviar foto. Tente novamente.');
+        } finally {
+            setIsUploadingAvatar(false);
+        }
+    };
+
     const renderProfileView = () => (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="px-5 space-y-6 pb-24 pt-4">
             <div className="flex flex-col items-center pt-8 pb-4">
-                <div 
-                    className="size-28 rounded-[40px] flex items-center justify-center mb-6 relative group"
+                {/* Avatar clicável com upload */}
+                <label
+                    htmlFor="avatar-upload"
+                    className="size-28 rounded-[40px] flex items-center justify-center mb-6 relative group cursor-pointer select-none"
                     style={{ background: '#1A1A1A', boxShadow: '12px 12px 24px rgba(0,0,0,0.5), -8px -8px 16px rgba(255,255,255,0.02)' }}
                 >
-                    <Icon name="person" size={48} className="text-primary group-hover:scale-110 transition-transform" />
-                    <div className="absolute -bottom-1 -right-1 size-8 rounded-full bg-emerald-500 border-4 border-[#0a0a0a] flex items-center justify-center">
-                        <Icon name="check" size={14} className="text-white" />
+                    {driverAvatar ? (
+                        <img
+                            src={driverAvatar}
+                            alt="Foto de Perfil"
+                            className="w-full h-full object-cover rounded-[40px]"
+                        />
+                    ) : (
+                        <Icon name="person" size={48} className="text-primary group-hover:scale-105 transition-transform" />
+                    )}
+
+                    {/* Overlay ao hover */}
+                    <div className="absolute inset-0 rounded-[40px] bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        {isUploadingAvatar ? (
+                            <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                            <Icon name="photo_camera" size={28} className="text-white" />
+                        )}
                     </div>
-                </div>
+
+                    {/* Badge de câmera */}
+                    <div className="absolute -bottom-1 -right-1 size-9 rounded-full bg-primary border-4 border-[#0a0a0a] flex items-center justify-center shadow-lg">
+                        <Icon name="photo_camera" size={14} className="text-slate-900" />
+                    </div>
+
+                    <input
+                        id="avatar-upload"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleAvatarUpload(f);
+                            e.target.value = ''; // reset
+                        }}
+                    />
+                </label>
                 <h2 className="text-2xl font-black text-white tracking-tight">{driverName}</h2>
                 <div className="flex items-center gap-2 mt-2">
                     <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Piloto Iziâ€¢ Nível {stats.level}</span>
