@@ -6,6 +6,7 @@ import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
 import { Geolocation } from '@capacitor/geolocation';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline, DirectionsService } from '@react-google-maps/api';
 
 const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
@@ -595,6 +596,7 @@ function App() {
     const hasBootedRef = useRef(false); // Garante que syncMissionWithDB e restauração s³ ocorrem 1x por sessão
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSOSActive, setIsSOSActive] = useState(false);
+    const [isScanning, setIsScanning] = useState(false);
     const [isAccepting, setIsAccepting] = useState(false);
     const [filter, setFilter] = useState<ServiceType | 'all'>('all');
     const [orders, setOrders] = useState<Order[]>([]);
@@ -681,6 +683,33 @@ function App() {
         keysToRemove.forEach(k => localStorage.removeItem(k));
         sessionStorage.clear();
     }, []);
+
+    const handleScanQR = async () => {
+        try {
+            await BarcodeScanner.requestPermissions();
+            document.querySelector('body')?.classList.add('barcode-scanner-active');
+            setIsScanning(true);
+            const { barcodes } = await BarcodeScanner.scan();
+            document.querySelector('body')?.classList.remove('barcode-scanner-active');
+            setIsScanning(false);
+            if (barcodes.length > 0) {
+                const scannedContent = barcodes[0].rawValue;
+                toastSuccess(`QR Code Lido: ${scannedContent}`);
+                // Lógica customizada de verificação de pacote caso necessário
+            }
+        } catch (e) {
+            console.error("Erro no Scanner:", e);
+            document.querySelector('body')?.classList.remove('barcode-scanner-active');
+            setIsScanning(false);
+            toastError("Erro ao iniciar a câmera nativa");
+        }
+    };
+
+    const stopScan = async () => {
+        setIsScanning(false);
+        document.querySelector('body')?.classList.remove('barcode-scanner-active');
+        await BarcodeScanner.stopScan();
+    };
 
     // WATCHDOG DE STATUS ONLINE
     // Se o estado isOnline divergir do localStorage por qualquer motivo (race condition, re-render),
@@ -3658,9 +3687,15 @@ const renderDashboard = () => (
                         <Icon name="arrow_back" className="text-yellow-400" />
                     </button>
                     <h1 className="text-yellow-400 font-bold tracking-tight text-lg uppercase italic">Missão em Andamento</h1>
-                    <button className="active:scale-95 transition-transform duration-200 hover:bg-neutral-800/50 p-2 rounded-full flex items-center justify-center">
-                        <Icon name="more_vert" className="text-yellow-400" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button onClick={handleScanQR} className="active:scale-95 transition-transform duration-200 bg-primary/20 hover:bg-primary/30 p-2 rounded-full flex items-center justify-center relative overlow-hidden">
+                            {isScanning && <div className="absolute inset-0 border-2 border-primary border-t-transparent rounded-full animate-spin" />}
+                            <Icon name="qr_code_scanner" className="text-yellow-400" />
+                        </button>
+                        <button className="active:scale-95 transition-transform duration-200 hover:bg-neutral-800/50 p-2 rounded-full flex items-center justify-center">
+                            <Icon name="more_vert" className="text-yellow-400" />
+                        </button>
+                    </div>
                 </header>
 
                 <main className="flex-1 overflow-y-auto pt-24 px-4 pb-40 space-y-8 no-scrollbar">
