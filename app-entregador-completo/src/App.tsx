@@ -1540,6 +1540,19 @@ function App() {
         fetchDedicatedSlots();
     }, [isAuthenticated, driverId, fetchDedicatedSlots]);
         
+    const getServicePresentation = (order: any) => {
+        const typeLabels: any = {
+            motoboy: 'Entrega Motoboy',
+            mototaxi: 'Viagem MotoTáxi',
+            frete: 'Serviço de Frete',
+            package: 'Entrega de Pacote'
+        };
+        return {
+            headline: typeLabels[order.service_type] || 'Pedido Izi Delivery',
+            pickupText: order.pickup_address || 'Retirada no Local'
+        };
+    };
+
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
 
@@ -1684,8 +1697,7 @@ function App() {
                         if (activeTabRef.current !== 'active_mission' && !['concluido', 'cancelado'].includes(o.status)) {
                             setActiveTab('active_mission');
                         }
-                        return;
-                    }
+                    return;
                 }
 
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
