@@ -620,12 +620,13 @@ function App() {
     const [isSyncing, setIsSyncing] = useState(false);
     const [confirmPaymentState, setConfirmPaymentState] = useState<{
         show: boolean,
-        resolve: (confirmed: boolean) => void,
-        mission: any
+        resolve: (method: string | false) => void,
+        mission: any,
+        isCashWarning?: boolean
     } | null>(null);
 
     const showConfirmPaymentMethod = (mission: any) => {
-        return new Promise<boolean>((resolve) => {
+        return new Promise<string | false>((resolve) => {
             setConfirmPaymentState({ show: true, resolve, mission });
         });
     };
@@ -1887,9 +1888,10 @@ function App() {
         const isFinishing = ['concluido', 'entregue', 'finalizado', 'delivered'].includes(newStatus.toLowerCase());
         const isPaid = activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago';
         
+        let paymentConfirmedMode: string | false = false;
         if (isFinishing && !isPaid) {
-             const confirmed = await showConfirmPaymentMethod(activeMission);
-             if (!confirmed) return;
+             paymentConfirmedMode = await showConfirmPaymentMethod(activeMission);
+             if (!paymentConfirmedMode) return;
         }
 
         setIsAccepting(true);
@@ -1942,9 +1944,28 @@ function App() {
             toastSuccess(`Status atualizado: ${newStatus === 'chegou_coleta' ? 'Chegada na Coleta' : newStatus}`);
             
             if (isFinishing) {
+                // INSERIR DESCONTO EM DINHEIRO DIRETAMENTE NO FRONTEND
+                if (paymentConfirmedMode === 'dinheiro') {
+                    const totalOrderPrice = activeMission.price || 0;
+                    if (totalOrderPrice > 0) {
+                        try {
+                            await supabase.from('wallet_transactions_delivery').insert({
+                                user_id: driverId,
+                                amount: totalOrderPrice,
+                                type: 'debit',
+                                status: 'concluido',
+                                description: `Desconto de pagamento em Dinheiro. (Pedido ${missionId.slice(0,6).toUpperCase()})`,
+                                order_id: missionId
+                            });
+                        } catch(err) {
+                            console.error('Erro ao debitar pagamento em dinheiro:', err);
+                        }
+                    }
+                }
+
                 setFinishedMissionData({
                     show: true,
-                    amount: activeMission.price || 0,
+                    amount: getNetEarnings(activeMission),
                     grossAmount: activeMission.price || 0,
                     bonus: 0,
                     extraKm: 0,
@@ -4236,52 +4257,94 @@ const renderDashboard = () => (
                         initial={{ opacity: 0 }} 
                         animate={{ opacity: 1 }} 
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[300] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-6"
+                        className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6"
                     >
                         <motion.div 
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="w-full max-w-sm bg-black border border-white/10 rounded-[40px] p-8 shadow-2xl"
+                            className="w-full max-w-sm bg-[#121212] border border-white/5 rounded-[48px] p-10 relative overflow-hidden"
+                            style={{
+                                boxShadow: '0 40px 100px rgba(0,0,0,0.8), inset 4px 4px 12px rgba(255,255,255,0.03), inset -4px -4px 12px rgba(0,0,0,0.5)'
+                            }}
                         >
-                            <div className="size-16 rounded-3xl bg-amber-500/10 flex items-center justify-center mb-6 border border-amber-500/20">
-                                <span className="material-symbols-outlined text-amber-500 text-3xl">payments</span>
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl -mr-16 -mt-16 rounded-full" />
+
+                            <div className="size-20 rounded-[32px] bg-amber-500/10 flex items-center justify-center mb-8 border border-white/5 shadow-inner">
+                                <span className="material-symbols-outlined text-primary text-4xl animate-pulse">payments</span>
                             </div>
 
-                            <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2 italic">Atenção Piloto!</h3>
-                            <p className="text-slate-400 font-medium text-sm leading-relaxed mb-8">
-                                Este pedido ainda <span className="text-rose-500 font-bold">não foi pago</span> via App. 
-                                Confirme como vocÃê recebeu o valor de <span className="text-white font-black">R$ {Number(confirmPaymentState.mission.total_price || 0).toFixed(2).replace('.', ',')}</span>:
+                            <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-3 italic">Atenção Piloto!</h3>
+                            <p className="text-neutral-400 font-bold text-sm leading-relaxed mb-10">
+                                Este pedido ainda <span className="text-rose-500 underline decoration-rose-500/30 underline-offset-4">não foi pago</span> via App. 
+                                <br />Confirme o recebimento de:
+                                <span className="block text-white text-3xl font-black mt-2 italic tracking-tighter">
+                                    R$ {Number(confirmPaymentState.mission.total_price || 0).toFixed(2).replace('.', ',')}
+                                </span>
                             </p>
 
-                            <div className="space-y-3">
-                                <button 
-                                    onClick={() => {
-                                        confirmPaymentState.resolve(true);
-                                        setConfirmPaymentState(null);
-                                    }}
-                                    className="w-full py-4 rounded-2xl bg-white text-black font-black text-[11px] uppercase tracking-widest hover:bg-primary transition-all active:scale-95"
-                                >
-                                    Recebi em Dinheiro
-                                </button>
-                                <button 
-                                    onClick={() => {
-                                        confirmPaymentState.resolve(true);
-                                        setConfirmPaymentState(null);
-                                    }}
-                                    className="w-full py-4 rounded-2xl bg-slate-800 text-white font-black text-[11px] uppercase tracking-widest border border-white/5 hover:bg-slate-700 transition-all active:scale-95"
-                                >
-                                    Recebi via Pix / Cartão
-                                </button>
-                                <button 
-                                    onClick={() => {
-                                        confirmPaymentState.resolve(false);
-                                        setConfirmPaymentState(null);
-                                    }}
-                                    className="w-full py-4 rounded-2xl text-slate-500 font-black text-[10px] uppercase tracking-widest"
-                                >
-                                    Ainda não recebi
-                                </button>
+                            <div className="space-y-4">
+                                {confirmPaymentState.isCashWarning ? (
+                                    <motion.div 
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="bg-[#1a1414] border border-rose-500/20 p-6 rounded-3xl"
+                                        style={{ boxShadow: 'inset 0 4px 20px rgba(244,63,94,0.1)' }}
+                                    >
+                                        <div className="flex items-start gap-4 mb-6">
+                                            <div className="p-2 bg-rose-500/10 rounded-full border border-rose-500/20 shrink-0">
+                                                <span className="material-symbols-outlined text-rose-500">warning</span>
+                                            </div>
+                                            <p className="text-rose-200 text-xs leading-relaxed font-medium">
+                                                Ao confirmar o recebimento em <strong className="text-rose-400 uppercase">Dinheiro</strong>, esse valor será <strong className="text-white">descontado do seu saldo</strong> de repasses. Deseja confirmar?
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <button 
+                                                onClick={() => setConfirmPaymentState(prev => prev ? { ...prev, isCashWarning: false } : prev)}
+                                                className="flex-1 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+                                            >
+                                                Voltar
+                                            </button>
+                                            <button 
+                                                onClick={() => {
+                                                    confirmPaymentState.resolve('dinheiro');
+                                                    setConfirmPaymentState(null);
+                                                }}
+                                                className="flex-1 py-4 rounded-2xl bg-rose-500 text-white font-black text-[10px] uppercase tracking-widest shadow-[0_5px_20px_rgba(244,63,94,0.3),inset_2px_2px_8px_rgba(255,255,255,0.4)] active:scale-95 transition-all"
+                                            >
+                                                Confirmar
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                ) : (
+                                    <>
+                                        <button 
+                                            onClick={() => setConfirmPaymentState(prev => prev ? { ...prev, isCashWarning: true } : prev)}
+                                            className="w-full py-5 rounded-[24px] bg-primary text-slate-950 font-black text-sm uppercase tracking-widest shadow-[0_10px_30px_rgba(250,204,21,0.2),inset_4px_4px_10px_rgba(255,255,255,0.4)] active:scale-95 transition-all"
+                                        >
+                                            Recebi em Dinheiro
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                confirmPaymentState.resolve('pix_cartao');
+                                                setConfirmPaymentState(null);
+                                            }}
+                                            className="w-full py-5 rounded-[24px] bg-white/[0.05] border border-white/5 text-white font-black text-sm uppercase tracking-widest hover:bg-white/[0.08] transition-all active:scale-95 shadow-inner"
+                                        >
+                                            Recebi via Pix / Cartão
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                confirmPaymentState.resolve(false);
+                                                setConfirmPaymentState(null);
+                                            }}
+                                            className="w-full py-4 text-rose-500/40 hover:text-rose-500 font-bold text-[10px] uppercase tracking-[0.3em] transition-colors mt-2"
+                                        >
+                                            Ainda não recebi
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </motion.div>
                     </motion.div>
@@ -4294,7 +4357,7 @@ const renderDashboard = () => (
                         initial={{ opacity: 0 }} 
                         animate={{ opacity: 1 }} 
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[250] bg-slate-950/98 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center overflow-hidden"
+                        className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center overflow-hidden"
                     >
                         <div className="absolute inset-0 pointer-events-none opacity-20">
                            <div className="absolute top-1/4 left-1/4 size-64 bg-primary/20 blur-[120px] rounded-full animate-pulse" />
@@ -4333,42 +4396,35 @@ const renderDashboard = () => (
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: 0.4, type: "spring" }}
-                            className="my-6 w-full max-w-sm px-6 py-8 bg-white/[0.03] border border-white/10 rounded-[40px] shadow-sm relative overflow-hidden"
+                            className="my-6 w-full max-w-sm px-6 py-8 bg-[#120F0F] border border-white/5 rounded-[48px] shadow-[0_30px_60px_rgba(0,0,0,0.9),inset_4px_4px_12px_rgba(255,255,255,0.03),inset_-4px_-4px_12px_rgba(0,0,0,0.8)] relative overflow-hidden"
                         >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl -mr-16 -mt-16 rounded-full" />
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl -mr-16 -mt-16 rounded-full" />
 
                             <div className="relative z-10 flex flex-col gap-6">
                                 <div>
-                                    <span className="block text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-2 text-center">Valor Real da Corrida</span>
+                                    <span className="block text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-2 text-center">Ganho Líquido (Frete)</span>
                                     <div className="flex items-center justify-center gap-1">
                                         <span className="text-2xl font-black text-white italic opacity-40 mt-3">R$</span>
-                                        <span className="text-7xl font-black text-white tracking-tighter italic leading-none">
-                                            {(finishedMissionData.grossAmount || 0).toFixed(2).replace('.', ',')}
+                                        <span className="text-7xl font-black text-white tracking-tighter italic leading-none" style={{ textShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+                                            {(finishedMissionData.amount || 0).toFixed(2).replace('.', ',')}
                                         </span>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3 pt-6 border-t border-white/5">
-                                    <div className="bg-white/5 p-3 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
-                                        <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Ganho Financeiro</span>
-                                        <span className="text-lg font-black text-white italic">
-                                            R$ {(finishedMissionData.amount || 0).toFixed(2).replace('.', ',')}
+                                    <div className="bg-[#1A1616] p-3 rounded-[24px] border border-white/5 flex flex-col items-center justify-center shadow-[inset_3px_3px_10px_rgba(0,0,0,0.4)]">
+                                        <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Total do Pedido</span>
+                                        <span className="text-lg font-black text-slate-300 italic">
+                                            R$ {(finishedMissionData.grossAmount || 0).toFixed(2).replace('.', ',')}
                                         </span>
                                     </div>
-                                    <div className="bg-white/5 p-3 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
+                                    <div className="bg-[#1A1616] p-3 rounded-[24px] border border-white/5 flex flex-col items-center justify-center shadow-[inset_3px_3px_10px_rgba(0,0,0,0.4)]">
                                         <span className="block text-[8px] font-black text-primary uppercase tracking-widest mb-1">XP Ganhos</span>
                                         <div className="flex items-center gap-1">
                                             <span className="text-lg font-black text-primary italic">+{finishedMissionData.xpGained || 15}</span>
                                             <span className="text-[10px] font-black text-primary/50 italic">XP</span>
                                         </div>
                                     </div>
-                                </div>
-
-                                <div className="flex items-center justify-between px-2 pt-2">
-                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Ganho Líquido</span>
-                                    <span className="text-sm font-black text-primary italic">
-                                        R$ {finishedMissionData.amount.toFixed(2).replace('.', ',')}
-                                    </span>
                                 </div>
                             </div>
                         </motion.div>
