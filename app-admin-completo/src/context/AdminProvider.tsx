@@ -26,7 +26,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { isLoaded, loadError: mapsLoadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: GOOGLE_MAPS_LIBRARIES
+    libraries: GOOGLE_MAPS_LIBRARIES,
+    language: 'pt-BR',
+    region: 'BR'
   });
 
   const ORDERS_PER_PAGE = 50;
