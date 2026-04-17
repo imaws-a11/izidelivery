@@ -2167,6 +2167,7 @@ const navigateSubView = (target: string) => {
   const [routeDistance, setRouteDistance] = useState<string>("");
   const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
   const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
+  const [nearbyDriversCount, setNearbyDriversCount] = useState(0);
   const [mobilityStep, setMobilityStep] = useState(1);
 
       // [Comentario Limpo pelo Sistema]
@@ -2692,7 +2693,8 @@ const navigateSubView = (target: string) => {
 
             // Logística Customizada por Veículo (Resiliência de chaves snake_case e camelCase)
             const getVal = (k1: string, k2: string, fallback: number) => {
-              return parseFloat(String(bv[k1] ?? bv[k2] ?? fallback));
+              const v = bv[k1] || bv[k2];
+              return v ? parseFloat(String(v)) : fallback;
             };
 
             const fiorino_min = getVal('fiorino_min', 'fiorinoMin', logistica_min);
@@ -2707,17 +2709,18 @@ const navigateSubView = (target: string) => {
             const aberto_km   = getVal('aberto_km',   'abertoKm',   logistica_km);
 
             const newPrices = {
-              mototaxi:   parseFloat(((mototaxi_min   + (mototaxi_km   * Math.ceil(distKm / mototaxi_int)))   * surge).toFixed(2)),
-              carro:      parseFloat(((carro_min      + (carro_km      * Math.ceil(distKm / carro_int)))      * surge).toFixed(2)),
-              van:        parseFloat(((van_min        + (van_km        * Math.ceil(distKm / van_int)))        * surge).toFixed(2)),
-              utilitario: parseFloat(((utilitario_min + (utilitario_km * Math.ceil(distKm / utilitario_int))) * surge).toFixed(2)),
-              logistica:  parseFloat(((logistica_min  + (logistica_km  * Math.ceil(distKm / logistica_int)))  * surge).toFixed(2)),
-              // Preços específicos de logística
-              fiorino:    parseFloat(((fiorino_min + (fiorino_km * Math.ceil(distKm / logistica_int))) * surge).toFixed(2)),
-              bau_p:      parseFloat(((bau_p_min   + (bau_p_km   * Math.ceil(distKm / logistica_int))) * surge).toFixed(2)),
-              bau_m:      parseFloat(((bau_m_min   + (bau_m_km   * Math.ceil(distKm / logistica_int))) * surge).toFixed(2)),
-              bau_g:      parseFloat(((bau_g_min   + (bau_g_km   * Math.ceil(distKm / logistica_int))) * surge).toFixed(2)),
-              aberto:     parseFloat(((aberto_min  + (aberto_km  * Math.ceil(distKm / logistica_int))) * surge).toFixed(2)),
+              mototaxi:   parseFloat(((mototaxi_min   + (mototaxi_km   * (distKm / mototaxi_int)))   * surge).toFixed(2)),
+              carro:      parseFloat(((carro_min      + (carro_km      * (distKm / carro_int)))      * surge).toFixed(2)),
+              van:        parseFloat(((van_min        + (van_km        * (distKm / van_int)))        * surge).toFixed(2)),
+              utilitario: parseFloat(((utilitario_min + (utilitario_km * (distKm / utilitario_int))) * surge).toFixed(2)),
+              logistica:  parseFloat(((logistica_min  + (logistica_km  * (distKm / logistica_int)))  * surge).toFixed(2)),
+              // Preços específicos de logística - Agora puramente Lineares (KM * Distância)
+              fiorino:    parseFloat(((fiorino_min + (fiorino_km * distKm)) * surge).toFixed(2)),
+              bau_p:      parseFloat(((bau_p_min   + (bau_p_km   * distKm)) * surge).toFixed(2)),
+              bau_m:      parseFloat(((bau_m_min   + (bau_m_km   * distKm)) * surge).toFixed(2)),
+              bau_g:      parseFloat(((bau_g_min   + (bau_g_km   * distKm)) * surge).toFixed(2)),
+              aberto:     parseFloat(((aberto_min  + (aberto_km  * distKm)) * surge).toFixed(2)),
+              van_carga:  parseFloat(((van_min     + (van_km     * distKm)) * surge).toFixed(2)),
             };
             setDistancePrices(newPrices);
             setTransitData(prev => {
