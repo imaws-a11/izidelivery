@@ -42,6 +42,7 @@ import { MobilityPaymentView } from "./components/features/Mobility/MobilityPaym
 import SplashScreenComponent from "./components/common/SplashScreen";
 import { SplashScreen as CapacitorSplash } from "@capacitor/splash-screen";
 import { Capacitor } from "@capacitor/core";
+import { Geolocation } from "@capacitor/geolocation";
 
 import { useAuth } from "./hooks/useAuth";
 import type { SavedAddress, Order, Quest } from "./types";
@@ -605,55 +606,81 @@ function App() {
 
   const updateLocation = (onSuccess?: (address: string) => void) => {
     setUserLocation((prev) => ({ ...prev, loading: true }));
+
+    const processCoords = async (latitude: number, longitude: number) => {
+      try {
+        let address = "";
+
+        // Tenta reverse geocode via Google Maps Geocoder (browser)
+        if ((window as any).google?.maps) {
+          const geocoder = new google.maps.Geocoder();
+          const response = await geocoder.geocode({
+            location: { lat: latitude, lng: longitude },
+          });
+          if (response.results[0]) {
+            address = response.results[0].formatted_address;
+          }
+        }
+
+        // Fallback: Places API via fetch
+        if (!address) {
+          try {
+            const res = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GMAPS_KEY}&language=pt-BR&result_type=street_address|route`
+            );
+            const data = await res.json();
+            if (data.results?.[0]) {
+              address = data.results[0].formatted_address;
+            }
+          } catch { /* silent */ }
+        }
+
+        // Fallback: Nominatim (OpenStreetMap)
+        if (!address) {
+          const nomRes = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+          );
+          const nomData = await nomRes.json();
+          address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "Localização atual";
+        }
+
+        setUserLocation({ address, loading: false, lat: latitude, lng: longitude });
+        setTransitData((prev) => ({ ...prev, origin: address }));
+        if (onSuccess) onSuccess(address);
+      } catch {
+        setUserLocation((prev) => ({ ...prev, loading: false }));
+      }
+    };
+
+    // --- Caminho Nativo (Android / iOS via Capacitor) ---
+    if (Capacitor.isNativePlatform()) {
+      (async () => {
+        try {
+          const perm = await Geolocation.requestPermissions();
+          if (perm.location === "granted") {
+            const pos = await Geolocation.getCurrentPosition({
+              enableHighAccuracy: true,
+              timeout: 10000,
+            });
+            await processCoords(pos.coords.latitude, pos.coords.longitude);
+          } else {
+            setUserLocation({ address: "Permissão de localização negada", loading: false });
+          }
+        } catch {
+          setUserLocation({ address: "Erro ao obter localização", loading: false });
+        }
+      })();
+      return;
+    }
+
+    // --- Caminho Web (Browser via navigator.geolocation) ---
     if (!("geolocation" in navigator)) {
       setUserLocation({ address: "Geolocalização não disponível", loading: false });
       return;
     }
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          let address = "";
-
-          // Tenta reverse geocode via Google Maps Geocoder
-          if ((window as any).google?.maps) {
-            const geocoder = new google.maps.Geocoder();
-            const response = await geocoder.geocode({
-              location: { lat: latitude, lng: longitude },
-            });
-            if (response.results[0]) {
-              address = response.results[0].formatted_address;
-            }
-          }
-
-          // Fallback: Places API (New) reverse geocode via fetch
-          if (!address) {
-            try {
-              const res = await fetch(
-                `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GMAPS_KEY}&language=pt-BR&result_type=street_address|route`
-              );
-              const data = await res.json();
-              if (data.results?.[0]) {
-                address = data.results[0].formatted_address;
-              }
-            } catch { /* silent */ }
-          }
-
-      // [Comentario Limpo pelo Sistema]
-          if (!address) {
-            const nomRes = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
-            );
-            const nomData = await nomRes.json();
-            address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "Localização atual";
-          }
-
-          setUserLocation({ address, loading: false, lat: latitude, lng: longitude });
-          setTransitData((prev) => ({ ...prev, origin: address }));
-          if (onSuccess) onSuccess(address);
-        } catch {
-          setUserLocation((prev) => ({ ...prev, loading: false }));
-        }
+        await processCoords(position.coords.latitude, position.coords.longitude);
       },
       () => {
         setUserLocation({ address: "Permissão de localização negada", loading: false });
