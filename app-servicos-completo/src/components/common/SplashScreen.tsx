@@ -1,19 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
+import { SplashScreen as CapacitorSplash } from '@capacitor/splash-screen';
 
 interface SplashScreenProps {
   finishLoading: () => void;
 }
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ finishLoading }) => {
-  const [loadingText, setLoadingText] = useState('Inicializando...');
+  const [loadingText, setLoadingText] = useState('Inicializando IZI...');
 
   useEffect(() => {
+    // Timer para fechar a Splash Web
     const timer = setTimeout(() => {
       finishLoading();
+      
+      // Se estiver no mobile nativo, garante que a splash da plataforma também feche
+      if (Capacitor.isNativePlatform()) {
+        CapacitorSplash.hide();
+      }
     }, 3000); 
 
-    const textTimer = setTimeout(() => setLoadingText('Conectando ao servidor...'), 1000);
+    const textTimer = setTimeout(() => setLoadingText('Buscando ofertas...'), 1000);
     const textTimer2 = setTimeout(() => setLoadingText('Sincronizando dados...'), 2000);
 
     return () => {
@@ -29,24 +37,24 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ finishLoading }) => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[10000] bg-[#FFD900] flex flex-col items-center justify-center overflow-hidden"
     >
-      {/* Background patterns */}
+      {/* Padrão de Pontos Sutil (Idêntico ao Entregador) */}
       <div className="absolute inset-0 opacity-10 pointer-events-none" 
            style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '24px 24px' }} />
 
       {/* Main Content Container */}
       <div className="relative z-10 flex flex-col items-center w-full px-8">
         
-        {/* Mascote Robô com Animação Elegantemente Suave */}
+        {/* Mascote Robô - Flutuação Elegante (Idêntico ao Entregador) */}
         <motion.div
           initial={{ y: 50, opacity: 0, scale: 0.8 }}
           animate={{ 
-            y: [0, -20, 0], // Flutuação suave
+            y: [0, -20, 0],
             opacity: 1, 
             scale: 1,
-            rotate: [0, -2, 2, 0], 
+            rotate: [0, -2, 2, 0]
           }}
           transition={{ 
-            y: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+            y: { duration: 3.2, repeat: Infinity, ease: "easeInOut" },
             rotate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
             opacity: { duration: 0.8 },
             scale: { duration: 0.8 }
@@ -56,11 +64,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ finishLoading }) => {
           {/* Sombra Suave */}
           <motion.div 
             animate={{ 
-                scale: [1, 1.1, 1],
-                opacity: [0.2, 0.3, 0.2]
+                scale: [0.9, 1.2, 0.9],
+                opacity: [0.1, 0.2, 0.1]
             }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 w-24 h-4 bg-black/10 blur-xl rounded-full"
+            transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-5 left-1/2 -translate-x-1/2 w-24 h-5 bg-black/10 blur-xl rounded-full"
           />
 
           <img 
@@ -70,7 +78,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ finishLoading }) => {
           />
         </motion.div>
 
-        {/* Logotipo Texto Aumentado */}
+        {/* Logotipo Texto Aumentado (Idêntico ao Entregador) */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -85,7 +93,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ finishLoading }) => {
         </motion.div>
       </div>
 
-      {/* Modern Loading Indicator */}
+      {/* Barra de Progresso e Texto */}
       <div className="absolute bottom-20 left-10 right-10 flex flex-col items-center">
         <div className="w-[85%] max-w-[320px] h-1 bg-black/10 rounded-full overflow-hidden">
           <motion.div 
