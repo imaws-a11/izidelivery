@@ -754,6 +754,26 @@ function App() {
     const [bankName, setBankName] = useState(() => localStorage.getItem('izi_driver_bank_name') || '');
     const [isEditingPix, setIsEditingPix] = useState(false);
     const [showBankDetails, setShowBankDetails] = useState(false);
+    const [showPreferences, setShowPreferences] = useState(false);
+
+    // Preferências do entregador
+    const [prefSoundEnabled, setPrefSoundEnabled] = useState(() => localStorage.getItem('pref_sound') !== 'false');
+    const [prefVibrationEnabled, setPrefVibrationEnabled] = useState(() => localStorage.getItem('pref_vibration') !== 'false');
+    const [prefNavApp, setPrefNavApp] = useState<'google' | 'waze' | 'apple'>(() => (localStorage.getItem('pref_nav_app') as any) || 'google');
+    const [prefVehicleTypes, setPrefVehicleTypes] = useState<string[]>(() => {
+        try { return JSON.parse(localStorage.getItem('pref_vehicle') || '["moto"]'); } catch { return ['moto']; }
+    });
+    const [prefServiceTypes, setPrefServiceTypes] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem('pref_services');
+            if (saved) return JSON.parse(saved);
+            // Padrão: entregas ativas, mobilidade opcional
+            const def = ['all_services'];
+            localStorage.setItem('pref_services', JSON.stringify(def));
+            return def;
+        } catch { return ['all_services']; }
+    });
+    const [prefMaxRadius, setPrefMaxRadius] = useState<number>(() => Number(localStorage.getItem('pref_max_radius') || 10));
 
     
 
@@ -3888,6 +3908,7 @@ const renderDashboard = () => (
                         key={i} 
                         onClick={() => {
                             if (item.label === 'Dados Bancários') setShowBankDetails(true);
+                            if (item.label === 'Preferências') setShowPreferences(true);
                         }}
                         className="w-full bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] border-none rounded-[24px] p-6 flex items-center justify-between group active:scale-[0.98]"
                     >
@@ -4060,6 +4081,307 @@ const renderDashboard = () => (
                             {isSavingPix ? 'Autenticando...' : 'Salvar Dados Bancários'}
                         </button>
                     </div>
+                </div>
+            </motion.div>
+        );
+    };
+
+    const renderPreferencesView = () => {
+        const ClayToggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
+            <button
+                onClick={onToggle}
+                className={`relative w-14 h-8 rounded-full transition-all duration-300 flex-shrink-0 ${
+                    enabled 
+                        ? 'bg-primary shadow-[inset_2px_2px_6px_rgba(255,255,255,0.6),inset_-2px_-2px_6px_rgba(0,0,0,0.3),0_4px_12px_rgba(250,204,21,0.4)]'
+                        : 'bg-[#1a1a1a] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.6),inset_-2px_-2px_6px_rgba(255,255,255,0.03)]'
+                }`}
+            >
+                <div className={`absolute top-1 size-6 rounded-full transition-all duration-300 shadow-[0_2px_8px_rgba(0,0,0,0.5)] ${
+                    enabled 
+                        ? 'left-7 bg-black' 
+                        : 'left-1 bg-white/30'
+                }`} />
+            </button>
+        );
+
+        const savePreference = (key: string, value: string) => {
+            localStorage.setItem(key, value);
+        };
+
+        const mobilityOptions = [
+            { key: 'mototaxi', label: 'Mototaxi', icon: 'two_wheeler', sub: 'Transporte de passageiros em moto' },
+            { key: 'frete', label: 'Fretes', icon: 'local_shipping', sub: 'Transporte de cargas e volumes' },
+            { key: 'mudanca', label: 'Mudanças', icon: 'move_up', sub: 'Ajuda com pequenas mudanças' },
+            { key: 'motorista', label: 'Motorista Particular', icon: 'directions_car', sub: 'Transporte privado de passageiros' },
+        ];
+
+        const allServicesEnabled = prefServiceTypes.includes('all_services');
+        const toggleAllServices = () => {
+            const updated = allServicesEnabled
+                ? prefServiceTypes.filter(s => s !== 'all_services')
+                : [...prefServiceTypes.filter(s => s !== 'all_services'), 'all_services'];
+            setPrefServiceTypes(updated);
+            localStorage.setItem('pref_services', JSON.stringify(updated));
+        };
+
+        const toggleMobility = (key: string) => {
+            const updated = prefServiceTypes.includes(key)
+                ? prefServiceTypes.filter(s => s !== key)
+                : [...prefServiceTypes, key];
+            setPrefServiceTypes(updated);
+            localStorage.setItem('pref_services', JSON.stringify(updated));
+        };
+
+        return (
+            <motion.div
+                initial={{ opacity: 0, x: 50, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 50, scale: 0.95 }}
+                className="fixed inset-0 z-[250] bg-[#0A0A0A] flex flex-col overflow-hidden"
+            >
+                {/* Header */}
+                <header className="sticky top-0 z-50 bg-[#0A0A0A]/80 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-white/5 flex-shrink-0">
+                    <button
+                        onClick={() => setShowPreferences(false)}
+                        className="size-12 rounded-[20px] bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] flex items-center justify-center active:scale-95 transition-transform border border-white/5"
+                    >
+                        <Icon name="arrow_back" className="text-white" />
+                    </button>
+                    <div className="flex flex-col items-end">
+                        <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Configurações</p>
+                        <h2 className="text-lg font-black text-white italic">Preferências</h2>
+                    </div>
+                </header>
+
+                <div className="flex-1 overflow-y-auto no-scrollbar px-5 pt-6 pb-32 space-y-6">
+
+                    {/* Notificações */}
+                    <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.04),inset_-2px_-2px_8px_rgba(0,0,0,0.5)] rounded-[32px] overflow-hidden">
+                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-white/5">
+                            <div className="size-8 rounded-[12px] bg-primary/10 flex items-center justify-center">
+                                <Icon name="notifications" size={16} className="text-primary" />
+                            </div>
+                            <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.25em]">Notificações</h3>
+                        </div>
+                        <div className="divide-y divide-white/5">
+                            <div className="flex items-center justify-between px-6 py-5">
+                                <div>
+                                    <p className="text-sm font-bold text-white/90">Sons de Pedidos</p>
+                                    <p className="text-[10px] text-white/30 mt-0.5">Alerta sonoro ao receber novas missões</p>
+                                </div>
+                                <ClayToggle enabled={prefSoundEnabled} onToggle={() => {
+                                    const v = !prefSoundEnabled;
+                                    setPrefSoundEnabled(v);
+                                    savePreference('pref_sound', String(v));
+                                }} />
+                            </div>
+                            <div className="flex items-center justify-between px-6 py-5">
+                                <div>
+                                    <p className="text-sm font-bold text-white/90">Vibração</p>
+                                    <p className="text-[10px] text-white/30 mt-0.5">Vibrar ao receber pedido ou atualização</p>
+                                </div>
+                                <ClayToggle enabled={prefVibrationEnabled} onToggle={() => {
+                                    const v = !prefVibrationEnabled;
+                                    setPrefVibrationEnabled(v);
+                                    savePreference('pref_vibration', String(v));
+                                }} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Navegação */}
+                    <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.04),inset_-2px_-2px_8px_rgba(0,0,0,0.5)] rounded-[32px] overflow-hidden">
+                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-white/5">
+                            <div className="size-8 rounded-[12px] bg-blue-500/10 flex items-center justify-center">
+                                <Icon name="navigation" size={16} className="text-blue-400" />
+                            </div>
+                            <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.25em]">App de Navegação</h3>
+                        </div>
+                        <div className="p-4 flex flex-col gap-3">
+                            {[
+                                { key: 'google', label: 'Google Maps', sub: 'Recomendado', color: 'text-green-400', bg: 'bg-green-400/10 border-green-400/20' },
+                                { key: 'waze', label: 'Waze', sub: 'Trânsito em tempo real', color: 'text-blue-400', bg: 'bg-blue-400/10 border-blue-400/20' },
+                                { key: 'apple', label: 'Apple Maps', sub: 'Apenas iOS', color: 'text-white/60', bg: 'bg-white/5 border-white/10' },
+                            ].map(nav => (
+                                <button
+                                    key={nav.key}
+                                    onClick={() => { setPrefNavApp(nav.key as any); savePreference('pref_nav_app', nav.key); }}
+                                    className={`w-full flex items-center justify-between p-4 rounded-[22px] transition-all border ${
+                                        prefNavApp === nav.key
+                                            ? `${nav.bg} shadow-[inset_2px_2px_6px_rgba(255,255,255,0.08)] active:scale-[0.98]`
+                                            : 'bg-transparent border-transparent active:scale-[0.98]'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Icon name="map" size={18} className={nav.color} />
+                                        <div className="text-left">
+                                            <p className="text-sm font-bold text-white/90">{nav.label}</p>
+                                            <p className="text-[9px] text-white/30">{nav.sub}</p>
+                                        </div>
+                                    </div>
+                                    {prefNavApp === nav.key && (
+                                        <div className="size-5 rounded-full bg-primary flex items-center justify-center shadow-[0_0_12px_rgba(250,204,21,0.5)]">
+                                            <Icon name="check" size={12} className="text-black" />
+                                        </div>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Serviços de Entrega */}
+                    <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.04),inset_-2px_-2px_8px_rgba(0,0,0,0.5)] rounded-[32px] overflow-hidden">
+                        <div className="flex items-center justify-between px-6 py-5">
+                            <div className="flex items-center gap-3">
+                                <div className="size-12 rounded-[18px] bg-emerald-400/10 border border-emerald-400/10 flex items-center justify-center shadow-[inset_2px_2px_6px_rgba(255,255,255,0.06)]">
+                                    <Icon name="local_shipping" size={22} className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-white/90">Serviços de Entrega</p>
+                                    <p className="text-[10px] text-white/30 mt-0.5">Restaurantes, Mercados, Farmácias e mais</p>
+                                </div>
+                            </div>
+                            <ClayToggle enabled={allServicesEnabled} onToggle={toggleAllServices} />
+                        </div>
+                        {allServicesEnabled && (
+                            <div className="px-6 pb-5">
+                                <div className="bg-emerald-400/5 border border-emerald-400/10 rounded-[20px] p-4 flex items-center gap-3">
+                                    <Icon name="check_circle" size={16} className="text-emerald-400 flex-shrink-0" />
+                                    <p className="text-[10px] text-emerald-400/80 font-bold">Você aceitará todos os tipos de entrega: restaurantes, mercados, farmácias, pet shops e mais.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Mobilidade */}
+                    <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.04),inset_-2px_-2px_8px_rgba(0,0,0,0.5)] rounded-[32px] overflow-hidden">
+                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-white/5">
+                            <div className="size-8 rounded-[12px] bg-blue-500/10 flex items-center justify-center">
+                                <Icon name="route" size={16} className="text-blue-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.25em]">Mobilidade</h3>
+                                <p className="text-[9px] text-white/30 mt-0.5">Selecione os serviços de transporte que aceita</p>
+                            </div>
+                        </div>
+                        <div className="divide-y divide-white/5">
+                            {mobilityOptions.map(mob => {
+                                const active = prefServiceTypes.includes(mob.key);
+                                return (
+                                    <div key={mob.key} className="flex items-center justify-between px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`size-10 rounded-[14px] flex items-center justify-center transition-all ${
+                                                active ? 'bg-blue-500/15 border border-blue-400/20' : 'bg-white/3 border border-white/5'
+                                            }`}>
+                                                <Icon name={mob.icon} size={18} className={active ? 'text-blue-400' : 'text-white/20'} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-white/90">{mob.label}</p>
+                                                <p className="text-[9px] text-white/30 mt-0.5">{mob.sub}</p>
+                                            </div>
+                                        </div>
+                                        <ClayToggle enabled={active} onToggle={() => toggleMobility(mob.key)} />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Veículo */}
+                    <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.04),inset_-2px_-2px_8px_rgba(0,0,0,0.5)] rounded-[32px] overflow-hidden">
+                        <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-white/5">
+                            <div className="size-8 rounded-[12px] bg-orange-400/10 flex items-center justify-center">
+                                <Icon name="local_shipping" size={16} className="text-orange-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-[10px] font-black text-orange-400 uppercase tracking-[0.25em]">Meus Veículos</h3>
+                                <p className="text-[9px] text-white/30 mt-0.5">Selecione todos os veículos que você possui</p>
+                            </div>
+                        </div>
+                        <div className="divide-y divide-white/5">
+                            {[
+                                { key: 'moto',       label: 'Moto',              icon: 'two_wheeler',    sub: 'Motocicleta de qualquer cilindrada' },
+                                { key: 'bike',       label: 'Bicicleta',         icon: 'pedal_bike',     sub: 'Bike convencional ou elétrica' },
+                                { key: 'carro',      label: 'Carro',             icon: 'directions_car', sub: 'Passeio, sedan ou hatch' },
+                                { key: 'fiorino',    label: 'Fiorino',           icon: 'airport_shuttle',sub: 'Furgoneta de pequeno porte' },
+                                { key: 'caminhonete',label: 'Caminhonete',       icon: 'rv_hookup',      sub: 'Pickup ou caminhonete' },
+                                { key: 'van',        label: 'Van',               icon: 'directions_bus', sub: 'Van de carga ou passageiros' },
+                                { key: 'vuc',        label: 'VUC',               icon: 'local_shipping', sub: 'Veículo Urbano de Carga' },
+                                { key: 'bau_p',      label: 'Baú P',             icon: 'inventory_2',    sub: 'Caminhão baú pequeno' },
+                                { key: 'bau_m',      label: 'Baú M',             icon: 'inventory_2',    sub: 'Caminhão baú médio' },
+                                { key: 'bau_g',      label: 'Baú G',             icon: 'inventory_2',    sub: 'Caminhão baú grande' },
+                            ].map(v => {
+                                const active = prefVehicleTypes.includes(v.key);
+                                return (
+                                    <div key={v.key} className="flex items-center justify-between px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`size-10 rounded-[14px] flex items-center justify-center transition-all ${
+                                                active ? 'bg-orange-400/15 border border-orange-400/20' : 'bg-white/3 border border-white/5'
+                                            }`}>
+                                                <Icon name={v.icon} size={18} className={active ? 'text-orange-400' : 'text-white/20'} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-white/90">{v.label}</p>
+                                                <p className="text-[9px] text-white/30 mt-0.5">{v.sub}</p>
+                                            </div>
+                                        </div>
+                                        <ClayToggle enabled={active} onToggle={() => {
+                                            const updated = active
+                                                ? prefVehicleTypes.filter(x => x !== v.key)
+                                                : [...prefVehicleTypes, v.key];
+                                            setPrefVehicleTypes(updated);
+                                            localStorage.setItem('pref_vehicle', JSON.stringify(updated));
+                                        }} />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Raio Máximo */}
+                    <div className="bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.04),inset_-2px_-2px_8px_rgba(0,0,0,0.5)] rounded-[32px] p-6">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="size-8 rounded-[12px] bg-purple-500/10 flex items-center justify-center">
+                                <Icon name="radar" size={16} className="text-purple-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-[10px] font-black text-purple-400 uppercase tracking-[0.25em]">Raio de Atuação</h3>
+                                <p className="text-[9px] text-white/30 mt-0.5">Distância máxima para aceitar pedidos</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="flex-1 h-2 bg-[#0a0a0a] rounded-full shadow-[inset_2px_2px_6px_rgba(0,0,0,0.8)] relative">
+                                <div
+                                    className="absolute top-0 left-0 h-2 rounded-full bg-gradient-to-r from-purple-600 to-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.5)]"
+                                    style={{ width: `${(prefMaxRadius / 30) * 100}%` }}
+                                />
+                                <input
+                                    type="range"
+                                    min={1}
+                                    max={30}
+                                    value={prefMaxRadius}
+                                    onChange={e => { const v = Number(e.target.value); setPrefMaxRadius(v); savePreference('pref_max_radius', String(v)); }}
+                                    className="absolute inset-0 w-full opacity-0 cursor-pointer h-full"
+                                />
+                            </div>
+                            <div className="bg-[#0a0a0a] shadow-[inset_2px_2px_6px_rgba(0,0,0,0.8)] rounded-[16px] px-4 py-2 min-w-[72px] text-center">
+                                <span className="text-lg font-black text-white">{prefMaxRadius}</span>
+                                <span className="text-[9px] font-black text-white/30 ml-0.5">km</span>
+                            </div>
+                        </div>
+                        <div className="flex justify-between">
+                            {[1, 5, 10, 20, 30].map(km => (
+                                <button
+                                    key={km}
+                                    onClick={() => { setPrefMaxRadius(km); savePreference('pref_max_radius', String(km)); }}
+                                    className={`text-[9px] font-black px-2 py-1 rounded-full transition-all ${
+                                        prefMaxRadius === km ? 'text-purple-400 bg-purple-400/10' : 'text-white/20'
+                                    }`}
+                                >{km}km</button>
+                            ))}
+                        </div>
+                    </div>
+
                 </div>
             </motion.div>
         );
@@ -4773,6 +5095,7 @@ const renderDashboard = () => (
                         <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
                         <AnimatePresence>{activeTab === 'active_mission' && renderActiveMissionView()}</AnimatePresence>
                         <AnimatePresence>{showBankDetails && renderBankDetailsView()}</AnimatePresence>
+                        <AnimatePresence>{showPreferences && renderPreferencesView()}</AnimatePresence>
 
                         {showSlotAppliedSuccess && (
                             <motion.div 
