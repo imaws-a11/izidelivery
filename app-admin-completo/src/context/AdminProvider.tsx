@@ -475,7 +475,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             is_open: data.is_open ?? true,
             free_delivery: data.free_delivery ?? false,
             estimated_time: data.estimated_time || '30-45 min',
-            store_type: data.store_type || 'restaurant'
+            store_type: data.store_type || 'restaurant',
+            food_category: data.food_category || 'all',
+            metadata: data.metadata || {}
           };
           setMerchantProfile(profile);
           localStorage.setItem('izi_admin_profile', JSON.stringify(profile));
@@ -1737,6 +1739,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         latitude: editingItem.latitude,
         longitude: editingItem.longitude,
         google_place_id: editingItem.google_place_id,
+        metadata: editingItem.metadata || {},
         role: 'merchant'
       };
 

@@ -69,11 +69,27 @@ export const MerchantCard = ({ shop, onClick, index }: MerchantCardProps) => {
             </span>
           </motion.div>
           <div className="flex flex-col">
-            <span className="text-[7px] font-black text-white/30 uppercase tracking-[0.2em] leading-none mb-1">Preparo &</span>
-            <span className="text-[7px] font-black text-yellow-400/60 uppercase tracking-[0.2em] leading-none">Entrega Izi</span>
+            {(shop.freeDelivery || shop.free_delivery) ? (
+              <div className="flex flex-col">
+                <span className="text-[7px] font-black text-yellow-400 uppercase tracking-[0.2em] leading-none mb-1 animate-pulse">Frete Grátis</span>
+                <span className="text-[7px] font-black text-white/30 uppercase tracking-[0.2em] leading-none">Entrega Izi</span>
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                <span className="text-[7px] font-black text-white/30 uppercase tracking-[0.2em] leading-none mb-1">Preparo &</span>
+                <span className="text-[7px] font-black text-yellow-400/60 uppercase tracking-[0.2em] leading-none">Entrega Izi</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
+      
+      {/* Frete Grátis Tag Flutuante (Premium Amarela) */}
+      {(shop.freeDelivery || shop.free_delivery) && (
+        <div className="absolute top-0 right-10 bg-yellow-400 text-black text-[7px] font-black px-3 py-1 rounded-b-xl uppercase tracking-widest shadow-[0_5px_15px_rgba(251,191,36,0.4)] border-x border-b border-black/10 z-20">
+          FRETE GRÁTIS
+        </div>
+      )}
       
       {/* Action Arrow Button */}
       <div className={`size-11 rounded-2xl bg-zinc-900 shadow-[4px_4px_8px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.02),inset_-2px_-2px_4px_rgba(0,0,0,0.5)] flex items-center justify-center shrink-0 ${shop.isOpen ? 'group-hover:bg-yellow-400 group-hover:shadow-[0_0_15px_rgba(251,191,36,0.3)]' : 'opacity-30'} transition-all duration-500`}>

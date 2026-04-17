@@ -98,44 +98,44 @@ export const FlashOffersListView: React.FC<FlashOffersListViewProps> = ({
                     navigateSubView("exclusive_offer");
                   }
                 }}
-                className={`relative bg-zinc-900 border ${story.isRedeemed ? 'border-zinc-800 opacity-60' : story.isMaster ? 'border-yellow-400' : 'border-white/5'} rounded-[48px] p-6 flex items-center gap-6 cursor-pointer group hover:bg-zinc-800 transition-all shadow-2xl overflow-hidden`}
+                className={`relative bg-zinc-900 border ${story.isRedeemed ? 'border-zinc-800 opacity-60' : story.isMaster ? 'border-yellow-400/50' : 'border-white/5'} rounded-[45px] p-6 flex items-center gap-6 cursor-pointer group hover:bg-zinc-850 transition-all shadow-[15px_15px_30px_rgba(0,0,0,0.5),inset_4px_4px_8px_rgba(255,255,255,0.02),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] overflow-hidden mb-2`}
               >
-                <div className="size-28 rounded-[36px] overflow-hidden shrink-0 border border-white/10 shadow-xl bg-black">
-                   <img src={story.img} className={`size-full object-cover group-hover:scale-110 transition-transform duration-700 ${story.isRedeemed ? 'grayscale opacity-50' : ''}`} alt={story.name} />
+                {/* Glossy Effect */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                
+                <div className="relative size-28 rounded-[32px] overflow-hidden shrink-0 border border-white/10 shadow-[4px_4px_10px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.1)] bg-black">
+                   <img src={story.img} className={`size-full object-cover group-hover:scale-125 transition-transform duration-[1500ms] ${story.isRedeemed ? 'grayscale opacity-50' : ''}`} alt={story.name} />
                 </div>
                 
-                <div className="flex-1 min-w-0">
-                   <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest truncate max-w-[120px]">{story.merchant}</span>
-                      <div className="size-1 rounded-full bg-zinc-700" />
-                      <span className="text-[9px] font-bold text-zinc-500 uppercase flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[12px]">schedule</span> {story.timeLeft}
-                      </span>
+                <div className="flex-1 min-w-0 relative z-10">
+                   <div className="flex items-center gap-2 mb-2">
+                       <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest truncate max-w-[120px] italic">{story.merchant}</span>
+                       <div className="size-1 rounded-full bg-zinc-700" />
+                       <div className="bg-white/5 px-2 py-0.5 rounded-full flex items-center gap-1 border border-white/5">
+                          <span className="material-symbols-outlined text-[10px] text-zinc-500">schedule</span> 
+                          <span className="text-[8px] font-bold text-zinc-500 uppercase">{story.timeLeft}</span>
+                       </div>
                    </div>
                    
-                   <h3 className="text-lg font-black text-white italic tracking-tighter uppercase leading-tight truncate mb-3">{story.name}</h3>
+                   <h3 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none truncate mb-4 group-hover:text-yellow-400 transition-colors uppercase">{story.name}</h3>
                    
-                   <div className="flex items-baseline gap-2">
-                       <span className="text-2xl font-black text-white italic tracking-tighter">R$ {story.finalPrice}</span>
+                   <div className="flex items-center gap-3">
+                       <div className="bg-yellow-400 px-4 py-1.5 rounded-2xl shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5)]">
+                          <span className="text-xl font-black text-black italic tracking-tighter">R$ {story.finalPrice}</span>
+                       </div>
                        {story.originalPrice && (
-                         <span className="text-[10px] text-zinc-600 line-through font-bold">R$ {story.originalPrice}</span>
+                         <span className="text-xs text-zinc-600 line-through font-bold">R$ {story.originalPrice}</span>
                        )}
                    </div>
                 </div>
 
-                <div className={`size-12 rounded-[24px] ${story.isRedeemed ? 'bg-zinc-800' : 'bg-yellow-400'} flex items-center justify-center shadow-xl shadow-yellow-400/10 group-hover:scale-110 transition-transform`}>
-                     <span className={`material-symbols-outlined font-black ${story.isRedeemed ? 'text-zinc-500' : 'text-black'}`}>{story.isRedeemed ? 'check' : 'bolt'}</span>
+                <div className={`size-14 rounded-3xl ${story.isRedeemed ? 'bg-zinc-800 shadow-inner' : 'bg-yellow-400 shadow-[4px_4px_10px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5)]'} flex items-center justify-center group-hover:scale-110 transition-all duration-500`}>
+                     <span className={`material-symbols-outlined font-black text-2xl ${story.isRedeemed ? 'text-zinc-600' : 'text-black'}`}>{story.isRedeemed ? 'check' : 'bolt'}</span>
                 </div>
 
                 {story.isMaster && !story.isRedeemed && (
-                    <div className="absolute -top-3 left-10 bg-yellow-400 text-black text-[9px] font-black px-4 py-1 rounded-full uppercase tracking-widest shadow-xl">
-                        Exclusivo Master
-                    </div>
-                )}
-
-                {story.isRedeemed && (
-                    <div className="absolute -top-3 left-10 bg-zinc-800 text-zinc-400 text-[9px] font-black px-4 py-1 rounded-full uppercase tracking-widest shadow-xl border border-white/5">
-                        Resgatado
+                    <div className="absolute top-4 right-4 bg-yellow-400 text-black text-[8px] font-black px-3 py-1 rounded-xl uppercase tracking-widest shadow-xl border border-black/10">
+                        MASTER
                     </div>
                 )}
               </motion.div>

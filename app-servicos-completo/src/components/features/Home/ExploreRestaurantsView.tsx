@@ -65,16 +65,20 @@ export const ExploreRestaurantsView = ({
     const normalize = (s: string) => s ? s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_') : "";
     
     return establishments.filter(shop => {
-      // Normalizamos o tipo/segmento para uma verificação rigorosa de Whitelist
-      const type = normalize(shop.type);
+      // Filtragem rigorosa por tipo e categoria
+      const rawType = (shop.type || "").toLowerCase();
+      const rawFoodCat = (shop.foodCategory || "").toLowerCase();
       
-      // Apenas permitimos se o segmento principal for relacionado a alimentação
-      // Excluímos explicitamente mercados, farmácias e serviços
-      const whitelist = ['restaurante', 'food', 'hamburguer', 'pizzaria', 'acai', 'japones', 'lanche', 'gastronomia', 'doce', 'sorvete', 'confeitaria'];
-      const blacklist = ['mercado', 'market', 'farmacia', 'pharmacy', 'saude', 'gas', 'agua', 'servico', 'van', 'taxi', 'frete', 'entrega', 'utility'];
+      // Lista de termos permitidos (Tipo ALIMENTAÇÃO)
+      const allowedTerms = ['restaurant', 'hamburguer', 'pizzaria', 'japones', 'lanche', 'acai', 'doceria', 'sorveteria', 'confeitaria'];
+      // Lista de termos estritamente bloqueados (Mercado, Saúde, Bebidas, Serviços)
+      const forbiddenTerms = ['market', 'mercado', 'pharmacy', 'farmacia', 'saude', 'beverages', 'bebidas', 'convenience', 'conveniencia', 'utility', 'taxi', 'frete', 'entrega', 'servico', 'pet'];
 
-      const isFoodRelated = whitelist.some(term => type.includes(term)) || 
-                           (!blacklist.some(term => type.includes(term)) && type !== "");
+      const isForbidden = forbiddenTerms.some(term => rawType.includes(term) || rawFoodCat.includes(term));
+      const isAllowed = allowedTerms.some(term => rawType.includes(term) || rawFoodCat.includes(term)) || (rawType === 'restaurant');
+
+      // Se for expressamente proibido, ou se não estiver no grupo de permitidos (e não for um restaurante genérico)
+      if (isForbidden || !isAllowed) return false;
       
       const matchesSearch = shop.name.toLowerCase().includes(searchQuery.toLowerCase());
       
@@ -103,7 +107,7 @@ export const ExploreRestaurantsView = ({
                           (shopFoodCat.includes('acai') || shopFoodCat.includes('açai') || shopFoodCat.includes('açaí') || shopType.includes('acai') || shopType.includes('açai')));
         }
 
-      return isFoodRelated && matchesSearch && matchesCategory;
+      return matchesSearch && matchesCategory;
     });
   }, [establishments, searchQuery, selectedCategory]);
 
@@ -145,18 +149,18 @@ export const ExploreRestaurantsView = ({
 
         {/* BUSCA INTEGRADA */}
         <div className="px-5 pb-4">
-           <div className="relative group">
-              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                <span className="material-symbols-outlined text-zinc-500 group-focus-within:text-yellow-400 transition-colors text-lg">search</span>
-              </div>
-              <input 
-                type="text"
-                placeholder="O que você quer comer?"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-12 bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 text-sm font-medium text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 transition-all"
-              />
-           </div>
+            <div className="relative group">
+               <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+                 <span className="material-symbols-outlined text-zinc-500 group-focus-within:text-yellow-400 transition-all duration-500 text-xl">search</span>
+               </div>
+               <input 
+                 type="text"
+                 placeholder="O que você quer comer?"
+                 value={searchQuery}
+                 onChange={(e) => setSearchQuery(e.target.value)}
+                 className="w-full h-14 bg-zinc-900 shadow-[10px_10px_20px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.3)] border border-white/5 rounded-[22px] pl-14 pr-4 text-sm font-black text-white placeholder:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-yellow-400/20 transition-all"
+               />
+            </div>
         </div>
       </header>
 
@@ -226,20 +230,36 @@ export const ExploreRestaurantsView = ({
                       setTimeout(() => setCopiedCoupon(null), 2000);
                     }
                   }}
-                  className="flex-shrink-0 w-64 h-32 rounded-[28px] relative overflow-hidden group border border-white/5 cursor-pointer shadow-xl"
+                  className="flex-shrink-0 w-72 h-36 rounded-[40px] relative overflow-hidden group border border-white/5 cursor-pointer shadow-[20px_20px_40px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.05)]"
                 >
-                  <img src={cpn.image_url || ""} className="absolute inset-0 size-full object-cover brightness-50 group-hover:scale-110 transition-transform duration-1000" />
-                  <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/20 to-transparent p-5 flex flex-col justify-between backdrop-blur-[2px]">
+                  <img src={cpn.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80"} className="absolute inset-0 size-full object-cover brightness-[0.4] group-hover:scale-110 transition-transform duration-[1200ms] ease-out" />
+                  
+                  {/* Glassmorphic Layer */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                  
+                  <div className="absolute inset-4 rounded-[32px] border border-white/10 bg-black/20 backdrop-blur-[4px] p-5 flex flex-col justify-between shadow-[inset_4px_4px_8px_rgba(255,255,255,0.05)]">
                     <div className="flex items-center justify-between">
-                       <span className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.2em]">{cpn.title || "Cupom Izi"}</span>
-                       <span className="material-symbols-outlined text-white/50 text-sm">{copiedCoupon === cpn.coupon_code ? "check_circle" : "content_copy"}</span>
+                       <div className="flex flex-col">
+                         <span className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.2em]">{cpn.title || "Cupom Izi"}</span>
+                         <span className="text-[7px] font-black text-white/40 uppercase tracking-widest mt-1">Exclusivo para Você</span>
+                       </div>
+                       <div className={`size-10 rounded-2xl flex items-center justify-center transition-all ${copiedCoupon === cpn.coupon_code ? 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 'bg-white/5 shadow-[inset_2px_2px_4px_rgba(255,255,255,0.1)]'}`}>
+                          <span className={`material-symbols-outlined ${copiedCoupon === cpn.coupon_code ? 'text-black' : 'text-white/40'} text-lg`}>
+                            {copiedCoupon === cpn.coupon_code ? "check" : "content_copy"}
+                          </span>
+                       </div>
                     </div>
-                    <div>
-                      <p className="text-2xl font-black text-white tracking-tighter leading-none italic uppercase">
-                        {cpn.discount_type === "percent" ? `${cpn.discount_value}%` : `R$ ${cpn.discount_value}`}
-                        <span className="text-xs text-yellow-400/80 ml-1">OFF</span>
-                      </p>
-                      <p className="text-[8px] font-black text-zinc-400 mt-1 uppercase tracking-widest">Toque para copiar: {cpn.coupon_code}</p>
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <p className="text-3xl font-black text-white tracking-tighter leading-none italic uppercase drop-shadow-2xl">
+                          {cpn.discount_type === "percent" ? `${cpn.discount_value}%` : `R$ ${cpn.discount_value}`}
+                          <span className="text-sm text-yellow-400 ml-1.5 non-italic">OFF</span>
+                        </p>
+                        <p className="text-[8px] font-black text-white/20 mt-2 uppercase tracking-[0.3em]">CÓDIGO: {cpn.coupon_code}</p>
+                      </div>
+                      <div className="bg-yellow-400 text-black text-[8px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest shadow-lg active:scale-90 transition-transform">
+                        Copiar
+                      </div>
                     </div>
                   </div>
                 </motion.div>

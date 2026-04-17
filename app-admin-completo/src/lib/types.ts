@@ -112,6 +112,7 @@ export interface Merchant {
   };
   created_at: string;
   updated_at?: string;
+  metadata?: any;
 }
 
 export interface MerchantProfile {
@@ -143,6 +144,7 @@ export interface MerchantProfile {
     account?: string;
     pix_key?: string;
   };
+  metadata?: any;
 }
 
 export interface Product {
