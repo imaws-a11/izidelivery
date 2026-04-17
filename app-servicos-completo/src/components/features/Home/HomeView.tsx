@@ -383,16 +383,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
         )}
 
         <div className="px-5 -mt-6 relative z-30 space-y-12 pb-12">
-          <div className="relative group shadow-2xl shadow-black/40">
-            <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none z-10">
               {isSearching ? (
-                <div className="size-5 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                <div className="size-5 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin shadow-[0_0_10px_rgba(251,191,36,0.3)]" />
               ) : (
-                <span className="material-symbols-outlined text-zinc-500 group-focus-within:text-yellow-400 transition-colors text-xl">search</span>
+                <span className="material-symbols-outlined text-zinc-500 group-focus-within:text-yellow-400 transition-all duration-500 text-2xl">search</span>
               )}
             </div>
             <input
-              className="w-full bg-zinc-900/90 backdrop-blur-xl border border-white/5 rounded-2xl py-4.5 pl-14 pr-12 text-zinc-100 placeholder:text-zinc-600 shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.3)] focus:outline-none focus:ring-1 focus:ring-yellow-400/30 transition-all text-sm font-semibold"
+              className="w-full h-16 bg-zinc-900 shadow-[15px_15px_30px_rgba(0,0,0,0.5),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] border border-white/5 rounded-[28px] py-4.5 pl-16 pr-14 text-zinc-100 placeholder:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-yellow-400/20 transition-all text-sm font-black"
               placeholder="Pesquisar lojas ou produtos..."
               type="text"
               value={searchQuery}
@@ -401,9 +401,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             {searchQuery.length > 0 && (
               <button 
                 onClick={() => setSearchQuery("")}
-                className="absolute inset-y-0 right-4 flex items-center text-zinc-500 hover:text-white"
+                className="absolute inset-y-0 right-6 flex items-center text-zinc-600 hover:text-white transition-colors"
               >
-                <span className="material-symbols-outlined text-xl">close</span>
+                <span className="material-symbols-outlined text-xl font-black">close</span>
               </button>
             )}
           </div>

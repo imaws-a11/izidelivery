@@ -265,6 +265,27 @@ export default function MyStudioTab() {
                        />
                     </div>
                     
+                    <div className="md:col-span-2 space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Categoria Principal (Tipo de Estabelecimento)</label>
+                       <div className="relative group">
+                         <select 
+                           className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm appearance-none cursor-pointer"
+                           value={targetItem.store_type || 'restaurant'}
+                           onChange={e => updateItem({...targetItem, store_type: e.target.value})}
+                         >
+                           <option value="restaurant">Restaurante / Alimentação</option>
+                           <option value="market">Mercado / Supermercado</option>
+                           <option value="pharmacy">Farmácia / Saúde</option>
+                           <option value="beverages">Bebidas / Conveniência</option>
+                           <option value="pet">Pet Shop / Agro</option>
+                           <option value="others">Outros Segmentos</option>
+                         </select>
+                         <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                           <span className="material-symbols-outlined">expand_more</span>
+                         </div>
+                       </div>
+                    </div>
+                    
                     <div className="md:col-span-2 space-y-4">
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Especialidades & Nicho</label>
                        <div className="flex flex-wrap gap-2">
@@ -444,12 +465,14 @@ export default function MyStudioTab() {
                              store_address: targetItem.store_address,
                              store_phone: targetItem.store_phone,
                              store_type: (targetItem as any).store_type,
+                             food_category: (targetItem as any).food_category,
                              delivery_radius: targetItem.delivery_radius,
                              store_banner: targetItem.store_banner,
                              store_logo: targetItem.store_logo,
                              latitude: targetItem.latitude,
                              longitude: targetItem.longitude,
-                             google_place_id: targetItem.google_place_id
+                             google_place_id: targetItem.google_place_id,
+                             metadata: targetItem.metadata || {}
                            };
 
                            // Credenciais (Email/Password)
