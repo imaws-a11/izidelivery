@@ -708,6 +708,7 @@ function App() {
     const isFirstRender = useRef(true);
     const hasLoadedOnlineStatus = useRef(false); // Impede que refreshes de token sobrescrevam o status
     const hasBootedRef = useRef(false); // Garante que syncMissionWithDB e restauração s³ ocorrem 1x por sessão
+    const lastLocationUpdateRef = useRef<number>(0); // Throttle de update de GPS no banco
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSOSActive, setIsSOSActive] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
@@ -750,7 +751,9 @@ function App() {
         });
     };
     const [pixKey, setPixKey] = useState(() => localStorage.getItem('izi_driver_pix') || '');
+    const [bankName, setBankName] = useState(() => localStorage.getItem('izi_driver_bank_name') || '');
     const [isEditingPix, setIsEditingPix] = useState(false);
+    const [showBankDetails, setShowBankDetails] = useState(false);
 
     
 
@@ -1019,9 +1022,14 @@ function App() {
         // Permite GPS se estiver ONLINE ou em uma MISSÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O ATIVA
         if (!isOnline && !activeMission) return;
         
-        const updateLocation = async (lat: number, lng: number) => {
+        const updateLocation = (lat: number, lng: number) => {
           setDriverCoords({ lat, lng });
-          await supabase.from('drivers_delivery').update({ lat, lng }).eq('id', driverId);
+          // Throttle: atualiza o banco no máximo a cada 15 segundos para não saturar HTTP
+          const now = Date.now();
+          if (now - lastLocationUpdateRef.current > 15000) {
+              lastLocationUpdateRef.current = now;
+              supabase.from('drivers_delivery').update({ lat, lng }).eq('id', driverId).then(() => {}).catch(() => {});
+          }
         };
 
         let watchId: string | undefined;
@@ -2363,17 +2371,61 @@ function App() {
         }
     };
 
-    const handleSavePix = async (val?: string) => {
+    const handleSavePix = async (val?: string, bankVal?: string) => {
         const keyToSave = (val || pixKey).trim();
-        if (!keyToSave || !driverId) return;
+        const bankToSave = (bankVal || bankName).trim();
+
+        if (!keyToSave) { toastError('Informe a chave PIX'); return; }
+        if (!driverId) { toastError('Sessão expirada. Faça login novamente.'); return; }
+
         setIsSavingPix(true);
         try {
-            const { error } = await supabase.from('drivers_delivery').update({ bank_info: { pix_key: keyToSave } }).eq('id', driverId);
-            if (error) throw error;
-            localStorage.setItem('izi_driver_pix', keyToSave); setPixKey(keyToSave); setIsEditingPix(false);
-            toastSuccess('Chave PIX salva!');
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+            // Ler o token JWT do localStorage (Supabase armazena automaticamente)
+            let accessToken = supabaseKey;
+            try {
+                const storageKey = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`;
+                const raw = localStorage.getItem(storageKey);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    accessToken = parsed?.access_token || supabaseKey;
+                }
+            } catch { /* usa anon key como fallback */ }
+
+            console.log('[PIX] Enviando PATCH para Supabase REST...', { driverId, keyToSave, bankToSave });
+
+            const res = await fetch(
+                `${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${accessToken}`,
+                    },
+                    body: JSON.stringify({ bank_info: { pix_key: keyToSave, bank_name: bankToSave } }),
+                    signal: AbortSignal.timeout(10000),
+                }
+            );
+
+            console.log('[PIX] HTTP Status:', res.status);
+
+            if (!res.ok) {
+                const txt = await res.text();
+                throw new Error(`HTTP ${res.status}: ${txt}`);
+            }
+
+            localStorage.setItem('izi_driver_pix', keyToSave);
+            localStorage.setItem('izi_driver_bank_name', bankToSave);
+            setPixKey(keyToSave);
+            setBankName(bankToSave);
+            setIsEditingPix(false);
+            toastSuccess('Dados Bancários salvos!');
         } catch (e: any) {
-            toastError("Erro ao salvar PIX");
+            console.error('[PIX] ERRO:', e);
+            toastError('Erro ao salvar: ' + (e?.message || 'Desconhecido'));
         } finally {
             setIsSavingPix(false);
         }
@@ -3832,7 +3884,13 @@ const renderDashboard = () => (
                     { label: 'Preferências', icon: 'settings', color: 'text-primary' },
                     { label: 'Ajuda & Suporte', icon: 'support_agent', color: 'text-blue-400' }
                 ].map((item, i) => (
-                    <button key={i} className="w-full bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] border-none rounded-[24px] p-6 flex items-center justify-between group active:scale-[0.98]">
+                    <button 
+                        key={i} 
+                        onClick={() => {
+                            if (item.label === 'Dados Bancários') setShowBankDetails(true);
+                        }}
+                        className="w-full bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] border-none rounded-[24px] p-6 flex items-center justify-between group active:scale-[0.98]"
+                    >
                         <div className="flex items-center gap-4">
                             <div className={`size-12 rounded-[18px] bg-white/5 flex items-center justify-center border border-white/10 ${item.color}`}>
                                 <Icon name={item.icon} className="text-xl" />
@@ -3885,6 +3943,127 @@ const renderDashboard = () => (
             </div>
         </motion.div>
     );
+
+    const renderBankDetailsView = () => {
+        return (
+            <motion.div
+                initial={{ opacity: 0, x: 50, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 50, scale: 0.95 }}
+                className="fixed inset-0 z-[250] bg-[#0A0A0A] flex flex-col no-scrollbar overflow-y-auto"
+            >
+                <header className="sticky top-0 z-50 bg-[#0A0A0A]/80 backdrop-blur-xl px-5 pt-8 pb-4 flex items-center justify-between border-b border-white/5">
+                    <button 
+                        onClick={() => {
+                            setShowBankDetails(false);
+                            // reverter as alterações se a chave não for salva
+                            setPixKey(localStorage.getItem('izi_driver_pix') || '');
+                            setBankName(localStorage.getItem('izi_driver_bank_name') || '');
+                            setIsEditingPix(false);
+                        }}
+                        className="size-12 rounded-[20px] bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] flex items-center justify-center active:scale-95 transition-transform border border-white/5"
+                    >
+                        <Icon name="arrow_back" className="text-white" />
+                    </button>
+                    <div className="flex flex-col items-end">
+                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em]">Financeiro</p>
+                        <h2 className="text-lg font-black text-white italic">Dados Bancários</h2>
+                    </div>
+                </header>
+
+                <div className="px-5 pt-8 pb-32 space-y-8">
+                    {/* Header Card */}
+                    <div className="clay-card-dark rounded-[40px] p-8 relative overflow-hidden group">
+                        <div className="absolute -right-8 -bottom-8 opacity-[0.03] rotate-12 group-hover:rotate-45 transition-transform duration-700">
+                            <Icon name="account_balance" size={180} className="text-white" />
+                        </div>
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/10 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
+                        
+                        <div className="relative z-10 space-y-4">
+                            <div className="size-14 rounded-[20px] bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mb-6 shadow-[inset_2px_2px_8px_rgba(255,255,255,0.1)]">
+                                <Icon name="pix" className="text-emerald-400 text-[28px] drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-black text-white tracking-tighter italic">Receba via PIX</h3>
+                                <p className="text-[11px] text-white/40 leading-relaxed font-bold max-w-[240px] mt-2">
+                                    Cadastre a sua chave abaixo. Os seus ganhos serão transferidos automaticamente mediante solicitação de saque.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Inputs */}
+                    <div className="space-y-4">
+                        <label className="flex items-center gap-2 block text-[10px] font-black text-white/40 uppercase tracking-[0.2em] ml-2">
+                            <Icon name="account_balance" size={14} className="text-white/20" /> Nome do Banco
+                        </label>
+                        <div className="relative">
+                            <input 
+                                type="text"
+                                value={bankName}
+                                onChange={(e) => {
+                                    setBankName(e.target.value);
+                                    setIsEditingPix(true);
+                                }}
+                                placeholder="Itaú, Nubank, Inter..."
+                                className="w-full h-16 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.6),inset_-2px_-2px_8px_rgba(255,255,255,0.02)] border-none rounded-[28px] px-6 text-white font-bold md:text-sm text-base placeholder:text-white/20 focus:ring-2 focus:ring-primary/30 transition-all outline-none"
+                            />
+                        </div>
+
+                        <label className="flex items-center gap-2 block text-[10px] font-black text-white/40 uppercase tracking-[0.2em] ml-2 mt-4">
+                            <Icon name="key" size={14} className="text-white/20" /> Sua Chave Principal
+                        </label>
+                        <div className="relative">
+                            <input 
+                                type="text"
+                                value={pixKey}
+                                onChange={(e) => {
+                                    setPixKey(e.target.value);
+                                    setIsEditingPix(true);
+                                }}
+                                placeholder="CPF, Celular, E-mail..."
+                                className="w-full h-16 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(0,0,0,0.6),inset_-2px_-2px_8px_rgba(255,255,255,0.02)] border-none rounded-[28px] px-6 text-white font-bold md:text-sm text-base placeholder:text-white/20 focus:ring-2 focus:ring-primary/30 transition-all outline-none"
+                            />
+                            {isEditingPix && pixKey.length > 4 && (
+                                <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                    <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest hidden sm:block">Não Salvo</span>
+                                    <div className="size-2 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
+                                </div>
+                            )}
+                        </div>
+                        <div className="bg-[#121212] rounded-[24px] p-5 flex gap-4 shadow-[inset_2px_2px_8px_rgba(255,255,255,0.02),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] mt-4">
+                            <div className="mt-0.5"><Icon name="shield" size={16} className="text-white/20" /></div>
+                            <p className="text-[9px] font-bold text-white/30 italic flex-1">
+                                A chave fornecida será vinculada de forma definitiva ao seu CPF/CNPJ via nossa integradora financeira de segurança. Revise antes de salvar.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="pt-2">
+                        <button 
+                            onClick={async () => {
+                                await handleSavePix(pixKey, bankName);
+                                setShowBankDetails(false);
+                            }}
+                            disabled={pixKey.length < 5 || bankName.length < 2 || isSavingPix}
+                            className={`w-full h-[68px] rounded-[32px] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-xl ${
+                                (pixKey.length >= 5 && bankName.length >= 2)
+                                    ? 'bg-primary text-black shadow-[inset_2px_2px_6px_rgba(255,255,255,0.8),inset_-3px_-3px_10px_rgba(0,0,0,0.2),0_10px_30px_rgba(250,204,21,0.4)] hover:scale-[1.02] active:scale-95 border border-yellow-300' 
+                                    : 'bg-[#121212] text-white/20 shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] opacity-50 cursor-not-allowed border border-white/5'
+                            }`}
+                        >
+                            {isSavingPix ? (
+                                <Icon name="sync" className="animate-spin" />
+                            ) : (
+                                <Icon name="task_alt" size={20} />
+                            )}
+                            {isSavingPix ? 'Autenticando...' : 'Salvar Dados Bancários'}
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    };
 
     const renderActiveMissionView = () => {
         if (!activeMission) {
@@ -4593,6 +4772,7 @@ const renderDashboard = () => (
                         <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
                         <AnimatePresence>{showOrderModal && renderOrderDetailsModal()}</AnimatePresence>
                         <AnimatePresence>{activeTab === 'active_mission' && renderActiveMissionView()}</AnimatePresence>
+                        <AnimatePresence>{showBankDetails && renderBankDetailsView()}</AnimatePresence>
 
                         {showSlotAppliedSuccess && (
                             <motion.div 
