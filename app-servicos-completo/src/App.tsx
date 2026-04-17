@@ -39,6 +39,7 @@ import { ExcursionWizard } from "./components/features/Excursions/ExcursionWizar
 import { LogisticsTrackingView } from "./components/features/Mobility/LogisticsTrackingView";
 import { FreightWizard } from "./components/features/Mobility/FreightWizard";
 import { MobilityPaymentView } from "./components/features/Mobility/MobilityPaymentView";
+import SplashScreen from "./components/common/SplashScreen";
 
 import { useAuth } from "./hooks/useAuth";
 import type { SavedAddress, Order, Quest } from "./types";
@@ -97,6 +98,16 @@ function App() {
       setCartAnimations(prev => prev.filter(a => a.id !== id));
     }, 800);
   };
+
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    // Timer de segurança redundante no App.tsx
+    const safetyTimer = setTimeout(() => {
+      setShowSplash(false);
+    }, 5000);
+    return () => clearTimeout(safetyTimer);
+  }, []);
 
   const [subView, setSubView] = useState<
     | "none"
@@ -7739,7 +7750,8 @@ const navigateSubView = (target: string) => {
   return (
     <div className="min-h-screen bg-black selection:bg-yellow-400/30">
       <AnimatePresence mode="wait">
-        {view === "loading" && (
+
+        {view === "loading" && !showSplash && (
           <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[1000] bg-black flex flex-col items-center justify-center">
             <div className="relative">
               <motion.div animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }} transition={{ duration: 3, repeat: Infinity }} className="size-24 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full" />
@@ -8252,6 +8264,12 @@ const navigateSubView = (target: string) => {
               <button onClick={() => setShowTimePicker(false)} className="mt-8 w-full py-4 text-zinc-500 font-black uppercase text-[10px] tracking-widest ring-1 ring-zinc-800 rounded-[20px]">Fechar</button>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSplash && (
+          <SplashScreen finishLoading={() => setShowSplash(false)} />
         )}
       </AnimatePresence>
     </div>
