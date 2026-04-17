@@ -9,6 +9,7 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import { GoogleMap, useJsApiLoader, Marker, DirectionsRenderer, OverlayView, Polyline, DirectionsService } from '@react-google-maps/api';
+import SplashScreen from './components/common/SplashScreen';
 
 const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 const GOOGLE_MAPS_ID = 'izi-pilot-map';
@@ -591,6 +592,14 @@ function App() {
     const [appSettings, setAppSettings] = useState<any>(null);
     const [dynamicRates, setDynamicRates] = useState<any>(null);
     const [realTimeRoute, setRealTimeRoute] = useState<{distanceText: string, distanceValue: number} | null>(null);
+    const [showSplash, setShowSplash] = useState(true);
+
+    useEffect(() => {
+        const safetyTimer = setTimeout(() => {
+            setShowSplash(false);
+        }, 5000);
+        return () => clearTimeout(safetyTimer);
+    }, []);
 
     const fetchGlobalSettings = useCallback(async () => {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -5131,13 +5140,11 @@ const renderDashboard = () => (
     return (
         <div className="w-full h-[100dvh] bg-black font-sans overflow-hidden relative">
             <AnimatePresence mode="wait">
-                {!isAuthenticated && authInitLoading && (
-                    <div key="boot" className="h-full flex flex-col items-center justify-center bg-black">
-                        <div className="size-20 bg-primary/10 rounded-full flex items-center justify-center animate-pulse mb-4"><Icon name="bolt" className="text-primary text-4xl" /></div>
-                        <p className="text-[9px] font-black text-primary uppercase tracking-[0.5em] animate-pulse">Inicializando Terminal...</p>
+                {!isAuthenticated && (
+                    <div key="auth-container" className="h-full">
+                        {renderLoginView()}
                     </div>
                 )}
-                {!isAuthenticated && !authInitLoading && <div key="login">{renderLoginView()}</div>}
                 {isAuthenticated && (
                     <div key="app" className="flex flex-col h-full overflow-hidden bg-black">
                         <AnimatePresence>{isSOSActive && renderSOS()}</AnimatePresence>
@@ -5573,6 +5580,12 @@ const renderDashboard = () => (
                             <div className="w-12 h-1.5 bg-white/10 rounded-full" />
                         </div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showSplash && (
+                    <SplashScreen finishLoading={() => setShowSplash(false)} />
                 )}
             </AnimatePresence>
 
