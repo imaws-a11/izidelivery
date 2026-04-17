@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "../../common/Icon";
 import { AddressSearchInput } from "../Address/AddressSearchInput";
 import { IziTrackingMap } from "../Map/IziTrackingMap";
-import { calculateFreightPrice } from "../../../lib/pricing_engine";
 
 interface FreightWizardProps {
   transitData: any;
@@ -15,10 +14,11 @@ interface FreightWizardProps {
   routePolyline: string;
   driverLocation: any;
   distancePrices: Record<string, number>;
-  distanceValueKm?: number;
-  marketConditions?: any;
-  setShowDatePicker: (val: boolean) => void;
-  setShowTimePicker: (val: boolean) => void;
+  isCalculatingPrice: boolean;
+  marketConditions: any;
+  paymentMethod: string;
+  userLevel: number;
+  routeDistance: string;
   setPaymentsOrigin: (origin: any) => void;
   setSubView: (view: any) => void;
   navigateSubView: (view: any) => void;
@@ -35,554 +35,350 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
   routePolyline,
   driverLocation,
   distancePrices,
-  distanceValueKm = 0,
   marketConditions,
-  setShowDatePicker,
-  setShowTimePicker,
+  paymentMethod,
+  routeDistance,
   setPaymentsOrigin,
   setSubView,
   navigateSubView,
   showToast,
 }) => {
-  const [showVehicleSelector, setShowVehicleSelector] = React.useState(false);
-  const [sheetState, setSheetState] = React.useState<"collapsed" | "half" | "expanded">("expanded");
 
-  const sheetVariants = {
-    collapsed: { y: "85%", transition: { type: "spring", damping: 25, stiffness: 200 } },
-    half: { y: "40%", transition: { type: "spring", damping: 25, stiffness: 200 } },
-    expanded: { y: "0%", transition: { type: "spring", damping: 25, stiffness: 200 } }
+  const freightData = transitData.freightData || {
+    vehicleType: "Fiorino / VUC",
+    hasStairs: false,
+    helpers: 0,
+    items: ""
   };
 
-  const handleDragEnd = (_: any, info: any) => {
-    const threshold = 50;
-    if (info.offset.y > threshold) {
-      if (sheetState === "expanded") setSheetState("half");
-      else setSheetState("collapsed");
-    } else if (info.offset.y < -threshold) {
-      if (sheetState === "collapsed") setSheetState("half");
-      else setSheetState("expanded");
-    }
+  const updateFreight = (updates: any) => {
+    setTransitData((prev: any) => ({
+      ...prev,
+      freightData: { ...(prev.freightData || freightData), ...updates }
+    }));
   };
 
-  // CÁLCULO DINÂMICO DE FRETE
-  const getEstimatedTotal = () => {
-    if (!marketConditions?.settings?.baseValues) return 0;
-    const bv = marketConditions.settings.baseValues;
-    const surgeMultiplier = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
-       // Mapeamento de chaves configuráveis no Admin
-    const vehicleConfigs: Record<string, { min: string, km: string }> = {
-      "Fiorino": { min: 'fiorino_min', km: 'fiorino_km' },
-      "Caminhonete": { min: 'caminhonete_min', km: 'caminhonete_km' },
-      "Caminhão Baú Pequeno": { min: 'bau_p_min', km: 'bau_p_km' },
-      "Caminhão Baú Médio": { min: 'bau_m_min', km: 'bau_m_km' },
-      "Caminhão Baú Grande": { min: 'bau_g_min', km: 'bau_g_km' },
-      "Caminhão Aberto": { min: 'aberto_min', km: 'aberto_km' }
-    };
+  const vehicleTypes = [
+    { id: "fiorino", name: "Fiorino / VUC", icon: "local_shipping", priceMod: 1.0 },
+    { id: "van", name: "Van Carga", icon: "airport_shuttle", priceMod: 1.2 },
+    { id: "truck_p", name: "Caminhão P", icon: "local_shipping", priceMod: 1.5 },
+    { id: "truck_m", name: "Caminhão M", icon: "local_shipping", priceMod: 1.8 },
+    { id: "truck_g", name: "Caminhão G", icon: "rv_hookup", priceMod: 2.2 },
+    { id: "truck_bau", name: "Caminhão Baú", icon: "local_shipping", priceMod: 2.5 },
+  ];
 
-    const configKeys = vehicleConfigs[transitData.vehicleCategory];
-    let baseFare = parseFloat(String(bv.logistica_min || 45));
-    let distanceRate = parseFloat(String(bv.logistica_km || 4.5));
+  const totalValue = React.useMemo(() => {
+    const vehicle = vehicleTypes.find(v => v.name === freightData.vehicleType);
+    const multiplier = vehicle?.priceMod || 1.0;
+    const base = distancePrices.logistica || 45.0;
+    
+    // Taxas dinâmicas do Admin
+    const baseValues = marketConditions?.settings?.baseValues || {};
+    const stairTaxValue = parseFloat(baseValues.logistica_stairs) || 30.0;
+    const helperTaxValue = parseFloat(baseValues.logistica_helper) || 35.0;
 
-    // Se o Admin configurou taxas específicas para este veículo, as utilizamos. 
-    // Caso contrário, mantemos o fallback dos multiplicadores para retrocompatibilidade.
-    if (configKeys && bv[configKeys.min] && parseFloat(String(bv[configKeys.min])) > 0) {
-       baseFare = parseFloat(String(bv[configKeys.min]));
-       distanceRate = parseFloat(String(bv[configKeys.km]));
-    } else {
-       const vehicleMultipliers: Record<string, number> = {
-         "Fiorino": 1.0,
-         "Caminhonete": 1.25,
-         "Caminhão Baú Pequeno": 1.6,
-         "Caminhão Baú Médio": 2.2,
-         "Caminhão Baú Grande": 3.5,
-         "Caminhão Aberto": 1.9,
-       };
-       const multiplier = vehicleMultipliers[transitData.vehicleCategory] || 1.0;
-       baseFare *= multiplier;
-       distanceRate *= multiplier;
-    }
-
-    try {
-      const calculation = calculateFreightPrice({
-        baseFare: baseFare,
-        distanceInKm: distanceValueKm || 1,
-        distanceRate: distanceRate,
-        helperCount: parseInt(String(transitData.helpers || 0)),
-        helperRate: parseFloat(String(bv.logistica_helper || 50)),
-        hasStairs: transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination || false,
-        stairsFee: parseFloat(String(bv.logistica_stairs || 30))
-      });
-
-      return calculation.totalPrice * surgeMultiplier;
-    } catch (e) {
-      console.error("Erro no cálculo de frete:", e);
-      return 0;
-    }
-  };
-
-  const estimatedTotal = getEstimatedTotal();
-
-  React.useEffect(() => {
-    console.log("FreightWizard TransitData Updated:", {
-      helpers: transitData.helpers,
-      stairs: transitData.accessibility?.stairsAtOrigin
-    });
-  }, [transitData]);
+    const stairTax = freightData.hasStairs ? stairTaxValue : 0;
+    const helperTax = freightData.helpers * helperTaxValue;
+    
+    return (base * multiplier) + stairTax + helperTax;
+  }, [distancePrices, freightData, vehicleTypes, marketConditions]);
 
   return (
-    <div className="absolute inset-0 z-[120] bg-transparent text-zinc-100 flex flex-col overflow-hidden italic">
-      {/* MAPA NO FUNDO */}
-      <div className="absolute inset-0 z-0 h-full">
-        <IziTrackingMap 
-          routePolyline={routePolyline} 
-          driverLoc={driverLocation} 
-          userLoc={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} 
-          onMyLocationClick={updateLocation} 
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-zinc-950/90 pointer-events-none" />
-      </div>
-
-      <header className="relative z-50 flex items-center justify-between px-6 pt-10">
-        <div className="flex items-center gap-4">
+    <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden italic">
+      
+      {/* SECTION MAPA - TOPO */}
+      <section className="relative h-[38vh] shrink-0 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <IziTrackingMap 
+            routePolyline={routePolyline} 
+            driverLoc={driverLocation} 
+            userLoc={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} 
+            onMyLocationClick={updateLocation} 
+            boxed={true}
+          />
+        </div>
+        
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-black/60 pointer-events-none z-10" />
+        
+        <header className="absolute top-10 left-0 right-0 z-20 flex items-center justify-between px-8">
           <motion.button 
             whileTap={{ scale: 0.9 }}
             onClick={() => {
-              if (mobilityStep > 1) {
-                setMobilityStep(mobilityStep - 1);
-              } else {
-                setSubView("none");
-              }
+              if (mobilityStep > 1) setMobilityStep(mobilityStep - 1);
+              else setSubView("none");
             }} 
-            className="size-12 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-purple-400 shadow-[4px_4px_10px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.05)]"
+            className="size-12 rounded-2xl bg-zinc-900/80 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400 shadow-2xl clay-card-dark"
           >
             <Icon name="arrow_back" />
           </motion.button>
-          {mobilityStep > 1 && (
-            <motion.button 
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setSubView("none")} 
-              className="px-4 py-3 rounded-2xl bg-zinc-900/50 border border-white/5 flex items-center justify-center text-zinc-500 text-[10px] font-black uppercase tracking-widest shadow-lg"
+          <div className="text-right">
+            <h2 className="text-xl font-black text-white tracking-tighter leading-none mb-1 uppercase text-shadow-sm">
+              Izi Logistics
+            </h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Frete & Mudanças</p>
+          </div>
+        </header>
+
+        <div className="absolute bottom-6 left-6 right-6 z-20 flex flex-wrap gap-2">
+           <div className={`clay-card-yellow px-4 py-2 rounded-[20px] font-black text-[10px] text-black flex items-center gap-2 shadow-[0_10px_20px_rgba(250,204,21,0.2)] italic border border-white/20 transition-all duration-500
+             ${!routeDistance ? 'opacity-50 grayscale' : 'opacity-100'}`}>
+             <span className="material-symbols-rounded text-sm">route</span>
+             {routeDistance ? routeDistance.split(' • ')[0] : "-- KM"}
+           </div>
+           
+           <div className={`clay-card-yellow px-4 py-2 rounded-[20px] font-black text-[10px] text-black flex items-center gap-2 shadow-[0_10px_20px_rgba(250,204,21,0.2)] italic border border-white/20 transition-all duration-500
+             ${!routeDistance ? 'opacity-50 grayscale' : 'opacity-100'}`}>
+             <span className="material-symbols-rounded text-sm">schedule</span>
+             {routeDistance ? routeDistance.split(' • ')[1] : "-- MIN"}
+           </div>
+
+           <div className="clay-card-yellow px-4 py-2 rounded-[20px] font-black text-[10px] text-black flex items-center gap-2 shadow-[0_10px_20px_rgba(250,204,21,0.2)] italic border border-white/20 animate-in fade-in slide-in-from-bottom-2">
+             <span className="material-symbols-rounded text-sm">payments</span>
+             <span>R$ {totalValue.toFixed(2).replace('.', ',')}</span>
+           </div>
+        </div>
+      </section>
+
+      {/* SECTION CONTEÚDO */}
+      <main className="flex-1 bg-zinc-950 -mt-6 relative z-30 rounded-t-[40px] border-t border-white/5 overflow-y-auto no-scrollbar p-8 pt-10 pb-32 space-y-10">
+        
+        <AnimatePresence mode="wait">
+          {mobilityStep === 1 ? (
+            <motion.section 
+              key="step1"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-10"
             >
-              Sair
-            </motion.button>
-          )}
-        </div>
-        <div className="text-right">
-          <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1 uppercase text-shadow-sm">
-            Caminhão de Frete
-          </h2>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-400">Logística Completa</p>
-        </div>
-      </header>
-
-      {/* BOTTOM SHEET DESLIZANTE */}
-      <motion.div 
-        variants={sheetVariants}
-        initial="expanded"
-        animate={sheetState}
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={0.1}
-        onDragEnd={handleDragEnd}
-        className="relative z-40 mt-auto bg-zinc-950/90 backdrop-blur-3xl border-t border-white/5 flex flex-col rounded-t-[45px] shadow-[0_-25px_50px_rgba(0,0,0,0.6)] touch-none"
-        style={{ height: "100dvh" }}
-      >
-        <div 
-          className="flex justify-center pt-4 pb-2 cursor-grab active:cursor-grabbing"
-          onClick={() => {
-            if (sheetState === "collapsed") setSheetState("half");
-            else if (sheetState === "half") setSheetState("expanded");
-            else setSheetState("collapsed");
-          }}
-        >
-          <div className="w-12 h-1.5 bg-white/10 rounded-full" />
-        </div>
-        <div className="p-8 pb-32 overflow-y-auto no-scrollbar flex-1 space-y-10">
-          {mobilityStep === 1 && (
-            <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-              <div className="space-y-4">
-                <h3 className="text-xl font-black text-white tracking-tight uppercase italic">Escolha o Veículo</h3>
-                
-                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-6 snap-x">
-                   {[
-                     { name: "Fiorino", icon: "local_shipping", label: "Fiorino / Furgão" },
-                     { name: "Caminhonete", icon: "airport_shuttle", label: "Caminhonete" },
-                     { name: "Caminhão Baú Pequeno", icon: "inventory", label: "Baú Pequeno" },
-                     { name: "Caminhão Baú Médio", icon: "inventory_2", label: "Baú Médio" },
-                     { name: "Caminhão Baú Grande", icon: "conveyor_belt", label: "Baú Grande" },
-                     { name: "Caminhão Aberto", icon: "front_loader", label: "Carroceria" }
-                   ].map((v) => (
-                     <motion.button
-                       key={v.name}
-                       whileTap={{ scale: 0.95 }}
-                       onClick={() => setTransitData((prev: any) => ({ ...prev, vehicleCategory: v.name }))}
-                       className={`flex-shrink-0 w-36 aspect-square p-5 rounded-[30px] border transition-all snap-start flex flex-col justify-between ${
-                         transitData.vehicleCategory === v.name 
-                           ? "bg-purple-600 border-purple-400 shadow-[0_10px_20px_rgba(168,85,247,0.3)] text-white" 
-                           : "bg-zinc-900/50 border-white/5 text-zinc-500 hover:border-white/10"
-                       }`}
-                     >
-                        <span className="material-symbols-outlined text-3xl font-black italic">{v.icon}</span>
-                        <div className="text-left">
-                           <p className={`text-[10px] font-black uppercase tracking-widest leading-tight ${transitData.vehicleCategory === v.name ? "text-purple-100" : "text-zinc-600"}`}>
-                             Veículo
-                           </p>
-                           <p className="text-[13px] font-black uppercase tracking-tighter leading-none mt-1">{v.label}</p>
-                        </div>
-                     </motion.button>
-                   ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-xl font-black text-white tracking-tight uppercase italic">Roteiro e Equipe</h3>
-                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest italic">Informe a rota e se precisará de mão de obra.</p>
-              </div>
-              
+              {/* ROTEIRO */}
               <div className="space-y-6">
-                <motion.div 
-                  whileHover={{ scale: 1.01 }} 
-                  className="bg-zinc-900/50 rounded-[35px] p-7 shadow-[10px_10px_20px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.03)] border border-white/5 group transition-all"
-                >
-                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.3em] mb-3 ml-1">Retirada</p>
-                  <AddressSearchInput 
-                    initialValue={transitData.origin}
-                    placeholder="Local de coleta"
-                    className="w-full bg-transparent border-none p-0 text-base font-black text-white focus:ring-0 placeholder:text-zinc-700 italic"
-                    userCoords={userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null}
-                    onSelect={(p: any) => {
-                      const ori = p.formatted_address || "";
-                      setTransitData((prev: any) => ({
-                        ...prev, 
-                        origin: ori,
-                        originCoords: p.lat ? { lat: p.lat, lng: p.lng } : null
-                      }));
-                    }}
-                  />
-                </motion.div>
-
-                <motion.div 
-                  whileHover={{ scale: 1.01 }} 
-                  className="bg-zinc-900/50 rounded-[35px] p-7 shadow-[10px_10px_20px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.03)] border border-white/5 group transition-all"
-                >
-                  <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.3em] mb-3 ml-1">Entrega</p>
-                  <AddressSearchInput 
-                    initialValue={transitData.destination}
-                    placeholder="Local de destino"
-                    className="w-full bg-transparent border-none p-0 text-base font-black text-white focus:ring-0 placeholder:text-zinc-700 italic"
-                    userCoords={transitData.originCoords || (userLocation.lat ? { lat: userLocation.lat, lng: userLocation.lng } : null)}
-                    onSelect={(p: any) => {
-                      const dest = p.formatted_address || "";
-                      setTransitData((prev: any) => ({
-                        ...prev, 
-                        destination: dest,
-                        destinationCoords: p.lat ? { lat: p.lat, lng: p.lng } : null
-                      }));
-                    }}
-                  />
-                </motion.div>
-
-                <div className="bg-zinc-900/50 rounded-[35px] p-8 border border-white/5 shadow-inner space-y-6">
-                   <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                         <p className="text-xs font-black text-white uppercase italic">Possui Escadas?</p>
-                         <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest italic">Origem ou Destino</p>
-                      </div>
-                      <div className="flex bg-zinc-950 p-1 rounded-2xl border border-white/5 shadow-lg">
-                        <button 
-                          onClick={() => setTransitData((prev: any) => ({...prev, accessibility: {...prev.accessibility, stairsAtOrigin: false, stairsAtDestination: false}}))}
-                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${!transitData.accessibility?.stairsAtOrigin ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-600 hover:text-zinc-400'}`}
-                        >
-                          Não
-                        </button>
-                        <button 
-                          onClick={() => setTransitData((prev: any) => ({...prev, accessibility: {...prev.accessibility, stairsAtOrigin: true, stairsAtDestination: true}}))}
-                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${transitData.accessibility?.stairsAtOrigin ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'text-zinc-600 hover:text-zinc-400'}`}
-                        >
-                          Sim
-                        </button>
-                      </div>
-                   </div>
-
-                   <div className="h-px bg-white/5 mx-2" />
-
-                   <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                           <p className="text-xs font-black text-white uppercase italic">Precisa de Ajudantes?</p>
-                           <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest italic">Carga e Descarga</p>
-                        </div>
-                        <div className="flex bg-zinc-950 p-1 rounded-2xl border border-white/5 shadow-lg">
-                           <button 
-                             onClick={() => setTransitData((prev: any) => ({ ...prev, helpers: 0 }))}
-                             className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${(transitData.helpers || 0) === 0 ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-600 hover:text-zinc-400'}`}
-                           >
-                             Não
-                           </button>
-                           <button 
-                             onClick={() => setTransitData((prev: any) => ({ ...prev, helpers: Math.max(1, prev.helpers || 0) }))}
-                             className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${(transitData.helpers || 0) > 0 ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'text-zinc-600 hover:text-zinc-400'}`}
-                           >
-                             Sim
-                           </button>
-                        </div>
-                      </div>
-
-                      <AnimatePresence>
-                        {(transitData.helpers || 0) > 0 && (
-                          <motion.div 
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="flex items-center justify-between pt-6 border-t border-white/10 mt-2">
-                               <div className="space-y-1">
-                                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Quantidade</p>
-                                  <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest italic">Máximo 10 ajudantes</p>
-                               </div>
-                               <div className="flex items-center gap-5 bg-zinc-800/80 p-2 rounded-2xl border border-white/5 backdrop-blur-md">
-                                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => setTransitData((prev: any) => ({...prev, helpers: Math.max(1, (prev.helpers || 0) - 1)}))} className="size-11 rounded-xl bg-zinc-900 flex items-center justify-center text-white active:scale-95 transition-all shadow-lg border border-white/5 active:bg-zinc-800">-</motion.button>
-                                  <span className="text-base font-black text-white w-5 text-center drop-shadow-lg">{transitData.helpers || 0}</span>
-                                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => setTransitData((prev: any) => ({...prev, helpers: Math.min(10, (prev.helpers || 0) + 1)}))} className="size-11 rounded-xl bg-purple-500 flex items-center justify-center text-white active:scale-95 transition-all shadow-lg shadow-purple-500/20">+</motion.button>
-                               </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                   </div>
-                </div>
-              </div>
-            </motion.section>
-          )}
-
-          {mobilityStep === 2 && (
-            <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-              <div className="space-y-2">
-                <h3 className="text-xl font-black text-white tracking-tight uppercase italic">Data e Horário</h3>
-                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest italic">Fretes são realizados apenas por agendamento.</p>
-              </div>
-
-              <div className="grid grid-cols-1 gap-6">
-                 <motion.div 
-                   whileTap={{ scale: 0.98 }}
-                   onClick={() => setShowDatePicker(true)}
-                   className="bg-zinc-900/50 rounded-[35px] p-8 border border-white/5 shadow-xl flex items-center justify-between group cursor-pointer"
-                 >
-                    <div className="flex items-center gap-5">
-                       <div className="size-14 rounded-2xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                          <Icon name="calendar_month" className="text-purple-400" />
-                       </div>
-                       <div>
-                          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Data da Coleta</p>
-                          <p className="text-base font-black text-white italic">{transitData.scheduledDate || "Escolher Data"}</p>
-                       </div>
+                <h3 className="text-zinc-500 font-black text-[9px] uppercase tracking-[0.3em] px-2 italic text-shadow-sm">Endereços Confirmados</h3>
+                <div className="space-y-4 relative">
+                  <div className="absolute left-9 top-1/2 -translate-y-1/2 w-[1.5px] h-10 bg-zinc-800" />
+                  
+                  <div className="clay-card-dark rounded-[30px] p-4 pl-5 flex items-center gap-4 border border-white/5 shadow-inner">
+                    <div className="size-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                      <Icon name="package_2" size={18} className="text-emerald-400" />
                     </div>
-                    <span className="material-symbols-outlined text-zinc-700 group-hover:text-purple-400 transition-colors">edit_calendar</span>
-                 </motion.div>
-
-                 <motion.div 
-                   whileTap={{ scale: 0.98 }}
-                   onClick={() => setShowTimePicker(true)}
-                   className="bg-zinc-900/50 rounded-[35px] p-8 border border-white/5 shadow-xl flex items-center justify-between group cursor-pointer"
-                 >
-                    <div className="flex items-center gap-5">
-                       <div className="size-14 rounded-2xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                          <Icon name="schedule" className="text-purple-400" />
-                       </div>
-                       <div>
-                          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Horário Previsto</p>
-                          <p className="text-base font-black text-white italic">{transitData.scheduledTime || "Escolher Horário"}</p>
-                       </div>
-                    </div>
-                    <span className="material-symbols-outlined text-zinc-700 group-hover:text-purple-400 transition-colors">history_toggle_off</span>
-                 </motion.div>
-              </div>
-
-              <div className="p-6 rounded-[30px] bg-white/5 border border-white/10 flex items-start gap-4">
-                 <Icon name="info" className="text-zinc-500 scale-75" />
-                 <p className="text-[10px] font-bold text-zinc-500 italic leading-relaxed uppercase tracking-wider">
-                   Nossos motoristas de frete precisam de antecedência para organizar a logística e ajudantes.
-                 </p>
-              </div>
-            </motion.section>
-          )}
-
-          {mobilityStep === 3 && (
-            <motion.section initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-              <div className="space-y-2">
-                <h3 className="text-xl font-black text-white tracking-tight uppercase italic">Resumo do Frete</h3>
-                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest italic">Confira todos os detalhes antes de solicitar.</p>
-              </div>
-
-              <div className="bg-zinc-900 border border-zinc-800/50 p-8 rounded-[45px] shadow-[25px_25px_50px_rgba(0,0,0,0.6),inset_4px_4px_10px_rgba(255,255,255,0.05)]">
-                <div className="flex flex-col gap-6">
-                  <motion.div 
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setShowVehicleSelector(true)}
-                    className="flex items-center gap-5 cursor-pointer group p-3 -m-3 rounded-3xl hover:bg-white/5 transition-colors"
-                  >
-                     <div className="size-15 rounded-3xl bg-zinc-800 flex items-center justify-center border border-white/5 shadow-inner group-hover:border-purple-500/50 transition-all">
-                        <span className="material-symbols-outlined text-purple-400 text-2xl font-black italic">
-                          {transitData.vehicleCategory === "Fiorino" ? "local_shipping" :
-                           transitData.vehicleCategory === "Caminhonete" ? "airport_shuttle" :
-                           transitData.vehicleCategory === "Caminhão Baú Pequeno" ? "inventory" :
-                           transitData.vehicleCategory === "Caminhão Baú Médio" ? "inventory_2" :
-                           transitData.vehicleCategory === "Caminhão Baú Grande" ? "conveyor_belt" : "front_loader"}
-                        </span>
-                     </div>
-                     <div className="flex-1">
-                        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] leading-none mb-2">Veículo <span className="text-purple-500/50 ml-1 italic">(toque para mudar)</span></p>
-                        <p className="text-base font-black text-white italic uppercase tracking-tighter">{transitData.vehicleCategory}</p>
-                     </div>
-                     <span className="material-symbols-outlined text-zinc-700 group-hover:text-purple-500 transition-colors">swap_horiz</span>
-                  </motion.div>
-
-                  <div className="h-px bg-white/5" />
-
-                  <div className="flex items-center gap-5">
-                    <div className="size-15 rounded-3xl bg-zinc-800 flex items-center justify-center border border-white/5 shadow-inner">
-                      <span className="material-symbols-outlined text-yellow-400 text-2xl font-black">payments</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] leading-none mb-2">Valor Estimado</p>
-                      <p className="text-4xl font-black text-yellow-400 tracking-tighter italic">
-                        R$ {estimatedTotal > 0 ? estimatedTotal.toFixed(2).replace(".", ",") : (distancePrices['logistica']?.toFixed(2).replace(".", ",") || "---")}
-                      </p>
-                    </div>
+                    <AddressSearchInput
+                      placeholder="Local de Coleta"
+                      onSelect={(addr) => setTransitData((p: any) => ({...p, origin: addr}))}
+                      defaultValue={transitData.origin?.address}
+                      className="bg-transparent text-white font-black text-xs w-full outline-none placeholder:text-zinc-800 italic"
+                    />
                   </div>
 
-                  <div className="h-px bg-white/5" />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-3xl bg-white/5 border border-white/5">
-                       <p className="text-[8px] font-black text-zinc-600 uppercase mb-1">Agendado para</p>
-                       <p className="text-[11px] font-black text-white italic">{transitData.scheduledDate || 'N/A'}</p>
-                       <p className="text-[11px] font-black text-purple-400 italic">{transitData.scheduledTime || 'N/A'}</p>
+                  <div className="clay-card-dark rounded-[30px] p-4 pl-5 flex items-center gap-4 border border-white/5 shadow-inner">
+                    <div className="size-10 rounded-2xl bg-yellow-500/10 flex items-center justify-center shrink-0">
+                      <Icon name="location_on" size={18} className="text-yellow-400" />
                     </div>
-                    <div className="p-4 rounded-3xl bg-white/5 border border-white/5 flex flex-col justify-center gap-1">
-                       <div className="flex items-center gap-2">
-                          <Icon name="groups" className="text-[12px] text-zinc-500" />
-                          <span className="text-[9px] font-black text-zinc-400 uppercase">Ajudantes: {transitData.helpers || 0}</span>
-                       </div>
-                       <div className="flex items-center gap-2">
-                          <Icon name="stairs" className="text-[12px] text-zinc-500" />
-                          <span className="text-[9px] font-black text-zinc-400 uppercase">Escadas: {transitData.accessibility?.stairsAtOrigin ? 'Sim' : 'Não'}</span>
-                       </div>
-                    </div>
+                    <AddressSearchInput
+                      placeholder="Local de Entrega"
+                      onSelect={(addr) => setTransitData((p: any) => ({...p, destination: addr}))}
+                      defaultValue={transitData.destination?.address}
+                      className="bg-transparent text-white font-black text-xs w-full outline-none placeholder:text-zinc-800 italic"
+                    />
                   </div>
                 </div>
               </div>
-            </motion.section>
-          )}
-        </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent pt-28 pointer-events-none">
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.95 }}
-            className="pointer-events-auto w-full"
-            onClick={() => {
-              if (mobilityStep === 1) {
-                if (!transitData.origin || !transitData.destination) {
-                  showToast("Preencha todos os endereços", "warning");
-                  return;
-                }
-                setMobilityStep(2);
-              } else if (mobilityStep === 2) {
-                if (!transitData.scheduledDate || !transitData.scheduledTime) {
-                  showToast("Selecione data e horário", "warning");
-                  return;
-                }
-                setMobilityStep(3);
-              } else {
-                setTransitData((prev: any) => ({ ...prev, estPrice: estimatedTotal }));
-                setPaymentsOrigin("checkout");
-                navigateSubView("mobility_payment");
-              }
-            }}
-          >
-            <div className="w-full bg-purple-500 text-white font-black text-lg py-6 px-12 rounded-[35px] shadow-[0_20px_40px_rgba(168,85,247,0.2),inset_4px_4px_8px_rgba(255,255,255,0.2)] active:grayscale transition-all flex items-center justify-center gap-4 group disabled:opacity-50 disabled:grayscale overflow-hidden relative">
-              <span className="uppercase tracking-[0.3em] text-[13px] italic">
-                {mobilityStep === 1 ? "Ir para Agendamento" : mobilityStep === 2 ? "Revisar Pedido" : "Confirmar Frete"}
-              </span>
-              <span className="material-symbols-outlined font-black group-hover:translate-x-2 transition-transform text-2xl">
-                {mobilityStep === 3 ? 'bolt' : 'arrow_forward'}
-              </span>
-            </div>
-          </motion.button>
-        </div>
-
-        <AnimatePresence>
-          {showVehicleSelector && (
-            <div className="absolute inset-0 z-[200]">
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }} 
-                onClick={() => setShowVehicleSelector(false)}
-                className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
-              />
-              <motion.div 
-                initial={{ y: "100%" }} 
-                animate={{ y: 0 }} 
-                exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="absolute bottom-0 left-0 right-0 p-8 pt-4 bg-zinc-950 rounded-t-[50px] border-t border-white/10 shadow-[0_-25px_50px_rgba(0,0,0,0.8)] flex flex-col gap-8 pb-12"
-              >
-                 <div className="flex justify-center mb-2">
-                    <div className="w-12 h-1.5 bg-white/10 rounded-full" />
+              {/* ESCOLHA DO TIPO DE VEÍCULO */}
+              <div className="space-y-6">
+                 <div className="flex justify-between items-end px-2">
+                    <h3 className="text-zinc-500 font-black text-[9px] uppercase tracking-[0.3em] italic">Tipo de Veículo</h3>
+                    <span className="text-yellow-400 text-[10px] font-black uppercase italic">Ideal para sua carga</span>
                  </div>
-                 <div className="flex flex-col gap-2">
-                    <h4 className="text-2xl font-black text-white uppercase italic tracking-tighter">Cockpit de Frotas</h4>
-                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] italic">Escolha o veículo ideal para sua carga</p>
-                 </div>
-
-                 <div className="grid grid-cols-2 gap-4">
-                    {[
-                      { name: "Fiorino", icon: "local_shipping", label: "Fiorino", info: "Ligeiro" },
-                      { name: "Caminhonete", icon: "airport_shuttle", label: "Caminhonete", info: "Expresso" },
-                      { name: "Caminhão Baú Pequeno", icon: "inventory", label: "Baú P", info: "Até 3t" },
-                      { name: "Caminhão Baú Médio", icon: "inventory_2", label: "Baú M", info: "Até 6t" },
-                      { name: "Caminhão Baú Grande", icon: "conveyor_belt", label: "Baú G", info: "Até 14t" },
-                      { name: "Caminhão Aberto", icon: "front_loader", label: "Carroceria", info: "Aberto" }
-                    ].map((v) => (
-                      <motion.button
-                        key={v.name}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => {
-                          setTransitData((prev: any) => ({ ...prev, vehicleCategory: v.name }));
-                          setShowVehicleSelector(false);
-                        }}
-                        className={`p-6 rounded-[35px] border transition-all flex flex-col gap-3 text-left ${
-                          transitData.vehicleCategory === v.name
-                            ? "bg-purple-600 border-purple-400 shadow-xl"
-                            : "bg-zinc-900/50 border-white/5"
-                        }`}
+                 
+                 <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 pr-10">
+                    {vehicleTypes.map((v) => (
+                      <button
+                        key={v.id}
+                        onClick={() => updateFreight({vehicleType: v.name})}
+                        className={`min-w-[140px] p-6 rounded-[40px] flex flex-col items-center gap-5 transition-all duration-300 active:scale-90
+                          ${freightData.vehicleType === v.name 
+                            ? 'clay-card-yellow border-2 border-yellow-200/50 scale-105 z-10' 
+                            : 'clay-card-dark border border-white/5 opacity-40 grayscale blur-[0.5px] hover:blur-0 hover:opacity-100 hover:grayscale-0'}`}
                       >
-                         <span className={`material-symbols-outlined text-3xl font-black ${transitData.vehicleCategory === v.name ? "text-white" : "text-purple-400"}`}>{v.icon}</span>
-                         <div>
-                            <p className="text-[12px] font-black text-white uppercase tracking-tighter leading-none italic">{v.label}</p>
-                            <p className={`text-[8px] font-black uppercase mt-1 tracking-widest ${transitData.vehicleCategory === v.name ? "text-purple-200" : "text-zinc-600"}`}>{v.info}</p>
+                         <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner
+                            ${freightData.vehicleType === v.name ? 'bg-black/10' : 'bg-white/5'}`}>
+                            <span className={`material-symbols-rounded text-3xl ${freightData.vehicleType === v.name ? 'text-black' : 'text-zinc-500'}`}>
+                              {v.icon}
+                            </span>
                          </div>
-                      </motion.button>
+                         <span className={`text-[10px] font-black uppercase tracking-tighter text-center leading-tight
+                            ${freightData.vehicleType === v.name ? 'text-black' : 'text-zinc-500'}`}>
+                            {v.name}
+                         </span>
+                      </button>
                     ))}
                  </div>
+              </div>
 
-                 <motion.button 
-                   whileTap={{ scale: 0.95 }}
-                   onClick={() => setShowVehicleSelector(false)}
-                   className="w-full py-6 rounded-[30px] border border-white/10 text-zinc-500 text-[10px] uppercase font-black tracking-widest"
-                 >
-                   Cancelar
-                 </motion.button>
-              </motion.div>
-            </div>
+              {/* DETALHES ADICIONAIS - ESCADA E AJUDANTES */}
+              <div className="space-y-6">
+                 <h3 className="text-zinc-500 font-black text-[9px] uppercase tracking-[0.3em] px-2 italic">Detalhes da Logística</h3>
+                 <div className="clay-card-dark rounded-[40px] p-8 border border-white/5 space-y-8 shadow-2xl">
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-4">
+                          <div className="size-10 rounded-2xl bg-yellow-400/10 flex items-center justify-center shadow-inner">
+                             <Icon name="stairs" size={20} className="text-yellow-400" />
+                          </div>
+                          <div className="flex flex-col">
+                             <span className="text-white font-black text-xs uppercase italic">Possui Escada?</span>
+                             <span className="text-[9px] text-zinc-600 font-black uppercase">Prédios sem elevador</span>
+                          </div>
+                       </div>
+                       <button 
+                        onClick={() => updateFreight({hasStairs: !freightData.hasStairs})}
+                        className={`w-14 h-8 rounded-full p-1 transition-all duration-300 flex items-center
+                          ${freightData.hasStairs ? 'bg-yellow-400' : 'bg-zinc-800'}`}
+                       >
+                         <div className={`size-6 rounded-full bg-black shadow-lg shadow-black/40 transition-all duration-300 transform
+                           ${freightData.hasStairs ? 'translate-x-6' : 'translate-x-0'}`} />
+                       </button>
+                    </div>
+
+                    <div className="h-px bg-white/5 w-full" />
+
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-4">
+                          <div className="size-10 rounded-2xl bg-yellow-400/10 flex items-center justify-center shadow-inner">
+                             <Icon name="groups" size={20} className="text-yellow-400" />
+                          </div>
+                          <div className="flex flex-col">
+                             <span className="text-white font-black text-xs uppercase italic">Precisa de Ajudante?</span>
+                             <span className="text-[9px] text-zinc-600 font-black uppercase">Valor por profissional</span>
+                          </div>
+                       </div>
+                       <div className="flex items-center gap-4 bg-black/40 px-4 py-2 rounded-2xl border border-white/5">
+                         <button 
+                          onClick={() => updateFreight({helpers: Math.max(0, freightData.helpers - 1)})}
+                          className="size-8 rounded-xl bg-zinc-800 flex items-center justify-center text-yellow-400 active:scale-75 transition-all"
+                         >
+                            <span className="material-symbols-rounded">remove</span>
+                         </button>
+                         <span className="text-white font-black text-sm">{freightData.helpers}</span>
+                         <button 
+                          onClick={() => updateFreight({helpers: freightData.helpers + 1})}
+                          className="size-8 rounded-xl bg-yellow-400 flex items-center justify-center text-black active:scale-75 transition-all"
+                         >
+                            <span className="material-symbols-rounded">add</span>
+                         </button>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="clay-card-dark rounded-[35px] p-8 border border-white/5 space-y-3">
+                 <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest italic">O que vamos levar hoje?</p>
+                 <textarea 
+                  value={freightData.items}
+                  onChange={(e) => updateFreight({items: e.target.value})}
+                  placeholder="Ex: 1 Geladeira, 1 Fogão e 3 Caixas..."
+                  rows={2}
+                  className="w-full bg-transparent text-white font-black text-sm outline-none border-none p-0 italic placeholder:text-zinc-800 resize-none"
+                 />
+              </div>
+
+              {/* ESPAÇO FINAL PARA SCROLL */}
+              <div className="h-10" />
+            </motion.section>
+          ) : (
+            <motion.section 
+              key="step2"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="space-y-10"
+            >
+               <div className="clay-card-dark rounded-[40px] p-8 border-l-4 border-yellow-400 space-y-8">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                      <div className="size-12 rounded-2xl bg-yellow-400/10 flex items-center justify-center shadow-inner">
+                        <Icon name="payments" size={24} className="text-yellow-400" />
+                      </div>
+                      <div>
+                        <span className="text-white font-black text-[13px] uppercase italic block leading-none mb-1">Total do Frete</span>
+                        <span className="text-zinc-500 text-[9px] font-black uppercase tracking-widest italic">Valor Final Garantido</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                       <span className="text-yellow-400 text-3xl font-black italic tracking-tighter block">R$ {totalValue.toFixed(2).replace('.', ',')}</span>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-white/5 w-full" />
+
+                  <div className="space-y-5">
+                    <div className="flex justify-between items-center px-2">
+                       <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest italic">Pagamento</span>
+                       <button 
+                        onClick={() => navigateSubView("mobility_payment")}
+                        className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-2xl border border-white/5 hover:bg-white/10 transition-all active:scale-95 shadow-md"
+                       >
+                         <Icon name={paymentMethod === 'online' ? 'credit_card' : 'payments'} size={14} className="text-yellow-400" />
+                         <span className="text-white font-black text-[10px] uppercase italic">
+                           {paymentMethod === 'online' ? 'Cartão Online' : 'Pagar na Coleta'}
+                         </span>
+                       </button>
+                    </div>
+
+                    <div className="bg-black/30 p-6 rounded-[30px] border border-white/5 space-y-4">
+                       <div className="flex justify-between text-[11px] font-black text-zinc-500 italic">
+                          <span>Distância:</span>
+                          <span className="text-zinc-200">{routeDistance}</span>
+                       </div>
+                       <div className="flex justify-between text-[11px] font-black text-zinc-500 italic">
+                          <span>Veículo:</span>
+                          <span className="text-yellow-400">{freightData.vehicleType}</span>
+                       </div>
+                       {freightData.hasStairs && (
+                         <div className="flex justify-between text-[11px] font-black text-orange-400 italic">
+                            <span>Taxa de Escada:</span>
+                            <span>Sim (+R$40)</span>
+                         </div>
+                       )}
+                       {freightData.helpers > 0 && (
+                         <div className="flex justify-between text-[11px] font-black text-zinc-500 italic">
+                            <span>Ajudantes ({freightData.helpers}x):</span>
+                            <span className="text-zinc-200">R$ {(freightData.helpers * 50).toFixed(2)}</span>
+                       </div>
+                       )}
+                    </div>
+                  </div>
+               </div>
+            </motion.section>
           )}
         </AnimatePresence>
-      </motion.div>
+      </main>
+
+      {/* BOTÃO FIXO */}
+      <div className="fixed bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent z-50">
+        <motion.button 
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            if (mobilityStep === 1) {
+              if (!transitData.origin || !transitData.destination) {
+                showToast("Escolha a origem e destino do frete", "warning");
+                return;
+              }
+              setMobilityStep(2);
+            } else {
+              setPaymentsOrigin("checkout");
+              navigateSubView("mobility_payment");
+            }
+          }}
+          className="w-full h-20 bg-yellow-400 clay-card-dark py-6 rounded-full flex items-center justify-center gap-4 shadow-[0_20px_60px_rgba(250,204,21,0.3)] active:grayscale transition-all relative overflow-hidden group"
+        >
+          <div className="absolute inset-0 bg-yellow-400 opacity-90 shadow-[inset_4px_4px_10px_rgba(255,255,255,0.4)]" />
+          <span className="relative z-10 text-black font-black text-xl tracking-tighter uppercase italic">
+            {mobilityStep === 1 ? "Prosseguir" : "Confirmar Izi Logistics"}
+          </span>
+          <Icon name={mobilityStep === 1 ? "arrow_forward" : "local_shipping"} className="relative z-10 text-black font-black group-hover:translate-x-2 transition-transform" size={28} />
+        </motion.button>
+      </div>
+
     </div>
   );
 };

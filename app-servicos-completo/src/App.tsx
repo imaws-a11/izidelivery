@@ -1867,6 +1867,9 @@ function App() {
       status: "novo",
       total_price: Number(total.toFixed(2)),
       delivery_fee: deliveryFee,
+      marketConditions,
+      paymentMethod,
+      routeDistance,
       service_fee: Number(serviceFeeAmount.toFixed(2)),
       items: cart,
       pickup_address: shopName,
@@ -2632,89 +2635,83 @@ const navigateSubView = (target: string) => {
   };
 
       // [Comentario Limpo pelo Sistema]
-  const calculateDistancePrices = async (origin: string, destination: string) => {
-    if (!origin || !destination) return;
+  const calculateDistancePrices = (origin: string, destination: string) => {
+    if (!origin || !destination || !window.google?.maps) return;
     setIsCalculatingPrice(true);
-    setDistancePrices({}); // Limpar preços antigos para feedback visual
+    setDistancePrices({});
+
     try {
-      const apiKey = GMAPS_KEY;
-      const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline",
+      const directionsService = new google.maps.DirectionsService();
+      directionsService.route(
+        {
+          origin: origin,
+          destination: destination,
+          travelMode: google.maps.TravelMode.DRIVING,
         },
-        body: JSON.stringify({
-          origin: { address: origin },
-          destination: { address: destination },
-          travelMode: "DRIVE",
-          languageCode: "pt-BR",
-        }),
-      });
-      const data = await res.json();
-      if (data?.routes?.[0]) {
-        const route = data.routes[0];
-        const distKm = (route.distanceMeters || 0) / 1000;
-        const secs = parseInt(route.duration?.replace("s","") || "0");
-        const mins = Math.round(secs / 60);
-        const durationText = mins >= 60 ? `${Math.floor(mins/60)}h ${mins%60}min` : `${mins} min`;
-        const distText = distKm < 1 ? `${Math.round(distKm*1000)} m` : `${distKm.toFixed(1)} km`;
-        setRouteDistance(`${distText} • ${durationText}`);
-        setDistanceValueKm(distKm);
-        if (route.polyline?.encodedPolyline) {
-          setRoutePolyline(route.polyline.encodedPolyline);
+        (result, status) => {
+          setIsCalculatingPrice(false);
+          if (status === google.maps.DirectionsStatus.OK && result?.routes[0]) {
+            const route = result.routes[0];
+            const leg = route.legs[0];
+            const distKm = (leg.distance?.value || 0) / 1000;
+            const durationText = leg.duration?.text || "";
+            const distText = leg.distance?.text || "";
+            
+            setRouteDistance(`${distText} • ${durationText}`);
+            setDistanceValueKm(distKm);
+            if (route.overview_path) {
+              setRoutePolyline(route.overview_path as any);
+            }
+
+            const bv = marketConditions.settings.baseValues;
+            const surge = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
+            
+            const mototaxi_min   = parseFloat(String(bv.mototaxi_min))   || 6.0;
+            const mototaxi_km    = parseFloat(String(bv.mototaxi_km))    || 2.5;
+            const mototaxi_int   = Math.max(0.1, parseFloat(String(bv.mototaxi_km_interval)) || 1.0);
+            
+            const carro_min      = parseFloat(String(bv.carro_min))      || 14.0;
+            const carro_km       = parseFloat(String(bv.carro_km))       || 4.5;
+            const carro_int      = Math.max(0.1, parseFloat(String(bv.carro_km_interval)) || 1.0);
+            
+            const van_min        = parseFloat(String(bv.van_min))        || 35.0;
+            const van_km         = parseFloat(String(bv.van_km))         || 8.0;
+            const van_int        = Math.max(0.1, parseFloat(String(bv.van_km_interval)) || 1.0);
+            
+            const utilitario_min = parseFloat(String(bv.utilitario_min)) || 10.0;
+            const utilitario_km  = parseFloat(String(bv.utilitario_km))  || 3.0;
+            const utilitario_int = Math.max(0.1, parseFloat(String(bv.utilitario_km_interval)) || 1.0);
+            
+            const logistica_min  = parseFloat(String(bv.logistica_min))  || 45.0;
+            const logistica_km   = parseFloat(String(bv.logistica_km))   || 8.0;
+            const logistica_int  = Math.max(0.1, parseFloat(String(bv.logistica_km_interval)) || 1.0);
+
+            const newPrices = {
+              mototaxi:   parseFloat(((mototaxi_min   + (mototaxi_km   * Math.ceil(distKm / mototaxi_int)))   * surge).toFixed(2)),
+              carro:      parseFloat(((carro_min      + (carro_km      * Math.ceil(distKm / carro_int)))      * surge).toFixed(2)),
+              van:        parseFloat(((van_min        + (van_km        * Math.ceil(distKm / van_int)))        * surge).toFixed(2)),
+              utilitario: parseFloat(((utilitario_min + (utilitario_km * Math.ceil(distKm / utilitario_int))) * surge).toFixed(2)),
+              logistica:  parseFloat(((logistica_min  + (logistica_km  * Math.ceil(distKm / logistica_int)))  * surge).toFixed(2)),
+            };
+            setDistancePrices(newPrices);
+            setTransitData(prev => ({ ...prev, estPrice: newPrices[prev.type] || newPrices.mototaxi }));
+
+            supabase
+              .from('drivers_delivery')
+              .select('id, name, vehicle_type, rating')
+              .eq('is_online', true)
+              .limit(5)
+              .then(({ data }) => {
+                if (data) {
+                  setNearbyDrivers(data);
+                  setNearbyDriversCount(data.length);
+                }
+              });
+          }
         }
-          const bv = marketConditions.settings.baseValues;
-          const surge = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
-          
-          const mototaxi_min   = parseFloat(String(bv.mototaxi_min))   || 6.0;
-          const mototaxi_km    = parseFloat(String(bv.mototaxi_km))    || 2.5;
-          const mototaxi_int   = Math.max(0.1, parseFloat(String(bv.mototaxi_km_interval)) || 1.0);
-          
-          const carro_min      = parseFloat(String(bv.carro_min))      || 14.0;
-          const carro_km       = parseFloat(String(bv.carro_km))       || 4.5;
-          const carro_int      = Math.max(0.1, parseFloat(String(bv.carro_km_interval)) || 1.0);
-          
-          const van_min        = parseFloat(String(bv.van_min))        || 35.0;
-          const van_km         = parseFloat(String(bv.van_km))         || 8.0;
-          const van_int        = Math.max(0.1, parseFloat(String(bv.van_km_interval)) || 1.0);
-          
-          const utilitario_min = parseFloat(String(bv.utilitario_min)) || 10.0;
-          const utilitario_km  = parseFloat(String(bv.utilitario_km))  || 3.0;
-          const utilitario_int = Math.max(0.1, parseFloat(String(bv.utilitario_km_interval)) || 1.0);
-          
-          const logistica_min  = parseFloat(String(bv.logistica_min))  || 45.0;
-          const logistica_km   = parseFloat(String(bv.logistica_km))   || 8.0;
-          const logistica_int  = Math.max(0.1, parseFloat(String(bv.logistica_km_interval)) || 1.0);
-
-          const newPrices = {
-            mototaxi:   parseFloat((mototaxi_min   + (mototaxi_km   * Math.ceil(distKm / mototaxi_int)   * surge)).toFixed(2)),
-            carro:      parseFloat((carro_min      + (carro_km      * Math.ceil(distKm / carro_int)      * surge)).toFixed(2)),
-            van:        parseFloat((van_min        + (van_km        * Math.ceil(distKm / van_int)        * surge)).toFixed(2)),
-            utilitario: parseFloat((utilitario_min + (utilitario_km * Math.ceil(distKm / utilitario_int) * surge)).toFixed(2)),
-            logistica:  parseFloat((logistica_min  + (logistica_km  * Math.ceil(distKm / logistica_int)  * surge)).toFixed(2)),
-          };
-          setDistancePrices(newPrices);
-          // Atualizar estPrice no transitData para uso no pagamento
-          setTransitData(prev => ({ ...prev, estPrice: newPrices[prev.type] || newPrices.mototaxi }));
-
-          // Buscar motoristas online reais
-          supabase
-            .from('drivers_delivery')
-            .select('id, name, vehicle_type, rating')
-            .eq('is_online', true)
-            .limit(5)
-            .then(({ data }) => {
-              if (data) {
-                setNearbyDrivers(data);
-                setNearbyDriversCount(data.length);
-              }
-            });
-      }
+      );
     } catch (err) {
       console.error("Error calculating routes:", err);
-    } finally {
       setIsCalculatingPrice(false);
     }
   };
@@ -2958,18 +2955,40 @@ const navigateSubView = (target: string) => {
       setIsCalculatingPrice(true);
       setDistancePrices({});
       const timer = setTimeout(() => {
-        calculateDistancePrices(transitData.origin, transitData.destination);
-      }, 600);
+        const extractAddr = (val: any) => {
+          if (typeof val === 'string') return val;
+          if (typeof val === 'object' && val !== null) {
+            return val.address || val.formatted_address || val.display_name;
+          }
+          return null;
+        };
+        
+        const ori = extractAddr(transitData.origin);
+        const dest = extractAddr(transitData.destination);
+        
+        if (ori && dest) {
+          calculateDistancePrices(ori, dest);
+        }
+      }, 50);
       return () => clearTimeout(timer);
     }
   }, [transitData.origin, transitData.destination, subView]);
 
   // Autopreencher origem se estiver vazia ao entrar no wizard
   useEffect(() => {
-    if (subView === "taxi_wizard" && userLocation.address && !transitData.origin) {
+    const wizards = ["taxi_wizard", "freight_wizard", "van_wizard", "excursion_wizard", "transit_selection"];
+    if (wizards.includes(subView) && userLocation.address && !transitData.origin) {
       setTransitData(prev => ({ ...prev, origin: userLocation.address }));
     }
   }, [subView, userLocation.address]);
+
+  // Capturar localização atual ao entrar em qualquer visão de mobilidade
+  useEffect(() => {
+    const mobilityViews = ["taxi_wizard", "freight_wizard", "van_wizard", "excursion_wizard", "transit_selection"];
+    if (mobilityViews.includes(subView) && !userLocation.lat) {
+      updateLocation();
+    }
+  }, [subView]);
 
   // Definir tipo de serviço correto ao entrar no FreightWizard
   useEffect(() => {
@@ -6637,6 +6656,7 @@ const navigateSubView = (target: string) => {
         userLocation={userLocation}
         updateLocation={updateLocation}
         routePolyline={routePolyline}
+        routeDistance={routeDistance}
         driverLocation={driverLocation}
         distancePrices={distancePrices}
         distanceValueKm={distanceValueKm}
