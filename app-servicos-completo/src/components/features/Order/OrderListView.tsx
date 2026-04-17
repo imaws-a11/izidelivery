@@ -13,9 +13,9 @@ const parseAddressText = (rawStr: any): string => {
   }
   try {
     const parsed = JSON.parse(cleanStr);
-    return (parsed.formatted_address || parsed.address || "Localidade").split(',')[0];
+    return parsed.formatted_address || parsed.address || cleanStr;
   } catch {
-    return cleanStr.split(',')[0];
+    return cleanStr;
   }
 };
 
@@ -62,7 +62,36 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
 
   const isMobility = (o: any) => ["mototaxi", "carro", "van", "utilitario", "frete", "logistica"].includes(o.service_type);
 
-  const renderMobilityClayCard = (order: any, isHistory: boolean = false) => {
+  const renderClayCard = (order: any, isHistory: boolean = false) => {
+    // Lógicas de tipo
+    const isMobilityOrder = isMobility(order);
+    const isCoin = order.service_type === "coin_purchase";
+    
+    let icon = "restaurant";
+    if (isCoin) icon = "payments";
+    else if (isMobilityOrder) {
+      if (order.service_type === "van") icon = "airport_shuttle";
+      else if (order.service_type === "mototaxi") icon = "two_wheeler";
+      else if (order.service_type === "carro") icon = "directions_car";
+      else icon = "local_shipping"; // logistica/frete
+    }
+
+    let title = order.merchant_name || "Pedido";
+    if (isCoin) title = "Compra de IZI Coins";
+    else if (isMobilityOrder) {
+      if (order.service_type === "van") title = "Van de Carga";
+      else if (order.service_type === "mototaxi") title = "Moto";
+      else if (order.service_type === "carro") title = "Carro Particular";
+      else title = "Izi Logistics";
+    }
+
+    let subtitle = "Delivery";
+    if (isCoin) subtitle = "Financeiro";
+    else if (isMobilityOrder) {
+      if (order.service_type === "frete" || order.service_type === "logistica") subtitle = "Frete & Mudanças";
+      else subtitle = "Transporte";
+    }
+
     return (
       <motion.div
         key={order.id}
@@ -71,92 +100,105 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
         whileTap={{ scale: 0.98 }}
         onClick={() => {
           setSelectedItem(order);
-          setSubView(["frete", "logistica", "van", "mototaxi", "carro"].includes(order.service_type) ? "logistics_tracking" : "order_detail");
+          if (isCoin) setSubView("izi_coin_tracking");
+          else if (isMobilityOrder) setSubView(["frete", "logistica", "van", "mototaxi", "carro"].includes(order.service_type) ? "logistics_tracking" : "order_detail");
+          else setSubView("order_detail");
         }}
-        className={`relative overflow-hidden rounded-[36px] cursor-pointer group ${isHistory ? 'mb-4 scale-95 origin-left opacity-90' : 'mb-6'}`}
+        className={`relative overflow-hidden rounded-[40px] cursor-pointer group ${isHistory ? 'mb-4 scale-95 origin-left opacity-90' : 'mb-8'}`}
         style={{
-          background: "linear-gradient(145deg, #1c1c1f, #141416)",
-          boxShadow: isHistory ? "10px 10px 20px rgba(0,0,0,0.5)" : "18px 18px 40px rgba(0,0,0,0.6), -6px -6px 20px rgba(255,255,255,0.03), inset 1px 1px 0px rgba(255,255,255,0.06)",
-          border: `1.5px solid rgba(250,204,21,${isHistory ? '0.05' : '0.18'})`
+          background: "linear-gradient(135deg, rgba(28,28,31,0.9) 0%, rgba(20,20,22,0.95) 100%)",
+          backdropFilter: "blur(20px)",
+          boxShadow: isHistory 
+            ? "10px 10px 30px rgba(0,0,0,0.4)" 
+            : "25px 25px 50px rgba(0,0,0,0.7), -8px -8px 25px rgba(255,255,255,0.02), inset 1.5px 1.5px 0px rgba(255,255,255,0.08), inset -1.5px -1.5px 0px rgba(0,0,0,0.2)",
+          border: `1.5px solid rgba(250,204,21,${isHistory ? '0.05' : '0.22'})`
         }}
       >
-        {/* Glow Blob */}
-        {!isHistory && <div className="absolute -top-10 -right-10 w-48 h-48 bg-yellow-400/8 rounded-full blur-[60px] pointer-events-none group-hover:bg-yellow-400/14 transition-all duration-700" />}
-        {!isHistory && <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-orange-500/6 rounded-full blur-[50px] pointer-events-none" />}
+        {/* PREMIUM DECORATION */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-yellow-400/10 transition-all duration-1000" />
+        
+        <div className="relative z-10 p-8 pb-6">
+          <div className="flex items-start justify-between mb-8">
+            <div className="flex items-center gap-5">
+              <div
+                className={`size-16 rounded-[24px] flex items-center justify-center shrink-0 relative shadow-[10px_10px_25px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.05)]`}
+                style={{
+                  background: "linear-gradient(145deg, #2a2a2e, #1c1c20)",
+                }}
+              >
+                <span className={`material-symbols-rounded text-3xl font-black ${isHistory ? 'text-zinc-500' : 'text-yellow-400'} drop-shadow-[0_0_12px_rgba(250,204,21,0.3)]`}>
+                  {icon}
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent rounded-[24px]" />
+              </div>
 
-        <div className="relative z-10 px-6 pt-6 flex items-start justify-between">
-          <div className="flex items-center gap-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500 mb-1.5 opacity-60">
+                  {isHistory ? "Encerrado" : order.scheduled_at ? "Agendamento" : "Atividade"}
+                </p>
+                <h4 className={`text-lg font-black uppercase tracking-tight italic leading-tight ${isHistory ? 'text-zinc-400' : 'text-white'}`}>
+                  {title}
+                </h4>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${isHistory ? 'bg-zinc-800 text-zinc-600' : 'bg-yellow-400/10 text-yellow-500 border border-yellow-400/20'}`}>
+                    {subtitle}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <div
-              className={`size-14 md:size-16 rounded-[20px] flex items-center justify-center shrink-0 relative`}
-              style={{
-                background: "linear-gradient(145deg, #2a2a2e, #202024)",
-                boxShadow: "8px 8px 20px rgba(0,0,0,0.5), -3px -3px 10px rgba(255,255,255,0.04), inset 1px 1px 0px rgba(255,255,255,0.07)"
-              }}
+              className={`px-4 py-2.5 rounded-2xl flex items-center gap-2 bg-black/40 border border-white/5 shadow-[inset_1px_1px_4px_rgba(0,0,0,0.5)]`}
             >
-              <span className={`material-symbols-rounded text-2xl md:text-3xl font-black ${isHistory ? 'text-zinc-500 group-hover:text-yellow-400 transition-colors' : 'text-yellow-400'}`}>
-                {order.service_type === "van" ? "airport_shuttle" : order.service_type === "mototaxi" ? "two_wheeler" : order.service_type === "carro" ? "directions_car" : "local_shipping"}
-              </span>
-            </div>
-
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-1">
-                {isHistory ? "Fechado" : order.scheduled_at ? "Agendado" : "Serviço Ativo"}
-              </p>
-              <h4 className={`text-sm md:text-base font-black uppercase tracking-tight italic leading-tight ${isHistory ? 'text-zinc-300' : 'text-white'}`}>
-                {order.service_type === "van" ? "Van de Carga" : order.service_type === "mototaxi" ? "Moto" : order.service_type === "carro" ? "Carro Particular" : "Izi Logistics"}
-              </h4>
-              <p className={`text-[10px] font-black uppercase tracking-widest mt-0.5 ${isHistory ? 'text-zinc-600' : 'text-yellow-400'}`}>
-                {order.service_type === "frete" || order.service_type === "logistica" ? "Frete & Mudanças" : "Transporte"}
+              {!isHistory && <div className={`size-1.5 rounded-full ${order.status === 'cancelado' ? 'bg-red-500' : 'bg-yellow-400 animate-pulse'}`} />}
+              <p className={`text-[10px] font-black uppercase tracking-widest ${order.status === 'cancelado' ? 'text-red-400' : 'text-yellow-400'}`}>
+                {statusLabel[order.status] || order.status}
               </p>
             </div>
           </div>
 
-          <div
-            className="px-3 py-1.5 md:py-2 rounded-2xl flex items-center gap-2"
-            style={{
-              background: isHistory ? "rgba(255,255,255,0.02)" : "linear-gradient(145deg, rgba(250,204,21,0.12), rgba(250,204,21,0.06))",
-              boxShadow: isHistory ? "none" : "4px 4px 12px rgba(0,0,0,0.4), -2px -2px 6px rgba(255,255,255,0.03), inset 1px 1px 0 rgba(250,204,21,0.1)",
-              border: isHistory ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(250,204,21,0.2)"
-            }}
-          >
-            {!isHistory && <span className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />}
-            <span className={`text-[9px] font-black uppercase tracking-widest ${order.status === "cancelado" ? 'text-red-400' : order.status === "concluido" ? 'text-emerald-400' : 'text-yellow-400'}`}>
-              {statusLabel[order.status] || order.status}
-            </span>
+          <div className="relative flex gap-4 min-h-0 bg-white/5 p-6 rounded-[32px] mb-8 border border-white/5 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.2)]">
+            <div className="flex flex-col items-center pt-1 shrink-0">
+              <div className="size-2 rounded-full bg-white/20" />
+              <div className="w-px flex-1 my-1.5 bg-gradient-to-b from-white/10 to-transparent" />
+              <div className="size-2 rounded-full bg-yellow-400 shadow-[0_0_8px_#fbbf24]" />
+            </div>
+            <div className="flex-1 min-w-0 space-y-3">
+              <div className="min-w-0">
+                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Origem</p>
+                <p className="text-xs font-black text-zinc-300 truncate uppercase tracking-tight">
+                  {isMobilityOrder ? parseAddressText(order.pickup_address) || "Origem" : isCoin ? "Digital" : order.merchant_name || "Loja Parceira"}
+                </p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Destino</p>
+                <p className="text-xs font-black text-yellow-400 truncate uppercase tracking-tight">
+                  {isCoin ? "Recarga na Carteira" : parseAddressText(order.delivery_address) || "Destino"}
+                </p>
+              </div>
+            </div>
+            <div className="text-right shrink-0 flex flex-col justify-end border-l border-white/5 pl-4">
+              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">Valor</p>
+              <p className={`text-xl font-black italic ${isHistory ? 'text-zinc-300' : 'text-white'}`}>
+                <span className="text-[10px] not-italic mr-1 opacity-50">R$</span>
+                {Number(order.total_price || 0).toFixed(2).replace(".",",")}
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="relative z-10 px-6 py-4 flex gap-3">
-          <div className="flex flex-col items-center pt-1 shrink-0">
-            <div className={`size-1.5 md:size-2 rounded-full ${isHistory ? 'bg-zinc-700' : 'bg-white/40'}`} />
-            <div className={`w-px flex-1 my-1.5 ${isHistory ? 'bg-zinc-800' : 'bg-white/10'}`} />
-            <div className={`size-1.5 md:size-2 rounded-full ${isHistory ? 'bg-zinc-600' : 'bg-yellow-400'}`} />
-          </div>
-          <div className="flex flex-col gap-2 min-w-0 flex-1">
-            <p className={`text-[10px] md:text-[11px] font-black uppercase truncate ${isHistory ? 'text-zinc-500' : 'text-zinc-300'}`}>
-              {parseAddressText(order.pickup_address) || "Origem"}
+          <div className="flex items-center justify-between mt-auto">
+            <p className="text-[10px] font-black uppercase text-zinc-600 tracking-widest">
+               {order.scheduled_at ? new Date(order.scheduled_at).toLocaleString("pt-BR") : new Date(order.created_at).toLocaleString("pt-BR")}
             </p>
-            <p className={`text-[10px] md:text-[11px] font-black uppercase truncate ${isHistory ? 'text-zinc-400' : 'text-yellow-400'}`}>
-              {parseAddressText(order.delivery_address) || "Destino"}
-            </p>
-          </div>
-          <div className="text-right shrink-0 flex flex-col justify-center">
-            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">Total</p>
-            <p className={`text-base md:text-lg font-black italic ${isHistory ? 'text-zinc-300' : 'text-white'}`}>R$ {Number(order.total_price || 0).toFixed(2).replace(".",",")}</p>
-          </div>
-        </div>
-
-        <div className="relative z-10 px-6 pb-5 flex items-center justify-between">
-          <p className="text-[9px] md:text-[10px] font-black uppercase text-zinc-600 tracking-widest">
-             {order.scheduled_at ? new Date(order.scheduled_at).toLocaleString("pt-BR") : new Date(order.created_at).toLocaleString("pt-BR")}
-          </p>
-          <div className={`${isHistory ? 'text-zinc-500 group-hover:text-zinc-300' : 'text-yellow-400'} text-[9px] md:text-[10px] font-black uppercase tracking-widest flex items-center gap-1 group-hover:gap-2 transition-all`}>
-             VER DETALHES <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            <div className={`${isHistory ? 'text-zinc-600' : 'text-yellow-400'} text-[10px] font-black uppercase tracking-widest flex items-center gap-2 group-hover:translate-x-1 transition-all`}>
+               DETALHES <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </div>
           </div>
         </div>
       </motion.div>
     );
   };
+
 
   return (
     <div className="flex flex-col h-full bg-black text-zinc-100 pb-32 overflow-y-auto no-scrollbar">
@@ -202,7 +244,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0 }}
-              className="space-y-14"
+              className="space-y-12"
             >
               {activeOrders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -210,71 +252,33 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                   <p className="text-zinc-600 text-sm font-medium">Nenhum pedido ativo no momento</p>
                 </div>
               ) : (
-                activeOrders.map((order) => {
-                  if (isMobility(order)) return renderMobilityClayCard(order, false);
-                  
-                  return (
-                    <motion.article
-                      key={order.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="relative flex flex-col md:flex-row items-start md:items-center gap-5"
-                    >
-                      <div className="relative w-28 h-28 shrink-0 bg-zinc-900/50 rounded-3xl flex items-center justify-center border border-zinc-800 overflow-hidden">
-                        <div className="absolute inset-0 bg-zinc-900/60" />
-                        <span
-                          className="material-symbols-outlined absolute text-5xl text-yellow-400"
-                          style={{
-                            filter: "drop-shadow(0 0 15px rgba(255,215,9,0.5))",
-                            fontVariationSettings: "'FILL' 1",
-                          }}
-                        >
-                          {order.service_type === "coin_purchase" ? "payments" : "restaurant"}
-                        </span>
+                <>
+                  {/* Seção Mobilidade */}
+                  {activeOrders.some(isMobility) && (
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-4 px-2">
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/10" />
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]">Mobilidade & Fretes</h3>
+                        <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/10" />
                       </div>
-                      <div className="flex-1 space-y-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black mb-1 block">
-                              {statusLabel[order.status] || order.status}
-                            </span>
-                            <h3 className="font-extrabold text-xl text-white tracking-tight">
-                              {order.service_type === "coin_purchase" ? "Compra de IZI Coins" : order.merchant_name || "Pedido"}
-                            </h3>
-                          </div>
-                          <span className="text-yellow-400 text-[10px] font-black bg-yellow-400/10 px-3 py-1 rounded-full uppercase tracking-widest whitespace-nowrap">
-                            {statusLabel[order.status] || order.status}
-                          </span>
+                      {activeOrders.filter(isMobility).map((order) => renderClayCard(order, false))}
+                    </div>
+                  )}
+
+                  {/* Seção Delivery/Outros */}
+                  {activeOrders.some(o => !isMobility(o)) && (
+                    <div className="space-y-6">
+                      {activeOrders.some(isMobility) && (
+                        <div className="flex items-center gap-4 px-2 mt-8">
+                          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/10" />
+                          <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Pedidos de Delivery</h3>
+                          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/10" />
                         </div>
-                        <p className="text-zinc-400 text-sm max-w-xs">
-                          {order.service_type === "coin_purchase"
-                            ? "Recarga Digital Instantânea"
-                            : parseAddressText(order.delivery_address || order.pickup_address)}
-                        </p>
-                        <div className="pt-3 flex items-center gap-3">
-                          <button
-                            onClick={() => {
-                              setSelectedItem(order);
-                              setSubView(order.service_type === "coin_purchase" ? "izi_coin_tracking" : "order_detail");
-                            }}
-                            className="bg-yellow-400 text-black font-black px-6 py-3 rounded-xl shadow-[0_0_20px_rgba(255,215,9,0.25)] hover:opacity-90 active:scale-95 transition-all text-xs uppercase tracking-wider"
-                          >
-                            Ver detalhes
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedItem(order);
-                              setSubView("order_chat");
-                            }}
-                            className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors active:scale-95"
-                          >
-                            <span className="material-symbols-outlined">chat_bubble</span>
-                          </button>
-                        </div>
-                      </div>
-                    </motion.article>
-                  )
-                })
+                      )}
+                      {activeOrders.filter(o => !isMobility(o)).map((order) => renderClayCard(order, false))}
+                    </div>
+                  )}
+                </>
               )}
             </motion.div>
           )}
@@ -294,35 +298,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                   <p className="text-zinc-600 text-sm font-medium">Nenhum pedido agendado</p>
                 </div>
               ) : (
-                scheduledOrders.map((order) => {
-                  if (isMobility(order)) return renderMobilityClayCard(order, false);
-                  return (
-                    <motion.article
-                      key={order.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="relative flex flex-col md:flex-row items-start md:items-center gap-5"
-                    >
-                      <div className="relative w-28 h-28 shrink-0 bg-zinc-900/50 rounded-3xl flex items-center justify-center border border-zinc-800">
-                        <span
-                          className="material-symbols-outlined text-5xl text-yellow-400"
-                          style={{ fontVariationSettings: "'FILL' 1" }}
-                        >
-                          event
-                        </span>
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black block">
-                          Agendado
-                        </span>
-                        <h3 className="font-extrabold text-xl text-white">{order.merchant_name || "Pedido Agendado"}</h3>
-                        <p className="text-zinc-400 text-sm">
-                          {order.scheduled_at ? new Date(order.scheduled_at).toLocaleString("pt-BR") : ""}
-                        </p>
-                      </div>
-                    </motion.article>
-                  )
-                })
+                scheduledOrders.map((order) => renderClayCard(order, false))
               )}
             </motion.div>
           )}
@@ -342,44 +318,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                   <p className="text-zinc-600 text-sm font-medium">Nenhum pedido no histórico</p>
                 </div>
               ) : (
-                pastOrders.map((order) => {
-                  if (isMobility(order)) return renderMobilityClayCard(order, true);
-                  
-                  return (
-                    <motion.div
-                      key={order.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      onClick={() => {
-                        setSelectedItem(order);
-                        setSubView("order_detail");
-                      }}
-                      className="flex items-center gap-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-all hover:border-yellow-400/20 group mb-3"
-                    >
-                      <div className="w-14 h-14 rounded-2xl bg-zinc-800 flex items-center justify-center shrink-0">
-                        <span
-                          className="material-symbols-outlined text-2xl text-zinc-500 group-hover:text-yellow-400 transition-colors"
-                          style={{ fontVariationSettings: "'FILL' 1" }}
-                        >
-                          {order.service_type === "coin_purchase" ? "payments" : "restaurant"}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-black text-sm text-white truncate">
-                          {order.service_type === "coin_purchase" ? "Recarga IZI Coins" : order.merchant_name || "Pedido"}
-                        </h4>
-                        <p className="text-zinc-500 text-xs mt-0.5">
-                          {new Date(order.created_at).toLocaleDateString("pt-BR")} • R$ {Number(order.total_price || 0).toFixed(2).replace(".", ",")}
-                        </p>
-                      </div>
-                      <span
-                        className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${order.status === "concluido" ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}
-                      >
-                        {statusLabel[order.status] || order.status}
-                      </span>
-                    </motion.div>
-                  )
-                })
+                pastOrders.map((order) => renderClayCard(order, true))
               )}
             </motion.div>
           )}

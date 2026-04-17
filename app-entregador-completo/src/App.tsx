@@ -2906,35 +2906,87 @@ const renderDashboard = () => (
                     <div className="grid gap-4">
                         {dedicatedSlots.length === 0 ? (
                             <p className="text-[10px] text-white/30 font-black uppercase tracking-widest text-center py-4">Nenhuma vaga no momento</p>
-                        ) : dedicatedSlots.slice(0, 2).map((slot: any) => (
-                            <motion.button 
-                                key={slot.id}
-                                onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
-                                className="w-full clay-card-yellow p-5 flex items-center gap-4 text-left active:scale-[0.98] transition-all"
-                            >
-                                {/* Ícone */}
-                                <div className="size-14 rounded-2xl bg-black/10 flex items-center justify-center shrink-0 overflow-hidden border border-black/10">
-                                    {slot.admin_users?.store_logo ? (
-                                        <img src={slot.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
-                                    ) : (
-                                        <Icon name="stars" className="text-stone-900" size={28} />
-                                    )}
-                                </div>
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-[9px] font-black text-stone-700 uppercase tracking-widest">
-                                        {slot.title.toLowerCase().includes((slot.admin_users?.store_name || '').toLowerCase()) ? 'Vaga Exclusiva' : (slot.admin_users?.store_name || 'Parceiro Izi')}
-                                    </p>
-                                    <p className="text-sm font-black text-stone-950 italic leading-snug truncate">{slot.title}</p>
-                                    <p className="text-[10px] text-stone-600 font-bold">{slot.working_hours}</p>
-                                </div>
-                                {/* Valor */}
-                                <div className="text-right shrink-0 flex flex-col justify-center">
-                                    <p className="text-[9px] font-bold text-stone-700 uppercase tracking-tighter">Diária</p>
-                                    <p className="text-base font-black text-stone-950 italic">R$ {parseFloat(slot.fee_per_day || 0).toFixed(0)}</p>
-                                </div>
-                            </motion.button>
-                        ))}
+                        ) : dedicatedSlots.slice(0, 2).map((slot: any) => {
+                            const maxDeliveries = slot.metadata?.base_deliveries || slot.max_deliveries || 0;
+                            return (
+                                <motion.button 
+                                    key={slot.id}
+                                    onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
+                                    className="relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group"
+                                    style={{
+                                        background: "linear-gradient(135deg, rgba(30,30,34,1) 0%, rgba(18,18,20,1) 100%)",
+                                        boxShadow: "20px 20px 60px rgba(0,0,0,0.8), -8px -8px 20px rgba(255,255,255,0.02), inset 1.5px 1.5px 0px rgba(255,255,255,0.08), inset -1.5px -1.5px 0px rgba(0,0,0,0.2)",
+                                        border: "1px solid rgba(250,204,21,0.2)"
+                                    }}
+                                >
+                                    {/* PREMIUM EFFECTS */}
+                                    <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-yellow-400/10 transition-all duration-1000" />
+                                    <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-orange-500/5 rounded-full blur-[60px] pointer-events-none" />
+                                    
+                                    <div className="relative z-10 flex items-start justify-between">
+                                        <div className="flex gap-5 items-center flex-1 min-w-0 pr-4">
+                                            <div className="size-16 rounded-[24px] bg-zinc-900 border border-white/5 flex items-center justify-center shrink-0 shadow-[10px_10px_25px_rgba(0,0,0,0.6),inset_2px_2px_4px_rgba(255,255,255,0.05)] overflow-hidden relative">
+                                                {slot.admin_users?.store_logo ? (
+                                                    <img src={slot.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
+                                                ) : (
+                                                    <div className="size-full bg-gradient-to-br from-yellow-400/20 to-orange-500/20 flex items-center justify-center">
+                                                        <Icon name="military_tech" className="text-yellow-400" size={32} />
+                                                    </div>
+                                                )}
+                                                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
+                                            </div>
+                                            
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1.5">
+                                                    <div className="size-4 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
+                                                        <Icon name="verified" className="text-blue-400" size={10} />
+                                                    </div>
+                                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] drop-shadow-[0_0_12px_rgba(96,165,250,0.5)] truncate">
+                                                        {slot.admin_users?.store_name || 'Parceiro Izi'}
+                                                    </p>
+                                                </div>
+                                                <h4 className="text-lg font-black text-white italic tracking-tight truncate leading-tight mb-1">{slot.title}</h4>
+                                                <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                                                    <Icon name="location_on" className="text-zinc-600" size={10} />
+                                                    <span className="truncate">{slot.admin_users?.store_address || 'Unidade Local'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="text-right shrink-0 bg-black/20 p-4 rounded-[28px] border border-white/5 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)]">
+                                            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">VALOR DIÁRIA</p>
+                                            <div className="flex flex-col items-end">
+                                                <p className="text-2xl font-black text-yellow-400 italic leading-none">
+                                                    <span className="text-xs mr-0.5 not-italic text-yellow-400/60 font-bold">R$</span>
+                                                    {parseFloat(slot.fee_per_day || 0).toFixed(0)}
+                                                </p>
+                                                <div className="mt-2 py-1 px-3 bg-yellow-400 text-black rounded-full shadow-[2px_2px_8px_rgba(250,204,21,0.2)]">
+                                                    <p className="text-[9px] font-black uppercase tracking-tight">
+                                                        Até {maxDeliveries} entregas
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="relative z-10 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+                                    <div className="relative z-10 flex items-center justify-between w-full">
+                                        <div className="flex items-center gap-3">
+                                            <div className="size-8 rounded-xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20 shrink-0">
+                                                <Icon name="schedule" className="text-yellow-400" size={14} />
+                                            </div>
+                                            <p className="text-[11px] text-zinc-300 font-bold uppercase tracking-wider">{slot.working_hours}</p>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-2 text-yellow-400 font-black uppercase text-[10px] tracking-widest drop-shadow-[0_0_8px_rgba(250,204,21,0.3)]">
+                                            Ver Detalhes
+                                            <span className="material-symbols-rounded text-base group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                                        </div>
+                                    </div>
+                                </motion.button>
+                            );
+                        })}
                     </div>
                 </section>
 
@@ -2973,7 +3025,7 @@ const renderDashboard = () => (
                             </div>
                         ) : (
                             <div className="p-10 rounded-[32px] border border-white/5 border-dashed flex flex-col items-center gap-3 text-center opacity-40">
-                                <Icon name="calendar_month" size={32} />
+                                <span className="material-symbols-rounded text-3xl">calendar_month</span>
                                 <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma escala disponível</p>
                             </div>
                         )}
