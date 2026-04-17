@@ -36,6 +36,7 @@ import { FlashOffersListView } from "./components/features/FlashOffersListView";
 import { TaxiWizard } from "./components/features/Mobility/TaxiWizard";
 import { VanWizard } from "./components/features/Mobility/VanWizard";
 import { ExcursionWizard } from "./components/features/Excursions/ExcursionWizard";
+import { LogisticsTrackingView } from "./components/features/Mobility/LogisticsTrackingView";
 import { FreightWizard } from "./components/features/Mobility/FreightWizard";
 import { MobilityPaymentView } from "./components/features/Mobility/MobilityPaymentView";
 
@@ -2426,6 +2427,36 @@ const navigateSubView = (target: string) => {
       setSubView("payment_error");
     }
   }, [myOrders, subView, selectedItem?.id]); // selectedItem.id previne loop
+
+  // Sincroniza logistics_tracking em tempo real
+  useEffect(() => {
+    if (subView !== "logistics_tracking") return;
+    if (!selectedItem?.id) return;
+
+    const liveOrder = myOrders.find((o: any) => o.id === selectedItem.id);
+    if (!liveOrder || !liveOrder.status) return;
+
+    // Atualiza dados do motorista/status em tempo real sem loop
+    const hasChanged = 
+      liveOrder.status !== selectedItem.status ||
+      liveOrder.driver_id !== selectedItem.driver_id ||
+      liveOrder.driver_name !== selectedItem.driver_name;
+    
+    if (hasChanged) {
+      console.log("[LOGISTICS SYNC] Status atualizado:", liveOrder.status);
+      setSelectedItem((prev: any) => ({ ...prev, ...liveOrder }));
+    }
+
+    // Se pedido concluído, atualiza UI
+    if (liveOrder.status === "concluido") {
+      toastSuccess("Entrega concluída com sucesso! 🎉");
+    }
+
+    // Se cancelado
+    if (liveOrder.status === "cancelado" || liveOrder.status === "recusado") {
+      toastError("Serviço cancelado.");
+    }
+  }, [myOrders, subView, selectedItem?.id, selectedItem?.status, selectedItem?.driver_id]);
   const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
   const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
 
@@ -2888,7 +2919,7 @@ const navigateSubView = (target: string) => {
       total_price: finalPrice,
       service_type: transitData.type,
       pickup_address: transitData.origin,
-      delivery_address: `${transitData.destination} | OBS: ${
+      delivery_address: `${typeof transitData.destination === 'object' ? (transitData.destination.formatted_address || transitData.destination.address || JSON.stringify(transitData.destination)) : transitData.destination} | OBS: ${
         transitData.type === 'van'
           ? `EXCURSÃO: ${transitData.excursionData.passengers} passageiros. Tipo: ${transitData.excursionData.tripType === 'ida_e_volta' ? 'Ida e Volta' : 'Somente Ida'}. Partida: ${transitData.excursionData.departureDate}. ${transitData.excursionData.notes || ''}`
           : (transitData.type === 'logistica' || transitData.type === 'frete')
@@ -2970,8 +3001,17 @@ const navigateSubView = (target: string) => {
       setSelectedItem(order);
       
       if (paymentMethod !== 'pix' && paymentMethod !== 'bitcoin_lightning') {
-        toastSuccess(isShipping ? "Pedido de envio criado!" : "Procurando motorista...");
-        setSubView(transitData.scheduled ? "payment_success" : "active_order");
+        const isLogisticsService = ['frete', 'logistica', 'van'].includes(transitData.type);
+        if (transitData.scheduled) {
+          toastSuccess("Agendamento confirmado com sucesso!");
+          setSubView("payment_success");
+        } else if (isLogisticsService) {
+          toastSuccess("Solicitação de logística enviada! Buscando motorista...");
+          setSubView("logistics_tracking");
+        } else {
+          toastSuccess("Procurando motorista...");
+          setSubView("active_order");
+        }
       }
     } catch (err: any) {
       console.error("Erro no fluxo de mobilidade:", err);
@@ -7949,6 +7989,17 @@ const navigateSubView = (target: string) => {
               {subView === "active_order" && (
                 <motion.div key="aorder" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[100]">
                   <ActiveOrderView selectedItem={selectedItem} driverLocation={driverLocation} userLocation={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} routePolyline={routePolyline || selectedItem?.route_polyline} onMyLocationClick={updateLocation} setSubView={setSubView} onCancelOrder={handleCancelOrder} />
+                </motion.div>
+              )}
+              {subView === "logistics_tracking" && (
+                <motion.div key="logtrack" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[100]">
+                  <LogisticsTrackingView 
+                    order={selectedItem} 
+                    driverLocation={driverLocation} 
+                    userLocation={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} 
+                    onBack={() => setSubView("none")} 
+                    onCancel={() => handleCancelOrder(selectedItem?.id)} 
+                  />
                 </motion.div>
               )}
               {subView === "izi_coin_tracking" && (

@@ -2,6 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../../lib/supabase";
 
+/** Extrai a parte em texto limpo de endereços salvos de forma corrompida ou serializada no DB */
+const parseAddressText = (rawStr: any): string => {
+  if (!rawStr) return "Endereço não disponível";
+  if (typeof rawStr !== "string") {
+    return rawStr.formatted_address || rawStr.address || "Localidade";
+  }
+  
+  // Limpa sufixos de OBS que acoplamos no app
+  let cleanStr = rawStr.split(" | OBS:")[0].split(" | FRETE:")[0].split(" | ENVIO:")[0].split(" | EXCURSÃO:")[0].split(" | VIAGEM:")[0].trim();
+  
+  if (cleanStr.includes("[object Object]")) {
+    return "Endereço processando..."; // fallback amigável pra ordens muito bugadas do passado
+  }
+
+  try {
+    const parsed = JSON.parse(cleanStr);
+    return (parsed.formatted_address || parsed.address || "Localidade").split(',')[0];
+  } catch {
+    return cleanStr.split(',')[0];
+  }
+};
+
+
 interface HomeViewProps {
   userLevel: number;
   userId: string | null;
@@ -61,7 +84,8 @@ interface HomeViewProps {
     | "izi_black_purchase"
     | "card_payment"
     | "izi_coin_tracking"
-    | "flash_offers_list";
+    | "flash_offers_list"
+    | "logistics_tracking";
   searchQuery: string;
   setSearchQuery: (val: string) => void;
   setSelectedItem: (item: any) => void;
@@ -233,7 +257,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
     };
   });
 
-  const activeOrder = myOrders.find(o => !["concluido", "cancelado"].includes(o.status) && o.service_type !== 'coin_purchase');
+  const LOGISTICS_TYPES = ["frete", "logistica", "van"];
+  const logisticsOrder = myOrders.find(o => !["concluido", "cancelado"].includes(o.status) && LOGISTICS_TYPES.includes(o.service_type));
+  const activeOrder = myOrders.find(o => !["concluido", "cancelado"].includes(o.status) && o.service_type !== 'coin_purchase' && !LOGISTICS_TYPES.includes(o.service_type));
   const coinOrder = myOrders.find(o => !["concluido", "cancelado"].includes(o.status) && o.service_type === 'coin_purchase');
 
   return (
@@ -681,6 +707,131 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     </div>
                  </div>
               </div>
+            </motion.div>
+          )}
+
+          {/* CARD EXCLUSIVO - ACOMPANHAMENTO DE LOGÍSTICA */}
+          {logisticsOrder && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => { setSelectedItem(logisticsOrder); setSubView("logistics_tracking"); }}
+              className="relative overflow-hidden rounded-[36px] cursor-pointer group"
+              style={{
+                background: "linear-gradient(145deg, #1c1c1f, #141416)",
+                boxShadow: "18px 18px 40px rgba(0,0,0,0.6), -6px -6px 20px rgba(255,255,255,0.03), inset 1px 1px 0px rgba(255,255,255,0.06)",
+                border: "1.5px solid rgba(250,204,21,0.18)"
+              }}
+            >
+              {/* Glow Blob */}
+              <div className="absolute -top-10 -right-10 w-48 h-48 bg-yellow-400/8 rounded-full blur-[60px] pointer-events-none group-hover:bg-yellow-400/14 transition-all duration-700" />
+              <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-orange-500/6 rounded-full blur-[50px] pointer-events-none" />
+
+              {/* Topo do card */}
+              <div className="relative z-10 px-6 pt-6 pb-0 flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                  {/* Ícone Veículo */}
+                  <div
+                    className="size-16 rounded-[20px] flex items-center justify-center shrink-0 relative"
+                    style={{
+                      background: "linear-gradient(145deg, #2a2a2e, #202024)",
+                      boxShadow: "8px 8px 20px rgba(0,0,0,0.5), -3px -3px 10px rgba(255,255,255,0.04), inset 1px 1px 0px rgba(255,255,255,0.07)"
+                    }}
+                  >
+                    <span className="material-symbols-rounded text-3xl text-yellow-400 font-black">
+                      {logisticsOrder.service_type === "van" ? "airport_shuttle" : "local_shipping"}
+                    </span>
+                    {/* Pulsing dot */}
+                    <span className="absolute -top-1 -right-1 size-3.5 rounded-full bg-yellow-400 border-2 border-[#141416] animate-pulse" />
+                  </div>
+
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-1">Serviço Ativo</p>
+                    <h4 className="text-base font-black text-white uppercase tracking-tight italic leading-tight">
+                      {logisticsOrder.service_type === "van" ? "Van de Carga" : "Izi Logistics"}
+                    </h4>
+                    <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">
+                      {logisticsOrder.service_type === "frete" || logisticsOrder.service_type === "logistica" ? "Frete & Mudanças" : "Transporte de Carga"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Badge Status */}
+                <div
+                  className="px-3 py-2 rounded-2xl flex items-center gap-2"
+                  style={{
+                    background: "linear-gradient(145deg, rgba(250,204,21,0.12), rgba(250,204,21,0.06))",
+                    boxShadow: "4px 4px 12px rgba(0,0,0,0.4), -2px -2px 6px rgba(255,255,255,0.03), inset 1px 1px 0 rgba(250,204,21,0.1)",
+                    border: "1px solid rgba(250,204,21,0.2)"
+                  }}
+                >
+                  <span className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-yellow-400">
+                    {logisticsOrder.status === "waiting_driver" || logisticsOrder.status === "novo" || logisticsOrder.status === "searching_driver"
+                      ? "Buscando"
+                      : logisticsOrder.status === "aceito" ? "Alocado"
+                      : logisticsOrder.status === "a_caminho" ? "A Caminho"
+                      : logisticsOrder.status === "chegou" ? "No Local"
+                      : logisticsOrder.status === "in_transit" ? "Em Trânsito"
+                      : logisticsOrder.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Trajeto */}
+              <div className="relative z-10 px-6 py-5 flex gap-3">
+                <div className="flex flex-col items-center pt-1 shrink-0">
+                  <div className="size-2 rounded-full bg-white/40" />
+                  <div className="w-px flex-1 bg-white/10 my-1.5" />
+                  <div className="size-2 rounded-full bg-yellow-400" />
+                </div>
+                <div className="flex flex-col gap-2 min-w-0 flex-1">
+                  <p className="text-[11px] font-black text-zinc-300 uppercase truncate">
+                    {parseAddressText(logisticsOrder.pickup_address) || "Origem"}
+                  </p>
+                  <p className="text-[11px] font-black text-yellow-400 uppercase truncate">
+                    {parseAddressText(logisticsOrder.delivery_address) || "Destino"}
+                  </p>
+                </div>
+                <div className="text-right shrink-0 flex flex-col justify-center">
+                  <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">Total</p>
+                  <p className="text-lg font-black text-white italic">R$ {Number(logisticsOrder.total_price || 0).toFixed(2).replace(".",",")}</p>
+                </div>
+              </div>
+
+              {/* Barra de progresso steps */}
+              <div className="relative z-10 px-6 pb-5">
+                <div className="flex gap-1.5 mb-2">
+                  {["waiting_driver","aceito","a_caminho","chegou","in_transit","concluido"].map((s, i) => {
+                    const stepMap: Record<string, number> = { waiting_driver: 0, novo: 0, searching_driver: 0, aceito: 1, a_caminho: 2, chegou: 3, in_transit: 4, concluido: 5 };
+                    const cur = stepMap[logisticsOrder.status] ?? 0;
+                    return (
+                      <div
+                        key={i}
+                        className={`h-1 flex-1 rounded-full transition-all duration-700 ${
+                          i < cur ? "bg-yellow-400" : i === cur ? "bg-yellow-400/60" : "bg-white/8"
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">
+                    {logisticsOrder.driver_name ? `Motorista: ${logisticsOrder.driver_name}` : "Aguardando motorista parceiro..."}
+                  </p>
+                  <div className="flex items-center gap-1 text-yellow-400">
+                    <span className="text-[9px] font-black uppercase tracking-widest">Ver Detalhes</span>
+                    <span className="material-symbols-rounded text-sm">arrow_forward</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Linha clay na base */}
+              <div
+                className="h-1.5 w-full rounded-b-[36px]"
+                style={{ background: "linear-gradient(90deg, rgba(250,204,21,0.6), rgba(250,204,21,0.2), rgba(250,204,21,0))" }}
+              />
             </motion.div>
           )}
 

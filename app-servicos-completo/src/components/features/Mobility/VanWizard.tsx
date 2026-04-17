@@ -229,6 +229,7 @@ export const VanWizard: React.FC<VanWizardProps> = ({
               }
               setMobilityStep(2);
             } else {
+              setTransitData((prev: any) => ({ ...prev, estPrice: totalValue }));
               setPaymentsOrigin("checkout");
               navigateSubView("mobility_payment");
             }

@@ -230,6 +230,7 @@ export const TaxiWizard: React.FC<TaxiWizardProps> = ({
               }
               setMobilityStep(2);
             } else {
+              setTransitData((prev: any) => ({ ...prev, estPrice: totalValue }));
               setPaymentsOrigin("checkout");
               navigateSubView("mobility_payment");
             }

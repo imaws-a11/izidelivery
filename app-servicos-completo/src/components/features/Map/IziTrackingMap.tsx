@@ -10,6 +10,8 @@ interface IziTrackingMapProps {
   routePolyline?: string;
   onMyLocationClick?: () => void;
   boxed?: boolean;
+  vehicleIcon?: string; // Nome do ícone Material Symbols para o motorista
+  originLabel?: string; // Label do ponto de origem
 }
 
 
@@ -32,7 +34,7 @@ const RADAR_CLEAN_STYLE: google.maps.MapTypeStyle[] = [
 ];
 
 
-export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocationClick, boxed = false }: IziTrackingMapProps) {
+export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocationClick, boxed = false, vehicleIcon = "two_wheeler", originLabel = "ORIGEM" }: IziTrackingMapProps) {
   const { isLoaded, loadError } = useGoogleMapsLoader();
   const mapRef = useRef<google.maps.Map | null>(null);
   const [isLocating, setIsLocating] = useState(false);
@@ -85,15 +87,14 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
     }
   }, [path]);
 
-  // Auto-fit bounds quando o path muda dinamicamente
+  // Auto-fit bounds quando path chega (mount assíncrono após cálculo de rota)
   useEffect(() => {
-    if (mapRef.current && path.length > 1) {
-      const bounds = new google.maps.LatLngBounds();
-      path.forEach(p => bounds.extend(p));
-      mapRef.current.fitBounds(bounds, { top: 50, bottom: 50, right: 50, left: 50 });
-      setIsFollowing(false); 
-    }
-  }, [path.length]); // Apenas reajustar se o número de pontos mudar (menos agressivo)
+    if (!mapRef.current || path.length < 2) return;
+    const bounds = new google.maps.LatLngBounds();
+    path.forEach(p => bounds.extend(p));
+    mapRef.current.fitBounds(bounds, { top: 60, bottom: 80, right: 40, left: 40 });
+    setIsFollowing(false);
+  }, [path]); // reage a qualquer mudança no array (referência ou tamanho)
 
   const onUnmount = useCallback(() => {
     mapRef.current = null;
@@ -210,29 +211,29 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
           </>
         )}
 
-        {/* Marcador do Motorista (Entregador) - Estilo Missão Ativa */}
+        {/* Marcador do Motorista - ícone dinâmico por tipo de veículo */}
         {isValidCoord(driverLoc) && (
           <OverlayView position={driverLoc!} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
             <div className="relative flex items-center justify-center" style={{ transform: 'translate(-50%, -50%)' }}>
               <div className="absolute size-9 rounded-full bg-emerald-500/20 animate-pulse" />
               <div className="size-9 rounded-2xl bg-emerald-500 border-2 border-black shadow-xl flex items-center justify-center rotate-45">
                  <div className="-rotate-45">
-                   <Icon name="two_wheeler" size={18} className="text-black" />
+                   <Icon name={vehicleIcon} size={18} className="text-black" />
                  </div>
               </div>
             </div>
           </OverlayView>
         )}
 
-        {/* Marcador do Usuário/Origem - Estilo Missão Ativa */}
+        {/* Marcador do Usuário/Origem */}
         {isValidCoord(userLoc) && (
           <OverlayView position={userLoc!} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
             <div className="relative flex items-center justify-center group" style={{ transform: 'translate(-50%, -50%)' }}>
               <div className="absolute size-11 rounded-full bg-yellow-400/20 animate-ping" />
               <div className="size-11 rounded-2xl bg-yellow-400 border-2 border-black shadow-lg flex items-center justify-center relative z-10">
-                <Icon name="person" size={20} className="text-black" />
+                <Icon name="person_pin" size={20} className="text-black" />
               </div>
-              <div className="absolute top-14 bg-black/80 px-2 py-1 rounded text-[8px] font-black text-white uppercase whitespace-nowrap border border-white/10">VOCÊ</div>
+              <div className="absolute top-14 bg-black/80 px-2 py-1 rounded text-[8px] font-black text-white uppercase whitespace-nowrap border border-white/10">{originLabel}</div>
             </div>
           </OverlayView>
         )}
