@@ -60,7 +60,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
 
   const vehicleTypes = [
     { id: "fiorino", name: "Fiorino", icon: "local_shipping", priceKey: "fiorino" },
-    { id: "van", name: "Van Carga", icon: "airport_shuttle", priceKey: "van" },
+    { id: "van", name: "Van Carga", icon: "airport_shuttle", priceKey: "van_carga" },
     { id: "truck_p", name: "Caminhão Baú Pequeno", icon: "local_shipping", priceKey: "bau_p" },
     { id: "truck_m", name: "Caminhão Baú Médio", icon: "local_shipping", priceKey: "bau_m" },
     { id: "truck_g", name: "Caminhão Baú Grande", icon: "rv_hookup", priceKey: "bau_g" },
@@ -303,13 +303,29 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                       <div className="size-12 rounded-2xl bg-yellow-400/10 flex items-center justify-center shadow-inner">
                         <Icon name="payments" size={24} className="text-yellow-400" />
                       </div>
-                      <div>
-                        <span className="text-white font-black text-[13px] uppercase italic block leading-none mb-1">Total do Frete</span>
-                        <span className="text-zinc-500 text-[9px] font-black uppercase tracking-widest italic">Valor Final Garantido</span>
+                      <div className="flex-1 space-y-4">
+                         <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="text-xl font-black text-white tracking-tighter leading-none italic">{freightData.vehicleType || "Selecione o Veículo"}</h4>
+                              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-1">Orçamento Inteligente Izi</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[28px] font-black text-white italic leading-none">R$ {totalValue.toFixed(2).replace('.', ',')}</p>
+                              <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Valor Total Estimado</p>
+                            </div>
+                         </div>
+
+                         {/* Detalhamento de Precisão */}
+                         {routeDistance && freightData.vehicleType && (
+                           <div className="pt-3 border-t border-white/5 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                              <div className="flex gap-4">
+                                <span>Base: R$ {(totalValue - (parseFloat(routeDistance) * (distancePrices[vehicleTypes.find(v => v.name === freightData.vehicleType)?.priceKey || 'logistica'] || 0) / (parseFloat(routeDistance) || 1))).toFixed(2)}</span>
+                                <span>KM: R$ {(totalValue - (totalValue - (parseFloat(routeDistance) * (distancePrices[vehicleTypes.find(v => v.name === freightData.vehicleType)?.priceKey || 'logistica'] || 0) / (parseFloat(routeDistance) || 1)))).toFixed(2)} ({routeDistance})</span>
+                              </div>
+                              <Icon name="verified" size={12} className="text-emerald-500" />
+                           </div>
+                         )}
                       </div>
-                    </div>
-                    <div className="text-right">
-                       <span className="text-yellow-400 text-3xl font-black italic tracking-tighter block">R$ {totalValue.toFixed(2).replace('.', ',')}</span>
                     </div>
                   </div>
 
