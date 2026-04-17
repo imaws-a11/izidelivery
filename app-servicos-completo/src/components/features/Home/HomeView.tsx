@@ -392,7 +392,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               )}
             </div>
             <input
-              className="w-full bg-zinc-900/90 backdrop-blur-xl border border-white/5 rounded-2xl py-4.5 pl-14 pr-12 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-400/30 transition-all text-sm font-semi-bold"
+              className="w-full bg-zinc-900/90 backdrop-blur-xl border border-white/5 rounded-2xl py-4.5 pl-14 pr-12 text-zinc-100 placeholder:text-zinc-600 shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.3)] focus:outline-none focus:ring-1 focus:ring-yellow-400/30 transition-all text-sm font-semibold"
               placeholder="Pesquisar lojas ou produtos..."
               type="text"
               value={searchQuery}
@@ -889,7 +889,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         navigateSubView("exclusive_offer");
                       }
                     }}
-                    className={`relative flex-shrink-0 w-[280px] h-[160px] snap-center rounded-[40px] overflow-hidden group cursor-pointer border-[3px] ${story.isRedeemed ? "border-zinc-800 opacity-80" : story.isMaster ? "border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.2)]" : "border-white/5"} transition-all duration-500`}
+                    className={`relative flex-shrink-0 w-[280px] h-[160px] snap-center rounded-[40px] overflow-hidden group cursor-pointer border-[3px] shadow-[20px_20px_40px_rgba(0,0,0,0.8),inset_8px_8px_20px_rgba(255,255,255,0.03),inset_-8px_-8px_20px_rgba(0,0,0,0.7)] ${story.isRedeemed ? "border-zinc-800 opacity-80" : story.isMaster ? "border-yellow-400" : "border-white/5"} transition-all duration-500`}
                   >
                     {/* Imagem de Fundo com Overlay Gradiente Pesado */}
                     <img 
@@ -998,7 +998,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         setTimeout(() => setCopiedCoupon(null), 2000);
                         showToast("Código promocional copiado!", "success");
                       }}
-                      className="relative flex-shrink-0 w-[360px] h-[196px] rounded-[36px] overflow-hidden group cursor-pointer transition-all snap-center shadow-[0_14px_40px_rgba(0,0,0,0.7)] border border-white/10 hover:border-yellow-400/30"
+                      className="relative flex-shrink-0 w-[360px] h-[196px] rounded-[36px] overflow-hidden group cursor-pointer transition-all snap-center shadow-[20px_20px_45px_rgba(0,0,0,0.9),inset_6px_6px_15px_rgba(255,255,255,0.02),inset_-6px_-6px_15px_rgba(0,0,0,0.7)] border border-white/10 hover:border-yellow-400/30"
                     >
                        {coupon.image_url && (
                          <img 
@@ -1250,7 +1250,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </div>
               <button
                 onClick={() => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); }}
-                className="text-[10px] font-black text-yellow-400 uppercase tracking-widest px-4 py-2 bg-yellow-400/10 rounded-2xl border border-yellow-400/20 active:scale-95 transition-all"
+                className="text-[10px] font-black text-yellow-400 uppercase tracking-widest px-6 py-2.5 bg-zinc-900 rounded-2xl border border-white/5 shadow-[6px_6px_12px_rgba(0,0,0,0.6),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.4)] active:scale-95 transition-all"
               >
                 Ver todos
               </button>
@@ -1264,23 +1264,27 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   onClick={() => handleShopClick(shop)}
                   className="relative flex-shrink-0 w-[160px] group cursor-pointer"
                 >
-                  <div className="relative aspect-[3/4] rounded-[32px] overflow-hidden bg-zinc-900 border border-white/5 transition-all duration-700 group-hover:border-white/20 group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.8)] shadow-2xl">
+                  <div className="relative aspect-[3/4] rounded-[32px] overflow-hidden bg-zinc-900 border border-white/5 transition-all duration-700 group-hover:border-white/20 shadow-[12px_12px_30px_rgba(0,0,0,0.7),inset_6px_6px_12px_rgba(255,255,255,0.02),inset_-6px_-6px_12px_rgba(0,0,0,0.5)]">
                     <img src={shop.img} className="size-full object-cover brightness-[0.7] group-hover:scale-110 transition-transform duration-1000" alt={shop.name} />
-                    <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/40 to-transparent p-6 flex flex-col justify-end">
-                      <div className="flex items-center gap-2 mb-3">
-                         <div className="flex items-center gap-1 bg-black/60 backdrop-blur-md px-2 py-1 rounded-xl border border-white/10">
-                            <span className="material-symbols-outlined text-yellow-400 text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                    <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black via-black/60 to-transparent p-5 flex flex-col justify-end gap-3">
+                      <div className="flex flex-col items-start gap-2">
+                         <div className="flex items-center gap-1 bg-zinc-900 px-2.5 py-1.5 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.6),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.3)] border border-white/5">
+                            <span className="material-symbols-outlined text-yellow-400 text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                             <span className="text-[11px] font-black text-white">{shop.rating}</span>
                          </div>
-                         <span className="text-[9px] font-black text-white/50 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/10 uppercase tracking-tighter">{shop.time}</span>
+                         <div className="bg-zinc-900 px-2.5 py-1.5 rounded-xl shadow-[4px_4px_8px_rgba(0,0,0,0.6),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.3)] border border-white/5">
+                            <span className="text-[10px] font-black text-yellow-400 uppercase tracking-tighter">{shop.time}</span>
+                         </div>
                       </div>
-                      <h4 className="text-base font-black text-white leading-tight tracking-tight uppercase italic">{shop.name}</h4>
-                      <p className="text-[10px] font-bold text-zinc-400/90 truncate mt-1 uppercase tracking-tighter">{shop.tag}</p>
+                      <div className="space-y-0.5">
+                        <h4 className="text-base font-black text-white leading-tight tracking-tight uppercase italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{shop.name}</h4>
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest drop-shadow-md">{shop.tag}</p>
+                      </div>
                     </div>
                     {shop.freeDelivery && (
                       <div className="absolute top-4 right-4 z-20">
-                         <div className="bg-yellow-400 text-black p-2 rounded-2xl shadow-2xl flex items-center justify-center border border-black/10">
-                            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>local_shipping</span>
+                         <div className="bg-yellow-400 text-black px-2.5 py-1.5 rounded-xl shadow-[4px_4px_12px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.4)] flex items-center justify-center border border-black/10">
+                            <span className="text-[8px] font-black uppercase tracking-tighter">Frete Grátis</span>
                          </div>
                       </div>
                     )}

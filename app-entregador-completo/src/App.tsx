@@ -2912,11 +2912,10 @@ const renderDashboard = () => (
                                 <motion.button 
                                     key={slot.id}
                                     onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
-                                    className="relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group"
+                                    className="relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-[30px_30px_60px_rgba(0,0,0,0.9),inset_10px_10px_25px_rgba(255,255,255,0.03),inset_-10px_-10px_25px_rgba(0,0,0,0.7)]"
                                     style={{
-                                        background: "linear-gradient(135deg, rgba(30,30,34,1) 0%, rgba(18,18,20,1) 100%)",
-                                        boxShadow: "20px 20px 60px rgba(0,0,0,0.8), -8px -8px 20px rgba(255,255,255,0.02), inset 1.5px 1.5px 0px rgba(255,255,255,0.08), inset -1.5px -1.5px 0px rgba(0,0,0,0.2)",
-                                        border: "1px solid rgba(250,204,21,0.2)"
+                                        background: "linear-gradient(145deg, #1a1a1d, #121214)",
+                                        border: "1px solid rgba(250,204,21,0.12)"
                                     }}
                                 >
                                     {/* PREMIUM EFFECTS */}
@@ -2981,7 +2980,6 @@ const renderDashboard = () => (
                                         
                                         <div className="flex items-center gap-2 text-yellow-400 font-black uppercase text-[10px] tracking-widest drop-shadow-[0_0_8px_rgba(250,204,21,0.3)]">
                                             Ver Detalhes
-                                            <span className="material-symbols-rounded text-base group-hover:translate-x-1 transition-transform">arrow_forward</span>
                                         </div>
                                     </div>
                                 </motion.button>
@@ -3025,7 +3023,6 @@ const renderDashboard = () => (
                             </div>
                         ) : (
                             <div className="p-10 rounded-[32px] border border-white/5 border-dashed flex flex-col items-center gap-3 text-center opacity-40">
-                                <span className="material-symbols-rounded text-3xl">calendar_month</span>
                                 <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma escala disponível</p>
                             </div>
                         )}
