@@ -74,13 +74,20 @@ export const PixPaymentView: React.FC<PixPaymentViewProps> = ({
         .from("orders_delivery")
         .insert({
           user_id: userId,
-          merchant_id: selectedShop.id,
+          merchant_id: selectedShop?.id || selectedItem?.merchant_id,
           status: "pendente_pagamento",
+          payment_status: "pending",
           total_price: Number(total.toFixed(2)),
-          pickup_address: selectedShop.name || "Endereço do Estabelecimento",
-          delivery_address: `${userLocation?.address || "Endereço não informado"} | ITENS: ${cart.map(i => `${i.name}`).join(', ')}`,
+          pickup_address: selectedShop?.name || selectedItem?.pickup_address || "Endereço do Estabelecimento",
+          delivery_address: userLocation?.address || selectedItem?.delivery_address || "Endereço não informado",
           payment_method: "pix",
-          service_type: selectedShop.type || "restaurant",
+          service_type: selectedShop?.type || selectedItem?.service_type || "restaurant",
+          items: cart.length > 0 ? cart : selectedItem?.items,
+          delivery_fee: selectedItem?.delivery_fee || 0,
+          service_fee: selectedItem?.service_fee || 0,
+          notes: selectedItem?.notes || "",
+          marketConditions: selectedItem?.marketConditions,
+          routeDistance: selectedItem?.routeDistance,
         })
         .select()
         .single();
