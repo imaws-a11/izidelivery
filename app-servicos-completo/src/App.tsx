@@ -39,7 +39,9 @@ import { ExcursionWizard } from "./components/features/Excursions/ExcursionWizar
 import { LogisticsTrackingView } from "./components/features/Mobility/LogisticsTrackingView";
 import { FreightWizard } from "./components/features/Mobility/FreightWizard";
 import { MobilityPaymentView } from "./components/features/Mobility/MobilityPaymentView";
-import SplashScreen from "./components/common/SplashScreen";
+import SplashScreenComponent from "./components/common/SplashScreen";
+import { SplashScreen as CapacitorSplash } from "@capacitor/splash-screen";
+import { Capacitor } from "@capacitor/core";
 
 import { useAuth } from "./hooks/useAuth";
 import type { SavedAddress, Order, Quest } from "./types";
@@ -105,6 +107,9 @@ function App() {
     // Timer de segurança redundante no App.tsx
     const safetyTimer = setTimeout(() => {
       setShowSplash(false);
+      if (Capacitor.isNativePlatform()) {
+        CapacitorSplash.hide();
+      }
     }, 5000);
     return () => clearTimeout(safetyTimer);
   }, []);
@@ -8269,7 +8274,7 @@ const navigateSubView = (target: string) => {
 
       <AnimatePresence>
         {showSplash && (
-          <SplashScreen finishLoading={() => setShowSplash(false)} />
+          <SplashScreenComponent finishLoading={() => setShowSplash(false)} />
         )}
       </AnimatePresence>
     </div>
