@@ -371,6 +371,8 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
               }
               setMobilityStep(2);
             } else {
+              // Garante que o valor calculado no wizard seja o valor usado no checkout
+              setTransitData((prev: any) => ({ ...prev, estPrice: totalValue }));
               setPaymentsOrigin("checkout");
               navigateSubView("mobility_payment");
             }

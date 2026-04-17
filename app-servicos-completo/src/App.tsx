@@ -2720,7 +2720,13 @@ const navigateSubView = (target: string) => {
               aberto:     parseFloat(((aberto_min  + (aberto_km  * Math.ceil(distKm / logistica_int))) * surge).toFixed(2)),
             };
             setDistancePrices(newPrices);
-            setTransitData(prev => ({ ...prev, estPrice: newPrices[prev.type] || newPrices.mototaxi }));
+            setTransitData(prev => {
+              // Se já houver um valor orçado no wizard de logística, não sobrescreve com o genérico
+              if ((prev.type === 'logistica' || prev.type === 'frete') && prev.vehicleCategory) {
+                return prev;
+              }
+              return { ...prev, estPrice: newPrices[prev.type] || newPrices.mototaxi };
+            });
 
             supabase
               .from('drivers_delivery')
@@ -2784,47 +2790,53 @@ const navigateSubView = (target: string) => {
     const surgeMultiplier = bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0;
 
     if (transitData.type === 'logistica' || transitData.type === 'frete') {
-       const vehicleConfigs: Record<string, { min: string, km: string, int: string }> = {
-         "Fiorino": { min: 'fiorino_min', km: 'fiorino_km', int: 'fiorino_km_interval' },
-         "Caminhonete": { min: 'caminhonete_min', km: 'caminhonete_km', int: 'caminhonete_km_interval' },
-         "Caminhão Baú Pequeno": { min: 'bau_p_min', km: 'bau_p_km', int: 'bau_p_km_interval' },
-         "Caminhão Baú Médio": { min: 'bau_m_min', km: 'bau_m_km', int: 'bau_m_km_interval' },
-         "Caminhão Baú Grande": { min: 'bau_g_min', km: 'bau_g_km', int: 'bau_g_km_interval' },
-         "Caminhão Aberto": { min: 'aberto_min', km: 'aberto_km', int: 'aberto_km_interval' }
-       };
-
-       const configKeys = vehicleConfigs[transitData.vehicleCategory];
-       let baseFare = parseFloat(String(bv.logistica_min || 45));
-       let distanceRate = parseFloat(String(bv.logistica_km || 4.5));
-       let logistica_int = Math.max(0.1, parseFloat(String(bv.logistica_km_interval)) || 1.0);
-
-       if (configKeys && bv[configKeys.min] && parseFloat(String(bv[configKeys.min])) > 0) {
-          baseFare = parseFloat(String(bv[configKeys.min]));
-          distanceRate = parseFloat(String(bv[configKeys.km]));
-          logistica_int = Math.max(0.1, parseFloat(String(bv[configKeys.int])) || 1.0);
+       if (Number(transitData.estPrice) > 0) {
+         finalPrice = Number(transitData.estPrice);
        } else {
-          const vehicleMultipliers: Record<string, number> = {
-            "Fiorino": 1.0,
-            "Caminhonete": 1.25,
-            "Caminhão Baú Pequeno": 1.6,
-            "Caminhão Baú Médio": 2.2,
-            "Caminhão Baú Grande": 3.5,
-            "Caminhão Aberto": 1.9,
+          const vehicleConfigs: Record<string, { min: string, km: string, int: string }> = {
+            "Fiorino": { min: 'fiorino_min', km: 'fiorino_km', int: 'fiorino_km_interval' },
+            "Van Carga": { min: 'van_min', km: 'van_km', int: 'van_km_interval' },
+            "Caminhonete": { min: 'caminhonete_min', km: 'caminhonete_km', int: 'caminhonete_km_interval' },
+            "Caminhão Baú Pequeno": { min: 'bau_p_min', km: 'bau_p_km', int: 'bau_p_km_interval' },
+            "Caminhão Baú Médio": { min: 'bau_m_min', km: 'bau_m_km', int: 'bau_m_km_interval' },
+            "Caminhão Baú Grande": { min: 'bau_g_min', km: 'bau_g_km', int: 'bau_g_km_interval' },
+            "Caminhão Aberto": { min: 'aberto_min', km: 'aberto_km', int: 'aberto_km_interval' }
           };
-          const multiplier = vehicleMultipliers[transitData.vehicleCategory] || 1.0;
-          baseFare *= multiplier;
-          distanceRate *= multiplier;
-       }
 
-       finalPrice = calculateFreightPrice({
-          baseFare: baseFare * surgeMultiplier,
-          distanceInKm: Math.ceil((distanceValueKm || 1) / logistica_int),
-          distanceRate: distanceRate * surgeMultiplier,
-          helperCount: transitData.helpers || 0,
-          helperRate: parseFloat(String(bv.logistica_helper || 50)),
-          hasStairs: transitData.accessibility?.stairsAtOrigin || transitData.accessibility?.stairsAtDestination,
-          stairsFee: parseFloat(String(bv.logistica_stairs || 30))
-       }).totalPrice;
+          const configKeys = vehicleConfigs[transitData.vehicleCategory];
+          let baseFare = parseFloat(String(bv.logistica_min || 45));
+          let distanceRate = parseFloat(String(bv.logistica_km || 4.5));
+          let logistica_int = Math.max(0.1, parseFloat(String(bv.logistica_km_interval)) || 1.0);
+
+          if (configKeys && bv[configKeys.min] && parseFloat(String(bv[configKeys.min])) > 0) {
+              baseFare = parseFloat(String(bv[configKeys.min]));
+              distanceRate = parseFloat(String(bv[configKeys.km]));
+              logistica_int = Math.max(0.1, parseFloat(String(bv[configKeys.int])) || 1.0);
+          } else {
+              const vehicleMultipliers: Record<string, number> = {
+                "Fiorino": 1.0,
+                "Van Carga": 1.0,
+                "Caminhonete": 1.25,
+                "Caminhão Baú Pequeno": 1.6,
+                "Caminhão Baú Médio": 2.2,
+                "Caminhão Baú Grande": 3.5,
+                "Caminhão Aberto": 1.9,
+              };
+              const multiplier = vehicleMultipliers[transitData.vehicleCategory] || 1.0;
+              baseFare *= multiplier;
+              distanceRate *= multiplier;
+          }
+
+          finalPrice = calculateFreightPrice({
+              baseFare: baseFare * surgeMultiplier,
+              distanceInKm: Math.ceil((distanceValueKm || 1) / logistica_int),
+              distanceRate: distanceRate * surgeMultiplier,
+              helperCount: (transitData.freightData?.helpers || 0),
+              helperRate: parseFloat(String(bv.logistica_helper || 35)),
+              hasStairs: transitData.freightData?.hasStairs,
+              stairsFee: parseFloat(String(bv.logistica_stairs || 30))
+          }).totalPrice;
+       }
     } else if (transitData.type === 'van') {
        const van_int = Math.max(0.1, parseFloat(String(bv.van_km_interval)) || 1.0);
        finalPrice = calculateVanPrice({
@@ -3008,11 +3020,11 @@ const navigateSubView = (target: string) => {
     }
   }, [subView, userLocation.address]);
 
-  // Capturar localização atual ao entrar em qualquer visão de mobilidade
+  // Capturar localização atual obrigatoriamente ao entrar em fluxos de mobilidade/logística
   useEffect(() => {
-    const mobilityViews = ["taxi_wizard", "freight_wizard", "van_wizard", "excursion_wizard", "transit_selection"];
-    if (mobilityViews.includes(subView) && !userLocation.lat) {
-      updateLocation();
+    const mobilityWizardViews = ["taxi_wizard", "freight_wizard", "van_wizard", "excursion_wizard", "transit_selection"];
+    if (mobilityWizardViews.includes(subView)) {
+      updateLocation(); // Garante atualização real e recente
     }
   }, [subView]);
 

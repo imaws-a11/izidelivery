@@ -99,6 +99,13 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
     mapRef.current = null;
   }, []);
 
+  // Centralização dinâmica baseada em mudanças de localização
+  useEffect(() => {
+    if (isValidCoord(userLoc) && isFollowing && !routePolyline && mapRef.current) {
+      mapRef.current.panTo(userLoc!);
+    }
+  }, [userLoc, isFollowing, routePolyline]);
+
   const handleCenterUser = () => {
     setIsLocating(true);
     setIsFollowing(true);
