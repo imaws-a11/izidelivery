@@ -1867,23 +1867,25 @@ function App() {
     // Garantir que shopId seja capturado de qualquer forma (Loja selecionada ou primeiro item do carrinho)
     const shopId = selectedShop?.id || cart[0]?.merchant_id || cart.find(i => i.merchant_id)?.merchant_id || null;
     const shopName = selectedShop?.name || cart[0]?.merchant_name || cart[0]?.store || "Estabelecimento";
+    const activeShop = ESTABLISHMENTS.find(e => e.id === shopId) || selectedShop;
+    const orderDistance = activeShop?.distKm || 0;
 
     const orderBase = {
       user_id: userId,
       merchant_id: shopId,
+      merchant_name: shopName,
+      user_name: userName,
       status: "novo",
       total_price: Number(total.toFixed(2)),
       delivery_fee: deliveryFee,
-      marketConditions,
-      paymentMethod,
-      routeDistance,
       service_fee: Number(serviceFeeAmount.toFixed(2)),
       items: cart,
       pickup_address: shopName,
       delivery_address: `${userLocation?.address || "Endereço não informado"}`,
       payment_method: paymentMethod,
-      service_type: selectedShop?.type || "restaurant",
+      service_type: activeShop?.type || "restaurant",
       notes: (paymentMethod === "dinheiro" && changeFor) ? `TROCO PARA: R$ ${changeFor}` : "",
+      route_distance_km: Number(orderDistance.toFixed(2))
     };
 
     console.log("[DIAG] handlePlaceOrder acionado:", { paymentMethod, total, shopId });
