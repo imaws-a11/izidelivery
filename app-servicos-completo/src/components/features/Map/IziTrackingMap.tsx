@@ -90,25 +90,10 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
     if (mapRef.current && path.length > 1) {
       const bounds = new google.maps.LatLngBounds();
       path.forEach(p => bounds.extend(p));
-      mapRef.current.fitBounds(bounds, { top: 120, bottom: 250, right: 50, left: 50 });
+      mapRef.current.fitBounds(bounds, { top: 50, bottom: 50, right: 50, left: 50 });
       setIsFollowing(false); 
     }
-  }, [path]);
-
-  // Seguir o motorista ou usuário suavemente
-  useEffect(() => {
-    if (isFollowing && mapRef.current) {
-        const target = driverLoc || userLoc;
-        if (isValidCoord(target)) {
-            mapRef.current.panTo(target!);
-        }
-    }
-  }, [driverLoc, userLoc, isFollowing]);
-
-  useEffect(() => {
-    if (isValidCoord(driverLoc)) setMapCenter(driverLoc!);
-    else if (isValidCoord(userLoc) && !isValidCoord(driverLoc)) setMapCenter(userLoc!);
-  }, [driverLoc, userLoc]);
+  }, [path.length]); // Apenas reajustar se o número de pontos mudar (menos agressivo)
 
   const onUnmount = useCallback(() => {
     mapRef.current = null;
@@ -206,6 +191,15 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
                 zIndex: 101
               }}
             />
+            {/* Marcadores de Início e Fim da Rota */}
+            <OverlayView position={path[0]} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+               <div className="size-4 bg-emerald-500 rounded-full border-2 border-white shadow-lg -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+            </OverlayView>
+            <OverlayView position={path[path.length - 1]} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+               <div className="size-5 bg-yellow-400 rounded-xl border-2 border-zinc-900 shadow-xl -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+                  <Icon name="location_on" size={12} className="text-zinc-900" />
+               </div>
+            </OverlayView>
           </>
         )}
 
