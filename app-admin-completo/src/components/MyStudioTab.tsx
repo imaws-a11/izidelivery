@@ -1575,7 +1575,7 @@ export default function MyStudioTab() {
                   await handleUpdateDedicatedSlot(slotData);
                   setEditingSlotId(null);
                 }}
-                merchantId={targetItem?.id || ''}
+                merchantId={targetMerchantId || ''}
               />
             )}
           </motion.div>

@@ -18,9 +18,9 @@ const parseAddressText = (rawStr: any): string => {
 
   try {
     const parsed = JSON.parse(cleanStr);
-    return (parsed.formatted_address || parsed.address || "Localidade").split(',')[0];
+    return parsed.formatted_address || parsed.address || cleanStr;
   } catch {
-    return cleanStr.split(',')[0];
+    return cleanStr;
   }
 };
 

@@ -872,17 +872,23 @@ function App() {
     }
 
     try {
-      const { error } = await supabase
-        .from("orders_delivery")
-        .update({ status: "cancelado" })
-        .eq("id", orderId);
+      const { data: orderData } = await supabase.from("orders_delivery").select("status").eq("id", orderId).single();
+      
+      let error = null;
+      if (orderData && ["novo", "pendente", "pendente_pagamento", "waiting_driver", "searching_driver", "waiting_merchant"].includes(orderData.status)) {
+         const { error: delError } = await supabase.from("orders_delivery").delete().eq("id", orderId);
+         error = delError;
+      } else {
+         const { error: updError } = await supabase.from("orders_delivery").update({ status: "cancelado" }).eq("id", orderId);
+         error = updError;
+      }
 
       if (error) {
         console.error("[DEBUG] Erro Supabase no cancelamento:", error);
         throw error;
       }
 
-      console.log("[DEBUG] Pedido cancelado no banco com sucesso.");
+      console.log("[DEBUG] Pedido cancelado/excluído no banco com sucesso.");
       toastSuccess("Pedido cancelado com sucesso!");
       
       if (userId) fetchMyOrders(userId);

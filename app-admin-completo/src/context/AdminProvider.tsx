@@ -1360,14 +1360,18 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const fetchMyDedicatedSlots = useCallback(async () => {
-    if (!merchantProfile?.id) return;
+    const targetId = userRole === 'merchant' ? merchantProfile?.merchant_id : selectedMerchantPreview?.id;
+    if (!targetId) {
+      setMyDedicatedSlots([]);
+      return;
+    }
     try {
-      const { data } = await supabase.from('dedicated_slots_delivery').select('*').eq('merchant_id', merchantProfile.id);
+      const { data } = await supabase.from('dedicated_slots_delivery').select('*').eq('merchant_id', targetId);
       if (data) setMyDedicatedSlots(data as DedicatedSlot[]);
     } catch (err) {
       console.error('Erro ao buscar vagas dedicadas:', err);
     }
-  }, [merchantProfile]);
+  }, [userRole, merchantProfile?.merchant_id, selectedMerchantPreview?.id]);
 
   const openMerchantPreview = useCallback(async (merchant: any) => {
     setSelectedMerchantPreview(merchant);
@@ -1381,6 +1385,12 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error('Erro ao carregar preview do lojista:', err);
     }
   }, []);
+
+  useEffect(() => {
+    if (userRole === 'admin' && selectedMerchantPreview?.id) {
+      fetchMyDedicatedSlots();
+    }
+  }, [userRole, selectedMerchantPreview?.id, fetchMyDedicatedSlots]);
 
   useEffect(() => {
     if (isAuthLoading || !session?.user?.id || !userRole) return;
@@ -1943,7 +1953,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const handleCreateDedicatedSlot = useCallback(() => {
     if (!merchantProfile) return;
     setEditingItem({
-      merchant_id: merchantProfile.id,
+      merchant_id: merchantProfile.merchant_id,
       label: 'Novo Slot',
       is_active: true
     });
