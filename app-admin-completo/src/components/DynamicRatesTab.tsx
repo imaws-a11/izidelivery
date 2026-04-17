@@ -267,11 +267,12 @@ export default function DynamicRatesTab() {
                 ],
                 vehicles: [
                   { title: 'Fiorino', minKey: 'fiorino_min', kmKey: 'fiorino_km' },
+                  { title: 'Van Carga', minKey: 'van_min', kmKey: 'van_km' },
                   { title: 'Caminhonete', minKey: 'caminhonete_min', kmKey: 'caminhonete_km' },
-                  { title: 'Baú P', minKey: 'bau_p_min', kmKey: 'bau_p_km' },
-                  { title: 'Baú M', minKey: 'bau_m_min', kmKey: 'bau_m_km' },
-                  { title: 'Baú G', minKey: 'bau_g_min', kmKey: 'bau_g_km' },
-                  { title: 'Aberto', minKey: 'aberto_min', kmKey: 'aberto_km' }
+                  { title: 'Caminhão Baú Pequeno', minKey: 'bau_p_min', kmKey: 'bau_p_km' },
+                  { title: 'Caminhão Baú Médio', minKey: 'bau_m_min', kmKey: 'bau_m_km' },
+                  { title: 'Caminhão Baú Grande', minKey: 'bau_g_min', kmKey: 'bau_g_km' },
+                  { title: 'Caminhão Aberto', minKey: 'aberto_min', kmKey: 'aberto_km' }
                 ]
               }
             ].map((cat: any) => (

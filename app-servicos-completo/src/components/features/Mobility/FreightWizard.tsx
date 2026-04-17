@@ -45,7 +45,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
 }) => {
 
   const freightData = transitData.freightData || {
-    vehicleType: "Fiorino / VUC",
+    vehicleType: "",
     hasStairs: false,
     helpers: 0,
     items: ""
@@ -59,18 +59,21 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
   };
 
   const vehicleTypes = [
-    { id: "fiorino", name: "Fiorino / VUC", icon: "local_shipping", priceMod: 1.0 },
-    { id: "van", name: "Van Carga", icon: "airport_shuttle", priceMod: 1.2 },
-    { id: "truck_p", name: "Caminhão P", icon: "local_shipping", priceMod: 1.5 },
-    { id: "truck_m", name: "Caminhão M", icon: "local_shipping", priceMod: 1.8 },
-    { id: "truck_g", name: "Caminhão G", icon: "rv_hookup", priceMod: 2.2 },
-    { id: "truck_bau", name: "Caminhão Baú", icon: "local_shipping", priceMod: 2.5 },
+    { id: "fiorino", name: "Fiorino", icon: "local_shipping", priceKey: "fiorino" },
+    { id: "van", name: "Van Carga", icon: "airport_shuttle", priceKey: "van" },
+    { id: "truck_p", name: "Caminhão Baú Pequeno", icon: "local_shipping", priceKey: "bau_p" },
+    { id: "truck_m", name: "Caminhão Baú Médio", icon: "local_shipping", priceKey: "bau_m" },
+    { id: "truck_g", name: "Caminhão Baú Grande", icon: "rv_hookup", priceKey: "bau_g" },
+    { id: "truck_bau", name: "Caminhão Aberto", icon: "local_shipping", priceKey: "aberto" },
   ];
 
   const totalValue = React.useMemo(() => {
+    // Se não houver distância calculada ou veículo selecionado, o valor deve ser zero
+    if (!routeDistance || !freightData.vehicleType) return 0;
+
     const vehicle = vehicleTypes.find(v => v.name === freightData.vehicleType);
-    const multiplier = vehicle?.priceMod || 1.0;
-    const base = distancePrices.logistica || 45.0;
+    const priceKey = vehicle?.priceKey || "logistica";
+    const base = distancePrices[priceKey] || distancePrices.logistica || 0;
     
     // Taxas dinâmicas do Admin
     const baseValues = marketConditions?.settings?.baseValues || {};
@@ -80,8 +83,8 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
     const stairTax = freightData.hasStairs ? stairTaxValue : 0;
     const helperTax = freightData.helpers * helperTaxValue;
     
-    return (base * multiplier) + stairTax + helperTax;
-  }, [distancePrices, freightData, vehicleTypes, marketConditions]);
+    return base + stairTax + helperTax;
+  }, [distancePrices, freightData, vehicleTypes, marketConditions, routeDistance]);
 
   return (
     <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden italic">
@@ -194,7 +197,10 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
                     {vehicleTypes.map((v) => (
                       <button
                         key={v.id}
-                        onClick={() => updateFreight({vehicleType: v.name})}
+                        onClick={() => {
+                          updateFreight({vehicleType: v.name});
+                          setTransitData((prev: any) => ({ ...prev, vehicleCategory: v.name }));
+                        }}
                         className={`min-w-[140px] p-6 rounded-[40px] flex flex-col items-center gap-5 transition-all duration-300 active:scale-90
                           ${freightData.vehicleType === v.name 
                             ? 'clay-card-yellow border-2 border-yellow-200/50 scale-105 z-10' 
