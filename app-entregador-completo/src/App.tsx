@@ -1842,71 +1842,54 @@ function App() {
                 
                 const dId = String(driverIdRef.current || '').trim();
                 
-                // Se o pedido já tem este motorista (Missão Ativa)
-                if (o.driver_id && String(o.driver_id).trim() === dId && dId !== '') {
+                // 1. GESTÃO DA MISSÃO ATIVA DESTE MOTORISTA
+                const isMyOrder = o.driver_id && String(o.driver_id).trim() === dId && dId !== '';
+                
+                if (isMyOrder) {
+                    // Se a missão foi finalizada ou cancelada, limpamos o estado
                     if (['concluido', 'cancelado', 'finalizado', 'entregue'].includes(o.status)) {
                         setActiveMission(null);
                         localStorage.removeItem('Izi_active_mission');
                         if (activeTabRef.current === 'active_mission') setActiveTab('dashboard');
                         return;
                     }
-                    // Continue para atualizar a missão ativa...
-                }
 
-                // Se o pedido NÃO tem motorista, checar se ele se tornou uma "Nova Missão" disponível agora
-                if (!o.driver_id && !o.scheduled_at && isOnlineRef.current && !activeMissionRef.current) {
-                    const actionableStatuses = ['novo', 'pendente', 'preparando', 'pronto', 'waiting_driver', 'waiting_merchant', 'accepted'];
-                    const pStatus = String(o.payment_status || '').toLowerCase();
-                    const pMethod = String(o.payment_method || '').toLowerCase();
-                    const isPaidOrCash = ['cash', 'dinheiro'].includes(pMethod) || ['paid', 'pago', 'approved', 'aprovado'].includes(pStatus);
-                    
-                    if (actionableStatuses.includes(o.status) && isPaidOrCash) {
-                        // Só toca som se o pedido ainda não estava na lista (para evitar sons repetidos em updates irrelevantes)
-                        setOrders(prev => {
-                            const alreadyInList = prev.some(x => x.realId === o.id);
-                            if (!alreadyInList) {
-                                playIziSound('driver');
-                                console.log(`[REALTIME-DRIVER] Novo pedido disponível via UPDATE: ${o.id}`);
-                            }
-                            return prev;
-                        });
+                    // Se é a minha missão, atualizamos os detalhes em tempo real
+                    const wasPreparing = currentMission?.preparation_status !== 'pronto';
+                    const isNowReady = o.preparation_status === 'pronto';
+
+                    if (wasPreparing && isNowReady) {
+                        playIziSound('driver');
+                        toastSuccess('🔔 O Pedido está PRONTO para coleta!');
                     }
-                }
 
-                    if (!currentMission || o.id === currentMission.id) {
-                        const wasPreparing = currentMission?.preparation_status !== 'pronto';
-                        const isNowReady = o.preparation_status === 'pronto';
-
-                        if (wasPreparing && isNowReady) {
-                            playIziSound('driver');
-                            toastSuccess('🔔 O Pedido está PRONTO para coleta!');
-                        }
-
-                        const mission: any = { 
-                            ...o, 
-                            realId: o.id, 
-                            type: o.service_type || 'delivery', 
-                            origin: currentMission?.pickup_address || o.store_address || o.pickup_address, 
-                            destination: o.delivery_address || 'Destino', 
-                            price: o.total_price || 0, 
-                            customer: o.user_name || 'Cliente Izi',
-                            store_name: currentMission?.store_name || o.store_name || 'Paladar Distribuidora',
-                            pickup_address: currentMission?.pickup_address || o.pickup_address,
-                            pickup_lat: currentMission?.pickup_lat || o.pickup_lat,
-                            pickup_lng: currentMission?.pickup_lng || o.pickup_lng,
-                            delivery_lat: o.delivery_lat,
-                            delivery_lng: o.delivery_lng
-                        };
-                        
-                        setActiveMission(mission);
-                        localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
-                        
-                        if (activeTabRef.current !== 'active_mission' && !['concluido', 'cancelado'].includes(o.status)) {
-                            setActiveTab('active_mission');
-                        }
+                    const mission: any = { 
+                        ...o, 
+                        realId: o.id, 
+                        type: o.service_type || 'delivery', 
+                        origin: o.pickup_address || currentMission?.pickup_address || o.store_address, 
+                        destination: o.delivery_address || 'Destino', 
+                        price: o.total_price || 0, 
+                        customer: o.user_name || 'Cliente Izi',
+                        store_name: o.store_name || currentMission?.store_name || 'Parceiro Izi',
+                        pickup_address: o.pickup_address || currentMission?.pickup_address,
+                        pickup_lat: o.pickup_lat || currentMission?.pickup_lat,
+                        pickup_lng: o.pickup_lng || currentMission?.pickup_lng,
+                        delivery_lat: o.delivery_lat,
+                        delivery_lng: o.delivery_lng
+                    };
+                    
+                    setActiveMission(mission);
+                    localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
+                    
+                    if (activeTabRef.current !== 'active_mission') {
+                        setActiveTab('active_mission');
+                    }
                     return;
                 }
 
+                // 2. GESTÃO DO RADAR (Pedidos disponíveis para qualquer um)
+                // Se o pedido não tem motorista e mudou para um status que permite coleta
                 const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
                 const isMerchantOrder = !!o.merchant_id;
                 const merchantAccepted = ['waiting_driver', 'preparando', 'pronto', 'accepted'].includes(o.status);
@@ -1967,7 +1950,7 @@ function App() {
                 .from('orders_delivery')
                 .select('*')
                 .eq('driver_id', driverId)
-                .not('status', 'in', ['concluido', 'cancelado', 'finalizado', 'entregue', 'delivered'])
+                .not('status', 'in', '(concluido,cancelado,finalizado,entregue,delivered)')
                 .maybeSingle();
 
             if (error) console.error('[RECOVERY] Erro na query:', error);
@@ -2052,44 +2035,35 @@ function App() {
                  return;
             }
 
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-            let token = supabaseKey;
-            try {
-                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
-                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
-            } catch(e) {}
-
             console.log('1. Verificando integridade via REST...');
-            const checkRes = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${targetId}&select=*`, {
-                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` }
+            const authHeaders = { 
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY, 
+                'Authorization': `Bearer ${token}` 
+            };
+            
+            const checkRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/orders_delivery?id=eq.${targetId}&select=*`, {
+                headers: authHeaders
             });
             
-            const ordersList = await checkRes.json();
-            const realOrder = ordersList[0];
+            const ordersListArr = await checkRes.json();
+            const realOrder = ordersListArr?.[0];
 
             if (!realOrder) throw new Error('Pedido não encontrado.');
             
-            // Verificar se ainda está disponível
             if (realOrder.driver_id && String(realOrder.driver_id).trim() !== '') {
                 toastError('Este pedido já foi aceito por outro piloto.');
                 setOrders(prev => prev.filter(o => (o.realId || o.id) !== targetId));
+                setIsAccepting(false);
                 return;
             }
 
             const isScheduled = !!order.scheduled_at;
             const newStatus = isScheduled ? 'confirmado' : 'a_caminho_coleta';
 
-            console.log(`2. Gravando aceite via PATCH REST (${isScheduled ? 'AGENDADO' : 'IMEDIATO'})...`);
-            const updateRes = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${targetId}`, {
+            console.log(`2. Gravando aceite via PATCH REST...`);
+            const updateRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/orders_delivery?id=eq.${targetId}`, {
                 method: 'PATCH',
-                headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                },
+                headers: { ...authHeaders, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     status: newStatus,
                     driver_id: driverId,
@@ -2149,55 +2123,68 @@ function App() {
         if (!driverId) return;
         setIsFinanceLoading(true);
         try {
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            const sUrl = import.meta.env.VITE_SUPABASE_URL;
+            const sKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
             
-            let token = supabaseKey;
+            let token = sKey;
             try {
-                const lsKey = `sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`;
-                const ls = localStorage.getItem(lsKey);
-                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
+                const project = (sUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1]);
+                const ls = localStorage.getItem(`sb-${project}-auth-token`);
+                if (ls) token = JSON.parse(ls)?.access_token || sKey;
             } catch(e) {}
 
-            const headers = { 'apikey': supabaseKey, 'Authorization': `Bearer ${token}` };
-            const fetchWithTimeout = (url: string) => fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+            const headers = { 'apikey': sKey, 'Authorization': `Bearer ${token}` };
+            const apiRequest = (path: string, method = 'GET', body?: any) => 
+                fetch(`${sUrl}/rest/v1/${path}`, { 
+                    method, 
+                    headers: { ...headers, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+                    body: body ? JSON.stringify(body) : undefined,
+                    signal: AbortSignal.timeout(10000) 
+                });
 
-            const txsRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/wallet_transactions_delivery?user_id=eq.${driverId}&order=created_at.desc`).catch(() => null);
-            const txs = (txsRes && txsRes.ok) ? await txsRes.json() : null;
+            // 1. Coleta de dados em paralelo para maior performance
+            const [txsRes, drvRes, ordsRes, setsRes] = await Promise.all([
+                apiRequest(`wallet_transactions_delivery?user_id=eq.${driverId}&order=created_at.desc`),
+                apiRequest(`drivers_delivery?id=eq.${driverId}&select=bank_info,name,avatar_url`),
+                apiRequest(`orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,entregue,finalizado,delivered)&order=updated_at.desc`),
+                apiRequest(`admin_settings_delivery?limit=1`)
+            ]).catch(() => [null, null, null, null]);
 
-            const driverRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}&select=bank_info,name,avatar_url`).catch(() => null);
-            const driverData = (driverRes && driverRes.ok) ? await driverRes.json() : null;
+            const [txs, drvData, orders, sets] = await Promise.all([
+                txsRes?.ok ? txsRes.json() : null,
+                drvRes?.ok ? drvRes.json() : null,
+                ordsRes?.ok ? ordsRes.json() : null,
+                setsRes?.ok ? setsRes.json() : null
+            ]);
 
-            if (driverData && driverData[0]) {
-                const savedPix = driverData[0].bank_info?.pix_key || '';
-                if (savedPix) { setPixKey(savedPix); localStorage.setItem('izi_driver_pix', savedPix); }
-                // Sincronizar foto de perfil
-                if (driverData[0].avatar_url) {
-                    setDriverAvatar(driverData[0].avatar_url);
-                    localStorage.setItem('izi_driver_avatar', driverData[0].avatar_url);
-                }
+            if (drvData?.[0]) {
+                const d = drvData[0];
+                if (d.bank_info?.pix_key) { setPixKey(d.bank_info.pix_key); localStorage.setItem('izi_driver_pix', d.bank_info.pix_key); }
+                if (d.avatar_url) { setDriverAvatar(d.avatar_url); localStorage.setItem('izi_driver_avatar', d.avatar_url); }
+                setDriverName(d.name || 'Entregador');
             }
+            if (sets?.[0]) setAppSettings(sets[0]);
+            if (orders) setHistory(orders);
 
-            const ordersRes = await fetchWithTimeout(`${supabaseUrl}/rest/v1/orders_delivery?driver_id=eq.${driverId}&status=in.(concluido,entregue,finalizado)&order=updated_at.desc`).catch(() => null);
-            const orders = (ordersRes && ordersRes.ok) ? await ordersRes.json() : null;
+            // 2. Processamento financeiro unificado
+            let balance = 0, todaySum = 0, weeklySum = 0, totalGanhos = 0;
+            const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+            const startOfWeek = new Date(); 
+            const diffDays = (startOfWeek.getDay() === 0 ? 6 : startOfWeek.getDay() - 1);
+            startOfWeek.setDate(startOfWeek.getDate() - diffDays);
+            startOfWeek.setHours(0, 0, 0, 0);
 
-            let balance = 0;
             if (txs) {
-                balance = txs.reduce((acc: number, t: any) => 
-                    ['deposito', 'reembolso', 'venda', 'vaga_dedicada', 'bonus'].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
                 setEarningsHistory(txs.filter((t: any) => t.type !== 'saque'));
                 setWithdrawHistory(txs.filter((t: any) => t.type === 'saque'));
-            }
 
-            let todaySum = 0; let weeklySum = 0; let totalGanhos = 0; let missionCount = 0;
-            const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-            const startOfWeek = new Date(); startOfWeek.setDate(startOfWeek.getDate() - (startOfWeek.getDay() || 7) + 1); startOfWeek.setHours(0, 0, 0, 0);
-
-            if (txs) {
                 txs.forEach((t: any) => {
-                    const tDate = new Date(t.created_at);
                     const amount = Number(t.amount);
-                    if (['venda', 'vaga_dedicada', 'bonus', 'deposito', 'reembolso'].includes(t.type)) {
+                    const isCredit = ['venda', 'vaga_dedicada', 'bonus', 'deposito', 'reembolso', 'cashback'].includes(t.type);
+                    balance = isCredit ? balance + amount : balance - amount;
+
+                    if (isCredit) {
+                        const tDate = new Date(t.created_at);
                         totalGanhos += amount;
                         if (tDate >= startOfDay) todaySum += amount;
                         if (tDate >= startOfWeek) weeklySum += amount;
@@ -2205,27 +2192,13 @@ function App() {
                 });
             }
 
-            if (orders) { 
-                setHistory(orders);
-                missionCount = orders.length;
-            }
-
-            const totalXp = missionCount * 15;
-            const currentLevel = Math.floor(totalXp / 100) + 1;
             setStats(prev => ({ 
-                ...prev, 
-                balance, 
-                today: todaySum, 
-                weekly: weeklySum, 
-                totalEarnings: totalGanhos, 
-                count: missionCount, 
-                xp: totalXp,
-                level: currentLevel,
-                nextXp: currentLevel * 100
+                ...prev, balance, today: todaySum, weekly: weeklySum, totalEarnings: totalGanhos, 
+                count: orders?.length || 0, xp: (orders?.length || 0) * 15,
+                level: Math.floor(((orders?.length || 0) * 15) / 100) + 1
             }));
 
-            const { data: sets } = await fetchWithTimeout(`${supabaseUrl}/rest/v1/admin_settings_delivery?limit=1`).then(r => r?.ok ? r.json() : {ok: false}).catch(() => { return { ok: false }; });
-            if (sets && sets[0]) setAppSettings(sets[0]);
+            console.log('[FINANCE] Sincronização concluída.', { balance, todaySum });
         } catch (e) {
             console.error("[FINANCE] Error:", e);
         } finally {
@@ -2279,6 +2252,7 @@ function App() {
                 payload.payment_status = 'paid';
             }
 
+
             const response = await fetch(`${supabaseUrl}/rest/v1/orders_delivery?id=eq.${missionId}`, {
                 method: 'PATCH',
                 headers: {
@@ -2297,7 +2271,9 @@ function App() {
                     setActiveMission(activeMission);
                     localStorage.setItem('Izi_active_mission', JSON.stringify(activeMission));
                 }
-                throw new Error(`Erro na API (${response.status}): ${errorText}`);
+                setIsUpdating(false);
+                toastError(`Erro ao atualizar status: ${errorText}`);
+                return;
             }
 
             toastSuccess(`Status atualizado: ${newStatus === 'chegou_coleta' ? 'Chegada na Coleta' : newStatus}`);
@@ -2306,38 +2282,48 @@ function App() {
                 const netEarned = getNetEarnings(activeMission);
                 const ordShortId = missionId.slice(0,8).toUpperCase();
 
-                // 1. REGISTRAR CRÉDITO DE GANHO NA WALLET (sempre que finalizar uma missão)
-                try {
-                    await supabase.from('wallet_transactions_delivery').insert({
+                console.log(`[WALLET] Finalizando missão ${ordShortId}. Ganho líquido: R$ ${netEarned}`);
+
+                // Inserir transação financeira via fetch manual para garantir sucesso no mobile
+                await fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
                         user_id: driverId,
                         amount: netEarned,
                         type: 'deposito',
                         status: 'concluido',
                         description: `Ganhos: Missão #${ordShortId} (Líquido)`,
                         order_id: missionId
-                    });
-                } catch(err) {
-                    console.error('[WALLET] Erro ao registrar ganho na wallet:', err);
-                }
+                    })
+                }).catch(err => console.error('[WALLET] Erro ao registrar ganho:', err));
 
-                // 2. INSERIR DÉBITO SE FOI PAGO EM DINHEIRO (o motorista ficou com o troco)
+                // 2. INSERIR DÉBITO SE FOI PAGO EM DINHEIRO (o motorista ficou com o dinheiro do cliente)
                 let cashDiscountAmount = 0;
                 if (paymentConfirmedMode === 'dinheiro') {
                     const totalOrderPrice = Number(activeMission.total_price || activeMission.price || 0);
                     if (totalOrderPrice > 0) {
                         cashDiscountAmount = totalOrderPrice;
-                        try {
-                            await supabase.from('wallet_transactions_delivery').insert({
+                        await fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
+                            method: 'POST',
+                            headers: {
+                                'apikey': supabaseKey,
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
                                 user_id: driverId,
                                 amount: totalOrderPrice,
                                 type: 'debit',
                                 status: 'concluido',
                                 description: `Desconto de pagamento em Dinheiro. (Pedido ${ordShortId})`,
                                 order_id: missionId
-                            });
-                        } catch(err) {
-                            console.error('Erro ao debitar pagamento em dinheiro:', err);
-                        }
+                            })
+                        }).catch(err => console.error('[CASH] Erro ao debitar pagamento:', err));
                     }
                 }
 
@@ -2351,12 +2337,11 @@ function App() {
                     xpGained: 15,
                     cashDiscount: cashDiscountAmount > 0 ? cashDiscountAmount : undefined
                 });
+
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
-                // Aguarda um momento para garantir que a transação foi inserida antes de buscar
-                setTimeout(() => refreshFinanceData(), 600);
+                setTimeout(() => refreshFinanceData(), 1000); // 1s para garantir propagação no DB
             } else {
-                // Sincronizar com o banco para garantir metadados extras
                 setTimeout(() => syncMissionWithDB(), 2000);
             }
         } catch (e: any) {
@@ -2411,40 +2396,27 @@ function App() {
         try {
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-            // Ler o token JWT do localStorage (Supabase armazena automaticamente)
-            let accessToken = supabaseKey;
+            
+            let token = supabaseKey;
             try {
-                const storageKey = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`;
-                const raw = localStorage.getItem(storageKey);
-                if (raw) {
-                    const parsed = JSON.parse(raw);
-                    accessToken = parsed?.access_token || supabaseKey;
-                }
-            } catch { /* usa anon key como fallback */ }
+                const project = (supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1]);
+                const raw = localStorage.getItem(`sb-${project}-auth-token`);
+                if (raw) token = JSON.parse(raw)?.access_token || supabaseKey;
+            } catch(e) {}
 
-            console.log('[PIX] Enviando PATCH para Supabase REST...', { driverId, keyToSave, bankToSave });
+            console.log('[PIX] Salvando dados via REST...', { driverId, keyToSave });
 
-            const res = await fetch(
-                `${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`,
-                {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': supabaseKey,
-                        'Authorization': `Bearer ${accessToken}`,
-                    },
-                    body: JSON.stringify({ bank_info: { pix_key: keyToSave, bank_name: bankToSave } }),
-                    signal: AbortSignal.timeout(10000),
-                }
-            );
+            const res = await fetch(`${supabaseUrl}/rest/v1/drivers_delivery?id=eq.${driverId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ bank_info: { pix_key: keyToSave, bank_name: bankToSave } })
+            });
 
-            console.log('[PIX] HTTP Status:', res.status);
-
-            if (!res.ok) {
-                const txt = await res.text();
-                throw new Error(`HTTP ${res.status}: ${txt}`);
-            }
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
             localStorage.setItem('izi_driver_pix', keyToSave);
             localStorage.setItem('izi_driver_bank_name', bankToSave);
@@ -2561,18 +2533,18 @@ function App() {
                                         <button
                                             key={item.id}
                                             onClick={() => setActiveTab(item.id as any)}
-                                            className={`flex flex-col items-center gap-1.5 py-2 px-1 rounded-[24px] transition-all relative flex-1 ${
-                                                isActive ? 'text-primary' : 'text-white/30 hover:bg-white/5'
+                                            className={`flex flex-col items-center gap-1 py-1.5 px-0.5 rounded-[20px] transition-all relative flex-1 min-w-0 ${
+                                                isActive ? 'text-primary' : 'text-white/30'
                                             }`}
                                         >
-                                            <div className={`size-12 rounded-[20px] flex items-center justify-center transition-all duration-300 ${
+                                            <div className={`size-10 sm:size-12 rounded-[16px] sm:rounded-[20px] flex items-center justify-center transition-all duration-300 ${
                                                 isActive 
-                                                    ? 'bg-primary shadow-[inset_2px_2px_6px_rgba(255,255,255,0.6),_inset_-3px_-3px_8px_rgba(0,0,0,0.2),_0_8px_20px_rgba(250,204,21,0.4)] scale-110 border border-yellow-300' 
+                                                    ? 'bg-primary shadow-[inset_2px_2px_6px_rgba(255,255,255,0.6),_inset_-3px_-3px_8px_rgba(0,0,0,0.2),_0_8px_20px_rgba(250,204,21,0.4)] scale-105 border border-yellow-300' 
                                                     : 'bg-transparent'
                                             }`}>
                                                 <Icon 
                                                     name={item.icon} 
-                                                    size={isActive ? 26 : 24} 
+                                                    size={isActive ? 22 : 20} 
                                                     className={isActive ? 'text-zinc-950 drop-shadow-sm' : 'text-white/30'} 
                                                 />
                                                 {item.badge > 0 && (
@@ -2661,9 +2633,52 @@ function App() {
         );
     };
 
-const renderDashboard = () => (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-80">
-            <main className="px-6 space-y-10 pt-6">
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [pullY, setPullY] = useState(0);
+
+    const onRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await Promise.all([
+                refreshFinanceData(),
+                fetchOrders()
+            ]);
+        } catch (e) {}
+        setIsRefreshing(false);
+        setPullY(0);
+    };
+
+    const renderDashboard = () => (
+        <div className="flex-1 flex flex-col relative overflow-hidden">
+            {/* Pull to Refresh Indicator */}
+            <motion.div 
+                style={{ y: pullY - 60 }}
+                className="absolute top-0 left-0 right-0 flex justify-center z-50 pointer-events-none"
+            >
+                <div className="bg-yellow-400 size-10 rounded-full flex items-center justify-center shadow-2xl border-2 border-white/20">
+                    <Icon name="sync" className={`text-zinc-900 ${isRefreshing ? 'animate-spin' : ''}`} size={20} />
+                </div>
+            </motion.div>
+
+            <motion.div 
+                className="flex-1 overflow-y-auto w-full no-scrollbar pt-6 pb-40"
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                onDrag={(_, info) => {
+                    if (info.offset.y > 0 && !isRefreshing) {
+                        setPullY(Math.min(info.offset.y, 80));
+                    }
+                }}
+                onDragEnd={(_, info) => {
+                    if (info.offset.y > 80 && !isRefreshing) {
+                        onRefresh();
+                    } else {
+                        setPullY(0);
+                    }
+                }}
+                animate={{ y: isRefreshing ? 60 : 0 }}
+            >
+                <div className="px-6 space-y-10">
                 {/* Refined Profile Card */}
                 <header className="clay-profile-card rounded-[2.5rem] flex flex-col gap-8 relative overflow-hidden p-6">
                     <div className="flex items-center gap-6">
@@ -2769,9 +2784,9 @@ const renderDashboard = () => (
                                         key={order.id} 
                                         initial={{ opacity: 0, x: 50 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        className="flex-shrink-0 w-[360px] relative pt-12 pb-4"
+                                        className="flex-shrink-0 w-[88vw] max-w-[400px] relative pt-12 pb-4"
                                     >
-                                        <div className="bg-[#1a1a1a] rounded-[32px] p-8 relative flex flex-col items-center text-center border border-white/5"
+                                        <div className="bg-[#1a1a1a] rounded-[32px] p-6 sm:p-8 relative flex flex-col items-center text-center border border-white/5"
                                              style={{
                                                  boxShadow: 'inset 4px 4px 12px rgba(255, 255, 255, 0.03), inset -4px -4px 12px rgba(0, 0, 0, 0.5), 0 20px 40px rgba(0,0,0,0.4)'
                                              }}
@@ -2802,65 +2817,65 @@ const renderDashboard = () => (
                                                                 (order.preparation_status === 'pronto' || order.status === 'pronto') ? 'bg-emerald-400' : 'bg-orange-400'
                                                             }`} />
                                                             <span className="text-[10px] font-black uppercase tracking-widest">
-                                                                {(order.preparation_status === 'pronto' || order.status === 'pronto') ? 'Pronto para Retirada' : 'Em Preparo'}
+                                                                {(order.preparation_status === 'pronto' || order.status === 'pronto') ? 'Pronto para Coleta' : 'Em Preparo'}
                                                             </span>
                                                         </div>
                                                     </div>
                                                 )}
 
-                                                <h1 className="text-2xl font-extrabold text-white leading-tight tracking-tight mb-2">
+                                                <h1 className="text-xl sm:text-2xl font-extrabold text-white leading-tight tracking-tight mb-2">
                                                     Nova Entrega Disponível
                                                 </h1>
-                                                <p className="text-white/50 text-[11px] mb-8 px-2 leading-relaxed">
-                                                    Uma missão de entrega de alta prioridade foi atribuída à sua proximidade.
+                                                <p className="text-white/50 text-[10px] sm:text-[11px] mb-6 sm:mb-8 px-2 leading-relaxed">
+                                                    Uma missão de entrega de alta prioridade foi atribuída disponível.
                                                 </p>
 
                                                 {/* Payment Highlight Box */}
-                                                <div className="bg-[#121212] rounded-2xl p-6 border border-white/5 mb-8 shadow-inner">
-                                                    <p className="text-white/30 text-[10px] uppercase tracking-widest font-bold mb-2">Você ganha</p>
+                                                <div className="bg-[#121212] rounded-2xl p-4 sm:p-6 border border-white/5 mb-6 sm:mb-8 shadow-inner">
+                                                    <p className="text-white/30 text-[9px] sm:text-[10px] uppercase tracking-widest font-bold mb-2">Você ganha</p>
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <span className="text-yellow-400 text-4xl font-black drop-shadow-xl italic">
+                                                        <span className="text-yellow-400 text-3xl sm:text-4xl font-black drop-shadow-xl italic">
                                                             R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}
                                                         </span>
-                                                        <Icon name="local_fire_department" className="text-yellow-400 text-3xl" />
+                                                        <Icon name="local_fire_department" className="text-yellow-400 text-2xl sm:text-3xl" />
                                                     </div>
-                                                    <p className="text-white/20 text-[9px] mt-2">+ Gorjeta do cliente (se houver)</p>
+                                                    <p className="text-white/20 text-[8px] sm:text-[9px] mt-2">+ Gorjeta do cliente (se houver)</p>
                                                 </div>
 
                                                 {/* Delivery Details Grid */}
-                                                <div className="grid grid-cols-2 gap-4 text-left w-full mb-8">
+                                                <div className="grid grid-cols-2 gap-3 sm:gap-4 text-left w-full mb-6 sm:mb-8">
                                                     <div className="flex flex-col bg-white/[0.02] p-3 rounded-xl border border-white/5 col-span-2">
-                                                        <span className="text-[9px] uppercase font-bold text-yellow-400/80 tracking-widest mb-1">{presentation.pickupLabel}</span>
-                                                        <span className="text-yellow-400 text-sm font-black leading-tight uppercase italic mb-1" title={order.store_name || order.merchant_name}>
+                                                        <span className="text-[8px] sm:text-[9px] uppercase font-bold text-yellow-400/80 tracking-widest mb-1">{presentation.pickupLabel}</span>
+                                                        <span className="text-yellow-400 text-xs sm:text-sm font-black leading-tight uppercase italic mb-1 truncate" title={order.store_name || order.merchant_name}>
                                                             {order.store_name || order.merchant_name || 'Estabelecimento Parceiro'}
                                                         </span>
-                                                        <span className="text-white/90 text-xs font-medium leading-relaxed drop-shadow-md">
-                                                            {order.origin || presentation.pickupText || order.pickup_address || 'Endereço de coleta não informado no sistema'}
+                                                        <span className="text-white/90 text-[11px] sm:text-xs font-medium leading-relaxed drop-shadow-md break-words">
+                                                            {order.origin || presentation.pickupText || order.pickup_address || 'Endereço de coleta não informado'}
                                                         </span>
                                                     </div>
 
                                                     <div className="flex flex-col bg-white/[0.02] p-3 rounded-xl border border-white/5 col-span-2 relative pb-8">
-                                                        <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest mb-1">Destino Final</span>
-                                                        <span className="text-white/90 text-xs font-medium leading-relaxed drop-shadow-md break-words pr-12">
+                                                        <span className="text-[8px] sm:text-[9px] uppercase font-bold text-white/30 tracking-widest mb-1">Destino Final</span>
+                                                        <span className="text-white/90 text-[11px] sm:text-xs font-medium leading-relaxed drop-shadow-md break-words pr-12">
                                                             {order.destination || order.delivery_address || presentation.destinationText || 'Destino não informado'}
                                                         </span>
                                                         
                                                         {/* Floating Distance Badge */}
-                                                        <div className="absolute bottom-2 right-2 bg-yellow-400 text-black px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-tight shadow-md">
+                                                        <div className="absolute bottom-2 right-2 bg-yellow-400 text-black px-2 py-1 rounded-md text-[9px] sm:text-[10px] font-black uppercase tracking-tight shadow-md">
                                                             {order.distance_km ? `${parseFloat(order.distance_km).toFixed(1)} km` : (order.distance ? `${order.distance}` : '')}
                                                         </div>
                                                     </div>
                                                 </div>
 
                                                 {/* Actions */}
-                                                <div className="flex flex-col gap-3 w-full">
+                                                <div className="flex flex-col gap-2 sm:gap-3 w-full">
                                                     <button 
                                                         onClick={() => {
                                                             setSelectedOrder(order);
                                                             handleAccept(order);
                                                         }}
                                                         disabled={isAccepting}
-                                                        className="w-full py-5 rounded-2xl bg-yellow-400 hover:bg-yellow-500 text-black font-black uppercase text-[13px] tracking-widest flex items-center justify-center gap-2 active:scale-[0.97] transition-all shadow-[0_10px_30px_rgba(250,204,21,0.2)] disabled:opacity-50"
+                                                        className="w-full py-4 sm:py-5 rounded-2xl bg-yellow-400 hover:bg-yellow-500 text-black font-black uppercase text-xs sm:text-[13px] tracking-widest flex items-center justify-center gap-2 active:scale-[0.97] transition-all shadow-[0_10px_30px_rgba(250,204,21,0.2)] disabled:opacity-50"
                                                         style={{
                                                             boxShadow: 'inset 4px 4px 8px rgba(255, 255, 255, 0.4), inset -4px -4px 8px rgba(0, 0, 0, 0.2)'
                                                         }}
@@ -2875,15 +2890,15 @@ const renderDashboard = () => (
                                                         )}
                                                     </button>
                                                     
-                                                    <div className="flex gap-2 w-full mt-2">
+                                                    <div className="flex gap-2 w-full mt-1">
                                                         <button 
                                                             onClick={() => {
                                                                 setSelectedOrder(order);
                                                                 setShowOrderModal(true);
                                                             }}
-                                                            className="flex-1 py-3 rounded-xl text-white/50 font-bold uppercase text-[10px] tracking-widest active:scale-95 transition-all hover:text-white hover:bg-white/5"
+                                                            className="flex-1 py-3 rounded-xl text-white/50 font-bold uppercase text-[9px] tracking-widest active:scale-95 transition-all hover:text-white hover:bg-white/5"
                                                         >
-                                                            Recibo & Detalhes
+                                                            Detalhes
                                                         </button>
                                                         <button 
                                                             onClick={() => {
@@ -2891,7 +2906,7 @@ const renderDashboard = () => (
                                                                     handleDeclineOrder(order.realId || order.id);
                                                                 }
                                                             }}
-                                                            className="flex-[0.5] py-3 rounded-xl text-red-500/50 font-bold uppercase text-[10px] tracking-widest active:scale-95 transition-all hover:text-red-400 hover:bg-red-500/10"
+                                                            className="flex-[0.5] py-3 rounded-xl text-red-500/50 font-bold uppercase text-[9px] tracking-widest active:scale-95 transition-all hover:text-red-400 hover:bg-red-500/10"
                                                         >
                                                             Recusar
                                                         </button>
@@ -3037,8 +3052,9 @@ const renderDashboard = () => (
                         )}
                     </section>
                 )}
-            </main>
-        </motion.div>
+                </div>
+            </motion.div>
+        </div>
     );
 
     const renderScheduledDetailView = () => {
@@ -4535,46 +4551,42 @@ const renderDashboard = () => (
         return (
             <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="fixed inset-0 z-[100] bg-[#0c0f10] flex flex-col overflow-hidden text-[#f5f6f7]">
                 {/* TopAppBar */}
-                <header className="bg-neutral-950/70 backdrop-blur-xl fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 border-b border-white/5">
+                <header className="bg-neutral-950/70 backdrop-blur-xl fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 border-b border-white/5 safe-area-top">
                     <button onClick={() => setActiveTab('dashboard')} className="active:scale-95 transition-transform duration-200 hover:bg-neutral-800/50 p-2 rounded-full flex items-center justify-center">
                         <Icon name="arrow_back" className="text-yellow-400" />
                     </button>
-                    <h1 className="text-yellow-400 font-bold tracking-tight text-lg uppercase italic">Missão em Andamento</h1>
+                    <h1 className="text-yellow-400 font-bold tracking-tight text-base sm:text-lg uppercase italic truncate px-2">Missão Ativa</h1>
                     <div className="flex items-center gap-2">
-                        <button onClick={handleScanQR} className="active:scale-95 transition-transform duration-200 bg-primary/20 hover:bg-primary/30 p-2 rounded-full flex items-center justify-center relative overlow-hidden">
+                        <button onClick={handleScanQR} className="active:scale-95 transition-transform duration-200 bg-primary/20 hover:bg-primary/30 p-2 rounded-full flex items-center justify-center relative overflow-hidden">
                             {isScanning && <div className="absolute inset-0 border-2 border-primary border-t-transparent rounded-full animate-spin" />}
                             <Icon name="qr_code_scanner" className="text-yellow-400" />
-                        </button>
-                        <button className="active:scale-95 transition-transform duration-200 hover:bg-neutral-800/50 p-2 rounded-full flex items-center justify-center">
-                            <Icon name="more_vert" className="text-yellow-400" />
                         </button>
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto pt-24 px-4 pb-40 space-y-8 no-scrollbar">
+                <main className="flex-1 overflow-y-auto pt-24 px-4 pb-48 space-y-6 sm:space-y-8 no-scrollbar">
                     {/* Status & Identity */}
-                    <section className="bg-neutral-900 rounded-[32px] p-6 flex items-center gap-4 border border-neutral-800/50" style={sClayDark}>
+                    <section className="bg-neutral-900 rounded-[32px] p-5 sm:p-6 flex items-center gap-4 border border-neutral-800/50" style={sClayDark}>
                         <div className="relative">
-                            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.2)] bg-zinc-800 flex items-center justify-center">
-                                <Icon name="person" size={32} className="text-white/20" />
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.2)] bg-zinc-800 flex items-center justify-center">
+                                <Icon name="person" size={28} className="text-white/20" />
                             </div>
-
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h2 className="text-lg font-black text-white tracking-tight truncate">{driverName}</h2>
-                            <p className="text-yellow-400/80 font-bold text-[10px] flex items-center gap-1 uppercase tracking-widest">
+                            <h2 className="text-base sm:text-lg font-black text-white tracking-tight truncate">{driverName}</h2>
+                            <p className="text-yellow-400/80 font-bold text-[9px] sm:text-[10px] flex items-center gap-1 uppercase tracking-widest">
                                 <Icon name="stars" size={12} />
                                 Nível {stats.level}
                             </p>
                         </div>
                         <div className="text-right">
-                            <p className="text-neutral-500 text-[8px] uppercase tracking-widest font-black">Hoje</p>
-                            <p className="text-xl font-black text-yellow-400 italic">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
+                            <p className="text-neutral-500 text-[8px] uppercase tracking-widest font-black">Meta</p>
+                            <p className="text-lg sm:text-xl font-black text-yellow-400italic">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
                         </div>
                     </section>
 
                     {/* Route Details - Map Section */}
-                    <section className="relative rounded-[40px] overflow-hidden h-52 bg-neutral-800 shadow-2xl group border border-white/5">
+                    <section className="relative rounded-[40px] overflow-hidden h-48 sm:h-52 bg-neutral-800 shadow-2xl group border border-white/5">
                         <div className="absolute inset-0 z-0">
                             <MissionRouteMap 
                                 pickup={{ lat: Number(activeMission.pickup_lat), lng: Number(activeMission.pickup_lng) }}
@@ -4589,48 +4601,44 @@ const renderDashboard = () => (
                         
                         <button 
                              onClick={() => {
-                                const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega';
-                                let lat = Number(isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat);
-                                let lng = Number(isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng);
-                                let addr = isDeliveryPhase ? addressOnly : pickupOnly;
+                                 const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega';
+                                 let lat = Number(isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat);
+                                 let lng = Number(isDeliveryPhase ? activeMission.delivery_lng : activeMission.pickup_lng);
+                                 let addr = isDeliveryPhase ? addressOnly : pickupOnly;
 
-                                // Fallback Robusto para Paladar Brumadinho
-                                if (!isDeliveryPhase) {
-                                    const pickupName = (activeMission.merchant_name || activeMission.pickup_address || "").toLowerCase();
-                                    if (pickupName.includes('paladar')) {
-                                        if (isNaN(lat) || Math.abs(lat) < 0.1) {
-                                            lat = -20.1435361;
-                                            lng = -44.2169737;
-                                            addr = "R. Henri Karam, 640 - Presidente Barroca, Brumadinho - MG";
-                                        }
-                                    }
-                                }
+                                 if (!isDeliveryPhase) {
+                                     const pickupName = (activeMission.merchant_name || activeMission.pickup_address || "").toLowerCase();
+                                     if (pickupName.includes('paladar')) {
+                                         if (isNaN(lat) || Math.abs(lat) < 0.1) {
+                                             lat = -20.1435361;
+                                             lng = -44.2169737;
+                                             addr = "R. Henri Karam, 640 - Presidente Barroca, Brumadinho - MG";
+                                         }
+                                     }
+                                 }
 
-                                const hasValidCoords = !isNaN(lat) && !isNaN(lng) && Math.abs(lat) > 0.01;
-                                const addressOnlyClean = String(addr || "Destino").split("| ITENS:")[0].split("| OBS:")[0].trim();
-                                
-                                let queryAddr = addressOnlyClean;
-                                if (!queryAddr.toLowerCase().includes('brumadinho')) {
-                                    queryAddr += ', Brumadinho - MG';
-                                }
+                                 const hasValidCoords = !isNaN(lat) && !isNaN(lng) && Math.abs(lat) > 0.01;
+                                 const addressOnlyClean = String(addr || "Destino").split("| ITENS:")[0].split("| OBS:")[0].trim();
+                                 let queryAddr = addressOnlyClean;
+                                 if (!queryAddr.toLowerCase().includes('brumadinho')) queryAddr += ', Brumadinho - MG';
 
-                                const destination = hasValidCoords ? `${lat},${lng}` : encodeURIComponent(queryAddr);
-                                window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
-                            }}
-                            className="absolute top-4 right-4 size-12 bg-yellow-400 rounded-2xl flex items-center justify-center shadow-xl active:scale-90 transition-all z-20"
+                                 const destination = hasValidCoords ? `${lat},${lng}` : encodeURIComponent(queryAddr);
+                                 window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
+                             }}
+                             className="absolute top-4 right-4 size-10 sm:size-12 bg-yellow-400 rounded-2xl flex items-center justify-center shadow-xl active:scale-90 transition-all z-20"
                         >
-                            <Icon name="navigation" size={24} className="text-black" />
+                            <Icon name="navigation" size={20} className="text-black" />
                         </button>
 
-                        <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end">
-                            <div className="bg-neutral-950/80 backdrop-blur-xl p-4 rounded-3xl border border-white/5 max-w-[70%]">
+                        <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 flex justify-between items-end">
+                            <div className="bg-neutral-950/80 backdrop-blur-xl p-3 sm:p-4 rounded-3xl border border-white/5 max-w-[70%]">
                                 <p className="text-neutral-500 text-[8px] font-black uppercase tracking-widest mb-1">Passo Atual</p>
-                                <p className="text-white font-black text-xs leading-tight line-clamp-2 italic">
+                                <p className="text-white font-black text-[11px] sm:text-xs leading-tight line-clamp-2 italic">
                                     {(activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho') ? addressOnly : pickupOnly}
                                 </p>
                             </div>
-                            <div className="bg-yellow-400 px-4 py-2.5 rounded-full font-black text-xs text-black flex items-center gap-2 shadow-lg" style={sClayYellow}>
-                                <Icon name="route" size={16} />
+                            <div className="bg-yellow-400 px-3 py-2 sm:px-4 sm:py-2.5 rounded-full font-black text-[10px] sm:text-xs text-black flex items-center gap-1.5 shadow-lg" style={sClayYellow}>
+                                <Icon name="route" size={14} />
                                 {realTimeRoute ? realTimeRoute.distanceText : `${(parseFloat(activeMission.distance_km || '0')).toFixed(1)} KM`}
                             </div>
                         </div>
@@ -4640,23 +4648,23 @@ const renderDashboard = () => (
                     {orderItems.length > 0 && (
                         <section className="space-y-4">
                             <div className="flex justify-between items-end px-2">
-                                <h2 className="text-neutral-500 font-black text-[9px] uppercase tracking-[0.3em]">Itens do Pedido</h2>
-                                <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest">{orderItems.length} Itens</span>
+                                <h2 className="text-neutral-500 font-black text-[9px] uppercase tracking-[0.3em]">Itens da Carga</h2>
+                                <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest">{orderItems.length} Unid.</span>
                             </div>
                             <div className="grid gap-3">
                                 {orderItems.map((item: any, idx: number) => (
-                                    <div key={idx} className="bg-neutral-900 clay-card-dark rounded-3xl p-5 flex items-center gap-4 border border-neutral-800/50" style={sClayDark}>
-                                        <div className="w-14 h-14 relative flex-shrink-0">
+                                    <div key={idx} className="bg-neutral-900 clay-card-dark rounded-[24px] p-4 flex items-center gap-4 border border-neutral-800/50" style={sClayDark}>
+                                        <div className="w-12 h-12 relative flex-shrink-0">
                                             <div className="w-full h-full bg-neutral-950 rounded-2xl flex items-center justify-center border border-white/5">
-                                                <Icon name={isMobility ? 'person' : 'package_2'} className="text-white/20" size={28} />
+                                                <Icon name={isMobility ? 'person' : 'package_2'} className="text-white/20" size={24} />
                                             </div>
                                             {(item.quantity > 1) && (
-                                                <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-lg border-2 border-neutral-900">{item.quantity}x</span>
+                                                <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-[9px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border-2 border-neutral-900">{item.quantity}x</span>
                                             )}
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <span className="text-white font-black text-[13px] block truncate italic uppercase">{item.name}</span>
-                                            {item.options && <span className="text-neutral-500 text-[10px] font-bold italic truncate block">{item.options}</span>}
+                                            <span className="text-white font-black text-xs block truncate italic uppercase">{item.name}</span>
+                                            {item.options && <span className="text-neutral-500 text-[9px] font-bold italic truncate block">{item.options}</span>}
                                         </div>
                                     </div>
                                 ))}
@@ -4666,70 +4674,60 @@ const renderDashboard = () => (
 
                     {/* Detalhes do Pagamento */}
                     <section className="space-y-4">
-                        <h2 className="text-neutral-500 font-black text-[9px] uppercase tracking-[0.3em] px-2">Pagamento e Lucro</h2>
-                        <div className="bg-neutral-900 rounded-[35px] p-8 border-l-4 border-yellow-400 space-y-6" style={sClayDark}>
+                        <h2 className="text-neutral-500 font-black text-[9px] uppercase tracking-[0.3em] px-2">Financeiro</h2>
+                        <div className="bg-neutral-900 rounded-[32px] p-6 sm:p-8 border-l-4 border-yellow-400 space-y-6" style={sClayDark}>
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-3">
-                                    <div className="size-10 rounded-xl bg-yellow-400/10 flex items-center justify-center">
-                                        <Icon name="payments" size={20} className="text-yellow-400" />
+                                    <div className="size-9 rounded-xl bg-yellow-400/10 flex items-center justify-center">
+                                        <Icon name="payments" size={18} className="text-yellow-400" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-white font-black text-xs uppercase tracking-tight italic">Seu Lucro na Corrida</span>
-                                        <span className="text-neutral-500 text-[9px] font-black uppercase tracking-widest">Líquido já com taxas</span>
+                                        <span className="text-white font-black text-[10px] sm:text-xs uppercase tracking-tight italic">Seu Repasse</span>
+                                        <span className="text-neutral-500 text-[8px] uppercase tracking-widest">Líquido</span>
                                     </div>
                                 </div>
-                                <span className="text-yellow-400 text-3xl font-black italic tracking-tighter shadow-sm">R$ {driverEarnings.toFixed(2).replace('.', ',')}</span>
+                                <span className="text-yellow-400 text-2xl sm:text-3xl font-black italic tracking-tighter shadow-sm">R$ {driverEarnings.toFixed(2).replace('.', ',')}</span>
                             </div>
                             
                             <div className="h-px bg-white/5 w-full" />
 
-                            <div className="flex justify-between items-center px-2">
-                                <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Forma de Pagamento</span>
-                                <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
-                                    <Icon 
-                                        name={activeMission.payment_method === 'online' ? 'verified_user' : 'payments'} 
-                                        size={14} 
-                                        className="text-yellow-400" 
-                                    />
-                                    <span className="text-white font-black text-[11px] uppercase italic">
-                                        {getPaymentLabel(activeMission)}
-                                    </span>
+                            <div className="flex justify-between items-center px-1">
+                                <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">Cobrança</span>
+                                <div className="flex items-center gap-2 bg-white/5 px-2.5 py-1 rounded-xl border border-white/5">
+                                    <Icon name={activeMission.payment_method === 'online' ? 'verified_user' : 'payments'} size={12} className="text-yellow-400" />
+                                    <span className="text-white font-black text-[10px] uppercase italic">{getPaymentLabel(activeMission)}</span>
                                 </div>
                             </div>
 
                             <div className="h-px bg-white/5 w-full" />
 
                             <div className="flex flex-col gap-4">
-                                <div className="flex items-start gap-4">
+                                <div className="flex items-start gap-3">
                                      <div className="bg-yellow-400/10 p-2 rounded-xl">
-                                        <Icon name={activeMission.payment_method === 'online' ? 'verified_user' : 'payments'} size={18} className="text-yellow-400" />
+                                        <Icon name={activeMission.payment_method === 'online' ? 'verified_user' : 'payments'} size={16} className="text-yellow-400" />
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex justify-between items-center">
-                                            <span className="text-white font-black text-xs uppercase italic">{activeMission.payment_method === 'online' ? 'Já Pago (Online)' : `Cobrar do Cliente (${getPaymentLabel(activeMission)})`}</span>
+                                            <span className="text-white font-black text-[10px] sm:text-xs uppercase italic">{activeMission.payment_method === 'online' ? 'Já Pago Online' : `Valor a Receber`}</span>
                                             {(activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago') && (
-                                                <span className="bg-emerald-500/20 text-emerald-400 text-[8px] font-black px-2 py-1 rounded-full border border-emerald-500/20 uppercase">Liquidado</span>
+                                                <span className="bg-emerald-500/20 text-emerald-400 text-[7px] font-black px-1.5 py-0.5 rounded-full border border-emerald-500/10 uppercase">Pago</span>
                                             )}
                                         </div>
                                         <div className="mt-2 space-y-1">
                                             {!(activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago') && activeMission.payment_method !== 'online' ? (
                                                 <div className="bg-black/20 p-4 rounded-2xl border border-white/5 space-y-2">
-                                                    <div className="flex justify-between text-[10px] font-bold text-neutral-400">
-                                                        <span>Subtotal Pedido:</span>
+                                                    <div className="flex justify-between text-[9px] font-bold text-neutral-400">
+                                                        <span>Subtotal:</span>
                                                         <span>R$ {(Number(activeMission.total_price || 0) - Number(activeMission.delivery_fee || 0)).toFixed(2).replace('.', ',')}</span>
                                                     </div>
-                                                    <div className="flex justify-between text-[10px] font-bold text-neutral-400 pb-2 border-b border-white/5">
-                                                        <span>Taxa de Entrega:</span>
-                                                        <span>R$ {Number(activeMission.delivery_fee || 0).toFixed(2).replace('.', ',')}</span>
-                                                    </div>
                                                     <div className="flex justify-between text-sm font-black text-white pt-1">
-                                                        <span className="uppercase italic tracking-tighter">Total a Cobrar:</span>
-                                                        <span className="text-yellow-400">R$ {parseFloat(activeMission.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                                        <span className="uppercase italic tracking-tighter">Total:</span>
+                                                        <span className="text-yellow-400 text-lg">R$ {parseFloat(activeMission.total_price || 0).toFixed(2).replace('.', ',')}</span>
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <p className="text-emerald-400/60 text-[10px] font-bold uppercase tracking-tight">
-                                                    Não é necessário cobrar no local. Receba seu lucro ao finalizar.
+                                                <p className="text-emerald-400/60 text-[9px] font-bold uppercase tracking-tight">
+                                                    Não cobre o cliente. Valor já liquidado.
                                                 </p>
                                             )}
                                         </div>
@@ -4737,57 +4735,36 @@ const renderDashboard = () => (
                                 </div>
 
                                 {activeMission.observations && (
-                                    <div className="flex items-start gap-4 bg-neutral-950/40 p-5 rounded-3xl border border-white/5">
-                                        <Icon name="error_outline" size={18} className="text-yellow-400 shrink-0" />
-                                        <p className="text-neutral-400 text-[11px] leading-relaxed italic font-medium">"{activeMission.observations}"</p>
+                                    <div className="flex items-start gap-4 bg-neutral-950/40 p-4 rounded-3xl border border-white/5">
+                                        <Icon name="error_outline" size={16} className="text-yellow-400 shrink-0" />
+                                        <p className="text-neutral-400 text-[10px] leading-relaxed italic font-medium">"{activeMission.observations}"</p>
                                     </div>
                                 )}
                             </div>
                         </div>
                     </section>
-
-                    {/* Quick Actions */}
-                    <section className="bg-neutral-900 rounded-[35px] border border-neutral-800/50 overflow-hidden" style={sClayDark}>
-                        <div className="grid grid-cols-2">
-                            <button 
-                                onClick={() => toastSuccess('Chat em breve!')}
-                                className="py-6 text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-neutral-800/50 active:scale-95 transition-all border-r border-white/5"
-                            >
-                                <Icon name="chat" size={20} className="text-yellow-400" />
-                                Chat
-                            </button>
-                            <button 
-                                onClick={() => window.open(`tel:${activeMission.customer_phone || activeMission.phone || ''}`)}
-                                className="py-6 text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-neutral-800/50 active:scale-95 transition-all"
-                            >
-                                <Icon name="call" size={20} className="text-yellow-400" />
-                                Ligar
-                            </button>
-                        </div>
-                    </section>
-
-                    {/* Botão de Cancelamento Discreto */}
-                     {['a_caminho_coleta', 'saiu_para_coleta', 'aceito', 'confirmado'].includes(activeMission.status || '') && (
-                        <button 
-                            onClick={async () => { if (await showConfirm({ message: 'Deseja realmente cancelar esta missão?' })) handleUpdateStatus('cancelado'); }}
-                            className="w-full py-4 text-red-500/30 text-[9px] font-black uppercase tracking-[0.4em] hover:text-red-500/50 transition-colors"
-                        >
-                            Cancelar Missão Ativa
-                        </button>
-                    )}
                 </main>
 
                 {/* Bottom Fixed Action Button Container */}
-                <div className="fixed bottom-28 left-0 w-full p-8 bg-gradient-to-t from-[#0c0f10] via-[#0c0f10] to-transparent z-[210]">
+                <div className="fixed bottom-24 left-0 w-full p-6 sm:p-8 bg-gradient-to-t from-[#0c0f10] via-[#0c0f10] to-transparent z-[210] safe-area-bottom">
                     <button 
                         onClick={btn.action}
                         disabled={isAccepting}
-                        className="w-full h-20 bg-yellow-400 py-6 rounded-full flex items-center justify-center gap-4 active:scale-[0.97] transition-all shadow-[0_20px_60px_rgba(250,204,21,0.3)] disabled:opacity-50" 
+                        className="w-full h-16 sm:h-20 bg-yellow-400 rounded-full flex items-center justify-center gap-4 active:scale-[0.97] transition-all shadow-[0_20px_60px_rgba(250,204,21,0.3)] disabled:opacity-50" 
                         style={sClayYellow}
                     >
-                        <span className="text-black font-black text-xl tracking-tighter uppercase italic">{isAccepting ? 'Sincronizando...' : btn.label}</span>
-                        <Icon name={isAccepting ? 'sync' : btn.icon} className={`text-black font-black ${isAccepting ? 'animate-spin' : ''}`} size={28} />
+                        <span className="text-black font-black text-base sm:text-xl tracking-tighter uppercase italic">{isAccepting ? 'Sincronizando...' : btn.label}</span>
+                        <Icon name={isAccepting ? 'sync' : btn.icon} className={`text-black font-black ${isAccepting ? 'animate-spin' : ''}`} size={24} />
                     </button>
+                    
+                    {['a_caminho_coleta', 'saiu_para_coleta', 'aceito', 'confirmado'].includes(activeMission.status || '') && (
+                        <button 
+                            onClick={async () => { if (await showConfirm({ message: 'Deseja realmente cancelar esta missão?' })) handleUpdateStatus('cancelado'); }}
+                            className="w-full py-3 text-red-500/30 text-[8px] font-black uppercase tracking-[0.4em] hover:text-red-500/50 transition-colors mt-2"
+                        >
+                            Cancelar Missão
+                        </button>
+                    )}
                 </div>
             </motion.div>
         );
