@@ -126,12 +126,35 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
 
   const handleApplicationAction = async (appId: string, status: 'accepted' | 'rejected') => {
     try {
+      const application = applications.find(a => a.id === appId);
+      
       const { error } = await supabase
         .from('slot_applications')
         .update({ status })
         .eq('id', appId);
       
       if (error) throw error;
+      
+      // Se aprovado, dispara push notification para o entregador
+      if (status === 'accepted' && application?.driver_id) {
+        try {
+          // Chamada para a Edge Function de disparar push
+          await supabase.functions.invoke('send-push-notification', {
+            body: {
+              driver_id: application.driver_id,
+              title: 'Vaga Confirmada! 🏁',
+              body: `Sua candidatura para a vaga "${editingItem.title}" foi aprovada pelo lojista!`,
+              data: {
+                type: 'dedicated_slot_confirmed',
+                slot_id: editingItem.id
+              }
+            }
+          });
+          console.log('[PUSH] Notificação enviada para o entregador');
+        } catch (pushErr) {
+          console.error('[PUSH] Erro ao disparar notificação:', pushErr);
+        }
+      }
       
       toastSuccess(status === 'accepted' ? 'Candidato aprovado!' : 'Candidatura recusada.');
       fetchApplications();
