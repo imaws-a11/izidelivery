@@ -1,11 +1,12 @@
 import { useRef } from 'react';
 import { useAdmin } from '../context/AdminContext';
+import type { DynamicRatesState } from '../lib/types';
 
 // Taxas Dinâmicas
 export default function DynamicRatesTab() {
   const {
     dynamicRatesState, setDynamicRatesState, setIsAddingPeakRule, 
-    handleRemovePeakRule, saveDynamicRates, saveSpecificRateMetadata, 
+    handleRemovePeakRule, handleRemoveZone, saveDynamicRates, saveSpecificRateMetadata, 
     stats, allOrders, isSaving
   } = useAdmin();
 
@@ -292,7 +293,7 @@ export default function DynamicRatesTab() {
                     <div className="relative">
                       <input
                         type="text"
-                        value={dynamicRatesState.baseValues?.[cat.minKey] || '0.00'}
+                        value={String(dynamicRatesState.baseValues?.[cat.minKey] ?? '0.00')}
                         onChange={(e) => {
                           const newBase = { ...dynamicRatesState.baseValues, [cat.minKey]: e.target.value };
                           setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
@@ -309,7 +310,7 @@ export default function DynamicRatesTab() {
                       <div className="flex items-center gap-1">
                         <input
                           type="text"
-                          value={dynamicRatesState.baseValues?.[`${cat.kmKey}_interval`] || '1'}
+                          value={String(dynamicRatesState.baseValues?.[`${cat.kmKey}_interval`] ?? '1')}
                           onChange={(e) => {
                             const newBase = { ...dynamicRatesState.baseValues, [`${cat.kmKey}_interval`]: e.target.value };
                             setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
@@ -322,7 +323,7 @@ export default function DynamicRatesTab() {
                     <div className="relative">
                       <input
                         type="text"
-                        value={dynamicRatesState.baseValues?.[cat.kmKey] || '0.00'}
+                        value={String(dynamicRatesState.baseValues?.[cat.kmKey] ?? '0.00')}
                         onChange={(e) => {
                           const newBase = { ...dynamicRatesState.baseValues, [cat.kmKey]: e.target.value };
                           setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
@@ -339,7 +340,7 @@ export default function DynamicRatesTab() {
                       <div className="relative">
                         <input
                           type="text"
-                          value={dynamicRatesState.baseValues?.[extra.key] || '0.00'}
+                          value={String(dynamicRatesState.baseValues?.[extra.key] ?? '0.00')}
                           onChange={(e) => {
                             const newBase = { ...dynamicRatesState.baseValues, [extra.key]: e.target.value };
                             setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
@@ -367,7 +368,7 @@ export default function DynamicRatesTab() {
                                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Min (R$)</label>
                                 <input
                                   type="text"
-                                  value={dynamicRatesState.baseValues?.[v.minKey] || '0.00'}
+                                  value={String(dynamicRatesState.baseValues?.[v.minKey] ?? '0.00')}
                                   onChange={(e) => {
                                     const newBase = { ...dynamicRatesState.baseValues, [v.minKey]: e.target.value };
                                     setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
@@ -381,7 +382,7 @@ export default function DynamicRatesTab() {
                                   <div className="flex items-center gap-0.5">
                                     <input
                                       type="text"
-                                      value={dynamicRatesState.baseValues?.[`${v.kmKey}_interval`] || '1'}
+                                      value={String(dynamicRatesState.baseValues?.[`${v.kmKey}_interval`] ?? '1')}
                                       onChange={(e) => {
                                         const newBase = { ...dynamicRatesState.baseValues, [`${v.kmKey}_interval`]: e.target.value };
                                         setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
@@ -393,7 +394,7 @@ export default function DynamicRatesTab() {
                                 </div>
                                 <input
                                   type="text"
-                                  value={dynamicRatesState.baseValues?.[v.kmKey] || '0.00'}
+                                  value={String(dynamicRatesState.baseValues?.[v.kmKey] ?? '0.00')}
                                   onChange={(e) => {
                                     const newBase = { ...dynamicRatesState.baseValues, [v.kmKey]: e.target.value };
                                     setDynamicRatesState((prev: any) => ({ ...prev, baseValues: newBase }));
@@ -550,7 +551,7 @@ export default function DynamicRatesTab() {
                       <button 
                          onClick={() => {
                             const newPriorities = { ...dynamicRatesState.shippingPriorities };
-                            (newPriorities as any)[p.id].active = !newPriorities[p.id].active;
+                            (newPriorities as any)[p.id].active = !(newPriorities as any)[p.id].active;
                             setDynamicRatesState({ ...dynamicRatesState, shippingPriorities: newPriorities });
                          }}
                          className={`w-12 h-7 rounded-full relative transition-all shadow-md ${config.active ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'}`}
