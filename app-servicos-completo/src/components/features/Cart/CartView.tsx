@@ -13,11 +13,12 @@ interface CartViewProps {
   isIziBlack?: boolean;
   iziCoinRate?: number;
   deliveryFee?: number;
+  iziBlackRate?: number;
 }
 
 export const CartView: React.FC<CartViewProps> = ({ 
   cart, setCart, handleClearCart, setSubView, navigateSubView, merchantProducts, merchantName, handleAddToCart,
-  isIziBlack = false, iziCoinRate = 0, deliveryFee = 0
+  isIziBlack = false, iziCoinRate = 0, deliveryFee = 0, iziBlackRate = 0
 }) => {
   const subtotal: number = cart.reduce((sum, item) => {
     const basePrice = Number(item.price) || 0;
@@ -222,6 +223,22 @@ export const CartView: React.FC<CartViewProps> = ({
                  ) : (
                    <span className="text-white font-black text-sm tracking-tight italic">R$ {taxa.toFixed(2).replace(".", ",")}</span>
                  )}
+              </div>
+            </div>
+
+            {/* CASHBACK INFO */}
+            <div className="p-4 rounded-[24px] bg-yellow-400/5 border border-yellow-400/10 flex items-center justify-between group overflow-hidden relative">
+              <div className="absolute inset-0 bg-yellow-400/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="size-10 rounded-2xl bg-yellow-400 text-black flex items-center justify-center font-black text-lg italic shadow-[0_0_20px_rgba(255,215,9,0.2)]">Z</div>
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black text-yellow-400 uppercase tracking-widest leading-none mb-1">Você vai ganhar</span>
+                  <span className="text-white font-black text-sm tracking-tight uppercase italic">{((subtotal * (isIziBlack ? (iziBlackRate || 1) : (iziCoinRate || 1))) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} IZI COINS</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-end relative z-10">
+                <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1 italic">Cashback {isIziBlack ? 'Izi Black' : 'Standard'}</span>
+                <span className="text-emerald-400 font-extrabold text-[10px] tracking-widest uppercase">{isIziBlack ? `${iziBlackRate || 1}%` : `${iziCoinRate || 1}%`}</span>
               </div>
             </div>
             

@@ -44,6 +44,7 @@ import { SplashScreen as CapacitorSplash } from "@capacitor/splash-screen";
 import { Capacitor } from "@capacitor/core";
 import { Geolocation } from "@capacitor/geolocation";
 import { PushNotifications } from '@capacitor/push-notifications';
+import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 
 import { useAuth } from "./hooks/useAuth";
 import type { SavedAddress, Order, Quest } from "./types";
@@ -524,6 +525,37 @@ function App() {
     };
   }, [userId, user]);
 
+  const handleStartNativeTransferScan = async () => {
+    if (!Capacitor.isNativePlatform()) {
+      showToast("Use o leitor na aba Carteira para web.", "info");
+      return;
+    }
+
+    try {
+      const { camera } = await BarcodeScanner.checkPermissions();
+      if (camera !== 'granted') {
+        const { camera: newStatus } = await BarcodeScanner.requestPermissions();
+        if (newStatus !== 'granted') return;
+      }
+
+      const { barcodes } = await BarcodeScanner.scan();
+      if (barcodes.length > 0) {
+        const text = barcodes[0].displayValue;
+        const cleanId = text.replace("izipay:", "").replace("user:", "").replace("merchant:", "").trim();
+        
+        // Simula busca
+        const { data: userData } = await supabase.from("users_delivery").select("id, name, email").eq("id", cleanId).single();
+        if (userData) {
+          setTransferTarget(userData);
+        } else {
+          showToast("Usuário não encontrado.", "error");
+        }
+      }
+    } catch (err) {
+      console.error("Native Scan Error:", err);
+    }
+  };
+
   const handleConfirmSavedCardShortcut = async (orderId: string, amount: number, origin: string) => {
     if (!selectedCard) {
       setSubView("card_payment");
@@ -835,7 +867,7 @@ function App() {
                 setShowIziBlackWelcome(true);
                 setSubView("none");
               } else if (newOrder.service_type === 'coin_purchase') {
-                showToast("IZI Coins adicionados com sucesso!", "success");
+                showToast("IZI COINS adicionados com sucesso!", "success");
                 setShowDepositModal(false);
                 setSubView("izi_coin_tracking");
                 if (userIdRef.current) fetchWalletBalance(userIdRef.current);
@@ -1425,12 +1457,11 @@ function App() {
     const total = Math.max(0, subtotal - couponDiscount);
     
     // BENEFÍCIO IZI BLACK: Multiplicadores Dinâmicos
-    const cashbackMult = appSettings?.izi_black_cashback_multiplier || 2;
-    const xpMult = appSettings?.izi_black_xp_multiplier || 2;
-
-    const baseRate = globalSettings?.izi_coin_rate || 1;
-    const coinRate = isIziBlackMembership ? (baseRate * cashbackMult) : baseRate;
+    const baseRate = Number(globalSettings?.izi_coin_rate || 1);
+    const blackRate = Number(globalSettings?.izi_black_cashback || 5);
+    const coinRate = isIziBlackMembership ? blackRate : baseRate;
     
+    // O cashback é em porcentagem (ex: 1 = 1%, 5 = 5%)
     const earnedCoins = Number((total * (coinRate / 100)).toFixed(8));
     const finalCoins = isUsingCoins ? earnedCoins : (Number(iziCoins) + earnedCoins);
     
@@ -2112,7 +2143,7 @@ function App() {
         const requiredCoins = Math.ceil(total / coinValue);
 
         if (iziCoins < requiredCoins) {
-          toastError("Saldo de IZI Coins insuficiente.");
+          toastError("Saldo de IZI COINS insuficiente.");
           setIsLoading(false);
           return;
         }
@@ -2776,46 +2807,74 @@ const navigateSubView = (target: string) => {
     setDistancePrices({});
 
     try {
-      const directionsService = new google.maps.DirectionsService();
-      directionsService.route(
-        {
-          origin: origin,
-          destination: destination,
-          travelMode: google.maps.TravelMode.DRIVING,
-        },
-        (result, status) => {
+      const callRoutesAPI = async () => {
+        try {
+          const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': GMAPS_KEY,
+              'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline,routes.legs'
+            },
+            body: JSON.stringify({
+              origin: { address: origin },
+              destination: { address: destination },
+              travelMode: 'DRIVE',
+              routingPreference: 'TRAFFIC_AWARE',
+              computeAlternativeRoutes: false,
+              languageCode: 'pt-BR',
+              units: 'METRIC'
+            })
+          });
+
+          const data = await res.json();
           setIsCalculatingPrice(false);
-          if (status === google.maps.DirectionsStatus.OK && result?.routes[0]) {
-            const route = result.routes[0];
-            const leg = route.legs[0];
-            const distKm = (leg.distance?.value || 0) / 1000;
-            const durationText = leg.duration?.text || "";
-            const distText = leg.distance?.text || "";
+
+          if (data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+            const distKm = (route.distanceMeters || 0) / 1000;
+            
+            // Converter duração (string "123s") para minutos
+            const durationSeconds = route.duration ? parseInt(route.duration.replace('s', '')) : 0;
+            const durationMin = Math.ceil(durationSeconds / 60);
+            
+            const distText = distKm.toFixed(1).replace('.', ',') + " km";
+            const durationText = durationMin + " min";
             
             setRouteDistance(`${distText} • ${durationText}`);
             setDistanceValueKm(distKm);
-            if (route.overview_path) {
-              const points = route.overview_path.map((p: any) => ({ 
-                lat: typeof p.lat === 'function' ? p.lat() : p.lat, 
-                lng: typeof p.lng === 'function' ? p.lng() : p.lng 
-              }));
+
+            // Decodificar Polyline para exibir no mapa
+            if (route.polyline?.encodedPolyline && window.google?.maps?.geometry?.encoding) {
+              const path = window.google.maps.geometry.encoding.decodePath(route.polyline.encodedPolyline);
+              const points = path.map(p => ({ lat: p.lat(), lng: p.lng() }));
               setRoutePolyline(points as any);
             }
 
-            const bv = marketConditions.settings.baseValues;
-            const surge = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
-            
-            const mototaxi_min   = parseFloat(String(bv.mototaxi_min))   || 6.0;
-            const mototaxi_km    = parseFloat(String(bv.mototaxi_km))    || 2.5;
-            const mototaxi_int   = Math.max(0.1, parseFloat(String(bv.mototaxi_km_interval)) || 1.0);
-            
-            const carro_min      = parseFloat(String(bv.carro_min))      || 14.0;
-            const carro_km       = parseFloat(String(bv.carro_km))       || 4.5;
-            const carro_int      = Math.max(0.1, parseFloat(String(bv.carro_km_interval)) || 1.0);
-            
-            const van_min        = parseFloat(String(bv.van_min))        || 35.0;
-            const van_km         = parseFloat(String(bv.van_km))         || 8.0;
-            const van_int        = Math.max(0.1, parseFloat(String(bv.van_km_interval)) || 1.0);
+            // Continuar com o cálculo de preços (que usa distKm e marketConditions já no escopo pai)
+            processPrices(distKm);
+          }
+        } catch (err) {
+          console.error("Routes API Error:", err);
+          setIsCalculatingPrice(false);
+        }
+      };
+
+      const processPrices = (distKm: number) => {
+        const bv = marketConditions.settings.baseValues;
+        const surge = (bv.isDynamicActive ? marketConditions.surgeMultiplier : 1.0) || 1.0;
+        
+        const mototaxi_min   = parseFloat(String(bv.mototaxi_min))   || 6.0;
+        const mototaxi_km    = parseFloat(String(bv.mototaxi_km))    || 2.5;
+        const mototaxi_int   = Math.max(0.1, parseFloat(String(bv.mototaxi_km_interval)) || 1.0);
+        
+        const carro_min      = parseFloat(String(bv.carro_min))      || 14.0;
+        const carro_km       = parseFloat(String(bv.carro_km))       || 4.5;
+        const carro_int      = Math.max(0.1, parseFloat(String(bv.carro_km_interval)) || 1.0);
+        
+        const van_min        = parseFloat(String(bv.van_min))        || 35.0;
+        const van_km         = parseFloat(String(bv.van_km))         || 8.0;
+        const van_int        = Math.max(0.1, parseFloat(String(bv.van_km_interval)) || 1.0);
             
             const utilitario_min = parseFloat(String(bv.utilitario_min)) || 10.0;
             const utilitario_km  = parseFloat(String(bv.utilitario_km))  || 3.0;
@@ -2876,14 +2935,15 @@ const navigateSubView = (target: string) => {
                   setNearbyDriversCount(data.length);
                 }
               });
-          }
+            }; // Fim do processPrices
+
+            // Chamar a nova API de Rotas (v2)
+            callRoutesAPI();
+        } catch (err) {
+            console.error("Error calculating routes:", err);
+            setIsCalculatingPrice(false);
         }
-      );
-    } catch (err) {
-      console.error("Error calculating routes:", err);
-      setIsCalculatingPrice(false);
-    }
-  };
+    };
 
 
   const handleRequestTransit = () => {
@@ -3715,7 +3775,8 @@ const navigateSubView = (target: string) => {
         handleAddToCart={handleAddToCart}
         navigateSubView={navigateSubView}
         cart={cart}
-        iziCoinRate={globalSettings?.izi_coin_rate || 1.0}
+        iziCoinRate={Number(globalSettings?.izi_coin_rate || 1.0)}
+        iziBlackRate={Number(globalSettings?.izi_black_cashback || 5.0)}
         isIziBlack={isIziBlackMembership}
       />
     );
@@ -3906,7 +3967,7 @@ const navigateSubView = (target: string) => {
               cpf: cleanCpf,
               name: userName || "Cliente IziDelivery",
             },
-            description: selectedItem?.service_type === 'coin_purchase' ? `Compra de IZI Coins - R$ ${total.toFixed(2)}` : undefined
+            description: selectedItem?.service_type === 'coin_purchase' ? `Compra de IZI COINS - R$ ${total.toFixed(2)}` : undefined
           },
         });
 
@@ -4619,40 +4680,88 @@ const navigateSubView = (target: string) => {
       </div>
     );
   };
-
+  
   const renderPaymentError = () => (
-    <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-center">
-      <div className="size-20 rounded-full bg-red-500/10 flex items-center justify-center mb-6 border border-red-500/20">
-        <span className="material-symbols-outlined text-4xl text-red-500">error</span>
-      </div>
-      <h2 className="text-2xl font-black text-white uppercase tracking-tight">Ops! Algo deu errado</h2>
-      <p className="text-zinc-400 mt-2 mb-8 font-medium">Não conseguimos processar seu pagamento. Verifique os dados e tente novamente. âš ï¸</p>
-      <button onClick={() => setSubView("checkout")} className="w-full max-w-xs py-4 bg-white text-black font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all">Tentar Novamente</button>
+    <div className="fixed inset-0 z-[250] bg-black/98 flex items-center justify-center p-6 overflow-hidden">
+      <div className="absolute inset-0 bg-red-500/5 blur-[120px] rounded-full animate-pulse" />
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+        className="w-full max-w-sm clay-card-dark rounded-[50px] p-10 text-center relative border border-white/5"
+      >
+        <div className="size-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6 border border-red-500/20">
+          <span className="material-symbols-outlined text-4xl text-red-500 fill-1">error</span>
+        </div>
+        <h2 className="text-2xl font-black text-white uppercase tracking-tight">Ops! Algo deu errado</h2>
+        <p className="text-zinc-500 mt-2 mb-8 font-bold text-xs uppercase tracking-widest leading-relaxed">
+          Não conseguimos processar seu pagamento. Verifique os dados e tente novamente. ⚠️
+        </p>
+        <button onClick={() => setSubView("checkout")} className="w-full py-5 bg-white text-black font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all">
+          Tentar Novamente
+        </button>
+      </motion.div>
     </div>
   );
 
   const renderPaymentSuccess = () => (
-    <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-center">
-      <div className="size-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 border border-emerald-500/20">
-        <span className="material-symbols-outlined text-4xl text-emerald-500">check_circle</span>
-      </div>
-      <h2 className="text-2xl font-black text-white uppercase tracking-tight">Pagamento Aprovado!</h2>
-      <p className="text-zinc-400 mt-2 mb-8 font-medium">Sucesso! Seu pedido já foi enviado para o estabelecimento. Prepare-se para uma experiência incrível. âœ¨</p>
-      <button onClick={() => { setTab("orders"); setSubView("none"); }} className="w-full max-w-xs py-4 bg-emerald-500 text-white font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_30px_rgba(16,185,129,0.3)]">Acompanhar Pedido</button>
+    <div className="fixed inset-0 z-[250] bg-black/98 flex items-center justify-center p-6 overflow-hidden">
+      <div className="absolute inset-0 bg-emerald-500/5 blur-[120px] rounded-full animate-pulse" />
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+        className="w-full max-w-sm clay-card-dark rounded-[50px] p-10 text-center relative border border-white/5"
+      >
+        <div className="size-20 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-6 border border-emerald-500/20">
+          <span className="material-symbols-outlined text-4xl text-emerald-500 fill-1">check_circle</span>
+        </div>
+        <h2 className="text-2xl font-black text-white uppercase tracking-tight">Pagamento Aprovado!</h2>
+        <p className="text-zinc-500 mt-2 mb-8 font-bold text-xs uppercase tracking-widest leading-relaxed">
+          Sucesso! Seu pedido já está com o estabelecimento. Prepare-se para uma experiência incrível. ✨
+        </p>
+        <button onClick={() => { setTab("orders"); setSubView("none"); }} className="w-full py-5 bg-emerald-500 text-white font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all shadow-[0_15px_30px_rgba(16,185,129,0.2)]">
+          Acompanhar Pedido
+        </button>
+      </motion.div>
     </div>
   );
 
   const renderWaitingMerchant = () => (
-    <div className="absolute inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center">
-      <div className="size-24 rounded-full bg-blue-500/10 flex items-center justify-center mb-8 relative">
-        <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-ping" />
-        <span className="material-symbols-outlined text-5xl text-blue-500 relative z-10">storefront</span>
-      </div>
-      <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-3">Aguardando Loja</h2>
-      <p className="text-zinc-400 font-medium max-w-[240px] leading-relaxed">
-        O estabelecimento está analisando seu pedido agora mesmo. Fique de olho! â±ï¸
-      </p>
-      <button onClick={() => setSubView("none")} className="mt-12 px-8 py-3 bg-zinc-900 border border-zinc-800 rounded-2xl text-zinc-500 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">Voltar ao Início</button>
+    <div className="fixed inset-0 z-[250] bg-black/98 flex items-center justify-center p-6 overflow-hidden">
+      <div className="absolute inset-0 bg-blue-500/5 blur-[120px] rounded-full animate-pulse" />
+      
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        className="w-full max-w-sm clay-card-dark rounded-[50px] p-10 text-center relative border border-white/5"
+      >
+        <div className="size-24 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-8 relative">
+          <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-ping" />
+          <span className="material-symbols-outlined text-5xl text-blue-500 relative z-10 fill-1">storefront</span>
+        </div>
+
+        <div className="space-y-4">
+          <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
+            Aguardando <br/>
+            <span className="text-blue-500">Loja</span>
+          </h2>
+          <p className="text-zinc-500 font-bold text-xs uppercase tracking-widest leading-relaxed px-4">
+            O estabelecimento está analisando seu pedido agora mesmo. Fique de olho! ⏱️
+          </p>
+        </div>
+
+        <div className="mt-12 space-y-4">
+          <div className="flex items-center justify-center gap-1.5">
+            <span className="size-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0s' }} />
+            <span className="size-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0.2s' }} />
+            <span className="size-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0.4s' }} />
+          </div>
+          
+          <button 
+            onClick={() => setSubView("none")} 
+            className="w-full py-5 bg-zinc-900/50 border border-white/5 rounded-[24px] text-zinc-400 font-black text-[10px] uppercase tracking-[0.2em] active:scale-95 transition-all"
+          >
+            Voltar ao Início
+          </button>
+        </div>
+      </motion.div>
     </div>
   );
 
@@ -4949,7 +5058,7 @@ const navigateSubView = (target: string) => {
             </div>
             
             <h3 className="text-2xl font-black text-white tracking-tight mb-2 uppercase">Meu IZI Code</h3>
-            <p className="text-zinc-500 text-xs font-medium mb-10 leading-relaxed px-4">Compartilhe para receber transferências instantâneas de IZI Coins.</p>
+            <p className="text-zinc-500 text-xs font-medium mb-10 leading-relaxed px-4">Compartilhe para receber transferências instantâneas de IZI COINS.</p>
 
             <div className="p-6 bg-white rounded-[40px] shadow-inner mb-10 relative group">
               <img 
@@ -4988,7 +5097,7 @@ const navigateSubView = (target: string) => {
             </div>
 
             <div className="space-y-1">
-              <p className="font-black text-2xl text-white tracking-tight">Transferir IZI Coins</p>
+              <p className="font-black text-2xl text-white tracking-tight">Transferir IZI COINS</p>
               <p className="text-emerald-400 font-bold text-xs uppercase tracking-widest leading-none mb-1">Para: {transferTarget.email}</p>
               <p className="text-zinc-600 font-bold text-[9px] uppercase tracking-widest">{transferTarget.phone || "Sem telefone"}</p>
             </div>
@@ -5104,7 +5213,7 @@ const navigateSubView = (target: string) => {
           <div className="grid grid-cols-4 gap-2">
             {[
               { icon: "add",           label: "Adicionar", action: () => setShowDepositModal(true) },
-              { icon: "arrow_outward", label: "Transferir", action: () => setIsScanningQR(true) },
+              { icon: "arrow_outward", label: "Transferir", action: handleStartNativeTransferScan },
               { icon: "history",       label: "Extrato" },
               { icon: "qr_code_2", label: "Meu QR", action: () => setIsShowingMyQR(true) },
             ].map((a) => (
@@ -5228,7 +5337,7 @@ const navigateSubView = (target: string) => {
                 { icon: "pix",                    label: "PIX",             desc: "Mercado Pago ÃÂ¢ââ€šÂ¬Â¢ InstantÃÂ¢neo",    id: "pix" },
                 { icon: "bolt",                   label: "Bitcoin Lightning", desc: "LNbits ÃÂ¢ââ€šÂ¬Â¢ Satoshis",           id: "bitcoin_lightning" },
                 { icon: "payments",               label: "Dinheiro",        desc: "Pague na entrega",              id: "dinheiro" },
-                { icon: "currency_bitcoin",       label: "Saldo em IZI Coins",  desc: `${iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString("pt-BR")} coins disponíveis`, id: "saldo" },
+                { icon: "currency_bitcoin",       label: "Saldo em IZI COINS",  desc: `${iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString("pt-BR")} coins disponíveis`, id: "saldo" },
               ].map((m) => (
                 <div key={m.id} className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0 group active:scale-98 transition-transform cursor-pointer"
                   onClick={() => setPaymentMethod(m.id)}>
@@ -5634,7 +5743,7 @@ const navigateSubView = (target: string) => {
           user_id: userId,
           status: "pendente_pagamento",
           total_price: amount,
-          pickup_address: `Compra de ${amount} IZI Coins`,
+          pickup_address: `Compra de ${amount} IZI COINS`,
           delivery_address: "Recarga de Carteira",
           service_type: "coin_purchase",
           payment_method: method === "lightning" ? "bitcoin_lightning" : "cartao",
@@ -7509,7 +7618,6 @@ const navigateSubView = (target: string) => {
     );
   };
 
-  // Comentario limpo
   const renderWaitingDriver = () => {
     if (!selectedItem) return null;
 
@@ -7522,80 +7630,58 @@ const navigateSubView = (target: string) => {
     const service = serviceLabels[selectedItem.service_type] || { label: "Serviço", icon: "local_shipping", color: "text-yellow-400" };
 
     return (
-      <div className="bg-black absolute inset-0 z-[115] bg-[#020617] flex flex-col items-center justify-center p-8 text-white overflow-hidden">
-        {/* Fundo animado */}
-        <div className="absolute inset-0 opacity-5 bg-[linear-gradient(rgba(255,217,0,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,217,0,0.1)_1px,transparent_1px)] bg-[size:32px_32px]" />
-
-        {/* Radar */}
-        <div className="relative mb-10">
-          <motion.div animate={{ scale: [1, 2.5], opacity: [0.4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }} className="absolute inset-0 bg-yellow-400/20 rounded-full" />
-          <motion.div animate={{ scale: [1, 2], opacity: [0.3, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeOut", delay: 0.6 }} className="absolute inset-0 bg-yellow-400/20 rounded-full" />
-          <div className="relative size-24 bg-yellow-400/10 border border-yellow-400/30 rounded-full flex items-center justify-center">
-            <span className={`material-symbols-outlined text-4xl ${service.color}`}>{service.icon}</span>
-          </div>
-        </div>
-
-        <h2 className="text-2xl font-black text-white tracking-tight text-center mb-2">Buscando Prestador</h2>
-        <p className="text-white/40 text-sm text-center mb-8 max-w-xs">Estamos encontrando o melhor prestador disponível para você</p>
-
-        {/* Info do pedido */}
-        <div className="w-full max-w-sm bg-white/5 border border-white/10 rounded-[32px] p-6 space-y-4 mb-8">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Serviço</span>
-            <span className="text-sm font-black text-white">{service.label}</span>
-          </div>
-          <div className="h-px bg-white/5" />
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="mt-1.5 size-2 rounded-full bg-yellow-400 shrink-0" />
-              <p className="text-xs text-white/60 leading-tight">{selectedItem.pickup_address}</p>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="mt-1.5 size-2 rounded-full bg-orange-500 shrink-0" />
-              <p className="text-xs text-white/80 font-bold leading-tight">{selectedItem.delivery_address}</p>
-            </div>
-          </div>
-          <div className="h-px bg-white/5" />
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Valor</span>
-            <span className="text-xl font-black text-yellow-400">R$ {Number(selectedItem.total_price).toFixed(2).replace(".", ",")}</span>
-          </div>
-        </div>
-
-        {/* Cancelar */}
-        <button
-          onClick={async () => {
-            if (!selectedItem?.id || !userId) return;
-            if (!await showConfirm({ message: "Cancelar a solicitação?" })) return;
-            await supabase.from("orders_delivery").update({ status: "cancelado" }).eq("id", selectedItem.id);
-            setSubView("none");
-            fetchMyOrders(userId);
-            toastSuccess("Solicitação cancelada.");
-          }}
-          className="text-white/30 font-black text-[10px] uppercase tracking-widest border border-white/10 px-6 py-3 rounded-2xl hover:bg-white/5 transition-all active:scale-95"
+      <div className="fixed inset-0 z-[250] bg-black/98 flex items-center justify-center p-6 overflow-hidden">
+        <div className="absolute inset-0 bg-yellow-400/5 blur-[120px] rounded-full animate-pulse" />
+        
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+          className="w-full max-w-sm clay-card-dark rounded-[50px] p-10 text-center relative border border-white/5"
         >
-          Cancelar Solicitação
-        </button>
+          {/* Radar */}
+          <div className="relative size-24 mx-auto mb-10">
+            <motion.div animate={{ scale: [1, 2.5], opacity: [0.4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }} className="absolute inset-0 bg-yellow-400/20 rounded-full" />
+            <motion.div animate={{ scale: [1, 2], opacity: [0.3, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeOut", delay: 0.6 }} className="absolute inset-0 bg-yellow-400/20 rounded-full" />
+            <div className="relative size-full bg-yellow-400/10 border border-yellow-400/30 rounded-full flex items-center justify-center shadow-[inset_0_4px_10px_rgba(255,255,255,0.1)]">
+              <span className={`material-symbols-outlined text-4xl ${service.color} fill-1`}>{service.icon}</span>
+            </div>
+          </div>
 
-        {/* Auto-redireciona para active_order quando driver aceita */}
-        {selectedItem?.status && ["a_caminho", "aceito", "confirmado", "em_rota", "no_local"].includes(selectedItem.status) && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute bottom-10 left-6 right-6"
-          >
+          <div className="space-y-4">
+            <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
+              Buscando <br/>
+              <span className="text-yellow-400">{service.label}</span>
+            </h2>
+            <p className="text-zinc-500 font-bold text-xs uppercase tracking-widest leading-relaxed">
+              Estamos enviando seu convite para os melhores parceiros da região.
+            </p>
+          </div>
+
+          <div className="mt-12 space-y-6">
+            <div className="flex items-center justify-center gap-1.5">
+              <span className="size-1.5 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: '0s' }} />
+              <span className="size-1.5 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: '0.2s' }} />
+              <span className="size-1.5 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: '0.4s' }} />
+            </div>
+
             <button
-              onClick={() => setSubView("active_order")}
-              className="w-full bg-yellow-400 text-white font-black py-5 rounded-[24px] shadow-2xl shadow-primary/30 flex items-center justify-center gap-3 text-sm uppercase tracking-widest"
+              onClick={async () => {
+                if (!selectedItem?.id || !userId) return;
+                if (!await showConfirm({ message: "Cancelar a solicitação?" })) return;
+                await supabase.from("orders_delivery").update({ status: "cancelado" }).eq("id", selectedItem.id);
+                setSubView("none");
+                fetchMyOrders(userId);
+                toastSuccess("Solicitação cancelada.");
+              }}
+              className="w-full py-5 bg-zinc-900/50 border border-white/5 rounded-[24px] text-red-500/70 font-black text-[10px] uppercase tracking-[0.2em] active:scale-95 transition-all"
             >
-              <Icon name="navigation" />
-              Motorista Encontrado! Acompanhar
+              Cancelar Solicitação
             </button>
-          </motion.div>
-        )}
+          </div>
+        </motion.div>
       </div>
     );
   };
+
 
   const renderScheduledOrder = () => {
     if (!selectedItem) return null;
@@ -7895,8 +7981,9 @@ const navigateSubView = (target: string) => {
                     merchantProducts={selectedShop?.products || []}
                     merchantName={selectedShop?.name || ""}
                     handleAddToCart={handleAddToCart}
-                    iziCoinRate={globalSettings?.izi_coin_value || 1}
+                    iziCoinRate={globalSettings?.izi_coin_rate || 1}
                     isIziBlack={isIziBlackMembership} 
+                    iziBlackRate={appSettings?.iziBlackCashback || 1}
                     deliveryFee={calculateDeliveryFee()} 
                   />
                 </motion.div>
@@ -7929,7 +8016,8 @@ const navigateSubView = (target: string) => {
                     deliveryFee={calculateDeliveryFee()} 
                     serviceFee={globalSettings?.service_fee_percent || 0}
                     isIziBlack={isIziBlackMembership}
-                    iziBlackCashbackMultiplier={appSettings?.izi_black_cashback_multiplier || 2}
+                    iziBlackCashback={appSettings?.iziBlackCashback || 1}
+                    iziBlackCashbackMultiplier={appSettings?.izi_black_cashback_multiplier || 1}
                     paymentMethodsActive={globalSettings?.payment_methods_active}
                   />
                 </motion.div>

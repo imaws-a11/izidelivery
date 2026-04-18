@@ -4,8 +4,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Html5Qrcode } from "html5-qrcode";
 import { MercadoPagoCardForm } from "../../MercadoPagoCardForm";
 
-// Componente para o Leitor de QR Code usando a câmera nativa (Html5Qrcode)
-// Versão com Autofoco: Otimizada para leitura rápida e foco contínuo.
+import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
+import { Capacitor } from '@capacitor/core';
+
+// Componente para o Leitor de QR Code usando a câmera nativa ou Web
 const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => void; onCancel: () => void }) => {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   
@@ -20,7 +22,34 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
   useEffect(() => {
     let isMounted = true;
 
-    const startCamera = async () => {
+    const startNativeScan = async () => {
+      try {
+        // Verifica/Solicita permissão
+        const { camera } = await BarcodeScanner.checkPermissions();
+        if (camera !== 'granted') {
+          const { camera: newStatus } = await BarcodeScanner.requestPermissions();
+          if (newStatus !== 'granted') {
+            console.warn("Permissão de câmera negada");
+            cancelRef.current();
+            return;
+          }
+        }
+
+        // Abre o scanner nativo (isso abre uma nova View/Activity nativa em cima do app)
+        const { barcodes } = await BarcodeScanner.scan();
+        
+        if (barcodes.length > 0 && isMounted) {
+          resultRef.current(barcodes[0].displayValue);
+        } else {
+          cancelRef.current();
+        }
+      } catch (err) {
+        console.error("Erro no scanner nativo:", err);
+        cancelRef.current();
+      }
+    };
+
+    const startWebCamera = async () => {
       await new Promise(r => setTimeout(r, 600));
       if (!isMounted) return;
 
@@ -31,10 +60,9 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
         const config = {
           fps: 20,
           aspectRatio: 1.0,
-          // Configurações avançadas de vídeo para Autofoco e Nitidez
           videoConstraints: { 
             facingMode: "environment",
-            // @ts-ignore - focusMode é suportado em navegadores modernos mas pode não estar no Type padrão
+            // @ts-ignore
             focusMode: "continuous",
             width: { min: 640, ideal: 1280 },
             height: { min: 640, ideal: 1280 }
@@ -57,7 +85,6 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
           () => {}
         );
 
-        // Tenta aplicar autofoco avançado se o hardware permitir após o início
         const videoTrack = scanner.getVideoTrack();
         if (videoTrack && videoTrack.applyConstraints) {
           const capabilities = videoTrack.getCapabilities() as any;
@@ -76,7 +103,11 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
       }
     };
 
-    startCamera();
+    if (Capacitor.isNativePlatform()) {
+      startNativeScan();
+    } else {
+      startWebCamera();
+    }
 
     return () => {
       isMounted = false;
@@ -89,6 +120,17 @@ const ScannerWrapper = ({ onResult, onCancel }: { onResult: (text: string) => vo
       }
     };
   }, []);
+
+  // Na versão nativa, o scanner ocupa a tela inteira por conta própria.
+  // Renderizamos apenas se não for nativo ou se for um fallback visual.
+  if (Capacitor.isNativePlatform()) {
+    return (
+      <div className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center p-6 text-center">
+         <div className="size-20 border-2 border-yellow-400 border-t-transparent animate-spin rounded-full mb-6" />
+         <p className="font-black text-white uppercase tracking-widest text-xs">Iniciando Scanner Nativo...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[1000] bg-black overflow-hidden flex items-center justify-center">
@@ -148,6 +190,7 @@ interface WalletViewProps {
   setShowDepositModal: (show: boolean) => void;
   iziCoinValue?: number;
   iziCoinRate?: number;
+  iziBlackRate?: number;
 }
 
 export const WalletView: React.FC<WalletViewProps> = ({
@@ -159,14 +202,15 @@ export const WalletView: React.FC<WalletViewProps> = ({
   savedCards = [],
   userId,
   userName,
-   iziCoinValue = 1.0,
-   iziCoinRate = 1.0,
-   paymentMethod,
-   setShowDepositModal,
-   showToast,
-   setPaymentsOrigin,
-   setSubView,
- }) => {
+    iziCoinValue = 1.0,
+    iziCoinRate = 1.0,
+    iziBlackRate = 5.0,
+    paymentMethod,
+    setShowDepositModal,
+    showToast,
+    setPaymentsOrigin,
+    setSubView,
+  }) => {
   const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr" | "scan" | "add_card" | "loans">("main");
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [newCard, setNewCard] = useState({ number: "", holder: "", expiry: "", cvv: "" });
@@ -499,7 +543,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
   const handleTransfer = async () => {
     const val = Number(amount.replace(",", "."));
     if (isNaN(val) || val <= 0) return showToast?.("Valor inválido", "error");
-    if (val > iziCoins) return showToast?.("Saldo de coins insuficiente", "error");
+    if (val > iziCoins) return showToast?.("Saldo de IZI COINS insuficiente", "error");
     if (!recipient) return;
 
     setIsTransferring(true);
@@ -1274,7 +1318,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
             
             <div className="mt-5 flex items-center gap-3">
               <div className="h-[1px] w-8 bg-gradient-to-r from-transparent to-yellow-400/30" />
-              <span className="text-yellow-400 font-extrabold text-[11px] tracking-[0.2em] uppercase italic">Izicoins</span>
+              <span className="text-yellow-400 font-extrabold text-[11px] tracking-[0.2em] uppercase italic">IZI COINS</span>
               <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-yellow-400/30" />
             </div>
           </div>

@@ -133,43 +133,64 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
     language: 'pt-BR', 
     region: 'BR' 
   });
-  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
+  const [routePolyline, setRoutePolyline] = useState<string | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{start: any, end: any} | null>(null);
 
   const vPickup = isValidCoord(pickup) ? pickup : null;
   const vDelivery = isValidCoord(delivery) ? delivery : null;
 
   useEffect(() => {
     if (isLoaded && (vPickup || pickupAddress) && (vDelivery || deliveryAddress)) {
-      const service = new google.maps.DirectionsService();
-      
-      // Fallback para garantir Brumadinho na busca textual se as coordenadas falharem
-      const origin = vPickup || (pickupAddress && !pickupAddress.toLowerCase().includes('brumadinho') ? `${pickupAddress}, Brumadinho - MG` : pickupAddress);
-      const destination = vDelivery || (deliveryAddress && !deliveryAddress.toLowerCase().includes('brumadinho') ? `${deliveryAddress}, Brumadinho - MG` : deliveryAddress);
+      const fetchRoute = async () => {
+        try {
+          const originVal = vPickup 
+            ? { location: { latLng: { latitude: vPickup.lat, longitude: vPickup.lng } } } 
+            : { address: (pickupAddress && !pickupAddress.toLowerCase().includes('brumadinho') ? `${pickupAddress}, Brumadinho - MG` : pickupAddress) };
+          
+          const destVal = vDelivery 
+            ? { location: { latLng: { latitude: vDelivery.lat, longitude: vDelivery.lng } } } 
+            : { address: (deliveryAddress && !deliveryAddress.toLowerCase().includes('brumadinho') ? `${deliveryAddress}, Brumadinho - MG` : deliveryAddress) };
 
-      service.route(
-        {
-          origin,
-          destination,
-          travelMode: google.maps.TravelMode.DRIVING,
-          optimizeWaypoints: true,
-          provideRouteAlternatives: false
-        },
-        (result, status) => {
-          if (status === 'OK' && result) {
-            setDirections(result);
+          const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': mapsKey,
+              'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline,routes.legs'
+            },
+            body: JSON.stringify({
+              origin: originVal,
+              destination: destVal,
+              travelMode: 'DRIVE',
+              routingPreference: 'TRAFFIC_AWARE',
+              units: 'METRIC',
+              languageCode: 'pt-BR'
+            })
+          });
+
+          const data = await res.json();
+          if (data.routes?.[0]) {
+            const route = data.routes[0];
+            setRoutePolyline(route.polyline.encodedPolyline);
+            
+            const leg = route.legs[0];
+            const startLoc = { lat: leg.startLocation.latLng.latitude, lng: leg.startLocation.latLng.longitude };
+            const endLoc = { lat: leg.endLocation.latLng.latitude, lng: leg.endLocation.latLng.longitude };
+            setRouteInfo({ start: startLoc, end: endLoc });
+
             if (onRouteInfo) {
-              const leg = result.routes[0].legs[0];
               onRouteInfo({
-                distanceText: leg.distance?.text || '0 km',
-                distanceValue: (leg.distance?.value || 0) / 1000,
-                durationText: leg.duration?.text || ''
+                distanceText: (route.distanceMeters / 1000).toFixed(1) + ' km',
+                distanceValue: route.distanceMeters / 1000,
+                durationText: Math.ceil(parseInt(route.duration) / 60) + ' min'
               });
             }
-          } else {
-            console.error('MissionRouteMap: directions failed=', status);
           }
+        } catch (e) {
+          console.error('MissionRouteMap Error:', e);
         }
-      );
+      };
+      fetchRoute();
     }
   }, [isLoaded, vPickup?.lat, vPickup?.lng, vDelivery?.lat, vDelivery?.lng, pickupAddress, deliveryAddress]);
 
@@ -189,14 +210,13 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
 
   if (!isLoaded) return <div className="w-full h-full bg-black animate-pulse" />;
 
-  const startLoc = directions?.routes[0]?.legs[0]?.start_location;
-  const mapCenter = startLoc || vPickup || vDelivery || { lat: -19.9167, lng: -43.9345 };
+  const mapCenter = routeInfo?.start || vPickup || vDelivery || { lat: -19.9167, lng: -43.9345 };
 
   return (
     <GoogleMap
       mapContainerStyle={{ width: '100%', height: '100%' }}
       center={mapCenter}
-      zoom={directions ? 15 : 14}
+      zoom={routePolyline ? 15 : 14}
       options={{
         disableDefaultUI: true,
         styles: mapStyle,
@@ -208,19 +228,19 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
         fullscreenControl: false
       }}
     >
-      {directions && (
+      {routePolyline && (
         <>
-          <DirectionsRenderer 
-            directions={directions} 
+          <Polyline 
+            path={window.google.maps.geometry.encoding.decodePath(routePolyline)} 
             options={{ 
-              suppressMarkers: true,
-              polylineOptions: {
-                strokeColor: '#FACD05',
-                strokeOpacity: 0.9,
-                strokeWeight: 5,
-              }
+              strokeColor: '#FACD05',
+              strokeOpacity: 0.9,
+              strokeWeight: 5,
+              lineCap: 'round',
+              lineJoin: 'round'
             }} 
           />
+          
           {/* Marcador do Entregador (Motorista) */}
           {driverCoords && isValidCoord(driverCoords) && (
             <OverlayView position={driverCoords} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
@@ -236,26 +256,30 @@ function MissionRouteMap({ pickup, delivery, pickupAddress, deliveryAddress, dri
           )}
 
           {/* Marcador de Origem (Lojista/Coleta) */}
-          <OverlayView position={directions.routes[0].legs[0].start_location} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-            <div className="relative flex items-center justify-center group">
-              <div className="absolute size-10 rounded-full bg-yellow-400/20 animate-ping" />
-              <div className="size-10 rounded-2xl bg-yellow-400 border-2 border-black shadow-lg flex items-center justify-center relative z-10">
-                <Icon name="package_2" size={18} className="text-black" />
+          {routeInfo?.start && (
+            <OverlayView position={routeInfo.start} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+              <div className="relative flex items-center justify-center group">
+                <div className="absolute size-10 rounded-full bg-yellow-400/20 animate-ping" />
+                <div className="size-10 rounded-2xl bg-yellow-400 border-2 border-black shadow-lg flex items-center justify-center relative z-10">
+                  <Icon name="package_2" size={18} className="text-black" />
+                </div>
+                <div className="absolute top-12 bg-black/80 px-2 py-1 rounded text-[8px] font-black text-white uppercase whitespace-nowrap border border-white/10">LOJISTA</div>
               </div>
-              <div className="absolute top-12 bg-black/80 px-2 py-1 rounded text-[8px] font-black text-white uppercase whitespace-nowrap border border-white/10">LOJISTA</div>
-            </div>
-          </OverlayView>
+            </OverlayView>
+          )}
 
           {/* Marcador de Destino (Cliente) */}
-          <OverlayView position={directions.routes[0].legs[0].end_location} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-            <div className="relative flex items-center justify-center">
-              <div className="size-10 rounded-full bg-white border-2 border-black shadow-xl flex items-center justify-center relative translate-y-[-5px]">
-                <Icon name="person" size={18} className="text-black" />
-                <div className="absolute -bottom-1 size-3 rounded-full bg-blue-500 border-2 border-black" />
+          {routeInfo?.end && (
+            <OverlayView position={routeInfo.end} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+              <div className="relative flex items-center justify-center">
+                <div className="size-10 rounded-full bg-white border-2 border-black shadow-xl flex items-center justify-center relative translate-y-[-5px]">
+                  <Icon name="person" size={18} className="text-black" />
+                  <div className="absolute -bottom-1 size-3 rounded-full bg-blue-500 border-2 border-black" />
+                </div>
+                <div className="absolute top-10 bg-black/80 px-2 py-1 rounded text-[8px] font-black text-white uppercase whitespace-nowrap border border-white/10">CLIENTE</div>
               </div>
-              <div className="absolute top-10 bg-black/80 px-2 py-1 rounded text-[8px] font-black text-white uppercase whitespace-nowrap border border-white/10">CLIENTE</div>
-            </div>
-          </OverlayView>
+            </OverlayView>
+          )}
         </>
       )}
     </GoogleMap>
@@ -736,7 +760,8 @@ function App() {
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [calculatedDistance, setCalculatedDistance] = useState<string | null>(null);
-    const [modalDirections, setModalDirections] = useState<google.maps.DirectionsResult | null>(null);
+    const [modalRoutePolyline, setModalRoutePolyline] = useState<string | null>(null);
+    const [modalRouteInfo, setModalRouteInfo] = useState<{start: any, end: any} | null>(null);
     const [merchantCoords, setMerchantCoords] = useState<{lat: number, lng: number} | null>(null);
     const [stats, setStats] = useState({ balance: 0, today: 0, weekly: 0, totalEarnings: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
     const [earningsHistory, setEarningsHistory] = useState<Order[]>([]);
@@ -864,7 +889,8 @@ function App() {
     useEffect(() => {
         if (!selectedOrder || !showOrderModal) {
             setCalculatedDistance(null);
-            setModalDirections(null);
+            setModalRoutePolyline(null);
+            setModalRouteInfo(null);
             return;
         }
 
@@ -872,11 +898,7 @@ function App() {
             try {
                 if (!window.google || !driverCoords) return;
                 
-                const directionsService = new google.maps.DirectionsService();
-                
-                const origin = new google.maps.LatLng(driverCoords.lat, driverCoords.lng);
-                
-                // Ponto de interesse (coleta ou entrega dependendo do contexto)
+                // Pontos de interesse
                 const isAtDelivery = ['picked_up', 'em_rota', 'saiu_para_entrega'].includes(selectedOrder.status);
                 
                 const targetLat = isAtDelivery 
@@ -889,22 +911,36 @@ function App() {
                 
                 if (!targetLat || !targetLng) return;
                 
-                const destination = new google.maps.LatLng(targetLat, targetLng);
-
-                directionsService.route({
-                    origin: origin,
-                    destination: destination,
-                    travelMode: google.maps.DirectionsTravelMode.DRIVING,
-                }, (result, status) => {
-                    if (status === google.maps.DirectionsStatus.OK && result) {
-                        setModalDirections(result);
-                        if (result.routes[0]?.legs[0]?.distance?.text) {
-                            setCalculatedDistance(result.routes[0].legs[0].distance.text);
-                        }
-                    } else {
-                        console.error('[DIRECTIONS] Falha ao buscar rota:', status);
-                    }
+                const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-Goog-Api-Key': mapsKey,
+                      'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline,routes.legs'
+                    },
+                    body: JSON.stringify({
+                      origin: { location: { latLng: { latitude: driverCoords.lat, longitude: driverCoords.lng } } },
+                      destination: { location: { latLng: { latitude: targetLat, longitude: targetLng } } },
+                      travelMode: 'DRIVE',
+                      routingPreference: 'TRAFFIC_AWARE',
+                      units: 'METRIC',
+                      languageCode: 'pt-BR'
+                    })
                 });
+
+                const data = await res.json();
+                if (data.routes?.[0]) {
+                    const route = data.routes[0];
+                    setModalRoutePolyline(route.polyline.encodedPolyline);
+                    
+                    const leg = route.legs[0];
+                    setModalRouteInfo({
+                        start: { lat: leg.startLocation.latLng.latitude, lng: leg.startLocation.latLng.longitude },
+                        end: { lat: leg.endLocation.latLng.latitude, lng: leg.endLocation.latLng.longitude }
+                    });
+
+                    setCalculatedDistance((route.distanceMeters / 1000).toFixed(1) + ' km');
+                }
             } catch (err) {
                 console.error('[DISTANCE] Erro ao calcular:', err);
             }
@@ -2084,8 +2120,17 @@ function App() {
             }
 
             console.log('1. Verificando integridade via REST...');
+            
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            let token = supabaseKey;
+            try {
+                const ls = localStorage.getItem(`sb-${(supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1])}-auth-token`);
+                if (ls) token = JSON.parse(ls)?.access_token || supabaseKey;
+            } catch(e) {}
+
             const authHeaders = { 
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY, 
+                'apikey': supabaseKey, 
                 'Authorization': `Bearer ${token}` 
             };
             
@@ -2231,7 +2276,10 @@ function App() {
                     const isCredit = ['venda', 'vaga_dedicada', 'bonus', 'deposito', 'reembolso', 'cashback'].includes(t.type);
                     balance = isCredit ? balance + amount : balance - amount;
 
-                    if (isCredit) {
+                    // Apenas ganhos reais entram nos totais de ganhos (sum)
+                    // Cashback e Reembolso afetam o saldo (balance), mas não são considerados faturamento de trabalho
+                    const isEarning = ['venda', 'vaga_dedicada', 'bonus', 'deposito'].includes(t.type);
+                    if (isEarning) {
                         const tDate = new Date(t.created_at);
                         totalGanhos += amount;
                         
@@ -2239,7 +2287,8 @@ function App() {
                         const tDay = new Date(tDate);
                         tDay.setHours(0,0,0,0);
                         
-                        if (tDay.getTime() === startOfDay.getTime()) todaySum += amount;
+                        // Comparação robusta: se a data da transação for igual ou posterior ao início do dia atual
+                        if (tDate >= startOfDay) todaySum += amount;
                         if (tDate >= startOfWeek) weeklySum += amount;
                     }
                 });
@@ -2255,8 +2304,7 @@ function App() {
             if (txs) {
                 const todayTxs = txs.filter((t: any) => {
                     const d = new Date(t.created_at);
-                    d.setHours(0,0,0,0);
-                    return d.getTime() === startOfDay.getTime();
+                    return d >= startOfDay;
                 });
                 console.log('[FINANCE] Transações de Hoje:', todayTxs.map((t: any) => `${t.type}: ${t.amount}`));
             }
@@ -2401,7 +2449,7 @@ function App() {
 
                 setActiveMission(null);
                 localStorage.removeItem('Izi_active_mission');
-                setTimeout(() => refreshFinanceData(), 1000); // 1s para garantir propagação no DB
+                setTimeout(() => refreshFinanceData(), 2000); // 2s para garantir propagação no DB
             } else {
                 setTimeout(() => syncMissionWithDB(), 2000);
             }
@@ -5050,18 +5098,29 @@ function App() {
                                 zoom={15}
                                 options={mapOptions}
                             >
-                                {modalDirections && (
-                                    <DirectionsRenderer
-                                        directions={modalDirections}
-                                        options={{
-                                            suppressMarkers: false,
-                                            polylineOptions: {
+                                {modalRoutePolyline && (
+                                    <>
+                                        <Polyline
+                                            path={window.google.maps.geometry.encoding.decodePath(modalRoutePolyline)}
+                                            options={{
                                                 strokeColor: '#FACD05',
                                                 strokeWeight: 6,
-                                                strokeOpacity: 0.9
-                                            }
-                                        }}
-                                    />
+                                                strokeOpacity: 0.9,
+                                                lineCap: 'round',
+                                                lineJoin: 'round'
+                                            }}
+                                        />
+                                        {modalRouteInfo?.start && (
+                                            <OverlayView position={modalRouteInfo.start} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                                                <div className="size-3 rounded-full bg-yellow-400 border-2 border-black shadow-lg" />
+                                            </OverlayView>
+                                        )}
+                                        {modalRouteInfo?.end && (
+                                            <OverlayView position={modalRouteInfo.end} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                                                <div className="size-3 rounded-full bg-white border-2 border-black shadow-lg" />
+                                            </OverlayView>
+                                        )}
+                                    </>
                                 )}
                             </GoogleMap>
                         ) : (
