@@ -7907,9 +7907,12 @@ const navigateSubView = (target: string) => {
           </div>
           <span className="mt-1 text-[9px] font-black uppercase tracking-widest text-yellow-400">
             {cart.length > 0
-              ? `R$${cart
-                  .reduce((sum: number, item: any) => sum + (item.price || 0), 0)
-                  .toFixed(0)}`
+              ? (() => {
+                  const subtotal = cart.reduce((sum: number, item: any) => sum + (item.price || 0), 0);
+                  const rate = isIziBlackMembership ? (appSettings?.iziBlackCashback || 5) : (globalSettings?.izi_coin_rate || 1);
+                  const cashback = subtotal * (rate / 100);
+                  return `R$ ${subtotal.toFixed(2)} | +${cashback.toFixed(3)} IZI COINS`;
+                })()
               : "Cart"}
           </span>
         </button>
