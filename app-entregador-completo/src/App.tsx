@@ -1497,7 +1497,7 @@ function App() {
             } else {
                 console.log('[SYNC] Nenhuma missão ativa no banco para o motorista:', driverId);
 
-                // PROTE¢ÃƒÆ’¢¬áÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O: S³ apaga o cache local se a missão for ANTIGA (> 30 min)
+                // PROTECAO: So apaga o cache local se a missao for ANTIGA (> 30 min)
                 // Isso evita apagar uma missão que acabou de ser aceita mas ainda não propagou no banco
                 const cachedMissionRaw = localStorage.getItem('Izi_active_mission');
                 if (cachedMissionRaw) {
@@ -5428,13 +5428,15 @@ function App() {
                                 </div>
                             </div>
 
-                            <div className="bg-white/[0.02] border border-white/5 rounded-[40px] p-6 space-y-5 shadow-inner">
-                                <div className="flex justify-between items-center bg-black/40 p-5 rounded-[24px] border border-white/5 shadow-2xl">
+                            <div className="clay-card-dark border border-white/5 rounded-[40px] p-6 space-y-5 shadow-2xl relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl -mr-16 -mt-16 rounded-full pointer-events-none" />
+                                
+                                <div className="flex justify-between items-center clay-profile-inner p-5 rounded-[24px] border border-white/5 shadow-inner">
                                     <div className="flex flex-col gap-1">
                                         <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Chave PIX Ativa</span>
                                         <span className="text-xs font-black text-white truncate max-w-[180px] italic tracking-tight">{pixKey}</span>
                                     </div>
-                                    <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg">
+                                    <div className="size-12 rounded-2xl bg-black/20 flex items-center justify-center border border-white/5 shadow-lg">
                                         <Icon name="qr_code_2" size={24} className="text-primary drop-shadow-[0_0_8px_rgba(255,217,0,0.5)]" />
                                     </div>
                                 </div>
@@ -5464,9 +5466,9 @@ function App() {
                                 </div>
                             </div>
                             
-                            <div className="flex items-center gap-4 bg-primary/5 p-5 rounded-[28px] border border-primary/10 overflow-hidden relative shadow-inner">
+                            <div className="flex items-center gap-4 clay-profile-inner p-5 rounded-[28px] border border-primary/10 overflow-hidden relative shadow-inner">
                                 <div className="absolute inset-0 bg-primary/5 opacity-50 blur-2xl"></div>
-                                <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                                <div className="size-10 rounded-xl bg-black/20 flex items-center justify-center border border-white/5 shrink-0 shadow-lg">
                                     <Icon name="bolt" className="text-primary" size={20} />
                                 </div>
                                 <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest leading-relaxed relative z-10">

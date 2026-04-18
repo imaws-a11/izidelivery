@@ -43,6 +43,7 @@ import SplashScreenComponent from "./components/common/SplashScreen";
 import { SplashScreen as CapacitorSplash } from "@capacitor/splash-screen";
 import { Capacitor } from "@capacitor/core";
 import { Geolocation } from "@capacitor/geolocation";
+import { PushNotifications } from '@capacitor/push-notifications';
 
 import { useAuth } from "./hooks/useAuth";
 import type { SavedAddress, Order, Quest } from "./types";
@@ -436,7 +437,7 @@ function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'flash_offers' }, fetchFlashOffers)
       .subscribe();
 
-    // Sincronização em tempo real do Perfil do Usuário (Wallet, IZI Black, etc)
+    // Sincronizacao em tempo real do Perfil do Usuario (Wallet, IZI Black, etc)
     let userProfileSub: any = null;
     if (userId) {
       userProfileSub = supabase
@@ -471,6 +472,57 @@ function App() {
       if (userProfileSub) supabase.removeChannel(userProfileSub);
     };
   }, [userId]);
+
+  // Registro de Notificacoes Push Nativas (Capacitor)
+  useEffect(() => {
+    if (!userId || !user) return;
+
+    const setupPush = async () => {
+      if (!Capacitor.isNativePlatform()) {
+        console.log('[PUSH] Pulando: Ambiente Web.');
+        return;
+      }
+
+      try {
+        let permStatus = await PushNotifications.checkPermissions();
+        
+        if (permStatus.receive === 'prompt') {
+          permStatus = await PushNotifications.requestPermissions();
+        }
+
+        if (permStatus.receive !== 'granted') {
+          console.warn('[PUSH] Permissao negada pelo usuario.');
+          return;
+        }
+
+        await PushNotifications.register();
+
+        PushNotifications.addListener('registration', async (token) => {
+          console.log('[PUSH] Token registrado:', token.value);
+          await supabase
+            .from('users_delivery')
+            .update({ push_token: token.value })
+            .eq('id', userId);
+        });
+
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          console.log('[PUSH] Recebida:', notification);
+          showToast(`${notification.title}: ${notification.body}`, 'info');
+        });
+
+      } catch (err) {
+        console.error('[PUSH] Falha na configuracao:', err);
+      }
+    };
+
+    setupPush();
+
+    return () => {
+      if (Capacitor.isNativePlatform()) {
+        PushNotifications.removeAllListeners();
+      }
+    };
+  }, [userId, user]);
 
   const handleConfirmSavedCardShortcut = async (orderId: string, amount: number, origin: string) => {
     if (!selectedCard) {
