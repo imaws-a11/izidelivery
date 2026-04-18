@@ -1100,6 +1100,7 @@ function App() {
         };
     }, [isAuthenticated, driverId, isOnline, activeMission]);
 
+
     useEffect(() => {
         const ensureDriverRecord = async (userId: string, email: string, name: string) => {
             // Busca o registro atual, mesmo que esteja marcado como deletado
@@ -1398,6 +1399,8 @@ function App() {
 
     const syncMissionWithDB = useCallback(async () => {
         if (!driverId || !isAuthenticated) return;
+        setIsSyncingMission(true);
+        toast('Buscando missão no servidor...', 'info');
         try {
             console.log('[SYNC] Sincronizando missão ativa do banco...');
             const dId = String(driverId).trim();
@@ -1480,6 +1483,7 @@ function App() {
                     pickup_lat: officialPickupLat,
                     pickup_lng: officialPickupLng,
                     destination: activeOrder.delivery_address || 'Destino', 
+
                     price: activeOrder.total_price || 0, 
                     status: activeOrder.status, 
                     preparation_status: activeOrder.preparation_status || 'preparando',
@@ -1488,6 +1492,7 @@ function App() {
                 setActiveMission(mission);
                 localStorage.setItem('Izi_active_mission', JSON.stringify(mission));
                 setActiveTab('active_mission');
+                toastSuccess('Missão sincronizada!');
                 console.log('[SYNC] Missão restaurada do banco:', mission.realId);
             } else {
                 console.log('[SYNC] Nenhuma missão ativa no banco para o motorista:', driverId);
@@ -1515,7 +1520,10 @@ function App() {
                 }
             }
         } catch (err: any) {
+            toastError('Erro ao sincronizar missão.');
             console.error('[SYNC] Falha ao sincronizar missão:', err.message);
+        } finally {
+            setIsSyncingMission(false);
         }
     }, [driverId, isAuthenticated]);
 
@@ -1578,6 +1586,46 @@ function App() {
             throw error;
         }
     }, []);
+
+    // Monitorar aprovação de vagas dedicadas em tempo real
+    useEffect(() => {
+        if (!isAuthenticated || !driverId) return;
+
+        const channel = supabase
+            .channel(`job_apps_${driverId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'slot_applications',
+                    filter: `driver_id=eq.${driverId}`
+                },
+                (payload) => {
+                    const status = payload.new.status;
+                    const oldStatus = payload.old.status;
+
+                    if (status === 'accepted' && oldStatus !== 'accepted') {
+                        playIziSound('driver');
+                        // Toast premium para avisar da aprovação
+                        toastSuccess("🏁 VAGA CONFIRMADA! O lojista acabou de aprovar sua candidatura.", {
+                            position: 'top-center',
+                            duration: 6000
+                        });
+                    }
+                    
+                    // Atualiza o estado local das candidaturas
+                    fetchFromDB('slot_applications');
+                    // Também atualiza a lista de vagas para garantir que o selo mude
+                    fetchFromDB('dedicated_slots_delivery', 'select=*,admin_users(store_name,store_logo,store_address,store_phone),slot_applications(status)&is_active=eq.true&order=created_at.desc');
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [isAuthenticated, driverId, fetchFromDB]);
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
@@ -2186,7 +2234,12 @@ function App() {
                     if (isCredit) {
                         const tDate = new Date(t.created_at);
                         totalGanhos += amount;
-                        if (tDate >= startOfDay) todaySum += amount;
+                        
+                        // Ajuste de fuso: garantindo que tDate está sendo comparado no dia local
+                        const tDay = new Date(tDate);
+                        tDay.setHours(0,0,0,0);
+                        
+                        if (tDay.getTime() === startOfDay.getTime()) todaySum += amount;
                         if (tDate >= startOfWeek) weeklySum += amount;
                     }
                 });
@@ -2198,7 +2251,15 @@ function App() {
                 level: Math.floor(((orders?.length || 0) * 15) / 100) + 1
             }));
 
-            console.log('[FINANCE] Sincronização concluída.', { balance, todaySum });
+            console.log(`[FINANCE] Sincronização concluída. Saldo: ${balance}, Hoje: ${todaySum}`);
+            if (txs) {
+                const todayTxs = txs.filter((t: any) => {
+                    const d = new Date(t.created_at);
+                    d.setHours(0,0,0,0);
+                    return d.getTime() === startOfDay.getTime();
+                });
+                console.log('[FINANCE] Transações de Hoje:', todayTxs.map((t: any) => `${t.type}: ${t.amount}`));
+            }
         } catch (e) {
             console.error("[FINANCE] Error:", e);
         } finally {
@@ -2579,49 +2640,44 @@ function App() {
                                 </button>
                                 
                                 {(() => {
-                                    const sClayDark: React.CSSProperties = {
-                                        background: '#121212',
-                                        borderRadius: '2.5rem',
-                                        boxShadow: '8px 8px 16px rgba(0,0,0,0.6), inset 4px 4px 8px rgba(255,255,255,0.02), inset -4px -4px 8px rgba(0,0,0,0.8)',
-                                    };
-                                    const sClayYellow: React.CSSProperties = {
-                                        background: '#FACD05',
-                                        borderRadius: '2.5rem',
-                                        boxShadow: '0 10px 25px rgba(250,204,21,0.3), inset 6px 6px 12px rgba(255,255,255,0.6), inset -6px -6px 12px rgba(0,0,0,0.2)',
-                                    };
-
                                     const hasApplied = myApplications.some((app: any) => app.slot_id === selectedSlot?.id);
                                     const application = myApplications.find((app: any) => app.slot_id === selectedSlot?.id);
                                     
                                     if (hasApplied) {
+                                        const isWaiting = application?.status === 'pending';
                                         return (
                                             <div
-                                                className="flex-1 flex items-center justify-center gap-3 h-14 font-black text-xs uppercase"
-                                                style={{
-                                                    ...(application?.status === 'accepted'
-                                                        ? { background: '#10b981', boxShadow: '0 10px 25px rgba(16,185,129,0.3)' }
-                                                        : { ...sClayDark, color: '#FFD700' }
-                                                    ),
-                                                    borderRadius: '1.2rem',
-                                                    letterSpacing: '0.1em',
-                                                    color: application?.status === 'accepted' ? '#fff' : '#FFD700',
-                                                }}
+                                                className={`flex-1 flex items-center justify-center gap-4 h-15 font-black text-xs uppercase tracking-[0.2em] transition-all ${
+                                                    application?.status === 'accepted' ? 'clay-card-yellow text-zinc-950' : 'clay-card-exclusive text-white/50'
+                                                }`}
                                             >
-                                                <Icon name={application?.status === 'accepted' ? 'verified' : 'today'} size={18} />
-                                                {application?.status === 'accepted' ? 'Candidatura Aprovada!' : 'Em Análise...'}
+                                                <Icon 
+                                                    name={application?.status === 'accepted' ? 'verified' : 'history'} 
+                                                    size={22} 
+                                                    className={isWaiting ? 'animate-spin-slow' : ''} 
+                                                />
+                                                {application?.status === 'accepted' ? 'Candidatura Aprovada!' : 'Aguardando Lojista...'}
                                             </div>
                                         );
                                     }
-                                    
+
                                     return (
-                                        <button
-                                            onClick={() => handleApplyToSlot(selectedSlot)}
-                                            disabled={applyingSlotId === selectedSlot.id}
-                                            className={`flex-1 flex items-center justify-center gap-3 h-14 font-black text-xs uppercase text-stone-950 active:scale-[0.98] transition-all ${applyingSlotId === selectedSlot.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                            style={{ ...sClayYellow, borderRadius: '1.2rem', letterSpacing: '0.15em' }}
+                                        <button 
+                                            disabled={!!applyingSlotId}
+                                            onClick={() => selectedSlot && handleApplyToSlot(selectedSlot)}
+                                            className="flex-1 h-15 clay-card-exclusive overflow-hidden relative group active:scale-95 transition-all flex items-center justify-center gap-3 border border-primary/20"
                                         >
-                                            <Icon name={applyingSlotId === selectedSlot.id ? 'sync' : 'stars'} size={18} className={applyingSlotId === selectedSlot.id ? 'animate-spin' : ''} />
-                                            {applyingSlotId === selectedSlot.id ? 'Enviando...' : 'Candidatar-se à Vaga'}
+                                            <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-10 transition-opacity" />
+                                            {applyingSlotId ? (
+                                                <div className="size-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <div className="size-8 rounded-xl bg-primary/20 flex items-center justify-center">
+                                                        <Icon name="touch_app" size={20} className="text-primary" />
+                                                    </div>
+                                                    <span className="text-sm font-black text-primary uppercase tracking-[0.2em]">Candidatar Agora</span>
+                                                </>
+                                            )}
                                         </button>
                                     );
                                 })()}
@@ -2634,6 +2690,7 @@ function App() {
     };
 
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isSyncingMission, setIsSyncingMission] = useState(false);
     const [pullY, setPullY] = useState(0);
 
     const onRefresh = async () => {
@@ -2930,85 +2987,87 @@ function App() {
                     <div className="grid gap-4">
                         {dedicatedSlots.length === 0 ? (
                             <p className="text-[10px] text-white/30 font-black uppercase tracking-widest text-center py-4">Nenhuma vaga no momento</p>
-                        ) : dedicatedSlots.slice(0, 2).map((slot: any) => {
-                            const maxDeliveries = slot.metadata?.base_deliveries || slot.max_deliveries || 0;
-                            return (
-                                <motion.button 
-                                    key={slot.id}
-                                    onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
-                                    className="relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-[30px_30px_60px_rgba(0,0,0,0.9),inset_10px_10px_25px_rgba(255,255,255,0.03),inset_-10px_-10px_25px_rgba(0,0,0,0.7)]"
-                                    style={{
-                                        background: "linear-gradient(145deg, #1a1a1d, #121214)",
-                                        border: "1px solid rgba(250,204,21,0.12)"
-                                    }}
-                                >
-                                    {/* PREMIUM EFFECTS */}
-                                    <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-yellow-400/10 transition-all duration-1000" />
-                                    <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-orange-500/5 rounded-full blur-[60px] pointer-events-none" />
-                                    
-                                    <div className="relative z-10 flex items-start justify-between">
-                                        <div className="flex gap-5 items-center flex-1 min-w-0 pr-4">
-                                            <div className="size-16 rounded-[24px] bg-zinc-900 border border-white/5 flex items-center justify-center shrink-0 shadow-[10px_10px_25px_rgba(0,0,0,0.6),inset_2px_2px_4px_rgba(255,255,255,0.05)] overflow-hidden relative">
-                                                {slot.admin_users?.store_logo ? (
-                                                    <img src={slot.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
-                                                ) : (
-                                                    <div className="size-full bg-gradient-to-br from-yellow-400/20 to-orange-500/20 flex items-center justify-center">
-                                                        <Icon name="military_tech" className="text-yellow-400" size={32} />
+                        ) : (
+                            dedicatedSlots.slice(0, 2).map((slot: any) => {
+                                const maxDeliveries = slot.metadata?.base_deliveries || slot.max_deliveries || 0;
+                                return (
+                                    <motion.button 
+                                        key={slot.id}
+                                        onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
+                                        className="relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-[30px_30px_60px_rgba(0,0,0,0.9),inset_10px_10px_25px_rgba(255,255,255,0.03),inset_-10px_-10px_25px_rgba(0,0,0,0.7)]"
+                                        style={{
+                                            background: "linear-gradient(145deg, #1a1a1d, #121214)",
+                                            border: "1px solid rgba(250,204,21,0.12)"
+                                        }}
+                                    >
+                                        {/* PREMIUM EFFECTS */}
+                                        <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-yellow-400/10 transition-all duration-1000" />
+                                        <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-orange-500/5 rounded-full blur-[60px] pointer-events-none" />
+                                        
+                                        <div className="relative z-10 flex items-start justify-between">
+                                            <div className="flex gap-5 items-center flex-1 min-w-0 pr-4">
+                                                <div className="size-16 rounded-[24px] bg-zinc-900 border border-white/5 flex items-center justify-center shrink-0 shadow-[10px_10px_25px_rgba(0,0,0,0.6),inset_2px_2px_4px_rgba(255,255,255,0.05)] overflow-hidden relative">
+                                                    {slot.admin_users?.store_logo ? (
+                                                        <img src={slot.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
+                                                    ) : (
+                                                        <div className="size-full bg-gradient-to-br from-yellow-400/20 to-orange-500/20 flex items-center justify-center">
+                                                            <Icon name="military_tech" className="text-yellow-400" size={32} />
+                                                        </div>
+                                                    )}
+                                                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
+                                                </div>
+                                                
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1.5">
+                                                        <div className="size-4 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
+                                                            <Icon name="verified" className="text-blue-400" size={10} />
+                                                        </div>
+                                                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] drop-shadow-[0_0_12px_rgba(96,165,250,0.5)] truncate">
+                                                            {slot.admin_users?.store_name || 'Parceiro Izi'}
+                                                        </p>
                                                     </div>
-                                                )}
-                                                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
+                                                    <h4 className="text-lg font-black text-white italic tracking-tight truncate leading-tight mb-1">{slot.title}</h4>
+                                                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                                                        <Icon name="location_on" className="text-zinc-600" size={10} />
+                                                        <span className="truncate">{slot.admin_users?.store_address || 'Unidade Local'}</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                             
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1.5">
-                                                    <div className="size-4 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
-                                                        <Icon name="verified" className="text-blue-400" size={10} />
+                                            <div className="text-right shrink-0 bg-black/20 p-4 rounded-[28px] border border-white/5 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)]">
+                                                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">VALOR DIÁRIA</p>
+                                                <div className="flex flex-col items-end">
+                                                    <p className="text-2xl font-black text-yellow-400 italic leading-none">
+                                                        <span className="text-xs mr-0.5 not-italic text-yellow-400/60 font-bold">R$</span>
+                                                        {parseFloat(slot.fee_per_day || 0).toFixed(0)}
+                                                    </p>
+                                                    <div className="mt-2 py-1 px-3 bg-yellow-400 text-black rounded-full shadow-[2px_2px_8px_rgba(250,204,21,0.2)]">
+                                                        <p className="text-[9px] font-black uppercase tracking-tight">
+                                                            Até {maxDeliveries} entregas
+                                                        </p>
                                                     </div>
-                                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] drop-shadow-[0_0_12px_rgba(96,165,250,0.5)] truncate">
-                                                        {slot.admin_users?.store_name || 'Parceiro Izi'}
-                                                    </p>
-                                                </div>
-                                                <h4 className="text-lg font-black text-white italic tracking-tight truncate leading-tight mb-1">{slot.title}</h4>
-                                                <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                                                    <Icon name="location_on" className="text-zinc-600" size={10} />
-                                                    <span className="truncate">{slot.admin_users?.store_address || 'Unidade Local'}</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        
-                                        <div className="text-right shrink-0 bg-black/20 p-4 rounded-[28px] border border-white/5 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)]">
-                                            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">VALOR DIÁRIA</p>
-                                            <div className="flex flex-col items-end">
-                                                <p className="text-2xl font-black text-yellow-400 italic leading-none">
-                                                    <span className="text-xs mr-0.5 not-italic text-yellow-400/60 font-bold">R$</span>
-                                                    {parseFloat(slot.fee_per_day || 0).toFixed(0)}
-                                                </p>
-                                                <div className="mt-2 py-1 px-3 bg-yellow-400 text-black rounded-full shadow-[2px_2px_8px_rgba(250,204,21,0.2)]">
-                                                    <p className="text-[9px] font-black uppercase tracking-tight">
-                                                        Até {maxDeliveries} entregas
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    <div className="relative z-10 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                                        <div className="relative z-10 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-                                    <div className="relative z-10 flex items-center justify-between w-full">
-                                        <div className="flex items-center gap-3">
-                                            <div className="size-8 rounded-xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20 shrink-0">
-                                                <Icon name="schedule" className="text-yellow-400" size={14} />
+                                        <div className="relative z-10 flex items-center justify-between w-full">
+                                            <div className="flex items-center gap-3">
+                                                <div className="size-8 rounded-xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20 shrink-0">
+                                                    <Icon name="schedule" className="text-yellow-400" size={14} />
+                                                </div>
+                                                <p className="text-[11px] text-zinc-300 font-bold uppercase tracking-wider">{slot.working_hours}</p>
                                             </div>
-                                            <p className="text-[11px] text-zinc-300 font-bold uppercase tracking-wider">{slot.working_hours}</p>
+                                            
+                                            <div className="flex items-center gap-2 text-yellow-400 font-black uppercase text-[10px] tracking-widest drop-shadow-[0_0_8px_rgba(250,204,21,0.3)]">
+                                                Ver Detalhes
+                                            </div>
                                         </div>
-                                        
-                                        <div className="flex items-center gap-2 text-yellow-400 font-black uppercase text-[10px] tracking-widest drop-shadow-[0_0_8px_rgba(250,204,21,0.3)]">
-                                            Ver Detalhes
-                                        </div>
-                                    </div>
-                                </motion.button>
-                            );
-                        })}
+                                    </motion.button>
+                                );
+                            })
+                        )}
                     </div>
                 </section>
 
@@ -3440,45 +3499,56 @@ function App() {
                                 const hasApplied = myApplications.some(app => app.slot_id === s.id);
                                 const application = myApplications.find(app => app.slot_id === s.id);
                                 
-                                const sClayDark: React.CSSProperties = {
-                                    background: '#121212',
-                                    borderRadius: '2.5rem',
-                                    boxShadow: '8px 8px 16px rgba(0,0,0,0.6), inset 4px 4px 8px rgba(255,255,255,0.02), inset -4px -4px 8px rgba(0,0,0,0.8)',
-                                };
-
                                 return (
                                     <motion.button 
                                         key={s.id} 
-                                        initial={{ opacity: 0, scale: 0.9 }} 
-                                        animate={{ opacity: 1, scale: 1 }} 
+                                        initial={{ opacity: 0, scale: 0.9, y: 10 }} 
+                                        animate={{ opacity: 1, scale: 1, y: 0 }} 
                                         transition={{ delay: i * 0.05 }}
                                         onClick={() => setSelectedSlot(s)}
-                                        className="w-full clay-card-yellow transition-all p-6 flex items-center gap-5 group text-left relative overflow-hidden active:scale-[0.98]"
+                                        className="w-full clay-card-exclusive transition-all p-8 flex items-center gap-6 group text-left relative overflow-hidden active:scale-[0.98]"
                                     >
-                                        <div className="size-14 rounded-2xl bg-black/10 border border-black/10 flex items-center justify-center shrink-0 overflow-hidden">
+                                        <div className="size-16 rounded-[24px] bg-white/[0.03] border border-white/5 flex items-center justify-center shrink-0 overflow-hidden shadow-inner group-hover:scale-105 transition-transform duration-500">
                                             {s.admin_users?.store_logo
                                                 ? <img src={s.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
-                                                : <Icon name="stars" size={26} className="text-stone-900" />}
+                                                : <div className="bg-primary/10 size-full flex items-center justify-center"><Icon name="stars" size={28} className="text-primary" /></div>}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[9px] font-black text-stone-700 uppercase tracking-widest">
-                                                {s.title.toLowerCase().includes((s.admin_users?.store_name || '').toLowerCase()) ? 'Vaga Exclusiva' : (s.admin_users?.store_name || 'Parceiro Izi')}
-                                            </p>
-                                            <p className="text-base font-black text-stone-950 truncate italic">{s.title}</p>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <Icon name="schedule" size={10} className="text-stone-600" />
-                                                <p className="text-[10px] text-stone-600 font-bold">{s.working_hours || 'Horário a combinar'}</p>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="size-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_#ffd900]"></span>
+                                                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] truncate">
+                                                    {s.admin_users?.store_name || 'Parceiro Exclusivo'}
+                                                </p>
+                                            </div>
+                                            <p className="text-lg font-black text-white tracking-tight leading-tight group-hover:text-primary transition-colors italic">{s.title}</p>
+                                            <div className="flex items-center gap-3 mt-3">
+                                                <div className="flex items-center gap-1.5 bg-white/[0.05] px-3 py-1 rounded-full border border-white/5">
+                                                    <Icon name="schedule" size={12} className="text-primary/60" />
+                                                    <p className="text-[9px] text-white/50 font-black uppercase tracking-wider">{s.working_hours || 'A combinar'}</p>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 bg-white/[0.05] px-3 py-1 rounded-full border border-white/5">
+                                                    <Icon name="local_shipping" size={12} className="text-primary/60" />
+                                                    <p className="text-[9px] text-white/50 font-black uppercase tracking-wider">Dedicado</p>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="text-right shrink-0">
-                                            <p className="text-xl font-black text-stone-950 italic">R$ {parseFloat(s.fee_per_day || 0).toFixed(0)}</p>
-                                            <p className="text-[8px] text-stone-600 uppercase tracking-widest">/dia</p>
+                                        <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                                            <div className="bg-primary/10 border border-primary/20 px-4 py-2 rounded-2xl shadow-xl">
+                                                <p className="text-xl font-black text-primary italic leading-none">R$ {parseFloat(s.fee_per_day || 0).toFixed(0)}</p>
+                                                <p className="text-[7px] text-primary/60 font-black uppercase tracking-tighter text-center">p/ dia</p>
+                                            </div>
                                             {hasApplied && (
-                                                <span className={`text-[8px] font-black uppercase tracking-widest mt-1 block ${application?.status === 'accepted' ? 'text-emerald-700' : 'text-stone-600'}`}>
-                                                    {application?.status === 'accepted' ? '✓ Aprovado' : '⌛ Analise'}
-                                                </span>
+                                                <div className="flex flex-col items-end gap-1.5 mt-2 transition-all">
+                                                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest ${application?.status === 'accepted' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-white/10 text-white/40 border border-white/5'}`}>
+                                                        {application?.status === 'accepted' ? 'Aprovado' : 'Em Análise'}
+                                                        {application?.status === 'pending' && <div className="size-1 bg-yellow-400 rounded-full animate-ping" />}
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
+
+                                        {/* Background glow effect */}
+                                        <div className="absolute -right-10 -bottom-10 size-40 bg-primary/5 blur-[80px] rounded-full group-hover:bg-primary/10 transition-all duration-700"></div>
                                     </motion.button>
                                 );
                             })}
@@ -3491,12 +3561,9 @@ function App() {
         const hasApplied = myApplications.some(app => app.slot_id === slot.id);
         const application = myApplications.find(app => app.slot_id === slot.id);
         
-        const requirements = slot.metadata?.requirements || [
-            { label: "CNH Categoria A Definitiva", detail: "Documentação em dia é obrigatória" },
-            { label: "Baú ou Mochila Térmica", detail: "Equipamento próprio para entregas" }
-        ];
         const customBenefits = slot.metadata?.custom_benefits || [];
         const neighborhoodExtras = slot.metadata?.bairros_extras || slot.metadata?.neighborhood_extras || [];
+        const requirements = slot.metadata?.custom_specialties || ["CNH Categoria A", "Experiência com Entregas"];
 
         const sClayDark: React.CSSProperties = {
             background: '#121212',
@@ -3551,22 +3618,32 @@ function App() {
                     </div>
                 </header>
 
-                <div className="px-6 space-y-10 py-10">
-                    {/* Ganho Card */}
-                    <div className="p-8 rounded-[40px] bg-yellow-400 text-stone-950 relative overflow-hidden shadow-[0_30px_60px_rgba(250,204,21,0.2)]">
+                <div className="px-6 space-y-12 py-12">
+                    {/* Ganho Card em Claymorphism */}
+                    <motion.div 
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="p-10 clay-card-yellow text-zinc-950 relative overflow-hidden group"
+                    >
+                        <div className="absolute -right-10 -bottom-10 size-40 bg-white/20 blur-[60px] rounded-full group-hover:scale-150 transition-transform duration-1000"></div>
                         <div className="relative z-10">
-                            <p className="font-black uppercase opacity-40 text-[10px] tracking-[0.3em] mb-2">Diária Garantida</p>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-2xl font-black italic">R$</span>
-                                <span className="text-7xl font-black tracking-tighter italic leading-none">{parseFloat(slot.fee_per_day || 0).toFixed(0)}</span>
+                            <div className="flex justify-between items-center mb-6">
+                                <p className="font-black uppercase opacity-60 text-[10px] tracking-[0.34em]">Diária Garantida</p>
+                                <div className="size-10 rounded-xl bg-black/10 flex items-center justify-center">
+                                    <Icon name="paid" size={22} className="text-zinc-900" />
+                                </div>
                             </div>
-                            <div className="mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-stone-950/5 w-fit px-4 py-2 rounded-full border border-stone-950/10">
-                                <Icon name="event" size={14} className="text-stone-950" />
-                                {slot.working_hours}
+                            <div className="flex items-baseline gap-3">
+                                <span className="text-3xl font-black italic opacity-40">R$</span>
+                                <span className="text-8xl font-black tracking-tighter italic leading-none drop-shadow-sm">{parseFloat(slot.fee_per_day || 0).toFixed(0)}</span>
+                            </div>
+                            <div className="mt-8 flex items-center gap-3 bg-white/20 w-fit px-6 py-3 rounded-full border border-white/20 backdrop-blur-md shadow-inner">
+                                <Icon name="schedule" size={16} className="text-zinc-900" />
+                                <p className="text-[11px] font-black uppercase tracking-widest">{slot.working_hours}</p>
                             </div>
                         </div>
                         <Icon name="payments" size={160} className="absolute -right-8 -bottom-8 opacity-10 rotate-12" />
-                    </div>
+                    </motion.div>
 
                     {/* Benefícios e Extras */}
                     <div className="grid grid-cols-2 gap-4">
@@ -3793,89 +3870,133 @@ function App() {
     };
 
     const renderEarningsView = () => (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="px-5 space-y-8 pb-32 pt-6">
-            <header className="flex flex-col gap-1">
-                <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Finanças</p>
-                <h2 className="text-3xl font-black text-white tracking-tight italic">Seus Ganhos</h2>
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            className="px-5 space-y-8 pb-48 pt-6 overflow-y-auto no-scrollbar"
+        >
+            {/* Visual Marker for Debugging */}
+            <div className="h-1 w-20 bg-primary mx-auto rounded-full opacity-50 mb-4" />
+
+            <header className="flex flex-col gap-1 px-2">
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Painel Financeiro 🚀</p>
+                <h2 className="text-4xl font-black text-white tracking-tighter italic drop-shadow-lg uppercase">Seus Resultados</h2>
             </header>
 
-            {/* Claymorphic Balance Card */}
-            <div className="clay-card-yellow rounded-[40px] p-8 relative overflow-hidden group">
-                <div className="absolute -right-6 -top-6 opacity-10 rotate-12 group-hover:scale-110 transition-transform duration-700">
+            {/* Claymorphic Balance Card Premium */}
+            <div className="clay-card-yellow rounded-[45px] p-8 relative overflow-hidden group border-t-4 border-white/40">
+                <div className="absolute -right-6 -top-6 opacity-20 rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                     <Icon name="account_balance_wallet" size={160} className="text-stone-900" />
                 </div>
                 
-                <div className="relative z-10 space-y-8">
-                    <div>
-                        <p className="text-stone-800 text-[10px] font-black uppercase tracking-widest mb-1">Saldo Disponível</p>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-2xl font-bold text-stone-900">R$</span>
-                            <span className="text-6xl font-black text-stone-950 tracking-tighter italic">
-                                {stats.balance.toFixed(2).replace('.', ',')}
-                            </span>
+                <div className="relative z-10 space-y-10">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <p className="text-stone-800 text-[10px] font-black uppercase tracking-widest mb-1 opacity-80">Saldo Disponível</p>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-2xl font-bold text-stone-900 opacity-60">R$</span>
+                                <span className="text-6xl font-black text-stone-950 tracking-tighter italic leading-none">
+                                    {stats.balance.toFixed(2).replace('.', ',')}
+                                </span>
+                            </div>
                         </div>
+                        <motion.button 
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => setShowBankDetails(true)}
+                            className="size-12 rounded-2xl bg-stone-950/10 flex items-center justify-center border border-stone-950/20 shadow-inner"
+                        >
+                            <Icon name="account_balance" className="text-stone-950" size={20} />
+                        </motion.button>
                     </div>
 
-                    <button 
+                    <motion.button 
+                        whileTap={{ scale: 0.96 }}
                         onClick={() => setShowWithdrawModal(true)}
-                        className="w-full h-16 bg-stone-950 text-white rounded-[24px] font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
+                        className="w-full h-18 bg-stone-950 text-white rounded-[28px] font-black text-[11px] uppercase tracking-[0.3em] shadow-[0_15px_30px_rgba(0,0,0,0.3)] active:shadow-none transition-all flex items-center justify-center gap-4 group"
                     >
-                        <Icon name="payments" size={20} />
+                        <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-primary transition-colors">
+                            <Icon name="payments" size={20} />
+                        </div>
                         Sacar Ganhos
-                    </button>
+                    </motion.button>
                 </div>
             </div>
 
-            {/* Secondary Stats Grid */}
-            <div className="grid grid-cols-2 gap-5">
-                <div className="clay-card-dark rounded-[32px] p-6 space-y-3">
-                    <div className="size-10 rounded-2xl bg-white/5 flex items-center justify-center">
-                        <Icon name="today" size={20} className="text-primary" />
+            {/* Premium Stats Grid */}
+            <div className="grid grid-cols-2 gap-5 px-1">
+                <div className="clay-card-dark rounded-[35px] p-6 space-y-4 border border-white/5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 blur-2xl rounded-full" />
+                    <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center shadow-inner border border-primary/20">
+                        <Icon name="today" size={24} className="text-primary drop-shadow-[0_0_8px_rgba(255,217,0,0.5)]" />
                     </div>
                     <div>
-                        <p className="text-white/30 text-[9px] font-black uppercase tracking-widest mb-0.5">Hoje</p>
-                        <p className="text-xl font-black text-white italic">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
+                        <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Ganhos hoje</p>
+                        <p className="text-2xl font-black text-white italic tracking-tighter">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
                     </div>
                 </div>
-                <div className="clay-card-dark rounded-[32px] p-6 space-y-3">
-                    <div className="size-10 rounded-2xl bg-white/5 flex items-center justify-center">
-                        <Icon name="local_shipping" size={20} className="text-secondary" />
+                
+                <div className="clay-card-dark rounded-[35px] p-6 space-y-4 border border-white/5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-secondary/5 blur-2xl rounded-full" />
+                    <div className="size-12 rounded-2xl bg-secondary/10 flex items-center justify-center shadow-inner border border-secondary/20">
+                        <Icon name="local_shipping" size={24} className="text-secondary drop-shadow-[0_0_8px_rgba(100,100,255,0.5)]" />
                     </div>
                     <div>
-                        <p className="text-white/30 text-[9px] font-black uppercase tracking-widest mb-0.5">Entregas</p>
-                        <p className="text-xl font-black text-white italic">{stats.count}</p>
+                        <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Total Entregas</p>
+                        <p className="text-2xl font-black text-white italic tracking-tighter">{stats.count}</p>
                     </div>
                 </div>
             </div>
 
-            {/* Performance Chart Placeholder / Future Feature */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-[32px] p-8 space-y-6">
+            {/* Performance Chart Claymorphic */}
+            <div className="clay-card-dark rounded-[40px] p-8 space-y-8 border border-white/5 relative overflow-hidden">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-white/60 text-[10px] font-black uppercase tracking-widest">Desempenho Semanal</h3>
-                    <Icon name="trending_up" size={16} className="text-emerald-400" />
+                    <div className="flex flex-col gap-1">
+                        <h3 className="text-white font-black text-[10px] uppercase tracking-[0.3em]">Performance</h3>
+                        <p className="text-[9px] text-white/20 font-bold uppercase">Meta semanal: 80%</p>
+                    </div>
+                    <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                        <Icon name="trending_up" size={18} className="text-emerald-400" />
+                    </div>
                 </div>
-                <div className="h-32 flex items-end justify-between gap-3 px-2">
-                    {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-3 group">
-                            <motion.div 
-                                initial={{ height: 0 }} 
-                                animate={{ height: `${h}%` }} 
-                                className={`w-full rounded-t-xl transition-all ${i === 3 ? 'bg-primary' : 'bg-white/10 group-hover:bg-white/20'}`}
-                            />
-                            <span className="text-[8px] font-black text-white/20 uppercase">{['S','T','Q','Q','S','S','D'][i]}</span>
+                
+                <div className="h-40 flex items-end justify-between gap-3 px-1 pt-4">
+                    {[40, 70, 45, 90, 65, 82, 55].map((h, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
+                            <div className="relative w-full flex flex-col items-center">
+                                <motion.div 
+                                    initial={{ height: 0 }} 
+                                    animate={{ height: `${h}%` }} 
+                                    className={`w-full max-w-[12px] rounded-full transition-all duration-700 ${
+                                        i === 5 ? 'bg-primary shadow-[0_0_15px_rgba(255,217,0,0.5)]' : 'bg-white/10 group-hover:bg-white/20'
+                                    }`}
+                                />
+                                {i === 5 && (
+                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-black text-[7px] font-black px-1.5 py-0.5 rounded-md shadow-lg">
+                                        TOP
+                                    </div>
+                                )}
+                            </div>
+                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{['S','T','Q','Q','S','S','D'][i]}</span>
                         </div>
                     ))}
                 </div>
             </div>
 
-            <div className="p-6 bg-primary/5 border border-primary/10 rounded-[28px] flex items-center gap-4">
-                <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <Icon name="info" className="text-primary" />
+            {/* Info Message Claymorphic */}
+            <div className="clay-card rounded-[32px] p-6 flex items-center gap-5 border border-white/5 bg-white/[0.02] shadow-inner">
+                <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-lg">
+                    <Icon name="verified" className="text-primary" size={24} />
                 </div>
-                <p className="text-[10px] text-white/40 font-bold leading-relaxed italic">
-                    Os pagamentos são processados via PIX e caem na sua conta em até 24h após a solicitação de saque.
-                </p>
+                <div className="space-y-1">
+                    <p className="text-[10px] text-white font-black uppercase tracking-widest italic leading-none">Pagamento Seguro</p>
+                    <p className="text-[9px] text-white/30 font-bold leading-relaxed italic">
+                        Solicitações de PIX processadas em até <span className="text-primary/60">24h úteis</span> via auditoria financeira.
+                    </p>
+                </div>
             </div>
+
+            {/* Placeholder for spacer to ensure visibility */}
+            <div className="h-10" />
         </motion.div>
     );
 
@@ -4471,18 +4592,20 @@ function App() {
                     <h2 className="text-xl font-black text-white uppercase tracking-tight mb-2">Sem Missão Ativa</h2>
                     <p className="text-sm text-white/40 leading-relaxed mb-8">Você não possui nenhuma corrida em andamento no momento. Vá ao Dashboard para aceitar novos pedidos.</p>
                     
-                    <div className="flex flex-col gap-3 w-full max-w-xs">
+                    <div className="flex flex-col gap-4 w-full max-w-xs">
                         <button 
                             onClick={() => setActiveTab('dashboard')}
-                            className="h-14 bg-primary text-slate-900 font-black text-xs uppercase tracking-widest rounded-3xl w-full active:scale-95 transition-all shadow-lg shadow-primary/20"
+                            className="h-16 clay-profile-inner bg-primary text-slate-900 font-black text-xs uppercase tracking-[0.2em] rounded-[28px] w-full active:scale-95 transition-all shadow-[0_15px_30px_rgba(250,204,21,0.2)] border-t border-white/40"
                         >
                             Ir para o Dashboard
                         </button>
                         <button 
                             onClick={syncMissionWithDB}
-                            className="h-14 bg-white/5 border border-white/10 text-white font-black text-xs uppercase tracking-widest rounded-3xl w-full active:scale-95 transition-all"
+                            disabled={isSyncingMission}
+                            className="h-16 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] border border-white/5 text-white/60 font-black text-xs uppercase tracking-[0.2em] rounded-[28px] w-full active:scale-95 transition-all flex items-center justify-center gap-3"
                         >
-                            Verificar no Servidor
+                            {isSyncingMission ? <Icon name="sync" className="animate-spin" /> : <Icon name="cloud_sync" />}
+                            {isSyncingMission ? 'Sincronizando...' : 'Verificar no Servidor'}
                         </button>
                     </div>
                 </motion.div>
@@ -4542,10 +4665,13 @@ function App() {
 
         const sClayDark: React.CSSProperties = {
             background: '#121212',
-            boxShadow: 'inset 2px 2px 8px rgba(255, 255, 255, 0.05), inset -2px -2px 8px rgba(0, 0, 0, 0.4)',
+            boxShadow: '12px 12px 24px rgba(0,0,0,0.5), inset 4px 4px 10px rgba(255,255,255,0.03), inset -4px -4px 10px rgba(0,0,0,0.7)',
+            borderRadius: '2.5rem'
         };
         const sClayYellow: React.CSSProperties = {
-            boxShadow: 'inset 4px 4px 10px rgba(255, 255, 255, 0.4), inset -4px -4px 10px rgba(0, 0, 0, 0.1)',
+            background: '#FACD05',
+            boxShadow: '0 15px 35px rgba(250,204,21,0.25), inset 8px 8px 16px rgba(255,255,255,0.7), inset -8px -8px 16px rgba(0,0,0,0.15)',
+            borderRadius: '2.5rem'
         };
 
         return (
@@ -4557,6 +4683,14 @@ function App() {
                     </button>
                     <h1 className="text-yellow-400 font-bold tracking-tight text-base sm:text-lg uppercase italic truncate px-2">Missão Ativa</h1>
                     <div className="flex items-center gap-2">
+                        <button 
+                            onClick={syncMissionWithDB} 
+                            disabled={isSyncingMission}
+                            className="active:scale-95 transition-transform duration-200 bg-white/5 hover:bg-white/10 p-2 rounded-full flex items-center justify-center relative"
+                        >
+                            {isSyncingMission && <div className="absolute inset-0 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />}
+                            <Icon name="cloud_sync" className="text-yellow-400" />
+                        </button>
                         <button onClick={handleScanQR} className="active:scale-95 transition-transform duration-200 bg-primary/20 hover:bg-primary/30 p-2 rounded-full flex items-center justify-center relative overflow-hidden">
                             {isScanning && <div className="absolute inset-0 border-2 border-primary border-t-transparent rounded-full animate-spin" />}
                             <Icon name="qr_code_scanner" className="text-yellow-400" />
@@ -4750,11 +4884,19 @@ function App() {
                     <button 
                         onClick={btn.action}
                         disabled={isAccepting}
-                        className="w-full h-16 sm:h-20 bg-yellow-400 rounded-full flex items-center justify-center gap-4 active:scale-[0.97] transition-all shadow-[0_20px_60px_rgba(250,204,21,0.3)] disabled:opacity-50" 
-                        style={sClayYellow}
+                        className="w-full h-18 sm:h-22 bg-[#FACD05] rounded-[2.5rem] flex items-center justify-center gap-4 active:scale-[0.97] transition-all shadow-[0_20px_50px_rgba(250,204,21,0.3)] disabled:opacity-50 border-t border-white/60 group" 
+                        style={{
+                            background: '#FACD05',
+                            boxShadow: '0 20px 40px rgba(250,204,21,0.2), inset 6px 6px 12px rgba(255,255,255,0.6), inset -6px -6px 12px rgba(0,0,0,0.1)'
+                        }}
                     >
-                        <span className="text-black font-black text-base sm:text-xl tracking-tighter uppercase italic">{isAccepting ? 'Sincronizando...' : btn.label}</span>
-                        <Icon name={isAccepting ? 'sync' : btn.icon} className={`text-black font-black ${isAccepting ? 'animate-spin' : ''}`} size={24} />
+                        <div className="flex flex-col items-start">
+                            <span className="text-[8px] font-black text-black/40 uppercase tracking-[0.4em] leading-none mb-1">Ação Requerida</span>
+                            <span className="text-black font-black text-base sm:text-xl tracking-tighter uppercase italic leading-none">{isAccepting ? 'Sincronizando...' : btn.label}</span>
+                        </div>
+                        <div className="size-12 bg-black/10 rounded-2xl flex items-center justify-center shadow-inner group-active:scale-90 transition-transform">
+                            <Icon name={isAccepting ? 'sync' : btn.icon} className={`text-black font-black ${isAccepting ? 'animate-spin' : ''}`} size={24} />
+                        </div>
                     </button>
                     
                     {['a_caminho_coleta', 'saiu_para_coleta', 'aceito', 'confirmado'].includes(activeMission.status || '') && (
@@ -5135,23 +5277,32 @@ function App() {
                                 initial={{ opacity: 0 }} 
                                 animate={{ opacity: 1 }} 
                                 exit={{ opacity: 0 }}
-                                className="fixed inset-0 z-[300] bg-slate-950/98 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center"
+                                className="fixed inset-0 z-[300] bg-black flex flex-col items-center justify-center p-8 text-center"
                             >
                                 <motion.div 
-                                    initial={{ scale: 0.5, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    className="size-28 rounded-[42px] bg-primary flex items-center justify-center shadow-[0_20px_40px_rgba(250,204,21,0.3)] mb-8"
+                                    initial={{ scale: 0.5, opacity: 0, rotate: -15 }}
+                                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                                    transition={{ type: "spring", damping: 12 }}
+                                    className="size-32 rounded-[48px] bg-yellow-400 flex items-center justify-center mb-10 relative"
+                                    style={{
+                                        boxShadow: '0 20px 50px rgba(250,204,21,0.25), inset 8px 8px 16px rgba(255,255,255,0.7), inset -8px -8px 16px rgba(0,0,0,0.15)'
+                                    }}
                                 >
-                                    <span className="material-symbols-outlined text-zinc-950 text-5xl font-black">stars</span>
+                                    <Icon name="verified" size={56} className="text-zinc-950" />
+                                    <motion.div 
+                                        animate={{ scale: [1, 1.3], opacity: [0.5, 0] }}
+                                        transition={{ duration: 2, repeat: Infinity }}
+                                        className="absolute inset-0 border-4 border-yellow-400/50 rounded-[48px]"
+                                    />
                                 </motion.div>
                                 
                                 <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none mb-4">
                                     Candidatura <br />
-                                    <span className="text-primary">Enviada!</span>
+                                    <span className="text-yellow-400">Enviada com Sucesso!</span>
                                 </h2>
                                 
-                                <p className="text-slate-400 font-bold text-sm tracking-wide mb-12 max-w-xs uppercase opacity-70">
-                                    Seu perfil está agora com o lojista parceiro. Você será notificado se for selecionado!
+                                <p className="text-white/40 font-bold text-[10px] sm:text-xs tracking-[0.2em] mb-12 max-w-xs uppercase italic leading-relaxed">
+                                    Seu perfil premium foi enviado para análise. Fique atento às suas notificações!
                                 </p>
 
                                 <button
@@ -5159,10 +5310,17 @@ function App() {
                                         setShowSlotAppliedSuccess(false);
                                         setSelectedSlot(null);
                                     }}
-                                    className="w-full max-w-xs h-16 rounded-[28px] bg-white text-zinc-950 font-black text-xs uppercase tracking-[0.3em] active:scale-95 transition-all"
+                                    className="w-full max-w-xs h-18 rounded-[2.5rem] bg-white text-zinc-950 font-black text-xs uppercase tracking-[0.3em] active:scale-95 transition-all shadow-[0_20px_40px_rgba(255,255,255,0.15)] border-t border-zinc-200"
+                                    style={{
+                                        boxShadow: '0 15px 35px rgba(255,255,255,0.1), inset 6px 6px 12px rgba(255,255,255,1), inset -6px -6px 12px rgba(0,0,0,0.1)'
+                                    }}
                                 >
                                     Voltar para Vagas
                                 </button>
+                                
+                                <div className="absolute bottom-12 left-0 right-0 flex justify-center opacity-10">
+                                    <div className="w-16 h-1.5 bg-white/20 rounded-full" />
+                                </div>
                             </motion.div>
                         )}
 
@@ -5181,9 +5339,24 @@ function App() {
 
                                 <AnimatePresence>
                                     {activeMission && activeTab !== 'active_mission' && (
-                                        <motion.button key="mission-btn" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }} onClick={() => setActiveTab('active_mission')} className="fixed bottom-28 left-5 right-5 z-[60] bg-primary text-slate-900 rounded-[28px] h-18 flex items-center justify-between px-7 shadow-[0_20px_40px_rgba(250,204,21,0.3)] border-t border-white/40">
-                                            <div className="flex items-center gap-4"><div className="size-3.5 bg-slate-950 rounded-full animate-ping" /><span className="font-black text-xs uppercase tracking-[0.2em] italic">Missão em Andamento</span></div>
-                                            <div className="size-10 bg-slate-950/10 rounded-full flex items-center justify-center"><Icon name="arrow_forward" className="text-slate-950 text-xl font-black" /></div>
+                                        <motion.button 
+                                            key="mission-btn" 
+                                            initial={{ y: 80, opacity: 0 }} 
+                                            animate={{ y: 0, opacity: 1 }} 
+                                            exit={{ y: 80, opacity: 0 }} 
+                                            onClick={() => setActiveTab('active_mission')} 
+                                            className="fixed bottom-28 left-5 right-5 z-[60] clay-profile-inner bg-yellow-400 text-slate-900 rounded-[2.5rem] h-20 flex items-center justify-between px-8 shadow-[0_25px_50px_rgba(250,204,21,0.4)] border-t border-white/60"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className="size-4 bg-slate-950 rounded-full animate-ping" />
+                                                <div className="flex flex-col items-start">
+                                                    <span className="font-black text-[10px] uppercase tracking-[0.3em] text-slate-950/60 leading-none mb-1">Missão Ativa</span>
+                                                    <span className="font-black text-xs uppercase tracking-[0.1em] italic text-slate-950">Continuar Entrega</span>
+                                                </div>
+                                            </div>
+                                            <div className="size-12 bg-slate-950/10 rounded-2xl flex items-center justify-center shadow-inner">
+                                                <Icon name="arrow_forward" className="text-slate-950 text-2xl font-black" />
+                                            </div>
                                         </motion.button>
                                     )}
                                 </AnimatePresence>
@@ -5218,71 +5391,116 @@ function App() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[150] bg-black/70 backdrop-blur-sm flex items-end justify-center"
+                        className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-md flex items-end justify-center"
                         onClick={() => setShowWithdrawModal(false)}
                     >
                         <motion.div
-                            initial={{ y: 100, opacity: 0 }}
+                            drag="y"
+                            dragConstraints={{ top: 0, bottom: 0 }}
+                            dragElastic={0.7}
+                            onDragEnd={(_, info) => {
+                                if (info.offset.y > 100) setShowWithdrawModal(false);
+                            }}
+                            initial={{ y: "100%", opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: 100, opacity: 0 }}
-                            transition={{ type: 'spring', damping: 20 }}
+                            exit={{ y: "100%", opacity: 0 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                             onClick={e => e.stopPropagation()}
-                            className="w-full max-w-sm bg-black border border-white/10 rounded-t-[40px] p-8 space-y-6"
+                            className="w-full max-w-lg clay-card-exclusive rounded-t-[50px] p-8 pb-36 space-y-6 relative border-t border-white/10"
+                            style={{ 
+                                background: 'linear-gradient(180deg, #111111 0%, #000000 100%)',
+                                boxShadow: '0 -20px 60px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.1)'
+                            }}
                         >
-                            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto" />
-                            <div className="text-center space-y-1">
-                                <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Confirmar Saque PIX</p>
-                                <p className="text-4xl font-black text-white tracking-tighter">R$ {stats.balance.toFixed(2).replace('.', ',')}</p>
+                            {/* Drag Handle Improvements */}
+                            <div className="flex flex-col items-center gap-1.5 mb-2">
+                                <div className="w-12 h-1.5 bg-white/20 rounded-full shadow-inner" />
+                                <div className="w-8 h-1 bg-white/10 rounded-full" />
                             </div>
-                            <div className="bg-white/[0.04] border border-white/5 rounded-[24px] p-5 space-y-3">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-white/40">Destino</span>
-                                    <span className="text-xs font-black text-white truncate max-w-[180px]">{pixKey}</span>
+
+                            <div className="text-center space-y-1 py-2">
+                                <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] mb-2 opacity-70">Resgate de Saldo</p>
+                                <div className="flex items-center justify-center gap-2">
+                                    <span className="text-2xl font-black text-white/10 italic">R$</span>
+                                    <span className="text-6xl font-black text-white tracking-tighter italic leading-none drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
+                                        {stats.balance.toFixed(2).replace('.', ',')}
+                                    </span>
                                 </div>
-                                <div className="h-px bg-white/5" />
-                                {Number(appSettings?.withdrawalfeepercent ?? 0) > 0 && (
-                                    <>
+                            </div>
+
+                            <div className="bg-white/[0.02] border border-white/5 rounded-[40px] p-6 space-y-5 shadow-inner">
+                                <div className="flex justify-between items-center bg-black/40 p-5 rounded-[24px] border border-white/5 shadow-2xl">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Chave PIX Ativa</span>
+                                        <span className="text-xs font-black text-white truncate max-w-[180px] italic tracking-tight">{pixKey}</span>
+                                    </div>
+                                    <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg">
+                                        <Icon name="qr_code_2" size={24} className="text-primary drop-shadow-[0_0_8px_rgba(255,217,0,0.5)]" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 px-2">
+                                    {Number(appSettings?.withdrawalfeepercent ?? 0) > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-xs font-bold text-white/40">Taxa Administrativa ({appSettings?.withdrawalfeepercent}%)</span>
-                                            <span className="text-xs font-black text-red-400">- R$ {(stats.balance * (Number(appSettings?.withdrawalfeepercent) / 100)).toFixed(2).replace('.', ',')}</span>
+                                            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest flex items-center gap-2">
+                                                Taxa Admin
+                                                <span className="px-2 py-0.5 rounded-full bg-white/5 text-[8px] text-white/30 capitalize">{appSettings?.withdrawalfeepercent}%</span>
+                                            </span>
+                                            <span className="text-xs font-black text-rose-500 italic">- R$ {(stats.balance * (Number(appSettings?.withdrawalfeepercent) / 100)).toFixed(2).replace('.', ',')}</span>
                                         </div>
-                                        <div className="h-px bg-white/5" />
-                                    </>
-                                )}
-                                <div className="flex justify-between items-center text-primary font-black">
-                                    <span className="text-xs uppercase tracking-widest">Líquido a Receber</span>
-                                    <span className="text-sm">R$ {(stats.balance * (1 - (Number(appSettings?.withdrawalfeepercent ?? 0) / 100))).toFixed(2).replace('.', ',')}</span>
-                                </div>
-                                <div className="h-px bg-white/5" />
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-white/40">Status</span>
-                                    <span className="text-xs font-black text-amber-400">Aguarda aprovação admin</span>
+                                    )}
+                                    
+                                    <div className="h-px bg-white/5 mx-2" />
+
+                                    <div className="flex justify-between items-center py-2">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-primary uppercase tracking-widest">Valor Líquido</span>
+                                            <span className="text-[8px] font-medium text-white/20 uppercase tracking-wider">Depósito imediato via PIX</span>
+                                        </div>
+                                        <span className="text-3xl font-black text-primary italic drop-shadow-[0_0_20px_rgba(255,217,0,0.4)]">
+                                            R$ {(stats.balance * (1 - (Number(appSettings?.withdrawalfeepercent ?? 0) / 100))).toFixed(2).replace('.', ',')}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                             
-                            <p className="text-[10px] text-center text-white/20 italic">Os saques são processados em até {appSettings?.withdrawal_period_h ?? 24}h.</p>
-                            <div className="flex gap-3 pt-2">
-                                <button
+                            <div className="flex items-center gap-4 bg-primary/5 p-5 rounded-[28px] border border-primary/10 overflow-hidden relative shadow-inner">
+                                <div className="absolute inset-0 bg-primary/5 opacity-50 blur-2xl"></div>
+                                <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                                    <Icon name="bolt" className="text-primary" size={20} />
+                                </div>
+                                <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest leading-relaxed relative z-10">
+                                    Pagamentos processados em até <span className="text-white">{appSettings?.withdrawal_period_h ?? 24}h</span> úteis.
+                                </p>
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                                <motion.button
+                                    whileTap={{ scale: 0.95 }}
                                     onClick={() => setShowWithdrawModal(false)}
                                     disabled={isWithdrawLoading}
-                                    className="flex-1 h-14 rounded-2xl bg-white/5 border border-white/10 text-white/60 font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all disabled:opacity-30"
+                                    className="flex-1 h-18 rounded-[30px] bg-white/[0.03] border border-white/10 text-white/40 font-black text-[10px] uppercase tracking-[0.2em] active:bg-white/[0.05] shadow-xl transition-all disabled:opacity-30"
                                 >
-                                    Cancelar
-                                </button>
-                                <button
+                                    Voltar
+                                </motion.button>
+                                <motion.button
+                                    whileTap={{ scale: 0.95 }}
                                     onClick={confirmWithdraw}
                                     disabled={isWithdrawLoading}
-                                    className="flex-1 h-14 rounded-2xl bg-primary text-slate-900 font-black text-[11px] uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                    className="flex-[1.8] h-18 rounded-[30px] bg-primary text-black font-black text-[10px] uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(255,217,0,0.2)] active:shadow-none transition-all disabled:opacity-50 flex items-center justify-center gap-3 border-t border-white/40"
                                 >
                                     {isWithdrawLoading ? (
                                         <>
-                                            <div className="size-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
-                                            <span>Processando...</span>
+                                            <div className="size-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                            <span>Processando</span>
                                         </>
                                     ) : (
-                                        'Confirmar'
+                                        <>
+                                            <Icon name="check_circle" size={22} />
+                                            <span>Solicitar Saque</span>
+                                        </>
                                     )}
-                                </button>
+                                </motion.button>
                             </div>
                         </motion.div>
                     </motion.div>
