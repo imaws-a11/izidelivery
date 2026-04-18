@@ -27,6 +27,7 @@ interface CheckoutViewProps {
   deliveryFee: number;
   serviceFee?: number;
   isIziBlack?: boolean;
+  iziBlackCashback?: number;
   iziBlackCashbackMultiplier?: number;
   paymentMethodsActive?: { pix?: boolean; card?: boolean; lightning?: boolean; wallet?: boolean };
 }
@@ -55,7 +56,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   deliveryFee = 0,
   serviceFee = 0,
   isIziBlack = false,
-  iziBlackCashbackMultiplier = 2,
+  iziBlackCashback = 1,
+  iziBlackCashbackMultiplier = 1,
   paymentMethodsActive = { pix: true, card: true, lightning: true, wallet: true }
 }) => {
   const [useCoins, setUseCoins] = React.useState(false);
@@ -81,6 +83,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   const coinDiscount = useCoins ? iziCoins * iziCoinValue : 0;
   const serviceFeeAmount = (subtotal * serviceFee) / 100;
   const total = Math.max(0, subtotal + deliveryFee + serviceFeeAmount - couponDiscount - coinDiscount);
+
+  const cashbackRate = isIziBlack ? (iziBlackCashback * (iziBlackCashbackMultiplier || 1)) : (iziCoinRate || 1);
+  const estimatedCashbackCoins = (total * (cashbackRate / 100));
 
   const paymentOptions = [
     {
@@ -422,6 +427,22 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                      R$ {total.toFixed(2).replace(".", ",")}
                    </p>
                 </div>
+
+                {estimatedCashbackCoins > 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-3 bg-yellow-400/10 border border-yellow-400/20 rounded-2xl flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                       <span className="material-symbols-outlined text-yellow-400 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
+                       <span className="text-[9px] font-black uppercase tracking-widest text-yellow-400/80 italic">Você receberá</span>
+                    </div>
+                    <span className="text-white font-black text-xs italic">
+                      +{estimatedCashbackCoins.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} IZI COINS
+                    </span>
+                  </motion.div>
+                )}
               </div>
            </div>
         </section>

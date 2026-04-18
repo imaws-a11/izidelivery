@@ -1,5 +1,5 @@
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-
 
 interface StoreCatalogViewProps {
   selectedShop: any;
@@ -10,6 +10,7 @@ interface StoreCatalogViewProps {
   navigateSubView: (view: any) => void;
   cart: any[];
   iziCoinRate?: number;
+  iziBlackRate?: number;
   isIziBlack?: boolean;
 }
 
@@ -22,6 +23,7 @@ export const StoreCatalogView = ({
   navigateSubView,
   cart,
   iziCoinRate = 0,
+  iziBlackRate = 0,
   isIziBlack = false,
 }: StoreCatalogViewProps) => {
   const shop = selectedShop || { name: "Loja", rating: "5.0", time: "30 min", freeDelivery: false, img: "", banner: "", categories: [] };
@@ -30,19 +32,19 @@ export const StoreCatalogView = ({
 
   const getCategoryAssets = (name: string) => {
     const n = name.toLowerCase();
-    if (n.includes('todos') || n.includes('destaque')) return { icon: "storefront", img: "", color: "zinc-400" };
-    if (n.includes('mercearia') || n.includes('despensa')) return { icon: "shopping_basket", img: "", color: "amber-500" };
-    if (n.includes('congelado')) return { icon: "ac_unit", img: "", color: "blue-400" };
-    if (n.includes('padaria') || n.includes('pães')) return { icon: "bakery_dining", img: "", color: "orange-400" };
-    if (n.includes('higiene') || n.includes('banho')) return { icon: "clean_hands", img: "", color: "rose-400" };
-    if (n.includes('limpeza')) return { icon: "cleaning_services", img: "", color: "cyan-400" };
-    if (n.includes('pet')) return { icon: "pets", img: "", color: "emerald-400" };
-    if (n.includes('sorvete') || n.includes('gelado') || n.includes('doces')) return { icon: "icecream", img: "", color: "sky-300" };
-    if (n.includes('bebida')) return { icon: "local_bar", img: "", color: "purple-400" };
-    if (n.includes('carne') || n.includes('açougue')) return { icon: "kebab_dining", img: "", color: "red-500" };
-    if (n.includes('fruta') || n.includes('verdura') || n.includes('horti')) return { icon: "potted_plant", img: "", color: "green-500" };
+    if (n.includes('todos') || n.includes('destaque')) return { icon: "storefront", img: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=400", color: "zinc-400" };
+    if (n.includes('mercearia') || n.includes('despensa')) return { icon: "shopping_basket", img: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=400", color: "amber-500" };
+    if (n.includes('congelado')) return { icon: "ac_unit", img: "https://images.unsplash.com/photo-1582213706041-09439f0f9780?auto=format&fit=crop&q=80&w=400", color: "blue-400" };
+    if (n.includes('padaria') || n.includes('pães')) return { icon: "bakery_dining", img: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=400", color: "orange-400" };
+    if (n.includes('higiene') || n.includes('banho')) return { icon: "clean_hands", img: "https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&q=80&w=400", color: "rose-400" };
+    if (n.includes('limpeza')) return { icon: "cleaning_services", img: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=400", color: "cyan-400" };
+    if (n.includes('pet')) return { icon: "pets", img: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80&w=400", color: "emerald-400" };
+    if (n.includes('sorvete') || n.includes('gelado') || n.includes('doces')) return { icon: "icecream", img: "https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?auto=format&fit=crop&q=80&w=400", color: "sky-300" };
+    if (n.includes('bebida')) return { icon: "local_bar", img: "https://images.unsplash.com/photo-1544145945-f904253db0ad?auto=format&fit=crop&q=80&w=400", color: "purple-400" };
+    if (n.includes('carne') || n.includes('açougue')) return { icon: "kebab_dining", img: "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&q=80&w=400", color: "red-500" };
+    if (n.includes('fruta') || n.includes('verdura') || n.includes('horti')) return { icon: "potted_plant", img: "https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&q=80&w=400", color: "green-500" };
     
-    return { icon: "category", img: "", color: "zinc-400" };
+    return { icon: "category", img: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=400", color: "zinc-400" };
   };
 
   const categorizeProduct = (p: any): string => {
@@ -220,28 +222,49 @@ export const StoreCatalogView = ({
         ))}
       </main>
 
-      {cart.length > 0 && (
-        <div className="fixed bottom-24 left-0 w-full px-5 z-50 pointer-events-none">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="max-w-md mx-auto bg-zinc-950/90 backdrop-blur-3xl border border-white/5 rounded-[32px] px-6 py-4 flex items-center justify-between shadow-[0_30px_60px_rgba(0,0,0,0.8)] pointer-events-auto border-t-emerald-400/20">
-            <div className="flex flex-col">
-              <span className="text-[9px] uppercase tracking-[0.3em] text-emerald-400/60 font-black mb-0.5">Sua Sacola</span>
-              <span className="text-white font-black text-sm italic">{cart.length} {cart.length === 1 ? "Item" : "Itens"}</span>
-              {iziCoinRate > 0 && (
-                <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mt-0.5 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>monetization_on</span>
-                  +{Math.floor(cart.reduce((a, b) => a + (b.price || 0), 0) * (isIziBlack ? iziCoinRate * 2 : iziCoinRate))} Coins
+      {/* FLOATING CART BAR */}
+      {cart.length > 0 && (() => {
+        const subtotal = cart.reduce((sum, item) => {
+          const basePrice = Number(item.price) || 0;
+          const addonsPrice = Array.isArray(item.addonDetails) 
+            ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0)
+            : 0;
+          return sum + basePrice + addonsPrice;
+        }, 0);
+
+        const cashbackRate = isIziBlack ? iziBlackRate : iziCoinRate;
+        const estimatedCashback = (subtotal * (cashbackRate / 100));
+
+        return (
+          <div className="fixed bottom-24 left-0 w-full px-5 z-50 pointer-events-none">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-md mx-auto bg-zinc-950/95 backdrop-blur-2xl border border-white/5 rounded-3xl px-5 py-4 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.8)] pointer-events-auto"
+            >
+              <div className="flex flex-col">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black">Sua Sacola</span>
+                <span className="text-white font-black text-sm">
+                  {cart.length} {cart.length === 1 ? "item" : "itens"} • R$ {subtotal.toFixed(2).replace(".", ",")}
                 </span>
-              )}
-            </div>
-            <button onClick={() => navigateSubView("cart")}
-              className="flex items-center gap-4 bg-emerald-400 text-black px-6 py-3 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(52,211,153,0.3)] active:scale-95 transition-all">
-              <span>Concluir Compra</span>
-              <span className="bg-black/10 px-2 py-1 rounded-lg">R$ {cart.reduce((a: number, b: any) => a + (b.price || 0), 0).toFixed(2).replace(".", ",")}</span>
-            </button>
-          </motion.div>
-        </div>
-      )}
+                {(cashbackRate > 0) && (
+                  <span className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <span className="izi-coin-symbol size-3.5 bg-yellow-500 text-black rounded-full flex items-center justify-center text-[9px] not-italic shadow-[0_0_10px_rgba(250,204,21,0.4)]">Z</span>
+                    +{estimatedCashback.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} IZI COINS
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => navigateSubView("cart")}
+                className="flex items-center gap-3 bg-yellow-400 text-black px-5 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-[0_0_20px_rgba(255,215,9,0.2)] active:scale-95 transition-all shrink-0"
+              >
+                <span>Ver Sacola</span>
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </button>
+            </motion.div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
