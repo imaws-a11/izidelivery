@@ -663,19 +663,25 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   </div>
                   <div>
                     <h4 className="text-white font-black text-sm uppercase tracking-tight italic">Acompanhe seu pedido</h4>
-                    <p className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">Live Tracking Ativo</p>
                   </div>
                 </div>
                 <div className="flex flex-col items-end">
                    <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest bg-yellow-400/10 px-3 py-1.5 rounded-full border border-yellow-400/20">
-                     {activeOrder.status === 'novo' ? "Aprovado" : 
-                      activeOrder.status === 'waiting_merchant' ? "Aguardando Loja" : 
-                      activeOrder.status === 'preparando' ? "No Preparo" : 
-                      activeOrder.status === 'a_caminho_coleta' ? "Motorista a Caminho" :
-                      activeOrder.status === 'chegou_coleta' ? "Entregador na Loja" :
-                      activeOrder.status === 'saiu_para_entrega' ? "Em Trânsito" : 
-                      activeOrder.status === 'no_local' ? "No seu Local" :
-                      activeOrder.status}
+                     {(() => {
+                       const s = activeOrder.status;
+                       if (s === 'novo' || s === 'aceito' || s === 'confirmado') return "Aprovado";
+                       if (s === 'waiting_driver' || s === 'searching_driver') return "Buscando Entregador";
+                       if (s === 'waiting_merchant') return "Aguardando Loja";
+                       if (s === 'preparando' || s === 'no_preparo') return "No Preparo";
+                       if (s === 'pronto') return "Pronto para Coleta";
+                       if (s === 'a_caminho_coleta' || s === 'atribuido' || s === 'saiu_para_coleta') return "Entregador a Caminho";
+                       if (s === 'chegou_coleta' || s === 'no_local_coleta') return "Entregador na Loja";
+                       if (s === 'picked_up' || s === 'a_caminho' || s === 'em_rota' || s === 'saiu_para_entrega') return "Em Trânsito";
+                       if (s === 'no_local') return "No seu Local";
+                       if (s === 'concluido' || s === 'entregue') return "Entregue";
+                       if (s === 'cancelado') return "Cancelado";
+                       return "Processando";
+                     })()}
                    </span>
                 </div>
               </div>
