@@ -82,6 +82,7 @@ export default function IziBlackTab() {
         expires_at: benefitData.expires_at || null,
         is_active: benefitData.is_active,
         is_vip: true,
+        is_free_shipping: benefitData.discount_type === 'free_shipping',
         coupon_code: (benefitData.title === 'Cupom Black' || benefitData.coupon_code) ? (benefitData.coupon_code || `VIP_${Date.now()}`).toUpperCase().trim() : null,
         image_url: isBanner ? benefitData.image_url : null,
         target_users: benefitData.target_users?.length > 0 ? benefitData.target_users : [],
@@ -658,29 +659,33 @@ export default function IziBlackTab() {
                 <div className="space-y-4">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo de Benefício</label>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    {[
-                      { id: 'free_shipping', label: 'Frete Grátis', icon: 'local_shipping', color: 'bg-emerald-500', desc: 'Isenção total na taxa de entrega' },
-                      { id: 'cashback', label: 'Cashback', icon: 'payments', color: 'bg-blue-500', desc: 'Saldo devolvido no saldo' },
-                      { id: 'cashback_ind', label: 'Cashback Individual', icon: 'person_add', color: 'bg-blue-600', desc: 'Cashback para pessoas específicas' },
-                      { id: 'coupon_black', label: 'Cupom Black', icon: 'confirmation_number', color: 'bg-amber-500', desc: 'Cupom de desconto especial' },
-                      { id: 'priority', label: 'Prioridade Izi', icon: 'bolt', color: 'bg-purple-500', desc: 'Entrega e suporte priorizados' },
-                    ].map((type) => (
-                      <button
-                        key={type.id}
-                        type="button"
-                        onClick={() => setBenefitData({
-                          ...benefitData, 
-                          title: type.label, 
-                          description: type.desc,
-                          discount_type: 'percent',
-                          discount_percent: type.label.includes('Cashback') ? 5 : (type.label === 'Cupom Black' ? 10 : 0)
-                        })}
-                        className={`flex flex-col items-center justify-center p-4 rounded-3xl border-2 transition-all gap-2 text-center group ${
-                          benefitData.title === type.label 
-                          ? 'border-primary bg-primary/5 dark:bg-primary/10' 
-                          : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-200 dark:hover:border-slate-700'
-                        }`}
-                      >
+                      {[
+                        { id: 'free_shipping', label: 'Frete Grátis', icon: 'local_shipping', color: 'bg-emerald-500', desc: 'Isenção total na taxa de entrega', type: 'id_free_shipping', discountType: 'free_shipping' },
+                        { id: 'cashback', label: 'Cashback', icon: 'payments', color: 'bg-blue-500', desc: 'Saldo devolvido no saldo', type: 'id_cashback', discountType: 'percent' },
+                        { id: 'cashback_ind', label: 'Cashback Individual', icon: 'person_add', color: 'bg-blue-600', desc: 'Cashback para pessoas específicas', type: 'id_cashback_ind', discountType: 'percent' },
+                        { id: 'coupon_black', label: 'Cupom Black', icon: 'confirmation_number', color: 'bg-amber-500', desc: 'Cupom de desconto especial', type: 'id_coupon_black', discountType: 'percent' },
+                        { id: 'priority', label: 'Prioridade Izi', icon: 'bolt', color: 'bg-purple-500', desc: 'Entrega e suporte priorizados', type: 'id_priority', discountType: 'percent' },
+                      ].map((type) => (
+                        <button
+                          key={type.id}
+                          type="button"
+                          onClick={() => {
+                            const isNewType = benefitData.title !== type.label;
+                            setBenefitData({
+                              ...benefitData, 
+                              title: type.label, 
+                              description: type.desc,
+                              discount_type: type.discountType,
+                              // Só altera o valor padrão se for um novo tipo e o valor atual for 0 ou 5 (padrão)
+                              discount_percent: isNewType ? (type.label.includes('Cashback') ? 5 : (type.label === 'Cupom Black' ? 10 : 0)) : benefitData.discount_percent
+                            });
+                          }}
+                          className={`flex flex-col items-center justify-center p-4 rounded-3xl border-2 transition-all gap-2 text-center group ${
+                            benefitData.title === type.label 
+                            ? 'border-primary bg-primary/5 dark:bg-primary/10' 
+                            : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-200 dark:hover:border-slate-700'
+                          }`}
+                        >
                         <div className={`size-10 rounded-xl ${type.color} text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
                           <span className="material-symbols-outlined text-lg">{type.icon}</span>
                         </div>
