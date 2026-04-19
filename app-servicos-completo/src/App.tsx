@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback, Fragment } from "rea
 import { BespokeIcons } from "./lib/BespokeIcons";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import iziCoinImg from "./assets/images/izi-coin-premium.png";
 import { supabase } from "./lib/supabase";
 import { toast, toastSuccess, toastError, toastWarning, showConfirm } from "./lib/useToast";
 import { useGoogleMapsLoader } from "./hooks/useGoogleMapsLoader";
@@ -5198,57 +5199,51 @@ const navigateSubView = (target: string) => {
     return (
       <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32">
 
-        {/* HERO SALDO */}
-        <div className="px-5 pt-14 pb-8 border-b border-zinc-900 bg-gradient-to-b from-yellow-400/5 to-transparent">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <span className="text-yellow-400 font-black italic tracking-widest text-xs">IZI PAY</span>
-              <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
+        {/* HERO SALDO - CLAYMORPHISM */}
+        <div className="px-5 pt-14 pb-12 border-b border-zinc-900 bg-gradient-to-b from-yellow-400/5 to-transparent relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 blur-[100px] rounded-full -mr-32 -mt-32 pointer-events-none" />
+          
+          <div className="flex items-center justify-between mb-8 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="size-2 rounded-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.8)] animate-pulse" />
+              <span className="text-yellow-400 font-black italic tracking-[0.3em] text-[10px] uppercase">IZI PAY NETWORK</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1 bg-zinc-900/50 rounded-full border border-white/5">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase">Status</span>
-              <span className="text-[10px] font-black text-emerald-400 uppercase">Ativo</span>
+            <div className="px-4 py-1.5 bg-zinc-900 border border-white/5 rounded-full shadow-[inset_2px_2px_4px_rgba(0,0,0,0.5)]">
+              <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Secure Node</span>
             </div>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <p className="text-zinc-600 text-[10px] font-black tracking-[0.3em] uppercase">Saldo Disponível</p>
-            <div className="flex items-center gap-4 mt-1">
-              <div className="size-12 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-[0_0_30px_rgba(250,204,21,0.3)] relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
-                <span className="material-symbols-outlined text-black font-black text-2xl relative z-10 transition-transform group-hover:scale-110">currency_bitcoin</span>
+          <div className="flex flex-col gap-2 relative z-10">
+            <p className="text-zinc-600 text-[10px] font-black tracking-[0.5em] uppercase px-1">Available Balance</p>
+            <div className="flex items-center gap-5 mt-2">
+              <div className="size-16 rounded-[28px] bg-yellow-400 flex items-center justify-center shadow-[8px_8px_16px_rgba(0,0,0,0.2),inset_4px_4px_8px_rgba(255,255,255,0.7)] relative overflow-hidden group">
+                <span className="material-symbols-outlined text-black font-black text-3xl">currency_bitcoin</span>
               </div>
               <div className="flex flex-col">
-                <div className="flex items-baseline gap-1">
-                  <span className="font-extrabold text-5xl tracking-tighter text-white"
-                    style={{ textShadow: "0 0 40px rgba(255,215,9,0.15)" }}>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-extrabold text-6xl tracking-tighter text-white italic drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)]">
                     {Math.floor(iziCoins).toLocaleString("pt-BR")}
                   </span>
-                  {iziCoins % 1 !== 0 && (
-                    <span className="font-bold text-2xl text-yellow-400/80 tracking-tighter">
-                      ,{iziCoins.toFixed(8).split(".")[1]}
-                    </span>
-                  )}
-                  <span className="text-[10px] font-black text-yellow-400/50 uppercase tracking-[0.2em] ml-2 italic">IZI</span>
+                  <span className="text-xs font-black text-yellow-400 uppercase tracking-[0.4em] mb-2">COINS</span>
                 </div>
               </div>
             </div>
             
-            <div className="mt-6 p-4 bg-zinc-900/40 rounded-[24px] border border-white/5 backdrop-blur-md flex items-center justify-between group hover:border-yellow-400/20 transition-all">
-              <div className="flex items-center gap-3">
-                <div className="size-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-emerald-400 text-lg">account_balance_wallet</span>
+            <div className="mt-8 p-6 rounded-[35px] bg-[#1a1a1a] border border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.2),inset_4px_4px_8px_rgba(255,255,255,0.03)] flex items-center justify-between group transition-all">
+              <div className="flex items-center gap-4">
+                <div className="size-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-emerald-400 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>payments</span>
                 </div>
                 <div>
-                  <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest leading-tight">Valor em Reais</p>
-                  <p className="text-lg font-black text-white leading-tight">
-                    R$ {(iziCoins * coinRate).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <p className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.2em] leading-tight">Valor Fiduciário</p>
+                  <p className="text-xl font-black text-white leading-tight mt-1">
+                    <span className="text-zinc-500 text-xs mr-1 font-bold">R$</span>
+                    {(iziCoins * coinRate).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest leading-tight">Cotação Atual</p>
-                <p className="text-[10px] font-bold text-yellow-400/60 leading-tight">1 IZI = R$ {coinRate.toFixed(4).replace(".", ",")}</p>
+                <p className="text-[10px] font-black text-yellow-400/40 italic">1 IZI = R$ {coinRate.toFixed(4).replace(".", ",")}</p>
               </div>
             </div>
           </div>
@@ -5297,45 +5292,65 @@ const navigateSubView = (target: string) => {
                 Gerenciar
               </button>
             </div>
-            <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-5 px-5 pb-2">
-              {/* Card IZI Digital */}
-              <div className="min-w-[260px] h-40 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between border border-zinc-900/80 shrink-0"
-                style={{ background: "linear-gradient(135deg, rgba(255,215,9,0.04) 0%, rgba(0,0,0,0) 100%)" }}>
-                <div className="absolute -top-8 -right-8 w-28 h-28 bg-yellow-400/5 rounded-full blur-2xl" />
+            <div className="flex gap-6 overflow-x-auto no-scrollbar -mx-5 px-5 pb-6">
+              {/* Card IZI Digital - CLAYMORPHISM AMARELO */}
+              <div className="min-w-[280px] h-44 rounded-[40px] p-6 relative overflow-hidden flex flex-col justify-between shrink-0 transition-transform active:scale-95 cursor-pointer
+                bg-yellow-400 
+                shadow-[12px_12px_24px_rgba(0,0,0,0.15),-8px_-8px_20px_rgba(255,255,255,0.1),inset_6px_6px_12px_rgba(255,255,255,0.6),inset_-6px_-6px_12px_rgba(0,0,0,0.05)]"
+              >
                 <div className="flex justify-between items-start">
-                  <span className="font-extrabold italic text-yellow-400/40 tracking-tighter">IZI</span>
-                  <span className="material-symbols-outlined text-zinc-800 text-base">contactless</span>
+                  <div className="flex flex-col">
+                    <span className="font-extrabold italic text-black/80 tracking-tighter text-xl leading-none">IZI</span>
+                    <span className="text-[8px] font-black uppercase tracking-[0.3em] text-black/40 mt-1">BLACK CREDIT</span>
+                  </div>
+                  <div className="size-10 rounded-2xl bg-black/5 flex items-center justify-center border border-black/5 shadow-inner">
+                    <span className="material-symbols-outlined text-black/80 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>wifi_tethering</span>
+                  </div>
                 </div>
                 <div>
-                  <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Digital</p>
-                  <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">•••• •••• •••• 8820</p>
-                  <div className="flex justify-between items-center">
-                    <p className="text-[8px] text-zinc-700 uppercase tracking-widest">Val. 12/28</p>
-                    <div className="size-7 rounded-full bg-yellow-400/10 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-yellow-400 text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
-                    </div>
-                  </div>
+                   <p className="font-black text-lg tracking-[0.25em] text-black/90 mb-3 drop-shadow-sm">•••• •••• •••• 8820</p>
+                   <div className="flex justify-between items-end">
+                     <div>
+                       <p className="text-[7px] text-black/40 font-black uppercase tracking-widest mb-0.5">Validade</p>
+                       <p className="text-[10px] text-black/80 font-black uppercase tracking-widest leading-none">12/28</p>
+                     </div>
+                     <div className="size-9 rounded-2xl bg-black text-yellow-400 flex items-center justify-center shadow-lg">
+                       <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
+                     </div>
+                   </div>
                 </div>
               </div>
+
               {savedCards.map((card: any) => (
-                <div key={card.id} className="min-w-[260px] h-40 border border-zinc-900/80 rounded-2xl p-5 flex flex-col justify-between shrink-0">
+                <div key={card.id} className="min-w-[280px] h-44 rounded-[40px] p-6 relative overflow-hidden flex flex-col justify-between shrink-0 transition-transform active:scale-95 cursor-pointer
+                  bg-[#222222] border border-white/5
+                  shadow-[12px_12px_24px_rgba(0,0,0,0.3),-8px_-8px_20px_rgba(255,255,255,0.02),inset_4px_4px_10px_rgba(255,255,255,0.05),inset_-4px_-4px_10px_rgba(0,0,0,0.2)]"
+                >
                   <div className="flex justify-between items-start">
-                    <span className="font-extrabold italic text-zinc-700 tracking-tighter">{card.brand}</span>
-                    <span className="material-symbols-outlined text-zinc-800 text-base">contactless</span>
+                    <div className="flex flex-col">
+                      <span className="font-extrabold italic text-white/40 tracking-tighter text-lg leading-none">{card.brand}</span>
+                      <span className="text-[8px] font-black uppercase tracking-[0.3em] text-zinc-700 mt-1">Physical Card</span>
+                    </div>
+                    <span className="material-symbols-outlined text-zinc-800 text-xl">contactless</span>
                   </div>
                   <div>
-                    <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-700 mb-1">Cartão Físico</p>
-                    <p className="font-extrabold text-base tracking-[0.2em] text-white mb-2">•••• •••• •••• {card.last4}</p>
-                    <div className="flex justify-between items-center">
-                      <p className="text-[8px] text-zinc-700 uppercase">{card.brand}</p>
-                      <p className="text-[9px] text-zinc-600">Val. {card.expiry}</p>
+                    <p className="font-black text-lg tracking-[0.25em] text-white/80 mb-3">•••• •••• •••• {card.last4}</p>
+                    <div className="flex justify-between items-end">
+                       <div>
+                         <p className="text-[7px] text-zinc-700 font-black uppercase tracking-widest mb-0.5">Expiração</p>
+                         <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest leading-none">{card.expiry}</p>
+                       </div>
                     </div>
                   </div>
                 </div>
               ))}
+
               <button onClick={() => { setPaymentsOrigin("profile"); setSubView("mobility_payment"); }}
-                className="min-w-[120px] h-40 border border-dashed border-zinc-900 rounded-2xl flex flex-col items-center justify-center gap-2 shrink-0 active:scale-95 transition-all hover:border-yellow-400/20 group">
-                <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors text-2xl">add</span>
+                className="min-w-[140px] h-44 rounded-[40px] border-2 border-dashed border-zinc-900 flex flex-col items-center justify-center gap-2 shrink-0 active:scale-95 transition-all hover:border-yellow-400/20 group"
+              >
+                <div className="size-12 rounded-full bg-zinc-900 flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
+                  <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors text-2xl">add</span>
+                </div>
                 <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-500 transition-colors">Novo Cartão</span>
               </button>
             </div>
@@ -5373,34 +5388,49 @@ const navigateSubView = (target: string) => {
             </div>
           </div>
 
-          {/* MÃÆ’ââ‚¬Â°TODOS DE PAGAMENTO */}
+          {/* MÉTODOS DE PAGAMENTO - CLAYMORPHISM */}
           <section>
-            <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-2">Formas de Pagamento</h2>
-            <div className="flex flex-col">
+            <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-6 px-1">Gateway de Pagamento</h2>
+            <div className="grid grid-cols-1 gap-4">
               {[
-                { icon: "pix",                    label: "PIX",             desc: "Mercado Pago ÃÂ¢ââ€šÂ¬Â¢ InstantÃÂ¢neo",    id: "pix" },
-                { icon: "bolt",                   label: "Bitcoin Lightning", desc: "LNbits ÃÂ¢ââ€šÂ¬Â¢ Satoshis",           id: "bitcoin_lightning" },
-                { icon: "payments",               label: "Dinheiro",        desc: "Pague na entrega",              id: "dinheiro" },
-                { icon: "currency_bitcoin",       label: "Saldo em IZI COINS",  desc: `${iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString("pt-BR")} coins disponíveis`, id: "saldo" },
+                { icon: "pix",                    label: "PIX",             desc: "Instantâneo via Mercado Pago",    id: "pix", border: "border-emerald-500/10" },
+                { icon: "bolt",                   label: "Lightning", desc: "Rede Bitcoin (0 Taxa)",           id: "bitcoin_lightning", border: "border-orange-500/10" },
+                { icon: "credit_card",            label: "Cartão Online",   desc: "Crédito ou Débito Imediato",     id: "cartao", border: "border-blue-500/10" },
+                { icon: "currency_bitcoin",       label: "Saldo IZI",       desc: "Usar seus coins acumulados",      id: "saldo", border: "border-yellow-500/10" },
               ].map((m) => (
-                <div key={m.id} className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0 group active:scale-98 transition-transform cursor-pointer"
-                  onClick={() => setPaymentMethod(m.id)}>
-                  <span className="material-symbols-outlined text-zinc-600 text-xl">{m.icon}</span>
-                  <div className="flex-1">
-                    <p className="font-black text-sm text-white">{m.label}</p>
-                    <p className="text-zinc-600 text-xs mt-0.5">{m.desc}</p>
+                <button 
+                  key={m.id} 
+                  onClick={() => setPaymentMethod(m.id as any)}
+                  className={`group relative p-5 rounded-[32px] border-2 transition-all flex items-center gap-5 italic
+                    ${paymentMethod === m.id 
+                      ? "bg-white border-white text-black shadow-[10px_10px_20px_rgba(255,255,255,0.05),inset_4px_4px_10px_rgba(0,0,0,0.1)]" 
+                      : "bg-[#111111] border-white/5 text-zinc-400 hover:border-white/10 active:scale-[0.98] shadow-lg"
+                    }`}
+                >
+                  <div className={`size-12 rounded-2xl flex items-center justify-center transition-all shadow-inner
+                    ${paymentMethod === m.id ? "bg-black text-yellow-400" : "bg-zinc-900 text-zinc-600"}
+                  `}>
+                    <span className="material-symbols-outlined font-black text-2xl">{m.icon}</span>
                   </div>
-                  <div className={`size-2 rounded-full ${paymentMethod === m.id ? "bg-yellow-400" : "bg-zinc-800"}`} />
-                </div>
+                  <div className="flex-1 text-left">
+                    <p className={`font-black text-sm uppercase tracking-tight ${paymentMethod === m.id ? "text-black" : "text-white"}`}>{m.label}</p>
+                    <p className={`text-[10px] font-bold mt-0.5 ${paymentMethod === m.id ? "text-black/50" : "text-zinc-600"}`}>{m.desc}</p>
+                  </div>
+                  {paymentMethod === m.id && (
+                    <div className="size-6 rounded-full bg-black flex items-center justify-center shadow-lg animate-in zoom-in">
+                       <span className="material-symbols-outlined text-yellow-400 text-sm font-black">check</span>
+                    </div>
+                  )}
+                </button>
               ))}
             </div>
           </section>
 
-          {/* HISTÃÆ’ââ‚¬Å“RICO */}
+          {/* HISTÓRICO */}
           <section>
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Histórico</h2>
-              <button className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Ver Tudo</button>
+            <div className="flex items-center justify-between mb-6 px-1">
+              <h2 className="font-extrabold text-sm text-zinc-500 uppercase tracking-[0.2em]">Fluxo de Caixa</h2>
+              <button className="px-4 py-1.5 rounded-full bg-zinc-900 border border-white/5 text-[9px] font-black text-yellow-400 uppercase tracking-widest active:scale-95 transition-all">Ver Ledger</button>
             </div>
             <div className="flex flex-col">
               {walletTransactions.length === 0 ? (
@@ -5835,7 +5865,7 @@ const navigateSubView = (target: string) => {
   const renderDepositModal = () => {
     const coinRate = appSettings?.iziCoinRate || 1.0;
     const minVal = 1;
-    const maxVal = 500; // Limite padrão de R$ 500 por transação rápida
+    const maxVal = 500; 
 
     const coinsToReceive = (Number(depositAmount) || 0) / coinRate;
     const integerPart = Math.floor(coinsToReceive);
@@ -5848,155 +5878,162 @@ const navigateSubView = (target: string) => {
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }} 
-            className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 italic"
+            className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 italic"
           >
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+              initial={{ scale: 0.9, opacity: 0, y: 30 }} 
               animate={{ scale: 1, opacity: 1, y: 0 }} 
-              exit={{ scale: 0.9, opacity: 0, y: 20 }} 
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="w-full max-w-lg bg-[#222222] border-[3px] border-white/10 rounded-[50px] shadow-[15px_15px_35px_rgba(0,0,0,0.4),-10px_-10px_20px_rgba(255,255,255,0.05),inset_6px_6px_15px_rgba(255,255,255,0.05),inset_-6px_-6px_15px_rgba(0,0,0,0.5)] relative max-h-[90vh] flex flex-col overflow-hidden"
+              exit={{ scale: 0.9, opacity: 0, y: 30 }} 
+              className="w-full max-w-lg bg-[#111111] border-2 border-white/5 rounded-[60px] shadow-[25px_25px_50px_rgba(0,0,0,0.5),inset_4px_4px_8px_rgba(255,255,255,0.02)] relative max-h-[92vh] flex flex-col overflow-hidden"
             >
-              {/* Claymorphism Accent */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/10 blur-[100px] rounded-full -mr-32 -mt-32 pointer-events-none" />
+              {/* Glow Premium */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-yellow-400/5 blur-[120px] rounded-full pointer-events-none" />
               
-              <header className="shrink-0 px-8 pt-8 pb-4 flex items-center justify-between border-b border-black/20 shadow-[0_5px_15px_rgba(0,0,0,0.1)] relative z-50 bg-[#222222]">
+              <header className="shrink-0 px-10 pt-10 pb-6 flex items-center justify-between relative z-50">
                 <div className="flex flex-col">
-                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none italic drop-shadow-md">IZI Coin Store</h3>
-                  <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.4em] mt-2 shadow-[0_2px_4px_rgba(0,0,0,0.5)] bg-black/20 w-fit px-2 py-1 rounded-full">Recarga Express</p>
+                  <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic">Izi Store</h3>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
+                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.4em]">Câmbio Instantâneo</p>
+                  </div>
                 </div>
                 <motion.button 
-                  whileHover={{ scale: 1.1, rotate: 90 }}
+                  whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setShowDepositModal(false)}
-                  className="size-12 rounded-[22px] bg-[#333333] border-2 border-white/5 flex items-center justify-center text-white shadow-[8px_8px_16px_rgba(0,0,0,0.4),-4px_-4px_8px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(255,255,255,0.1)]"
+                  className="size-14 rounded-[28px] bg-[#0d0d0d] border-2 border-white/5 flex items-center justify-center text-white shadow-[10px_10px_20px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.02)]"
                 >
-                  <span className="material-symbols-outlined font-black text-xl">close</span>
+                  <span className="material-symbols-outlined font-black text-2xl">close</span>
                 </motion.button>
               </header>
 
-              <div className="flex-1 overflow-y-auto px-8 py-8 space-y-12 pb-12 relative z-10 custom-scrollbar">
-                {/* Hero Conversion Display */}
-                <section className="text-center space-y-4">
-                   <div className="inline-flex flex-col items-center">
-                      <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.6em] mb-4">Você receberá</p>
-                      <div className="flex items-baseline justify-center">
-                         <span className="text-6xl font-black text-white tracking-tighter italic">
+              <div className="flex-1 overflow-y-auto no-scrollbar px-10 pb-10 space-y-12 relative z-10 italic">
+                {/* Display de Conversão Claymorphism */}
+                <section className="relative py-10 rounded-[45px] bg-[#0d0d0d] border-2 border-white/5 shadow-inner flex flex-col items-center justify-center overflow-hidden">
+                   <div className="absolute inset-0 bg-yellow-400/[0.02] pointer-events-none" />
+                   <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.6em] mb-6 relative z-10">Você Receberá</p>
+                      <div className="flex items-baseline justify-center relative z-10">
+                         <span className="text-6xl font-black text-white tracking-tighter italic tabular-nums">
                            {integerPart.toLocaleString('pt-BR')}
                          </span>
-                         {fractionalPart !== "00000000" && (
-                           <span className="text-2xl font-black text-yellow-400/60 tracking-tighter italic ml-1">
-                             ,{fractionalPart}
-                           </span>
-                         )}
-                         <span className="text-xs font-black text-yellow-400 uppercase tracking-widest ml-3 mt-4">IZI</span>
+                         <span className="text-2xl font-black text-yellow-400/50 tracking-tighter italic ml-1 tabular-nums">
+                           ,{fractionalPart}
+                         </span>
+                         <div className="size-16 ml-6 drop-shadow-[0_8px_15px_rgba(250,204,21,0.2)]">
+                            <img 
+                              src={iziCoinImg} 
+                              alt="Izi Coin" 
+                              className="w-full h-full object-contain"
+                            />
+                         </div>
                       </div>
-                      <div className="mt-6 px-4 py-2 rounded-2xl bg-black/40 border border-white/5 shadow-inner">
-                         <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.3em]">Cotação Atual: <span className="text-emerald-400">R$ {coinRate.toFixed(2).replace(".", ",")}</span></p>
-                      </div>
+                   <div className="mt-8 px-5 py-2 rounded-full bg-black/40 border border-white/5">
+                      <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.3em]">Taxa Fixa: <span className="text-emerald-400">1 IZI = R$ {coinRate.toFixed(2).replace(".", ",")}</span></p>
                    </div>
                 </section>
 
-                {/* The Slider Row */}
-                <section className="space-y-8">
-                  <div className="px-2">
-                    <div className="flex justify-between items-center mb-6">
-                       <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest italic">Valor da Recarga</label>
-                       <span className="text-xl font-black text-white italic">R$ {Number(depositAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    
-                    <div className="relative h-14 bg-zinc-800 rounded-[30px] border border-white/5 shadow-[inset_4px_4px_8px_rgba(0,0,0,0.4)] flex items-center p-2 group transition-all">
-                       <input 
-                         type="range"
-                         min={minVal}
-                         max={maxVal}
-                         step={1}
-                         value={depositAmount || minVal}
-                         onChange={(e) => setDepositAmount(e.target.value)}
-                         className="w-full h-10 appearance-none bg-transparent cursor-pointer relative z-20 
-                                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:size-10 
-                                  [&::-webkit-slider-thumb]:bg-yellow-400 [&::-webkit-slider-thumb]:rounded-[18px] 
-                                  [&::-webkit-slider-thumb]:shadow-[4px_4px_10px_rgba(250,204,21,0.3),inset_2px_2px_6px_rgba(255,255,255,0.8)]
-                                  [&::-webkit-slider-thumb]:transition-transform active:[&::-webkit-slider-thumb]:scale-95"
-                       />
-                       {/* Visual Track */}
-                       <div className="absolute left-2 right-2 h-10 bg-yellow-400/5 rounded-[18px] pointer-events-none" />
-                    </div>
-                    
-                    <div className="flex justify-between mt-4 px-2">
-                       <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest">MIN R$ {minVal}</span>
-                       <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest">MAX R$ {maxVal}</span>
+                {/* Slider Control Claymorphism */}
+                <section className="space-y-10 px-2">
+                  <div className="flex justify-between items-end">
+                     <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Valor em Reais</label>
+                        <h4 className="text-3xl font-black text-white italic tracking-tight">R$ {Number(depositAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h4>
+                     </div>
+                     <div className="flex items-center gap-3 bg-zinc-900/50 px-4 py-2 rounded-2xl border border-white/5">
+                        <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Limite Diário</span>
+                        <span className="text-[10px] font-black text-white italic">R$ 5K</span>
+                     </div>
+                  </div>
+                  
+                  <div className="relative pt-2">
+                    <input 
+                      type="range"
+                      min={minVal}
+                      max={maxVal}
+                      step={1}
+                      value={depositAmount || minVal}
+                      onChange={(e) => setDepositAmount(e.target.value)}
+                      className="w-full h-4 appearance-none bg-[#0a0a0a] rounded-full outline-none shadow-inner border border-white/5
+                               [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:size-10 
+                               [&::-webkit-slider-thumb]:bg-yellow-400 [&::-webkit-slider-thumb]:rounded-[18px] 
+                               [&::-webkit-slider-thumb]:shadow-[inset_4px_4px_8px_rgba(255,255,255,0.7),0_10px_20px_rgba(250,204,21,0.2)]
+                               [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:transition-transform
+                               active:[&::-webkit-slider-thumb]:scale-90"
+                    />
+                    <div className="flex justify-between mt-6">
+                       <span className="text-[8px] font-black text-zinc-700 uppercase tracking-[0.4em]">Mín R$ {minVal}</span>
+                       <span className="text-[8px] font-black text-zinc-700 uppercase tracking-[0.4em]">Máx R$ {maxVal}</span>
                     </div>
                   </div>
 
-                  {/* Manual Input Alternative */}
-                  <div className="relative group p-1">
-                    <div className="absolute inset-x-4 -bottom-4 h-16 bg-yellow-400/5 blur-3xl rounded-full opacity-0 group-focus-within:opacity-100 transition-opacity" />
-                    <div className="flex items-center gap-4 bg-zinc-800 border-2 border-white/5 rounded-[35px] py-2 pl-8 pr-2 focus-within:border-yellow-400/30 transition-all shadow-[inset_4px_4px_10px_rgba(0,0,0,0.5)]">
-                       <span className="text-zinc-600 font-black text-lg italic">R$</span>
+                  <div className="relative group">
+                    <div className="flex items-center gap-5 bg-[#0a0a0a] border-2 border-white/5 rounded-[40px] py-2 pl-10 pr-2 focus-within:border-yellow-400/20 transition-all shadow-inner">
+                       <span className="text-zinc-700 font-black text-xl italic">R$</span>
                        <input 
                         type="number"
                         value={depositAmount}
                         onChange={(e) => setDepositAmount(e.target.value)}
                         placeholder="0,00"
-                        className="flex-1 bg-transparent border-none text-2xl font-black text-white outline-none italic py-4"
+                        className="flex-1 bg-transparent border-none text-2xl font-black text-white outline-none italic py-5 tabular-nums"
                       />
-                      <div className="px-6 py-4 bg-zinc-900 rounded-[25px] border border-white/5 shadow-xl">
-                        <span className="material-symbols-outlined text-yellow-400 text-xl font-black">edit_note</span>
+                      <div className="size-14 rounded-[24px] bg-zinc-900 flex items-center justify-center border border-white/5 shadow-xl">
+                        <span className="material-symbols-outlined text-yellow-400 text-2xl font-black">keyboard</span>
                       </div>
                     </div>
                   </div>
                 </section>
 
-                {/* Payment Methods */}
+                {/* Métodos de Pagamento Claymorphism */}
                 <section className="space-y-6">
-                   <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em] px-2 flex items-center gap-3">
-                      <span>Escolha o Meio</span>
-                      <div className="h-px flex-1 bg-white/5" />
-                   </h3>
-                   <div className="grid grid-cols-3 gap-4">
+                   <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] px-2">Método de Checkout</h3>
+                   <div className="grid grid-cols-3 gap-5 pb-4">
                      {[
                        { id: 'cartao', icon: 'credit_card', label: 'Cartão', color: 'text-blue-400' },
                        { id: 'pix', icon: 'pix', label: 'Pix Safe', color: 'text-emerald-400' },
-                       { id: 'lightning', icon: 'bolt', label: 'Bitcoin', color: 'text-orange-400' }
+                       { id: 'lightning', icon: 'bolt', label: 'Rede BTC', color: 'text-orange-400' }
                      ].map((method) => (
                        <button
                          key={method.id}
                          onClick={() => setDepositPaymentMethod(method.id)}
-                         className={`p-6 rounded-[30px] border-2 transition-all flex flex-col items-center justify-center gap-2 group italic relative overflow-hidden
+                         className={`p-6 rounded-[35px] border-2 transition-all flex flex-col items-center justify-center gap-3 group italic relative active:scale-95
                            ${depositPaymentMethod === method.id 
-                             ? "bg-white border-white text-black shadow-[15px_15px_30px_rgba(255,255,255,0.05),inset_4px_4px_10px_rgba(0,0,0,0.1)]" 
-                             : "bg-zinc-800 border-white/5 text-zinc-600 hover:border-white/10 active:scale-[0.98]"
+                             ? "bg-yellow-400 border-yellow-400 text-black shadow-[15px_15px_30px_rgba(250,204,21,0.1),inset_4px_4px_8px_rgba(255,255,255,0.6)]" 
+                             : "bg-[#0d0d0d] border-white/5 text-zinc-600 hover:border-white/10 shadow-[8px_8px_16px_rgba(0,0,0,0.2)]"
                            }`}
                        >
-                         <span className={`material-symbols-outlined text-2xl font-black ${depositPaymentMethod === method.id ? 'text-black' : method.color + ' opacity-40'}`}>{method.icon}</span>
-                         <span className={`text-[8px] font-black uppercase tracking-widest leading-none text-center ${depositPaymentMethod === method.id ? 'text-black' : 'text-zinc-700'}`}>{method.label}</span>
+                         <div className={`size-12 rounded-[18px] flex items-center justify-center shadow-inner ${depositPaymentMethod === method.id ? 'bg-black/10' : 'bg-black/40'}`}>
+                           <span className={`material-symbols-outlined text-2xl font-black ${depositPaymentMethod === method.id ? 'text-black' : method.color + ' opacity-40'}`}>{method.icon}</span>
+                         </div>
+                         <span className={`text-[9px] font-black uppercase tracking-widest leading-none ${depositPaymentMethod === method.id ? 'text-black' : 'text-zinc-700'}`}>{method.label}</span>
                        </button>
                      ))}
                    </div>
                 </section>
               </div>
 
-              <footer className="shrink-0 p-8 pt-4 bg-zinc-950/80 backdrop-blur-xl border-t border-white/5 relative z-20">
+              <footer className="shrink-0 p-10 pt-4 bg-[#0a0a0a] border-t border-white/5 relative z-20">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   disabled={!depositAmount || Number(depositAmount) <= 0 || isLoading}
                   onClick={() => handlePurchaseCoins(Number(depositAmount), depositPaymentMethod)}
-                  className="w-full bg-yellow-400 text-black font-black py-7 rounded-[35px] shadow-[0_20px_40px_rgba(250,204,21,0.2),inset_4px_4px_12px_rgba(255,255,255,0.8)] active:shadow-inner transition-all disabled:opacity-20 flex justify-center items-center gap-4 group h-[92px] relative overflow-hidden italic"
+                  className="w-full bg-yellow-400 text-black font-black h-[100px] rounded-[45px] shadow-[inset_4px_4px_12px_rgba(255,255,255,0.7),0_20px_40px_rgba(250,204,21,0.15)] flex justify-center items-center gap-5 group relative overflow-hidden italic"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:animate-[shimmer_2.5s_infinite] pointer-events-none" />
                   {isLoading ? (
                     <div className="size-8 border-4 border-black/20 border-t-black rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span className="uppercase tracking-[0.4em] text-sm leading-none pt-1">Gerar Pagamento</span>
-                      <span className="material-symbols-outlined text-2xl font-black group-hover:translate-x-2 transition-transform">send_money</span>
+                      <span className="uppercase tracking-[0.5em] text-sm pt-1">Iniciar Checkout</span>
+                      <div className="size-12 rounded-[18px] bg-black/10 flex items-center justify-center group-hover:bg-black/20 transition-colors">
+                        <span className="material-symbols-outlined text-2xl font-black group-hover:translate-x-1 transition-transform">rocket_launch</span>
+                      </div>
                     </>
                   )}
                 </motion.button>
-                <div className="flex items-center justify-center gap-3 mt-8 opacity-20">
-                   <span className="text-[10px] font-black text-white italic tracking-[0.8em] uppercase">Izi Pay Security</span>
+                <div className="flex items-center justify-center gap-3 mt-10 opacity-30">
+                   <div className="h-px w-8 bg-zinc-800" />
+                   <span className="text-[10px] font-black text-zinc-600 italic tracking-[0.8em] uppercase">Powered by Izi Pay</span>
+                   <div className="h-px w-8 bg-zinc-800" />
                 </div>
               </footer>
             </motion.div>
