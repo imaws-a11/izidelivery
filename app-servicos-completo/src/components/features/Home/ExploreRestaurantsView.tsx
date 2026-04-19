@@ -67,7 +67,13 @@ export const ExploreRestaurantsView = ({
     
     return establishments.filter(shop => {
       // Filtragem por tipo e categoria
-      const shopType = (shop.type || "").toLowerCase();
+      const shopType = (shop.type || "").toLowerCase().trim();
+      
+      // Base: Esta view é exclusiva para o ecossistema de Food (Restaurante, Doceria, Lanches)
+      const foodMasterTypes = ['restaurant', 'restaurante', 'candy', 'doceria', 'comida', 'lanches'];
+      const isFoodRelated = foodMasterTypes.includes(shopType);
+      if (!isFoodRelated) return false;
+
       const shopFoodCats = Array.isArray(shop.foodCategory) 
         ? shop.foodCategory.map(c => (c || "").toLowerCase())
         : [(shop.foodCategory || "").toLowerCase()];

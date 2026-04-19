@@ -164,7 +164,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       is_free_shipping: formData.is_free_shipping,
       merchant_id: formData.merchant_id,
       coupon_code: activeTab === 'coupon' ? formData.coupon_code.toUpperCase().trim() : null,
-      image_url: activeTab === 'banner' ? formData.image_url : null,
+      image_url: (activeTab === 'banner' || activeTab === 'coupon') ? formData.image_url : null,
       target_merchants: activeTab === 'coupon' ? formData.merchant_ids : null,
       target_products: activeTab === 'coupon' ? formData.selected_product_ids : null,
       target_view: activeTab === 'banner' ? formData.target_view : null,
@@ -512,6 +512,34 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                          className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-black text-2xl text-center text-primary tracking-[0.3em] focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
                                          placeholder={formData.is_free_shipping ? 'EX: FRETEFREE' : 'EX: IZI20OFF'}
                                      />
+                                   </div>
+
+                                   {/* Imagem de Fundo do Cupom */}
+                                   <div className="space-y-2 md:col-span-2">
+                                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Imagem de Fundo do Card (Personalização)</label>
+                                       <div className="aspect-[3/1] rounded-[32px] bg-white/5 border-2 border-dashed border-white/10 relative overflow-hidden group hover:border-primary/50 transition-colors cursor-pointer">
+                                           {formData.image_url ? (
+                                               <>
+                                                   <img src={formData.image_url} className="w-full h-full object-cover" />
+                                                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                                                       <span className="material-symbols-outlined text-primary text-4xl">edit</span>
+                                                       <button 
+                                                           type="button"
+                                                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFormData({...formData, image_url: null}); }}
+                                                           className="size-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center hover:scale-110 transition-all"
+                                                       >
+                                                           <span className="material-symbols-outlined">delete</span>
+                                                       </button>
+                                                   </div>
+                                               </>
+                                           ) : (
+                                               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-500 group-hover:text-primary transition-colors">
+                                                   <span className="material-symbols-outlined text-4xl text-slate-500">add_photo_alternate</span>
+                                                   <span className="text-[10px] font-black uppercase tracking-widest">Adicionar fundo visual ao cupom</span>
+                                               </div>
+                                           )}
+                                           <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleFileUpload} />
+                                       </div>
                                    </div>
                                  </>
                              )}

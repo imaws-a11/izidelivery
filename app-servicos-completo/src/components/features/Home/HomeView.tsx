@@ -198,12 +198,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
   };
 
   const deliveryServices = [
-    { icon: "restaurant",     img: "/images/comida.png", tagline: "GASTRONOMIA",      highlight: "gold", label: "Comida e Lanche", type: "restaurant", action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
+    { icon: "restaurant",     img: "/images/comida.png", tagline: "GASTRONOMIA",      highlight: "gold", label: "Food",             type: "restaurant", action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
     { icon: "rice_bowl",      img: "/images/almoco.png",   tagline: "ALMOÇO EXPRESS",   highlight: "none", label: "Almoço",       type: "restaurant", action: () => { setRestaurantInitialCategory("Almoço"); navigateSubView("explore_restaurants"); } },
     { icon: "local_mall",     img: "/images/mercados.png", tagline: "MERCAIDT",         highlight: "cyan", label: "Mercados",     type: "market",     action: null },
     { icon: "local_bar",      img: "/images/bebidas.png",  tagline: "BEBIDAS FINAIS",   highlight: "none", label: "Bebidas",      type: "beverages",  action: null },
     { icon: "local_pharmacy", img: "/images/saude.png",    tagline: "SAÚDE INTEGRAL",   highlight: "cyan", label: "Saúde",        type: "pharmacy",   action: null },
-    { icon: "pedal_bike",     img: "/images/envios.png",   tagline: "",                 highlight: "none", label: "Envios",       type: null,         action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
+    { icon: "pedal_bike",     img: "/images/envios.png",   tagline: "",                 highlight: "none", label: "Izi Envios",   type: null,         action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
     { icon: "pets",           img: "/images/petshop.png",  tagline: "CONFORTO PET",     highlight: "gold", label: "Petshop",      type: "generic",    action: () => { setExploreCategoryState({ id: "pets", title: "Pet Shop Premium", tagline: "Mimo para seu melhor amigo", primaryColor: "rose-500", icon: "pets" }); navigateSubView("explore_category"); } },
     { icon: "propane_tank",   img: "/images/gas-agua.png", tagline: "VITAIS",           highlight: "cyan", label: "Gas e Agua",   type: "generic",    action: () => { setExploreCategoryState({ id: "gas", title: "Gás e Água", tagline: "Essencial na sua porta", primaryColor: "blue-500", icon: "propane_tank" }); navigateSubView("explore_category"); } },
     { icon: "kebab_dining",   img: "/images/acougue.png",  tagline: "CARNES PRIME",     highlight: "gold", label: "Açougue",      type: "generic",    action: () => { setExploreCategoryState({ id: "açougue", title: "Corte Prime", tagline: "Os melhores cortes selecionados", primaryColor: "red-600", icon: "kebab_dining" }); navigateSubView("explore_category"); } },
@@ -992,93 +992,31 @@ export const HomeView: React.FC<HomeViewProps> = ({
               
               <div className="flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-4 -mx-5 px-5">
                 {availableCoupons.map((coupon, i) => {
-                  const isCopied = copiedCoupon === coupon.coupon_code;
+                   const isCopied = copiedCoupon === coupon.coupon_code;
 
-                  return (
-                    <motion.div 
-                      key={coupon.id || i} 
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        navigator.clipboard.writeText(coupon.coupon_code).catch(() => {});
-                        setCopiedCoupon(coupon.coupon_code);
-                        setTimeout(() => setCopiedCoupon(null), 2000);
-                        showToast("Código promocional copiado!", "success");
-                      }}
-                      className="relative flex-shrink-0 w-[360px] h-[196px] rounded-[36px] overflow-hidden group cursor-pointer transition-all snap-center shadow-[20px_20px_45px_rgba(0,0,0,0.9),inset_6px_6px_15px_rgba(255,255,255,0.02),inset_-6px_-6px_15px_rgba(0,0,0,0.7)] border border-white/10 hover:border-yellow-400/30"
-                    >
-                       {coupon.image_url && (
-                         <img 
-                           src={coupon.image_url}
-                           alt={coupon.title || "Cupom"} 
-                           className="absolute inset-0 w-full h-full object-cover brightness-[0.32] saturate-[1.05] group-hover:scale-110 transition-transform duration-1000"
-                         />
-                       )}
-                       
-                       <div className="absolute inset-0 bg-gradient-to-br from-black/85 via-black/58 to-black/90" />
-                       <div className="absolute inset-y-0 right-0 w-32 bg-yellow-400/10 blur-3xl opacity-70" />
+                   return (
+                     <motion.div 
+                       key={coupon.id || i} 
+                       whileTap={{ scale: 0.98 }}
+                       onClick={() => {
+                         if (!coupon.coupon_code) return;
+                         navigator.clipboard.writeText(coupon.coupon_code).catch(() => {});
+                         setCopiedCoupon(coupon.coupon_code);
+                         setTimeout(() => setCopiedCoupon(null), 2000);
+                         showToast("Código promocional copiado!", "success");
+                       }}
+                       className="relative flex-shrink-0 w-[330px] h-[180px] rounded-[32px] overflow-hidden group cursor-pointer transition-all snap-center shadow-2xl border border-white/5 bg-zinc-900"
+                     >
+                        {/* Background Image - O cupom completo enviado pelo lojista */}
+                        <img 
+                          src={coupon.image_url || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=500&auto=format&fit=crop"}
+                          alt="Cupom" 
+                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-[4s]"
+                        />
 
-                       <div className="relative z-10 h-full p-6 flex flex-col justify-between">
-                          <div className="flex justify-between items-start gap-3">
-                             <div className="bg-white/8 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
-                               <span className="text-[9px] font-black text-yellow-400 uppercase tracking-widest flex items-center gap-1.5">
-                                 <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>sell</span>
-                                 Cupom Izi
-                               </span>
-                             </div>
 
-                             <button 
-                               onClick={(e) => { 
-                                 e.stopPropagation();
-                                 navigator.clipboard.writeText(coupon.coupon_code).catch(() => {}); 
-                                 setCopiedCoupon(coupon.coupon_code); 
-                                 setTimeout(() => setCopiedCoupon(null), 2000); 
-                                 showToast("Código promocional copiado!", "success");
-                               }}
-                               className={`size-11 rounded-2xl flex items-center justify-center transition-all duration-300 backdrop-blur-md shadow-2xl border ${isCopied ? "bg-emerald-500 border-none scale-105" : "bg-black/40 border-white/10 group-hover:bg-yellow-400 group-hover:border-yellow-400"}`}
-                             >
-                                <span className={`material-symbols-outlined text-lg ${isCopied ? "text-white" : "text-white group-hover:text-black"} transition-colors`}>
-                                  {isCopied ? "done_all" : "content_copy"}
-                                </span>
-                             </button>
-                          </div>
-                          
-                          <div className="flex flex-col mt-auto">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="min-w-0">
-                                <p className="text-[10px] font-black text-white/45 uppercase tracking-[0.24em]">Código</p>
-                                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                  <span className="text-white text-base font-black tracking-[0.18em] uppercase bg-black/40 px-3 py-1.5 rounded-xl border border-white/10 shadow-md">
-                                    {coupon.coupon_code}
-                                  </span>
-                                  {coupon.min_order_value > 0 && (
-                                    <span className="text-zinc-300 text-[10px] font-black uppercase tracking-[0.12em]">
-                                      Mín. R${coupon.min_order_value}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="shrink-0 text-right">
-                                <p className="text-[10px] font-black text-white/45 uppercase tracking-[0.24em]">Desconto</p>
-                                <div className="flex items-end gap-2 mt-1 justify-end">
-                                  <h5 className="text-4xl font-black text-white uppercase italic tracking-tighter drop-shadow-2xl leading-none">
-                                    {coupon.discount_type === "fixed" ? `R$${coupon.discount_value}` : `${coupon.discount_value}%`}
-                                  </h5>
-                                  <span className="text-yellow-400 font-black text-xs uppercase tracking-[0.2em] mb-1">OFF</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="mt-4">
-                              <h6 className="text-lg font-black text-white tracking-tight leading-tight line-clamp-2">
-                                {coupon.title || "Economia liberada para o seu próximo pedido"}
-                              </h6>
-                              <p className="text-[11px] text-zinc-300/80 font-medium leading-relaxed line-clamp-2 mt-2">
-                                {coupon.description || "Toque no banner para copiar e usar no checkout."}
-                              </p>
-                            </div>
-                          </div>
-                       </div>
-                    </motion.div>
-                  );
+                     </motion.div>
+                   );
                 })}
               </div>
             </section>
