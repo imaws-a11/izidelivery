@@ -16,7 +16,7 @@ interface PromotionStudioProps {
   isModal?: boolean;
 }
 
-type PromoType = 'banner' | 'coupon' | 'flash';
+type PromoType = 'banner' | 'coupon' | 'flash' | 'explore';
 
 export default function PromotionStudio({ merchantId = null, userRole, onClose, isModal = false }: PromotionStudioProps) {
   const { fetchPromotions, promotionsList, stats, appSettings, setAppSettings, handleFileUpload: uploadToSupabase } = useAdmin();
@@ -108,8 +108,9 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
     return p.merchant_id === null; 
   });
 
-  const banners = filteredPromos.filter(p => (p.image_url || p.type === 'banner') && !p.coupon_code);
-  const coupons = filteredPromos.filter(p => (p.coupon_code || p.type === 'coupon'));
+  const banners = filteredPromos.filter(p => (p.image_url || p.type === 'banner') && !p.coupon_code && p.type !== 'explore');
+  const coupons = filteredPromos.filter(p => (p.coupon_code || p.type === 'coupon') && p.type !== 'explore');
+  const exploreCards = filteredPromos.filter(p => p.type === 'explore');
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -148,6 +149,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
   const saveStandardPromotion = async () => {
     if (activeTab === 'coupon' && !formData.coupon_code) throw new Error('Código do cupom é obrigatório');
     if (activeTab === 'banner' && !formData.image_url) throw new Error('Imagem do banner é obrigatória');
+    if (activeTab === 'explore' && !formData.image_url) throw new Error('Imagem do card é obrigatória');
     if (activeTab === 'coupon' && !formData.is_free_shipping && Number(formData.discount_value || 0) <= 0)
       throw new Error('Informe um valor de desconto maior que zero');
 
@@ -164,7 +166,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       is_free_shipping: formData.is_free_shipping,
       merchant_id: formData.merchant_id,
       coupon_code: activeTab === 'coupon' ? formData.coupon_code.toUpperCase().trim() : null,
-      image_url: (activeTab === 'banner' || activeTab === 'coupon') ? formData.image_url : null,
+      image_url: (activeTab === 'banner' || activeTab === 'coupon' || activeTab === 'explore') ? formData.image_url : null,
       target_merchants: activeTab === 'coupon' ? formData.merchant_ids : null,
       target_products: activeTab === 'coupon' ? formData.selected_product_ids : null,
       target_view: activeTab === 'banner' ? formData.target_view : null,
@@ -318,6 +320,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
 
   const tabs = [
     { id: 'banner', label: 'Banners Home (Geral)', icon: 'view_carousel', color: 'text-amber-500' },
+    { id: 'explore', label: 'Cards de Exploração', icon: 'explore', color: 'text-indigo-400' },
     { id: 'coupon', label: 'Cupons de Desconto', icon: 'confirmation_number', color: 'text-primary' },
     { id: 'flash', label: 'Izi Flash (Ofertas)', icon: 'local_fire_department', color: 'text-rose-500' },
   ];
@@ -408,7 +411,9 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                              <div className="space-y-2 md:col-span-2">
-                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Título Interno da Campanha</label>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
+                                  {activeTab === 'explore' ? 'Nome Exato da Categoria (ex: Padaria Izi, Pet Shop Premium)' : 'Título Interno da Campanha'}
+                                </label>
                                 <input 
                                     type="text" 
                                     required
@@ -456,6 +461,28 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                          </select>
                                      </div>
                                  </>
+                             )}
+
+                             {activeTab === 'explore' && (
+                                 <div className="space-y-2 md:col-span-2">
+                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Imagem do Card de Exploração</label>
+                                     <div className="aspect-[2/1] rounded-[40px] bg-white/5 border-2 border-dashed border-white/10 relative overflow-hidden group hover:border-primary/50 transition-colors cursor-pointer">
+                                         {formData.image_url ? (
+                                             <>
+                                                 <img src={formData.image_url} className="w-full h-full object-cover" />
+                                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                     <span className="material-symbols-outlined text-primary text-5xl">edit</span>
+                                                 </div>
+                                             </>
+                                         ) : (
+                                             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-slate-500 group-hover:text-primary transition-colors">
+                                                 <span className="material-symbols-outlined text-6xl text-slate-500">add_photo_alternate</span>
+                                                 <span className="text-xs font-black uppercase tracking-widest text-center px-10">Upload Imagem (Proporção 2:1 recomendada)</span>
+                                             </div>
+                                         )}
+                                         <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleFileUpload} />
+                                     </div>
+                                 </div>
                              )}
 
                              {activeTab === 'coupon' && (
@@ -578,7 +605,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                              )}
 
                                        {/* Tipo de Desconto e Valor – ocultados no modo Frete Grátis */}
-                              {activeTab !== 'banner' && (
+                              {(activeTab === 'coupon' || activeTab === 'flash') && (
                                 <>
                                   {!formData.is_free_shipping && (
                                     <>
@@ -640,7 +667,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                 </>
                               )}
 
-                             {activeTab !== 'banner' && (
+                             {(activeTab === 'coupon' || activeTab === 'flash') && (
                                  <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Expira em (Vencimento)</label>
                                     <input 
@@ -652,7 +679,7 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                  </div>
                              )}
 
-                             {activeTab !== 'banner' && (
+                             {(activeTab === 'coupon' || activeTab === 'flash') && (
                                  <>
                                      <div className="md:col-span-2 pt-4 flex gap-6">
                                         <label className="flex-1 flex items-center justify-between p-6 bg-white/5 border border-white/5 rounded-[32px] cursor-pointer group hover:bg-white/10 transition-all">
@@ -790,6 +817,21 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                     <div className="text-[9px] font-bold text-slate-700 uppercase tracking-widest mt-1">
                                         {item.expires_at ? format(new Date(item.expires_at), 'dd MMM yyyy', { locale: ptBR }) : 'Oferta Permanente'}
                                     </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+
+                    {activeTab === 'explore' && exploreCards.map(item => (
+                        <motion.div layout key={item.id} className="bg-slate-900/50 border border-indigo-500/20 rounded-[48px] overflow-hidden group hover:border-indigo-400 transition-all flex flex-col relative shadow-2xl">
+                            <div className="aspect-[2/1] relative overflow-hidden">
+                                <img src={item.image_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={item.title} />
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent p-6 flex flex-col justify-end">
+                                    <h4 className="text-xl font-black italic uppercase tracking-tighter text-white">{item.title}</h4>
+                                </div>
+                                <div className="absolute top-6 right-6 flex gap-2">
+                                     <button onClick={() => openEdit(item, 'explore')} className="size-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white hover:bg-indigo-400 hover:text-slate-950 transition-all"><span className="material-symbols-outlined text-lg">edit</span></button>
+                                     <button onClick={() => handleDelete(item.id!, 'explore')} className="size-10 rounded-xl bg-rose-500/20 backdrop-blur-md flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all"><span className="material-symbols-outlined text-lg">delete</span></button>
                                 </div>
                             </div>
                         </motion.div>
