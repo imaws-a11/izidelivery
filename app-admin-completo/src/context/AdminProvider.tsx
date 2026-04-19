@@ -476,7 +476,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             free_delivery: data.free_delivery ?? false,
             estimated_time: data.estimated_time || '30-45 min',
             store_type: data.store_type || 'restaurant',
-            food_category: data.food_category || 'all',
+            food_category: Array.isArray(data.food_category) ? data.food_category : [data.food_category || 'all'],
             metadata: data.metadata || {}
           };
           setMerchantProfile(profile);
@@ -1728,7 +1728,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         store_address: editingItem.store_address,
         store_phone: editingItem.store_phone,
         store_type: editingItem.store_type || 'restaurant',
-        food_category: editingItem.food_category || 'all',
+        food_category: Array.isArray(editingItem.food_category) 
+          ? editingItem.food_category 
+          : [editingItem.food_category || 'all'],
         store_logo: editingItem.store_logo,
         store_banner: editingItem.store_banner,
         email: editingItem.email,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, Fragment } from "react";
 import { BespokeIcons } from "./lib/BespokeIcons";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1064,7 +1064,7 @@ function App() {
       // 2. Buscar Produtos da categoria Bebidas para a tela de ofertas
       const { data: pDeals } = await supabase
         .from('products_delivery')
-        .select('*')
+        .select('*, product_options_groups_delivery(id)')
         .eq('is_available', true)
         .eq('category', 'Bebidas')
         .limit(8);
@@ -1081,7 +1081,8 @@ function App() {
           off: `${discountPct}%`,
           img: p.image_url || "",
           cat: p.category || "Bebidas",
-          merchant_id: p.merchant_id // Injetar merchant_id para evitar pedidos órfãos
+          merchant_id: p.merchant_id,
+          has_options: p.product_options_groups_delivery && p.product_options_groups_delivery.length > 0
         }));
         setBeverageOffers(formatted);
       }
@@ -1332,10 +1333,11 @@ function App() {
       // 1. Buscar produtos do estabelecimento
       const { data: products } = await supabase
         .from("products_delivery")
-        .select("*")
+        .select("*, product_options_groups_delivery(id)")
         .eq("merchant_id", shop.id)
         .eq("is_available", true)
         .order("created_at", { ascending: false });
+
 
       // 2. Buscar redenções do usuário para desativar ofertas já utilizadas
       let usedSourceIds = new Set<string>();
@@ -1409,6 +1411,7 @@ function App() {
             store: shop.name,
             is_flash_offer: hasLinkedOffer,
             flash_offer_id: hasLinkedOffer ? linkedOffer.id : undefined,
+            has_options: p.product_options_groups_delivery && p.product_options_groups_delivery.length > 0
           });
         });
         const categories = Object.entries(grouped).map(([name, items]) => ({ name, items }));
@@ -2418,18 +2421,15 @@ const navigateSubView = (target: string) => {
             distKm = distKm * 1.3;
           }
           
-          // Mapeamento de tipos do banco para os filtros do App
+          // Mapeamento de tipos do banco para os filtros do App baseados na nova taxonomia
           const rawType = (m.store_type || "restaurant").toLowerCase().trim();
-          let normalizedType = rawType;
-          if (rawType.includes("restaurante")) normalizedType = "restaurant";
-          else if (rawType === "saude") normalizedType = "pharmacy";
-          else if (rawType === "mercado") normalizedType = "market";
-          else if (rawType === "bebidas") normalizedType = "beverages";
-          else if (rawType === "hamburguer") normalizedType = "restaurant";
           
           return {
             id: m.id,
             name: m.store_name || "Loja Parceira",
+            description: m.store_description || "",
+            type: rawType,
+            foodCategory: Array.isArray(m.food_category) ? m.food_category : [m.food_category || "all"],
             tag: isOpen ? "Aberto Agora" : "Fechado",
             statusTag: isOpen ? "Aberto" : "Fechado",
             isOpen,
@@ -2445,9 +2445,6 @@ const navigateSubView = (target: string) => {
             free_delivery: !!m.free_delivery || (m.service_fee !== null && Number(m.service_fee) === 0),
             service_fee: m.free_delivery ? 0 : (m.service_fee !== undefined && m.service_fee !== null ? Number(m.service_fee) : null),
             fee: m.free_delivery || Number(m.service_fee) === 0 ? "Grátis" : `R$ ${Number(m.service_fee ?? globalSettings?.base_fee ?? appSettings?.baseFee ?? 5.90).toFixed(2).replace('.', ',')}`,
-            type: normalizedType,
-            foodCategory: m.food_category || "all",
-            description: m.store_description || "",
             latitude: m.latitude,
             longitude: m.longitude,
             coverageMode: m.delivery_coverage_mode || 'radius',
@@ -2678,23 +2675,61 @@ const navigateSubView = (target: string) => {
     }
   });
 
-  const foodCategories = [
-    { id: "all",        name: "Todos",         icon: "restaurant",    action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
-    { id: "promocoes",  name: "Promoções",     icon: "percent",       action: () => { setRestaurantInitialCategory("Promoções"); navigateSubView("explore_restaurants"); } },
-    { id: "burguer",    name: "Burguer",       icon: "lunch_dining",  action: () => { setRestaurantInitialCategory("Burguer"); navigateSubView("explore_restaurants"); } },
-    { id: "pizza",      name: "Pizza",         icon: "local_pizza",   action: () => { setRestaurantInitialCategory("Pizza"); navigateSubView("explore_restaurants"); } },
-    { id: "doces",      name: "Doces e Bolos", icon: "cake",          action: () => { setRestaurantInitialCategory("Doces e Bolos"); navigateSubView("explore_restaurants"); } },
-    { id: "salgados",   name: "Salgados",      icon: "bakery_dining", action: () => { setRestaurantInitialCategory("Salgados"); navigateSubView("explore_restaurants"); } },
-    { id: "porcoes",    name: "Porções",       icon: "ramen_dining",  action: () => { setRestaurantInitialCategory("Porções"); navigateSubView("explore_restaurants"); } },
-    { id: "japones",    name: "Japonês",       icon: "set_meal",      action: () => { setRestaurantInitialCategory("Japonês"); navigateSubView("explore_restaurants"); } },
-    { id: "massas",     name: "Massas",        icon: "dinner_dining", action: () => { setRestaurantInitialCategory("Massas"); navigateSubView("explore_restaurants"); } },
-    { id: "carnes",     name: "Carnes",        icon: "kebab_dining",  action: () => { setRestaurantInitialCategory("Carnes"); navigateSubView("explore_restaurants"); } },
-    { id: "fit",        name: "Fit",           icon: "eco",           action: () => { setRestaurantInitialCategory("Fit"); navigateSubView("explore_restaurants"); } },
-    { id: "acai",       name: "Açaí",          icon: "grass",         action: () => { setRestaurantInitialCategory("Açaí"); navigateSubView("explore_restaurants"); } },
-    { id: "sorvetes",   name: "Sorvetes",      icon: "icecream",       action: () => { setRestaurantInitialCategory("Sorvetes"); navigateSubView("explore_restaurants"); } },
-    { id: "padaria",    name: "Padaria",       icon: "breakfast_dining", action: () => { setRestaurantInitialCategory("Padaria"); navigateSubView("explore_restaurants"); } },
-    { id: "daily",      name: "Do Dia",        icon: "today",         action: () => navigateSubView("daily_menus") },
-  ];
+  const [establishmentTypes, setEstablishmentTypes] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchEstablishmentTypes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('establishment_types')
+          .select('*')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true });
+        
+        if (!error && data) {
+          setEstablishmentTypes(data);
+        }
+      } catch (err) {
+        console.error("Erro ao buscar tipos de estabelecimento:", err);
+      }
+    };
+    fetchEstablishmentTypes();
+  }, []);
+
+  const dynamicFoodCategories = useMemo(() => {
+    // Pegamos a categoria pai "Restaurante"
+    const restaurantParent = establishmentTypes.find(t => t.value === 'restaurant' && !t.parent_id);
+    
+    // Pegamos as especialidades (subcategorias) de Restaurante
+    const specialties = restaurantParent 
+      ? establishmentTypes.filter(t => t.parent_id === restaurantParent.id)
+      : [];
+
+    const base = [
+      { id: "all",        name: "Todos",         icon: "restaurant",    action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
+      { id: "promocoes",  name: "Promoções",     icon: "percent",       action: () => { setRestaurantInitialCategory("Promoções"); navigateSubView("explore_restaurants"); } },
+    ];
+
+    const dynamic = specialties.map(s => ({
+      id: s.value,
+      name: s.name,
+      icon: s.icon || "restaurant",
+      action: () => { setRestaurantInitialCategory(s.value); navigateSubView("explore_restaurants"); }
+    }));
+
+    // Fallback se não houver dinâmicas ainda
+    if (dynamic.length === 0) {
+      return [
+        ...base,
+        { id: "burguer",    name: "Burguer",       icon: "lunch_dining",  action: () => { setRestaurantInitialCategory("burguer"); navigateSubView("explore_restaurants"); } },
+        { id: "pizza",      name: "Pizza",         icon: "local_pizza",   action: () => { setRestaurantInitialCategory("pizza"); navigateSubView("explore_restaurants"); } },
+        { id: "doces",      name: "Doces e Bolos", icon: "cake",          action: () => { setRestaurantInitialCategory("doces"); navigateSubView("explore_restaurants"); } },
+        { id: "japones",    name: "Japonês",       icon: "set_meal",      action: () => { setRestaurantInitialCategory("japones"); navigateSubView("explore_restaurants"); } },
+      ];
+    }
+
+    return [...base, ...dynamic, { id: "daily", name: "Do Dia", icon: "today", action: () => navigateSubView("daily_menus") }];
+  }, [establishmentTypes]);
 
   const lunchCategories = [
     { id: "all",     name: "Todos",           icon: "restaurant" },
@@ -3281,9 +3316,15 @@ const navigateSubView = (target: string) => {
         establishments={ESTABLISHMENTS}
         filterFn={(estab: any) => {
           const catId = (exploreCategoryState.id || "").toLowerCase();
-          const type = estab.type.toLowerCase();
-          const foodCat = (estab.foodCategory || "").toLowerCase();
-          return type === catId || foodCat.includes(catId) || estab.description.toLowerCase().includes(catId);
+          const type = (estab.type || "").toLowerCase();
+          const foodCats = Array.isArray(estab.foodCategory) 
+            ? estab.foodCategory.map((c: any) => (c || "").toLowerCase())
+            : [(estab.foodCategory || "").toLowerCase()];
+            
+          return type === catId || 
+                 foodCats.includes(catId) || 
+                 foodCats.some((c: string) => c.includes(catId)) ||
+                 (estab.description || "").toLowerCase().includes(catId);
         }}
         onShopClick={(shop) => handleShopClick({ ...shop, type: exploreCategoryState.id })}
         cartLength={cart.length}
@@ -3303,7 +3344,7 @@ const navigateSubView = (target: string) => {
         setSearchQuery={setSearchQuery}
         cart={cart}
         navigateSubView={navigateSubView}
-        foodCategories={isLunchMode ? lunchCategories : foodCategories}
+        foodCategories={isLunchMode ? lunchCategories : dynamicFoodCategories}
         availableCoupons={availableCoupons}
         establishments={ESTABLISHMENTS}
         onShopClick={handleShopClick}

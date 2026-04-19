@@ -92,8 +92,14 @@ export const BeverageOffersView = ({
                    <h3 className="text-[14px] font-black tracking-tight mb-2.5 leading-tight truncate text-white">{item.name}</h3>
                    <div className="flex items-center justify-between">
                       <div className="flex flex-col">
-                         <span className="text-[16px] font-black text-white leading-none mb-1">R$ {item.price.toFixed(2).replace(".", ",")}</span>
-                         <span className="text-[11px] text-zinc-500 line-through font-bold">R$ {item.oldPrice.toFixed(2).replace(".", ",")}</span>
+                         {item.has_options ? (
+                           <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest bg-yellow-400/10 px-2.5 py-1.5 rounded-xl border border-yellow-400/20 w-fit">Ver todos</span>
+                         ) : (
+                           <>
+                             <span className="text-[16px] font-black text-white leading-none mb-1">R$ {item.price.toFixed(2).replace(".", ",")}</span>
+                             <span className="text-[11px] text-zinc-500 line-through font-bold">R$ {item.oldPrice.toFixed(2).replace(".", ",")}</span>
+                           </>
+                         )}
                       </div>
                       <div className="flex items-center gap-3">
                         <button 

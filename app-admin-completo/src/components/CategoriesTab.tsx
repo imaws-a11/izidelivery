@@ -25,7 +25,22 @@ export default function CategoriesTab() {
   
   // States for the refined assignment flow
   const [tempStoreType, setTempStoreType] = useState<string | null>(null);
-  const [tempFoodCategory, setTempFoodCategory] = useState<string | null>(null);
+  const [tempFoodCategories, setTempFoodCategories] = useState<string[]>([]);
+
+  const toggleFoodCategory = (val: string) => {
+    if (val === 'all') {
+      setTempFoodCategories(['all']);
+      return;
+    }
+    setTempFoodCategories(prev => {
+      const filtered = (prev || []).filter(c => c !== 'all');
+      if (filtered.includes(val)) {
+        const next = filtered.filter(c => c !== val);
+        return next.length === 0 ? ['all'] : next;
+      }
+      return [...filtered, val];
+    });
+  };
 
   const selectedMerchant = merchantsList.find(m => m.id === selectedMerchantId);
 
@@ -33,7 +48,8 @@ export default function CategoriesTab() {
   useEffect(() => {
     if (selectedMerchant) {
       setTempStoreType(selectedMerchant.store_type || 'restaurant');
-      setTempFoodCategory(selectedMerchant.food_category || 'all');
+      const cats = selectedMerchant.food_category;
+      setTempFoodCategories(Array.isArray(cats) ? cats : [cats || 'all']);
     }
   }, [selectedMerchantId]);
 
@@ -43,7 +59,7 @@ export default function CategoriesTab() {
       const updated = { 
         ...selectedMerchant, 
         store_type: tempStoreType, 
-        food_category: tempFoodCategory || 'all' 
+        food_category: tempFoodCategories.length > 0 ? tempFoodCategories : ['all'] 
       };
       
       setEditingItem(updated);
@@ -209,9 +225,9 @@ export default function CategoriesTab() {
                                return (
                                 <button
                                   key={t.id}
-                                  onClick={() => {
+                                    onClick={() => {
                                     setTempStoreType(t.value);
-                                    setTempFoodCategory('all');
+                                    setTempFoodCategories(['all']);
                                   }}
                                   className={`flex flex-col items-center gap-4 p-8 rounded-[32px] border-2 transition-all group relative overflow-hidden ${isSelected ? 'bg-primary border-primary text-slate-900 shadow-2xl shadow-primary/20 scale-[1.05]' : 'bg-slate-50 dark:bg-slate-800/50 border-transparent text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                                 >
@@ -248,19 +264,19 @@ export default function CategoriesTab() {
 
                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                   <button
-                                    onClick={() => setTempFoodCategory('all')}
-                                    className={`flex flex-col items-center gap-4 p-8 rounded-[32px] border-2 transition-all group relative overflow-hidden ${tempFoodCategory === 'all' || !tempFoodCategory ? 'bg-slate-900 text-white border-slate-900 shadow-2xl scale-[1.05]' : 'bg-slate-50 dark:bg-slate-800/50 border-transparent text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                    onClick={() => toggleFoodCategory('all')}
+                                    className={`flex flex-col items-center gap-4 p-8 rounded-[32px] border-2 transition-all group relative overflow-hidden ${tempFoodCategories.includes('all') ? 'bg-slate-900 text-white border-slate-900 shadow-2xl scale-[1.05]' : 'bg-slate-50 dark:bg-slate-800/50 border-transparent text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                                   >
                                      <span className="material-symbols-outlined text-4xl relative z-10">close</span>
                                      <span className="font-black text-[10px] uppercase tracking-widest relative z-10">Lojista Geral</span>
                                   </button>
 
                                   {getSubcategories(tempStoreType).map(t => {
-                                     const isSubSelected = tempFoodCategory === t.value && t.value !== undefined && t.value !== null;
+                                     const isSubSelected = tempFoodCategories.includes(t.value);
                                      return (
                                        <button
                                          key={t.id}
-                                         onClick={() => setTempFoodCategory(t.value)}
+                                         onClick={() => toggleFoodCategory(t.value)}
                                          className={`flex flex-col items-center gap-4 p-8 rounded-[32px] border-2 transition-all group relative overflow-hidden ${isSubSelected ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xl shadow-emerald-500/20 scale-[1.05]' : 'bg-slate-50 dark:bg-slate-800/50 border-transparent text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                                        >
                                           {isSubSelected && (
@@ -308,7 +324,8 @@ export default function CategoriesTab() {
                              <button 
                                onClick={() => {
                                  setTempStoreType(selectedMerchant.store_type || null);
-                                 setTempFoodCategory(selectedMerchant.food_category || null);
+                                 const cats = selectedMerchant.food_category;
+                                 setTempFoodCategories(Array.isArray(cats) ? cats : [cats || 'all']);
                                }}
                                className="px-8 py-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-slate-400 font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all"
                              >

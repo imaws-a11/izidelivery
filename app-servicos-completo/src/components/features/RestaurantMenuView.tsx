@@ -141,9 +141,15 @@ export const RestaurantMenuView: React.FC<RestaurantMenuViewProps> = ({
                       <h3 className="font-black text-base uppercase tracking-tight text-white group-hover:text-yellow-400 transition-colors leading-tight flex-1">
                         {item.name}
                       </h3>
-                      <span className="text-yellow-400 font-black text-sm whitespace-nowrap" style={{ textShadow: "0 0 10px rgba(255,215,9,0.5)" }}>
-                        R$ {item.price.toFixed(2).replace(".", ",")}
-                      </span>
+                      {item.has_options ? (
+                        <span className="bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(255,215,9,0.1)]">
+                          Ver todos
+                        </span>
+                      ) : (
+                        <span className="text-yellow-400 font-black text-sm whitespace-nowrap" style={{ textShadow: "0 0 10px rgba(255,215,9,0.5)" }}>
+                          R$ {item.price.toFixed(2).replace(".", ",")}
+                        </span>
+                      )}
                     </div>
                     <p className="text-zinc-500 text-sm leading-relaxed max-w-[85%]">{item.desc}</p>
                   </div>

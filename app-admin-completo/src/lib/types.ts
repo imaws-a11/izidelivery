@@ -100,7 +100,7 @@ export interface Merchant {
   opening_mode?: "auto" | "manual";
   free_delivery?: boolean;
   estimated_time?: string;
-  food_category?: string;
+  food_category?: string[];
   latitude?: number;
   longitude?: number;
   google_place_id?: string;
@@ -134,7 +134,7 @@ export interface MerchantProfile {
   free_delivery?: boolean;
   estimated_time?: string;
   password?: string;
-  food_category?: string;
+  food_category?: string[];
   latitude?: number;
   longitude?: number;
   google_place_id?: string;

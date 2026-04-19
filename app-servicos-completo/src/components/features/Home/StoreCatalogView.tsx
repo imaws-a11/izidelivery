@@ -212,7 +212,11 @@ export const StoreCatalogView = ({
                       <p className="text-zinc-500 text-[9px] font-medium leading-tight line-clamp-1">{item.desc}</p>
                     </div>
                     <div className="mt-3 flex items-center justify-between">
-                      <span className="text-emerald-400 font-black text-sm tracking-tighter">R$ {Number(item.price).toFixed(2).replace(".", ",")}</span>
+                      {item.has_options ? (
+                        <span className="text-emerald-400 font-black text-[10px] uppercase tracking-widest bg-emerald-400/10 px-2 py-1 rounded-lg border border-emerald-400/20">Ver todos</span>
+                      ) : (
+                        <span className="text-emerald-400 font-black text-sm tracking-tighter">R$ {Number(item.price).toFixed(2).replace(".", ",")}</span>
+                      )}
                     </div>
                   </div>
                 </motion.div>

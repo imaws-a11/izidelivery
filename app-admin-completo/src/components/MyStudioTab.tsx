@@ -71,13 +71,6 @@ export default function MyStudioTab() {
 
   const [isLocating, setIsLocating] = React.useState(false);
   const [isMapSelectorOpen, setIsMapSelectorOpen] = React.useState(false);
-  const [newSpecialtyTag, setNewSpecialtyTag] = React.useState('');
-  const [editingTagIdx, setEditingTagIdx] = React.useState<number | null>(null);
-  const [suggestedTags, setSuggestedTags] = React.useState(['Pizza', 'Hambúrguer', 'Comida Japonesa', 'Brasileira', 'Saudável', 'Açaí', 'Bebidas', 'Doces & Bolos', 'Mercado', 'Farmácia']);
-  
-  const removeSuggestedTag = (tag: string) => {
-    setSuggestedTags(prev => prev.filter(t => t !== tag));
-  };
 
   const getCurrentLocation = async (updateItem: (updated: any) => void, targetItem: any) => {
     if (!navigator.geolocation) {
@@ -265,117 +258,6 @@ export default function MyStudioTab() {
                        />
                     </div>
                     
-                    <div className="md:col-span-2 space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Categoria Principal (Tipo de Estabelecimento)</label>
-                       <div className="relative group">
-                         <select 
-                           className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm appearance-none cursor-pointer"
-                           value={targetItem.store_type || 'restaurant'}
-                           onChange={e => updateItem({...targetItem, store_type: e.target.value})}
-                         >
-                           <option value="restaurant">Restaurante / Alimentação</option>
-                           <option value="market">Mercado / Supermercado</option>
-                           <option value="pharmacy">Farmácia / Saúde</option>
-                           <option value="beverages">Bebidas / Conveniência</option>
-                           <option value="pet">Pet Shop / Agro</option>
-                           <option value="others">Outros Segmentos</option>
-                         </select>
-                         <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                           <span className="material-symbols-outlined">expand_more</span>
-                         </div>
-                       </div>
-                    </div>
-                    
-                    <div className="md:col-span-2 space-y-4">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Especialidades & Nicho</label>
-                       <div className="flex flex-wrap gap-2">
-                          {suggestedTags.map(tag => (
-                            <div key={tag} className="relative group/tag">
-                              <button
-                                onClick={() => {
-                                  const current = targetItem.metadata?.specialties || [];
-                                  const newTags = current.includes(tag) ? current.filter((t: string) => t !== tag) : [...current, tag];
-                                  updateItem({...targetItem, metadata: {...targetItem.metadata, specialties: newTags}});
-                                }}
-                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
-                                  (targetItem.metadata?.specialties || []).includes(tag)
-                                    ? 'bg-primary border-primary text-slate-950 shadow-lg shadow-primary/20'
-                                    : 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10'
-                                }`}
-                              >
-                                {tag}
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeSuggestedTag(tag);
-                                }}
-                                className="absolute -top-1.5 -right-1.5 size-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/tag:opacity-100 transition-opacity hover:bg-red-600 z-10"
-                              >
-                                <span className="material-symbols-outlined text-[8px]">close</span>
-                              </button>
-                            </div>
-                          ))}
-
-                          {(targetItem.metadata?.specialties || []).filter((t: string) => !suggestedTags.includes(t)).map((tag: string, idx: number) => (
-                             <div key={tag} className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border bg-primary border-primary text-slate-950 shadow-lg shadow-primary/20 transition-all">
-                               {editingTagIdx === idx ? (
-                                 <input 
-                                   autoFocus
-                                   className="bg-transparent border-none text-[10px] font-black uppercase tracking-widest text-slate-950 outline-none w-20"
-                                   value={tag}
-                                   onChange={(e) => {
-                                      const current = [...(targetItem.metadata?.specialties || [])];
-                                      const tagIdx = current.indexOf(tag);
-                                      if (tagIdx > -1) {
-                                        current[tagIdx] = e.target.value;
-                                        updateItem({...targetItem, metadata: {...targetItem.metadata, specialties: current}});
-                                      }
-                                   }}
-                                   onBlur={() => setEditingTagIdx(null)}
-                                   onKeyDown={(e) => e.key === 'Enter' && setEditingTagIdx(null)}
-                                 />
-                               ) : (
-                                 <span 
-                                   onClick={() => setEditingTagIdx(idx)}
-                                   className="cursor-text"
-                                 >
-                                   {tag}
-                                 </span>
-                               )}
-                               <button 
-                                 onClick={() => {
-                                   const current = targetItem.metadata?.specialties || [];
-                                   const newTags = current.filter((t2: string) => t2 !== tag);
-                                   updateItem({...targetItem, metadata: {...targetItem.metadata, specialties: newTags}});
-                                 }}
-                                 className="hover:scale-125 transition-transform"
-                               >
-                                 <span className="material-symbols-outlined text-[10px]">close</span>
-                               </button>
-                             </div>
-                          ))}
-
-                          <div className="flex items-center gap-2 ml-2">
-                            <input 
-                               type="text"
-                               value={newSpecialtyTag}
-                               onChange={e => setNewSpecialtyTag(e.target.value)}
-                               onKeyDown={e => {
-                                 if (e.key === 'Enter' && newSpecialtyTag.trim()) {
-                                   const current = targetItem.metadata?.specialties || [];
-                                   if (!current.includes(newSpecialtyTag.trim())) {
-                                     updateItem({...targetItem, metadata: {...targetItem.metadata, specialties: [...current, newSpecialtyTag.trim()]}});
-                                   }
-                                   setNewSpecialtyTag('');
-                                 }
-                               }}
-                               placeholder="+ Adicionar Tag"
-                               className="bg-transparent border-b border-primary/30 text-[10px] font-black uppercase tracking-widest text-white outline-none w-24 px-1 focus:border-primary transition-all"
-                            />
-                          </div>
-                       </div>
-                    </div>
                     <div className="md:col-span-2 space-y-2">
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Meu endereço de coletas</label>
                        <div className="relative group">

@@ -52,10 +52,11 @@ export const ExploreRestaurantsView = ({
   const categories = useMemo(() => {
     const list = foodCategories.map(cat => ({
       ...cat,
-      name: cat.name
+      // Se não tiver name, tenta usar o id como fallback formatado
+      name: cat.name || cat.id
     }));
     
-    if (!list.find(c => c.name === "Todos")) {
+    if (!list.find(c => c.id === "all")) {
        list.unshift({ id: "all", name: "Todos", icon: "restaurant" } as any);
     }
     return list.filter(c => c.id !== "daily" && c.name !== "Padaria" && c.name !== "Carnes");
@@ -65,47 +66,33 @@ export const ExploreRestaurantsView = ({
     const normalize = (s: string) => s ? s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_') : "";
     
     return establishments.filter(shop => {
-      // Filtragem rigorosa por tipo e categoria
-      const rawType = (shop.type || "").toLowerCase();
-      const rawFoodCat = (shop.foodCategory || "").toLowerCase();
-      
-      // Lista de termos permitidos (Tipo ALIMENTAÇÃO)
-      const allowedTerms = ['restaurant', 'hamburguer', 'pizzaria', 'japones', 'lanche', 'acai', 'doceria', 'sorveteria', 'confeitaria'];
-      // Lista de termos estritamente bloqueados (Mercado, Saúde, Bebidas, Serviços)
-      const forbiddenTerms = ['market', 'mercado', 'pharmacy', 'farmacia', 'saude', 'beverages', 'bebidas', 'convenience', 'conveniencia', 'utility', 'taxi', 'frete', 'entrega', 'servico', 'pet'];
-
-      const isForbidden = forbiddenTerms.some(term => rawType.includes(term) || rawFoodCat.includes(term));
-      const isAllowed = allowedTerms.some(term => rawType.includes(term) || rawFoodCat.includes(term)) || (rawType === 'restaurant');
-
-      // Se for expressamente proibido, ou se não estiver no grupo de permitidos (e não for um restaurante genérico)
-      if (isForbidden || !isAllowed) return false;
+      // Filtragem por tipo e categoria
+      const shopType = (shop.type || "").toLowerCase();
+      const shopFoodCats = Array.isArray(shop.foodCategory) 
+        ? shop.foodCategory.map(c => (c || "").toLowerCase())
+        : [(shop.foodCategory || "").toLowerCase()];
       
       const matchesSearch = shop.name.toLowerCase().includes(searchQuery.toLowerCase());
       
       let matchesCategory = true;
-      if (selectedCategory !== "Todos") {
-        const catNormalized = normalize(selectedCategory);
-        const shopFoodCat = normalize(shop.foodCategory);
-        const shopType = normalize(shop.type);
-        const shopTag = normalize(shop.tag);
-        const shopDesc = normalize(shop.description);
-        const shopName = normalize(shop.name);
+      if (selectedCategory !== "all" && selectedCategory !== "Todos") {
+        const catId = selectedCategory.toLowerCase();
         
-        matchesCategory = shopFoodCat.includes(catNormalized) ||
-                         shopType.includes(catNormalized) ||
-                         shopTag.includes(catNormalized) || 
-                         shopDesc.includes(catNormalized) ||
-                         shopName.includes(catNormalized) ||
-                         // Lógica de Sinônimos e Variações para resolver problemas de visibilidade (ex: Burguer vs Hambúrguer)
-                         ((catNormalized === 'burguer' || catNormalized === 'burger' || catNormalized === 'hamburguer' || catNormalized === 'hambúrguer') && 
-                          (shopFoodCat.includes('burguer') || shopFoodCat.includes('burger') || shopFoodCat.includes('hamburguer') || shopFoodCat.includes('hambúrguer') || shopType.includes('hamburguer') || shopType.includes('hambur'))) ||
-                         ((catNormalized === 'japonesa' || catNormalized === 'sushi' || catNormalized === 'japones' || catNormalized === 'japonês') && 
-                          (shopFoodCat.includes('japones') || shopFoodCat.includes('japonês') || shopFoodCat.includes('sushi') || shopType.includes('japones') || shopType.includes('japonês'))) ||
-                         ((catNormalized === 'pizza' || catNormalized === 'pizzaria') && 
-                          (shopFoodCat.includes('pizza') || shopFoodCat.includes('pizzaria') || shopType.includes('pizza') || shopType.includes('pizzaria'))) ||
-                         ((catNormalized === 'acai' || catNormalized === 'açai' || catNormalized === 'açaí') && 
-                          (shopFoodCat.includes('acai') || shopFoodCat.includes('açai') || shopFoodCat.includes('açaí') || shopType.includes('acai') || shopType.includes('açai')));
+        matchesCategory = shopFoodCats.includes(catId) || 
+                         shopType === catId ||
+                         shopFoodCats.some(c => normalize(c).includes(normalize(selectedCategory))) ||
+                         normalize(shop.name).includes(normalize(selectedCategory));
+                         
+        if (!matchesCategory) {
+          if (catId === 'burguer' || catId === 'burger' || catId === 'hamburguer') {
+            matchesCategory = shopFoodCats.some(c => c.includes('burg')) || shopType.includes('burg');
+          } else if (catId === 'pizza') {
+            matchesCategory = shopFoodCats.some(c => c.includes('pizz')) || shopType.includes('pizz');
+          } else if (catId === 'japonesa' || catId === 'japones') {
+            matchesCategory = shopFoodCats.some(c => c.includes('japon') || c.includes('sushi')) || shopType.includes('japon');
+          }
         }
+      }
 
       return matchesSearch && matchesCategory;
     });
@@ -172,13 +159,13 @@ export const ExploreRestaurantsView = ({
           </div>
           <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 h-[120px]">
              {categories.map((cat, i) => {
-               const catImg = getCategoryImg(cat.name);
-               const isActive = selectedCategory === cat.name;
+               const isActive = selectedCategory === cat.id || (selectedCategory === "Todos" && cat.id === "all");
+               const catImg = ""; 
                
                return (
                  <motion.button
                    key={cat.id || i}
-                   onClick={() => setSelectedCategory(cat.name)}
+                   onClick={() => setSelectedCategory(cat.id)}
                    whileTap={{ scale: 0.95 }}
                    initial={{ opacity: 0, scale: 0.8 }}
                    animate={{ opacity: 1, scale: 1 }}
@@ -199,9 +186,9 @@ export const ExploreRestaurantsView = ({
                        <div className={`size-10 rounded-2xl flex items-center justify-center mb-1 transition-all duration-500
                          ${isActive ? "bg-black/10 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)]" : "bg-zinc-900 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)]"}
                        `}>
-                          <span className={`material-symbols-outlined text-2xl ${isActive ? "text-black" : "text-zinc-500"}`}>{cat.icon}</span>
+                          <span className={`material-symbols-outlined text-2xl ${isActive ? "text-black" : "text-yellow-400"}`}>{cat.icon || 'restaurant'}</span>
                        </div>
-                       <span className={`text-[9px] font-black uppercase tracking-widest text-center ${isActive ? "text-black" : "text-zinc-400"}`}>{cat.name}</span>
+                       <span className={`text-[11px] font-black uppercase tracking-tighter leading-tight transition-all duration-500 text-center ${isActive ? "text-black" : "text-zinc-400"}`}>{cat.name}</span>
                     </div>
                  </motion.button>
                );
