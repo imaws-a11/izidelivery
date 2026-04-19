@@ -2697,13 +2697,13 @@ const navigateSubView = (target: string) => {
   }, []);
 
   const dynamicFoodCategories = useMemo(() => {
-    // Pegamos a categoria pai "Restaurante"
-    const restaurantParent = establishmentTypes.find(t => t.value === 'restaurant' && !t.parent_id);
+    // Categorias Master que compõem o ecossistema de "Food"
+    const foodMasterValues = ['restaurant', 'candy', 'comida'];
+    const foodMasterParents = establishmentTypes.filter(t => foodMasterValues.includes(t.value) && !t.parent_id);
+    const foodMasterIds = foodMasterParents.map(p => p.id);
     
-    // Pegamos as especialidades (subcategorias) de Restaurante
-    const specialties = restaurantParent 
-      ? establishmentTypes.filter(t => t.parent_id === restaurantParent.id)
-      : [];
+    // Pegamos as especialidades de todos esses pais
+    const specialties = establishmentTypes.filter(t => t.parent_id && foodMasterIds.includes(t.parent_id));
 
     const base = [
       { id: "all",        name: "Todos",         icon: "restaurant",    action: () => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); } },
