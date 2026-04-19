@@ -80,8 +80,14 @@ export const BeverageOffersView: React.FC<BeverageOffersViewProps> = ({
                    <h3 className="text-lg font-black tracking-tight mb-4 leading-tight truncate">{item.name}</h3>
                    <div className="flex items-center justify-between">
                       <div className="flex flex-col">
-                         <span className="text-xl font-black text-yellow-400 leading-none mb-1">R$ {item.price.toFixed(2).replace(".", ",")}</span>
-                         <span className="text-xs text-white/40 line-through font-bold">R$ {item.oldPrice.toFixed(2).replace(".", ",")}</span>
+                         {item.has_options ? (
+                           <span className="text-yellow-400 font-black text-[10px] uppercase tracking-widest bg-yellow-400/10 px-3 py-1.5 rounded-xl border border-yellow-400/20 w-fit">Ver todos</span>
+                         ) : (
+                           <>
+                             <span className="text-xl font-black text-yellow-400 leading-none mb-1">R$ {item.price.toFixed(2).replace(".", ",")}</span>
+                             <span className="text-xs text-white/40 line-through font-bold">R$ {item.oldPrice.toFixed(2).replace(".", ",")}</span>
+                           </>
+                         )}
                       </div>
                       <div className="flex items-center gap-2">
                         <button 

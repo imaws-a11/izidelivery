@@ -109,7 +109,13 @@ export const StoreCatalogView: React.FC<StoreCatalogViewProps> = ({
                   <div className="px-1">
                     <div className="flex justify-between items-start mb-1 gap-3">
                       <h3 className="font-black text-base uppercase tracking-tight text-white group-hover:text-yellow-400 transition-colors leading-tight flex-1">{item.name}</h3>
-                      <span className="text-yellow-400 font-black text-sm whitespace-nowrap">R$ {Number(item.price).toFixed(2).replace(".", ",")}</span>
+                      {item.has_options ? (
+                        <span className="bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                          Ver todos
+                        </span>
+                      ) : (
+                        <span className="text-yellow-400 font-black text-sm whitespace-nowrap">R$ {Number(item.price).toFixed(2).replace(".", ",")}</span>
+                      )}
                     </div>
                     <p className="text-zinc-500 text-xs leading-relaxed">{item.desc}</p>
                   </div>
