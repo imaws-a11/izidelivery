@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "../../../lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
+import iziCoinImg from "../../../assets/images/izi-coin-premium.png";
 import { Html5Qrcode } from "html5-qrcode";
 import { MercadoPagoCardForm } from "../../MercadoPagoCardForm";
 
@@ -1288,82 +1289,88 @@ export const WalletView: React.FC<WalletViewProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32">
-      {/* HERO SALDO - REDESIGN CENTRALIZADO */}
-      <div className="px-5 pt-14 pb-8 border-b border-zinc-900/50 flex flex-col items-center">
-        <div className="flex items-center gap-2 mb-6 w-full justify-center">
-          <span className="text-yellow-400 font-extrabold italic tracking-[0.3em] text-[10px] uppercase">Izi Pay</span>
-          <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
+    <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32 italic">
+      {/* HERO SALDO - REDESIGN CLAYMORPHISM PREMIUM */}
+      <div className="px-5 pt-14 pb-12 flex flex-col items-center relative overflow-hidden">
+        {/* Glow de Fundo */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-yellow-400/5 blur-[120px] rounded-full pointer-events-none" />
+        
+        <div className="flex items-center gap-3 mb-10 w-full justify-center opacity-80">
+          <div className="size-2 rounded-full bg-yellow-400 shadow-[0_0_10px_#facc15]" />
+          <span className="text-white font-black italic tracking-[0.5em] text-[10px] uppercase">IZI PAY NETWORK</span>
+          <div className="size-2 rounded-full bg-yellow-400 shadow-[0_0_10px_#facc15]" />
         </div>
         
-        <div className="flex flex-col items-center justify-center mt-2 mb-10 w-full relative">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-64 bg-yellow-400/5 blur-[80px] rounded-full pointer-events-none" />
-          
-          <div className="relative flex flex-col items-center">
-            <p className="text-zinc-600 text-[9px] font-black tracking-[0.4em] uppercase mb-8 opacity-60">Sua Carteira Digital Oficial</p>
-            
-            <div className="flex items-center justify-center gap-4">
-              <span className="izi-coin-symbol text-4xl text-yellow-400 opacity-90">Z</span>
-              <div className="flex items-baseline">
-                <h3 className="text-7xl font-black tracking-tighter text-white tabular-nums drop-shadow-2xl">
-                  {(iziCoins || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                </h3>
-                {((iziCoins || 0) % 1 > 0) && (
-                  <span className="text-2xl font-black text-yellow-400/60 ml-1 tabular-nums">
-                    ,{(iziCoins % 1).toFixed(8).split('.')[1]}
-                  </span>
-                )}
-              </div>
-            </div>
-            
-            <div className="mt-5 flex items-center gap-3">
-              <div className="h-[1px] w-8 bg-gradient-to-r from-transparent to-yellow-400/30" />
-              <span className="text-yellow-400 font-extrabold text-[11px] tracking-[0.2em] uppercase italic">IZI COINS</span>
-              <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-yellow-400/30" />
-            </div>
-          </div>
-
+        <div className="flex flex-col items-center justify-center w-full relative">
           <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-12 w-full max-w-[300px] bg-gradient-to-b from-zinc-900/60 to-zinc-950/80 backdrop-blur-xl rounded-[32px] p-6 border border-white/5 relative group shadow-2xl"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="relative flex flex-col items-center p-12 rounded-[60px] bg-[#0d0d0d] border-2 border-white/5 shadow-[20px_20px_40px_rgba(0,0,0,0.6),inset_6px_6px_12px_rgba(255,255,255,0.02),inset_-6px_-6px_12px_rgba(0,0,0,0.5)]"
           >
-            <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-40 transition-opacity">
-              <span className="text-[8px] font-black uppercase text-white">Garantia Izi</span>
-              <span className="material-symbols-outlined text-[10px] text-yellow-400">verified_user</span>
+            <p className="text-zinc-600 text-[9px] font-black tracking-[0.5em] uppercase mb-10 opacity-40">Liquidez Disponível</p>
+            
+            <div className="flex items-center justify-center gap-5">
+              <motion.div 
+                animate={{ rotateY: [0, 180, 360] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                className="size-20 drop-shadow-[0_10px_20px_rgba(250,204,21,0.3)]"
+              >
+                <img 
+                  src={iziCoinImg} 
+                  alt="Izi Coin" 
+                  className="w-full h-full object-contain"
+                />
+              </motion.div>
+              <div className="flex items-baseline">
+                <h3 className="text-5xl font-black tracking-tighter text-white tabular-nums drop-shadow-2xl">
+                  {(iziCoins || 0).toLocaleString('pt-BR', { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </h3>
+              </div>
             </div>
             
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col">
-                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                  Reserva em Reais
-                  <span className="size-1 rounded-full bg-emerald-500 animate-pulse" />
-                </p>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-emerald-400 font-black text-2xl drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">R$</span>
-                  <span className="text-3xl font-black text-white tracking-tight">
-                    {(iziCoins * iziCoinValue).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
+            <motion.div 
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowDepositModal(true)}
+              className="mt-12 px-10 py-4 bg-yellow-400 rounded-full flex items-center gap-3 shadow-[0_10_25px_rgba(250,204,21,0.15),inset_4px_4px_8px_rgba(255,255,255,0.7),inset_-4px_-4px_8px_rgba(0,0,0,0.1)] cursor-pointer group"
+            >
+              <span className="text-black font-black text-[11px] tracking-[0.2em] uppercase italic">Recarregar Saldo</span>
+              <span className="material-symbols-outlined text-black text-lg font-black group-hover:translate-x-1 transition-transform">arrow_forward</span>
+            </motion.div>
+          </motion.div>
+
+          {/* Card de Reserva Claymorphism */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-8 w-full max-w-[320px] bg-[#111111] rounded-[45px] p-8 border-2 border-white/5 flex flex-col gap-6 shadow-[15px_15px_30px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.02)]"
+          >
+            <div className="flex flex-col">
+              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                RESERVA EM REAIS
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]" />
+              </p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-emerald-400 font-black text-2xl drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">R$</span>
+                <span className="text-3xl font-black text-white tracking-tight">
+                  {(iziCoins * iziCoinValue).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
-              
-              <div className="h-[1px] w-full bg-white/5" />
-              
-              <div className="flex justify-between items-center">
-                <p className="text-[8px] text-zinc-600 uppercase font-bold tracking-wider italic">Liquidez imediata para pagamentos</p>
-                <div className="size-6 rounded-full bg-zinc-900 flex items-center justify-center">
-                   <span className="text-[10px] font-black text-emerald-500">1:1</span>
-                </div>
-              </div>
+            </div>
+            
+            <div className="h-[1px] w-full bg-white/5" />
+            
+            <div className="flex justify-between items-center opacity-60">
+              <p className="text-[8px] text-zinc-600 uppercase font-black tracking-widest leading-none">Transação Criptográfica Segura</p>
+              <span className="material-symbols-outlined text-xs text-emerald-500">verified</span>
             </div>
           </motion.div>
         </div>
 
-        {/* AÇÕES RÁPIDAS - GRID DE 3 COLUNAS */}
-        <div className="grid grid-cols-3 gap-1 w-full max-w-sm mx-auto">
+        {/* AÇÕES RÁPIDAS - PREMIUM CLAY BUTTONS */}
+        <div className="grid grid-cols-3 gap-6 w-full max-w-sm mx-auto mt-12 px-2">
           {[
-            { icon: "add_circle", label: "Depositar", action: () => setShowDepositModal(true) },
-            { icon: "arrow_outward", label: "Enviar", action: () => setWalletMode("transfer") },
+            { icon: "add", label: "Depositar", action: () => setShowDepositModal(true), highlight: true },
+            { icon: "send", label: "Enviar", action: () => setWalletMode("transfer") },
             { icon: "qr_code_scanner", label: "Escanear", action: () => setWalletMode("scan") },
             { icon: "qr_code", label: "Meu QR", action: () => setWalletMode("my_qr") },
             { icon: "account_balance", label: "Crédito", action: () => setWalletMode("loans") },
@@ -1372,14 +1379,18 @@ export const WalletView: React.FC<WalletViewProps> = ({
             <button
               key={a.label}
               onClick={a.action}
-              className="flex flex-col items-center gap-2.5 py-4 active:scale-95 transition-all group"
+              className="flex flex-col items-center gap-3 active:scale-90 transition-all group"
             >
-              <div className="size-12 rounded-full bg-zinc-900/60 flex items-center justify-center group-hover:bg-yellow-400/10 transition-all">
-                <span className="material-symbols-outlined text-zinc-400 group-hover:text-yellow-400 transition-colors text-lg">
+              <div className={`size-16 rounded-[28px] flex items-center justify-center transition-all bg-[#0e0e0e] border-2 border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.02)]
+                ${a.highlight ? "bg-yellow-400 border-yellow-400 shadow-[inset_4px_4px_8px_rgba(255,255,255,0.7),0_8px_20px_rgba(250,204,21,0.2)]" : "group-hover:bg-zinc-900"}
+              `}>
+                <span className={`material-symbols-outlined text-2xl font-black transition-colors
+                  ${a.highlight ? "text-black" : "text-zinc-500 group-hover:text-yellow-400"}
+                `}>
                   {a.icon}
                 </span>
               </div>
-              <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest group-hover:text-zinc-300 transition-colors text-center">
+              <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest group-hover:text-zinc-300 transition-colors">
                 {a.label}
               </span>
             </button>
@@ -1387,75 +1398,75 @@ export const WalletView: React.FC<WalletViewProps> = ({
         </div>
       </div>
 
-      <main className="px-5 py-8 space-y-10">
-        {/* STATS - BORDERLESS */}
-        <div className="flex gap-2">
+      <main className="px-6 py-10 space-y-12">
+        {/* STATS - LUXURY MINIMALIST */}
+        <div className="flex gap-4">
           {[
-            { label: "Moedas Gastas", value: `${totalGasto.toFixed(0)}`, icon: "shopping_bag" },
-            { label: "Cashback Ganho", value: `${iziCashback.toFixed(0)}`, icon: "add_circle" },
-            { label: "Nível Izi", value: `Nível ${Math.floor(userXP/1000) + 1}`, icon: "verified" },
+            { label: "Gastos", value: `${totalGasto.toFixed(0)}`, icon: "shopping_bag" },
+            { label: "Cashback", value: `${iziCashback.toFixed(0)}`, icon: "add_circle" },
+            { label: "Nível", value: `${Math.floor(userXP/1000) + 1}`, icon: "verified" },
           ].map((s, i) => (
             <div
               key={i}
-              className="flex-1 flex flex-col items-center py-5 gap-1.5 bg-zinc-900/30 rounded-2xl"
+              className="flex-1 flex flex-col items-center py-6 px-2 gap-2 bg-[#0a0a0a] rounded-[35px] border-2 border-white/5 shadow-inner"
             >
-              <span className="material-symbols-outlined text-zinc-700 text-lg mb-1">{s.icon}</span>
-              <p className="font-extrabold text-sm text-white">{s.value}</p>
-              <p className="text-[8px] text-zinc-600 uppercase tracking-widest">{s.label}</p>
+              <span className="material-symbols-outlined text-zinc-800 text-xl">{s.icon}</span>
+              <p className="font-black text-lg text-white leading-none tracking-tight">{s.value}</p>
+              <p className="text-[8px] text-zinc-700 uppercase font-black tracking-widest mt-1">{s.label}</p>
             </div>
           ))}
         </div>
 
-
-        {/* CARTÕES REMOVIDOS CONFORME SOLICITADO A FAVOR DO MODAL DE COMPRA */}
-
-        {/* HISTÓRICO */}
-        <section ref={historyRef}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Histórico</h2>
+        {/* HISTÓRICO - CLAYMOL DESIGN */}
+        <section ref={historyRef} className="space-y-6">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="font-black text-lg text-white uppercase tracking-tighter italic">Timeline Izi</h2>
             <button
               onClick={() => setShowAllHistory((prev) => !prev)}
-              className="text-[10px] font-black text-yellow-400 uppercase tracking-widest"
+              className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.2em] bg-yellow-400/5 px-4 py-2 rounded-full border border-yellow-400/10 active:scale-95 transition-all"
             >
-              {showAllHistory ? "Ver menos" : "Ver tudo"}
+              {showAllHistory ? "Recolher" : "Full View"}
             </button>
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-3">
             {walletTransactions.length === 0 ? (
-              <div className="py-10 flex flex-col items-center gap-3 bg-zinc-900/20 rounded-[24px]">
-                <span className="material-symbols-outlined text-4xl text-zinc-800">receipt_long</span>
-                <p className="text-zinc-600 text-xs font-black uppercase tracking-widest">Nenhuma transação</p>
+              <div className="py-20 flex flex-col items-center gap-6 bg-[#0a0a0a] border-2 border-white/5 rounded-[45px] shadow-inner italic">
+                <div className="size-16 rounded-[28px] bg-zinc-950 flex items-center justify-center border border-white/5">
+                  <span className="material-symbols-outlined text-3xl text-zinc-800">receipt_long</span>
+                </div>
+                <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.3em]">Rede Vazia</p>
               </div>
             ) : (
-              <div className="bg-zinc-900/20 rounded-[24px] p-2">
+              <div className="space-y-4">
               {(showAllHistory ? walletTransactions : walletTransactions.slice(0, 20)).map((t: any, i: number) => {
                 const tx = txIcon[t.type] || { icon: "payments", color: "text-zinc-400" };
+                const isPositive = ["deposito", "reembolso", "venda"].includes(t.type);
                 return (
-                  <div key={t.id || i} className="flex items-center gap-4 py-3 px-3 hover:bg-zinc-900/40 rounded-xl transition-all border-b border-zinc-900/30 last:border-0 cursor-pointer">
-                    <div className="size-12 rounded-2xl bg-zinc-900 flex align-center justify-center shrink-0">
-                      <span
-                        className={`material-symbols-outlined mt-3 text-xl ${tx.color}`}
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                      >
+                  <motion.div 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    key={t.id || i} 
+                    className="flex items-center gap-5 p-5 bg-[#0e0e0e] border-2 border-white/5 rounded-[30px] hover:border-yellow-400/20 transition-all cursor-pointer group shadow-[10px_10px_20px_rgba(0,0,0,0.2)]"
+                  >
+                    <div className={`size-14 rounded-[22px] flex items-center justify-center shrink-0 shadow-inner bg-zinc-950 border border-white/5`}>
+                      <span className={`material-symbols-outlined text-2xl font-black ${tx.color} group-hover:scale-110 transition-transform`}>
                         {tx.icon}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-white truncate capitalize">{t.description || t.type}</p>
-                      <p className="text-[9px] text-zinc-500 uppercase tracking-widest mt-1">
+                      <p className="text-sm font-black text-white truncate uppercase tracking-tight italic">{t.description || t.type}</p>
+                      <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest mt-1 opacity-60">
                         {new Date(t.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} •{" "}
                         {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p
-                        className={`font-extrabold text-sm ${["deposito", "reembolso"].includes(t.type) ? "text-emerald-400" : "text-white"}`}
-                      >
-                        {["deposito", "reembolso"].includes(t.type) ? "+" : "-"} {Number(t.amount).toLocaleString("pt-BR")} IZI
+                      <p className={`font-black text-sm italic ${isPositive ? "text-emerald-400" : "text-white"}`}>
+                        {isPositive ? "+" : "-"} {Number(t.amount).toLocaleString("pt-BR", { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
                       </p>
-                      <p className="text-[9px] text-zinc-600 uppercase mt-1">Moeda Digital</p>
+                      <p className="text-[8px] text-zinc-800 font-black uppercase tracking-[0.2em] mt-1">IZI COIN</p>
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
               </div>
