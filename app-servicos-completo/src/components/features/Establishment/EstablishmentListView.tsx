@@ -45,15 +45,23 @@ export const EstablishmentListView = ({
     window.scrollTo(0, 0);
 
     const fetchExploreImage = async () => {
-       const { data } = await supabase
+       let queryTitle = title;
+       if (title === "Farmácias" || title === "Todas as Farmácias") queryTitle = "Farmácia";
+       else if (title.includes("Pet Shop")) queryTitle = "Pet Shop";
+       else if (title.includes("Gás") || title.includes("Agua") || title.includes("Água")) queryTitle = "Gás e Água";
+       else if (title === "Corte Prime" || title.includes("Açougue")) queryTitle = "Carnes";
+       else if (title.includes("Padaria")) queryTitle = "Padaria";
+       else if (title.includes("Hortifruti")) queryTitle = "Hortifruti";
+
+       const { data, error } = await supabase
           .from('promotions_delivery')
           .select('image_url')
           .eq('type', 'explore')
-          .ilike('title', title)
-          .single();
+          .ilike('title', `%${queryTitle}%`)
+          .limit(1);
           
-       if (data && data.image_url) {
-          setBgImage(data.image_url);
+       if (data && data.length > 0 && data[0].image_url) {
+          setBgImage(data[0].image_url);
        }
     };
     fetchExploreImage();

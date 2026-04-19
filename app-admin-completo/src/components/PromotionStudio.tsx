@@ -412,16 +412,63 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                              <div className="space-y-2 md:col-span-2">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">
-                                  {activeTab === 'explore' ? 'Nome Exato da Categoria (ex: Padaria Izi, Pet Shop Premium)' : 'Título Interno da Campanha'}
+                                  {activeTab === 'explore' ? 'Selecione a Categoria de Exploração' : 'Título Interno da Campanha'}
                                 </label>
-                                <input 
-                                    type="text" 
-                                    required
-                                    value={formData.title} 
-                                    onChange={e => setFormData({...formData, title: e.target.value})}
-                                    className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
-                                    placeholder="Ex: Festival de Verão 2026"
-                                />
+                                {activeTab === 'explore' ? (
+                                    <div className="flex flex-wrap gap-3">
+                                        {[
+                                            { id: "Restaurantes", icon: "🍔", label: "Restaurantes" },
+                                            { id: "Lanches", icon: "🍟", label: "Lanches" },
+                                            { id: "Doceria", icon: "🍩", label: "Doceria" },
+                                            { id: "Mercado", icon: "🛒", label: "Mercado" },
+                                            { id: "Bebidas", icon: "🍾", label: "Bebidas" },
+                                            { id: "Farmácia", icon: "💊", label: "Farmácia" },
+                                            { id: "Pet Shop", icon: "🐾", label: "Pet Shop" },
+                                            { id: "Hortifruti", icon: "🥬", label: "Hortifruti" },
+                                            { id: "Carnes", icon: "🥩", label: "Carnes" },
+                                            { id: "Padaria", icon: "🥐", label: "Padaria" },
+                                            { id: "Gás e Água", icon: "💧", label: "Gás e Água" }
+                                        ].map(cat => {
+                                            const isSelected = (formData.title || '').split(',').includes(cat.id);
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    key={cat.id}
+                                                    onClick={() => {
+                                                        const currentList = (formData.title || '').split(',').filter(Boolean);
+                                                        if (isSelected) {
+                                                            setFormData({ ...formData, title: currentList.filter(c => c !== cat.id).join(',') });
+                                                        } else {
+                                                            setFormData({ ...formData, title: [...currentList, cat.id].join(',') });
+                                                        }
+                                                    }}
+                                                    className={`px-5 py-3 rounded-2xl flex items-center gap-2 font-black transition-all ${
+                                                        isSelected 
+                                                            ? 'bg-primary text-slate-900 shadow-[0_4px_20px_rgba(0,0,0,0.4)] scale-105' 
+                                                            : 'bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10'
+                                                    }`}
+                                                >
+                                                    <span className="text-xl">{cat.icon}</span>
+                                                    <span className="text-[10px] uppercase tracking-widest">{cat.label}</span>
+                                                </button>
+                                            )
+                                        })}
+                                        {(!formData.title || formData.title.length === 0) && (
+                                            <p className="text-[10px] font-bold text-rose-500 w-full ml-4 mt-2 uppercase tracking-widest">
+                                                * Obrigatório: Selecione pelo menos uma categoria acima.
+                                            </p>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <input 
+                                        type="text" 
+                                        required
+                                        value={formData.title} 
+                                        onChange={e => setFormData({...formData, title: e.target.value})}
+                                        className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-lg focus:ring-2 focus:ring-primary focus:bg-white/10 transition-all shadow-inner"
+                                        placeholder="Ex: Festival de Verão 2026"
+                                    />
+                                )}
                              </div>
 
                               {activeTab === 'banner' && (
