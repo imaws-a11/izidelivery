@@ -4371,9 +4371,10 @@ const navigateSubView = (target: string) => {
   };
 
   const renderOrders = () => {
-    const activeOrders    = myOrders.filter(o => o && !["concluido", "cancelado"].includes(o.status));
-    const scheduledOrders = myOrders.filter(o => o && o.scheduled_at && !["concluido", "cancelado"].includes(o.status));
-    const pastOrders      = myOrders.filter(o => o && ["concluido", "cancelado"].includes(o.status));
+    const FINISHED_STATUSES = ["concluido", "cancelado"];
+    const activeOrders    = myOrders.filter(o => o && !FINISHED_STATUSES.includes(o.status) && !o.scheduled_at);
+    const scheduledOrders = myOrders.filter(o => o && o.scheduled_at && !FINISHED_STATUSES.includes(o.status));
+    const pastOrders      = myOrders.filter(o => o && FINISHED_STATUSES.includes(o.status));
 
     const statusLabel: Record<string, string> = {
       pending: "Aguardando", pendente: "Aguardando", novo: "Processando",

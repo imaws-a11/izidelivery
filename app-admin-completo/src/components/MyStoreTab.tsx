@@ -739,7 +739,7 @@ export default function MyStoreTab() {
               ) : (
                 <>
                   <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">save</span>
-                  Confirmar Escala
+                  Confirmar Horários
                 </>
               )}
             </button>

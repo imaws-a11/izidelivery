@@ -1756,7 +1756,10 @@ function App() {
         }
         setIsSyncing(true);
         try {
-            const data = await fetchFromDB('orders_delivery', 'select=*,admin_users(store_name,store_address,latitude,longitude)&status=not.in.(concluido,cancelado)&order=created_at.desc&limit=20');
+            const [data] = await Promise.all([
+                fetchFromDB('orders_delivery', 'select=*,admin_users(store_name,store_address,latitude,longitude)&status=not.in.(concluido,cancelado)&order=created_at.desc&limit=20'),
+                new Promise(resolve => setTimeout(resolve, 600)) // Atraso artificial mínimo para feedback visual fluido (Girar o ícone)
+            ]);
             
             const declinedMap: Record<string, number> = JSON.parse(localStorage.getItem('Izi_declined_timed') || '{}');
             const now = Date.now();
@@ -2765,24 +2768,7 @@ function App() {
                 </div>
             </motion.div>
 
-            <motion.div 
-                className="flex-1 overflow-y-auto w-full no-scrollbar pt-6 pb-40"
-                drag="y"
-                dragConstraints={{ top: 0, bottom: 0 }}
-                onDrag={(_, info) => {
-                    if (info.offset.y > 0 && !isRefreshing) {
-                        setPullY(Math.min(info.offset.y, 80));
-                    }
-                }}
-                onDragEnd={(_, info) => {
-                    if (info.offset.y > 80 && !isRefreshing) {
-                        onRefresh();
-                    } else {
-                        setPullY(0);
-                    }
-                }}
-                animate={{ y: isRefreshing ? 60 : 0 }}
-            >
+            <div className="flex-1 overflow-y-auto w-full no-scrollbar pt-6 pb-40">
                 <div className="px-6 space-y-10">
                 {/* Refined Profile Card */}
                 <header className="clay-profile-card rounded-[2.5rem] flex flex-col gap-8 relative overflow-hidden p-6">
@@ -3128,27 +3114,80 @@ function App() {
                         </div>
                         {scheduledOrders.filter(o => !o.driver_id).length > 0 ? (
                             <div className="space-y-4">
-                                {scheduledOrders.filter(o => !o.driver_id).slice(0, 3).map((order: any) => { // Aumentado para 3 disponiveis
+                                {scheduledOrders.filter(o => !o.driver_id).slice(0, 3).map((order: any) => {
                                     const dt = new Date(order.scheduled_at);
                                     return (
-                                        <div key={order.id} className="clay-card-yellow p-5 flex items-center gap-4">
-                                            {/* Data */}
-                                            <div className="size-14 rounded-2xl bg-black/10 flex flex-col items-center justify-center shrink-0 border border-black/10">
-                                                <p className="text-[9px] font-black text-stone-700 uppercase">{dt.toLocaleDateString('pt-BR', { weekday: 'short' })}</p>
-                                                <p className="text-xl font-black text-stone-950 italic leading-none">{dt.getDate()}</p>
+                                        <motion.button 
+                                            key={order.id}
+                                            onClick={() => { setSelectedScheduledOrder(order); setActiveTab('scheduled'); }}
+                                            className="relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-[30px_30px_60px_rgba(0,0,0,0.9),inset_10px_10px_25px_rgba(255,255,255,0.03),inset_-10px_-10px_25px_rgba(0,0,0,0.7)]"
+                                            style={{
+                                                background: "linear-gradient(145deg, #1a1a1d, #121214)",
+                                                border: "1px solid rgba(250,204,21,0.12)"
+                                            }}
+                                        >
+                                            {/* PREMIUM EFFECTS */}
+                                            <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-yellow-400/10 transition-all duration-1000" />
+                                            <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-emerald-500/5 rounded-full blur-[60px] pointer-events-none" />
+                                            
+                                            <div className="relative z-10 flex items-start justify-between">
+                                                <div className="flex gap-5 items-center flex-1 min-w-0 pr-4">
+                                                    <div className="size-16 rounded-[24px] bg-zinc-900 border border-white/5 flex items-center justify-center shrink-0 shadow-[10px_10px_25px_rgba(0,0,0,0.6),inset_2px_2px_4px_rgba(255,255,255,0.05)] overflow-hidden relative">
+                                                        <div className="size-full bg-gradient-to-br from-yellow-400/20 to-orange-500/20 flex flex-col items-center justify-center">
+                                                            <p className="text-[10px] font-black text-yellow-500 uppercase">{dt.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.','')}</p>
+                                                            <p className="text-xl font-black text-yellow-400 italic leading-none">{dt.getDate()}</p>
+                                                        </div>
+                                                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
+                                                    </div>
+                                                    
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1.5">
+                                                            <div className="size-4 rounded-full bg-yellow-400/20 flex items-center justify-center border border-yellow-400/30">
+                                                                <Icon name="schedule" className="text-yellow-400" size={10} />
+                                                            </div>
+                                                            <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.2em] drop-shadow-[0_0_12px_rgba(250,204,21,0.5)] truncate">
+                                                                {dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h
+                                                            </p>
+                                                        </div>
+                                                        <h4 className="text-lg font-black text-white italic tracking-tight truncate leading-tight mb-1">{order.store_name || order.merchant_name || 'Agendamento Izi'}</h4>
+                                                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                                                            <Icon name="location_on" className="text-zinc-600" size={10} />
+                                                            <span className="truncate">{order.pickup_address || 'Endereço Indisponível'}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="text-right shrink-0 bg-black/20 p-4 rounded-[28px] border border-white/5 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)]">
+                                                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">LÍQUIDO</p>
+                                                    <div className="flex flex-col items-end">
+                                                        <p className="text-xl font-black text-emerald-400 italic leading-none">
+                                                            <span className="text-[10px] mr-0.5 not-italic text-emerald-400/60 font-bold">R$</span>
+                                                            {getNetEarnings(order).toFixed(2).replace('.', ',')}
+                                                        </p>
+                                                        <div className="mt-2 py-1 px-3 bg-emerald-500 text-white rounded-full shadow-[2px_2px_8px_rgba(16,185,129,0.2)]">
+                                                            <p className="text-[9px] font-black uppercase tracking-tight">
+                                                                ESCALA
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            {/* Info */}
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-[9px] font-black text-stone-700 uppercase tracking-widest">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h</p>
-                                                <p className="text-sm font-black text-stone-950 italic leading-snug line-clamp-2">{order.pickup_address || 'Endereço Indisponível'}</p>
-                                                <p className="text-[10px] text-stone-600 font-bold">Reserva de Agendamento</p>
+
+                                            <div className="relative z-10 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+                                            <div className="relative z-10 flex items-center justify-between w-full">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="size-8 rounded-xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20 shrink-0">
+                                                        <Icon name="info" className="text-yellow-400" size={14} />
+                                                    </div>
+                                                    <p className="text-[11px] text-zinc-300 font-bold uppercase tracking-wider">Detalhes da Entrega</p>
+                                                </div>
+                                                
+                                                <div className="flex items-center gap-2 text-yellow-400 font-black uppercase text-[10px] tracking-widest drop-shadow-[0_0_8px_rgba(250,204,21,0.3)]">
+                                                    Aceitar <Icon name="chevron_right" size={14} />
+                                                </div>
                                             </div>
-                                            {/* Valor */}
-                                            <div className="text-right shrink-0 flex flex-col justify-center">
-                                                <p className="text-[9px] font-bold text-stone-700 uppercase tracking-tighter">Disponível</p>
-                                                <p className="text-base font-black text-stone-950 italic">R$ {getNetEarnings(order).toFixed(2).replace('.', ',')}</p>
-                                            </div>
-                                        </div>
+                                        </motion.button>
                                     );
                                 })}
                             </div>
@@ -3160,7 +3199,7 @@ function App() {
                     </section>
                 )}
                 </div>
-            </motion.div>
+            </div>
         </div>
     );
 
@@ -3181,7 +3220,7 @@ function App() {
                             <span className="material-symbols-outlined text-3xl">arrow_back</span>
                         </button>
                         <h1 className="font-black text-yellow-400 text-xl tracking-tighter uppercase italic">
-                            {isMine ? 'Detalhes do Agendamento' : 'Confirmar Agendamento'}
+                            {isMine ? 'Detalhes do Agendamento' : 'Aceitar Agendamento'}
                         </h1>
                     </div>
                 </header>
@@ -3228,8 +3267,8 @@ function App() {
                                         <Icon name="schedule" size={32} className="text-black" />
                                     </div>
                                     <div>
-                                        <p className="text-xs font-black uppercase opacity-60 tracking-widest">Janela de Horário</p>
-                                        <p className="text-xl font-black italic uppercase">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} em diante</p>
+                                        <p className="text-xs font-black uppercase opacity-60 tracking-widest">Horário de Início</p>
+                                        <p className="text-xl font-black italic uppercase">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}h</p>
                                     </div>
                                 </div>
                                 <div className="p-6 bg-black/5 border border-black/10 rounded-[32px] space-y-4">
@@ -3241,12 +3280,33 @@ function App() {
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-3">
-                                        <Icon name="explore" size={20} className="mt-1" />
+                                        <Icon name="flag" size={20} className="mt-1" />
                                         <div>
-                                            <p className="text-[10px] font-black uppercase opacity-40 mb-1">Área de Atuação</p>
-                                            <p className="font-bold text-sm leading-tight italic">{order.delivery_address?.split(',')[0]} e região</p>
+                                            <p className="text-[10px] font-black uppercase opacity-40 mb-1">Endereço de Entrega</p>
+                                            <p className="font-bold text-sm leading-tight italic">
+                                                {(order.delivery_address || 'Destino não informado').split('|')[0].trim()}
+                                            </p>
                                         </div>
                                     </div>
+                                    {(() => {
+                                        const embeddedObs = order.delivery_address?.includes('|') 
+                                            ? order.delivery_address.split('|')[1]?.replace(/^\s*OBS:\s*/i, '').trim() 
+                                            : null;
+                                        const obsText = order.notes || embeddedObs;
+                                        if (!obsText) return null;
+                                        return (
+                                            <>
+                                                <div className="w-full h-px bg-black/10 my-2" />
+                                                <div className="flex items-start gap-3">
+                                                    <Icon name="chat_bubble" size={20} className="mt-1" />
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase opacity-40 mb-1">Observações do Cliente</p>
+                                                        <p className="font-bold text-sm leading-snug italic text-stone-800">{obsText}</p>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>
@@ -3301,7 +3361,7 @@ function App() {
                             }}
                             className="w-full h-20 bg-yellow-400 text-black rounded-[28px] font-black text-xl uppercase tracking-tighter shadow-[0_20px_40px_rgba(250,204,21,0.3)] active:scale-95 transition-all"
                         >
-                            Confirmar Escala Agora
+                            Aceitar
                         </button>
                     ) : isMine ? (
                         (() => {
@@ -3611,7 +3671,7 @@ function App() {
         
         const customBenefits = slot.metadata?.custom_benefits || [];
         const neighborhoodExtras = slot.metadata?.bairros_extras || slot.metadata?.neighborhood_extras || [];
-        const requirements = slot.metadata?.custom_specialties || ["CNH Categoria A", "Experiência com Entregas"];
+        const requirements: string[] = slot.metadata?.custom_specialties || [];
 
         const sClayDark: React.CSSProperties = {
             background: '#121212',
@@ -3782,19 +3842,26 @@ function App() {
                             <span className="size-2 rounded-full bg-primary" />
                             Requisitos
                         </h3>
-                        <div className="grid gap-4">
-                            {requirements.map((req: any, idx: number) => (
-                                <div key={idx} className="p-2 pr-6 flex items-center gap-5 border border-white/5" style={sClayDark}>
-                                    <div className="size-12 rounded-[20px] flex items-center justify-center shrink-0" style={sClayIcon}>
-                                        <Icon name="check" size={20} className="text-primary" />
+                        {requirements.length === 0 ? (
+                            <div className="p-5 border border-white/5 rounded-[2rem] flex items-center gap-4 opacity-40" style={sClayDark}>
+                                <Icon name="check_circle" size={20} className="text-primary shrink-0" />
+                                <p className="text-xs font-bold text-white/50 uppercase tracking-wide italic">Nenhum requisito específico cadastrado</p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-4">
+                                {requirements.map((req: any, idx: number) => (
+                                    <div key={idx} className="p-2 pr-6 flex items-center gap-5 border border-white/5" style={sClayDark}>
+                                        <div className="size-12 rounded-[20px] flex items-center justify-center shrink-0" style={sClayIcon}>
+                                            <Icon name="check" size={20} className="text-primary" />
+                                        </div>
+                                        <div className="flex-1 py-2">
+                                            <p className="text-xs font-black text-white uppercase tracking-wide">{typeof req === 'string' ? req : req.label}</p>
+                                            {req.detail && <p className="text-[10px] font-medium text-white/30 mt-0.5">{req.detail}</p>}
+                                        </div>
                                     </div>
-                                    <div className="flex-1 py-2">
-                                        <p className="text-xs font-black text-white uppercase tracking-wide">{typeof req === 'string' ? req : req.label}</p>
-                                        {req.detail && <p className="text-[10px] font-medium text-white/30 mt-0.5">{req.detail}</p>}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        )}
                     </section>
                 </div>
             </motion.div>
