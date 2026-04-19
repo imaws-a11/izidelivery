@@ -678,7 +678,7 @@ function App() {
         try {
             const { data, error } = await supabase
                 .from('slot_applications')
-                .select('*')
+                .select('*, slot:dedicated_slots_delivery(*, admin_users(store_name, store_logo, store_address, store_phone))')
                 .eq('driver_id', driverId);
             
             if (!error && data) {
@@ -689,6 +689,26 @@ function App() {
             console.error("Erro ao carregar candidaturas:", err);
         }
     }, [driverId]);
+
+    const fetchDedicatedSlotsRealtime = useCallback(async () => {
+        try {
+            const { data } = await supabase
+                .from('dedicated_slots_delivery')
+                .select('*, admin_users(store_name, store_logo, store_address, store_phone)')
+                .eq('is_active', true)
+                .order('created_at', { ascending: false });
+            
+            if (data) {
+                const declinedIds = JSON.parse(localStorage.getItem('Izi_declined_slots') || '[]');
+                const finalSlots = data.filter((s: any) => !declinedIds.includes(s.id));
+                setDedicatedSlots(finalSlots);
+            } else {
+                setDedicatedSlots([]);
+            }
+        } catch (err) {
+            console.error("Erro ao carregar vagas dedicadas:", err);
+        }
+    }, []);
 
     const [activeTab, setActiveTab] = useState<View>(() => (localStorage.getItem('izi_driver_active_tab') as View) || 'dashboard');
     const activeTabRef = useRef(activeTab);
@@ -765,6 +785,31 @@ function App() {
     const [isAccepting, setIsAccepting] = useState(false);
     const [filter, setFilter] = useState<ServiceType | 'all'>('all');
     const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
+    const [audioBlocked, setAudioBlocked] = useState(false);
+
+    // Efeito para checar se o áudio está bloqueado
+    useEffect(() => {
+        const checkAudio = () => {
+            if (typeof window !== 'undefined') {
+                const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
+                if (AudioContextClass) {
+                    const ctx = new AudioContextClass();
+                    if (ctx.state === 'suspended') {
+                        setAudioBlocked(true);
+                    }
+                    ctx.close();
+                }
+            }
+        };
+        checkAudio();
+    }, []);
+
+    const enableAudioManually = () => {
+        playIziSound('success');
+        setAudioBlocked(false);
+        toastSuccess('Notificações sonoras ativas!');
+    };
+
     const [myApplications, setMyApplications] = useState<any[]>(() => {
         const uid = localStorage.getItem('izi_driver_uid');
         if (!uid) return [];
@@ -909,6 +954,19 @@ function App() {
             setIsOnline(true);
         }
     }, [isOnline]);
+
+    // Sincronizar detalhe da vaga aberta com o Realtime
+    useEffect(() => {
+        if (selectedSlot) {
+            const fresh = dedicatedSlots.find(s => s.id === selectedSlot.id);
+            if (fresh) {
+                // Só atualiza se houver mudança real para evitar re-renders infinitos
+                if (JSON.stringify(fresh.slot_applications) !== JSON.stringify(selectedSlot.slot_applications)) {
+                    setSelectedSlot(fresh);
+                }
+            }
+        }
+    }, [dedicatedSlots]);
     
     // Efeito para calcular distância e rota quando um pedido é selecionado
     useEffect(() => {
@@ -1592,36 +1650,63 @@ function App() {
         syncMissionWithDB();
     }, [driverId, isAuthenticated, syncMissionWithDB]);
 
-    // Canal separado para vagas dedicadas ¢¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬Ãƒâ€¦á¬¢ÃƒÆ’¢¬ funciona independente do status online
+    const fetchDedicatedSlotsRealtimeRef = useRef(fetchDedicatedSlotsRealtime);
+    fetchDedicatedSlotsRealtimeRef.current = fetchDedicatedSlotsRealtime;
+    const refreshMyApplicationsRef = useRef(refreshMyApplications);
+    refreshMyApplicationsRef.current = refreshMyApplications;
+
+    // Canal separado para vagas dedicadas - funciona independente do status online
     useEffect(() => {
         if (!isAuthenticated) return;
-        const fetchDedicatedSlotsRealtime = async () => {
-            const { data } = await supabase
-                .from('dedicated_slots_delivery')
-                .select('*, admin_users(store_name, store_logo, store_address, store_phone)')
-                .eq('is_active', true)
-                .order('created_at', { ascending: false });
-            
-            setDedicatedSlots(data || []);
-        };
-        fetchDedicatedSlotsRealtime();
-        const slotsChannel = supabase.channel('dedicated_slots_realtime')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dedicated_slots_delivery' }, fetchDedicatedSlotsRealtime)
+        
+        const fetchDeep = () => fetchDedicatedSlotsRealtimeRef.current();
+        fetchDeep();
+
+        const slotsChannel = supabase.channel('driver_dedicated_slots_stream')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dedicated_slots_delivery' }, async (payload) => {
+                const newItem = payload.new as any;
+                if (newItem.is_active) {
+                    setDedicatedSlots(prev => {
+                        if (prev.find(s => s.id === newItem.id)) return prev;
+                        return [newItem, ...prev];
+                    });
+                }
+                await fetchDeep();
+                playIziSound('driver');
+                toastSuccess('Nova vaga dedicada disponível!');
+            })
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dedicated_slots_delivery' }, (payload) => {
                 const updated = payload.new as any;
                 if (!updated.is_active) {
                     setDedicatedSlots(prev => prev.filter((s: any) => s.id !== updated.id));
+                    stopIziSounds();
                 } else {
-                    fetchDedicatedSlotsRealtime();
+                    fetchDeep();
                 }
             })
             .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'dedicated_slots_delivery' }, (payload) => {
-                setDedicatedSlots(prev => prev.filter((s: any) => s.id !== (payload.old as any).id));
+                const deletedId = (payload.old as any).id;
+                setDedicatedSlots(prev => prev.filter((s: any) => s.id !== deletedId));
+                stopIziSounds();
             })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'slot_applications' }, fetchDedicatedSlotsRealtime)
-            .subscribe();
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'slot_applications' }, (payload) => {
+                console.log('⚡ MUDANÇA EM CANDIDATURAS (Realtime):', payload);
+                fetchDeep();
+                refreshMyApplicationsRef.current();
+
+                // Notificação de aprovação
+                const data = payload.new as any;
+                if (payload.eventType === 'UPDATE' && data.status === 'accepted' && String(data.driver_id) === String(driverId)) {
+                    playIziSound('success');
+                    toastSuccess('Parabéns! Sua vaga foi confirmada!');
+                }
+            })
+            .subscribe((status) => {
+                console.log('[REALTIME-STATUS] Vagas Dedicadas:', status);
+            });
+
         return () => { supabase.removeChannel(slotsChannel); };
-    }, [isAuthenticated]);
+    }, [isAuthenticated, driverId]);
     // Buscar candidaturas
     const fetchFromDB = useCallback(async (table: string, queryParams: string = '') => {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -1887,22 +1972,7 @@ function App() {
         return () => clearInterval(interval);
     }, [isAuthenticated, driverId, fetchOrders]);
 
-    const fetchDedicatedSlots = useCallback(async () => {
-        try {
-            const declinedIds = JSON.parse(localStorage.getItem('Izi_declined_slots') || '[]');
-            const data = await fetchFromDB('dedicated_slots_delivery', 'select=*,admin_users(store_name,store_logo,store_address,store_phone),slot_applications(status)&is_active=eq.true&order=created_at.desc');
-            const available = (data || []).filter((s: any) => 
-                !declinedIds.includes(s.id) && 
-                !s.slot_applications?.some((app: any) => app.status === 'accepted')
-            );
-            setDedicatedSlots(available);
-        } catch (e) {}
-    }, [fetchFromDB]);
 
-    useEffect(() => {
-        if (!isAuthenticated || !driverId) return;
-        fetchDedicatedSlots();
-    }, [isAuthenticated, driverId, fetchDedicatedSlots]);
         
                                 
 
@@ -2710,7 +2780,7 @@ function App() {
                                     { id: 'dashboard', label: 'Início', icon: 'grid_view' },
                                     { id: 'active_mission', label: 'Missão', icon: 'route' },
                                     { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length },
-                                    { id: 'dedicated', label: 'Vagas', icon: 'military_tech', badge: dedicatedSlots.length > 0 ? dedicatedSlots.length : 0 },
+                                    { id: 'dedicated', label: 'Vagas', icon: 'military_tech', badge: dedicatedSlots.filter(s => s.is_active).length },
                                     { id: 'earnings', label: 'Financeiro', icon: 'payments' },
                                     { id: 'history', label: 'Histórico', icon: 'history' },
                                     { id: 'profile', label: 'Perfil', icon: 'person' }
@@ -2764,8 +2834,8 @@ function App() {
                                 className="w-full flex items-center gap-3 p-1"
                             >
                                 <button 
-                                    onClick={() => setSelectedSlot(null)}
-                                    className="size-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all"
+                                    onClick={() => { setSelectedSlot(null); stopIziSounds(); }}
+                                    className="size-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all font-black"
                                 >
                                     <Icon name="close" size={24} />
                                 </button>
@@ -2778,28 +2848,40 @@ function App() {
                                         const isAccepted = application?.status === 'accepted';
                                         return (
                                             <div
-                                                className={`flex-1 flex items-center justify-center gap-4 h-15 rounded-[22px] font-black text-xs uppercase tracking-[0.3em] shadow-2xl relative overflow-hidden ${
+                                                className={`flex-1 flex items-center justify-center gap-4 h-15 rounded-[22px] font-black text-xs uppercase tracking-[0.3em] shadow-2xl relative overflow-hidden transition-all duration-500 ${
                                                     isAccepted 
-                                                        ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white border border-emerald-400/30' 
-                                                        : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white/90 border border-blue-500/30'
+                                                        ? 'bg-gradient-to-r from-emerald-500/80 to-teal-600/80 text-white border border-emerald-400/30 backdrop-blur-md' 
+                                                        : 'bg-white/5 text-white border border-white/10 backdrop-blur-2xl'
                                                 }`}
                                             >
-                                                {/* Efeito de brilho Claymorphic */}
-                                                <div className="absolute top-1 left-2 right-2 h-[40%] bg-white/20 blur-[2px] rounded-t-full pointer-events-none" />
+                                                {/* Efeito de brilho Superior */}
+                                                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
                                                 
-                                                <div className={`size-8 rounded-xl flex items-center justify-center ${isAccepted ? 'bg-white/20' : 'bg-white/10'}`}>
+                                                <div className={`size-9 rounded-xl flex items-center justify-center shadow-inner ${
+                                                    isAccepted ? 'bg-white/20' : 'bg-primary/10 border border-primary/20'
+                                                }`}>
                                                     <Icon 
-                                                        name={isAccepted ? 'verified' : 'hourglass_top'} 
-                                                        size={20} 
-                                                        className={!isAccepted ? 'animate-pulse' : ''} 
+                                                        name={isAccepted ? 'verified' : 'history'} 
+                                                        size={22} 
+                                                        className={!isAccepted ? 'text-primary animate-pulse' : 'text-white'} 
                                                     />
                                                 </div>
-                                                <div className="flex flex-col items-start leading-none gap-1">
-                                                    <span className="text-[10px] font-black">{isAccepted ? 'Vaga Confirmada!' : 'Aguardando Lojista'}</span>
-                                                    <span className={`text-[7px] opacity-60 font-bold ${isAccepted ? 'text-emerald-100' : 'text-blue-100'}`}>
-                                                        {isAccepted ? 'VOCÊ JÁ É EXCLUSIVO' : 'EM ANÁLISE PELO PARCEIRO'}
+                                                <div className="flex flex-col items-start leading-none gap-1.5">
+                                                    <span className={`text-[10px] font-black tracking-[0.1em] ${isAccepted ? 'text-white' : 'text-primary'}`}>
+                                                        {isAccepted ? 'Vaga Confirmada' : 'Aguardando Lojista'}
                                                     </span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        {!isAccepted && <div className="size-1 rounded-full bg-primary animate-ping" />}
+                                                        <span className={`text-[8px] font-bold uppercase ${isAccepted ? 'opacity-70' : 'text-slate-400'}`}>
+                                                            {isAccepted ? 'VOCÊ É EXCLUSIVO' : 'EM ANÁLISE PELO PARCEIRO'}
+                                                        </span>
+                                                    </div>
                                                 </div>
+
+                                                {/* Raio de luz decorativo para o modo aguardando */}
+                                                {!isAccepted && (
+                                                    <div className="absolute -inset-x-20 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent blur-sm opacity-50" />
+                                                )}
                                             </div>
                                         );
                                     }
@@ -3706,7 +3788,14 @@ function App() {
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {[...dedicatedSlots].sort((a, b) => {
+                            {[...dedicatedSlots]
+                                .filter(s => {
+                                    // Regra de ouro: Vaga confirmada (por mim ou por qualquer um via is_active) SAI DA TELA
+                                    const myApp = myApplications.find(app => String(app.slot_id) === String(s.id));
+                                    if (myApp?.status === 'accepted') return false;
+                                    return s.is_active;
+                                })
+                                .sort((a, b) => {
                                 const appA = myApplications.find(app => String(app.slot_id) === String(a.id));
                                 const appB = myApplications.find(app => String(app.slot_id) === String(b.id));
                                 if (appA?.status === 'accepted' && appB?.status !== 'accepted') return -1;
@@ -3882,9 +3971,9 @@ function App() {
                             <div className="size-12 rounded-2xl flex items-center justify-center border border-white/5" style={sClayIcon}>
                                 <Icon name="location_on" size={20} className="text-primary" />
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-1 w-full overflow-hidden px-2">
                                 <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Endereço Base</p>
-                                <p className="text-sm font-black text-white truncate w-full italic" title={slot.admin_users?.store_address || slot.city}>
+                                <p className="text-xs font-black text-white italic break-words line-clamp-2 w-full leading-tight uppercase tracking-tight" title={slot.admin_users?.store_address || slot.city}>
                                     {slot.admin_users?.store_address || slot.city || 'Sua Região'}
                                 </p>
                             </div>
@@ -5507,6 +5596,28 @@ function App() {
 
     return (
         <div className="w-full h-[100dvh] bg-black font-sans overflow-hidden relative">
+            {/* Banner de Ativação de Áudio */}
+            {audioBlocked && (
+                <motion.div 
+                    initial={{ y: -100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    onClick={enableAudioManually}
+                    className="fixed top-20 left-4 right-4 z-[9999] bg-amber-500/95 backdrop-blur-xl p-4 rounded-2xl border border-white/30 shadow-[0_20px_40px_rgba(0,0,0,0.4)] flex items-center justify-between cursor-pointer active:scale-95 transition-transform"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="size-10 rounded-full bg-white/20 flex items-center justify-center">
+                            <Icon name="volume_up" size={24} className="text-white animate-pulse" />
+                        </div>
+                        <div>
+                            <p className="text-white text-sm font-black leading-tight">ATIVAR ALERTAS SONOROS</p>
+                            <p className="text-white/80 text-[10px] uppercase font-bold tracking-widest mt-0.5">Clique aqui para não perder novas vagas!</p>
+                        </div>
+                    </div>
+                    <div className="size-8 rounded-full bg-black/20 flex items-center justify-center">
+                        <Icon name="chevron_right" size={20} className="text-white" />
+                    </div>
+                </motion.div>
+            )}
             <AnimatePresence mode="wait">
                 {!isAuthenticated && (
                     <div key="auth-container" className="h-full">
