@@ -1,5 +1,6 @@
-import React, { useMemo, useEffect, useRef } from "react";
+import React, { useMemo, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { supabase } from "../../../lib/supabase";
 import { MerchantCard } from "../Establishment/MerchantCard";
 
 interface MarketExploreViewProps {
@@ -22,12 +23,27 @@ export const MarketExploreView: React.FC<MarketExploreViewProps> = ({
   onShopClick,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [bgImage, setBgImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
     window.scrollTo(0, 0);
+
+    const fetchExploreImage = async () => {
+       const { data } = await supabase
+          .from('promotions_delivery')
+          .select('image_url')
+          .eq('type', 'explore')
+          .ilike('title', `%Mercado%`)
+          .limit(1);
+          
+       if (data && data.length > 0 && data[0].image_url) {
+          setBgImage(data[0].image_url);
+       }
+    };
+    fetchExploreImage();
   }, []);
 
   const filteredMarkets = useMemo(() => {
@@ -97,6 +113,14 @@ export const MarketExploreView: React.FC<MarketExploreViewProps> = ({
       </header>
 
       <main className="flex flex-col pt-44 px-4">
+        {bgImage && (
+          <section className="mb-8">
+            <div className="w-full aspect-[2/1] rounded-[32px] overflow-hidden relative shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 group cursor-pointer">
+               <img src={bgImage} className="absolute inset-0 size-full object-cover group-hover:scale-105 transition-transform duration-700" />
+               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-6 flex flex-col justify-end" />
+            </div>
+          </section>
+        )}
         {/* LISTA DE MERCADOS */}
         <section className="space-y-6">
            <div className="flex items-center justify-between px-1">

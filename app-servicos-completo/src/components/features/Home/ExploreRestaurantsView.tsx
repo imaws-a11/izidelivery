@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "../../../lib/supabase";
 import { MerchantCard } from "../Establishment/MerchantCard";
 
 
@@ -36,6 +37,7 @@ export const ExploreRestaurantsView = ({
 }: ExploreRestaurantsViewProps) => {
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [bgImage, setBgImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (scrollContainerRef.current) {
@@ -43,6 +45,29 @@ export const ExploreRestaurantsView = ({
     }
     window.scrollTo(0, 0);
   }, []);
+
+  useEffect(() => {
+    const fetchExploreImage = async () => {
+       let queryTitle = selectedCategory;
+       if (selectedCategory === "all" || selectedCategory === "Todos") {
+           queryTitle = "Restaurantes";
+       }
+       
+       const { data } = await supabase
+          .from('promotions_delivery')
+          .select('image_url')
+          .eq('type', 'explore')
+          .ilike('title', `%${queryTitle}%`)
+          .limit(1);
+          
+       if (data && data.length > 0 && data[0].image_url) {
+          setBgImage(data[0].image_url);
+       } else {
+          setBgImage(null);
+       }
+    };
+    fetchExploreImage();
+  }, [selectedCategory]);
 
   const getCategoryImg = (name: string) => {
     return "";
@@ -158,6 +183,14 @@ export const ExploreRestaurantsView = ({
       </header>
 
       <main className="flex flex-col pt-44 px-4">
+        {bgImage && (
+          <section className="mb-8">
+            <div className="w-full aspect-[2/1] rounded-[32px] overflow-hidden relative shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 group cursor-pointer">
+               <img src={bgImage} className="absolute inset-0 size-full object-cover group-hover:scale-105 transition-transform duration-700" />
+               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-6 flex flex-col justify-end" />
+            </div>
+          </section>
+        )}
         {/* CARROSSEL DE CATEGORIAS VISUAIS (ESTILO MARKET) */}
         <section className="mb-10">
           <div className="flex items-center justify-between mb-6 px-1">
