@@ -1368,7 +1368,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
     try {
-      const { data } = await supabase.from('dedicated_slots_delivery').select('*').eq('merchant_id', targetId);
+      const { data } = await supabase.from('dedicated_slots_delivery').select('*, slot_applications(id, status)').eq('merchant_id', targetId);
       if (data) setMyDedicatedSlots(data as DedicatedSlot[]);
     } catch (err) {
       console.error('Erro ao buscar vagas dedicadas:', err);
