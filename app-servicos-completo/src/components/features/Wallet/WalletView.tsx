@@ -1311,8 +1311,6 @@ export const WalletView: React.FC<WalletViewProps> = ({
             
             <div className="flex items-center justify-center gap-5">
               <motion.div 
-                animate={{ rotateY: [0, 180, 360] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
                 className="size-20 drop-shadow-[0_10px_20px_rgba(250,204,21,0.3)]"
               >
                 <img 

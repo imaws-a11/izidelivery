@@ -15,8 +15,17 @@ export const LightningPaymentView: React.FC<LightningPaymentViewProps> = ({
   toastSuccess
 }) => {
   const invoice = selectedItem?.lightningInvoice || "";
-  const satoshis = selectedItem?.satoshis || 0;
-  const btcPrice = selectedItem?.btcPrice || 0;
+  
+  // Normalização de nomes e cálculo de fallback
+  const btcPrice = selectedItem?.btcPrice || selectedItem?.btc_price_brl || 0;
+  const totalPrice = selectedItem?.total_price || 0;
+  
+  let satoshis = selectedItem?.satoshis || selectedItem?.sats || 0;
+  
+  // Se satoshis estiver zerado mas temos preço e total, calculamos visualmente
+  if (satoshis === 0 && btcPrice > 0 && totalPrice > 0) {
+    satoshis = Math.floor((totalPrice / btcPrice) * 100000000);
+  }
 
   return (
     <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
@@ -32,8 +41,15 @@ export const LightningPaymentView: React.FC<LightningPaymentViewProps> = ({
             <span className="material-symbols-outlined text-3xl text-orange-400" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
           </div>
           <p className="text-zinc-500 text-xs font-black uppercase tracking-widest">Total em Satoshis</p>
-          <p className="text-3xl font-black text-white">{satoshis.toLocaleString("pt-BR")} sats</p>
-          {btcPrice > 0 && <p className="text-zinc-500 text-xs">1 BTC = R$ {btcPrice.toLocaleString("pt-BR")}</p>}
+          <p className="text-3xl font-black text-white tabular-nums drop-shadow-xl">
+            {(satoshis || 0).toLocaleString("pt-BR")} <span className="text-orange-400 text-lg ml-1">SATS</span>
+          </p>
+          {btcPrice > 0 && (
+            <div className="flex items-center justify-center gap-2 mt-2 py-1 px-4 rounded-full bg-white/5 border border-white/5 w-fit mx-auto">
+               <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Cotação:</span>
+               <span className="text-[10px] font-black text-emerald-400">R$ {btcPrice.toLocaleString("pt-BR")}</span>
+            </div>
+          )}
         </div>
 
         {invoice && !selectedItem?.lightningError ? (

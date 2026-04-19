@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "../../common/Icon";
 
+import iziCoinImg from "../../../assets/images/izi-coin-premium.png";
+
 interface IziCoinTrackingViewProps {
   order: any;
   onClose: () => void;
@@ -36,7 +38,7 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
   const currentIdx = isConfirmed ? (status === "concluido" ? 2 : 1) : 0;
 
   return (
-    <div className="absolute inset-0 z-[200] bg-black flex flex-col items-center justify-center p-6 italic overflow-y-auto no-scrollbar">
+    <div className="h-full w-full bg-black flex flex-col items-center justify-center p-3 italic overflow-hidden">
       {/* Background Accents */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-24 -right-24 size-96 bg-yellow-400/10 rounded-full blur-[120px]" />
@@ -46,20 +48,20 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="w-full max-w-lg bg-[#1a1a1a] border-[3px] border-white/10 rounded-[60px] p-10 shadow-[20px_20px_60px_rgba(0,0,0,0.6),-10px_-10px_30px_rgba(255,255,255,0.02),inset_6px_6px_15px_rgba(255,255,255,0.03),inset_-6px_-6px_15px_rgba(0,0,0,0.4)] relative flex flex-col items-center text-center gap-10"
+        className="w-full max-w-lg bg-[#1a1a1a] border-[3px] border-white/10 rounded-[60px] p-10 shadow-[20px_20px_60px_rgba(0,0,0,0.6)] relative flex flex-col items-center text-center gap-10"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-8 right-8 size-12 rounded-[22px] bg-zinc-800/50 border border-white/5 flex items-center justify-center text-zinc-500 active:scale-90 transition-all shadow-lg"
+          className="absolute top-6 right-6 size-10 rounded-[18px] bg-zinc-800/50 border border-white/5 flex items-center justify-center text-zinc-500 active:scale-90 transition-all z-20"
         >
-          <Icon name="close" />
+          <Icon name="close" size={18} />
         </button>
 
         {/* Header Section */}
-        <div className="space-y-3">
-          <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.5em] shadow-sm">Protocolo Financeiro</p>
-          <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic drop-shadow-xl">Recarga em Curso</h2>
+        <div className="space-y-1">
+          <p className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.4em]">Protocolo Financeiro</p>
+          <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic">Recarga em Curso</h2>
         </div>
 
         {/* Status Hero */}
@@ -67,18 +69,22 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
           <div className="absolute inset-0 bg-yellow-400/20 blur-3xl rounded-full scale-150 animate-pulse" />
           <motion.div
             animate={{ 
-              rotate: isConfirmed ? 0 : [0, 10, -10, 0],
+              rotate: isConfirmed ? 0 : [0, 5, -5, 0],
               scale: isConfirmed ? [1, 1.1, 1] : 1
             }}
             transition={{ 
-              rotate: { repeat: Infinity, duration: 3 },
+              rotate: { repeat: Infinity, duration: 4 },
               scale: { duration: 0.5 }
             }}
-            className="size-32 rounded-[45px] bg-yellow-400 flex items-center justify-center shadow-[10px_10px_30px_rgba(250,204,21,0.3),inset_6px_6px_12px_rgba(255,255,255,0.6),inset_-6px_-6px_12px_rgba(0,0,0,0.2)] relative z-10"
+            className="size-32 rounded-[45px] bg-yellow-400 flex items-center justify-center shadow-[10px_10px_30px_rgba(250,204,21,0.3),inset_6px_6px_12px_rgba(255,255,255,0.6),inset_-6px_-6px_12px_rgba(0,0,0,0.2)] relative z-10 overflow-hidden"
           >
-            <span className="material-symbols-outlined text-black font-black text-6xl italic transform -rotate-12">
-              {isConfirmed ? "check_circle" : "currency_bitcoin"}
-            </span>
+            {isConfirmed ? (
+              <span className="material-symbols-outlined text-black font-black text-6xl italic transform -rotate-12">
+                check_circle
+              </span>
+            ) : (
+              <img src={iziCoinImg} className="w-20 h-20 object-contain drop-shadow-lg" alt="Izi Coin" />
+            )}
           </motion.div>
         </div>
 
@@ -125,11 +131,7 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
 
               <AnimatePresence>
                 {idx < currentIdx && (
-                  <motion.div 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="text-emerald-500"
-                  >
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-emerald-500">
                     <Icon name="check_circle" size={18} />
                   </motion.div>
                 )}
@@ -139,7 +141,7 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="w-full pt-4 space-y-4">
+        <div className="w-full space-y-3">
           {!isConfirmed && (
             <button
                onClick={onReturnToPayment}
@@ -151,20 +153,21 @@ export const IziCoinTrackingView: React.FC<IziCoinTrackingViewProps> = ({
 
           <button
             onClick={isConfirmed ? onGoToWallet : onSupport}
-            className={`w-full py-6 rounded-[35px] font-black text-sm uppercase tracking-[0.25em] italic transition-all active:scale-95 shadow-[0_15px_35px_rgba(0,0,0,0.3)] flex items-center justify-center gap-4 group h-[88px] 
+            className={`w-full py-6 rounded-[35px] font-black text-sm uppercase tracking-[0.25em] italic transition-all active:scale-95 flex items-center justify-center gap-4 h-[88px] 
               ${isConfirmed 
-                ? "bg-yellow-400 text-black shadow-[0_15px_35px_rgba(250,204,21,0.2),inset_4px_4px_10px_rgba(255,255,255,0.6)]" 
+                ? "bg-yellow-400 text-black shadow-lg" 
                 : "bg-zinc-800 text-white border border-white/5"
               }`}
           >
-            <span className="leading-none pt-1">{isConfirmed ? "Ver Minha Carteira" : "Solicitar Suporte VIP"}</span>
+            <span>{isConfirmed ? "Ver Minha Carteira" : "Suporte VIP"}</span>
             <Icon 
               name={isConfirmed ? "arrow_forward" : "support_agent"} 
-              className={`transition-transform group-hover:translate-x-2 ${isConfirmed ? "text-black" : "text-yellow-400"}`} 
+              size={18}
+              className={`${isConfirmed ? "text-black" : "text-yellow-400"}`} 
             />
           </button>
           
-          <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.4em] pt-4">Izi Financial Ecosystem &copy; 2026</p>
+          <p className="text-[9px] font-black text-zinc-700 uppercase tracking-[0.4em] pt-4">Izi Pay &copy; 2026</p>
         </div>
       </motion.div>
     </div>

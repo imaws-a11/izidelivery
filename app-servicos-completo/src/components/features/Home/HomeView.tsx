@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../../../lib/supabase";
+import iziCoinImg from "../../../assets/images/izi-coin-premium.png";
 
 /** Extrai a parte em texto limpo de endereços salvos de forma corrompida ou serializada no DB */
 const parseAddressText = (rawStr: any): string => {
@@ -573,10 +574,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
               
               <div className="flex items-center justify-between" onClick={() => { setSelectedItem(coinOrder); setSubView("izi_coin_tracking"); }}>
                 <div className="flex items-center gap-3 cursor-pointer">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                    <span className="material-symbols-outlined text-white text-2xl font-black animate-pulse">
-                      payments
-                    </span>
+                  <div className="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20 overflow-hidden">
+                    <img src={iziCoinImg} className="w-9 h-9 object-contain animate-pulse" alt="Izi Coin" />
                   </div>
                   <div>
                     <h4 className="text-white font-black text-sm uppercase tracking-tight italic">Recarga de IZI Coins</h4>
