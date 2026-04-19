@@ -58,16 +58,31 @@ export const playIziSound = (role: 'merchant' | 'driver' | 'success') => {
 
     const audio = new Audio(soundUrls[role]);
     if (role === 'driver') {
-        audio.loop = true; // Notificação de vaga é crítica, toca até o usuário interagir
-        // Armazenar referência global para parar depois se necessário
+        audio.loop = false; // Removido loop infinito
+        let count = 0;
+        audio.addEventListener('ended', () => {
+            if (count < 2) { 
+                count++;
+                audio.currentTime = 0;
+                audio.play().catch(e => console.error('Erro na repetição do som:', e));
+            }
+        });
         (window as any)._iziActiveAlarm = audio;
     }
-    audio.play().catch(() => {
-        // Fallback dinâmico se o navegador bloquear
-        if (ctx && role === 'driver') {
-            playTone(ctx, 880, 'triangle', 0, 0.4, 0.1); 
-        }
-    });
+
+    audio.currentTime = 0;
+    audio.load();
+    const playPromise = audio.play();
+    
+    if (playPromise !== undefined) {
+        playPromise.catch((e) => {
+            console.warn(`[iziSounds] Bloqueio de áudio detectado para ${role}:`, e);
+            // Fallback para tom sintético apenas se for crítico (driver)
+            if (ctx && role === 'driver') {
+                playTone(ctx, 880, 'triangle', 0, 0.4, 0.1); 
+            }
+        });
+    }
 
   } catch (e) {
     console.warn('Erro ao reproduzir som:', e);

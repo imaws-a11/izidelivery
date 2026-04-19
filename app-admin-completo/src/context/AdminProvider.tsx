@@ -776,8 +776,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => { fetchDriversRef.current = fetchDrivers; }, [fetchDrivers]);
   useEffect(() => { fetchMyDriversRef.current = fetchMyDrivers; }, [fetchMyDrivers]);
   useEffect(() => { allOrdersRef.current = allOrders; }, [allOrders]);
-
+  
   const merchantProfileRef = useRef(merchantProfile);
+
   useEffect(() => { merchantProfileRef.current = merchantProfile; }, [merchantProfile]);
 
   const selectedMerchantPreviewRef = useRef(selectedMerchantPreview);
@@ -892,6 +893,31 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.log(`[REALTIME-STATUS] Canal Pedidos (${channelName}):`, status);
       });
 
+    // Canal dedicado para Vagas e Candidaturas (Isolado para estabilidade)
+    const activeMerchantId = merchantProfileRef.current?.id || selectedMerchantPreviewRef.current?.id;
+    const slotsChannel = supabase.channel('dedicated_slots_admin_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'slot_applications', filter: activeMerchantId ? `merchant_id=eq.${activeMerchantId}` : undefined },
+        (payload) => {
+          console.log('⚡ MUDANÇA EM CANDIDATURA (Canal Dedicado):', payload);
+          fetchMyDedicatedSlotsRef.current();
+          
+          if (payload.eventType === 'INSERT') {
+            playIziSound('candidate');
+            toastSuccess('Nova candidatura recebida!');
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as any;
+            if (updated.status === 'accepted') {
+              playIziSound('payment');
+              toastSuccess('Vaga preenchida com sucesso!');
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[REALTIME-STATUS] Canal Vagas Dedicadas:', status);
+      });
     fetchStatsRef.current(true);
     fetchAllOrdersRef.current(undefined, true);
     if (userRole === 'merchant') {
@@ -1368,12 +1394,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
     try {
-      const { data } = await supabase.from('dedicated_slots_delivery').select('*, slot_applications(id, status)').eq('merchant_id', targetId);
+      const { data } = await supabase.from('dedicated_slots_delivery').select('*').eq('merchant_id', targetId);
       if (data) setMyDedicatedSlots(data as DedicatedSlot[]);
     } catch (err) {
       console.error('Erro ao buscar vagas dedicadas:', err);
     }
   }, [userRole, merchantProfile?.merchant_id, selectedMerchantPreview?.id]);
+
+  const fetchMyDedicatedSlotsRef = useRef(fetchMyDedicatedSlots);
+  useEffect(() => { fetchMyDedicatedSlotsRef.current = fetchMyDedicatedSlots; }, [fetchMyDedicatedSlots]);
+
+
 
   const openMerchantPreview = useCallback(async (merchant: any) => {
     setSelectedMerchantPreview(merchant);

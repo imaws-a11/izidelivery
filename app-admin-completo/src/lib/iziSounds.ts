@@ -34,7 +34,7 @@ const playTone = (
   osc.stop(ctx.currentTime + startOffset + duration);
 };
 
-export const playIziSound = async (role: 'merchant' | 'driver' | 'payment') => {
+export const playIziSound = async (role: 'merchant' | 'driver' | 'payment' | 'candidate') => {
   const ctx = getAudioContext();
   console.log(`[AUDIO-CHECK] playIziSound chamada para: ${role}, Contexto: ${ctx?.state}`);
   

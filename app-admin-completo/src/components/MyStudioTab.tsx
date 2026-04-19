@@ -146,6 +146,27 @@ export default function MyStudioTab() {
     } catch { setSlotApplications([]); }
     finally { setIsLoadingApplications(false); }
   }, []);
+  
+  // Realtime para candidaturas da vaga selecionada
+  React.useEffect(() => {
+    if (!selectedSlotForCandidates?.id) return;
+
+    const channel = supabase.channel(`candidates_${selectedSlotForCandidates.id}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'slot_applications', 
+        filter: `slot_id=eq.${selectedSlotForCandidates.id}` 
+      }, () => {
+        console.log('⚡ Atualizando candidatos via Realtime...');
+        fetchSlotApplications(selectedSlotForCandidates.id);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedSlotForCandidates?.id, fetchSlotApplications]);
 
   const handleCandidateAction = async (appId: string, status: 'accepted' | 'rejected') => {
     setProcessingAppId(appId);
@@ -153,12 +174,17 @@ export default function MyStudioTab() {
       const app = slotApplications.find((a: any) => a.id === appId);
       const { error } = await supabase.from('slot_applications').update({ status }).eq('id', appId);
       if (error) throw error;
+      
       if (status === 'accepted' && app?.driver_id) {
+        // Marcar vaga como inativa pois foi preenchida
+        await supabase.from('dedicated_slots_delivery').update({ is_active: false }).eq('id', selectedSlotForCandidates.id);
+        
         await supabase.functions.invoke('send-push-notification', {
-          body: { driver_id: app.driver_id, title: 'Vaga Confirmada! ðŸ', body: `Sua candidatura para "${selectedSlotForCandidates?.title}" foi aprovada!`, data: { type: 'dedicated_slot_confirmed', slot_id: selectedSlotForCandidates?.id } }
+          body: { driver_id: app.driver_id, title: 'Vaga Confirmada! 🌟', body: `Sua candidatura para "${selectedSlotForCandidates?.title}" foi aprovada!`, data: { type: 'dedicated_slot_confirmed', slot_id: selectedSlotForCandidates?.id } }
         }).catch(() => {});
       }
-      toastSuccess(status === 'accepted' ? 'Candidato aprovado!' : 'Candidatura recusada.');
+      
+      toastSuccess(status === 'accepted' ? 'Candidato aprovado e vaga preenchida!' : 'Candidatura recusada.');
       fetchSlotApplications(selectedSlotForCandidates.id);
     } catch (e: any) { toastError('Erro: ' + e.message); }
     finally { setProcessingAppId(null); }
@@ -1595,7 +1621,7 @@ export default function MyStudioTab() {
                               )}
                             </div>
                             <div>
-                              <h4 className="text-xl font-black dark:text-white">{app.driver?.full_name || 'Entregador'}</h4>
+                              <h4 className="text-xl font-black dark:text-white">{app.driver?.name || 'Entregador'}</h4>
                               <div className="flex gap-2 mt-1">
                                 <span className="text-[10px] font-black bg-slate-100 dark:bg-white/5 px-2 py-1 rounded-lg text-slate-500">â˜… {app.driver?.rating || 'Novo'}</span>
                                 <span className="text-[10px] font-black bg-slate-100 dark:bg-white/5 px-2 py-1 rounded-lg text-slate-500">{app.driver?.total_trips || 0} viagens</span>
@@ -1616,7 +1642,7 @@ export default function MyStudioTab() {
                                   {processingAppId === app.id ? '...' : 'Aceitar Piloto'}
                                 </button>
                               </div>
-                              <button onClick={() => openWhatsAppCandidate(app.driver?.phone, app.driver?.full_name)}
+                              <button onClick={() => openWhatsAppCandidate(app.driver?.phone, app.driver?.name)}
                                 className="w-full h-11 bg-emerald-500/10 text-emerald-500 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center justify-center gap-2 hover:bg-emerald-500/20 transition-all">
                                 <span className="material-symbols-outlined text-sm">chat</span> Entrevistar via WhatsApp
                               </button>
@@ -1631,7 +1657,7 @@ export default function MyStudioTab() {
                               </div>
                               {app.status === 'accepted' && (
                                 <div className="flex gap-3">
-                                  <button onClick={() => openWhatsAppCandidate(app.driver?.phone, app.driver?.full_name)}
+                                  <button onClick={() => openWhatsAppCandidate(app.driver?.phone, app.driver?.name)}
                                     className="flex-1 h-11 bg-emerald-500 text-slate-950 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
                                     <span className="material-symbols-outlined text-sm">call</span> Contato
                                   </button>
