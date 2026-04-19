@@ -692,11 +692,26 @@ function App() {
 
     const fetchDedicatedSlotsRealtime = useCallback(async () => {
         try {
-            const { data } = await supabase
+            // 1. Busca os IDs de vagas que já foram preenchidas (status 'accepted')
+            const { data: filledApps } = await supabase
+                .from('slot_applications')
+                .select('slot_id')
+                .eq('status', 'accepted');
+            
+            const filledSlotIds = filledApps?.map(a => a.slot_id) || [];
+
+            // 2. Busca apenas as vagas ativas que NÃO estão na lista de preenchidas
+            let query = supabase
                 .from('dedicated_slots_delivery')
                 .select('*, admin_users(store_name, store_logo, store_address, store_phone)')
                 .eq('is_active', true)
                 .order('created_at', { ascending: false });
+
+            if (filledSlotIds.length > 0) {
+                query = query.not('id', 'in', `(${filledSlotIds.join(',')})`);
+            }
+
+            const { data } = await query;
             
             if (data) {
                 const declinedIds = JSON.parse(localStorage.getItem('Izi_declined_slots') || '[]');
@@ -832,7 +847,7 @@ function App() {
     const [modalRoutePolyline, setModalRoutePolyline] = useState<string | null>(null);
     const [modalRouteInfo, setModalRouteInfo] = useState<{start: any, end: any} | null>(null);
     const [merchantCoords, setMerchantCoords] = useState<{lat: number, lng: number} | null>(null);
-    const [stats, setStats] = useState({ balance: 0, today: 0, weekly: 0, totalEarnings: 0, count: 0, level: 1, xp: 0, nextXp: 100 });
+    const [stats, setStats] = useState({ balance: 0, today: 0, weekly: 0, totalEarnings: 0, count: 0, level: 1, xp: 0, nextXp: 100, performance: [0, 0, 0, 0, 0, 0, 0] });
     const [earningsHistory, setEarningsHistory] = useState<Order[]>([]);
     const [withdrawHistory, setWithdrawHistory] = useState<any[]>([]);
     const [isFinanceLoading, setIsFinanceLoading] = useState(false);
@@ -1826,7 +1841,7 @@ function App() {
             const referenceDate = new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString(); // 12h atrás para cobrir qualquer delay de confirmação
             
             try {
-                const data = await fetchFromDB('orders_delivery', `scheduled_at=not.is.null&scheduled_at=gte.${referenceDate}&order=scheduled_at.asc`);
+                const data = await fetchFromDB('orders_delivery', `scheduled_at=gte.${referenceDate}&order=scheduled_at.asc`);
                 
                 if (data) {
                     const filtered = data.filter((o: any) => {
@@ -2426,10 +2441,29 @@ function App() {
                 });
             }
 
+            // 3. Cálculo de Performance Semanal (últimos 7 dias)
+            const performance = [0, 0, 0, 0, 0, 0, 0]; // S, T, Q, Q, S, S, D
+            const now = new Date();
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(now.getDate() - 7);
+            sevenDaysAgo.setHours(0,0,0,0);
+
+            if (orders) {
+                orders.forEach(o => {
+                    const oDate = new Date(o.updated_at);
+                    if (oDate >= sevenDaysAgo) {
+                        const day = oDate.getDay(); // 0=Dom, 1=Seg...
+                        const idx = day === 0 ? 6 : day - 1; // Mapear para S, T, Q, Q, S, S, D
+                        performance[idx]++;
+                    }
+                });
+            }
+
             setStats(prev => ({ 
                 ...prev, balance, today: todaySum, weekly: weeklySum, totalEarnings: totalGanhos, 
                 count: orders?.length || 0, xp: (orders?.length || 0) * 15,
-                level: Math.floor(((orders?.length || 0) * 15) / 100) + 1
+                level: Math.floor(((orders?.length || 0) * 15) / 100) + 1,
+                performance
             }));
 
             console.log(`[FINANCE] Sincronização concluída. Saldo: ${balance}, Hoje: ${todaySum}`);
@@ -2603,26 +2637,66 @@ function App() {
 
     const confirmWithdraw = async () => {
         if (isWithdrawLoading) return;
+        
+        if (!stats.balance || stats.balance <= 0) {
+            toastError("Você não possui saldo para sacar.");
+            setShowWithdrawModal(false);
+            return;
+        }
+
         setIsWithdrawLoading(true);
+
+        const feeAmount = stats.balance * (Number(appSettings?.withdrawalfeepercent ?? 0) / 100);
         try {
+            const uid = driverId || localStorage.getItem('izi_driver_uid');
+            if (!uid) throw new Error("Sessão inválida. Faça login novamente.");
+
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
             const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-            const uid = driverId || localStorage.getItem('izi_driver_uid');
-            const feePercent = Number(appSettings?.withdrawalfeepercent ?? 0);
-            const feeAmount = stats.balance * (feePercent / 100);
+            
+            // Reconstrução do token para autenticação REST (mesmo padrão do handleSavePix)
+            let token = supabaseKey;
+            try {
+                const project = (supabaseUrl.match(/(?:https:\/\/)?(.*?)\.supabase\.co/)?.[1]);
+                const raw = localStorage.getItem(`sb-${project}-auth-token`);
+                if (raw) token = JSON.parse(raw)?.access_token || supabaseKey;
+            } catch(e) {}
 
-            const { error } = await supabase.from('wallet_transactions_delivery').insert({
-                user_id: uid, amount: stats.balance, type: 'saque', status: 'pendente',
-                description: `Saque PIX: ${pixKey}${feeAmount > 0 ? ` (Taxa IZI: R$ ${feeAmount.toFixed(2)})` : ''}`
+            console.log('[WITHDRAW] Solicitando saque via REST...', { uid, amount: stats.balance });
+
+            const res = await fetch(`${supabaseUrl}/rest/v1/wallet_transactions_delivery`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    user_id: uid, 
+                    amount: stats.balance, 
+                    type: 'saque', 
+                    status: 'pendente',
+                    description: `Saque PIX: ${pixKey}${feeAmount > 0 ? ` (Taxa IZI: R$ ${feeAmount.toFixed(2)})` : ''}`
+                })
             });
 
-            if (error) throw error;
-            setShowWithdrawModal(false); setShowSuccessOverlay(true);
-            setTimeout(() => { setShowSuccessOverlay(false); refreshFinanceData(); }, 4000);
+            if (!res.ok) throw new Error(`Falha no servidor: ${res.status}`);
+
+            console.log('[WITHDRAW] Sucesso!');
+
+            setShowWithdrawModal(false); 
+            setShowSuccessOverlay(true);
+            
+            setTimeout(() => { 
+                setShowSuccessOverlay(false); 
+                refreshFinanceData(); 
+            }, 4000);
+
         } catch (err: any) {
-            toastError("Erro ao processar saque.");
-        } finally {
-            setIsWithdrawLoading(false);
+            console.error('[WITHDRAW] Exceção capturada ao solicitar saque:', err);
+            toastError(err.message || "Erro ao processar saque.");
+        } finally { 
+            setIsWithdrawLoading(false); 
         }
     };
 
@@ -2781,7 +2855,7 @@ function App() {
                                     { id: 'active_mission', label: 'Missão', icon: 'route' },
                                     { id: 'scheduled', label: 'Agendamentos', icon: 'event', badge: scheduledOrders.length },
                                     { id: 'dedicated', label: 'Vagas', icon: 'military_tech', badge: dedicatedSlots.filter(s => s.is_active).length },
-                                    { id: 'earnings', label: 'Financeiro', icon: 'payments' },
+                                    { id: 'earnings', label: 'Izi Pay', icon: 'payments' },
                                     { id: 'history', label: 'Histórico', icon: 'history' },
                                     { id: 'profile', label: 'Perfil', icon: 'person' }
                                 ].filter(item => {
@@ -4206,7 +4280,7 @@ function App() {
             <div className="h-1 w-20 bg-primary mx-auto rounded-full opacity-50 mb-4" />
 
             <header className="flex flex-col gap-1 px-2">
-                <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Painel Financeiro 🚀</p>
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Izi Pay 🚀</p>
                 <h2 className="text-4xl font-black text-white tracking-tighter italic drop-shadow-lg uppercase">Seus Resultados</h2>
             </header>
 
@@ -4238,7 +4312,7 @@ function App() {
 
                     <motion.button 
                         whileTap={{ scale: 0.96 }}
-                        onClick={() => setShowWithdrawModal(true)}
+                        onClick={handleWithdrawRequest}
                         className="w-full h-18 bg-stone-950 text-white rounded-[28px] font-black text-[11px] uppercase tracking-[0.3em] shadow-[0_15px_30px_rgba(0,0,0,0.3)] active:shadow-none transition-all flex items-center justify-center gap-4 group"
                     >
                         <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-primary transition-colors">
@@ -4287,25 +4361,30 @@ function App() {
                 </div>
                 
                 <div className="h-40 flex items-end justify-between gap-3 px-1 pt-4">
-                    {[40, 70, 45, 90, 65, 82, 55].map((h, i) => (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
-                            <div className="relative w-full flex flex-col items-center">
-                                <motion.div 
-                                    initial={{ height: 0 }} 
-                                    animate={{ height: `${h}%` }} 
-                                    className={`w-full max-w-[12px] rounded-full transition-all duration-700 ${
-                                        i === 5 ? 'bg-primary shadow-[0_0_15px_rgba(255,217,0,0.5)]' : 'bg-white/10 group-hover:bg-white/20'
-                                    }`}
-                                />
-                                {i === 5 && (
-                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-black text-[7px] font-black px-1.5 py-0.5 rounded-md shadow-lg">
-                                        TOP
-                                    </div>
-                                )}
+                    {stats.performance.map((val, i) => {
+                        const maxVal = Math.max(...stats.performance, 1);
+                        const h = (val / maxVal) * 100;
+                        const isToday = i === (new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
+                        return (
+                            <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
+                                <div className="relative w-full flex flex-col items-center">
+                                    <motion.div 
+                                        initial={{ height: 0 }} 
+                                        animate={{ height: `${Math.max(h, 5)}%` }} 
+                                        className={`w-full max-w-[12px] rounded-full transition-all duration-700 ${
+                                            isToday ? 'bg-primary shadow-[0_0_15px_rgba(255,217,0,0.5)]' : 'bg-white/10 group-hover:bg-white/20'
+                                        }`}
+                                    />
+                                    {isToday && (
+                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-black text-[7px] font-black px-1.5 py-0.5 rounded-md shadow-lg">
+                                            HOJE
+                                        </div>
+                                    )}
+                                </div>
+                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{['S','T','Q','Q','S','S','D'][i]}</span>
                             </div>
-                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{['S','T','Q','Q','S','S','D'][i]}</span>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 
@@ -4509,7 +4588,7 @@ function App() {
                         <Icon name="arrow_back" className="text-white" />
                     </button>
                     <div className="flex flex-col items-end">
-                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em]">Financeiro</p>
+                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em]">Izi Pay</p>
                         <h2 className="text-lg font-black text-white italic">Dados Bancários</h2>
                     </div>
                 </header>
@@ -5135,7 +5214,7 @@ function App() {
 
                     {/* Detalhes do Pagamento */}
                     <section className="space-y-4">
-                        <h2 className="text-neutral-500 font-black text-[9px] uppercase tracking-[0.3em] px-2">Financeiro</h2>
+                        <h2 className="text-neutral-500 font-black text-[9px] uppercase tracking-[0.3em] px-2">Izi Pay</h2>
                         <div className="bg-neutral-900 rounded-[32px] p-6 sm:p-8 border-l-4 border-yellow-400 space-y-6" style={sClayDark}>
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-3">
