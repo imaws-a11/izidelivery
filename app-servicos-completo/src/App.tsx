@@ -3828,27 +3828,47 @@ const navigateSubView = (target: string) => {
 
   const renderLightningPayment = () => {
     const invoice = selectedItem?.lightningInvoice || selectedItem?.lightning_invoice || lightningData?.payment_request || "";
-    const satoshis = Number(selectedItem?.satoshis || lightningData?.satoshis || 0);
-    const btcPrice = Number(selectedItem?.btcPrice || selectedItem?.btc_price_brl || lightningData?.btc_price_brl || 0);
     
-    // Cálculo robusto: Tenta total_price, depois amount_brl, depois calcula baseado em sats
+    // Normalização agressiva de cotação
+    const btcPrice = Number(
+      selectedItem?.btcPrice || 
+      selectedItem?.btc_price_brl || 
+      lightningData?.btcPrice || 
+      lightningData?.btc_price_brl || 
+      appSettings?.lastBtcPrice || 
+      500000 // Fallback final para evitar divisão por zero
+    );
+    
+    const satoshisRaw = Number(selectedItem?.satoshis || selectedItem?.amount_sats || lightningData?.satoshis || 0);
     let amountBrl = Number(selectedItem?.total_price || selectedItem?.amount_brl || 0);
-    let finalSatoshis = satoshis;
+    
+    let finalSatoshis = satoshisRaw;
 
     // Se satoshis vier zerado mas temos o valor em BRL e a cotação, recalculamos no frontend
-    if (finalSatoshis === 0 && amountBrl > 0 && btcPrice > 0) {
-      finalSatoshis = Math.round((amountBrl / btcPrice) * 100_000_000);
+    if (finalSatoshis <= 0 && amountBrl > 0 && btcPrice > 0) {
+      finalSatoshis = Math.floor((amountBrl / btcPrice) * 100_000_000);
     }
     
-    // Fallback inverso: se temos sats mas não BRL
-    if (amountBrl === 0 && finalSatoshis > 0 && btcPrice > 0) {
-      amountBrl = (finalSatoshis * btcPrice) / 100000000;
+    // Fallback inverso: se temos sats mas não BRL (raro, mas possível)
+    if (amountBrl <= 0 && finalSatoshis > 0 && btcPrice > 0) {
+      amountBrl = (finalSatoshis * btcPrice) / 100_000_000;
     }
 
+    console.log("[LN Debug]", { amountBrl, btcPrice, satoshisRaw, finalSatoshis });
+    
     return (
-      <div className="absolute inset-0 z-[200] bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
+      <div className="absolute inset-0 z-[200] bg-black text-zinc-100 flex flex-col overflow-hidden pb-10">
         <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-lg flex items-center gap-4 px-5 py-6 border-b border-white/5">
-          <button onClick={() => setSubView("checkout")} className="size-11 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center active:scale-90 transition-all">
+          <button 
+            onClick={() => {
+              if (selectedItem?.service_type === 'coin_purchase') {
+                setSubView("none");
+              } else {
+                setSubView("checkout");
+              }
+            }} 
+            className="size-11 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center active:scale-90 transition-all"
+          >
             <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
           </button>
           <div className="flex-1">
@@ -3860,41 +3880,41 @@ const navigateSubView = (target: string) => {
           </div>
         </header>
 
-        <main className="flex-1 flex flex-col items-center justify-center p-8 text-center pt-16">
-          <div className="mb-12 relative">
-             <div className="absolute -inset-8 bg-yellow-400/10 blur-[60px] rounded-full animate-pulse" />
-             <div className="relative group p-4 border-2 border-dashed border-yellow-400/30 rounded-[40px] bg-zinc-950/50">
-               <div className="bg-white p-6 rounded-[32px] shadow-2xl transition-all duration-700">
+        <main className="flex-1 flex flex-col items-center justify-center p-6 text-center pt-4">
+          <div className="mb-6 relative">
+             <div className="absolute -inset-6 bg-yellow-400/10 blur-[40px] rounded-full animate-pulse" />
+             <div className="relative group p-3 border-2 border-dashed border-yellow-400/30 rounded-[35px] bg-zinc-950/50">
+               <div className="bg-white p-5 rounded-[28px] shadow-2xl transition-all duration-700">
                 <img
-                  src={"https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(invoice)}
+                  src={"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(invoice)}
                   alt="Lightning QR"
-                  className="size-[220px] rounded-2xl"
+                  className="size-[200px] rounded-xl"
                 />
                </div>
              </div>
           </div>
 
-          <div className="space-y-2 mb-10 w-full max-w-xs">
-            <h3 className="text-3xl font-black text-white tracking-tighter flex flex-col items-center justify-center gap-1">
-              <span>{finalSatoshis.toLocaleString("pt-BR")}</span>
-              <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Satoshi</span>
+          <div className="space-y-1 mb-6 w-full max-w-xs">
+            <h3 className="text-2xl font-black text-white tracking-tighter flex flex-col items-center justify-center gap-1">
+              <span className="tabular-nums">{(finalSatoshis / 100_000_000).toFixed(8)}</span>
+              <span className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.3em]">Bitcoin (BTC)</span>
             </h3>
             {amountBrl > 0 && (
-              <p className="text-zinc-400 text-sm font-bold">
+              <p className="text-zinc-400 text-xs font-bold">
                 ≈ R$ {amountBrl.toFixed(2).replace(".", ",")}
               </p>
             )}
           </div>
 
-          <div className="w-full space-y-4">
+          <div className="w-full space-y-3 max-w-xs">
              <button 
                onClick={() => {
                  navigator.clipboard.writeText(invoice);
                  toastSuccess("Fatura copiada!");
                }}
-               className="w-full h-16 rounded-[24px] bg-white text-black font-black uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-white/5"
+               className="w-full h-14 rounded-[20px] bg-white text-black font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl shadow-white/5"
              >
-               <span className="material-symbols-outlined">content_copy</span>
+               <span className="material-symbols-outlined text-lg">content_copy</span>
                Copiar Invoice
              </button>
              
@@ -3902,18 +3922,32 @@ const navigateSubView = (target: string) => {
                onClick={() => {
                  window.open(`lightning:${invoice}`);
                }}
-               className="w-full h-16 rounded-[24px] bg-zinc-900 border border-white/10 text-white font-black uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all"
+               className="w-full h-14 rounded-[20px] bg-zinc-900 border border-white/10 text-white font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all"
              >
-               <span className="material-symbols-outlined">open_in_new</span>
+               <span className="material-symbols-outlined text-lg">open_in_new</span>
                Abrir na Carteira
              </button>
+
+             <button 
+               onClick={async () => {
+                if (window.confirm("Deseja realmente cancelar esta solicitação de recarga?")) {
+                  await handleCancelOrder(selectedItem?.id);
+                  setSubView("none");
+                  setSelectedItem(null);
+                }
+               }}
+               className="w-full h-14 rounded-[20px] bg-red-500/10 border border-red-500/20 text-red-500 font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all"
+             >
+               <span className="material-symbols-outlined text-lg">close</span>
+               Cancelar Pagamento
+             </button>
              
-             <div className="pt-8 flex flex-col items-center gap-4">
+             <div className="pt-4 flex flex-col items-center gap-3">
                 <div className="flex items-center gap-3">
-                   <div className="size-2 bg-yellow-400 rounded-full animate-ping" />
-                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Aguardando pagamento...</p>
+                   <div className="size-1.5 bg-yellow-400 rounded-full animate-ping" />
+                   <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">Aguardando pagamento...</p>
                 </div>
-                <p className="text-[10px] text-zinc-600 max-w-[200px] leading-relaxed font-medium">Não feche esta tela até que o pagamento seja detectado automaticamente.</p>
+                <p className="text-[9px] text-zinc-600 max-w-[180px] leading-relaxed font-medium">Não feche esta tela até que o pagamento seja detectado automaticamente.</p>
              </div>
           </div>
         </main>
@@ -5987,11 +6021,11 @@ const navigateSubView = (target: string) => {
                 <section className="space-y-6">
                    <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] px-2">Método de Checkout</h3>
                    <div className="grid grid-cols-3 gap-5 pb-4">
-                     {[
-                       { id: 'cartao', icon: 'credit_card', label: 'Cartão', color: 'text-blue-400' },
-                       { id: 'pix', icon: 'pix', label: 'Pix Safe', color: 'text-emerald-400' },
-                       { id: 'lightning', icon: 'bolt', label: 'Rede BTC', color: 'text-orange-400' }
-                     ].map((method) => (
+                      {[
+                        { id: 'cartao', icon: 'credit_card', label: 'Cartão', color: 'text-blue-400' },
+                        { id: 'pix', icon: 'pix', label: 'Pix', color: 'text-emerald-400' },
+                        { id: 'lightning', icon: 'bolt', label: 'Bitcoin Lightning', color: 'text-orange-400' }
+                      ].map((method) => (
                        <button
                          key={method.id}
                          onClick={() => setDepositPaymentMethod(method.id)}
@@ -8030,8 +8064,9 @@ const navigateSubView = (target: string) => {
                 <motion.div key="home-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
                   <HomeView userLevel={userLevel} userId={userId} userLocation={userLocation} isIziBlackMembership={isIziBlackMembership} cart={cart} myOrders={myOrders} navigateSubView={navigateSubView} setSubView={setSubView} subView={subView} searchQuery={searchQuery} setSearchQuery={setSearchQuery} setSelectedItem={setSelectedItem} onOpenDepositModal={() => setShowDepositModal(true)} onReturnToPayment={(order) => {
                     setSelectedItem(order);
-                    if (order?.payment_method === 'pix') setSubView("pix_payment");
-                    else if (order?.payment_method === 'lightning') setSubView("lightning_payment");
+                    const method = order?.payment_method;
+                    if (method === 'pix') setSubView("pix_payment");
+                    else if (method === 'lightning' || method === 'bitcoin_lightning') setSubView("lightning_payment");
                     else setSubView("card_payment");
                   }} availableCoupons={availableCoupons.filter((c: any) => c.coupon_code)} banners={availableCoupons.filter((c: any) => !c.coupon_code && c.image_url)} copiedCoupon={copiedCoupon} setCopiedCoupon={setCopiedCoupon} showToast={showToast} setShowMasterPerks={setShowMasterPerks} ESTABLISHMENTS={ESTABLISHMENTS} handleShopClick={handleShopClick} flashOffers={flashOffers} setActiveService={setActiveService} transitData={transitData} setTransitData={setTransitData} setExploreCategoryState={setExploreCategoryState} setRestaurantInitialCategory={setRestaurantInitialCategory} setTab={setTab} />
                 </motion.div>
@@ -8228,12 +8263,12 @@ const navigateSubView = (target: string) => {
                 </motion.div>
               )}
               {subView === "lightning_payment" && (
-                <motion.div key="lnpay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                <motion.div key="lnpay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] h-full overflow-hidden bg-black">
                   {renderLightningPayment()}
                 </motion.div>
               )}
               {subView === "card_payment" && (
-                <motion.div key="cardpay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
+                <motion.div key="cardpay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] h-full overflow-hidden bg-black">
                   {renderCardPayment()}
                 </motion.div>
               )}
@@ -8279,16 +8314,18 @@ const navigateSubView = (target: string) => {
                 </motion.div>
               )}
               {subView === "izi_coin_tracking" && (
-                <motion.div key="izi_coin_tracking" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[100]">
+                <motion.div key="izi_coin_tracking" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="fixed inset-0 z-[100] bg-black overflow-hidden h-full">
                   <IziCoinTrackingView 
                     order={selectedItem} 
                     onClose={() => setSubView("none")} 
                     onGoToWallet={() => { setTab("wallet"); setSubView("none"); }} 
                     onSupport={() => setSubView("order_support")} 
                     onReturnToPayment={() => {
-                      if (selectedItem?.payment_method === 'pix') setSubView("pix_payment");
-                      else if (selectedItem?.payment_method === 'lightning') setSubView("lightning_payment");
-                      else setSubView("card_payment");
+                      const method = selectedItem?.payment_method;
+                      if (method === 'pix') setSubView("pix_payment");
+                      else if (method === 'lightning' || method === 'bitcoin_lightning') setSubView("lightning_payment");
+                      else if (method === 'cartao') setSubView("card_payment");
+                      else setSubView("card_payment"); // fallback final
                     }}
                   />
                 </motion.div>
