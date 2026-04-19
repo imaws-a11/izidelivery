@@ -1034,6 +1034,7 @@ function App() {
       .from('promotions_delivery')
       .select('*')
       .eq('is_active', true)
+      .neq('type', 'explore')
       .order('created_at', { ascending: false });
     
     if (data) {
@@ -1050,6 +1051,7 @@ function App() {
         .select('*')
         .eq('is_active', true)
         .is('coupon_code', null)
+        .neq('type', 'explore')
         .order('created_at', { ascending: false });
       
       if (banners) {

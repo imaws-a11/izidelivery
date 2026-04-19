@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "../../../lib/supabase";
 
 import type { Establishment } from "../../../types";
 import { MerchantCard } from "./MerchantCard";
@@ -35,12 +36,28 @@ export const EstablishmentListView = ({
 }: EstablishmentListViewProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  const [bgImage, setBgImage] = useState<string | null>(null);
+
   useEffect(() => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
     window.scrollTo(0, 0);
-  }, []);
+
+    const fetchExploreImage = async () => {
+       const { data } = await supabase
+          .from('promotions_delivery')
+          .select('image_url')
+          .eq('type', 'explore')
+          .ilike('title', title)
+          .single();
+          
+       if (data && data.image_url) {
+          setBgImage(data.image_url);
+       }
+    };
+    fetchExploreImage();
+  }, [title]);
 
   return (
     <div 
@@ -80,14 +97,14 @@ export const EstablishmentListView = ({
       <main className="px-5 flex flex-col gap-6">
         {icon && (
           <section>
-            <div className="relative h-36 rounded-2xl overflow-hidden mb-6">
-              <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-black flex items-center justify-center">
-                <span className="material-symbols-outlined text-[100px] text-yellow-400/10">{icon}</span>
-              </div>
-              <div className="absolute inset-0 flex flex-col justify-center p-5">
-                <span className="bg-yellow-400 text-black font-extrabold text-[10px] px-2 py-0.5 rounded w-fit mb-2 uppercase tracking-wider">Disponível agora</span>
-                <h2 className="text-lg font-extrabold text-white leading-tight">{title} premium<br/>na sua porta</h2>
-              </div>
+            <div className="relative h-40 rounded-[32px] overflow-hidden mb-6 shadow-2xl border border-white/5 bg-zinc-900 group">
+               {bgImage ? (
+                  <img src={bgImage} alt={title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-[3s]" />
+               ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-black flex items-center justify-center">
+                     <span className="material-symbols-outlined text-[80px] text-white/5">{icon}</span>
+                  </div>
+               )}
             </div>
           </section>
         )}
