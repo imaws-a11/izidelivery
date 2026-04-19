@@ -135,24 +135,30 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
       
       if (error) throw error;
       
-      // Se aprovado, dispara push notification para o entregador
-      if (status === 'accepted' && application?.driver_id) {
-        try {
-          // Chamada para a Edge Function de disparar push
-          await supabase.functions.invoke('send-push-notification', {
-            body: {
-              driver_id: application.driver_id,
-              title: 'Vaga Confirmada! 🏁',
-              body: `Sua candidatura para a vaga "${editingItem.title}" foi aprovada pelo lojista!`,
-              data: {
-                type: 'dedicated_slot_confirmed',
-                slot_id: editingItem.id
+      // Se aprovado, desativa a vaga para novos candidatos e dispara push
+      if (status === 'accepted') {
+        const { error: slotErr } = await supabase
+          .from('dedicated_slots_delivery')
+          .update({ is_active: false })
+          .eq('id', editingItem.id);
+        
+        if (!slotErr) {
+          setEditingItem(prev => ({ ...prev, is_active: false }));
+        }
+
+        if (application?.driver_id) {
+          try {
+            await supabase.functions.invoke('send-push-notification', {
+              body: {
+                driver_id: application.driver_id,
+                title: 'Vaga Confirmada! 🏁',
+                body: `Sua candidatura para a vaga "${editingItem.title}" foi aprovada pelo lojista!`,
+                data: { type: 'dedicated_slot_confirmed', slot_id: editingItem.id }
               }
-            }
-          });
-          console.log('[PUSH] Notificação enviada para o entregador');
-        } catch (pushErr) {
-          console.error('[PUSH] Erro ao disparar notificação:', pushErr);
+            });
+          } catch (pushErr) {
+            console.error('[PUSH] Erro ao disparar notificação:', pushErr);
+          }
         }
       }
       
