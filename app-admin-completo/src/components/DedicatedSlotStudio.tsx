@@ -339,339 +339,190 @@ export const DedicatedSlotStudio: React.FC<DedicatedSlotStudioProps> = ({
           </div>
 
           <div className="flex gap-2">
-            <button 
-              onClick={() => setActiveTab('config')} 
-              className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'config' ? 'bg-primary text-slate-950 shadow-lg shadow-primary/20' : 'bg-white/5 text-slate-500 hover:bg-white/10'}`}
-              title="Configurações e Detalhes da Vaga"
-            >
-              <span className="material-symbols-outlined text-sm">settings</span> Painel de Vaga
-            </button>
-            {slot.id && slot.id !== 'new' && (
-              <button 
-                onClick={() => setActiveTab('candidates')} 
-                className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 relative ${activeTab === 'candidates' ? 'bg-primary text-slate-950 shadow-lg shadow-primary/20' : 'bg-white/5 text-slate-500 hover:bg-white/10'}`}
-              >
-                <span className="material-symbols-outlined text-sm">group</span> Candidatos 
-                {applications.filter(a => a.status === 'pending').length > 0 && (
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white absolute -top-1 -right-1 shadow-lg border-2 border-slate-950">
-                    {applications.filter(a => a.status === 'pending').length}
-                  </span>
-                )}
-              </button>
-            )}
+            <div className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-primary text-slate-950 shadow-lg shadow-primary/20 flex items-center gap-2`}>
+              <span className="material-symbols-outlined text-sm">settings</span> Detalhes da Vaga
+            </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto scrollbar-hide">
-          {activeTab === 'config' ? (
-            <div className="p-10 space-y-12">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                <div className="space-y-10">
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Nome da Vaga</label>
-                    <input 
-                      type="text" 
-                      value={editingItem.title}
-                      onChange={e => setEditingItem({...editingItem, title: e.target.value})}
-                      className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-lg focus:ring-2 focus:ring-primary outline-none"
-                      placeholder="Ex: Entregador Noturno"
-                    />
-                  </div>
+          <div className="p-10 space-y-12">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              <div className="space-y-10">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Nome da Vaga</label>
+                  <input 
+                    type="text" 
+                    value={editingItem.title}
+                    onChange={e => setEditingItem({...editingItem, title: e.target.value})}
+                    className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-lg focus:ring-2 focus:ring-primary outline-none"
+                    placeholder="Ex: Entregador Noturno"
+                  />
+                </div>
 
-                  <div className="bg-white/5 rounded-[40px] p-8 border border-white/5 space-y-8">
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Diária Fixa (R$)</label>
-                        <input 
-                          type="text" 
-                          inputMode="decimal"
-                          value={editingItem.fee_per_day} 
-                          onChange={e => setEditingItem({...editingItem, fee_per_day: e.target.value.replace(/[^0-9.]/g, '')})} 
-                          className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 font-black text-xl text-primary outline-none" 
-                          placeholder="0.00"
-                        />
-                      </div>
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Meta Saídas</label>
-                        <input 
-                          type="text" 
-                          inputMode="numeric"
-                          value={editingItem.metadata?.base_deliveries || 0} 
-                          onChange={e => setEditingItem({...editingItem, metadata: {...editingItem.metadata, base_deliveries: toNumber(e.target.value)}})} 
-                          className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 font-black text-xl text-center outline-none" 
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
+                <div className="bg-white/5 rounded-[40px] p-8 border border-white/5 space-y-8">
+                  <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Extra por Saída (R$)</label>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Diária Fixa (R$)</label>
                       <input 
                         type="text" 
                         inputMode="decimal"
-                        value={editingItem.metadata?.fee_per_extra_delivery || 0} 
-                        onChange={e => setEditingItem({...editingItem, metadata: {...editingItem.metadata, fee_per_extra_delivery: e.target.value.replace(/[^0-9.]/g, '')}})} 
-                        className="w-full bg-emerald-500/5 border border-emerald-500/10 rounded-2xl px-6 py-4 font-black text-xl text-emerald-500 outline-none" 
+                        value={editingItem.fee_per_day} 
+                        onChange={e => setEditingItem({...editingItem, fee_per_day: e.target.value.replace(/[^0-9.]/g, '')})} 
+                        className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 font-black text-xl text-primary outline-none" 
                         placeholder="0.00"
                       />
                     </div>
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Meta Saídas</label>
+                      <input 
+                        type="text" 
+                        inputMode="numeric"
+                        value={editingItem.metadata?.base_deliveries || 0} 
+                        onChange={e => setEditingItem({...editingItem, metadata: {...editingItem.metadata, base_deliveries: toNumber(e.target.value)}})} 
+                        className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 font-black text-xl text-center outline-none" 
+                        placeholder="0"
+                      />
+                    </div>
                   </div>
-
-
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Horário</label>
-                    <button onClick={() => setShowTimePicker(true)} className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 flex items-center justify-between hover:bg-white/10 transition-all">
-                      <p className="text-sm font-black text-white">{startTime} às {endTime}</p>
-                      <span className="material-symbols-outlined text-slate-600">schedule</span>
-                    </button>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Extra por Saída (R$)</label>
+                    <input 
+                      type="text" 
+                      inputMode="decimal"
+                      value={editingItem.metadata?.fee_per_extra_delivery || 0} 
+                      onChange={e => setEditingItem({...editingItem, metadata: {...editingItem.metadata, fee_per_extra_delivery: e.target.value.replace(/[^0-9.]/g, '')}})} 
+                      className="w-full bg-emerald-500/5 border border-emerald-500/10 rounded-2xl px-6 py-4 font-black text-xl text-emerald-500 outline-none" 
+                      placeholder="0.00"
+                    />
                   </div>
+                </div>
 
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Incentivos Financeiros</label>
-                    <button onClick={() => setShowCockpit(true)} className="w-full p-6 rounded-3xl border border-dashed border-primary/40 bg-primary/5 text-primary flex items-center justify-center gap-3 hover:bg-primary/10 transition-all group">
-                      <span className="material-symbols-outlined group-hover:rotate-90 transition-transform">add_circle</span>
-                      <span className="text-[11px] font-black uppercase tracking-widest">Gerenciar Bônus e Benefícios</span>
-                    </button>
-                    {(editingItem.metadata?.custom_benefits || []).length > 0 && (
-                      <div className="mt-4 flex flex-wrap gap-2 ml-4">
-                        {editingItem.metadata.custom_benefits.map((b: any, i: number) => (
-                          <span key={i} className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-500 uppercase tracking-widest">
-                            + {typeof b === 'string' ? b : b.label}
-                          </span>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Horário</label>
+                  <button onClick={() => setShowTimePicker(true)} className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 flex items-center justify-between hover:bg-white/10 transition-all">
+                    <p className="text-sm font-black text-white">{startTime} às {endTime}</p>
+                    <span className="material-symbols-outlined text-slate-600">schedule</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Incentivos Financeiros</label>
+                  <button onClick={() => setShowCockpit(true)} className="w-full p-6 rounded-3xl border border-dashed border-primary/40 bg-primary/5 text-primary flex items-center justify-center gap-3 hover:bg-primary/10 transition-all group">
+                    <span className="material-symbols-outlined group-hover:rotate-90 transition-transform">add_circle</span>
+                    <span className="text-[11px] font-black uppercase tracking-widest">Gerenciar Bônus e Benefícios</span>
+                  </button>
+                  {(editingItem.metadata?.custom_benefits || []).length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2 ml-4">
+                      {editingItem.metadata.custom_benefits.map((b: any, i: number) => (
+                        <span key={i} className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-500 uppercase tracking-widest">
+                          + {typeof b === 'string' ? b : b.label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-10">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4 col-span-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Requisitos e Especialidades</label>
+                    
+                    <div className="bg-black/20 rounded-[32px] p-6 border border-white/5">
+                      <div className="flex flex-wrap gap-3 mb-6">
+                        {(editingItem.metadata?.custom_specialties || []).length === 0 && (
+                          <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest py-4 px-4">Nenhum requisito específico adicionado</p>
+                        )}
+                        {(editingItem.metadata?.custom_specialties || []).map((spec: string, idx: number) => (
+                          <motion.div 
+                            layout
+                            key={idx} 
+                            className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary group"
+                          >
+                            {editingSpecialtyIdx === idx ? (
+                              <input 
+                                autoFocus
+                                className="bg-transparent border-none text-[11px] font-black uppercase tracking-widest text-primary outline-none min-w-[100px]"
+                                value={spec}
+                                onChange={(e) => updateCustomSpecialty(idx, e.target.value)}
+                                onBlur={() => setEditingSpecialtyIdx(null)}
+                                onKeyDown={(e) => e.key === 'Enter' && setEditingSpecialtyIdx(null)}
+                              />
+                            ) : (
+                              <span 
+                                onClick={() => setEditingSpecialtyIdx(idx)}
+                                className="text-[11px] font-black uppercase tracking-widest cursor-text"
+                              >
+                                {spec}
+                              </span>
+                            )}
+                            <button onClick={() => removeCustomSpecialty(idx)} className="size-6 rounded-full bg-primary/20 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all">
+                              <span className="material-symbols-outlined text-[14px]">close</span>
+                            </button>
+                          </motion.div>
                         ))}
                       </div>
-                    )}
-                  </div>
-                </div>
 
-                <div className="space-y-10">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-4 col-span-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Requisitos e Especialidades</label>
-                      
-                      <div className="bg-black/20 rounded-[32px] p-6 border border-white/5">
-                        <div className="flex flex-wrap gap-3 mb-6">
-                          {(editingItem.metadata?.custom_specialties || []).length === 0 && (
-                            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest py-4 px-4">Nenhum requisito específico adicionado</p>
-                          )}
-                          {(editingItem.metadata?.custom_specialties || []).map((spec: string, idx: number) => (
-                            <motion.div 
-                              layout
-                              key={idx} 
-                              className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary group"
-                            >
-                              {editingSpecialtyIdx === idx ? (
-                                <input 
-                                  autoFocus
-                                  className="bg-transparent border-none text-[11px] font-black uppercase tracking-widest text-primary outline-none min-w-[100px]"
-                                  value={spec}
-                                  onChange={(e) => updateCustomSpecialty(idx, e.target.value)}
-                                  onBlur={() => setEditingSpecialtyIdx(null)}
-                                  onKeyDown={(e) => e.key === 'Enter' && setEditingSpecialtyIdx(null)}
-                                />
-                              ) : (
-                                <span 
-                                  onClick={() => setEditingSpecialtyIdx(idx)}
-                                  className="text-[11px] font-black uppercase tracking-widest cursor-text"
-                                >
-                                  {spec}
-                                </span>
-                              )}
-                              <button onClick={() => removeCustomSpecialty(idx)} className="size-6 rounded-full bg-primary/20 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all">
-                                <span className="material-symbols-outlined text-[14px]">close</span>
-                              </button>
-                            </motion.div>
-                          ))}
-                        </div>
-
-                        <div className="relative group">
-                          <input 
-                            type="text"
-                            value={newCustomSpecialty}
-                            onChange={e => setNewCustomSpecialty(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && addCustomSpecialty()}
-                            placeholder="Adicionar novo requisito (ex: Moto Própria, Disponibilidade Imediata...)"
-                            className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary/50 transition-all pr-16 placeholder:text-slate-600"
-                          />
-                          <button 
-                            onClick={addCustomSpecialty}
-                            className="absolute right-2 top-2 bottom-2 px-4 bg-primary text-slate-950 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all"
-                          >
-                            Adicionar
-                          </button>
-                        </div>
+                      <div className="relative group">
+                        <input 
+                          type="text"
+                          value={newCustomSpecialty}
+                          onChange={e => setNewCustomSpecialty(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && addCustomSpecialty()}
+                          placeholder="Adicionar novo requisito (ex: Moto Própria, Disponibilidade Imediata...)"
+                          className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary/50 transition-all pr-16 placeholder:text-slate-600"
+                        />
+                        <button 
+                          onClick={addCustomSpecialty}
+                          className="absolute right-2 top-2 bottom-2 px-4 bg-primary text-slate-950 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all"
+                        >
+                          Adicionar
+                        </button>
                       </div>
                     </div>
-
-
                   </div>
 
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Bairros Extras</label>
-                    <button onClick={() => setShowBairrosCockpit(true)} className="w-full bg-white/5 border border-dashed border-primary/20 rounded-3xl p-5 flex items-center justify-between hover:bg-white/10 transition-all text-primary">
-                      <div className="flex items-center gap-4">
-                        <span className="material-symbols-outlined text-xl">near_me</span>
-                        <div className="text-left">
-                          <p className="text-sm font-black italic">Gerenciar Regiões de Atuação</p>
-                          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{editingItem.metadata?.bairros_extras?.length || 0} bairros selecionados</p>
-                        </div>
-                      </div>
-                      <span className="material-symbols-outlined text-slate-600">settings_applications</span>
-                    </button>
-                  </div>
 
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Informações Extras</label>
-                    <textarea value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} className="w-full bg-white/5 border border-white/5 rounded-[32px] px-8 py-8 font-bold text-sm h-[180px] resize-none outline-none" />
-                  </div>
-
-                  <div className="flex items-center gap-6 p-8 bg-black/40 rounded-[32px] border border-white/5">
-                    <div className="flex-1">
-                      <p className="text-sm font-black">Vaga Ativa</p>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Aparece para todos entregadores</p>
-                    </div>
-                    <button onClick={() => setEditingItem({...editingItem, is_active: !editingItem.is_active})} className={`w-16 h-10 rounded-full relative transition-all ${editingItem.is_active ? 'bg-emerald-500' : 'bg-slate-700'}`}>
-                      <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all ${editingItem.is_active ? 'left-7' : 'left-1'}`}></div>
-                    </button>
-                  </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end pt-8">
-                <button onClick={handleLocalSave} disabled={isSaving} className="bg-primary text-slate-950 px-16 py-6 rounded-[32px] font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:scale-105 active:scale-95 transition-all outline-none">
-                  {isSaving ? 'Salvando...' : 'Publicar Alterações'}
-                </button>
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Bairros Extras</label>
+                  <button onClick={() => setShowBairrosCockpit(true)} className="w-full bg-white/5 border border-dashed border-primary/20 rounded-3xl p-5 flex items-center justify-between hover:bg-white/10 transition-all text-primary">
+                    <div className="flex items-center gap-4">
+                      <span className="material-symbols-outlined text-xl">near_me</span>
+                      <div className="text-left">
+                        <p className="text-sm font-black italic">Gerenciar Regiões de Atuação</p>
+                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{editingItem.metadata?.bairros_extras?.length || 0} bairros selecionados</p>
+                      </div>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-600">settings_applications</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Informações Extras</label>
+                  <textarea value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} className="w-full bg-white/5 border border-white/5 rounded-[32px] px-8 py-8 font-bold text-sm h-[180px] resize-none outline-none" />
+                </div>
+
+                <div className="flex items-center gap-6 p-8 bg-black/40 rounded-[32px] border border-white/5">
+                  <div className="flex-1">
+                    <p className="text-sm font-black">Vaga Ativa</p>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Aparece para todos entregadores</p>
+                  </div>
+                  <button onClick={() => setEditingItem({...editingItem, is_active: !editingItem.is_active})} className={`w-16 h-10 rounded-full relative transition-all ${editingItem.is_active ? 'bg-emerald-500' : 'bg-slate-700'}`}>
+                    <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all ${editingItem.is_active ? 'left-7' : 'left-1'}`}></div>
+                  </button>
+                </div>
               </div>
             </div>
-          ) : (
-            <div className="p-10 space-y-8">
-              <div className="flex items-center justify-between mb-10">
-                <h3 className="text-2xl font-black italic tracking-tight">Candidatos Interessados</h3>
-                <button onClick={fetchApplications} className="p-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-all">
-                  <span className="material-symbols-outlined text-sm">refresh</span>
-                </button>
-              </div>
 
-              {isLoadingApps ? (
-                <div className="py-24 flex flex-col items-center gap-6">
-                  <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-600">Conectando ao banco...</p>
-                </div>
-              ) : applications.length === 0 ? (
-                <div className="py-32 border border-dashed border-white/10 rounded-[48px] flex flex-col items-center gap-6 opacity-40">
-                  <span className="material-symbols-outlined text-6xl">person_search</span>
-                  <p className="text-[10px] font-black uppercase tracking-widest">Ninguém se candidatou ainda</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {applications.map((app) => (
-                    <div key={app.id} className={`p-8 rounded-[40px] border transition-all relative overflow-hidden group ${app.status === 'accepted' ? 'bg-emerald-500/10 border-emerald-500/20 shadow-lg shadow-emerald-500/5' : 'bg-white/5 border-white/5 hover:bg-white/[0.07]'}`}>
-                      <div className="flex items-center gap-6 mb-8">
-                        <div className="relative">
-                          <div className="size-20 rounded-3xl bg-slate-900 border border-white/10 overflow-hidden shadow-2xl">
-                            {app.driver?.photo_url ? (
-                              <img src={app.driver.photo_url} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-primary bg-primary/5">
-                                <span className="material-symbols-outlined text-4xl">person</span>
-                              </div>
-                            )}
-                          </div>
-                          {app.status === 'accepted' && (
-                            <div className="absolute -top-2 -right-2 size-8 bg-emerald-500 text-slate-950 rounded-full flex items-center justify-center border-4 border-slate-950 shadow-lg">
-                              <span className="material-symbols-outlined text-sm font-black">check</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="text-xl font-black text-white italic tracking-tight">{app.driver?.full_name || 'Entregador'}</h4>
-                          <div className="flex flex-wrap gap-3 mt-2">
-                             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 rounded-lg border border-white/5">
-                                <span className="material-symbols-outlined text-[12px] text-amber-400 fill-1">star</span>
-                                <span className="text-[10px] font-black text-slate-400">{app.driver?.rating || 'Novo'}</span>
-                             </div>
-                             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 rounded-lg border border-white/5">
-                                <span className="material-symbols-outlined text-[12px] text-blue-400">directions_bike</span>
-                                <span className="text-[10px] font-black text-slate-400">{app.driver?.total_trips || 0} viagens</span>
-                             </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Especialidades do Entregador */}
-                      {(app.driver?.metadata?.specialties || []).length > 0 && (
-                        <div className="mb-8 flex flex-wrap gap-2">
-                           {app.driver.metadata.specialties.map((spec: string) => {
-                             const specInfo = availableSpecialties.find(s => s.id === spec);
-                             return (
-                               <div key={spec} className="px-3 py-1.5 rounded-xl bg-primary/5 border border-primary/10 flex items-center gap-2 group/spec">
-                                  <span className="material-symbols-outlined text-[12px] text-primary">{specInfo?.icon || 'verified'}</span>
-                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{specInfo?.label || spec}</span>
-                               </div>
-                             );
-                           })}
-                        </div>
-                      )}
-
-                      <div className="flex gap-3 relative z-10">
-                         {app.status === 'pending' ? (
-                          <div className="flex flex-col gap-3 w-full">
-                            <div className="flex gap-3">
-                              <button 
-                                onClick={() => handleApplicationAction(app.id, 'rejected')} 
-                                className="flex-1 h-12 bg-white/5 text-rose-500 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-white/5 hover:bg-rose-500/10 transition-all"
-                              >
-                                Recusar
-                              </button>
-                              <button 
-                                onClick={() => handleApplicationAction(app.id, 'accepted')} 
-                                className="flex-[2] h-12 bg-primary text-slate-950 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all text-center"
-                              >
-                                Aceitar Piloto
-                              </button>
-                            </div>
-                            <button 
-                                onClick={() => openWhatsApp(app.driver?.phone, app.driver?.full_name)}
-                                className="w-full h-12 bg-emerald-500/10 text-emerald-500 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center justify-center gap-2 hover:bg-emerald-500/20 transition-all"
-                            >
-                                <span className="material-symbols-outlined text-sm">chat</span> Entrevistar via WhatsApp
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col gap-3 w-full">
-                            <div className={`w-full py-4 text-center text-[10px] font-black uppercase tracking-[0.2em] italic rounded-2xl border flex items-center justify-center gap-2 ${
-                              app.status === 'accepted' ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/20' : 'bg-white/5 text-slate-500 border-white/5'
-                            }`}>
-                               <span className="material-symbols-outlined text-sm">
-                                 {app.status === 'accepted' ? 'verified' : 'archive'}
-                               </span>
-                               {app.status === 'accepted' ? 'Candidato Selecionado' : 'Candidatura Arquivada'}
-                            </div>
-                            {app.status === 'accepted' && (
-                              <div className="flex gap-3">
-                                <button 
-                                  onClick={() => openWhatsApp(app.driver?.phone, app.driver?.full_name)}
-                                  className="flex-1 h-12 bg-emerald-500 text-slate-950 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
-                                >
-                                  <span className="material-symbols-outlined text-sm">call</span> Contato
-                                </button>
-                                <button 
-                                  onClick={() => handleApplicationAction(app.id, 'pending')}
-                                  className="px-4 h-12 bg-white/5 text-white/40 rounded-2xl text-[9px] font-black uppercase hover:text-rose-500 transition-all"
-                                  title="Remover da Vaga"
-                                >
-                                  <span className="material-symbols-outlined text-sm">logout</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="flex justify-end pt-8">
+              <button onClick={handleLocalSave} disabled={isSaving} className="bg-primary text-slate-950 px-16 py-6 rounded-[32px] font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:scale-105 active:scale-95 transition-all outline-none">
+                {isSaving ? 'Salvando...' : 'Publicar Alterações'}
+              </button>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Time Picker Pop-up */}

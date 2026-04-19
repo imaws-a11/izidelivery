@@ -74,7 +74,7 @@ export default function MyStudioTab() {
 
   const getCurrentLocation = async (updateItem: (updated: any) => void, targetItem: any) => {
     if (!navigator.geolocation) {
-      toastError("Geolocalização nÃ£o Ã© suportada pelo seu navegador.");
+      toastError("GeolocalizaÃ§Ã£o nÃƒÂ£o ÃƒÂ© suportada pelo seu navegador.");
       return;
     }
 
@@ -94,19 +94,19 @@ export default function MyStudioTab() {
               longitude,
               google_place_id: result.place_id
             });
-            toastSuccess("LocalizaÃ§Ã£o capturada com sucesso!");
+            toastSuccess("LocalizaÃƒÂ§ÃƒÂ£o capturada com sucesso!");
           } else {
-            toastError("NÃ£o foi possÃ­vel converter as coordenadas em endereço.");
+            toastError("NÃƒÂ£o foi possÃƒÂ­vel converter as coordenadas em endereÃ§o.");
           }
         } catch (err: any) {
-          toastError("Erro ao buscar endereço: " + err.message);
+          toastError("Erro ao buscar endereÃ§o: " + err.message);
         } finally {
           setIsLocating(false);
         }
       },
       (error) => {
         setIsLocating(false);
-        toastError("Erro ao obter localização: " + error.message);
+        toastError("Erro ao obter localizaÃ§Ã£o: " + error.message);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -120,6 +120,54 @@ export default function MyStudioTab() {
   const [withdrawalAmount, setWithdrawalAmount] = React.useState('');
   const [withdrawalStatus, setWithdrawalStatus] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [withdrawalError, setWithdrawalError] = React.useState('');
+
+  // â”€â”€ Candidatos: state local da aba â”€â”€
+  const [selectedSlotForCandidates, setSelectedSlotForCandidates] = React.useState<any>(null);
+  const [slotApplications, setSlotApplications] = React.useState<any[]>([]);
+  const [isLoadingApplications, setIsLoadingApplications] = React.useState(false);
+  const [processingAppId, setProcessingAppId] = React.useState<string | null>(null);
+
+  const fetchSlotApplications = React.useCallback(async (slotId: string) => {
+    setIsLoadingApplications(true);
+    try {
+      const { data, error } = await supabase
+        .from('slot_applications')
+        .select('*, driver:drivers_delivery(*)')
+        .eq('slot_id', slotId)
+        .order('created_at', { ascending: false });
+      if (!error) { setSlotApplications(data || []); return; }
+      // fallback sem join
+      const { data: simple } = await supabase.from('slot_applications').select('*').eq('slot_id', slotId);
+      if (simple && simple.length > 0) {
+        const ids = simple.map((a: any) => a.driver_id);
+        const { data: drivers } = await supabase.from('drivers_delivery').select('*').in('id', ids);
+        setSlotApplications(simple.map((a: any) => ({ ...a, driver: drivers?.find((d: any) => d.id === a.driver_id) })));
+      } else { setSlotApplications([]); }
+    } catch { setSlotApplications([]); }
+    finally { setIsLoadingApplications(false); }
+  }, []);
+
+  const handleCandidateAction = async (appId: string, status: 'accepted' | 'rejected') => {
+    setProcessingAppId(appId);
+    try {
+      const app = slotApplications.find((a: any) => a.id === appId);
+      const { error } = await supabase.from('slot_applications').update({ status }).eq('id', appId);
+      if (error) throw error;
+      if (status === 'accepted' && app?.driver_id) {
+        await supabase.functions.invoke('send-push-notification', {
+          body: { driver_id: app.driver_id, title: 'Vaga Confirmada! ðŸ', body: `Sua candidatura para "${selectedSlotForCandidates?.title}" foi aprovada!`, data: { type: 'dedicated_slot_confirmed', slot_id: selectedSlotForCandidates?.id } }
+        }).catch(() => {});
+      }
+      toastSuccess(status === 'accepted' ? 'Candidato aprovado!' : 'Candidatura recusada.');
+      fetchSlotApplications(selectedSlotForCandidates.id);
+    } catch (e: any) { toastError('Erro: ' + e.message); }
+    finally { setProcessingAppId(null); }
+  };
+
+  const openWhatsAppCandidate = (phone: string, name: string) => {
+    if (!phone) { toastError('Telefone nÃ£o cadastrado'); return; }
+    window.open(`https://wa.me/55${phone.replace(/\D/g, '')}?text=${encodeURIComponent(`OlÃ¡ ${name}, vi sua candidatura para a nossa vaga dedicada. Podemos conversar?`)}`, '_blank');
+  };
 
 
   const targetMerchantId = userRole === 'merchant' ? merchantProfile?.merchant_id : selectedMerchantPreview?.id;
@@ -147,8 +195,8 @@ export default function MyStudioTab() {
       <div className="px-8 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800 flex gap-6 overflow-x-auto scrollbar-hide">
         {[
           { id: 'info', label: 'Estande & Geral', icon: 'style' },
-          { id: 'products', label: 'CardÃ¡pio Digital', icon: 'restaurant_menu' },
-          { id: 'promotions', label: userRole === 'merchant' ? 'PromoÃ§Ãµes & Ofertas' : 'PromoÃ§Ãµes & Banners' , icon: 'campaign' },
+          { id: 'products', label: 'CardÃƒÂ¡pio Digital', icon: 'restaurant_menu' },
+          { id: 'promotions', label: userRole === 'merchant' ? 'PromoÃƒÂ§ÃƒÂµes & Ofertas' : 'PromoÃƒÂ§ÃƒÂµes & Banners' , icon: 'campaign' },
           { id: 'sales', label: 'Vendas & Performance', icon: 'monitoring' },
           { id: 'financial', label: 'Financeiro & Saque', icon: 'account_balance_wallet' },
           { id: 'access', label: 'Dados de Acesso', icon: 'lock_person' },
@@ -240,7 +288,7 @@ export default function MyStudioTab() {
                       />
                     </div>
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Telefone PÃºblico / WhatsApp</label>
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Telefone PÃƒÂºblico / WhatsApp</label>
                        <input 
                          className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
                          value={targetItem.store_phone || ''}
@@ -248,7 +296,7 @@ export default function MyStudioTab() {
                        />
                     </div>
                     <div className="md:col-span-2 space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">DescriÃ§Ã£o curta</label>
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">DescriÃƒÂ§ÃƒÂ£o curta</label>
                        <textarea 
                          rows={2}
                          className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm resize-none"
@@ -259,7 +307,7 @@ export default function MyStudioTab() {
                     </div>
                     
                     <div className="md:col-span-2 space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Meu endereço de coletas</label>
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Meu endereÃ§o de coletas</label>
                        <div className="relative group">
                          <AddressSearchInput 
                            className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 pr-24 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white shadow-sm"
@@ -281,7 +329,7 @@ export default function MyStudioTab() {
                            onClick={() => getCurrentLocation(updateItem, targetItem)}
                            disabled={isLocating}
                            className="absolute right-14 top-1/2 -translate-y-1/2 size-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-all flex items-center justify-center hover:bg-primary/10 group-hover:bg-white dark:group-hover:bg-slate-700 shadow-sm"
-                           title="Usar localização atual"
+                           title="Usar localizaÃ§Ã£o atual"
                          >
                            {isLocating ? (
                              <div className="size-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -311,7 +359,7 @@ export default function MyStudioTab() {
                              latitude: data.lat,
                              longitude: data.lng
                            });
-                           toastSuccess("Localização definida pelo mapa!");
+                           toastSuccess("LocalizaÃ§Ã£o definida pelo mapa!");
                          }}
                        />
                        {(targetItem.latitude && targetItem.longitude) && (
@@ -328,8 +376,8 @@ export default function MyStudioTab() {
                       disabled={isSaving}
                       onClick={async () => {
                          const confirm = await showConfirm({
-                           title: 'Confirmar AlteraÃ§Ãµes',
-                           message: 'Deseja salvar as configuraÃ§Ãµes da sua loja?',
+                           title: 'Confirmar AlteraÃƒÂ§ÃƒÂµes',
+                           message: 'Deseja salvar as configuraÃƒÂ§ÃƒÂµes da sua loja?',
                            confirmLabel: 'Sim, Salvar',
                            cancelLabel: 'Cancelar'
                          });
@@ -339,7 +387,7 @@ export default function MyStudioTab() {
                          try {
                            const targetId = userRole === 'merchant' ? (targetItem as MerchantProfile).merchant_id : (targetItem as Merchant).id;
                            
-                           if (!targetId) throw new Error("ID do lojista nÃ£o encontrado.");
+                           if (!targetId) throw new Error("ID do lojista nÃƒÂ£o encontrado.");
 
                            const updates: any = {
                              store_name: targetItem.store_name,
@@ -373,9 +421,9 @@ export default function MyStudioTab() {
                            const { error } = await supabase.from('admin_users').update(updates).eq('id', targetId);
                            if (error) throw error;
                            
-                           toastSuccess('ConfiguraÃ§Ãµes salvas com sucesso!');
+                           toastSuccess('ConfiguraÃƒÂ§ÃƒÂµes salvas com sucesso!');
 
-                           // Limpar senha do preview apÃ³s salvar
+                           // Limpar senha do preview apÃƒÂ³s salvar
                            if (userRole === 'admin') {
                              setSelectedMerchantPreview({...(targetItem as Merchant), password: ''});
                            } else {
@@ -414,7 +462,7 @@ export default function MyStudioTab() {
                   {[
                     { label: 'Vendas Hoje', val: 'R$ 0,00', icon: 'payments', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-950/30' },
                     { label: 'Pedidos Ativos', val: '0', icon: 'receipt_long', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950/30' },
-                    { label: 'AvaliaÃ§Ã£o MÃ©dia', val: '4.9', icon: 'star', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-950/30' },
+                    { label: 'AvaliaÃƒÂ§ÃƒÂ£o MÃƒÂ©dia', val: '4.9', icon: 'star', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-950/30' },
                   ].map(s => (
                     <div key={s.label} className={`${s.bg} p-8 rounded-[40px] border border-white/10`}>
                       <span className={`material-symbols-outlined ${s.color} text-3xl mb-4`}>{s.icon}</span>
@@ -434,8 +482,8 @@ export default function MyStudioTab() {
                       <span className="material-symbols-outlined text-2xl font-bold">payments</span>
                     </div>
                     <div>
-                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">GestÃ£o Financeira</h4>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Saldo, saques e relatÃ³rios de desempenho</p>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">GestÃƒÂ£o Financeira</h4>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Saldo, saques e relatÃƒÂ³rios de desempenho</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -468,7 +516,7 @@ export default function MyStudioTab() {
                       </div>
                       <h4 className="text-xl font-black text-slate-900 dark:text-white mb-2">Seu QR Code IZI</h4>
                       <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed px-4">
-                        Apresente este cÃ³digo para que o cliente realize o pagamento instantÃ¢neo via App IZI Customer.
+                        Apresente este cÃƒÂ³digo para que o cliente realize o pagamento instantÃƒÂ¢neo via App IZI Customer.
                       </p>
                       
                       <div className="mt-8 grid grid-cols-2 gap-3 w-full">
@@ -498,7 +546,7 @@ export default function MyStudioTab() {
                           Receba Pagamentos <br/> Sem Maquininha.
                         </h3>
                         <p className="text-slate-400 text-sm leading-relaxed max-w-md">
-                          Utilize o saldo do cliente ou cartÃµes cadastrados no App IZI para receber pagamentos presenciais de forma rÃ¡pida, segura e com taxas reduzidas.
+                          Utilize o saldo do cliente ou cartÃƒÂµes cadastrados no App IZI para receber pagamentos presenciais de forma rÃƒÂ¡pida, segura e com taxas reduzidas.
                         </p>
                       </div>
 
@@ -506,7 +554,7 @@ export default function MyStudioTab() {
                         {[
                           { icon: 'qr_code_scanner', title: 'Cliente Escaneia', desc: 'No App Customer' },
                           { icon: 'ads_click', title: 'Digita o Valor', desc: 'E confirma senha' },
-                          { icon: 'account_balance_wallet', title: 'VocÃª Recebe', desc: 'Saldo instantÃ¢neo' },
+                          { icon: 'account_balance_wallet', title: 'VocÃƒÂª Recebe', desc: 'Saldo instantÃƒÂ¢neo' },
                         ].map((step, idx) => (
                           <div key={idx} className="flex flex-col gap-2">
                             <span className="material-symbols-outlined text-primary">{step.icon}</span>
@@ -525,7 +573,7 @@ export default function MyStudioTab() {
                     { 
                       label: 'Vendas Brutas', 
                       val: `R$ ${(dashboardData.totalRevenue || 0).toFixed(2).replace('.', ',')}`, 
-                      trend: 'Total histÃ³rico', 
+                      trend: 'Total histÃƒÂ³rico', 
                       icon: 'payments', 
                       color: 'bg-primary/10 text-primary'
                     },
@@ -537,14 +585,14 @@ export default function MyStudioTab() {
                       color: 'bg-emerald-50 text-emerald-500' 
                     },
                     { 
-                      label: 'ComissÃ£o IZI', 
+                      label: 'ComissÃƒÂ£o IZI', 
                       val: `R$ ${(dashboardData.totalCommission || 0).toFixed(2).replace('.', ',')}`, 
                       trend: `${(merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12)}% de taxa`, 
                       icon: 'percent', 
                       color: 'bg-red-50 text-red-500' 
                     },
                     { 
-                      label: 'LÃ­quido DisponÃ­vel', 
+                      label: 'LÃƒÂ­quido DisponÃƒÂ­vel', 
                       val: `R$ ${merchantBalance.toFixed(2).replace('.', ',')}`, 
                       trend: 'Pronto para saque', 
                       icon: 'account_balance_wallet', 
@@ -563,12 +611,12 @@ export default function MyStudioTab() {
                   ))}
                 </div>
 
-                {/* GrÃ¡fico de Performance */}
+                {/* GrÃƒÂ¡fico de Performance */}
                 <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
                   <div className="flex justify-between items-center mb-8">
                     <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-3 italic uppercase tracking-[0.1em]">
                       <span className="material-symbols-outlined text-primary">insights</span>
-                      TendÃªncia de Ganhos
+                      TendÃƒÂªncia de Ganhos
                     </h4>
                   </div>
                   <div className="h-48 flex items-end justify-between gap-2 px-2">
@@ -597,7 +645,7 @@ export default function MyStudioTab() {
                       <div className="absolute -top-10 -right-10 size-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
                       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
                         <div>
-                          <p className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-2">Saldo DisponÃ­vel para Saque</p>
+                          <p className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-2">Saldo DisponÃƒÂ­vel para Saque</p>
                           <h2 className="text-5xl font-black text-white tracking-tighter">R$ {merchantBalance.toFixed(2).replace('.', ',')}</h2>
                           
                           {withdrawalStatus === 'success' && (
@@ -608,9 +656,9 @@ export default function MyStudioTab() {
                             >
                               <div className="flex items-center gap-2">
                                 <span className="material-symbols-outlined text-sm font-black">check_circle</span>
-                                <span className="text-[10px] font-black uppercase tracking-wider">SolicitaÃ§Ã£o Enviada!</span>
+                                <span className="text-[10px] font-black uppercase tracking-wider">SolicitaÃƒÂ§ÃƒÂ£o Enviada!</span>
                               </div>
-                              <p className="text-[8px] font-bold opacity-80 uppercase tracking-widest pl-6">Processamento em atÃ© {appSettings.withdrawal_period_h} horas</p>
+                              <p className="text-[8px] font-bold opacity-80 uppercase tracking-widest pl-6">Processamento em atÃƒÂ© {appSettings.withdrawal_period_h} horas</p>
                             </motion.div>
                           )}
                         </div>
@@ -637,13 +685,13 @@ export default function MyStudioTab() {
                               onClick={async () => {
                                 const amount = parseFloat(withdrawalAmount.replace('.', '').replace(',', '.'));
                                 if (isNaN(amount) || amount <= 0) {
-                                  setWithdrawalError('Digite um valor vÃ¡lido');
+                                  setWithdrawalError('Digite um valor vÃƒÂ¡lido');
                                   setWithdrawalStatus('error');
                                   return;
                                 }
                                 const minLimit = Number(appSettings.minwithdrawalamount ?? 0);
                                 if (amount < minLimit) {
-                                  setWithdrawalError(`MÃ­nimo R$ ${minLimit.toFixed(2).replace('.', ',')}`);
+                                  setWithdrawalError(`MÃƒÂ­nimo R$ ${minLimit.toFixed(2).replace('.', ',')}`);
                                   setWithdrawalStatus('error');
                                   return;
                                 }
@@ -661,7 +709,7 @@ export default function MyStudioTab() {
                                   setTimeout(() => setWithdrawalStatus('idle'), 5000);
                                 } catch (err) {
                                   setWithdrawalStatus('error');
-                                  setWithdrawalError('Erro na solicitaÃ§Ã£o');
+                                  setWithdrawalError('Erro na solicitaÃƒÂ§ÃƒÂ£o');
                                 }
                               }}
                               disabled={withdrawalStatus === 'loading'}
@@ -697,7 +745,7 @@ export default function MyStudioTab() {
 
                     <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
                       <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
-                        <h4 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">HistÃ³rico de TransaÃ§Ãµes</h4>
+                        <h4 className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">HistÃƒÂ³rico de TransaÃƒÂ§ÃƒÂµes</h4>
                         {isWalletLoading && <div className="size-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>}
                       </div>
                       <div className="overflow-x-auto min-h-[150px]">
@@ -705,7 +753,7 @@ export default function MyStudioTab() {
                           <thead>
                             <tr className="bg-slate-50/50 dark:bg-slate-800/50">
                               <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
-                              <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">DescriÃ§Ã£o</th>
+                              <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">DescriÃƒÂ§ÃƒÂ£o</th>
                               <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</th>
                               <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                             </tr>
@@ -737,7 +785,7 @@ export default function MyStudioTab() {
                             {merchantTransactions.length === 0 && !isWalletLoading && (
                               <tr>
                                 <td colSpan={4} className="px-8 py-20 text-center text-slate-300 font-bold uppercase tracking-widest text-[10px]">
-                                  Nenhuma transaÃ§Ã£o encontrada
+                                  Nenhuma transaÃƒÂ§ÃƒÂ£o encontrada
                                 </td>
                               </tr>
                             )}
@@ -754,7 +802,7 @@ export default function MyStudioTab() {
                         <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
                           <span className="material-symbols-outlined text-lg font-black">account_balance</span>
                         </div>
-                        <h4 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Dados BancÃ¡rios</h4>
+                        <h4 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Dados BancÃƒÂ¡rios</h4>
                       </div>
 
                       <div className="space-y-6">
@@ -792,7 +840,7 @@ export default function MyStudioTab() {
                           <span className="material-symbols-outlined text-lg">info</span>
                           <span className="text-[9px] font-black uppercase tracking-widest">Regras de Saque</span>
                         </div>
-                        <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase italic">Os saques sÃ£o processados em atÃ© {appSettings.withdrawal_period_h ?? 24}h. Pagamentos realizados: {appSettings.withdrawal_day ?? 'Qualquer dia'}. O valor mÃ­nimo Ã© de R$ {(appSettings.minwithdrawalamount ?? 0).toFixed(2).replace('.', ',')}.</p>
+                        <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase italic">Os saques sÃƒÂ£o processados em atÃƒÂ© {appSettings.withdrawal_period_h ?? 24}h. Pagamentos realizados: {appSettings.withdrawal_day ?? 'Qualquer dia'}. O valor mÃƒÂ­nimo ÃƒÂ© de R$ {(appSettings.minwithdrawalamount ?? 0).toFixed(2).replace('.', ',')}.</p>
                       </div>
                     </div>
                   </div>
@@ -807,8 +855,8 @@ export default function MyStudioTab() {
                       <span className="material-symbols-outlined text-2xl font-bold">lock_person</span>
                     </div>
                     <div>
-                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">SeguranÃ§a & Acesso</h4>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gerencie suas credenciais e permissÃµes na plataforma</p>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">SeguranÃƒÂ§a & Acesso</h4>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gerencie suas credenciais e permissÃƒÂµes na plataforma</p>
                     </div>
                  </div>
 
@@ -860,12 +908,12 @@ export default function MyStudioTab() {
                      <div className="bg-slate-900 p-8 rounded-[40px] shadow-2xl space-y-6 border border-white/5">
                         <div className="flex items-center gap-3 mb-2">
                           <span className="material-symbols-outlined text-primary">admin_panel_settings</span>
-                          <h5 className="text-[11px] font-black text-white uppercase tracking-widest">ParÃ¢metros de Sistema (Admin)</h5>
+                          <h5 className="text-[11px] font-black text-white uppercase tracking-widest">ParÃƒÂ¢metros de Sistema (Admin)</h5>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">ComissÃ£o (%)</label>
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">ComissÃƒÂ£o (%)</label>
                             <input 
                               type="number" step="0.1"
                               className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 font-black text-white text-sm focus:ring-2 focus:ring-primary"
@@ -919,7 +967,7 @@ export default function MyStudioTab() {
                       onClick={async () => {
                          const confirm = await showConfirm({
                            title: 'Salvar Acessos',
-                           message: 'Deseja confirmar a alteraÃ§Ã£o das credenciais de seguranÃ§a?',
+                           message: 'Deseja confirmar a alteraÃƒÂ§ÃƒÂ£o das credenciais de seguranÃƒÂ§a?',
                            confirmLabel: 'Sim, Atualizar',
                            cancelLabel: 'Cancelar'
                          });
@@ -939,7 +987,7 @@ export default function MyStudioTab() {
                       className="px-10 py-5 bg-primary text-slate-950 rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
                     >
                       <span className="material-symbols-outlined">security</span>
-                      Confirmar AtualizaÃ§Ãµes
+                      Confirmar AtualizaÃƒÂ§ÃƒÂµes
                     </button>
                  </div>
                </div>
@@ -952,7 +1000,7 @@ export default function MyStudioTab() {
                     <div>
                        <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
                           <span className="material-symbols-outlined text-primary text-3xl">restaurant_menu</span>
-                          CardÃ¡pio & Produtos
+                          CardÃƒÂ¡pio & Produtos
                        </h3>
                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Gerencie os itens da sua loja organizados por categorias</p>
                     </div>
@@ -1036,7 +1084,7 @@ export default function MyStudioTab() {
                                       </div>
                                     </div>
                                     <h5 className="text-sm font-black text-slate-900 dark:text-white truncate">{p.name || 'Novo Produto'}</h5>
-                                    <p className="text-[9px] text-slate-400 font-bold truncate mt-0.5">{p.description || 'Sem descriÃ§Ã£o'}</p>
+                                    <p className="text-[9px] text-slate-400 font-bold truncate mt-0.5">{p.description || 'Sem descriÃƒÂ§ÃƒÂ£o'}</p>
                                     <div className="flex justify-between items-end mt-2">
                                        <span className="text-xs font-black text-primary">R$ {parseFloat((p.price || 0).toString()).toFixed(2).replace('.', ',')}</span>
                                     </div>
@@ -1060,7 +1108,7 @@ export default function MyStudioTab() {
                   <div>
                     <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
                       <span className="material-symbols-outlined text-primary text-3xl">campaign</span>
-                      {userRole === 'merchant' ? 'PromoÃ§Ãµes & Ofertas' : 'PromoÃ§Ãµes & Banners'}
+                      {userRole === 'merchant' ? 'PromoÃƒÂ§ÃƒÂµes & Ofertas' : 'PromoÃƒÂ§ÃƒÂµes & Banners'}
                     </h3>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                       {userRole === 'merchant'
@@ -1118,26 +1166,26 @@ export default function MyStudioTab() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">TÃ­tulo da Campanha</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">TÃƒÂ­tulo da Campanha</label>
                         <input 
                           className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white"
                           value={promoForm.title} onChange={e => setPromoForm({...promoForm, title: e.target.value})}
-                          placeholder="Ex: 20% OFF em todo o cardÃ¡pio"
+                          placeholder="Ex: 20% OFF em todo o cardÃƒÂ¡pio"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">DescriÃ§Ã£o curta</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">DescriÃƒÂ§ÃƒÂ£o curta</label>
                         <input 
                           className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white"
                           value={promoForm.description} onChange={e => setPromoForm({...promoForm, description: e.target.value})}
-                          placeholder="Ex: VÃ¡lido atÃ© domingo"
+                          placeholder="Ex: VÃƒÂ¡lido atÃƒÂ© domingo"
                         />
                       </div>
 
                       {promoFormType === 'coupon' && (
                         <>
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">CÃ³digo do Cupom</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">CÃƒÂ³digo do Cupom</label>
                             <input 
                               className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-6 py-4 font-black text-lg tracking-widest text-primary focus:ring-2 focus:ring-primary dark:text-white uppercase"
                               value={promoForm.coupon_code} onChange={e => setPromoForm({...promoForm, coupon_code: e.target.value})}
@@ -1203,7 +1251,7 @@ export default function MyStudioTab() {
                         ) : (
                           <span className="material-symbols-outlined text-lg">check_circle</span>
                         )}
-                        Salvar PromoÃ§Ã£o
+                        Salvar PromoÃƒÂ§ÃƒÂ£o
                       </button>
                     </div>
                   </motion.div>
@@ -1234,7 +1282,7 @@ export default function MyStudioTab() {
                           </div>
                           <button 
                             onClick={async () => {
-                              if (await showConfirm({ message: 'Deseja excluir esta promoÃ§Ã£o permanentemente?' })) {
+                              if (await showConfirm({ message: 'Deseja excluir esta promoÃƒÂ§ÃƒÂ£o permanentemente?' })) {
                                 await supabase.from('promotions_delivery').delete().eq('id', promo.id);
                                 fetchPromotions();
                               }
@@ -1244,7 +1292,7 @@ export default function MyStudioTab() {
                             <span className="material-symbols-outlined">delete</span>
                           </button>
                         </div>
-                        <p className="text-[11px] font-bold text-slate-400 line-clamp-2">{promo.description || 'Nenhuma descriÃ§Ã£o informada'}</p>
+                        <p className="text-[11px] font-bold text-slate-400 line-clamp-2">{promo.description || 'Nenhuma descriÃƒÂ§ÃƒÂ£o informada'}</p>
                         
                         <div className="mt-8 pt-6 border-t border-slate-50 dark:border-slate-900 flex items-center justify-between">
                            <div className="flex items-center gap-2">
@@ -1271,7 +1319,7 @@ export default function MyStudioTab() {
                         <span className="material-symbols-outlined text-4xl text-slate-200 dark:text-slate-800">campaign</span>
                       </div>
                       <h4 className="text-xl font-black text-slate-400 italic">
-                        {userRole === 'merchant' ? 'Nenhum cupom ativo' : 'Nenhuma promoÃ§Ã£o ativa'}
+                        {userRole === 'merchant' ? 'Nenhum cupom ativo' : 'Nenhuma promoÃƒÂ§ÃƒÂ£o ativa'}
                       </h4>
                       <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">
                         {userRole === 'merchant' ? 'Crie cupons ou ofertas para aumentar suas vendas' : 'Crie cupons ou banners para aumentar suas vendas'}
@@ -1298,7 +1346,7 @@ export default function MyStudioTab() {
                            </h3>
                         </div>
                         <p className="text-sm font-medium text-slate-500 max-w-xl leading-relaxed">
-                          Garanta a exclusividade de entregadores para o seu negÃ³cio. Vagas dedicadas permitem que os motoristas aceitem trabalhar em turnos fixos apenas para vocÃª.
+                          Garanta a exclusividade de entregadores para o seu negÃƒÂ³cio. Vagas dedicadas permitem que os motoristas aceitem trabalhar em turnos fixos apenas para vocÃƒÂª.
                         </p>
                       </div>
                       <button 
@@ -1321,8 +1369,8 @@ export default function MyStudioTab() {
                          <div className="size-24 bg-white dark:bg-slate-800 rounded-[32px] flex items-center justify-center mb-8 shadow-xl border border-slate-100 dark:border-slate-700 group-hover:scale-110 transition-transform duration-500">
                             <span className="material-symbols-outlined text-5xl text-slate-200 dark:text-slate-700 animate-bounce">rocket</span>
                          </div>
-                         <h4 className="text-2xl font-black text-slate-400 italic mb-2">Sua frota exclusiva comeÃ§a aqui</h4>
-                         <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] font-black">Clique no botÃ£o acima para criar sua primeira vaga</p>
+                         <h4 className="text-2xl font-black text-slate-400 italic mb-2">Sua frota exclusiva comeÃƒÂ§a aqui</h4>
+                         <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] font-black">Clique no botÃƒÂ£o acima para criar sua primeira vaga</p>
                       </div>
                    ) : (
                      myDedicatedSlots.map((slot) => (
@@ -1335,7 +1383,7 @@ export default function MyStudioTab() {
                                 <div className="space-y-3">
                                    <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-2 ${slot.is_active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-500'}`}>
                                       <span className={`size-1.5 rounded-full ${slot.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'}`}></span>
-                                      {slot.is_active ? 'Ativa & VisÃ­vel' : 'Pausada'}
+                                      {slot.is_active ? 'Ativa & VisÃƒÂ­vel' : 'Pausada'}
                                    </div>
                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white leading-tight pr-4">
                                      {slot.title}
@@ -1359,7 +1407,7 @@ export default function MyStudioTab() {
 
                              <div className="flex-1 space-y-8">
                                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-3 italic">
-                                   "{slot.description || 'Sem descriÃ§Ã£o detalhada.'}"
+                                   "{slot.description || 'Sem descriÃƒÂ§ÃƒÂ£o detalhada.'}"
                                 </p>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -1367,11 +1415,11 @@ export default function MyStudioTab() {
                                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pagamento / Dia</p>
                                       <p className="text-xl font-black text-primary leading-tight">R$ {slot.fee_per_day}</p>
                                       {slot.metadata?.base_deliveries > 0 && (
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">AtÃ© {slot.metadata.base_deliveries} entregas</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">AtÃƒÂ© {slot.metadata.base_deliveries} entregas</p>
                                       )}
                                    </div>
                                    <div className="bg-slate-50 dark:bg-white/5 rounded-3xl p-6 border border-slate-100 dark:border-white/5 group-hover:bg-primary/5 transition-colors duration-500">
-                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">HorÃ¡rio / Turno</p>
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">HorÃƒÂ¡rio / Turno</p>
                                       <p className="text-sm font-black text-slate-900 dark:text-white uppercase truncate">{slot.working_hours || 'A definir'}</p>
                                       {slot.metadata?.benefits?.length > 0 && (
                                         <div className="flex gap-1 mt-1.5 overflow-hidden">
@@ -1400,7 +1448,14 @@ export default function MyStudioTab() {
                                       +12
                                    </div>
                                 </div>
-                                <span className="text-[10px] font-black text-primary uppercase tracking-widest animate-pulse">Candidatos Verificados</span>
+                                 <span 
+                                   onClick={() => {
+                                     setActivePreviewTab('candidates');
+                                     setSelectedSlotForCandidates(slot);
+                                     fetchSlotApplications(slot.id);
+                                   }}
+                                   className="text-[10px] font-black text-primary uppercase tracking-widest cursor-pointer hover:underline animate-pulse"
+                                 >Ver Candidatos</span>
                              </div>
                           </div>
                           
@@ -1408,7 +1463,7 @@ export default function MyStudioTab() {
                              onClick={() => setEditingSlotId(slot.id)}
                              className="w-full py-6 bg-slate-50 dark:bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:bg-primary hover:text-slate-950 transition-all border-t border-slate-100 dark:border-white/5"
                           >
-                             Gerenciar Vaga & Candidaturas
+                             Gerenciar Vaga
                           </button>
                        </div>
                      ))
@@ -1419,56 +1474,149 @@ export default function MyStudioTab() {
 
             {activePreviewTab === 'candidates' && (
               <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-700 pb-20">
-                <div className="relative group">
-                   <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-transparent blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
-                   <div className="relative flex flex-col md:flex-row justify-between md:items-end gap-8 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-10 rounded-[48px] border border-white/20 shadow-2xl">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-4 mb-4">
-                           <div className="size-12 rounded-2xl bg-primary flex items-center justify-center text-slate-950 shadow-lg shadow-primary/20">
-                              <span className="material-symbols-outlined text-2xl font-black">group_add</span>
-                           </div>
-                           <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
-                             Central de Candidatos
-                           </h3>
-                        </div>
-                        <p className="text-sm font-medium text-slate-500 max-w-xl leading-relaxed">
-                          Visualize e gerencie todos os motoristas que se candidataram Ã s suas vagas dedicadas.
-                        </p>
+                {/* Header */}
+                <div className="relative flex flex-col md:flex-row justify-between md:items-end gap-8 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md p-10 rounded-[48px] border border-white/20 shadow-2xl">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="size-12 rounded-2xl bg-primary flex items-center justify-center text-slate-950 shadow-lg shadow-primary/20">
+                        <span className="material-symbols-outlined text-2xl font-black">group_add</span>
                       </div>
-                   </div>
+                      <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                        {selectedSlotForCandidates ? selectedSlotForCandidates.title : 'Central de Candidatos'}
+                      </h3>
+                    </div>
+                    <p className="text-sm font-medium text-slate-500 max-w-xl leading-relaxed">
+                      {selectedSlotForCandidates ? 'Gerencie os entregadores interessados nesta vaga.' : 'Selecione uma vaga para visualizar e gerenciar candidaturas.'}
+                    </p>
+                  </div>
+                  {selectedSlotForCandidates && (
+                    <button
+                      onClick={() => { setSelectedSlotForCandidates(null); setSlotApplications([]); }}
+                      className="flex items-center gap-2 px-8 py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-rose-500 transition-all"
+                    >
+                      <span className="material-symbols-outlined text-sm">arrow_back</span>
+                      Voltar Ã s Vagas
+                    </button>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                   {myDedicatedSlots.length === 0 ? (
-                      <div className="col-span-full py-32 flex flex-col items-center justify-center bg-white/10 dark:bg-slate-900/20 rounded-[64px] border-2 border-dashed border-slate-200 dark:border-slate-800/50">
-                         <span className="material-symbols-outlined text-5xl text-slate-400 mb-6 font-thin">person_search</span>
-                         <h4 className="text-xl font-black text-slate-400 italic">Nenhuma candidatura registrada</h4>
-                         <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-2">Crie vagas em "Vagas Dedicadas" para atrair entregadores</p>
-                      </div>
-                   ) : (
-                     myDedicatedSlots.map((slot) => (
-                       <div key={slot.id} className="space-y-4">
-                          <button 
-                            onClick={() => setEditingSlotId(slot.id)}
-                            className="w-full bg-white dark:bg-slate-900/60 backdrop-blur-sm p-10 rounded-[48px] border border-white/5 flex items-center justify-between hover:scale-[1.02] active:scale-95 transition-all group shadow-2xl text-left"
-                          >
-                             <div className="flex items-center gap-6">
-                                <div className="size-16 rounded-[24px] bg-slate-950 dark:bg-primary flex items-center justify-center text-white dark:text-slate-950 shadow-xl">
-                                   <span className="material-symbols-outlined text-3xl">person_search</span>
+                {/* Listagem de vagas ou candidatos */}
+                {!selectedSlotForCandidates ? (
+                  /* Seletor de vaga */
+                  myDedicatedSlots.length === 0 ? (
+                    <div className="py-32 flex flex-col items-center justify-center bg-white/10 dark:bg-slate-900/20 rounded-[64px] border-2 border-dashed border-slate-200 dark:border-slate-800/50">
+                      <span className="material-symbols-outlined text-5xl text-slate-400 mb-6 font-thin">person_search</span>
+                      <h4 className="text-xl font-black text-slate-400 italic">Nenhuma vaga criada</h4>
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-2">Crie vagas em "Vagas Dedicadas" para atrair entregadores</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {myDedicatedSlots.map((slot: any) => (
+                        <button
+                          key={slot.id}
+                          onClick={() => { setSelectedSlotForCandidates(slot); fetchSlotApplications(slot.id); }}
+                          className="bg-white dark:bg-slate-900/60 p-8 rounded-[40px] border border-slate-100 dark:border-white/5 flex items-center justify-between hover:scale-[1.02] active:scale-95 transition-all group shadow-xl text-left"
+                        >
+                          <div className="flex items-center gap-5">
+                            <div className="size-14 rounded-[20px] bg-slate-950 dark:bg-primary flex items-center justify-center text-white dark:text-slate-950 shadow-lg">
+                              <span className="material-symbols-outlined text-2xl">person_search</span>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">{slot.working_hours || 'HorÃ¡rio a definir'}</p>
+                              <p className="text-xl font-black dark:text-white tracking-tight">{slot.title}</p>
+                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{slot.is_active ? 'â— Ativa' : 'â—‹ Pausada'}</p>
+                            </div>
+                          </div>
+                          <div className="size-12 rounded-full border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-slate-950 group-hover:border-primary transition-all">
+                            <span className="material-symbols-outlined">chevron_right</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  /* Lista de candidatos da vaga selecionada */
+                  isLoadingApplications ? (
+                    <div className="py-24 flex flex-col items-center gap-4">
+                      <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Carregando candidatos...</p>
+                    </div>
+                  ) : slotApplications.length === 0 ? (
+                    <div className="py-28 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[48px] flex flex-col items-center gap-4 opacity-50">
+                      <span className="material-symbols-outlined text-5xl text-slate-400">person_search</span>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nenhum candidato ainda</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {slotApplications.map((app: any) => (
+                        <div key={app.id} className={`p-8 rounded-[40px] border transition-all ${app.status === 'accepted' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-white dark:bg-slate-900/60 border-slate-100 dark:border-white/5 shadow-xl'}`}>
+                          <div className="flex items-center gap-5 mb-6">
+                            <div className="relative">
+                              <div className="size-18 rounded-3xl bg-slate-100 dark:bg-slate-800 border border-white/10 overflow-hidden size-20">
+                                {app.driver?.photo_url
+                                  ? <img src={app.driver.photo_url} className="w-full h-full object-cover" />
+                                  : <div className="w-full h-full flex items-center justify-center text-primary"><span className="material-symbols-outlined text-4xl">person</span></div>}
+                              </div>
+                              {app.status === 'accepted' && (
+                                <div className="absolute -top-2 -right-2 size-7 bg-emerald-500 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900">
+                                  <span className="material-symbols-outlined text-sm">check</span>
                                 </div>
-                                <div>
-                                   <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">{slot.title}</p>
-                                   <p className="text-2xl font-black dark:text-white tracking-tight">Gerenciar Candidatos</p>
+                              )}
+                            </div>
+                            <div>
+                              <h4 className="text-xl font-black dark:text-white">{app.driver?.full_name || 'Entregador'}</h4>
+                              <div className="flex gap-2 mt-1">
+                                <span className="text-[10px] font-black bg-slate-100 dark:bg-white/5 px-2 py-1 rounded-lg text-slate-500">â˜… {app.driver?.rating || 'Novo'}</span>
+                                <span className="text-[10px] font-black bg-slate-100 dark:bg-white/5 px-2 py-1 rounded-lg text-slate-500">{app.driver?.total_trips || 0} viagens</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* AÃ§Ãµes */}
+                          {app.status === 'pending' ? (
+                            <div className="flex flex-col gap-3">
+                              <div className="flex gap-3">
+                                <button onClick={() => handleCandidateAction(app.id, 'rejected')} disabled={processingAppId === app.id}
+                                  className="flex-1 h-11 bg-slate-100 dark:bg-white/5 text-rose-500 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-500/10 transition-all">
+                                  Recusar
+                                </button>
+                                <button onClick={() => handleCandidateAction(app.id, 'accepted')} disabled={processingAppId === app.id}
+                                  className="flex-[2] h-11 bg-primary text-slate-950 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
+                                  {processingAppId === app.id ? '...' : 'Aceitar Piloto'}
+                                </button>
+                              </div>
+                              <button onClick={() => openWhatsAppCandidate(app.driver?.phone, app.driver?.full_name)}
+                                className="w-full h-11 bg-emerald-500/10 text-emerald-500 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center justify-center gap-2 hover:bg-emerald-500/20 transition-all">
+                                <span className="material-symbols-outlined text-sm">chat</span> Entrevistar via WhatsApp
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-3">
+                              <div className={`w-full py-3 text-center text-[10px] font-black uppercase tracking-widest rounded-2xl border flex items-center justify-center gap-2 ${
+                                app.status === 'accepted' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-white/5 text-slate-500 border-white/5'
+                              }`}>
+                                <span className="material-symbols-outlined text-sm">{app.status === 'accepted' ? 'verified' : 'archive'}</span>
+                                {app.status === 'accepted' ? 'Candidato Selecionado' : 'Candidatura Arquivada'}
+                              </div>
+                              {app.status === 'accepted' && (
+                                <div className="flex gap-3">
+                                  <button onClick={() => openWhatsAppCandidate(app.driver?.phone, app.driver?.full_name)}
+                                    className="flex-1 h-11 bg-emerald-500 text-slate-950 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                                    <span className="material-symbols-outlined text-sm">call</span> Contato
+                                  </button>
+                                  <button onClick={() => handleCandidateAction(app.id, 'pending')}
+                                    className="px-4 h-11 bg-white/5 text-white/40 rounded-2xl text-[9px] font-black uppercase hover:text-rose-500 transition-all" title="Remover da vaga">
+                                    <span className="material-symbols-outlined text-sm">logout</span>
+                                  </button>
                                 </div>
-                             </div>
-                             <div className="size-14 rounded-full border border-white/10 flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-slate-950 transition-all">
-                                <span className="material-symbols-outlined">chevron_right</span>
-                             </div>
-                          </button>
-                       </div>
-                     ))
-                   )}
-                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
               </div>
             )}
 
@@ -1520,7 +1668,7 @@ export default function MyStudioTab() {
                 <h4 className="text-sm font-black truncate max-w-[150px]">{targetItem?.store_name || 'Minha Loja'}</h4>
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-[10px] fill-1 text-primary">star</span>
-                  <span className="text-[10px] font-black">4.9 â€¢ 30-40 min</span>
+                  <span className="text-[10px] font-black">4.9 Ã¢â‚¬Â¢ 30-40 min</span>
                 </div>
               </div>
             </div>
@@ -1556,7 +1704,7 @@ export default function MyStudioTab() {
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                   <h5 className="text-[11px] font-black text-slate-900 dark:text-white truncate">{p.name || `Produto Exemplo ${i+1}`}</h5>
-                  <p className="text-[9px] text-slate-400 font-bold truncate mt-0.5">{p.description || 'DescriÃ§Ã£o deliciosa...'}</p>
+                  <p className="text-[9px] text-slate-400 font-bold truncate mt-0.5">{p.description || 'DescriÃƒÂ§ÃƒÂ£o deliciosa...'}</p>
                   <div className="flex justify-between items-end mt-2">
                      <span className="text-xs font-black text-primary">R$ {p.price || '0,00'}</span>
                   </div>
@@ -1588,7 +1736,7 @@ export default function MyStudioTab() {
         <div className="absolute top-0 right-0 w-1 h-full bg-gradient-to-b from-primary/0 via-primary/40 to-primary/0"></div>
         <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-full shadow-sm border border-slate-100 dark:border-slate-800 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
            <span className="material-symbols-outlined text-primary text-sm">devices</span>
-           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">VisualizaÃ§Ã£o em Tempo Real</span>
+           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">VisualizaÃƒÂ§ÃƒÂ£o em Tempo Real</span>
         </div>
         
         <div className="scale-90 xl:scale-100 transition-transform duration-500">
@@ -1606,7 +1754,7 @@ export default function MyStudioTab() {
         <span className="material-symbols-outlined text-5xl">storefront</span>
       </div>
       <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-2">Selecione um Lojista</h3>
-      <p className="text-slate-500 dark:text-slate-400 max-w-sm font-medium">VocÃª precisa selecionar um lojista na aba "Lojistas" para visualizar e editar seu estÃºdio digital.</p>
+      <p className="text-slate-500 dark:text-slate-400 max-w-sm font-medium">VocÃƒÂª precisa selecionar um lojista na aba "Lojistas" para visualizar e editar seu estÃƒÂºdio digital.</p>
       <button 
         onClick={() => setActiveTab('merchants')}
         className="mt-8 px-8 py-4 bg-primary text-slate-900 rounded-2xl font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
@@ -1616,7 +1764,7 @@ export default function MyStudioTab() {
     </div>
   )}
 </div>
-{/* â”€â”€ Merchant: Financeiro â”€â”€ */}
+{/* Ã¢â€â‚¬Ã¢â€â‚¬ Merchant: Financeiro Ã¢â€â‚¬Ã¢â€â‚¬ */}
 {activeTab === 'financial' && userRole === 'merchant' && (
   <div className="flex flex-col h-[calc(100vh-160px)] -m-8 relative overflow-hidden bg-white dark:bg-slate-900 shadow-2xl rounded-[40px] border border-slate-100 dark:border-slate-800 p-8">
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -1626,7 +1774,7 @@ export default function MyStudioTab() {
           <span className="material-symbols-outlined text-3xl text-emerald-500">account_balance_wallet</span>
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Meu Financeiro</h1>
         </div>
-        <p className="text-slate-500 dark:text-slate-400">Controle seus ganhos, solicitaÃ§Ãµes de saque e histÃ³rico de vendas.</p>
+        <p className="text-slate-500 dark:text-slate-400">Controle seus ganhos, solicitaÃƒÂ§ÃƒÂµes de saque e histÃƒÂ³rico de vendas.</p>
       </div>
       <button 
         onClick={() => handleRequestWithdrawal(merchantBalance, merchantProfile?.bank_info?.pix_key || '')}
@@ -1641,12 +1789,12 @@ export default function MyStudioTab() {
       <div className="md:col-span-1 space-y-6">
         <section className="bg-slate-900 rounded-[40px] p-8 text-white relative overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/20 -mr-20 -mt-20 rounded-full blur-3xl"></div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Saldo DisponÃ­vel</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Saldo DisponÃƒÂ­vel</p>
           <h2 className="text-5xl font-black tracking-tighter mb-8">R$ {merchantBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
 
           <div className="space-y-4">
             <div className="flex justify-between items-center p-4 rounded-3xl bg-white/5 border border-white/10">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saque MÃ­nimo</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saque MÃƒÂ­nimo</span>
               <span className="font-black text-emerald-400">R$ {(appSettings.minwithdrawalamount ?? 0).toFixed(2).replace('.', ',')}</span>
             </div>
             <div className="flex justify-between items-center p-4 rounded-3xl bg-white/5 border border-white/10">
@@ -1663,7 +1811,7 @@ export default function MyStudioTab() {
           </h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center text-sm">
-              <span className="font-bold text-slate-500">Sua ComissÃ£o (LÃ­quido)</span>
+              <span className="font-bold text-slate-500">Sua ComissÃƒÂ£o (LÃƒÂ­quido)</span>
               <span className="font-black text-slate-900 dark:text-white">{100 - (merchantProfile?.commission_percent ?? appSettings.appCommission ?? 12)}%</span>
             </div>
             <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
@@ -1683,7 +1831,7 @@ export default function MyStudioTab() {
           <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/20">
             <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-3">
               <span className="material-symbols-outlined text-emerald-500">history</span>
-              Ãšltimas Vendas
+              ÃƒÅ¡ltimas Vendas
             </h3>
             <button className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">Exportar CSV</button>
           </div>
@@ -1696,12 +1844,12 @@ export default function MyStudioTab() {
                   </div>
                   <div>
                     <p className="text-sm font-black text-slate-900 dark:text-white tracking-tight">Pedido #DT-{o.id.slice(0, 4).toUpperCase()}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{new Date(o.created_at).toLocaleDateString()} â€¢ {new Date(o.created_at).toLocaleTimeString().slice(0, 5)}</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{new Date(o.created_at).toLocaleDateString()} Ã¢â‚¬Â¢ {new Date(o.created_at).toLocaleTimeString().slice(0, 5)}</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-black text-emerald-500">+ R$ {o.total_price.toFixed(2).replace('.', ',')}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Via {o.payment_method || 'CartÃ£o'}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Via {o.payment_method || 'CartÃƒÂ£o'}</p>
                 </div>
               </div>
             ))}
@@ -1735,12 +1883,12 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
     <h2 className="text-3xl font-black text-slate-900">
       {editingItem.id ? 'Editar' : 'Novo'} {
         editType === 'driver' ? 'Entregador' :
-          editType === 'my_driver' ? 'Motoboy PrÃ³prio' :
+          editType === 'my_driver' ? 'Motoboy PrÃƒÂ³prio' :
             editType === 'user' ? 'Cliente' :
               editType === 'category' ? 'Categoria' :
                 editType === 'merchant' ? 'Lojista' :
                   editType === 'partner' ? 'Parceiro Click & Retire' :
-                    editType === 'my_product' ? 'Produto' : 'PromoÃ§Ã£o/Banner'
+                    editType === 'my_product' ? 'Produto' : 'PromoÃƒÂ§ÃƒÂ£o/Banner'
       }
     </h2>
   </div>
@@ -1765,7 +1913,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
       <div className="space-y-1">
         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">
           {editType === 'merchant' ? 'E-mail de Acesso (Login)' : 
-           editType === 'my_product' ? 'Nome do Produto' : 'Nome / TÃ­tulo'}
+           editType === 'my_product' ? 'Nome do Produto' : 'Nome / TÃƒÂ­tulo'}
         </label>
         <input
           type={editType === 'merchant' ? 'email' : 'text'}
@@ -1795,7 +1943,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
               }}
               className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline"
             >
-              Gerar AleatÃ³ria
+              Gerar AleatÃƒÂ³ria
             </button>
           </div>
           <input
@@ -1830,7 +1978,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
           className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
           <option value="restaurant">Restaurante / Lanchonete</option>
-          <option value="pharmacy">Farmácia</option>
+          <option value="pharmacy">FarmÃ¡cia</option>
           <option value="market">Mercado / Hortifruti</option>
           <option value="beverages">Bebidas</option>
         </select>
@@ -1865,14 +2013,14 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
             <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-3xl px-6 py-4 font-bold text-sm flex items-center gap-3 group-hover:border-primary/50 transition-colors">
               <span className="material-symbols-outlined text-primary">cloud_upload</span>
               <span className="text-slate-400 truncate">
-                {editingItem.store_logo ? 'Imagem Carregada âœ“' : 'PNG, JPG, SVG, WebP'}
+                {editingItem.store_logo ? 'Imagem Carregada Ã¢Å“â€œ' : 'PNG, JPG, SVG, WebP'}
               </span>
             </div>
           </div>
         </div>
       </div>
       <div className="space-y-1">
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">DescriÃ§Ã£o da Loja</label>
+        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">DescriÃƒÂ§ÃƒÂ£o da Loja</label>
         <textarea
           value={editingItem.store_description || ''}
           onChange={e => setEditingItem({ ...editingItem, store_description: e.target.value })}
@@ -1892,7 +2040,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
           />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">EndereÃ§o Completo</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">EndereÃƒÂ§o Completo</label>
           <div className="relative group">
             <AddressSearchInput
               className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 pr-14 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -1906,14 +2054,14 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
                   longitude: addr.lng
                 });
               }}
-              placeholder="Rua, NÃºmero, Bairro, Cidade"
+              placeholder="Rua, NÃƒÂºmero, Bairro, Cidade"
             />
             <button
                type="button"
                onClick={() => getCurrentLocation(setEditingItem, editingItem)}
                disabled={isLocating}
                className="absolute right-3 top-1/2 -translate-y-1/2 size-10 rounded-xl bg-white/50 dark:bg-slate-800/50 text-slate-400 hover:text-primary transition-all flex items-center justify-center hover:bg-primary/10 shadow-sm"
-               title="Usar localização atual"
+               title="Usar localizaÃ§Ã£o atual"
              >
                {isLocating ? (
                  <div className="size-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -1933,7 +2081,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1 border-t border-slate-50 pt-4">
-          <label className="text-[10px] font-black uppercase tracking-widest text-emerald-500 ml-4">ComissÃ£o Personalizada (%)</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-emerald-500 ml-4">ComissÃƒÂ£o Personalizada (%)</label>
           <div className="relative">
             <input
               type="number"
@@ -1945,7 +2093,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
           </div>
         </div>
         <div className="space-y-1 border-t border-slate-50 pt-4">
-          <label className="text-[10px] font-black uppercase tracking-widest text-emerald-500 ml-4">Taxa de ServiÃ§o (R$)</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-emerald-500 ml-4">Taxa de ServiÃƒÂ§o (R$)</label>
           <div className="relative">
             <input
               type="number"
@@ -1977,7 +2125,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
   {(editType === 'driver' || editType === 'my_driver') && (
     <div className="grid grid-cols-2 gap-4">
       <div className="space-y-1">
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">VeÃ­culo</label>
+        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">VeÃƒÂ­culo</label>
         <input
           type="text"
           required
@@ -2003,7 +2151,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
   {editType === 'category' && (
     <>
       <div className="space-y-1">
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">DescriÃ§Ã£o curta</label>
+        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">DescriÃƒÂ§ÃƒÂ£o curta</label>
         <input
           type="text"
           required
@@ -2031,7 +2179,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
 
       {(!editingItem.icon_mode || editingItem.icon_mode === 'symbol') ? (
         <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Ãcone (Material Symbol)</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">ÃƒÂcone (Material Symbol)</label>
           <div className="flex gap-4">
             <input
               type="text"
@@ -2105,14 +2253,14 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
         </select>
       </div>
       <div className="space-y-1">
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Segmento (Tipo de ServiÃ§o)</label>
+        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Segmento (Tipo de ServiÃƒÂ§o)</label>
         <select
           value={editingItem.type || 'service'}
           onChange={e => setEditingItem({ ...editingItem, type: e.target.value })}
           className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
         >
-          <option value="service" title="ðŸ›’">ServiÃ§os / Delivery</option>
-          <option value="mobility" title="ðŸš—">Mobilidade / Passageiros</option>
+          <option value="service" title="Ã°Å¸â€ºâ€™">ServiÃƒÂ§os / Delivery</option>
+          <option value="mobility" title="Ã°Å¸Å¡â€”">Mobilidade / Passageiros</option>
         </select>
       </div>
     </>
@@ -2142,7 +2290,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
           />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">CÃ³digo (Opcional)</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">CÃƒÂ³digo (Opcional)</label>
           <input
             type="text"
             value={editingItem.coupon_code || ''}
@@ -2175,7 +2323,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
               <span>
                 {editingItem.expires_at 
                   ? new Date(editingItem.expires_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
-                  : 'Definir expiraÃ§Ã£o'}
+                  : 'Definir expiraÃƒÂ§ÃƒÂ£o'}
               </span>
             </div>
             <span className="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors">calendar_month</span>
@@ -2194,8 +2342,8 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
                 <div className="size-16 rounded-3xl bg-primary/10 flex items-center justify-center text-primary mx-auto mb-4 border border-primary/20">
                   <span className="material-symbols-outlined text-3xl">schedule</span>
                 </div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white">Agendar ExpiraÃ§Ã£o</h3>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Defina quando a oferta sairÃ¡ do ar</p>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">Agendar ExpiraÃƒÂ§ÃƒÂ£o</h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Defina quando a oferta sairÃƒÂ¡ do ar</p>
               </div>
 
               <div className="space-y-6">
@@ -2210,7 +2358,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">HorÃ¡rio</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">HorÃƒÂ¡rio</label>
                   <input 
                     type="time"
                     value={tempTime}
@@ -2246,7 +2394,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
           </div>
         )}
         <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Usos MÃ¡ximos</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Usos MÃƒÂ¡ximos</label>
           <input
             type="number"
             value={editingItem.max_usage || ''}
@@ -2297,7 +2445,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
   {editType === 'driver' && (
     <div className="grid grid-cols-2 gap-6">
       <div className="space-y-1">
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">VeÃ­culo</label>
+        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">VeÃƒÂ­culo</label>
         <input
           type="text"
           value={editingItem.vehicle_type || ''}
@@ -2323,12 +2471,12 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">EndereÃ§o do Ponto</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">EndereÃƒÂ§o do Ponto</label>
           <AddressSearchInput
             className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm"
             initialValue={editingItem.address || ''}
             onSelect={(addr) => setEditingItem({ ...editingItem, address: addr.formatted_address, latitude: addr.lat, longitude: addr.lng })}
-            placeholder="Rua, NÃºmero..."
+            placeholder="Rua, NÃƒÂºmero..."
           />
         </div>
         <div className="space-y-1">
@@ -2344,12 +2492,12 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">HorÃ¡rio de Funcionamento</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">HorÃƒÂ¡rio de Funcionamento</label>
           <input
             type="text"
             value={editingItem.hours || ''}
             onChange={e => setEditingItem({ ...editingItem, hours: e.target.value })}
-            placeholder="Ex: 08h Ã s 22h"
+            placeholder="Ex: 08h ÃƒÂ s 22h"
             className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm"
           />
         </div>
@@ -2361,7 +2509,7 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
             className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-6 py-4 font-bold text-sm"
           >
             <option value="Ponto de Retirada">Ponto de Retirada</option>
-            <option value="Hub LogÃ­stico">Hub LogÃ­stico</option>
+            <option value="Hub LogÃƒÂ­stico">Hub LogÃƒÂ­stico</option>
             <option value="Loja Parceira">Loja Parceira</option>
             <option value="Outro">Outro</option>
           </select>
@@ -2373,10 +2521,10 @@ className="w-full max-w-lg bg-white rounded-[48px] p-10 shadow-2xl relative z-10
   <div className="flex items-center gap-4 p-6 bg-slate-50 rounded-[32px] border border-slate-100">
     <div className="flex-1">
       <p className="text-sm font-black text-slate-900">
-        {editType === 'my_product' ? 'Item DisponÃ­vel' : 'Status da Conta'}
+        {editType === 'my_product' ? 'Item DisponÃƒÂ­vel' : 'Status da Conta'}
       </p>
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-        {editType === 'my_product' ? 'Habilita ou desativa o item no cardÃ¡pio' : 'Habilita ou desativa o acesso'}
+        {editType === 'my_product' ? 'Habilita ou desativa o item no cardÃƒÂ¡pio' : 'Habilita ou desativa o acesso'}
       </p>
     </div>
     <button
@@ -2426,7 +2574,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
       <span className="material-symbols-outlined text-4xl font-black">sports_motorsports</span>
     </div>
     <div>
-      <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">EstÃºdio do Entregador</h2>
+      <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">EstÃƒÂºdio do Entregador</h2>
       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
         <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
         {(typeof selectedDriverStudio.id === 'string' && selectedDriverStudio.id.startsWith('new-')) ? 'Novo Cadastro Operacional' : `ID: ${selectedDriverStudio.id?.substring(0, 8)}...`}
@@ -2445,9 +2593,9 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
             <div className="px-10 py-4 bg-slate-50 dark:bg-slate-950/50 border-b border-slate-100 dark:border-slate-800 flex gap-8 overflow-x-auto no-scrollbar">
 {[
   { id: 'personal', label: 'Dados Pessoais', icon: 'person' },
-  { id: 'vehicle', label: 'VeÃ­culo', icon: 'directions_bike' },
+  { id: 'vehicle', label: 'VeÃƒÂ­culo', icon: 'directions_bike' },
   { id: 'finance', label: 'Financeiro', icon: 'account_balance' },
-  { id: 'documents', label: 'DocumentaÃ§Ã£o', icon: 'description' },
+  { id: 'documents', label: 'DocumentaÃƒÂ§ÃƒÂ£o', icon: 'description' },
 ].map(t => (
   <button
     key={t.id}
@@ -2541,16 +2689,16 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
         <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-inner">
           <div className="flex items-center gap-3 mb-6">
              <span className="material-symbols-outlined text-primary">location_on</span>
-             <h4 className="text-xs font-black uppercase tracking-widest dark:text-white">LocalizaÃ§Ã£o Principal</h4>
+             <h4 className="text-xs font-black uppercase tracking-widest dark:text-white">LocalizaÃƒÂ§ÃƒÂ£o Principal</h4>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">EndereÃ§o Completo</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">EndereÃƒÂ§o Completo</label>
             <input 
               type="text" 
               value={selectedDriverStudio.address || ''}
               onChange={e => setSelectedDriverStudio({...selectedDriverStudio, address: e.target.value})}
               className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl px-6 py-5 font-bold text-sm focus:ring-2 focus:ring-primary dark:text-white transition-all shadow-sm"
-              placeholder="Rua, NÃºmero, Bairro, Cidade - UF"
+              placeholder="Rua, NÃƒÂºmero, Bairro, Cidade - UF"
             />
           </div>
         </div>
@@ -2566,13 +2714,13 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
             </div>
             <div>
               <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Ativos Transacionais</h4>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">InformaÃ§Ãµes do VeÃ­culo de Trabalho</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">InformaÃƒÂ§ÃƒÂµes do VeÃƒÂ­culo de Trabalho</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Tipo de VeÃ­culo</label>
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Tipo de VeÃƒÂ­culo</label>
                <select 
                  value={selectedDriverStudio.vehicle_type || 'Moto'}
                  onChange={e => setSelectedDriverStudio({...selectedDriverStudio, vehicle_type: e.target.value})}
@@ -2581,11 +2729,11 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                  <option>Moto</option>
                  <option>Bicicleta</option>
                  <option>Carro</option>
-                 <option>Van / CaminhÃ£o</option>
+                 <option>Van / CaminhÃƒÂ£o</option>
                </select>
              </div>
              <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Placa do VeÃ­culo</label>
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Placa do VeÃƒÂ­culo</label>
                <input 
                  type="text" 
                  value={selectedDriverStudio.license_plate || ''}
@@ -2628,13 +2776,13 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
             </div>
             <div>
               <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Dados para Repasse</h4>
-              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest italic">Pagamentos & ConciliaÃ§Ã£o</p>
+              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest italic">Pagamentos & ConciliaÃƒÂ§ÃƒÂ£o</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">InstituiÃ§Ã£o BancÃ¡ria</label>
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">InstituiÃƒÂ§ÃƒÂ£o BancÃƒÂ¡ria</label>
                <input 
                  type="text" 
                  value={selectedDriverStudio.bank_info?.bank || ''}
@@ -2654,7 +2802,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                />
              </div>
              <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">NÃºmero da AgÃªncia</label>
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">NÃƒÂºmero da AgÃƒÂªncia</label>
                <input 
                  type="text" 
                  value={selectedDriverStudio.bank_info?.agency || ''}
@@ -2664,7 +2812,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                />
              </div>
              <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Conta & DÃ­gito</label>
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Conta & DÃƒÂ­gito</label>
                <input 
                  type="text" 
                  value={selectedDriverStudio.bank_info?.account || ''}
@@ -2686,8 +2834,8 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
               <span className="material-symbols-outlined text-2xl font-bold">description</span>
             </div>
             <div>
-              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">DocumentaÃ§Ã£o & KYC</h4>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">VerificaÃ§Ã£o de Identidade e SeguranÃ§a</p>
+              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">DocumentaÃƒÂ§ÃƒÂ£o & KYC</h4>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">VerificaÃƒÂ§ÃƒÂ£o de Identidade e SeguranÃƒÂ§a</p>
             </div>
           </div>
 
@@ -2703,11 +2851,11 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                />
              </div>
              <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Status de VerificaÃ§Ã£o</label>
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Status de VerificaÃƒÂ§ÃƒÂ£o</label>
                <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl px-6 py-5 border border-slate-100 dark:border-slate-800 shadow-sm">
                   <span className={`size-3 rounded-full ${selectedDriverStudio.status === 'active' ? 'bg-green-500' : 'bg-amber-500'}`}></span>
                   <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">
-                    {selectedDriverStudio.status === 'active' ? 'Verificado' : 'Pendente / Em AnÃ¡lise'}
+                    {selectedDriverStudio.status === 'active' ? 'Verificado' : 'Pendente / Em AnÃƒÂ¡lise'}
                   </span>
                </div>
              </div>
@@ -2756,7 +2904,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
      onClick={async () => {
        setIsSaving(true);
          try {
-           // Obter merchant_id se nÃ£o estiver presente
+           // Obter merchant_id se nÃƒÂ£o estiver presente
            let mId = selectedDriverStudio.merchant_id;
            if (!mId && session?.user?.email) {
              const { data: adminData } = await supabase
@@ -2782,12 +2930,12 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
 
              const res = await supabase.functions.invoke('manage-driver-auth', { body: payload });
              
-             if (res.error) throw new Error('Falha de AutenticaÃ§Ã£o: ' + res.error.message);
+             if (res.error) throw new Error('Falha de AutenticaÃƒÂ§ÃƒÂ£o: ' + res.error.message);
              if (!res.data.success) throw new Error(res.data.error || 'Erro no setup da conta do entregador');
              
              finalId = res.data.user.id;
            } else if (isNew) {
-             throw new Error('O e-mail Ã© obrigatÃ³rio para um novo entregador.');
+             throw new Error('O e-mail ÃƒÂ© obrigatÃƒÂ³rio para um novo entregador.');
            }
 
            const driverData = {
@@ -2839,7 +2987,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
         </div>
       )}
 
-      {/* â€¢â€¢â€¢â€¢â€¢â€¢â€¢ Client Detail Studio (Comprehensive Editing) â€¢â€¢â€¢â€¢â€¢â€¢â€¢ */}
+      {/* Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ Client Detail Studio (Comprehensive Editing) Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ */}
       {selectedUserStudio && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 md:p-10 text-slate-900 overflow-hidden">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-3xl" onClick={() => setSelectedUserStudio(null)}></div>
@@ -2856,7 +3004,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
     <span className="material-symbols-outlined text-4xl font-black">person</span>
   </div>
   <div>
-    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">EstÃºdio do Cliente</h2>
+    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">EstÃƒÂºdio do Cliente</h2>
     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
       <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
       {(typeof selectedUserStudio.id === 'string' && selectedUserStudio.id.startsWith('new-')) ? 'Novo Cadastro Operacional' : `ID: ${selectedUserStudio.id?.substring(0, 8)}...`}
@@ -2876,7 +3024,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
 {[
   { id: 'personal', label: 'Cadastro Base', icon: 'account_circle' },
   { id: 'wallet', label: 'Carteira & Saldo', icon: 'wallet' },
-  { id: 'security', label: 'SeguranÃ§a & Status', icon: 'verified_user' },
+  { id: 'security', label: 'SeguranÃƒÂ§a & Status', icon: 'verified_user' },
   { id: 'iziblack', label: 'Izi Black VIP', icon: 'workspace_premium' },
 ].map(t => (
   <button
@@ -2974,7 +3122,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                  />
               </div>
               <div className="space-y-3">
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">GÃªnero</label>
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">GÃƒÂªnero</label>
                  <div className="relative">
                    <select 
                      value={selectedUserStudio.gender || ''}
@@ -2985,7 +3133,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                      <option value="masculino">Masculino</option>
                      <option value="feminino">Feminino</option>
                      <option value="outro">Outro</option>
-                     <option value="prefiro_nao_informar">Prefiro nÃ£o informar</option>
+                     <option value="prefiro_nao_informar">Prefiro nÃƒÂ£o informar</option>
                    </select>
                    <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
                  </div>
@@ -2994,15 +3142,15 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
           </div>
         </div>
 
-        {/* EndereÃ§o Completo */}
+        {/* EndereÃƒÂ§o Completo */}
         <div className="p-10 rounded-[48px] bg-blue-50/30 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10 shadow-inner space-y-8">
           <div className="flex items-center gap-4 mb-2">
             <div className="size-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-600">
               <span className="material-symbols-outlined text-2xl font-bold">location_on</span>
             </div>
             <div>
-              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">EndereÃ§o Residencial</h4>
-              <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest italic">LocalizaÃ§Ã£o Principal do Cliente</p>
+              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">EndereÃƒÂ§o Residencial</h4>
+              <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest italic">LocalizaÃƒÂ§ÃƒÂ£o Principal do Cliente</p>
             </div>
           </div>
 
@@ -3028,7 +3176,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                />
             </div>
             <div className="space-y-3">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">NÃºmero</label>
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">NÃƒÂºmero</label>
                <input 
                  type="text" 
                  value={selectedUserStudio.address_number || ''}
@@ -3086,33 +3234,33 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
           </div>
         </div>
 
-        {/* ObservaÃ§Ãµes Internas */}
+        {/* ObservaÃƒÂ§ÃƒÂµes Internas */}
         <div className="p-10 rounded-[48px] bg-amber-50/30 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10 shadow-inner space-y-6">
           <div className="flex items-center gap-4 mb-2">
             <div className="size-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-600">
               <span className="material-symbols-outlined text-2xl font-bold">sticky_note_2</span>
             </div>
             <div>
-              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">ObservaÃ§Ãµes Internas</h4>
-              <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest italic">VisÃ­vel apenas para administradores</p>
+              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">ObservaÃƒÂ§ÃƒÂµes Internas</h4>
+              <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest italic">VisÃƒÂ­vel apenas para administradores</p>
             </div>
           </div>
           <textarea 
             value={selectedUserStudio.notes || ''}
             onChange={e => setSelectedUserStudio({...selectedUserStudio, notes: e.target.value})}
             className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl px-8 py-5 font-bold text-sm focus:ring-4 focus:ring-amber-500/20 dark:text-white transition-all shadow-sm h-32 resize-none"
-            placeholder="AnotaÃ§Ãµes sobre o cliente, preferÃªncias, restriÃ§Ãµes, informaÃ§Ãµes relevantes..."
+            placeholder="AnotaÃƒÂ§ÃƒÂµes sobre o cliente, preferÃƒÂªncias, restriÃƒÂ§ÃƒÂµes, informaÃƒÂ§ÃƒÂµes relevantes..."
           />
         </div>
 
-        {/* Resumo CronolÃ³gico */}
+        {/* Resumo CronolÃƒÂ³gico */}
         <div className="p-10 rounded-[48px] bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/50 shadow-inner">
           <div className="flex items-center gap-4 mb-8">
             <div className="size-12 rounded-2xl bg-primary flex items-center justify-center text-slate-900 shadow-lg shadow-primary/20">
               <span className="material-symbols-outlined text-2xl font-bold">history</span>
             </div>
             <div>
-              <h4 className="text-xs font-black uppercase tracking-[0.2em] dark:text-white">Resumo CronolÃ³gico</h4>
+              <h4 className="text-xs font-black uppercase tracking-[0.2em] dark:text-white">Resumo CronolÃƒÂ³gico</h4>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Dados gerados pelo sistema</p>
             </div>
           </div>
@@ -3141,13 +3289,13 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
              <span className="material-symbols-outlined text-[160px] font-black">account_balance_wallet</span>
           </div>
           <div className="relative z-10">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80 mb-4">Saldo DisponÃ­vel na Carteira</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-80 mb-4">Saldo DisponÃƒÂ­vel na Carteira</p>
             <h3 className="text-6xl font-black tracking-tighter mb-4 flex items-baseline gap-2">
               <span className="izi-coin-symbol">Z</span>
               {selectedUserStudio.izi_coins?.toLocaleString('pt-BR') || '0'}
             </h3>
             <div className="flex gap-4">
-               <button onClick={() => setShowAddCreditModal(true)} className="px-6 py-3 bg-white/20 backdrop-blur-md rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/30 transition-all border border-white/20">Adicionar CrÃ©ditos</button>
+               <button onClick={() => setShowAddCreditModal(true)} className="px-6 py-3 bg-white/20 backdrop-blur-md rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/30 transition-all border border-white/20">Adicionar CrÃƒÂ©ditos</button>
                <button onClick={() => setShowWalletStatementModal(true)} className="px-6 py-3 bg-black/10 backdrop-blur-md rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black/20 transition-all border border-white/5">Extrato Detalhado</button>
             </div>
           </div>
@@ -3156,7 +3304,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
         <div className="p-10 rounded-[48px] bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/50 shadow-inner">
            <h4 className="text-xs font-black uppercase tracking-[0.2em] dark:text-white mb-8 flex items-center gap-3">
              <span className="size-2 rounded-full bg-emerald-500"></span>
-             HistÃ³rico Recente de TransaÃ§Ãµes
+             HistÃƒÂ³rico Recente de TransaÃƒÂ§ÃƒÂµes
            </h4>
            <div className="space-y-4">
               {isWalletLoading ? (
@@ -3167,7 +3315,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
               ) : walletTransactions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-10 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl text-center">
                   <span className="material-symbols-outlined text-4xl text-slate-300 dark:text-slate-600 mb-2">receipt_long</span>
-                  <span className="text-xs font-bold text-slate-400">Nenhuma transaÃ§Ã£o encontrada</span>
+                  <span className="text-xs font-bold text-slate-400">Nenhuma transaÃƒÂ§ÃƒÂ£o encontrada</span>
                 </div>
               ) : (
                 walletTransactions.slice(0, 5).map(tx => {
@@ -3180,7 +3328,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                         </div>
                         <div>
                            <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{tx.description || (!isPositive ? 'Uso de Saldo' : 'Aporte de Saldo')}</p>
-                           <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })} â€¢ {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                           <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })} Ã¢â‚¬Â¢ {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
                         </div>
                      </div>
                      <span className={`text-sm font-black ${!isPositive ? 'text-red-500' : 'text-emerald-500'}`}>
@@ -3219,15 +3367,15 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                     onChange={e => setSelectedUserStudio({...selectedUserStudio, is_izi_black: e.target.value === 'active'})}
                     className="w-full bg-white/5 border border-white/10 rounded-3xl px-8 py-5 font-black text-sm focus:ring-4 focus:ring-white/10 text-white appearance-none cursor-pointer"
                   >
-                    <option value="active" className="text-black">ðŸŸ¢ Assinatura VIP Ativa</option>
-                    <option value="inactive" className="text-black">âšª Sem Assinatura (Conta Comum)</option>
+                    <option value="active" className="text-black">Ã°Å¸Å¸Â¢ Assinatura VIP Ativa</option>
+                    <option value="inactive" className="text-black">Ã¢Å¡Âª Sem Assinatura (Conta Comum)</option>
                   </select>
                   <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none">expand_more</span>
                 </div>
              </div>
              <div className="p-6 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Cashback HistÃ³rico Ganho</p>
+                  <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Cashback HistÃƒÂ³rico Ganho</p>
                   <p className="text-3xl font-black text-white tabular-nums italic">R$ <span className="text-emerald-400">{(selectedUserStudio.cashback_earned || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}</span></p>
                 </div>
              </div>
@@ -3244,8 +3392,8 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
               <span className="material-symbols-outlined text-2xl font-bold">lock</span>
             </div>
             <div>
-              <h4 className="text-xs font-black uppercase tracking-[0.2em] dark:text-white">Estado CrÃ­tico & SeguranÃ§a</h4>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controles de acesso do usuÃ¡rio</p>
+              <h4 className="text-xs font-black uppercase tracking-[0.2em] dark:text-white">Estado CrÃƒÂ­tico & SeguranÃƒÂ§a</h4>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controles de acesso do usuÃƒÂ¡rio</p>
             </div>
           </div>
 
@@ -3258,16 +3406,16 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                     onChange={e => setSelectedUserStudio({...selectedUserStudio, status: e.target.value, is_active: e.target.value === 'active'})}
                     className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl px-8 py-5 font-bold text-sm focus:ring-4 focus:ring-primary/20 dark:text-white appearance-none cursor-pointer shadow-sm"
                   >
-                    <option value="active">ðŸŸ¢ Ativo (Acesso Total)</option>
-                    <option value="inactive">âšª Inativo (Apenas Leitura)</option>
-                    <option value="suspended">ðŸŸ¡ Suspenso (AÃ§Ã£o Requerida)</option>
-                    <option value="blocked">ðŸ”´ Bloqueado (Acesso Negado)</option>
+                    <option value="active">Ã°Å¸Å¸Â¢ Ativo (Acesso Total)</option>
+                    <option value="inactive">Ã¢Å¡Âª Inativo (Apenas Leitura)</option>
+                    <option value="suspended">Ã°Å¸Å¸Â¡ Suspenso (AÃƒÂ§ÃƒÂ£o Requerida)</option>
+                    <option value="blocked">Ã°Å¸â€Â´ Bloqueado (Acesso Negado)</option>
                   </select>
                   <span className="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
                 </div>
              </div>
              <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">AutenticaÃ§Ã£o</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">AutenticaÃƒÂ§ÃƒÂ£o</label>
                 <button className="w-full bg-white dark:bg-slate-900 border-none rounded-3xl px-8 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 shadow-sm hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2">
                   <span className="material-symbols-outlined text-lg">key</span>
                   Resetar Senha por E-mail
@@ -3281,8 +3429,8 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
              <span className="material-symbols-outlined text-4xl font-black">gpp_maybe</span>
            </div>
            <div>
-              <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Zona de ExclusÃ£o</h4>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest max-w-sm mx-auto">Estas aÃ§Ãµes sÃ£o permanentes e afetarÃ£o todos os dados histÃ³ricos deste cliente.</p>
+              <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Zona de ExclusÃƒÂ£o</h4>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest max-w-sm mx-auto">Estas aÃƒÂ§ÃƒÂµes sÃƒÂ£o permanentes e afetarÃƒÂ£o todos os dados histÃƒÂ³ricos deste cliente.</p>
            </div>
            <button className="px-10 py-5 bg-red-500 text-white font-black text-[10px] uppercase tracking-widest rounded-3xl shadow-2xl shadow-red-500/30 hover:scale-105 transition-all">
              Apagar Registro do Banco de Dados
@@ -3363,7 +3511,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
     className="px-14 py-6 bg-primary text-slate-900 font-black text-[10px] uppercase tracking-widest rounded-full shadow-[0_20px_40px_rgba(255,217,0,0.3)] hover:scale-[1.05] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
   >
     <span className={`material-symbols-outlined text-xl font-bold ${isSaving ? 'animate-spin' : ''}`}>{isSaving ? 'sync' : 'done_all'}</span>
-    {isSaving ? 'Processando...' : 'Confirmar & Salvar AlteraÃ§Ãµes'}
+    {isSaving ? 'Processando...' : 'Confirmar & Salvar AlteraÃƒÂ§ÃƒÂµes'}
   </button>
 </div>
             </div>
@@ -3371,7 +3519,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
         </div>
       )}
 
-      {/* â€¢â€¢â€¢â€¢â€¢â€¢â€¢ Active Orders Live Monitor â€¢â€¢â€¢â€¢â€¢â€¢â€¢ */}
+      {/* Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ Active Orders Live Monitor Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ */}
       {showActiveOrdersModal && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 md:p-10 text-slate-900">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl" onClick={() => setShowActiveOrdersModal(false)}></div>
@@ -3431,7 +3579,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                   'bg-blue-500'
                 }`} />
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  {o.status === 'preparando' ? 'Em PreparaÃ§Ã£o' :
+                  {o.status === 'preparando' ? 'Em PreparaÃƒÂ§ÃƒÂ£o' :
                    o.status === 'pronto' ? 'Pronto p/ Retirada' :
                    ['picked_up', 'em_rota', 'a_caminho', 'saiu_para_entrega'].includes(o.status) ? 'Saiu para Entrega' :
                    ['waiting_driver', 'pending'].includes(o.status) ? 'Buscando Entregador' :
@@ -3449,7 +3597,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
         <div className="space-y-2 mb-6">
           <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
             <span className="material-symbols-outlined text-xs">location_on</span>
-            <span className="truncate">{o.delivery_address || 'EndereÃ§o nÃ£o informado'}</span>
+            <span className="truncate">{o.delivery_address || 'EndereÃƒÂ§o nÃƒÂ£o informado'}</span>
           </div>
           <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
             <span className="material-symbols-outlined text-xs">schedule</span>
@@ -3477,7 +3625,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
           </motion.div>
         </div>
       )}
-      {/* â€¢â€¢â€¢â€¢â€¢â€¢â€¢ Category Studio (Services & Infrastructure) â€¢â€¢â€¢â€¢â€¢â€¢â€¢ */}
+      {/* Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ Category Studio (Services & Infrastructure) Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ */}
       {selectedCategoryStudio && (
         <div className="fixed inset-0 z-[170] flex items-center justify-center p-4 md:p-10 text-slate-900 overflow-hidden">
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-3xl" onClick={() => setSelectedCategoryStudio(null)}></div>
@@ -3494,7 +3642,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
     <span className="material-symbols-outlined text-4xl font-black">{selectedCategoryStudio.icon || 'category'}</span>
   </div>
   <div>
-      <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">EstÃºdio de Categoria</h2>
+      <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">EstÃƒÂºdio de Categoria</h2>
       <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
         <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
         {selectedCategoryStudio.id?.startsWith('new-') ? 'Novo Recurso Estrutural' : `ID: ${selectedCategoryStudio.id}`}
@@ -3550,7 +3698,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                      />
                   </div>
                   <div className="space-y-2">
-                     <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-4">Ãcone (Symbol Name)</label>
+                     <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-4">ÃƒÂcone (Symbol Name)</label>
                      <div className="flex gap-4">
                         <input 
                           type="text" 
@@ -3565,7 +3713,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                      </div>
                   </div>
                   <div className="md:col-span-2 space-y-2">
-                     <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-4">DescriÃ§Ã£o da Atividade</label>
+                     <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-4">DescriÃƒÂ§ÃƒÂ£o da Atividade</label>
                      <textarea 
                        value={selectedCategoryStudio.description || ''} 
                        onChange={e => setSelectedCategoryStudio({...selectedCategoryStudio, description: e.target.value})}
@@ -3583,7 +3731,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                          </div>
                          <div>
                             <p className="text-sm font-black text-slate-900 dark:text-white">Status de Disponibilidade</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">{selectedCategoryStudio.is_active ? 'VisÃ­vel para todos os usuÃ¡rios' : 'Oculto na interface do cliente'}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">{selectedCategoryStudio.is_active ? 'VisÃƒÂ­vel para todos os usuÃƒÂ¡rios' : 'Oculto na interface do cliente'}</p>
                          </div>
                       </div>
                       <button 
@@ -3601,7 +3749,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
            <div className="space-y-8">
               <div className="flex items-center justify-between">
                  <div>
-                    <h3 className="text-xl font-black text-slate-900 dark:text-white">Sub-nÃ³dulos Operacionais</h3>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white">Sub-nÃƒÂ³dulos Operacionais</h3>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Defina as especialidades desta categoria</p>
                  </div>
                  <button 
@@ -3696,7 +3844,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
    onClick={() => setSelectedCategoryStudio(null)}
    className="px-10 py-5 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-600 transition-all font-sans"
  >
-   Descartar AlteraÃ§Ãµes
+   Descartar AlteraÃƒÂ§ÃƒÂµes
  </button>
  <button 
    disabled={isSaving}
@@ -3743,14 +3891,14 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
     ) : (
       <span className="material-symbols-outlined text-lg">rocket_launch</span>
     )}
-    {isSaving ? 'Sincronizando...' : 'Implementar MudanÃ§as'}
+    {isSaving ? 'Sincronizando...' : 'Implementar MudanÃƒÂ§as'}
  </button>
             </div>
           </motion.div>
         </div>
       )}
 
-      {/* â€¢â€¢â€¢â€¢â€¢â€¢â€¢ Category Directory Modal â€¢â€¢â€¢â€¢â€¢â€¢â€¢ */}
+      {/* Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ Category Directory Modal Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ */}
       {showCategoryListModal && (
         <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 md:p-10 text-slate-900 overflow-hidden">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-3xl" onClick={() => setShowCategoryListModal(false)}></div>
@@ -3767,8 +3915,8 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
     <span className="material-symbols-outlined text-4xl font-black">category</span>
   </div>
   <div>
-    <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">DiretÃ³rio de Categorias</h2>
-    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">Ecosystem Infrastructure â€¢ {categoriesState.length} itens cadastrados</p>
+    <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">DiretÃƒÂ³rio de Categorias</h2>
+    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">Ecosystem Infrastructure Ã¢â‚¬Â¢ {categoriesState.length} itens cadastrados</p>
   </div>
 </div>
 <div className="flex items-center gap-4">
@@ -3825,7 +3973,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
         </div>
       </div>
       <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
-         <span className={cat.is_active ? 'text-emerald-500' : 'text-slate-300'}>{cat.is_active ? 'â— Ativo' : 'â—‹ Inativo'}</span>
+         <span className={cat.is_active ? 'text-emerald-500' : 'text-slate-300'}>{cat.is_active ? 'Ã¢â€”Â Ativo' : 'Ã¢â€”â€¹ Inativo'}</span>
          <span>Criado em {cat.created_at ? new Date(cat.created_at).toLocaleDateString() : 'N/A'}</span>
       </div>
     </div>
@@ -3858,18 +4006,18 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
         </div>
       )}
 
-      {/* â€¢â€¢â€¢â€¢â€¢â€¢â€¢ Peak Hour Rule Modal â€¢â€¢â€¢â€¢â€¢â€¢â€¢ */}
+      {/* Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ Peak Hour Rule Modal Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ */}
       {isAddingPeakRule && (
         <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 text-slate-900">
            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-3xl" onClick={() => setIsAddingPeakRule(false)}></div>
            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-[48px] p-10 relative z-10 shadow-2xl border border-white/20">
 <h2 className="text-2xl font-black mb-8 flex items-center gap-3">
    <span className="material-symbols-outlined text-primary">schedule</span>
-   Novo HorÃ¡rio de Pico
+   Novo HorÃƒÂ¡rio de Pico
 </h2>
 <div className="space-y-6">
    <div className="space-y-2">
-      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">DescriÃ§Ã£o / Nome</label>
+      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">DescriÃƒÂ§ÃƒÂ£o / Nome</label>
       <input 
         type="text" value={newPeakRule.label} placeholder="Ex: Sexta Noite 18h-22h"
         onChange={e => setNewPeakRule({...newPeakRule, label: e.target.value})}
@@ -3896,7 +4044,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
         </div>
       )}
 
-      {/* â€¢â€¢â€¢â€¢â€¢â€¢â€¢ Zone Map Selection Modal â€¢â€¢â€¢â€¢â€¢â€¢â€¢ */}
+      {/* Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ Zone Map Selection Modal Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ */}
       {selectedZoneForMap && (
         <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 md:p-10 text-slate-900 overflow-hidden">
            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-3xl" onClick={() => setSelectedZoneForMap(null)}></div>
@@ -3921,7 +4069,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                }
              }}
            >
-             <input type="text" placeholder="Pesquisar endereço..." className="bg-transparent border-none text-sm font-bold w-full focus:ring-0 placeholder:text-slate-400 text-slate-700" />
+             <input type="text" placeholder="Pesquisar endereÃ§o..." className="bg-transparent border-none text-sm font-bold w-full focus:ring-0 placeholder:text-slate-400 text-slate-700" />
            </Autocomplete>
          )}
       </div>
@@ -3943,7 +4091,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
           );
         }}
         className="w-14 h-[46px] rounded-2xl bg-white/95 border border-[#f8c967]/50 shadow-xl flex items-center justify-center hover:bg-[#f8c967]/20 transition-all group"
-        title="Usar minha localização atual"
+        title="Usar minha localizaÃ§Ã£o atual"
       >
         {isGeolocating
           ? <span className="material-symbols-outlined text-[#e98d58] animate-spin text-xl">progress_activity</span>
@@ -3962,7 +4110,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
           <p className="text-[10px] font-black text-primary uppercase tracking-widest">Como corrigir:</p>
           <p className="text-[11px] text-slate-300">1. Acesse console.cloud.google.com</p>
           <p className="text-[11px] text-slate-300">2. Ative: Maps JavaScript API + Places API</p>
-          <p className="text-[11px] text-slate-300">3. Permita localhost nas restriÃ§Ãµes da chave</p>
+          <p className="text-[11px] text-slate-300">3. Permita localhost nas restriÃƒÂ§ÃƒÂµes da chave</p>
         </div>
      </div>
     ) : isLoaded ? (
@@ -4017,8 +4165,8 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
  <div className="w-full md:w-[400px] p-10 flex flex-col justify-between bg-white dark:bg-slate-950 overflow-y-auto scrollbar-hide">
     <div className="space-y-8">
        <div>
-<h2 className="text-2xl font-black dark:text-white leading-tight">Nova Zona DinÃ¢mica</h2>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">ConfiguraÃ§Ã£o de PerÃ­metro</p>
+<h2 className="text-2xl font-black dark:text-white leading-tight">Nova Zona DinÃƒÂ¢mica</h2>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">ConfiguraÃƒÂ§ÃƒÂ£o de PerÃƒÂ­metro</p>
        </div>
         <div className="space-y-6">
            <div className="p-5 rounded-3xl bg-indigo-50 border border-indigo-100 dark:bg-indigo-500/10 dark:border-indigo-500/20 space-y-3">
@@ -4027,7 +4175,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                  <span className="text-[10px] font-black uppercase tracking-widest">Modo Colmeia Ativo</span>
               </div>
               <p className="text-[11px] font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
-                 Clique nos hexÃ¡gonos no mapa para "pintar" a Ã¡rea de cobertura. A taxa serÃ¡ aplicada a todos os hexÃ¡gonos selecionados.
+                 Clique nos hexÃƒÂ¡gonos no mapa para "pintar" a ÃƒÂ¡rea de cobertura. A taxa serÃƒÂ¡ aplicada a todos os hexÃƒÂ¡gonos selecionados.
               </p>
            </div>
 
@@ -4036,7 +4184,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
               <input type="text" value={newZoneData.label} placeholder="Ex: Centro Expandido" onChange={e => setNewZoneData({...newZoneData, label: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl p-5 font-bold text-slate-900 dark:text-white" />
            </div>
            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">AcrÃ©scimo Fixo (R$)</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">AcrÃƒÂ©scimo Fixo (R$)</label>
               <input type="text" value={newZoneData.fee} onChange={e => setNewZoneData({...newZoneData, fee: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl p-5 font-black text-primary text-xl" />
            </div>
         </div>
@@ -4050,7 +4198,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
           </div>
         )}
 
-          {/* Modal Adicionar CrÃ©ditos */}
+          {/* Modal Adicionar CrÃƒÂ©ditos */}
           <AnimatePresence>
             {showAddCreditModal && (
 <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
@@ -4116,7 +4264,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
           <span className="material-symbols-outlined text-emerald-500">receipt_long</span>
           Extrato Detalhado
         </h3>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Todas as movimentaÃ§Ãµes da carteira</p>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Todas as movimentaÃƒÂ§ÃƒÂµes da carteira</p>
       </div>
       <button onClick={() => setShowWalletStatementModal(false)} className="size-12 rounded-full bg-white dark:bg-slate-800 text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-100 dark:border-slate-700 flex items-center justify-center transition-colors shadow-sm">
         <span className="material-symbols-outlined">close</span>
@@ -4126,7 +4274,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
       {walletTransactions.length === 0 ? (
         <div className="py-20 text-center">
           <span className="material-symbols-outlined text-5xl text-slate-200 dark:text-slate-700 mb-4 block">receipt_long</span>
-          <p className="text-slate-400 font-bold">Nenhuma movimentaÃ§Ã£o registrada.</p>
+          <p className="text-slate-400 font-bold">Nenhuma movimentaÃƒÂ§ÃƒÂ£o registrada.</p>
         </div>
       ) : (
         walletTransactions.map(tx => {
@@ -4139,7 +4287,7 @@ className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-[64px] overflow-h
                 </div>
                 <div>
                   <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{tx.description || (!isPositive ? 'Uso de Saldo' : 'Aporte de Saldo')}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })} â€¢ {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })} Ã¢â‚¬Â¢ {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
                   <p className="text-[9px] font-mono font-bold text-slate-300 dark:text-slate-600 mt-1">ID: {tx.id}</p>
                 </div>
             </div>

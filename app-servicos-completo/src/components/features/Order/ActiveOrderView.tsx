@@ -357,7 +357,17 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
               </div>
               <div>
                 <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">Receber em</p>
-                <p className="text-xs font-bold text-zinc-300 leading-tight">{selectedItem.delivery_address}</p>
+                <p className="text-xs font-bold text-zinc-300 leading-tight">
+                  {selectedItem.delivery_address?.split('|')[0].trim()}
+                </p>
+                {selectedItem.delivery_address?.includes('|') && (
+                  <div className="mt-2 p-3 bg-white/5 rounded-xl border border-white/5">
+                    <p className="text-[8px] font-black text-orange-500 uppercase tracking-widest mb-1">Nota da Entrega</p>
+                    <p className="text-[10px] font-bold text-zinc-400 leading-tight italic">
+                      {selectedItem.delivery_address.split('|')[1]?.replace(/^\s*OBS:\s*/i, '').trim()}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </section>
