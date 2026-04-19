@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from './lib/supabase';
-import { playIziSound } from './lib/iziSounds';
+import { playIziSound, stopIziSounds } from './lib/iziSounds';
 import { toast, toastSuccess, toastError, showConfirm } from './lib/useToast';
 import { BespokeIcons } from './lib/BespokeIcons';
 import { Geolocation } from '@capacitor/geolocation';
@@ -673,6 +673,23 @@ function App() {
         }
     }, [isAuthenticated, driverId, driverName, authInitLoading]);
 
+    const refreshMyApplications = useCallback(async () => {
+        if (!driverId) return;
+        try {
+            const { data, error } = await supabase
+                .from('slot_applications')
+                .select('*')
+                .eq('driver_id', driverId);
+            
+            if (!error && data) {
+                setMyApplications(data);
+                localStorage.setItem(`izi_apps_${driverId}`, JSON.stringify(data));
+            }
+        } catch (err) {
+            console.error("Erro ao carregar candidaturas:", err);
+        }
+    }, [driverId]);
+
     const [activeTab, setActiveTab] = useState<View>(() => (localStorage.getItem('izi_driver_active_tab') as View) || 'dashboard');
     const activeTabRef = useRef(activeTab);
     useEffect(() => { 
@@ -748,10 +765,17 @@ function App() {
     const [isAccepting, setIsAccepting] = useState(false);
     const [filter, setFilter] = useState<ServiceType | 'all'>('all');
     const [dedicatedSlots, setDedicatedSlots] = useState<any[]>([]);
-    const [myApplications, setMyApplications] = useState<any[]>([]);
+    const [myApplications, setMyApplications] = useState<any[]>(() => {
+        const uid = localStorage.getItem('izi_driver_uid');
+        if (!uid) return [];
+        const cached = localStorage.getItem(`izi_apps_${uid}`);
+        try { return cached ? JSON.parse(cached) : []; } catch { return []; }
+    });
     const [selectedSlot, setSelectedSlot] = useState<any | null>(null);
     const [applyingSlotId, setApplyingSlotId] = useState<string | null>(null);
     const [showSlotAppliedSuccess, setShowSlotAppliedSuccess] = useState(false);
+    const [showApprovedSlotModal, setShowApprovedSlotModal] = useState(false);
+    const [approvedSlotData, setApprovedSlotData] = useState<any>(null);
     const [scheduledOrders, setScheduledOrders] = useState<any[]>([]);
     const [subTabScheduled, setSubTabScheduled] = useState<'available' | 'confirmed'>('confirmed');
     const [selectedScheduledOrder, setSelectedScheduledOrder] = useState<any | null>(null);
@@ -841,7 +865,8 @@ function App() {
             'izi_driver_pix',
             'Izi_active_mission',
             'Izi_declined_slots',
-            'Izi_online' // Aqui sim limpamos o online
+            'Izi_online',
+            `izi_apps_${driverId}` // Limpa o cache de candidaturas também
         ];
         keysToRemove.forEach(k => localStorage.removeItem(k));
         sessionStorage.clear();
@@ -1571,10 +1596,13 @@ function App() {
     useEffect(() => {
         if (!isAuthenticated) return;
         const fetchDedicatedSlotsRealtime = async () => {
-            const { data } = await supabase.from('dedicated_slots_delivery').select('*, admin_users(store_name, store_logo, store_address, store_phone), slot_applications(status)').eq('is_active', true).order('created_at', { ascending: false });
-            // Filtrar apenas vagas que NÃO possuem nenhum candidato aceito
-            const available = (data || []).filter((s: any) => !s.slot_applications?.some((app: any) => app.status === 'accepted'));
-            setDedicatedSlots(available);
+            const { data } = await supabase
+                .from('dedicated_slots_delivery')
+                .select('*, admin_users(store_name, store_logo, store_address, store_phone)')
+                .eq('is_active', true)
+                .order('created_at', { ascending: false });
+            
+            setDedicatedSlots(data || []);
         };
         fetchDedicatedSlotsRealtime();
         const slotsChannel = supabase.channel('dedicated_slots_realtime')
@@ -1627,51 +1655,82 @@ function App() {
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
 
+        console.log('[REALTIME] Iniciando canal de escuta autoritativo para candidaturas...');
+        
         const channel = supabase
-            .channel(`job_apps_${driverId}`)
+            .channel(`all_applications_sync`)
             .on(
                 'postgres_changes',
                 {
                     event: 'UPDATE',
                     schema: 'public',
-                    table: 'slot_applications',
-                    filter: `driver_id=eq.${driverId}`
+                    table: 'slot_applications'
                 },
                 (payload) => {
-                    const status = payload.new.status;
-                    const oldStatus = payload.old.status;
+                    const { new: updatedApp } = payload;
+                    
+                    // Filtragem manual no cliente (Mais robusto)
+                    if (String(updatedApp.driver_id) !== String(driverId)) return;
 
-                    if (status === 'accepted' && oldStatus !== 'accepted') {
+                    const status = updatedApp.status;
+                    console.log(`[REALTIME] Mudança de status detectada para você: ${status}`);
+
+                    if (status === 'accepted') {
                         playIziSound('driver');
-                        // Toast premium para avisar da aprovação
-                        toastSuccess("🏁 VAGA CONFIRMADA! O lojista acabou de aprovar sua candidatura.", {
+                        
+                        const slotId = updatedApp.slot_id;
+                        const targetSlot = dedicatedSlots.find(s => String(s.id) === String(slotId));
+                        
+                        setApprovedSlotData(targetSlot || { 
+                            id: slotId, 
+                            title: 'Vaga Dedicada',
+                            fee_per_day: '80',
+                            admin_users: { store_name: 'Parceiro Izi' }
+                        });
+                        
+                        setShowApprovedSlotModal(true);
+
+                        toastSuccess("🏁 VAGA CONFIRMADA! Clique para ver os detalhes.", {
                             position: 'top-center',
-                            duration: 6000
+                            duration: 10000
                         });
                     }
                     
-                    // Atualiza o estado local das candidaturas
-                    fetchFromDB('slot_applications');
-                    // Também atualiza a lista de vagas para garantir que o selo mude
-                    fetchFromDB('dedicated_slots_delivery', 'select=*,admin_users(store_name,store_logo,store_address,store_phone),slot_applications(status)&is_active=eq.true&order=created_at.desc');
+                    // Sincroniza estados após qualquer atualização minha
+                    refreshMyApplications();
+                    fetchFromDB('dedicated_slots_delivery', 'select=*,admin_users(store_name,store_logo,store_address,store_phone)&is_active=eq.true&order=created_at.desc');
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                console.log('[REALTIME] Status da inscrição do canal:', status);
+            });
 
         return () => {
+            console.log('[REALTIME] Encerrando canal de candidaturas.');
             supabase.removeChannel(channel);
         };
-    }, [isAuthenticated, driverId, fetchFromDB]);
+    }, [isAuthenticated, driverId, fetchFromDB, dedicatedSlots, refreshMyApplications]);
+
+
 
     useEffect(() => {
         if (!isAuthenticated || !driverId) return;
-        const fetchApps = async () => {
-            const { data } = await supabase.from('slot_applications').select('*').eq('driver_id', driverId);
-            setMyApplications(data || []);
-        };
-        fetchApps();
+        
+        // Tenta carregar do cache primeiro para evitar flicker da trava sumindo
+        // Já carregado no estado inicial via initializer, mas atualizamos se o ID mudar
+        const cached = localStorage.getItem(`izi_apps_${driverId}`);
+        if (cached) {
+            try { 
+                const parsed = JSON.parse(cached);
+                if (JSON.stringify(parsed) !== JSON.stringify(myApplications)) {
+                    setMyApplications(parsed);
+                }
+            } catch(e) {}
+        }
+
+        refreshMyApplications();
         refreshFinanceData();
-    }, [isAuthenticated, driverId]);
+    }, [isAuthenticated, driverId, refreshMyApplications]);
 
     // Buscar Agendamentos disponíveis e aceitos
     useEffect(() => {
@@ -2563,6 +2622,15 @@ function App() {
             return;
         }
 
+        // --- TRAVA DE SEGURANÇA: Verificação de duplicados ---
+        const alreadyApplied = myApplications.some(app => String(app.slot_id) === String(slot.id) && app.status !== 'rejected');
+        
+        if (alreadyApplied) {
+            toastError("Você já possui uma candidatura ativa para esta vaga!");
+            return;
+        }
+        // ---------------------------------------------------
+
         setApplyingSlotId(slot.id);
         
         try {
@@ -2596,8 +2664,20 @@ function App() {
             console.log("Candidatura enviada via REST!");
             setShowSlotAppliedSuccess(true);
             
-            // Recarrega as vagas para atualizar a lista
-            await fetchFromDB('slot_applications');
+            // --- ATUALIZAÇÃO OTIMISTA E INSTANTÂNEA ---
+            const newApp = {
+                slot_id: slot.id,
+                driver_id: driverId,
+                status: 'pending',
+                created_at: new Date().toISOString()
+            };
+            
+            const updatedApps = [...myApplications, newApp];
+            setMyApplications(updatedApps);
+            localStorage.setItem(`izi_apps_${driverId}`, JSON.stringify(updatedApps));
+
+            // Atualiza do banco em background para garantir sincronia de campos extras
+            refreshMyApplications();
             
         } catch (err: any) {
             console.error('Erro detalhado:', err);
@@ -2691,32 +2771,44 @@ function App() {
                                 </button>
                                 
                                 {(() => {
-                                    const hasApplied = myApplications.some((app: any) => app.slot_id === selectedSlot?.id);
+                                    const hasApplied = myApplications.some((app: any) => String(app.slot_id) === String(selectedSlot?.id));
                                     const application = myApplications.find((app: any) => app.slot_id === selectedSlot?.id);
                                     
                                     if (hasApplied) {
-                                        const isWaiting = application?.status === 'pending';
+                                        const isAccepted = application?.status === 'accepted';
                                         return (
                                             <div
-                                                className={`flex-1 flex items-center justify-center gap-4 h-15 font-black text-xs uppercase tracking-[0.2em] transition-all ${
-                                                    application?.status === 'accepted' ? 'clay-card-yellow text-zinc-950' : 'clay-card-exclusive text-white/50'
+                                                className={`flex-1 flex items-center justify-center gap-4 h-15 rounded-[22px] font-black text-xs uppercase tracking-[0.3em] shadow-2xl relative overflow-hidden ${
+                                                    isAccepted 
+                                                        ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white border border-emerald-400/30' 
+                                                        : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white/90 border border-blue-500/30'
                                                 }`}
                                             >
-                                                <Icon 
-                                                    name={application?.status === 'accepted' ? 'verified' : 'history'} 
-                                                    size={22} 
-                                                    className={isWaiting ? 'animate-spin-slow' : ''} 
-                                                />
-                                                {application?.status === 'accepted' ? 'Candidatura Aprovada!' : 'Aguardando Lojista...'}
+                                                {/* Efeito de brilho Claymorphic */}
+                                                <div className="absolute top-1 left-2 right-2 h-[40%] bg-white/20 blur-[2px] rounded-t-full pointer-events-none" />
+                                                
+                                                <div className={`size-8 rounded-xl flex items-center justify-center ${isAccepted ? 'bg-white/20' : 'bg-white/10'}`}>
+                                                    <Icon 
+                                                        name={isAccepted ? 'verified' : 'hourglass_top'} 
+                                                        size={20} 
+                                                        className={!isAccepted ? 'animate-pulse' : ''} 
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col items-start leading-none gap-1">
+                                                    <span className="text-[10px] font-black">{isAccepted ? 'Vaga Confirmada!' : 'Aguardando Lojista'}</span>
+                                                    <span className={`text-[7px] opacity-60 font-bold ${isAccepted ? 'text-emerald-100' : 'text-blue-100'}`}>
+                                                        {isAccepted ? 'VOCÊ JÁ É EXCLUSIVO' : 'EM ANÁLISE PELO PARCEIRO'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         );
                                     }
 
                                     return (
                                         <button 
-                                            disabled={!!applyingSlotId}
+                                            disabled={!!applyingSlotId || hasApplied}
                                             onClick={() => selectedSlot && handleApplyToSlot(selectedSlot)}
-                                            className="flex-1 h-15 clay-card-exclusive overflow-hidden relative group active:scale-95 transition-all flex items-center justify-center gap-3 border border-primary/20"
+                                            className="flex-1 h-15 clay-card-exclusive overflow-hidden relative group active:scale-95 transition-all flex items-center justify-center gap-3 border border-primary/20 disabled:opacity-50"
                                         >
                                             <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-10 transition-opacity" />
                                             {applyingSlotId ? (
@@ -3023,44 +3115,46 @@ function App() {
                             <p className="text-[10px] text-white/30 font-black uppercase tracking-widest text-center py-4">Nenhuma vaga no momento</p>
                         ) : (
                             dedicatedSlots.slice(0, 2).map((slot: any) => {
-                                const maxDeliveries = slot.metadata?.base_deliveries || slot.max_deliveries || 0;
+                                const application = myApplications.find(app => String(app.slot_id) === String(slot.id));
+                                const hasApplied = !!application;
+                                const isAccepted = application?.status === 'accepted';
+                                const maxDeliveries = (slot.metadata?.base_deliveries || slot.max_deliveries || 0);
+                                
                                 return (
                                     <motion.button 
                                         key={slot.id}
                                         onClick={() => { setSelectedSlot(slot); setActiveTab('dedicated'); }}
-                                        className="relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-[30px_30px_60px_rgba(0,0,0,0.9),inset_10px_10px_25px_rgba(255,255,255,0.03),inset_-10px_-10px_25px_rgba(0,0,0,0.7)]"
+                                        className={`relative w-full rounded-[48px] overflow-hidden p-8 flex flex-col gap-6 text-left active:scale-[0.97] transition-all group shadow-[30px_30px_60px_rgba(0,0,0,0.9),inset_10px_10px_25px_rgba(255,255,255,0.03),inset_-10px_-10px_25px_rgba(0,0,0,0.7)] ${isAccepted ? 'border-2 border-emerald-500/40' : 'border border-white/5'}`}
                                         style={{
-                                            background: "linear-gradient(145deg, #1a1a1d, #121214)",
-                                            border: "1px solid rgba(250,204,21,0.12)"
+                                            background: isAccepted 
+                                                ? "linear-gradient(145deg, #062016, #0a0a0c)" 
+                                                : "linear-gradient(145deg, #1a1a1d, #121214)",
                                         }}
                                     >
-                                        {/* PREMIUM EFFECTS */}
-                                        <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-yellow-400/10 transition-all duration-1000" />
-                                        <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-orange-500/5 rounded-full blur-[60px] pointer-events-none" />
-                                        
+                                        <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] pointer-events-none group-hover:scale-110 transition-all duration-1000 ${isAccepted ? 'bg-emerald-500/10' : 'bg-yellow-400/5'}`} />
+
                                         <div className="relative z-10 flex items-start justify-between">
                                             <div className="flex gap-5 items-center flex-1 min-w-0 pr-4">
-                                                <div className="size-16 rounded-[24px] bg-zinc-900 border border-white/5 flex items-center justify-center shrink-0 shadow-[10px_10px_25px_rgba(0,0,0,0.6),inset_2px_2px_4px_rgba(255,255,255,0.05)] overflow-hidden relative">
+                                                <div className={`size-16 rounded-[24px] bg-zinc-900 border flex items-center justify-center shrink-0 shadow-inner overflow-hidden relative ${isAccepted ? 'border-emerald-500/20' : 'border-white/5'}`}>
                                                     {slot.admin_users?.store_logo ? (
                                                         <img src={slot.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
                                                     ) : (
-                                                        <div className="size-full bg-gradient-to-br from-yellow-400/20 to-orange-500/20 flex items-center justify-center">
-                                                            <Icon name="military_tech" className="text-yellow-400" size={32} />
+                                                        <div className={`size-full flex items-center justify-center ${isAccepted ? 'bg-emerald-500/10' : 'bg-yellow-400/10'}`}>
+                                                            <Icon name="military_tech" className={isAccepted ? 'text-emerald-400' : 'text-yellow-400'} size={32} />
                                                         </div>
                                                     )}
-                                                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
                                                 </div>
                                                 
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1.5">
-                                                        <div className="size-4 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
-                                                            <Icon name="verified" className="text-blue-400" size={10} />
+                                                        <div className={`size-4 rounded-full flex items-center justify-center border ${isAccepted ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-blue-500/20 border-blue-500/30'}`}>
+                                                            <Icon name="verified" className={isAccepted ? 'text-emerald-400' : 'text-blue-400'} size={10} />
                                                         </div>
-                                                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] drop-shadow-[0_0_12px_rgba(96,165,250,0.5)] truncate">
+                                                        <p className={`text-[10px] font-black uppercase tracking-[0.2em] truncate ${isAccepted ? 'text-emerald-400' : 'text-blue-400'}`}>
                                                             {slot.admin_users?.store_name || 'Parceiro Izi'}
                                                         </p>
                                                     </div>
-                                                    <h4 className="text-lg font-black text-white italic tracking-tight truncate leading-tight mb-1">{slot.title}</h4>
+                                                    <h4 className={`text-lg font-black italic tracking-tight truncate leading-tight mb-1 ${isAccepted ? 'text-emerald-400' : 'text-white'}`}>{slot.title}</h4>
                                                     <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-500">
                                                         <Icon name="location_on" className="text-zinc-600" size={10} />
                                                         <span className="truncate">{slot.admin_users?.store_address || 'Unidade Local'}</span>
@@ -3068,34 +3162,43 @@ function App() {
                                                 </div>
                                             </div>
                                             
-                                            <div className="text-right shrink-0 bg-black/20 p-4 rounded-[28px] border border-white/5 shadow-[inset_2px_2px_8px_rgba(0,0,0,0.4)]">
+                                            <div className="text-right shrink-0 bg-black/20 p-4 rounded-[28px] border border-white/5 shadow-inner">
                                                 <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 opacity-70">VALOR DIÁRIA</p>
                                                 <div className="flex flex-col items-end">
-                                                    <p className="text-2xl font-black text-yellow-400 italic leading-none">
-                                                        <span className="text-xs mr-0.5 not-italic text-yellow-400/60 font-bold">R$</span>
+                                                    <p className={`text-2xl font-black italic leading-none ${isAccepted ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                                                        <span className="text-xs mr-0.5 not-italic font-bold opacity-60">R$</span>
                                                         {parseFloat(slot.fee_per_day || 0).toFixed(0)}
                                                     </p>
-                                                    <div className="mt-2 py-1 px-3 bg-yellow-400 text-black rounded-full shadow-[2px_2px_8px_rgba(250,204,21,0.2)]">
-                                                        <p className="text-[9px] font-black uppercase tracking-tight">
-                                                            Até {maxDeliveries} entregas
-                                                        </p>
+                                                    <div className={`mt-2 py-1 px-3 ${isAccepted ? 'bg-emerald-500' : 'bg-yellow-400'} text-black rounded-full shadow-lg`}>
+                                                        <p className="text-[8px] font-black uppercase tracking-tight">Até {maxDeliveries} Entregas</p>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
+                                        {hasApplied && (
+                                            <div className={`relative z-10 mx-6 mt-2 px-6 py-3 rounded-2xl flex items-center justify-between border bg-black/40 backdrop-blur-md ${isAccepted ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-yellow-500/10'}`}>
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`size-2 rounded-full animate-pulse ${isAccepted ? 'bg-emerald-400' : 'bg-yellow-400'}`} />
+                                                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isAccepted ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                                                        {isAccepted ? 'VAGA CONQUISTADA' : 'AGUARDANDO LOJISTA'}
+                                                    </span>
+                                                </div>
+                                                <Icon name={isAccepted ? 'verified' : 'hourglass_empty'} size={16} className={isAccepted ? 'text-emerald-400' : 'text-yellow-400'} />
+                                            </div>
+                                        )}
+
                                         <div className="relative z-10 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
                                         <div className="relative z-10 flex items-center justify-between w-full">
                                             <div className="flex items-center gap-3">
-                                                <div className="size-8 rounded-xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/20 shrink-0">
-                                                    <Icon name="schedule" className="text-yellow-400" size={14} />
+                                                <div className={`size-8 rounded-xl flex items-center justify-center border shrink-0 ${isAccepted ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-yellow-400/10 border-yellow-400/20'}`}>
+                                                    <Icon name="schedule" className={isAccepted ? 'text-emerald-400' : 'text-yellow-400'} size={14} />
                                                 </div>
                                                 <p className="text-[11px] text-zinc-300 font-bold uppercase tracking-wider">{slot.working_hours}</p>
                                             </div>
-                                            
-                                            <div className="flex items-center gap-2 text-yellow-400 font-black uppercase text-[10px] tracking-widest drop-shadow-[0_0_8px_rgba(250,204,21,0.3)]">
-                                                Ver Detalhes
+                                            <div className={`flex items-center gap-2 font-black uppercase text-[10px] tracking-widest ${isAccepted ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                                                {isAccepted ? 'Ver Posto de Trabalho' : 'Ver Detalhes'} <Icon name="arrow_forward" size={14} />
                                             </div>
                                         </div>
                                     </motion.button>
@@ -3603,9 +3706,16 @@ function App() {
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {dedicatedSlots.map((s: any, i: number) => {
-                                const hasApplied = myApplications.some(app => app.slot_id === s.id);
-                                const application = myApplications.find(app => app.slot_id === s.id);
+                            {[...dedicatedSlots].sort((a, b) => {
+                                const appA = myApplications.find(app => String(app.slot_id) === String(a.id));
+                                const appB = myApplications.find(app => String(app.slot_id) === String(b.id));
+                                if (appA?.status === 'accepted' && appB?.status !== 'accepted') return -1;
+                                if (appB?.status === 'accepted' && appA?.status !== 'accepted') return 1;
+                                return 0;
+                            }).map((s: any, i: number) => {
+                                const hasApplied = myApplications.some(app => String(app.slot_id) === String(s.id));
+                                const application = myApplications.find(app => String(app.slot_id) === String(s.id));
+                                const isAccepted = application?.status === 'accepted';
                                 
                                 return (
                                     <motion.button 
@@ -3614,8 +3724,17 @@ function App() {
                                         animate={{ opacity: 1, scale: 1, y: 0 }} 
                                         transition={{ delay: i * 0.05 }}
                                         onClick={() => setSelectedSlot(s)}
-                                        className="w-full clay-card-exclusive transition-all p-8 flex items-center gap-6 group text-left relative overflow-hidden active:scale-[0.98]"
+                                        className={`w-full transition-all p-8 flex items-center gap-6 group text-left relative overflow-hidden active:scale-[0.98] ${
+                                            isAccepted 
+                                            ? 'clay-card-dark border-2 border-emerald-500/30' 
+                                            : 'clay-card-exclusive border border-white/5'
+                                        }`}
                                     >
+                                        {/* Efeito de brilho para vagas aprovadas */}
+                                        {isAccepted && (
+                                            <div className="absolute inset-0 bg-emerald-500/[0.03] pointer-events-none" />
+                                        )}
+
                                         <div className="size-16 rounded-[24px] bg-white/[0.03] border border-white/5 flex items-center justify-center shrink-0 overflow-hidden shadow-inner group-hover:scale-105 transition-transform duration-500">
                                             {s.admin_users?.store_logo
                                                 ? <img src={s.admin_users.store_logo} className="w-full h-full object-cover" alt="" />
@@ -3623,12 +3742,12 @@ function App() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <span className="size-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_#ffd900]"></span>
+                                                <span className={`size-1.5 rounded-full ${isAccepted ? 'bg-emerald-400' : 'bg-primary animate-pulse'} shadow-[0_0_8px_${isAccepted ? '#10b881' : '#ffd900'}]`}></span>
                                                 <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] truncate">
                                                     {s.admin_users?.store_name || 'Parceiro Exclusivo'}
                                                 </p>
                                             </div>
-                                            <p className="text-lg font-black text-white tracking-tight leading-tight group-hover:text-primary transition-colors italic">{s.title}</p>
+                                            <p className={`text-lg font-black tracking-tight leading-tight group-hover:text-primary transition-colors italic ${isAccepted ? 'text-emerald-400' : 'text-white'}`}>{s.title}</p>
                                             <div className="flex items-center gap-3 mt-3">
                                                 <div className="flex items-center gap-1.5 bg-white/[0.05] px-3 py-1 rounded-full border border-white/5">
                                                     <Icon name="schedule" size={12} className="text-primary/60" />
@@ -3641,14 +3760,18 @@ function App() {
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                                            <div className="bg-primary/10 border border-primary/20 px-4 py-2 rounded-2xl shadow-xl">
-                                                <p className="text-xl font-black text-primary italic leading-none">R$ {parseFloat(s.fee_per_day || 0).toFixed(0)}</p>
-                                                <p className="text-[7px] text-primary/60 font-black uppercase tracking-tighter text-center">p/ dia</p>
+                                            <div className={`${isAccepted ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-primary/10 border-primary/20'} border px-4 py-2 rounded-2xl shadow-xl transition-all`}>
+                                                <p className={`text-xl font-black italic leading-none ${isAccepted ? 'text-emerald-400' : 'text-primary'}`}>R$ {parseFloat(s.fee_per_day || 0).toFixed(0)}</p>
+                                                <p className={`text-[7px] font-black uppercase tracking-tighter text-center ${isAccepted ? 'text-emerald-400/60' : 'text-primary/60'}`}>p/ dia</p>
                                             </div>
                                             {hasApplied && (
                                                 <div className="flex flex-col items-end gap-1.5 mt-2 transition-all">
-                                                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest ${application?.status === 'accepted' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-white/10 text-white/40 border border-white/5'}`}>
-                                                        {application?.status === 'accepted' ? 'Aprovado' : 'Em Análise'}
+                                                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest ${isAccepted ? 'bg-emerald-500 text-black shadow-[0_5px_15px_rgba(16,185,129,0.3)]' : 'bg-white/10 text-white/40 border border-white/5 shadow-inner'}`}>
+                                                        {isAccepted ? (
+                                                            <><Icon name="verified" size={10} /> Vaga Confirmada</>
+                                                        ) : (
+                                                            'Em Análise'
+                                                        )}
                                                         {application?.status === 'pending' && <div className="size-1 bg-yellow-400 rounded-full animate-ping" />}
                                                     </div>
                                                 </div>
@@ -3656,7 +3779,7 @@ function App() {
                                         </div>
 
                                         {/* Background glow effect */}
-                                        <div className="absolute -right-10 -bottom-10 size-40 bg-primary/5 blur-[80px] rounded-full group-hover:bg-primary/10 transition-all duration-700"></div>
+                                        <div className={`absolute -right-10 -bottom-10 size-40 blur-[80px] rounded-full transition-all duration-700 ${isAccepted ? 'bg-emerald-500/10' : 'bg-primary/5 group-hover:bg-primary/10'}`}></div>
                                     </motion.button>
                                 );
                             })}
@@ -5903,6 +6026,67 @@ function App() {
                             <div className="w-12 h-1.5 bg-white/10 rounded-full" />
                         </div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showApprovedSlotModal && approvedSlotData && (
+                    <div className="fixed inset-0 z-[500] flex items-center justify-center p-6 sm:p-10">
+                        <motion.div 
+                            initial={{ opacity: 0 }} 
+                            animate={{ opacity: 1 }} 
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-xl"
+                            onClick={() => {
+                                setShowApprovedSlotModal(false);
+                                stopIziSounds();
+                            }}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.8, y: 50, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.8, y: 50, opacity: 0 }}
+                            className="relative w-full max-w-sm clay-card-exclusive bg-black/95 p-8 flex flex-col items-center gap-8 overflow-hidden border border-white/10"
+                        >
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 blur-3xl -mr-16 -mt-16 rounded-full" />
+                            
+                            <div className="size-24 rounded-[32px] bg-primary flex items-center justify-center shadow-[0_20px_40px_rgba(250,204,21,0.3)]">
+                                <Icon name="verified" size={48} className="text-black" />
+                            </div>
+
+                            <div className="text-center space-y-3">
+                                <h2 className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Parabéns!</h2>
+                                <h3 className="text-3xl font-black text-white italic tracking-tighter leading-none">VAGA CONFIRMADA</h3>
+                                <p className="text-xs text-white/40 leading-relaxed font-bold px-4">
+                                    Você foi selecionado para a vaga de <span className="text-white">{approvedSlotData.title}</span> em <span className="text-white">{approvedSlotData.admin_users?.store_name || 'um novo parceiro'}</span>.
+                                </p>
+                            </div>
+
+                            <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+                            <div className="w-full flex flex-col gap-4">
+                                <div className="flex justify-between items-center px-4 py-3 bg-white/5 rounded-[24px]">
+                                    <div className="flex flex-col">
+                                        <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">Garantido</p>
+                                        <p className="text-xl font-black text-primary italic leading-none">R$ {parseFloat(approvedSlotData.fee_per_day || 0).toFixed(0)} <span className="text-[10px] not-italic text-white/20">/ dia</span></p>
+                                    </div>
+                                    <Icon name="payments" className="text-white/10" size={32} />
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={() => {
+                                    setShowApprovedSlotModal(false);
+                                    stopIziSounds();
+                                    setActiveTab('dedicated');
+                                    setSelectedSlot(approvedSlotData);
+                                }}
+                                className="w-full h-20 bg-primary text-black rounded-[32px] font-black text-[11px] uppercase tracking-[0.3em] shadow-[0_15px_30px_rgba(250,204,21,0.2)] active:scale-95 transition-all flex items-center justify-center gap-4 border-t border-white/40"
+                            >
+                                VER DETALHES <Icon name="chevron_right" />
+                            </button>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
 

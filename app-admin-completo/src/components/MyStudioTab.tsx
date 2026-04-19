@@ -1373,18 +1373,33 @@ export default function MyStudioTab() {
                          <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] font-black">Clique no botÃƒÂ£o acima para criar sua primeira vaga</p>
                       </div>
                    ) : (
-                     myDedicatedSlots.map((slot) => (
+                      myDedicatedSlots.map((slot) => {
+                        const isAccepted = (slot as any).slot_applications?.some((app: any) => app.status === 'accepted');
+                        return (
                        <div 
                          key={slot.id} 
-                         className="group bg-white dark:bg-slate-900/60 backdrop-blur-sm rounded-[48px] border border-slate-100 dark:border-white/5 shadow-2xl overflow-hidden hover:shadow-primary/5 transition-all duration-500 flex flex-col h-full"
-                       >
+                          className={`group relative ${isAccepted ? "bg-gradient-to-br from-white to-emerald-50/30 dark:from-slate-900 dark:to-[#062016] ring-2 ring-emerald-500/30" : "bg-white dark:bg-slate-900/60"} backdrop-blur-sm rounded-[41px] border border-slate-100 dark:border-white/5 shadow-2xl overflow-hidden hover:shadow-primary/5 transition-all duration-500 flex flex-col h-full`}
+                        >
+                          {isAccepted && (
+                            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600 animate-pulse z-10"></div>
+                          )}
                           <div className="p-10 flex-1 flex flex-col">
                              <div className="flex justify-between items-start mb-10">
                                 <div className="space-y-3">
-                                   <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-2 ${slot.is_active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-500'}`}>
-                                      <span className={`size-1.5 rounded-full ${slot.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'}`}></span>
-                                      {slot.is_active ? 'Ativa & VisÃƒÂ­vel' : 'Pausada'}
+                                   <div className="flex items-center gap-3">
+                                      <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-2 ${slot.is_active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-500'}`}>
+                                         <span className={`size-1.5 rounded-full ${slot.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'}`}></span>
+                                         {slot.is_active ? 'Ativa' : 'Pausada'}
+                                      </div>
+                                      {isAccepted && (
+                                        <div className="bg-emerald-600 text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-500/20">
+                                          <span className="material-symbols-outlined text-[10px]">verified</span>
+                                          Preenchida
+                                        </div>
+                                      )}
                                    </div>
+
+
                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white leading-tight pr-4">
                                      {slot.title}
                                    </h3>
@@ -1455,18 +1470,19 @@ export default function MyStudioTab() {
                                      fetchSlotApplications(slot.id);
                                    }}
                                    className="text-[10px] font-black text-primary uppercase tracking-widest cursor-pointer hover:underline animate-pulse"
-                                 >Ver Candidatos</span>
+                                 >{isAccepted ? "Ver Escalado" : "Ver Candidatos"}</span>
                              </div>
                           </div>
                           
                           <button 
                              onClick={() => setEditingSlotId(slot.id)}
-                             className="w-full py-6 bg-slate-50 dark:bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:bg-primary hover:text-slate-950 transition-all border-t border-slate-100 dark:border-white/5"
+                              className={`w-full py-6 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-t border-slate-100 dark:border-white/5 ${isAccepted ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-slate-50 dark:bg-white/5 text-slate-400 hover:bg-primary hover:text-slate-950"}`}
                           >
-                             Gerenciar Vaga
+                             {isAccepted ? "Gerenciar Escala" : "Gerenciar Vaga"}
                           </button>
                        </div>
-                     ))
+                       );
+                      })
                    )}
                 </div>
               </div>
@@ -1511,27 +1527,42 @@ export default function MyStudioTab() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {myDedicatedSlots.map((slot: any) => (
-                        <button
-                          key={slot.id}
-                          onClick={() => { setSelectedSlotForCandidates(slot); fetchSlotApplications(slot.id); }}
-                          className="bg-white dark:bg-slate-900/60 p-8 rounded-[40px] border border-slate-100 dark:border-white/5 flex items-center justify-between hover:scale-[1.02] active:scale-95 transition-all group shadow-xl text-left"
-                        >
-                          <div className="flex items-center gap-5">
-                            <div className="size-14 rounded-[20px] bg-slate-950 dark:bg-primary flex items-center justify-center text-white dark:text-slate-950 shadow-lg">
-                              <span className="material-symbols-outlined text-2xl">person_search</span>
+                      {myDedicatedSlots.map((slot: any) => {
+                        const isFilled = slot.slot_applications?.some((a: any) => a.status === 'accepted');
+                        return (
+                          <button
+                            key={slot.id}
+                            onClick={() => { setSelectedSlotForCandidates(slot); fetchSlotApplications(slot.id); }}
+                            className={`bg-white dark:bg-slate-900/60 p-8 rounded-[40px] border-2 flex items-center justify-between hover:scale-[1.02] active:scale-95 transition-all group shadow-xl text-left relative overflow-hidden ${isFilled ? 'border-emerald-500/30' : 'border-slate-100 dark:border-white/5'}`}
+                          >
+                            {isFilled && (
+                              <div className="absolute top-0 right-0">
+                                <div className="bg-emerald-500 text-white text-[8px] font-black px-4 py-1.5 rounded-bl-[20px] uppercase tracking-widest shadow-lg">
+                                  Vaga Preenchida
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-5">
+                              <div className={`size-14 rounded-[20px] flex items-center justify-center shadow-lg ${isFilled ? 'bg-emerald-500 text-white' : 'bg-slate-950 dark:bg-primary text-white dark:text-slate-950'}`}>
+                                <span className="material-symbols-outlined text-2xl">{isFilled ? 'verified' : 'person_search'}</span>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">{slot.working_hours || 'Horário a definir'}</p>
+                                <p className="text-xl font-black dark:text-white tracking-tight">{slot.title}</p>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{slot.is_active ? '● Ativa' : '○ Pausada'}</p>
+                                  {slot.slot_applications?.length > 0 && (
+                                    <span className="text-[10px] font-bold text-primary uppercase tracking-widest">● {slot.slot_applications.length} {slot.slot_applications.length === 1 ? 'Candidato' : 'Candidatos'}</span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">{slot.working_hours || 'HorÃ¡rio a definir'}</p>
-                              <p className="text-xl font-black dark:text-white tracking-tight">{slot.title}</p>
-                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{slot.is_active ? 'â— Ativa' : 'â—‹ Pausada'}</p>
+                            <div className={`size-12 rounded-full border border-slate-200 dark:border-white/10 flex items-center justify-center transition-all ${isFilled ? 'bg-emerald-50 text-emerald-500 border-emerald-100' : 'text-slate-400 group-hover:bg-primary group-hover:text-slate-950 group-hover:border-primary'}`}>
+                              <span className="material-symbols-outlined">chevron_right</span>
                             </div>
-                          </div>
-                          <div className="size-12 rounded-full border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-slate-950 group-hover:border-primary transition-all">
-                            <span className="material-symbols-outlined">chevron_right</span>
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        );
+                      })}
                     </div>
                   )
                 ) : (

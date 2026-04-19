@@ -57,6 +57,11 @@ export const playIziSound = (role: 'merchant' | 'driver' | 'success') => {
     };
 
     const audio = new Audio(soundUrls[role]);
+    if (role === 'driver') {
+        audio.loop = true; // Notificação de vaga é crítica, toca até o usuário interagir
+        // Armazenar referência global para parar depois se necessário
+        (window as any)._iziActiveAlarm = audio;
+    }
     audio.play().catch(() => {
         // Fallback dinâmico se o navegador bloquear
         if (ctx && role === 'driver') {
@@ -66,6 +71,18 @@ export const playIziSound = (role: 'merchant' | 'driver' | 'success') => {
 
   } catch (e) {
     console.warn('Erro ao reproduzir som:', e);
+  }
+};
+
+export const stopIziSounds = () => {
+  if ((window as any)._iziActiveAlarm) {
+    try {
+      (window as any)._iziActiveAlarm.pause();
+      (window as any)._iziActiveAlarm.currentTime = 0;
+      (window as any)._iziActiveAlarm = null;
+    } catch (e) {
+      console.error('Erro ao parar som:', e);
+    }
   }
 };
 

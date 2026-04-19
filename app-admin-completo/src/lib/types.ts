@@ -234,6 +234,7 @@ export interface DedicatedSlot {
   fee_per_day: number;
   working_hours?: string;
   is_active: boolean;
+  slot_applications?: any[];
   created_at?: string;
   _isNew?: boolean;
   _tempTitle?: string;
