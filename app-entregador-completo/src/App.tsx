@@ -809,7 +809,13 @@ function App() {
                 const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
                 if (AudioContextClass) {
                     const ctx = new AudioContextClass();
-                    if (ctx.state === 'suspended') {
+                    
+                    // No web normal, suspended é o gatilho. No APK, as vezes o estado inicia como running 
+                    // mas requer interação. Forçamos a exibição se for nativo e não houver flag de desbloqueio.
+                    const isNative = Capacitor.isNativePlatform();
+                    const hasUnlocked = localStorage.getItem('izi_audio_unlocked') === 'true';
+
+                    if (ctx.state === 'suspended' || (isNative && !hasUnlocked)) {
                         setAudioBlocked(true);
                     }
                     ctx.close();
@@ -822,6 +828,7 @@ function App() {
     const enableAudioManually = () => {
         playIziSound('success');
         setAudioBlocked(false);
+        localStorage.setItem('izi_audio_unlocked', 'true');
         toastSuccess('Notificações sonoras ativas!');
     };
 
@@ -1301,16 +1308,19 @@ function App() {
                     hasBootedRef.current = true;
                     console.log('[AUTH] Primeiro boot detectado. Carregando perfil...');
 
-                    // Buscar perfil apenas para nome e chave pix (NÃƒÂ¢Ã¢€ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Åá¬ÃƒÂ¢Ã¢â‚¬Å¾¢O tocar no is_online aqui)
+                    // Buscar perfil apenas para nome e chave pix (NÃO tocar no is_online aqui)
                     const { data: profile } = await supabase
                         .from('drivers_delivery')
-                        .select('name, bank_info')
+                        .select('name, bank_info, avatar_url')
                         .eq('id', user.id)
                         .single();
 
                     if (profile) {
                         setDriverName(profile.name || 'Entregador');
                         setPixKey(profile.bank_info?.pix_key || '');
+                        setDriverAvatar(profile.avatar_url || null);
+                        if (profile.avatar_url) localStorage.setItem('izi_driver_avatar', profile.avatar_url);
+                        else localStorage.removeItem('izi_driver_avatar');
                     } else {
                         const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
                         setDriverName(name);
@@ -1331,6 +1341,11 @@ function App() {
                     setDriverId(null);
                     setIsAuthenticated(false);
                     setDriverName('Entregador');
+                    setDriverAvatar(null);
+                    localStorage.removeItem('izi_driver_avatar');
+                    localStorage.removeItem('izi_driver_uid');
+                    localStorage.removeItem('izi_driver_authenticated');
+                    localStorage.removeItem('izi_driver_name');
                 }
             }
             setAuthInitLoading(false);
