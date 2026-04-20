@@ -616,6 +616,7 @@ function App() {
     const [appSettings, setAppSettings] = useState<any>(null);
     const [dynamicRates, setDynamicRates] = useState<any>(null);
     const [realTimeRoute, setRealTimeRoute] = useState<{distanceText: string, distanceValue: number} | null>(null);
+    const [activeBroadcast, setActiveBroadcast] = useState<any>(null);
     const [showSplash, setShowSplash] = useState(true);
 
     useEffect(() => {
@@ -1274,6 +1275,9 @@ function App() {
             }
         };
 
+        // O listener de transmissões foi movido para um useEffect dedicado abaixo.
+
+
         // Check initial Supabase session
         supabase.auth.getSession().then(({ data: { session } }) => {
             const user = session?.user;
@@ -1283,17 +1287,68 @@ function App() {
                 const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Entregador';
                 setDriverName(name);
                 ensureDriverRecord(user.id, user.email || '', name);
+
             } else {
                 setDriverId(null);
                 setIsAuthenticated(false);
                 setDriverName('Entregador');
             }
-        }).catch(err => {
-            console.error('[AUTH] Erro Session:', err);
         }).finally(() => {
             setAuthInitLoading(false);
         });
 
+        const authTimeout = setTimeout(() => setAuthInitLoading(false), 5000);
+
+        return () => {
+            clearTimeout(authTimeout);
+        };
+    }, []);
+
+    // Effect dedicado para Transmissões Administrativas (Popups)
+    useEffect(() => {
+        if (!driverId) return;
+
+        const initBroadcasts = async () => {
+            const { data } = await supabase
+                .from('broadcast_notifications')
+                .select('*')
+                .eq('status', 'sent')
+                .in('type', ['popup', 'both'])
+                .in('target_type', ['all', 'drivers'])
+                .order('created_at', { ascending: false })
+                .limit(1);
+            
+            if (data && data[0]) {
+                const lastSeen = localStorage.getItem('last_izi_broadcast_driver');
+                if (lastSeen !== data[0].id) {
+                    setActiveBroadcast(data[0]);
+                }
+            }
+        };
+
+        initBroadcasts();
+
+        const broadcastSub = supabase
+            .channel(`broadcast-notifs-${driverId}`)
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'broadcast_notifications' 
+            }, (payload) => {
+                const notif = payload.new;
+                if ((notif.type === 'popup' || notif.type === 'both') && 
+                    (notif.target_type === 'all' || notif.target_type === 'drivers')) {
+                    setActiveBroadcast(notif);
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(broadcastSub);
+        };
+    }, [driverId]);
+
+    useEffect(() => {
         // Timeout de segurança: garante que o app saia da tela de boot mesmo se houver erro de rede/supabase
         const authTimeout = setTimeout(() => setAuthInitLoading(false), 5000);
 
@@ -5688,6 +5743,53 @@ function App() {
         );
     };
 
+    const renderBroadcastPopup = () => {
+        if (!activeBroadcast) return null;
+        return (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md"
+          >
+             <motion.div 
+               initial={{ scale: 0.9, y: 20 }}
+               animate={{ scale: 1, y: 0 }}
+               className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-[40px] overflow-hidden shadow-2xl border-4 border-white/50 dark:border-slate-800/50"
+             >
+                {activeBroadcast.image_url && (
+                  <div className="w-full h-48 relative overflow-hidden">
+                     <img src={activeBroadcast.image_url} alt="Broadcast" className="w-full h-full object-cover" />
+                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  </div>
+                )}
+                
+                <div className="p-8 space-y-6">
+                   <div className="space-y-2">
+                      <h3 className="text-2xl font-black text-slate-900 dark:text-white leading-tight">
+                        {activeBroadcast.title}
+                      </h3>
+                      <p className="text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
+                        {activeBroadcast.message}
+                      </p>
+                   </div>
+                   
+                   <motion.button 
+                     whileTap={{ scale: 0.95 }}
+                     onClick={() => {
+                        localStorage.setItem('last_izi_broadcast_driver', activeBroadcast.id);
+                        setActiveBroadcast(null);
+                     }}
+                     className="w-full bg-primary text-black font-black py-5 rounded-[22px] shadow-xl shadow-primary/10 uppercase tracking-widest text-[10px]"
+                   >
+                     Aproveitar
+                   </motion.button>
+                </div>
+             </motion.div>
+          </motion.div>
+        );
+    };
+
     return (
         <div className="w-full h-[100dvh] bg-black font-sans overflow-hidden relative">
             {/* Banner de Ativação de Áudio */}
@@ -6301,6 +6403,10 @@ function App() {
                 )}
             </AnimatePresence>
 
+            {/* In-App Broadcast Popups */}
+            <AnimatePresence>
+              {renderBroadcastPopup()}
+            </AnimatePresence>
         </div>
     );
 }
