@@ -24,6 +24,7 @@ const NotificationsTab = () => {
   const [notifType, setNotifType] = useState<'push' | 'popup' | 'both'>('push');
   const [imageUrl, setImageUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [menuItem, setMenuItem] = useState<NotificationBroadcast | null>(null);
 
   useEffect(() => {
     fetchHistory();
@@ -88,6 +89,19 @@ const NotificationsTab = () => {
 
       if (error) throw error;
 
+      // Disparar Push via Edge Function se necessário
+      if (notifType === 'push' || notifType === 'both') {
+        const { error: fnError } = await supabase.functions.invoke('broadcast-push', {
+          body: {
+            target_type: target,
+            title,
+            message,
+            image_url: imageUrl || null
+          }
+        });
+        if (fnError) console.error('Erro ao disparar broadcast push:', fnError);
+      }
+
       // Reset form
       setTitle('');
       setMessage('');
@@ -96,6 +110,55 @@ const NotificationsTab = () => {
       alert('Notificação disparada com sucesso!');
     } catch (err: any) {
       alert('Erro ao enviar: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTemplate = (item: NotificationBroadcast) => {
+    setTitle(item.title);
+    setMessage(item.message);
+    setTarget(item.target_type);
+    setNotifType(item.type);
+    setImageUrl(item.image_url || '');
+    setMenuItem(null);
+    // Scroll para o topo para mostrar o formulário preenchido
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleResendDirectly = async (item: NotificationBroadcast) => {
+    setLoading(true);
+    setMenuItem(null);
+    try {
+      const { error } = await supabase
+        .from('broadcast_notifications')
+        .insert({
+          title: item.title,
+          message: item.message,
+          target_type: item.target_type,
+          type: item.type,
+          image_url: item.image_url || null,
+          status: 'sent'
+        });
+
+      if (error) throw error;
+
+      // Disparar Push via Edge Function se necessário
+      if (item.type === 'push' || item.type === 'both') {
+        await supabase.functions.invoke('broadcast-push', {
+          body: {
+            target_type: item.target_type,
+            title: item.title,
+            message: item.message,
+            image_url: item.image_url || null
+          }
+        });
+      }
+
+      fetchHistory();
+      alert('Notificação reenviada com sucesso!');
+    } catch (err: any) {
+      alert('Erro ao reenviar: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -234,7 +297,8 @@ const NotificationsTab = () => {
                    key={item.id}
                    initial={{ opacity: 0, x: 20 }}
                    animate={{ opacity: 1, x: 0 }}
-                   className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 rounded-[32px] flex items-center gap-5 hover:border-slate-200 dark:hover:border-slate-700 transition-all group"
+                   onClick={() => setMenuItem(item)}
+                   className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 rounded-[32px] flex items-center gap-5 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 cursor-pointer transition-all group relative overflow-hidden"
                 >
                    <div className={`size-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${
                       item.type === 'push' ? 'bg-blue-500/10 text-blue-500' : 
@@ -255,8 +319,61 @@ const NotificationsTab = () => {
                       </p>
                       <span className="text-[8px] font-black bg-emerald-500/10 text-emerald-500 px-2 py-1 rounded-full uppercase">Enviado</span>
                    </div>
+
+                   {/* Indicador de Hover */}
+                   <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="material-symbols-outlined text-primary">more_vert</span>
+                   </div>
                 </motion.div>
               ))}
+
+              <AnimatePresence>
+                {menuItem && (
+                   <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setMenuItem(null)}
+                        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                      />
+                      <motion.div 
+                        initial={{ scale: 0.9, y: 20 }}
+                        animate={{ scale: 1, y: 0 }}
+                        exit={{ scale: 0.9, y: 20 }}
+                        className="relative w-full max-w-xs bg-white dark:bg-slate-900 rounded-[40px] p-8 shadow-2xl border-4 border-white dark:border-slate-800 space-y-6"
+                      >
+                         <div className="text-center space-y-2">
+                            <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase italic">Opções da Transmissão</h4>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{menuItem.title}</p>
+                         </div>
+
+                         <div className="flex flex-col gap-3">
+                            <button 
+                              onClick={() => loadTemplate(menuItem)}
+                              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 hover:bg-primary hover:text-slate-900 transition-all font-black text-[10px] uppercase tracking-widest"
+                            >
+                               <span className="material-symbols-outlined text-sm">edit_note</span>
+                               Editar & Carregar
+                            </button>
+                            <button 
+                              onClick={() => handleResendDirectly(menuItem)}
+                              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 hover:bg-emerald-500 hover:text-white transition-all font-black text-[10px] uppercase tracking-widest"
+                            >
+                               <span className="material-symbols-outlined text-sm">replay</span>
+                               Disparar Novamente
+                            </button>
+                            <button 
+                              onClick={() => setMenuItem(null)}
+                              className="w-full py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest"
+                            >
+                               Cancelar
+                            </button>
+                         </div>
+                      </motion.div>
+                   </div>
+                )}
+              </AnimatePresence>
 
               {history.length === 0 && (
                  <div className="py-20 text-center opacity-30">
