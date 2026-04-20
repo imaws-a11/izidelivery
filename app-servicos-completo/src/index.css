@@ -75,21 +75,19 @@
     box-shadow: 0 0 20px rgba(250, 204, 21, 0.6);
   }
 
-  /* CLAYMORPSHISM PREMIUM STYLES - MAIS VOLUMOSO */
-  .clay-card-dark {
-    background: #09090b;
-    box-shadow: 12px 12px 24px #040405, -12px -12px 24px #0e0e11, inset 4px 4px 10px rgba(255,255,255,0.03), inset -4px -4px 10px rgba(0,0,0,0.4);
+  /* CLUBE IZI BLACK STYLES */
+  .clay-card {
+      box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.1), inset -2px -2px 4px rgba(0, 0, 0, 0.5), 0 8px 32px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
   }
   .clay-card-yellow {
-    background: #FACD05;
-    box-shadow: 10px 10px 20px rgba(0,0,0,0.15), inset 6px 6px 12px rgba(255,255,255,0.5), inset -6px -6px 12px rgba(0,0,0,0.15);
+      background: #facc15;
+      box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.6), inset -4px -4px 8px rgba(0, 0, 0, 0.2), 0 8px 32px rgba(250, 204, 21, 0.2);
+      border: none;
   }
-  .clay-button-yellow {
-    background: #FACD05;
-    box-shadow: 0 15px 30px rgba(250,204,21,0.2), inset 4px 4px 8px rgba(255,255,255,0.4), inset -4px -4px 8px rgba(0,0,0,0.1);
-  }
-  .text-shadow-sm {
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  .clay-button {
+      background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+      box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.4), 0 8px 16px rgba(250, 204, 21, 0.2);
   }
 }
 

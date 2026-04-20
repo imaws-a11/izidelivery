@@ -101,6 +101,7 @@ interface PaymentMethodsViewProps {
   onSetDefault: (id: string) => void;
   onDelete: (id: string) => void;
   isLoading?: boolean;
+  onDepositPix?: () => void;
 }
 
 export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
@@ -110,6 +111,7 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
   onSetDefault,
   onDelete,
   isLoading,
+  onDepositPix,
 }) => {
   return (
     <div className="fixed inset-0 z-[140] bg-black text-zinc-100 flex flex-col pt-safe overflow-hidden">
@@ -137,7 +139,10 @@ export const PaymentMethodsView: React.FC<PaymentMethodsViewProps> = ({
             {/* Quick Actions / Pix */}
             <section className="space-y-6">
               <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.4em] ml-2">Fluxo de Caixa</p>
-              <button className="w-full h-24 p-6 rounded-[35px] bg-[#0c0c0c] border border-white/5 flex items-center justify-between group active:scale-[0.98] transition-all shadow-[10px_10px_20px_rgba(0,0,0,0.3),inset_4px_4px_8px_rgba(255,255,255,0.02)]">
+              <button 
+                onClick={onDepositPix}
+                className="w-full h-24 p-6 rounded-[35px] bg-[#0c0c0c] border border-white/5 flex items-center justify-between group active:scale-[0.98] transition-all shadow-[10px_10px_20px_rgba(0,0,0,0.3),inset_4px_4px_8px_rgba(255,255,255,0.02)]"
+              >
                 <div className="flex items-center gap-5">
                   <div className="size-14 rounded-3xl bg-zinc-900 flex items-center justify-center border border-white/5 shadow-inner">
                     <span className="material-symbols-outlined text-yellow-400 text-2xl font-black">qr_code_2</span>

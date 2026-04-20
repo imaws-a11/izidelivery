@@ -20,26 +20,36 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Custom Icons
+// Custom Icons - Ponto Amarelo Pulsante Minimalista
 const driverIcon = new L.DivIcon({
   className: 'custom-driver',
-  html: `<div style="width:24px;height:24px;background-color:#facc15;border:3px solid #000;border-radius:50%;box-shadow:0 0 10px rgba(250,204,21,0.5);display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:12px;color:black">two_wheeler</span></div>`,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12]
+  html: `<div class="relative flex items-center justify-center">
+           <div class="absolute w-8 h-8 bg-yellow-400 opacity-20 rounded-full animate-ping"></div>
+           <div class="absolute w-5 h-5 bg-yellow-400 opacity-30 rounded-full animate-pulse"></div>
+           <div class="w-2.5 h-2.5 bg-yellow-400 rounded-full border border-black/40 shadow-[0_0_15px_rgba(250,204,21,1)]"></div>
+         </div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16]
 });
 
 const pickupIcon = new L.DivIcon({
   className: 'custom-pickup',
-  html: `<div style="width:20px;height:20px;background-color:#3b82f6;border:2px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:12px;color:white">storefront</span></div>`,
-  iconSize: [20, 20],
-  iconAnchor: [10, 10]
+  html: `<div class="relative flex items-center justify-center">
+           <div class="absolute w-6 h-6 bg-yellow-400 opacity-20 rounded-full animate-pulse"></div>
+           <div class="w-2 h-2 bg-yellow-400 rounded-full shadow-[0_0_10px_rgba(250,204,21,0.8)]"></div>
+         </div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12]
 });
 
 const userIcon = new L.DivIcon({
   className: 'custom-user',
-  html: `<div style="width:20px;height:20px;background-color:#22c55e;border:2px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:12px;color:white">home</span></div>`,
-  iconSize: [20, 20],
-  iconAnchor: [10, 10]
+  html: `<div class="relative flex items-center justify-center">
+           <div class="absolute w-6 h-6 bg-yellow-400 opacity-20 rounded-full animate-pulse"></div>
+           <div class="w-2 h-2 bg-yellow-400 rounded-full shadow-[0_0_10px_rgba(250,204,21,0.8)]"></div>
+         </div>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12]
 });
 
 // Component to handle auto bounds

@@ -5076,6 +5076,10 @@ const navigateSubView = (target: string) => {
           onSetDefault={handleSetPrimaryCard}
           onDelete={handleDeleteCard}
           isLoading={isLoadingCards}
+          onDepositPix={() => {
+            setDepositPaymentMethod("pix");
+            setShowDepositModal(true);
+          }}
         />
 
         {/* MODAL: ADD CARD */}
@@ -6060,112 +6064,145 @@ const navigateSubView = (target: string) => {
     }
 
     const perks = [
-      { icon: "delivery_dining",    title: "Taxa Zero",        desc: "Entrega grátis em toda a cidade, sem limite.",    highlight: true },
-      { icon: "bolt",               title: "Prioridade IZI",   desc: "Seus pedidos sempre primeiro na fila.",           highlight: false },
-      { icon: "stars",              title: "Cashback 5%",      desc: "Pontos dobrados em todos os pedidos.",            highlight: false },
-      { icon: "support_agent",      title: "Suporte VIP",      desc: "Canal exclusivo 24 horas via App.",               highlight: false },
-      { icon: "confirmation_number",title: "Cupons Black",     desc: "Ofertas exclusivas só para membros.",             highlight: false },
-      { icon: "qr_code_scanner",    title: "Early Access",     desc: "Lançamentos e novidades antecipadas.",         highlight: false },
+      { id: 1, icon: "delivery_dining", title: "Taxa Zero Izi", desc: "Entrega gratuita em estabelecimentos selecionados.", yellow: true },
+      { id: 2, icon: "confirmation_number", title: "Cupons Black", desc: "Acesso a cupons exclusivos de alto valor.", yellow: false },
+      { id: 3, icon: "stars", title: "Cashback 5%", desc: "Receba parte do valor de volta em todos os pedidos.", yellow: false },
+      { id: 4, icon: "bolt", title: "Prioridade Izi", desc: "Seus pedidos são preparados e entregues primeiro.", yellow: true },
     ];
 
     return (
-      <div className="absolute inset-0 z-50 bg-[#000000] text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
-        <header className="px-6 pt-10 pb-4 flex items-center justify-between sticky top-0 z-[60] bg-transparent">
-          <button onClick={handleClose}
-            className="size-10 flex items-center justify-center active:scale-90 transition-all text-white drop-shadow-md">
-            <span className="material-symbols-outlined text-zinc-100">close</span>
+      <div className="absolute inset-0 z-50 bg-black text-white flex flex-col overflow-y-auto no-scrollbar pb-24">
+        {/* Header com Voltar */}
+        <header className="sticky top-0 z-[100] px-5 py-4 bg-black/60 backdrop-blur-xl border-b border-white/5 flex items-center gap-4">
+          <button 
+            onClick={handleClose}
+            className="size-10 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center active:scale-95 transition-all"
+          >
+            <span className="material-symbols-outlined text-white">arrow_back</span>
           </button>
-          <div className="text-center drop-shadow-md">
-            <h2 className="text-xl font-black text-white italic tracking-tighter uppercase leading-none mb-0.5">Izi <span className="text-yellow-500">Black</span></h2>
-            <p className="text-[8px] text-yellow-500 font-black uppercase tracking-[0.4em]">Elite</p>
-          </div>
-          <div className="size-10" />
+          <h1 className="text-sm font-black uppercase tracking-widest italic">Clube <span className="text-yellow-400">Izi Black</span></h1>
         </header>
 
-        <main className="relative z-10 flex flex-col">
-          <section className="mb-12 mt-[-88px]">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8 }}
-              className="relative h-[480px] overflow-hidden group"
-              style={{ backgroundImage: 'url("/izi_black_allblack.png")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#000' }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black/90" />
-              
-              <div className="absolute inset-x-8 bottom-10 space-y-4">
-                <div className="flex flex-col">
-                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.4em] mb-2 animate-pulse">Status: Elite</span>
-                  <h3 className="text-5xl font-black text-white leading-[0.9] uppercase tracking-tighter italic">
-                    Izi<br/>Black.
-                  </h3>
-                </div>
-
-                <div className="flex items-end gap-3 pt-4">
-                  <div className="flex items-start gap-1">
-                    <span className="text-zinc-600 font-black text-xl mt-1 italic">R$</span>
-                    <span className="text-6xl font-black text-white tracking-tighter leading-none italic">{Math.floor(iziBlackPrice)}</span>
-                    <span className="text-2xl font-black text-zinc-600 mt-1">,{((iziBlackPrice % 1) * 100).toFixed(0).padStart(2, '0')}</span>
-                  </div>
-                  <div className="mb-1">
-                    <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest italic">Por mês</p>
-                  </div>
-                </div>
+        <main className="max-w-xl mx-auto px-6 pt-12 space-y-10 w-full mb-10">
+          {/* Hero Section: Claymorphism Card */}
+          <motion.section 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative"
+          >
+            <div className="clay-card bg-zinc-900/80 rounded-3xl p-8 text-center relative overflow-visible">
+              {/* Floating 3D Icon Overlay */}
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center clay-card-yellow shadow-2xl">
+                <span className="material-symbols-outlined text-black text-4xl font-black fill-1">diamond</span>
               </div>
-            </motion.div>
-          </section>
+              
+              <div className="mt-10 space-y-3">
+                <p className="text-[10px] text-zinc-500 font-extrabold tracking-[0.2em] uppercase">Economia total com o Clube</p>
+                <div className="flex items-center justify-center gap-1">
+                   <span className="text-xl font-black text-yellow-400 mb-4 italic">R$</span>
+                   <h2 className="font-black text-yellow-400 text-6xl tracking-tighter italic">76,50</h2>
+                </div>
+                <p className="text-zinc-400 text-[11px] px-4 font-medium leading-relaxed">Usuários que assinam o Clube economizam em média R$ 120 por mês.</p>
+              </div>
 
-          <section className="px-8 space-y-2">
-            <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mb-6">Seus Privilégios</h3>
-
-            <div className="flex flex-col">
-              {perks.map((p, i) => (
-                <motion.div 
-                  key={i} 
-                  initial={{ opacity: 0, y: 10 }} 
-                  animate={{ opacity: 1, y: 0 }} 
-                  transition={{ delay: 0.2 + i * 0.08 }}
-                  className="flex items-start gap-6 py-6 border-b border-zinc-900 last:border-0 group"
+              {!isIziBlackMembership ? (
+                <button 
+                  onClick={() => setIziBlackStep("payment")}
+                  className="clay-button w-full mt-8 py-5 rounded-3xl text-black font-black tracking-widest uppercase text-[11px] flex items-center justify-center gap-3 hover:opacity-90 active:scale-95 transition-all"
                 >
-                  <div className={`mt-0.5 ${p.highlight ? 'text-yellow-500' : 'text-zinc-600'} transition-all duration-300`}>
-                    <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>{p.icon}</span>
+                  Quero entrar pro Clube
+                  <span className="material-symbols-outlined text-sm font-black">arrow_forward</span>
+                </button>
+              ) : (
+                <div className="clay-card-yellow mt-8 py-5 rounded-3xl text-black flex items-center justify-center gap-3">
+                   <span className="material-symbols-outlined font-black fill-1">verified</span>
+                   <span className="text-[11px] font-black uppercase tracking-widest">Assinatura Ativa</span>
+                </div>
+              )}
+            </div>
+          </motion.section>
+
+          {/* Benefícios Section */}
+          <section className="space-y-6">
+            <div className="flex justify-between items-end px-1">
+              <h3 className="font-black text-2xl tracking-tighter text-white italic">Benefícios do Clube</h3>
+              <span className="text-yellow-400 font-black text-xs uppercase tracking-widest cursor-pointer">Ver tudo</span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              {perks.map((perk, idx) => (
+                <motion.div 
+                  key={perk.id}
+                  initial={{ opacity: 0, x: idx % 2 === 0 ? -10 : 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 * idx }}
+                  className={`${perk.yellow ? 'clay-card-yellow' : 'clay-card bg-zinc-900 border border-white/5'} rounded-3xl p-6 flex flex-col items-start justify-between min-h-[170px] overflow-hidden group relative`}
+                >
+                  <div className="relative w-full">
+                    <span 
+                      className={`material-symbols-outlined ${perk.yellow ? 'text-black/30' : 'text-yellow-400/20'} text-6xl absolute -right-2 -top-2 transition-transform group-hover:scale-110 fill-1`}
+                    >
+                      {perk.icon}
+                    </span>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-black text-sm text-white tracking-tight uppercase mb-0.5">{p.title}</p>
-                    <p className="text-zinc-500 text-xs font-medium leading-relaxed">{p.desc}</p>
+                  <div className="space-y-1.5 relative z-10">
+                    <p className={`font-black text-base leading-tight tracking-tight ${perk.yellow ? 'text-black' : 'text-white'}`}>{perk.title}</p>
+                    <p className={`text-[10px] font-bold leading-relaxed ${perk.yellow ? 'text-black/70' : 'text-zinc-500'}`}>{perk.desc}</p>
                   </div>
                 </motion.div>
               ))}
             </div>
           </section>
 
-          <section className="px-8 mt-16 pb-12">
-            {!isIziBlackMembership ? (
-              <div className="space-y-6">
-                <button onClick={() => setIziBlackStep("payment")}
-                  className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all text-zinc-900 shadow-[0_0_20px_rgba(251,191,36,0.15)]"
-                  style={{ backgroundColor: "#FBBF24" }}>
-                  Quero ser IZI Black Agora
-                </button>
-                <div className="flex flex-col items-center gap-2 text-center">
-                  <p className="text-zinc-700 text-[9px] font-black uppercase tracking-[0.3em]">Ambiente Seguro 256-bit</p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-6 py-10 border-t border-b border-zinc-900">
-                <div className="text-yellow-500 animate-pulse">
-                  <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
-                </div>
-                <div className="text-center">
-                  <h4 className="text-white font-black text-lg uppercase tracking-tight italic">Assinatura Ativa</h4>
-                  <p className="text-zinc-500 text-xs mt-1">Sua jornada de elite já começou.</p>
-                </div>
-              </div>
-            )}
+          {/* Assinaturas e Parcerias Section */}
+          <section className="space-y-6">
+            <h3 className="font-black text-2xl tracking-tighter text-white italic">Assinaturas e Parcerias</h3>
             
-            <p className="text-zinc-800 text-[10px] text-center mt-8 font-bold uppercase tracking-widest">Cancele quando quiser â€¢ Sem fidelidade</p>
+            <motion.div 
+              whileTap={{ scale: 0.98 }}
+              className="relative rounded-3xl overflow-hidden min-h-[180px] flex items-center group cursor-pointer"
+            >
+              <img 
+                alt="Uber Partnership" 
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=800" 
+              />
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-[1px]"></div>
+              
+              <div className="relative z-10 w-full p-6 flex justify-between items-center bg-zinc-900/40 backdrop-blur-md border border-white/10 m-4 rounded-3xl shadow-2xl">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-yellow-400 text-black font-black text-[9px] px-2 py-0.5 rounded uppercase tracking-tighter">CLUBE</span>
+                    <span className="text-white font-black text-2xl tracking-tighter">+</span>
+                    <span className="text-white font-black text-2xl tracking-tighter italic">Uber</span>
+                  </div>
+                  <p className="text-white/60 text-[11px] font-bold uppercase tracking-widest">Vantagens exclusivas para suas viagens.</p>
+                </div>
+                <div className="size-10 rounded-full bg-yellow-400 flex items-center justify-center text-black shadow-lg">
+                  <span className="material-symbols-outlined font-black">chevron_right</span>
+                </div>
+              </div>
+            </motion.div>
           </section>
 
+          {/* Secondary CTA Grid */}
+          <section className="grid grid-cols-1 gap-4 pb-10">
+            <motion.div 
+              whileTap={{ scale: 0.98 }}
+              className="clay-card bg-zinc-900/50 p-6 rounded-3xl flex items-center justify-between border border-white/5 transition-all group cursor-pointer"
+            >
+              <div className="flex items-center gap-5">
+                <div className="size-14 bg-yellow-400/10 rounded-2xl flex items-center justify-center text-yellow-400 border border-yellow-400/10 shadow-inner">
+                  <span className="material-symbols-outlined text-2xl fill-1">card_giftcard</span>
+                </div>
+                <div>
+                  <p className="font-black text-sm text-white uppercase tracking-tight">Indique e ganhe</p>
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Ganhe cupons indicando amigos</p>
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors">arrow_forward</span>
+            </motion.div>
+          </section>
         </main>
       </div>
     );
@@ -7136,7 +7173,7 @@ const navigateSubView = (target: string) => {
           </div>
         </header>
 
-        <main className="px-6 space-y-10">
+        <main className="px-6 space-y-10 pb-40">
           {transitData.subService === "express" && (
             <section className="space-y-6">
               <div className="flex items-center gap-4 px-2">
@@ -7698,49 +7735,63 @@ const navigateSubView = (target: string) => {
     const navItems = [
       { id: "home", icon: "explore", label: "Inicio" },
       { id: "wallet", icon: "account_balance_wallet", label: "IZI Pay" },
+      { id: "cart", icon: "shopping_cart", label: cart.length > 0 ? `R$ ${cart.reduce((sum: number, item: any) => sum + (item.price || 0), 0).toFixed(2).replace(".", ",")}` : "Carrinho", isCart: true },
       { id: "orders", icon: "receipt_long", label: "Pedidos" },
       { id: "profile", icon: "person", label: "Perfil" },
     ];
 
     return (
       <nav
-        className="fixed bottom-0 left-0 z-50 flex w-full items-center justify-around border-t border-white/5 bg-black/80 px-4 pt-4 backdrop-blur-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+        className="fixed bottom-0 left-0 z-[1000] flex w-full items-center justify-around bg-black/95 px-2 pb-6 pt-3 backdrop-blur-3xl border-t border-white/5"
         style={{
-          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)",
-          height: "80px",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 20px)",
+          height: "105px",
         }}
       >
         {navItems.map((item) => {
-          const isActive = tab === item.id;
+          const isActive = item.isCart ? subView === 'cart' : (tab === item.id && subView === 'none');
 
           return (
             <button
               key={item.id}
               onClick={() => {
-                setTab(item.id as any);
-                setSubView("none");
-                window.history.replaceState(
-                  { view: "app", tab: item.id, subView: "none" },
-                  "",
-                );
+                if (item.isCart) {
+                  navigateSubView("cart");
+                } else {
+                  setTab(item.id as any);
+                  setSubView("none");
+                  window.history.replaceState(
+                    { view: "app", tab: item.id, subView: "none" },
+                    "",
+                  );
+                }
               }}
-              className={`flex flex-col items-center justify-center transition-all duration-300 ease-out active:scale-90 ${
-                isActive
-                  ? "scale-110 text-yellow-400 drop-shadow-[0_0_8px_rgba(255,215,0,0.6)]"
-                  : "text-zinc-500 hover:text-zinc-300"
-              }`}
+              className="relative flex flex-col items-center justify-center flex-1 transition-all active:scale-95"
             >
-              <span
-                className="material-symbols-outlined text-2xl"
-                style={{
-                  fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0",
-                }}
+              <div 
+                className={`relative flex size-12 items-center justify-center rounded-[20px] transition-all duration-500 ${
+                  isActive 
+                    ? "bg-yellow-400 shadow-[6px_6px_12px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] scale-110" 
+                    : "bg-zinc-900 shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_1px_1px_2px_rgba(255,255,255,0.02)]"
+                }`}
               >
-                {item.icon}
-              </span>
+                <span
+                  className={`material-symbols-outlined text-[24px] transition-all ${isActive ? 'text-black font-black' : 'text-zinc-600'}`}
+                  style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
+                >
+                  {item.icon}
+                </span>
+
+                {item.isCart && cart.length > 0 && (
+                  <span className={`absolute -right-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[9px] font-black transition-colors ${isActive ? 'bg-black text-yellow-400' : 'bg-red-500 text-white shadow-lg'}`}>
+                    {cart.length > 99 ? "99+" : cart.length}
+                  </span>
+                )}
+              </div>
+
               <span
-                className={`mt-1 text-[9px] font-black uppercase tracking-widest ${
-                  isActive ? "text-yellow-400" : "text-zinc-500"
+                className={`mt-2 text-[8px] font-black uppercase tracking-[0.05em] transition-all text-center ${
+                  isActive ? "text-yellow-400" : "text-zinc-600"
                 }`}
               >
                 {item.label}
@@ -7748,35 +7799,6 @@ const navigateSubView = (target: string) => {
             </button>
           );
         })}
-
-        <button
-          onClick={() => navigateSubView("cart")}
-          className="relative flex flex-col items-center justify-center text-zinc-500 transition-all ease-out hover:text-zinc-300 active:scale-90"
-        >
-          <div className="relative flex size-9 items-center justify-center rounded-2xl bg-yellow-400 shadow-[0_0_15px_rgba(255,215,9,0.3)]">
-            <span
-              className="material-symbols-outlined text-[20px] text-black"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              shopping_cart
-            </span>
-            {cart.length > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white ring-2 ring-black">
-                {cart.length > 99 ? "99+" : cart.length}
-              </span>
-            )}
-          </div>
-          <span className="mt-1 text-[9px] font-black uppercase tracking-widest text-yellow-400">
-            {cart.length > 0
-              ? (() => {
-                  const subtotal = cart.reduce((sum: number, item: any) => sum + (item.price || 0), 0);
-                  const rate = isIziBlackMembership ? (appSettings?.iziBlackCashback || 5) : (globalSettings?.izi_coin_rate || 1);
-                  const cashback = subtotal * (rate / 100);
-                  return `R$ ${subtotal.toFixed(2)} | +${cashback.toFixed(3)} IZI COINS`;
-                })()
-              : "Cart"}
-          </span>
-        </button>
       </nav>
     );
   };
@@ -8161,7 +8183,7 @@ const navigateSubView = (target: string) => {
               )}
             </AnimatePresence>
 
-            <BottomNav />
+            {subView === "none" && <BottomNav />}
           </motion.div>
         )}
       </AnimatePresence>

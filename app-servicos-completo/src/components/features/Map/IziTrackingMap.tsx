@@ -201,39 +201,37 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
             />
             {/* Marcadores de Início e Fim da Rota */}
             <OverlayView position={path[0]} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-               <div className="size-4 bg-emerald-500 rounded-full border-2 border-white shadow-lg -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+               <div className="relative flex items-center justify-center" style={{ transform: 'translate(-50%, -50%)' }}>
+                  <div className="absolute size-6 rounded-full bg-yellow-400/30 animate-pulse" />
+                  <div className="size-3 rounded-full bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.8)]" />
+               </div>
             </OverlayView>
             <OverlayView position={path[path.length - 1]} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-               <div className="size-5 bg-yellow-400 rounded-xl border-2 border-zinc-900 shadow-xl -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-                  <Icon name="location_on" size={12} className="text-zinc-900" />
+               <div className="relative flex items-center justify-center" style={{ transform: 'translate(-50%, -50%)' }}>
+                  <div className="absolute size-8 rounded-full bg-yellow-400/20 animate-ping" />
+                  <div className="size-3.5 rounded-full bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,1)]" />
                </div>
             </OverlayView>
           </>
         )}
 
-        {/* Marcador do Motorista - ícone dinâmico por tipo de veículo */}
+        {/* Marcador do Motorista - Minimalista Amarelo Pulsante */}
         {isValidCoord(driverLoc) && (
           <OverlayView position={driverLoc!} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
             <div className="relative flex items-center justify-center" style={{ transform: 'translate(-50%, -50%)' }}>
-              <div className="absolute size-9 rounded-full bg-emerald-500/20 animate-pulse" />
-              <div className="size-9 rounded-2xl bg-emerald-500 border-2 border-black shadow-xl flex items-center justify-center rotate-45">
-                 <div className="-rotate-45">
-                   <Icon name={vehicleIcon} size={18} className="text-black" />
-                 </div>
-              </div>
+              <div className="absolute size-10 rounded-full bg-yellow-400/20 animate-ping" />
+              <div className="absolute size-6 rounded-full bg-yellow-400/40 animate-pulse" />
+              <div className="size-4 rounded-full bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,1)] border-2 border-black" />
             </div>
           </OverlayView>
         )}
 
-        {/* Marcador do Usuário/Origem */}
+        {/* Marcador do Usuário/Lojista - Minimalista Amarelo Pulsante */}
         {isValidCoord(userLoc) && (
           <OverlayView position={userLoc!} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-            <div className="relative flex items-center justify-center group" style={{ transform: 'translate(-50%, -50%)' }}>
-              <div className="absolute size-11 rounded-full bg-yellow-400/20 animate-ping" />
-              <div className="size-11 rounded-2xl bg-yellow-400 border-2 border-black shadow-lg flex items-center justify-center relative z-10">
-                <Icon name="person_pin" size={20} className="text-black" />
-              </div>
-              <div className="absolute top-14 bg-black/80 px-2 py-1 rounded text-[8px] font-black text-white uppercase whitespace-nowrap border border-white/10">{originLabel}</div>
+            <div className="relative flex items-center justify-center" style={{ transform: 'translate(-50%, -50%)' }}>
+              <div className="absolute size-8 rounded-full bg-yellow-400/20 animate-pulse" />
+              <div className="size-3 rounded-full bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.8)] border border-black/20" />
             </div>
           </OverlayView>
         )}
