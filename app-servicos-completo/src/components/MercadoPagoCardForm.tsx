@@ -10,9 +10,10 @@ interface MercadoPagoCardFormProps {
   onConfirm: (token: string, issuer: string, installments: number, brand: string, last4: string) => void;
   total?: number;
   userId?: string | null;
+  publicKey?: string;
 }
 
-export const MercadoPagoCardForm = ({ onConfirm }: MercadoPagoCardFormProps) => {
+export const MercadoPagoCardForm = ({ onConfirm, publicKey }: MercadoPagoCardFormProps) => {
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   
@@ -78,13 +79,15 @@ export const MercadoPagoCardForm = ({ onConfirm }: MercadoPagoCardFormProps) => 
         return;
       }
 
-      if (!mpPublicKey || mpPublicKey.includes("INSIRA_SUA_CHAVE")) {
+      const finalPublicKey = (publicKey || mpPublicKey || "").trim();
+      
+      if (!finalPublicKey || finalPublicKey.includes("INSIRA_SUA_CHAVE")) {
         toastError("Chave Pública do Mercado Pago não configurada.");
         setLoading(false);
         return;
       }
 
-      // Validação básica manual antes de enviar
+      const mp = new MercadoPago(finalPublicKey);
       if (formData.cardNumber.replace(/\s/g, '').length < 15) {
         toastError("Número do cartão incompleto.");
         setLoading(false);

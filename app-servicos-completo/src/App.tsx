@@ -238,7 +238,9 @@ function App() {
         .select('*')
         .single();
       if (appData) setAppSettings(appData);
-    } catch (e) {}
+    } catch (e) {
+      console.error("Erro ao carregar configurações:", e);
+    }
   }, []);
 
   const [nowTick, setNowTick] = useState<number>(Date.now());
@@ -2034,7 +2036,7 @@ function App() {
       const addonsPrice = Array.isArray(item.addonDetails) 
         ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0)
         : 0;
-      return sum + basePrice + addonsPrice;
+      return sum + (basePrice + addonsPrice) * (item.quantity || 1);
     }, 0);
     const couponDiscount = appliedCoupon
       ? appliedCoupon.discount_type === "fixed"
@@ -2045,8 +2047,9 @@ function App() {
     const coinValue = globalSettings?.izi_coin_value || 0.01;
     const coinDiscount = useCoins ? (iziCoins || 0) * coinValue : 0;
     const deliveryFee = calculateDeliveryFee();
-    const serviceFeePercent = appSettings?.serviceFee || 0;
-    const serviceFeeAmount = (subtotal * serviceFeePercent) / 100;
+    const serviceFeePercent = globalSettings?.service_fee_percent || 0;
+    const rawServiceFee = (subtotal * serviceFeePercent) / 100;
+    const serviceFeeAmount = isIziBlackMembership ? 0 : rawServiceFee;
     const totalRaw = subtotal + deliveryFee + serviceFeeAmount - couponDiscount - coinDiscount;
     const total = Math.max(0, Number(totalRaw.toFixed(2)));
 
@@ -3163,8 +3166,9 @@ const navigateSubView = (target: string) => {
     }
 
       // [Comentario Limpo pelo Sistema]
-    const serviceFeePercent = appSettings?.serviceFee || 0;
-    const serviceFeeAmount = (finalPrice * serviceFeePercent) / 100;
+    const serviceFeePercent = globalSettings?.service_fee_percent || 0;
+    const rawServiceFee = (finalPrice * serviceFeePercent) / 100;
+    const serviceFeeAmount = isIziBlackMembership ? 0 : rawServiceFee;
     finalPrice += serviceFeeAmount;
 
     setIsLoading(true);
@@ -4444,7 +4448,7 @@ const navigateSubView = (target: string) => {
           </div>
 
           <div className="bg-zinc-900/10 border border-zinc-900/50 p-6 rounded-[40px] shadow-2xl">
-              <MercadoPagoCardForm onConfirm={handleConfirmCard} />
+              <MercadoPagoCardForm onConfirm={handleConfirmCard} publicKey={appSettings?.mercadopago_public_key} />
           </div>
           
           <div className="flex flex-col items-center gap-4 py-4">
@@ -5135,7 +5139,9 @@ const navigateSubView = (target: string) => {
                   </button>
                 </div>
                 
-                <MercadoPagoCardForm onConfirm={async (token, issuer, _installments, brand, last4) => {
+                <MercadoPagoCardForm 
+                  publicKey={appSettings?.mercadopago_public_key}
+                  onConfirm={async (token, issuer, _installments, brand, last4) => {
                    setIsLoadingCards(true);
                    try {
                      const { data: inserted, error } = await supabase.from("payment_methods").insert({
@@ -5267,6 +5273,7 @@ const navigateSubView = (target: string) => {
   const renderWallet = () => {
     return (
       <WalletView 
+        mercadopagoPublicKey={appSettings?.mercadopago_public_key}
         walletTransactions={walletTransactions}
         myOrders={myOrders}
         userXP={userXP}
@@ -7185,7 +7192,7 @@ const navigateSubView = (target: string) => {
         navigateSubView={navigateSubView}
         marketConditions={marketConditions}
         calculateDynamicPrice={calculateDynamicPrice}
-        serviceFee={appSettings?.serviceFee || 0}
+        serviceFee={globalSettings?.service_fee_percent || 0}
       />
     );
   };
@@ -8092,7 +8099,24 @@ const navigateSubView = (target: string) => {
               )}
               {tab === "wallet" && (
                 <motion.div key="wallet-tab" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-                   <WalletView walletTransactions={walletTransactions} myOrders={myOrders} userXP={userXP} savedCards={savedCards} paymentMethod={paymentMethod} setPaymentsOrigin={setPaymentsOrigin} setSubView={setSubView} showToast={showToast} userId={userId} userName={userName} iziCoins={iziCoins} iziCashback={iziCashbackEarned} setShowDepositModal={setShowDepositModal} iziCoinValue={globalSettings?.izi_coin_value || 0.01} iziCoinRate={globalSettings?.izi_coin_value || 1.0} />
+                   <WalletView 
+                     mercadopagoPublicKey={appSettings?.mercadopago_public_key}
+                     walletTransactions={walletTransactions} 
+                     myOrders={myOrders} 
+                     userXP={userXP} 
+                     savedCards={savedCards} 
+                     paymentMethod={paymentMethod} 
+                     setPaymentsOrigin={setPaymentsOrigin} 
+                     setSubView={setSubView} 
+                     showToast={showToast} 
+                     userId={userId} 
+                     userName={userName} 
+                     iziCoins={iziCoins} 
+                     iziCashback={iziCashbackEarned} 
+                     setShowDepositModal={setShowDepositModal} 
+                     iziCoinValue={globalSettings?.izi_coin_value || 0.01} 
+                     iziCoinRate={globalSettings?.izi_coin_value || 1.0} 
+                   />
                 </motion.div>
               )}
               {tab === "profile" && (

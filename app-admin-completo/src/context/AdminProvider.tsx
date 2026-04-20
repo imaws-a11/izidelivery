@@ -191,6 +191,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     withdrawal_period_h: 24,
     withdrawal_day: 'Quarta-feira',
     loan_interest_rate: 12.0,
+    mercadopago_public_key: '',
     paymentmethodsactive: { pix: true, card: true, lightning: false, wallet: true }
   });
   const [globalSettings, setGlobalSettings] = useState<any>({
@@ -242,6 +243,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           withdrawal_day: String(appSettings.withdrawal_day || 'Quarta-feira'),
           minwithdrawalamount: Number(appSettings.minwithdrawalamount ?? 0.0),
           loan_interest_rate: Number(appSettings.loan_interest_rate ?? 12.0),
+          mercadopago_public_key: String(appSettings.mercadopago_public_key || ''),
           updated_at: new Date().toISOString()
         };
         

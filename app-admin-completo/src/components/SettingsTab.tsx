@@ -159,6 +159,37 @@ export default function SettingsTab() {
         </div>
       </section>
 
+      {/* Mercado Pago */}
+      <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+          <span className="material-symbols-outlined text-[120px]">payments</span>
+        </div>
+        <div className="flex items-center gap-3 mb-8">
+          <div className="p-3 rounded-2xl bg-yellow-50 text-yellow-600 border border-yellow-100 dark:bg-yellow-500/10 dark:border-yellow-500/20">
+            <span className="material-symbols-outlined">api</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Integração Mercado Pago</h2>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Configurações para processamento de cartões</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-6">
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Chave Pública (Public Key)</label>
+            <input
+              className="px-6 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none focus:ring-2 focus:ring-yellow-400 text-sm font-bold dark:text-white transition-all font-mono"
+              type="text"
+              placeholder="APP_USR-..."
+              value={appSettings.mercadopago_public_key || ''}
+              onChange={(e) => setAppSettings({ ...appSettings, mercadopago_public_key: e.target.value })}
+            />
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1 mt-1">
+              Necessária para tokenização segura do cartão no frontend.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Operacional: Plataforma Global */}
       <section className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3 mb-2">
@@ -325,10 +356,9 @@ export default function SettingsTab() {
               <input
                 className="w-full bg-white dark:bg-slate-900 border-none rounded-2xl pl-4 pr-10 py-3.5 font-black text-2xl text-blue-600 focus:ring-2 focus:ring-blue-300 shadow-inner"
                 type="number" min="0" max="20" step="0.01"
-                value={globalSettings?.service_fee_percent ?? appSettings.serviceFee}
+                value={globalSettings?.service_fee_percent || 0}
                 onChange={(e) => {
                   const val = parseFloat(e.target.value) || 0;
-                  setAppSettings({ ...appSettings, serviceFee: val });
                   handleUpdateGlobalFinance('service_fee_percent', val);
                 }}
               />

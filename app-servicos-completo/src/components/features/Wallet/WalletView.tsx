@@ -193,6 +193,7 @@ interface WalletViewProps {
   iziCoinRate?: number;
   iziBlackRate?: number;
   setIziCoins?: React.Dispatch<React.SetStateAction<number>>;
+  mercadopagoPublicKey?: string;
 }
 
 export const WalletView: React.FC<WalletViewProps> = ({
@@ -213,6 +214,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
     showToast,
     setPaymentsOrigin,
     setSubView,
+    mercadopagoPublicKey,
   }) => {
   const [walletMode, setWalletMode] = useState<"main" | "transfer" | "my_qr" | "scan" | "add_card" | "loans">("main");
   const [showAllHistory, setShowAllHistory] = useState(false);
@@ -1297,7 +1299,9 @@ export const WalletView: React.FC<WalletViewProps> = ({
             <p className="text-[10px] font-black uppercase tracking-wider">Checkout Seguro Mercado Pago</p>
           </div>
           
-          <MercadoPagoCardForm onConfirm={async (token, issuer, _installments, brand, last4) => {
+          <MercadoPagoCardForm 
+            publicKey={mercadopagoPublicKey}
+            onConfirm={async (token, issuer, _installments, brand, last4) => {
              setIsSavingCard(true);
              try {
                const { error } = await supabase.from("payment_methods").insert({
