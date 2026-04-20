@@ -2213,6 +2213,28 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
 
+  const handleUpdateMerchantProfile = useCallback(async (data: Partial<MerchantProfile>) => {
+    if (!merchantProfile?.id) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('admin_users')
+        .update(data)
+        .eq('id', merchantProfile.id);
+
+      if (error) throw error;
+
+      const updatedProfile = { ...merchantProfile, ...data };
+      setMerchantProfile(updatedProfile);
+      localStorage.setItem('izi_admin_profile', JSON.stringify(updatedProfile));
+      toastSuccess('Perfil atualizado com sucesso!');
+    } catch (err: any) {
+      toastError('Erro ao atualizar perfil: ' + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [merchantProfile]);
+
   const handleUpdateDispatchSettings = async (_field: string, _value: string) => {};
   const handleSeedCategories = async () => {};
 
@@ -2481,6 +2503,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     handleFileUpload, handleUpdateDispatchSettings, handleSeedCategories, savePromotion, 
     autoSavePromo,
     handleSaveAppSettings,
+    handleUpdateMerchantProfile,
     fetchMerchantFinance, handleRequestWithdrawal, handleUpdateMerchantBankInfo, handleSyncMerchantBalance,
     partnerTransactions, partnerBalance, fetchPartnerFinance, handleRequestPartnerWithdrawal
   };

@@ -45,7 +45,7 @@ type Tab = 'dashboard' | 'tracking' | 'orders' | 'drivers' | 'users' | 'financia
 type UserRole = 'admin' | 'merchant';
 const MASTER_ADMIN_EMAIL = (import.meta.env.VITE_MASTER_ADMIN_EMAIL as string ?? '').trim().toLowerCase();
 
-// ‚îÄ‚îÄ‚îÄ Flash Offers Section ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+// √¢îÄ√¢îÄ√¢îÄ Flash Offers Section √¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ√¢îÄ
 const FlashOffersSection = ({ supabase, userRole, merchantId }: { supabase: any, userRole: string, merchantId?: string }) => {
   const [offers, setOffers] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -139,7 +139,7 @@ const FlashOffersSection = ({ supabase, userRole, merchantId }: { supabase: any,
               <input type="number" value={form.discounted_price} onChange={e => setForm({...form, discounted_price: e.target.value})} placeholder="0,00" className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold dark:text-white focus:outline-none focus:border-rose-400" />
               {form.original_price && form.discounted_price && (
                 <p className={`text-[10px] font-black ${Math.round((1 - Number(form.discounted_price)/Number(form.original_price))*100) >= 20 ? 'text-emerald-500' : 'text-red-500'}`}>
-                  Desconto: {Math.round((1 - Number(form.discounted_price)/Number(form.original_price))*100)}% {Math.round((1 - Number(form.discounted_price)/Number(form.original_price))*100) < 20 ? '(m√≠nimo 20%)' : '‚úì'}
+                  Desconto: {Math.round((1 - Number(form.discounted_price)/Number(form.original_price))*100)}% {Math.round((1 - Number(form.discounted_price)/Number(form.original_price))*100) < 20 ? '(m√≠nimo 20%)' : '√¢úì'}
                 </p>
               )}
             </div>
@@ -196,7 +196,7 @@ const FlashOffersSection = ({ supabase, userRole, merchantId }: { supabase: any,
                   </div>
                   <div className="flex gap-2 pt-1">
                     <button onClick={() => toggleActive(offer.id, offer.is_active)} className={`flex-1 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${offer.is_active ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-                      {offer.is_active ? '‚óè Ativa' : '‚óã Pausada'}
+                      {offer.is_active ? '√¢óè Ativa' : '√¢óã Pausada'}
                     </button>
                     <button onClick={() => deleteOffer(offer.id)} className="px-3 py-2.5 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl border border-red-100 dark:border-red-500/20 text-[9px] font-black uppercase tracking-widest">
                       <span className="material-symbols-outlined text-sm">delete</span>
@@ -2192,7 +2192,7 @@ toastSuccess('Configura√ß√µes de precifica√ß√£o din√¢mica publicadas com sucesso
         }]);
 
       if (notifyErr && notifyErr.code === '42P01') {
-        // Tabela n√£o existe ainda ‚Äî apenas o log foi salvo
+        // Tabela n√£o existe ainda √¢Äî apenas o log foi salvo
         toastWarning('Notifica√ß√£o registrada no log. Crie a tabela notifications_delivery para envio real.');
       } else if (notifyErr) {
         throw notifyErr;
@@ -2481,7 +2481,7 @@ toastSuccess('Configura√ß√µes de precifica√ß√£o din√¢mica publicadas com sucesso
                 <h4 className="text-sm font-black truncate max-w-[150px]">{targetItem?.store_name || 'Minha Loja'}</h4>
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-[10px] fill-1 text-primary">star</span>
-                  <span className="text-[10px] font-black">4.9 ‚Ä¢ 30-40 min</span>
+                  <span className="text-[10px] font-black">4.9 √¢Ä¢ 30-40 min</span>
                 </div>
               </div>
             </div>
@@ -2698,7 +2698,7 @@ toastSuccess('Configura√ß√µes de precifica√ß√£o din√¢mica publicadas com sucesso
                   </div>
                 </section>
 
-                {/* Bot√£o Salvar ‚Äî persiste no Supabase */}
+                {/* Bot√£o Salvar √¢Äî persiste no Supabase */}
                 <div className="sticky bottom-0 left-0 right-0 pt-6 pb-2 bg-gradient-to-t from-[#F8F9FA] dark:from-slate-950 to-transparent">
                   <button
                     onClick={() => handleSaveStudioInfo(targetItem)}
@@ -3337,11 +3337,11 @@ toastSuccess('Configura√ß√µes de precifica√ß√£o din√¢mica publicadas com sucesso
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢"
+                  placeholder="√¢Ä¢√¢Ä¢√¢Ä¢√¢Ä¢√¢Ä¢√¢Ä¢√¢Ä¢√¢Ä¢"
                   className="w-full bg-white/5 border border-white/5 rounded-full px-8 py-5 text-white font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 shadow-inner placeholder:text-slate-700"
                 />
               </div>
-              {authError && <p className="text-red-500 text-xs font-bold text-center mt-4">‚ö†Ô∏è¬è {authError}</p>}
+              {authError && <p className="text-red-500 text-xs font-bold text-center mt-4">√¢ö†Ô∏è¬è {authError}</p>}
               <button
                 type="submit"
                 disabled={authLoading}
@@ -3350,7 +3350,7 @@ toastSuccess('Configura√ß√µes de precifica√ß√£o din√¢mica publicadas com sucesso
                 {authLoading ? 'Autenticando...' : 'Acessar Painel'}
               </button>
             </form>
-            <p className="text-center text-[9px] font-bold text-slate-700 mt-10 uppercase tracking-[0.1em]">¬© 2026 Delivery de Tudo ‚Ä¢ Console Privada</p>
+            <p className="text-center text-[9px] font-bold text-slate-700 mt-10 uppercase tracking-[0.1em]">¬© 2026 Delivery de Tudo √¢Ä¢ Console Privada</p>
           </motion.div>
         </div>
       )}
@@ -3521,7 +3521,7 @@ toastSuccess('Configura√ß√µes de precifica√ß√£o din√¢mica publicadas com sucesso
             </Suspense>
           {/* Global Footer */}
           <div className="p-6 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-slate-800 text-center mt-auto">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">Painel de Controle em Tempo Real ‚Ä¢ Gerenciamento de Pedidos</p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">Painel de Controle em Tempo Real √¢Ä¢ Gerenciamento de Pedidos</p>
           </div>
         </div>
       </main>

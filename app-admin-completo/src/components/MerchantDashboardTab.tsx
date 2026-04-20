@@ -25,8 +25,25 @@ export default function MerchantDashboardTab() {
   const { totalRevenue, completedOrdersCount, avgTicket, dailyRevenue, topProducts } = dashboardData;
   
   // Metas e Projeções (Dinâmico baseado nas configurações)
-  const monthlyGoal = 0; // Removido meta fixa de 15k
+  const [showGoalModal, setShowGoalModal] = React.useState(false);
+  const [tempGoal, setTempGoal] = React.useState('');
+  const { handleUpdateMerchantProfile, isSaving } = useAdmin();
+
+  const monthlyGoal = Number(merchantProfile?.monthly_goal || 0);
   const progressPercent = monthlyGoal > 0 ? Math.min((totalRevenue / monthlyGoal) * 100, 100) : 0;
+
+  const openGoalModal = () => {
+    setTempGoal(monthlyGoal.toString());
+    setShowGoalModal(true);
+  };
+
+  const saveGoal = async () => {
+    const val = parseFloat(tempGoal.replace(',', '.'));
+    if (isNaN(val)) return;
+    
+    await handleUpdateMerchantProfile({ monthly_goal: val });
+    setShowGoalModal(false);
+  };
 
   return (
     <div className="space-y-8 pb-20">
@@ -37,7 +54,7 @@ export default function MerchantDashboardTab() {
             Dashboard de Resultados
           </h1>
           <p className="text-slate-500 font-bold text-sm mt-1">
-            {merchantProfile?.name || 'Sua Loja'} • Acompanhe seu desempenho
+            {merchantProfile?.store_name || 'Sua Loja'} • Acompanhe seu desempenho
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -49,7 +66,7 @@ export default function MerchantDashboardTab() {
               Sacar Saldo
             </button>
             {monthlyGoal > 0 && (
-              <div className="px-6 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+              <div className="px-6 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm cursor-pointer hover:border-primary transition-colors" onClick={openGoalModal}>
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Meta Mensal</span>
                   <span className="text-lg font-black text-slate-900 dark:text-white italic">R$ {monthlyGoal.toLocaleString('pt-BR')}</span>
               </div>
@@ -178,11 +195,14 @@ export default function MerchantDashboardTab() {
 
                     <p className="text-xs font-bold leading-relaxed opacity-80 mb-8">
                         {monthlyGoal > 0 
-                          ? `Faltam R$ ${(monthlyGoal - totalRevenue).toFixed(2).replace('.', ',')} para atingir sua meta.`
+                          ? `Faltam R$ ${Math.max(0, monthlyGoal - totalRevenue).toFixed(2).replace('.', ',')} para atingir sua meta.`
                           : "Defina uma meta mensal para acompanhar seu progresso."}
                     </p>
 
-                    <button className="w-full py-5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-[24px] text-xs font-black uppercase tracking-[0.2em] shadow-xl hover:translate-y-[-2px] active:translate-y-[0px] transition-all">
+                    <button 
+                      onClick={openGoalModal}
+                      className="w-full py-5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-[24px] text-xs font-black uppercase tracking-[0.2em] shadow-xl hover:translate-y-[-2px] active:translate-y-[0px] transition-all"
+                    >
                         Ajustar Metas
                     </button>
                 </div>
@@ -275,6 +295,49 @@ export default function MerchantDashboardTab() {
               </table>
           </div>
       </div>
+
+      {/* Modal de Ajuste de Metas */}
+      {showGoalModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="w-full max-w-md bg-white dark:bg-slate-900 rounded-[48px] p-10 shadow-2xl relative overflow-hidden"
+            >
+                <div className="absolute -right-10 -top-10 size-40 bg-primary/10 rounded-full blur-3xl" />
+                
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white italic uppercase tracking-tighter mb-2">Ajustar Meta Mensal</h3>
+                <p className="text-xs font-bold text-slate-400 mb-8 uppercase tracking-widest">Defina seu objetivo de faturamento</p>
+
+                <div className="relative mb-10">
+                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl font-black text-slate-400 italic">R$</span>
+                    <input 
+                        type="text" 
+                        value={tempGoal}
+                        onChange={(e) => setTempGoal(e.target.value)}
+                        placeholder="0,00"
+                        className="w-full pl-16 pr-8 py-6 bg-slate-50 dark:bg-slate-800 border-none rounded-3xl text-2xl font-black text-slate-900 dark:text-white placeholder:text-slate-300 focus:ring-2 focus:ring-primary transition-all"
+                    />
+                </div>
+
+                <div className="flex gap-4">
+                    <button 
+                        onClick={() => setShowGoalModal(false)}
+                        className="flex-1 py-5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-3xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                    >
+                        Cancelar
+                    </button>
+                    <button 
+                        onClick={saveGoal}
+                        disabled={isSaving}
+                        className="flex-2 px-10 py-5 bg-primary text-slate-900 rounded-3xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                        {isSaving ? 'Salvando...' : 'Confirmar Meta'}
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+      )}
     </div>
   );
 }

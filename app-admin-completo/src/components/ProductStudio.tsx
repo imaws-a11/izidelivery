@@ -809,7 +809,7 @@ export const ProductStudio: React.FC<ProductStudioProps> = ({
                         }}
                       />
                     </div>
-                    <p className="text-[10px] text-center text-slate-500 mt-4 uppercase tracking-[0.2em]">Formatos aceitos: JPG, PNG • Máximo 2MB</p>
+                    <p className="text-[10px] text-center text-slate-500 mt-4 uppercase tracking-[0.2em]">Formatos aceitos: JPG, PNG â�� Máximo 2MB</p>
                   </div>
                 </div>
               </motion.div>

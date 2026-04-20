@@ -268,7 +268,7 @@ export default function FinancialTab() {
                     <td className="px-8 py-6 text-sm font-bold text-slate-700 dark:text-slate-300 capitalize">
                       <p className="line-clamp-1">{clientName || 'Cliente IZI'}</p>
                       <span className="text-[9px] font-black text-slate-400 block uppercase tracking-tighter">
-                        {tr.service_type === 'coin_purchase' ? 'ðŸ›’ App' : tr.service_type || 'Pedido'}
+                        {tr.service_type === 'coin_purchase' ? 'Ã°Å¸Ã¢€ºÃ¢€™ App' : tr.service_type || 'Pedido'}
                       </span>
                     </td>
                     <td className="px-8 py-6 text-sm font-black text-slate-900 dark:text-white">R$ {tr.total_price?.toFixed(2).replace('.', ',')}</td>
@@ -494,7 +494,7 @@ function ManageLoansSection() {
             GestÃ£o de EmprÃ©stimos (Izi Coins)
           </h4>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-            {loans.filter(l => l.status === 'active').length} emprÃ©stimos ativos â€¢ Taxa Global: 10% am
+            {loans.filter(l => l.status === 'active').length} emprÃ©stimos ativos Ã¢€¢ Taxa Global: 10% am
           </p>
          </div>
          <button onClick={fetchLoans} className="size-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-primary transition-all shadow-sm">

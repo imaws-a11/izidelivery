@@ -651,7 +651,7 @@ export default function UsersTab() {
                                   value={editForm.password} 
                                   onChange={e => setEditForm({...editForm, password: e.target.value})}
                                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-[28px] py-5 px-8 text-sm font-black italic text-slate-900 dark:text-white focus:ring-4 ring-primary/10 transition-all shadow-inner"
-                                  placeholder="‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢"
+                                  placeholder="√¢Ä¢√¢Ä¢√¢Ä¢√¢Ä¢√¢Ä¢√¢Ä¢√¢Ä¢√¢Ä¢"
                                 />
                                 <div className="absolute right-6 top-1/2 -translate-y-1/2 size-10 rounded-2xl bg-zinc-900 flex items-center justify-center border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <span className="material-symbols-outlined text-slate-400 text-lg">enhanced_encryption</span>
@@ -680,7 +680,7 @@ export default function UsersTab() {
               <div className="mt-auto px-4 pb-4">
                    <div className="p-8 rounded-[40px] bg-rose-500/5 border border-rose-500/10 flex flex-col md:flex-row items-center justify-between gap-6">
                         <div className="text-center md:text-left">
-                             <p className="text-[9px] font-black text-rose-500/60 uppercase tracking-widest mb-1 italic">Zona de Risco ‚Ä¢ √Årea Cr√≠tica</p>
+                             <p className="text-[9px] font-black text-rose-500/60 uppercase tracking-widest mb-1 italic">Zona de Risco √¢Ä¢ √Årea Cr√≠tica</p>
                              <div className="flex items-center gap-2">
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">UID:</span>
                                 <span className="text-[10px] font-mono text-slate-400 opacity-60">{selectedUser.id}</span>
