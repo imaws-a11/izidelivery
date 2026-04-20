@@ -4374,7 +4374,7 @@ const navigateSubView = (target: string) => {
             });
 
             if (fnErr || (fnData && fnData.status !== 'approved')) {
-                const mpMsg = fnData?.details?.cause?.[0]?.description || fnData?.error || fnErr?.message || "O cartão foi recusado pela operadora.";
+                const mpMsg = fnData?.details || fnData?.error || fnErr?.message || "O cartão foi recusado pela operadora.";
                 toastError(`Pagamento não aprovado: ${mpMsg}`);
                 if (isSubscription) {
                   setSubView("izi_black_purchase");
