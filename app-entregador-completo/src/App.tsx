@@ -870,6 +870,7 @@ function App() {
     const [isSavingPix, setIsSavingPix] = useState(false);
     const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+    const [showWithdrawHistory, setShowWithdrawHistory] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [confirmPaymentState, setConfirmPaymentState] = useState<{
         show: boolean,
@@ -4482,13 +4483,22 @@ function App() {
                                 </span>
                             </div>
                         </div>
-                        <motion.button 
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => setShowBankDetails(true)}
-                            className="size-12 rounded-2xl bg-stone-950/10 flex items-center justify-center border border-stone-950/20 shadow-inner"
-                        >
-                            <Icon name="account_balance" className="text-stone-950" size={20} />
-                        </motion.button>
+                        <div className="flex gap-2">
+                            <motion.button 
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => setShowWithdrawHistory(true)}
+                                className="size-12 rounded-2xl bg-stone-950/10 flex items-center justify-center border border-stone-950/20 shadow-inner"
+                            >
+                                <Icon name="history" className="text-stone-950" size={20} />
+                            </motion.button>
+                            <motion.button 
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => setShowBankDetails(true)}
+                                className="size-12 rounded-2xl bg-stone-950/10 flex items-center justify-center border border-stone-950/20 shadow-inner"
+                            >
+                                <Icon name="account_balance" className="text-stone-950" size={20} />
+                            </motion.button>
+                        </div>
                     </div>
 
                     <motion.button 
@@ -4584,6 +4594,85 @@ function App() {
 
             {/* Placeholder for spacer to ensure visibility */}
             <div className="h-10" />
+        </motion.div>
+    );
+
+    const renderWithdrawHistoryView = () => (
+        <motion.div 
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            className="fixed inset-0 z-[100] bg-black no-scrollbar overflow-y-auto"
+        >
+            <div className="min-h-screen px-5 pt-8 pb-32 space-y-8">
+                <header className="flex items-center justify-between px-2">
+                    <div className="flex flex-col gap-1">
+                        <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] opacity-70">Saques 💰</p>
+                        <h2 className="text-4xl font-black text-white tracking-tighter italic drop-shadow-lg uppercase">Histórico</h2>
+                    </div>
+                    <motion.button 
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setShowWithdrawHistory(false)}
+                        className="size-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10"
+                    >
+                        <Icon name="close" className="text-white" size={24} />
+                    </motion.button>
+                </header>
+
+                <div className="space-y-4">
+                    {withdrawHistory.length === 0 ? (
+                        <div className="clay-card-dark rounded-[40px] p-12 flex flex-col items-center justify-center text-center gap-6 border border-white/5 mt-10">
+                            <div className="size-20 rounded-full bg-white/5 flex items-center justify-center">
+                                <Icon name="history_edu" size={40} className="text-white/20" />
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-white font-black uppercase text-[10px] tracking-widest">Nada por aqui</p>
+                                <p className="text-white/30 text-[9px] font-bold">Você ainda não realizou nenhum saque.</p>
+                            </div>
+                        </div>
+                    ) : (
+                        withdrawHistory.map((tx, i) => (
+                            <motion.div 
+                                key={tx.id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.05 }}
+                                className="clay-card-dark rounded-[30px] p-6 border border-white/5 flex items-center gap-5 relative overflow-hidden"
+                            >
+                                <div className={`size-14 rounded-2xl flex items-center justify-center border shadow-lg ${
+                                    tx.status === 'concluido' ? 'bg-emerald-500/10 border-emerald-500/20' : 
+                                    tx.status === 'recusado' ? 'bg-rose-500/10 border-rose-500/20' :
+                                    'bg-primary/10 border-primary/20'
+                                }`}>
+                                    <Icon 
+                                        name={tx.status === 'concluido' ? 'verified' : tx.status === 'recusado' ? 'close' : 'sync'} 
+                                        size={24} 
+                                        className={tx.status === 'concluido' ? 'text-emerald-400' : tx.status === 'recusado' ? 'text-rose-400' : 'text-primary'} 
+                                    />
+                                </div>
+
+                                <div className="flex-1 space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-white font-black text-xl italic tracking-tighter">R$ {Number(tx.amount).toFixed(2).replace('.', ',')}</p>
+                                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                            tx.status === 'concluido' ? 'bg-emerald-500/20 text-emerald-400' : 
+                                            tx.status === 'recusado' ? 'bg-rose-500/20 text-rose-400' :
+                                            'bg-primary/20 text-primary'
+                                        }`}>
+                                            {tx.status || 'Pendente'}
+                                        </span>
+                                    </div>
+                                    <p className="text-[9px] text-white/30 font-bold uppercase truncate max-w-[150px]">
+                                        {new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                    <p className="text-[8px] text-white/20 font-medium italic line-clamp-1">{tx.description}</p>
+                                </div>
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-white/[0.01] blur-3xl -z-10 rounded-full" />
+                            </motion.div>
+                        ))
+                    )}
+                </div>
+            </div>
         </motion.div>
     );
 
@@ -6496,6 +6585,10 @@ function App() {
                 {showSplash && (
                     <SplashScreen finishLoading={() => setShowSplash(false)} />
                 )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showWithdrawHistory && renderWithdrawHistoryView()}
             </AnimatePresence>
 
             {/* In-App Broadcast Popups */}
