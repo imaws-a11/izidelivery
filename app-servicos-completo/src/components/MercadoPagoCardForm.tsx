@@ -122,9 +122,15 @@ export const MercadoPagoCardForm = ({ onConfirm, publicKey }: MercadoPagoCardFor
       }
     } catch (err: any) {
       console.error("MP Token Error Full Object:", err);
-      // Extrair mensagem de erro amigável se houver 'cause'
-      const cause = err?.cause?.[0]?.description || err?.message || "Erro desconhecido";
-      toastError(`Falha na validação: ${cause}`);
+      
+      const errorMessage = typeof err === 'string' ? err : (err?.message || "");
+      
+      if (errorMessage.includes("SSL certificate is required") || errorMessage.includes("secure connection")) {
+        toastError("Erro de Segurança: O Mercado Pago exige HTTPS (SSL) para processar cartões de produção. Para testes locais, use uma Chave de Testes (Sandbox) ou use um túnel HTTPS (ngrok).");
+      } else {
+        const cause = err?.cause?.[0]?.description || errorMessage || "Erro desconhecido";
+        toastError(`Falha na validação: ${cause}`);
+      }
     } finally {
       setLoading(false);
     }
