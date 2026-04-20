@@ -100,8 +100,6 @@ export const MercadoPagoCardForm = ({ onConfirm, publicKey }: MercadoPagoCardFor
         return;
       }
 
-      const mp = new MercadoPago(mpPublicKey.trim());
-      
       console.log("[MP] Criando token de cartão...");
       const cardToken = await mp.createCardToken({
         cardNumber: formData.cardNumber.replace(/\s/g, ''),
