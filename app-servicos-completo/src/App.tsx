@@ -2320,6 +2320,28 @@ const navigateSubView = (target: string) => {
 
     return () => { supabase.removeChannel(channel); };
   }, [selectedItem?.driver_id]);
+  
+  // Sincronização em tempo real do status do pedido para o cliente
+  useEffect(() => {
+    if (!selectedItem?.id) return;
+
+    const channel = supabase.channel(`order_status_${selectedItem.id}`)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'orders_delivery',
+        filter: `id=eq.${selectedItem.id}` 
+      }, (payload) => {
+        console.log("[REALTIME] Status do pedido atualizado:", payload.new.status);
+        setSelectedItem(payload.new);
+        // Atualizar lista de pedidos também se o usuário estiver logado
+        if (userId) fetchMyOrders(userId);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedItem?.id, userId]);
+
 
   const [tempQuantity, setTempQuantity] = useState(1);
   const [filterTab, setFilterTab] = useState<"ativos" | "historico">("ativos");

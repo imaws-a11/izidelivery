@@ -42,16 +42,16 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
   const steps = isMobility
     ? [
         { id: "procurando", label: "Procurando IZI parceiro nas proximidades", icon: "search", status: ["waiting_driver", "novo"] },
-        { id: "confirmed", label: "Motorista Confirmado", icon: "check_circle", status: ["aceito", "confirmado"] },
-        { id: "a_caminho", label: "Motorista em Rota", icon: "directions_bike", status: ["a_caminho", "at_pickup"] },
+        { id: "confirmed", label: "Motorista Confirmado", icon: "check_circle", status: ["aceito", "confirmado", "atribuido"] },
+        { id: "a_caminho", label: "Motorista em Rota", icon: "directions_bike", status: ["a_caminho_coleta", "saiu_para_coleta", "at_pickup", "chegou_coleta", "no_local_coleta"] },
         {
           id: "em_curso",
           label: "Viagem Iniciada",
           icon: "location_on",
-          status: ["picked_up", "em_rota", "saiu_para_entrega"],
+          status: ["picked_up", "em_rota", "saiu_para_entrega", "a_caminho"],
         },
         { id: "chegando", label: "Chegando ao Destino", icon: "potted_plant", status: ["no_local"] },
-        { id: "concluido", label: "Viagem Concluída", icon: "verified", status: ["concluido"] },
+        { id: "concluido", label: "Viagem Concluída", icon: "verified", status: ["concluido", "delivered", "finalizado"] },
       ]
     : [
         {
@@ -65,7 +65,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
           label: "Pedido Recebido",
           icon: "check_circle",
           status: [
-            "novo", "pendente", "aceito", "confirmado", "preparando", "no_preparo", "pronto", "waiting_driver", "a_caminho_coleta", "saiu_para_coleta", "chegou_coleta", "picked_up", "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
+            "novo", "pendente", "aceito", "confirmado", "atribuido", "preparando", "no_preparo", "pronto", "waiting_driver", "a_caminho_coleta", "saiu_para_coleta", "chegou_coleta", "picked_up", "a_caminho", "saiu_para_entrega", "em_rota", "no_local", "concluido"
           ],
         },
         {
@@ -106,7 +106,7 @@ export const ActiveOrderView: React.FC<ActiveOrderViewProps> = ({
           icon: "location_home",
           status: ["no_local", "concluido"],
         },
-        { id: "entregue", label: "Entregue", icon: "verified", status: ["concluido"] },
+        { id: "entregue", label: "Entregue", icon: "verified", status: ["concluido", "delivered", "finalizado"] },
       ];
 
   const revIdx = steps
