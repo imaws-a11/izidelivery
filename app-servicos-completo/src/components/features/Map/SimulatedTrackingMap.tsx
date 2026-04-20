@@ -99,36 +99,24 @@ export const SimulatedTrackingMap: React.FC<SimulatedTrackingMapProps> = ({ stat
           </filter>
         </defs>
 
-        {/* Marcador do Entregador/Motorista (Icone Móvel) */}
+        {/* Marcador do Entregador/Motorista (Minimalista Amarelo Pulsante) */}
         <motion.g
           initial={{ offsetDistance: "0%" }}
           animate={{ offsetDistance: `${progress * 100}%` }}
           transition={{ duration: 3, ease: "easeInOut" }}
           style={{ offsetPath: `path('${mobilePath}')` }}
         >
-          {/* Sombra/Glow do Marcador */}
-          <circle r="20" fill="#facc15" className="opacity-20 blur-xl" />
-          
-          <circle r="12" fill="#facc15" className="shadow-lg" />
-          <circle r="12" fill="transparent" stroke="white" strokeWidth="2" strokeOpacity="0.5" />
-          
-          {/* Icone dependendo do tipo de serviço */}
-          <text 
-            x="0" 
-            y="5" 
-            textAnchor="middle" 
-            className="material-symbols-outlined fill-black text-[14px]"
-            style={{ fontSize: '14px', fontWeight: '900' }}
-          >
-            {isMobility ? 'directions_car' : 'delivery_dining'}
-          </text>
+          {/* Glow e Ponto */}
+          <circle r="25" fill="#facc15" className="opacity-20 animate-pulse" />
+          <circle r="15" fill="#facc15" className="opacity-30 animate-ping" />
+          <circle r="8" fill="#facc15" className="shadow-lg" />
+          <circle r="8" fill="transparent" stroke="black" strokeWidth="2" strokeOpacity="0.3" />
         </motion.g>
 
         {/* Marcador de Destino (Fixo no final do path) */}
         <g transform="translate(400, 100)">
-           <circle r="15" fill="#facc15" className="opacity-10 animate-ping" />
+           <circle r="20" fill="#facc15" className="opacity-10 animate-pulse" />
            <circle r="6" fill="#facc15" />
-           <text x="-10" y="-15" fill="white" className="text-[10px] uppercase font-black tracking-widest" style={{ fontSize: '8px' }}>Destino</text>
         </g>
       </svg>
 
