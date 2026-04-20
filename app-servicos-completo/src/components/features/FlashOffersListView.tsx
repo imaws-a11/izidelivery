@@ -98,7 +98,7 @@ export const FlashOffersListView: React.FC<FlashOffersListViewProps> = ({
                     navigateSubView("exclusive_offer");
                   }
                 }}
-                className={`relative bg-zinc-900 border ${story.isRedeemed ? 'border-zinc-800 opacity-60' : story.isMaster ? 'border-yellow-400/50' : 'border-white/5'} rounded-[45px] p-6 flex items-center gap-6 cursor-pointer group hover:bg-zinc-850 transition-all shadow-[15px_15px_30px_rgba(0,0,0,0.5),inset_4px_4px_8px_rgba(255,255,255,0.02),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] overflow-hidden mb-2`}
+                className={`relative bg-zinc-900 border ${story.isRedeemed ? 'border-zinc-800 opacity-60' : story.isMaster ? 'border-yellow-400/30' : 'border-white/10'} rounded-[48px] p-8 flex items-center gap-6 cursor-pointer group hover:bg-zinc-850 transition-all shadow-[12px_12px_25px_rgba(0,0,0,0.5),inset_4px_4px_10px_rgba(255,255,255,0.03),inset_-4px_-4px_10px_rgba(0,0,0,0.6)] overflow-hidden mb-4`}
               >
                 {/* Glossy Effect */}
                 <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />

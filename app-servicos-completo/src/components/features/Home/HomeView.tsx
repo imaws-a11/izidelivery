@@ -21,8 +21,37 @@ const parseAddressText = (rawStr: any): string => {
     const parsed = JSON.parse(cleanStr);
     return parsed.formatted_address || parsed.address || cleanStr;
   } catch {
-    return cleanStr;
   }
+};
+
+/** Componente de Timer Regressivo em Tempo Real para Izi Flash */
+const FlashCountdown = ({ expiresAt }: { expiresAt: string }) => {
+  const [timeLeft, setTimeLeft] = React.useState("");
+
+  React.useEffect(() => {
+    const update = () => {
+      const exp = new Date(expiresAt).getTime();
+      const now = new Date().getTime();
+      const diff = exp - now;
+
+      if (diff <= 0) {
+        setTimeLeft("00:00:00");
+        return;
+      }
+
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setTimeLeft(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
+    };
+
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+
+  return <span className="font-mono tabular-nums">{timeLeft}</span>;
 };
 
 
@@ -309,9 +338,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     </span>
                   )}
                 </button>
-                <button onClick={() => setSubView("quest_center")} 
-                  className="w-9 h-9 flex items-center justify-center rounded-2xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95">
-                  <span className="material-symbols-outlined text-zinc-100 text-[18px]">notifications</span>
+                <button onClick={() => setSubView("notifications_center")} 
+                  className="w-10 h-10 flex items-center justify-center rounded-[18px] bg-zinc-900 border border-white/5 hover:bg-zinc-800 transition-all active:scale-95 shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.05)]">
+                  <span className="material-symbols-outlined text-yellow-400 text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>notifications</span>
                 </button>
               </div>
             </div>
@@ -894,7 +923,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         navigateSubView("exclusive_offer");
                       }
                     }}
-                    className={`relative flex-shrink-0 w-[280px] h-[160px] snap-center rounded-[40px] overflow-hidden group cursor-pointer border-[3px] shadow-[20px_20px_40px_rgba(0,0,0,0.8),inset_8px_8px_20px_rgba(255,255,255,0.03),inset_-8px_-8px_20px_rgba(0,0,0,0.7)] ${story.isRedeemed ? "border-zinc-800 opacity-80" : story.isMaster ? "border-yellow-400" : "border-white/5"} transition-all duration-500`}
+                    className={`relative flex-shrink-0 w-[280px] h-[210px] snap-center rounded-[48px] overflow-hidden group cursor-pointer border-[1px] shadow-[15px_15px_35px_rgba(0,0,0,0.6),inset_6px_6px_12px_rgba(255,255,255,0.05),inset_-6px_-6px_12px_rgba(0,0,0,0.5)] ${story.isRedeemed ? "border-zinc-800 opacity-80" : story.isMaster ? "border-yellow-400" : "border-white/10"} transition-all duration-500`}
                   >
                     {/* Imagem de Fundo com Overlay Gradiente Pesado */}
                     <img 
@@ -905,25 +934,29 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
                     
                     {/* Badge de Tempo - Design "Relógio de Pulso" */}
-                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-xl border border-white/10 px-3 py-2 rounded-2xl flex items-center gap-2 shadow-2xl z-20">
+                    <div className="absolute top-5 right-5 z-20 bg-black/60 backdrop-blur-xl border border-white/20 px-3 py-2 rounded-2xl flex items-center gap-2 shadow-[12px_12px_24px_rgba(0,0,0,0.6),inset_4px_4px_8px_rgba(255,255,255,0.06),inset_-4px_-4px_8px_rgba(0,0,0,0.5)]">
                        {story.isRedeemed ? (
-                         <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1">
-                            RESGATADO <span className="material-symbols-outlined text-xs">check_circle</span>
+                         <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1">
+                            OK <span className="material-symbols-outlined text-xs">check_circle</span>
                          </span>
                        ) : (
                          <>
-                           <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
-                           <span className="text-[10px] font-black text-white uppercase tracking-widest">{story.timeLeft}</span>
+                           <div className="size-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.6)]" />
+                           <span className="text-[11px] font-black text-white uppercase tracking-widest">
+                             <FlashCountdown expiresAt={story.offer.expires_at} />
+                           </span>
                          </>
                        )}
                     </div>
 
                     {/* Badge de Loja */}
-                    <div className="absolute top-4 left-4 z-20">
-                       <div className="bg-white/10 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2">
-                          <img src={`https://api.dicebear.com/7.x/identicon/svg?seed=${story.merchant}`} className="size-4 rounded-md" alt="shop" />
-                          <span className="text-[9px] font-black text-white/90 uppercase truncate max-w-[80px]">{story.merchant}</span>
+                    <div className="absolute top-5 left-5 z-20 flex items-center gap-2">
+                       <div className="size-8 rounded-full overflow-hidden border-2 border-white/20 shadow-lg bg-zinc-900 shrink-0">
+                          <img src={story.offer.admin_users?.store_logo || `https://api.dicebear.com/7.x/identicon/svg?seed=${story.merchant}`} className="size-full object-cover" alt="logo" />
                        </div>
+                       <span className="text-[10px] font-black text-white uppercase tracking-tight truncate max-w-[120px] italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                          {story.merchant}
+                       </span>
                     </div>
 
                     {/* Conteúdo Principal */}
@@ -944,9 +977,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
                           )}
                         </div>
                         
-                        <div className="size-10 rounded-2xl bg-yellow-400 flex items-center justify-center shadow-[0_5px_15px_rgba(250,204,21,0.3)] group-hover:scale-110 group-hover:rotate-12 transition-all">
-                           <span className="material-symbols-outlined text-black font-black text-xl">bolt</span>
-                        </div>
                       </div>
                     </div>
 

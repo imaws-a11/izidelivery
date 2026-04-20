@@ -51,7 +51,7 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
   const serviceFeeAmount = (rawBase * serviceFee) / 100;
   const rawPriceWithFee = rawBase + serviceFeeAmount;
   
-  const price = (isIziBlackMembership && isShippingService) ? 0 : rawPriceWithFee;
+  const price = rawPriceWithFee;
 
   const PaymentMethodButton = ({ id, icon, label, sub, colorClass, disabled = false }: any) => {
     const isSelected = paymentMethod === id;
@@ -147,7 +147,7 @@ export const MobilityPaymentView: React.FC<MobilityPaymentViewProps> = ({
                       <p className="text-sm font-black text-white italic tracking-tight shadow-sm">R$ {rawBase.toFixed(2).replace(".", ",")}</p>
                    </div>
                    
-                   {serviceFeeAmount > 0 && !isIziBlackMembership && (
+                   {serviceFeeAmount > 0 && (
                      <div className="flex justify-between items-center px-2 pt-2 border-t border-white/5">
                        <div className="flex flex-col">
                           <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] italic">Taxa de Serviço</p>

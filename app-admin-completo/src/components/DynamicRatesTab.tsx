@@ -256,7 +256,7 @@ export default function DynamicRatesTab() {
               { title: 'Bebidas / Conveniência', minKey: 'beverages_min', kmKey: 'beverages_km' },
               { title: 'MotoTáxi', minKey: 'mototaxi_min', kmKey: 'mototaxi_km' },
               { title: 'Carro Executivo', minKey: 'carro_min', kmKey: 'carro_km' },
-              { title: 'Entrega Express', minKey: 'utilitario_min', kmKey: 'utilitario_km' },
+              { title: 'Izi Express', minKey: 'utilitario_min', kmKey: 'utilitario_km' },
               { title: 'Van de Transporte', minKey: 'van_min', kmKey: 'van_km' },
               { 
                 title: 'Logística / Frete', 
@@ -481,10 +481,10 @@ export default function DynamicRatesTab() {
               <div className="p-4 rounded-3xl bg-amber-50 text-amber-500 border border-amber-100">
                 <span className="material-symbols-outlined font-black text-2xl">speed</span>
               </div>
-              <div>
-                <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Prioridades de Envios</h2>
-                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Urgência & Tarifação</p>
-              </div>
+              <div className="flex flex-col">
+                <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tighter">Configuração de Serviços Izi Express</h2>
+                <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Regras de precificação para logística e envios flash</p>
+             </div>
             </div>
             <div className="p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-500 rounded-2xl flex items-center gap-2">
                <span className="material-symbols-outlined text-sm">info</span>
@@ -532,7 +532,7 @@ export default function DynamicRatesTab() {
                       </div>
 
                       <div className="flex flex-col gap-1.5 min-w-[100px]">
-                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Taxa Mínima</span>
+                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Preço Base</span>
                          <div className="relative">
                             <input 
                               type="number" 
@@ -543,6 +543,24 @@ export default function DynamicRatesTab() {
                                 setDynamicRatesState({ ...dynamicRatesState, shippingPriorities: newPriorities });
                               }}
                               className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-xl py-2 px-3 font-black text-emerald-500 text-sm shadow-inner focus:ring-1 focus:ring-emerald-500/30 pr-10"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-400 uppercase">R$</span>
+                         </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5 min-w-[100px]">
+                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Add por KM</span>
+                         <div className="relative">
+                            <input 
+                               type="number" 
+                               step="0.1"
+                               value={(config as any).km_fee || 0}
+                               onChange={(e) => {
+                                 const newPriorities = { ...dynamicRatesState.shippingPriorities };
+                                 (newPriorities as any)[p.id].km_fee = parseFloat(e.target.value);
+                                 setDynamicRatesState({ ...dynamicRatesState, shippingPriorities: newPriorities });
+                               }}
+                               className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-xl py-2 px-3 font-black text-blue-500 text-sm shadow-inner focus:ring-1 focus:ring-blue-500/30 pr-10"
                             />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-400 uppercase">R$</span>
                          </div>
