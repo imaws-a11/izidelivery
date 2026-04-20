@@ -152,6 +152,7 @@ function App() {
     | "pix_payment"
     | "order_chat"
     | "quest_center"
+    | "notifications_center"
     | "order_support"
     | "order_feedback"
     | "mobility_payment"
@@ -205,7 +206,9 @@ function App() {
   const [iziCoins, setIziCoins] = useState(0);
   const [userLevel] = useState(12);
   const [nextLevelXP] = useState(2500);
+  const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
+  const [activeBroadcast, setActiveBroadcast] = useState<any>(null);
   const [schedObsState, setSchedObsState] = useState('');
   const [schedChatInputState, setSchedChatInputState] = useState('');
   const [schedMessagesState, setSchedMessagesState] = useState<{id: string; text: string; from: 'user'|'driver'; time: string}[]>([]);
@@ -439,6 +442,41 @@ function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'flash_offers' }, fetchFlashOffers)
       .subscribe();
 
+    const settingsChannel = supabase.channel('settings_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings_delivery' }, fetchGlobalSettings)
+      .subscribe();
+
+    // In-App Broadcaster (Popups Administrativos)
+    const initBroadcasts = async () => {
+      const { data } = await supabase
+        .from('broadcast_notifications')
+        .select('*')
+        .eq('status', 'sent')
+        .in('type', ['popup', 'both'])
+        .in('target_type', ['all', 'users'])
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      if (data && data[0]) {
+        const lastSeen = localStorage.getItem('last_izi_broadcast');
+        if (lastSeen !== data[0].id) {
+          setActiveBroadcast(data[0]);
+        }
+      }
+    };
+
+    initBroadcasts();
+
+    const broadcastSub = supabase
+      .channel('broadcast-notifs')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'broadcast_notifications' }, (payload) => {
+        const notif = payload.new;
+        if ((notif.type === 'popup' || notif.type === 'both') && (notif.target_type === 'all' || notif.target_type === 'users')) {
+           setActiveBroadcast(notif);
+        }
+      })
+      .subscribe();
+
     // Sincronizacao em tempo real do Perfil do Usuario (Wallet, IZI Black, etc)
     let userProfileSub: any = null;
     if (userId) {
@@ -479,14 +517,13 @@ function App() {
         .subscribe();
     }
 
-    const settingsChannel = supabase.channel('settings_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings_delivery' }, fetchGlobalSettings)
-      .subscribe();
+
 
     return () => {
       clearInterval(interval);
       supabase.removeChannel(flashChannel);
       supabase.removeChannel(settingsChannel);
+      supabase.removeChannel(broadcastSub);
       if (userProfileSub) supabase.removeChannel(userProfileSub);
       if (walletTxSub) supabase.removeChannel(walletTxSub);
     };
@@ -3113,20 +3150,22 @@ const navigateSubView = (target: string) => {
     const priorityConfig = marketConditions.settings?.shippingPriorities?.[priorityId as keyof typeof marketConditions.settings.shippingPriorities];
     
     if (priorityConfig && priorityConfig.active) {
-      finalPrice *= (priorityConfig.multiplier || 1.0);
-      if (finalPrice < (priorityConfig.min_fee || 0)) {
-        finalPrice = priorityConfig.min_fee;
+      if ((priorityConfig as any).km_fee > 0) {
+        // Cálculo independente por prioridade (Base + KM * Distância)
+        finalPrice = (priorityConfig.min_fee || 0) + ((priorityConfig as any).km_fee * distanceValueKm);
+      } else {
+        // Cálculo baseado em multiplicador (Legado)
+        finalPrice *= (priorityConfig.multiplier || 1.0);
+        if (finalPrice < (priorityConfig.min_fee || 0)) {
+          finalPrice = priorityConfig.min_fee;
+        }
       }
     }
 
       // [Comentario Limpo pelo Sistema]
-    if (isIziBlackMembership && isShipping) {
-      finalPrice = 0;
-    } else {
-      const serviceFeePercent = appSettings?.serviceFee || 0;
-      const serviceFeeAmount = (finalPrice * serviceFeePercent) / 100;
-      finalPrice += serviceFeeAmount;
-    }
+    const serviceFeePercent = appSettings?.serviceFee || 0;
+    const serviceFeeAmount = (finalPrice * serviceFeePercent) / 100;
+    finalPrice += serviceFeeAmount;
 
     setIsLoading(true);
 
@@ -5508,80 +5547,216 @@ const navigateSubView = (target: string) => {
 
   const renderQuestCenter = () => {
     const quests = [
-      { id: 1, title: "Explorador Urbano", desc: "Faça 3 pedidos em categorias diferentes", xp: 150, progress: 33, icon: "explore" },
-      { id: 2, title: "Cliente Fiel",      desc: "Peça do mesmo restaurante 3 vezes",        xp: 100, progress: 66, icon: "favorite" },
-      { id: 3, title: "Madrugador",        desc: "Faça um pedido antes das 9h",              xp: 80,  progress: 0,  icon: "wb_sunny" },
-      { id: 4, title: "Gourmet",           desc: "Experimente 5 restaurantes diferentes",    xp: 200, progress: 20, icon: "restaurant" },
+      { id: 1, title: "Explorador Urbano", desc: "Faça 3 pedidos em categorias diferentes", xp: 150, progress: 33, icon: "explore", color: "text-blue-400", bg: "bg-blue-400/10" },
+      { id: 2, title: "Cliente Fiel",      desc: "Peça do mesmo restaurante 3 vezes",        xp: 100, progress: 66, icon: "favorite", color: "text-rose-400", bg: "bg-rose-400/10" },
+      { id: 3, title: "Madrugador",        desc: "Faça um pedido antes das 9h",              xp: 80,  progress: 0,  icon: "wb_sunny", color: "text-amber-400", bg: "bg-amber-400/10" },
+      { id: 4, title: "Gourmet",           desc: "Experimente 5 restaurantes diferentes",    xp: 200, progress: 20, icon: "restaurant", color: "text-emerald-400", bg: "bg-emerald-400/10" },
+    ];
+
+    const ranking = [
+      { rank: 1, name: "Izi Master", xp: 12450, medal: "text-yellow-400", avatar: "IM" },
+      { rank: 2, name: "Pedro Silva", xp: 8900,  medal: "text-zinc-300", avatar: "PS" },
+      { rank: 3, name: "Ana Souza",  xp: 7200,  medal: "text-orange-500", avatar: "AS" },
+      { rank: 15, name: "Você",       xp: userXP, isMe: true, avatar: "VC" },
     ];
 
     return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
-        <header className="sticky top-0 z-50 bg-black flex items-center justify-between px-5 py-4 border-b border-zinc-900">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSubView("none")} className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center active:scale-90 transition-all">
-              <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
-            </button>
+      <div className="absolute inset-0 z-40 bg-[#050505] text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
+        <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-between px-6 py-8 border-b border-white/5">
+          <div className="flex items-center gap-5">
+            <motion.button 
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setSubView("none")} 
+              className="size-12 rounded-[20px] bg-zinc-900 border border-white/5 flex items-center justify-center shadow-xl active:scale-95 px-0 py-0"
+            >
+              <span className="material-symbols-outlined text-white text-2xl">arrow_back</span>
+            </motion.button>
             <div>
-              <h1 className="font-extrabold text-base text-white uppercase tracking-tight">Quests & Ranking</h1>
-              <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-0.5">Nível {userLevel} ÃÂ¢ââ€šÂ¬Â¢ {userXP} XP</p>
+              <h1 className="font-black text-2xl text-white tracking-tighter uppercase italic leading-none">Quests & Ranking</h1>
+              <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.3em] mt-2">Nível {userLevel} • {userXP} XP Acumulado</p>
             </div>
           </div>
         </header>
 
-        <main className="px-5 py-8 space-y-10">
+        <main className="px-6 py-10 space-y-12">
 
-          {/* XP PROGRESS */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Infinity Tier</p>
-                <p className="font-black text-white text-lg">Nível {userLevel}</p>
+          {/* XP PROGRESS CARD - CLAY */}
+          <section className="bg-zinc-900/40 p-8 rounded-[45px] border border-white/5 shadow-[20px_20px_40px_rgba(0,0,0,0.6),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/5 blur-[60px] rounded-full" />
+            
+            <div className="flex items-center justify-between relative z-10">
+              <div className="space-y-1">
+                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.4em]">Infinity Tier</p>
+                <div className="flex items-baseline gap-2">
+                   <h3 className="text-4xl font-black text-white italic tracking-tighter">Nível {userLevel}</h3>
+                   <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                      <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Ativo</span>
+                   </div>
+                </div>
               </div>
-              <div className="size-14 rounded-2xl bg-yellow-400/10 border border-yellow-400/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-2xl text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>diamond</span>
+              <motion.div 
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 5, repeat: Infinity }}
+                className="size-16 rounded-[28px] bg-yellow-400 flex items-center justify-center shadow-[10px_10px_25px_rgba(250,204,21,0.2),inset_4px_4px_10px_rgba(255,255,255,0.6),inset_-4px_-4px_8px_rgba(0,0,0,0.2)] border-2 border-yellow-300/30"
+              >
+                <span className="material-symbols-outlined text-3xl text-black/80 font-black" style={{ fontVariationSettings: "'FILL' 1" }}>diamond</span>
+              </motion.div>
+            </div>
+
+            <div className="mt-8 space-y-4 relative z-10">
+              <div className="flex justify-between items-end">
+                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest italic">XP Progress</span>
+                <span className="text-sm font-black text-white italic tabular-nums">{userXP} <span className="text-zinc-600 text-[10px] font-bold">/ {nextLevelXP}</span></span>
+              </div>
+              <div className="h-4 w-full bg-black/60 rounded-full p-1.5 shadow-inner border border-white/5 overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }} 
+                  animate={{ width: `${Math.min((userXP/nextLevelXP)*100,100)}%` }}
+                  className="h-full bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-400 bg-[length:200%_auto] animate-gradient-x rounded-full shadow-[0_0_15px_rgba(250,204,21,0.4)]" 
+                />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <div className="flex justify-between">
-                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">XP Progress</span>
-                <span className="text-[9px] font-black text-yellow-400">{userXP} / {nextLevelXP}</span>
-              </div>
-              <div className="h-px w-full bg-zinc-900 rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((userXP/nextLevelXP)*100,100)}%` }}
-                  className="h-full bg-gradient-to-r from-yellow-400 to-orange-400" />
-              </div>
-            </div>
-          </div>
+          </section>
 
-          {/* QUESTS */}
-          <div>
-            <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-4">MissÃÆ’Âµes Ativas</h2>
-            <div className="flex flex-col">
+          {/* ACTIVE QUESTS - GRID */}
+          <section>
+            <div className="flex items-center justify-between mb-8 px-2">
+               <h2 className="font-black text-xl text-white tracking-tighter uppercase italic">Missões Ativas</h2>
+               <div className="size-8 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-zinc-500 text-lg">bolt</span>
+               </div>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-5">
               {quests.map((q, i) => (
-                <motion.div key={q.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                  className="flex items-start gap-4 py-5 border-b border-zinc-900/60 last:border-0">
-                  <span className="material-symbols-outlined text-zinc-600 text-xl mt-0.5">{q.icon}</span>
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-black text-sm text-white">{q.title}</p>
-                        <p className="text-zinc-600 text-xs mt-0.5">{q.desc}</p>
+                <motion.div 
+                  key={q.id} 
+                  initial={{ opacity: 0, x: -20 }} 
+                  animate={{ opacity: 1, x: 0 }} 
+                  transition={{ delay: i * 0.1 }}
+                  className="bg-zinc-900/40 p-6 rounded-[35px] border border-white/5 shadow-[12px_12px_24px_rgba(0,0,0,0.3),-4px_-4px_12px_rgba(255,255,255,0.01),inset_3px_3px_6px_rgba(255,255,255,0.02),inset_-3px_-3px_6px_rgba(0,0,0,0.3)] flex items-center gap-5 group"
+                >
+                  <div className={`size-14 rounded-[22px] ${q.bg} flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform shrink-0`}>
+                    <span className={`material-symbols-outlined ${q.color} text-2xl`}>{q.icon}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="font-black text-sm text-white tracking-tight leading-tight">{q.title}</p>
+                      <div className="px-2 py-0.5 rounded-lg bg-yellow-400/10">
+                         <span className="text-yellow-400 text-[9px] font-black">+{q.xp} XP</span>
                       </div>
-                      <span className="text-yellow-400 text-[10px] font-black shrink-0">+{q.xp} XP</span>
                     </div>
-                    <div className="space-y-1">
-                      <div className="h-px w-full bg-zinc-900 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${q.progress}%` }}
-                          className="h-full bg-gradient-to-r from-yellow-400 to-orange-400" />
-                      </div>
-                      <p className="text-[9px] font-bold text-zinc-700 text-right">{q.progress}%</p>
+                    <p className="text-zinc-500 text-[10px] leading-tight mb-3 opacity-70">{q.desc}</p>
+                    <div className="h-1.5 w-full bg-black shadow-inner rounded-full overflow-hidden border border-white/5">
+                      <motion.div 
+                        initial={{ width: 0 }} 
+                        animate={{ width: `${q.progress}%` }}
+                        className={`h-full bg-gradient-to-r ${q.progress === 100 ? 'from-emerald-400 to-green-500' : 'from-yellow-500 to-orange-500'}`} 
+                      />
                     </div>
                   </div>
                 </motion.div>
               ))}
             </div>
-          </div>
+          </section>
 
+          {/* RANKING GLOBAL - CLAY LIST */}
+          <section>
+            <div className="flex items-center justify-between mb-8 px-2">
+               <h2 className="font-black text-xl text-white tracking-tighter uppercase italic">Ranking Semanal</h2>
+               <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Cidade: São Paulo</span>
+            </div>
+
+            <div className="bg-zinc-900/30 rounded-[45px] border border-white/5 p-4 shadow-inner space-y-2">
+               {ranking.map((row, i) => (
+                 <motion.div 
+                   key={row.name}
+                   initial={{ opacity: 0, y: 10 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   transition={{ delay: 0.5 + (i * 0.1) }}
+                   className={`flex items-center gap-4 p-4 rounded-[30px] border transition-all ${row.isMe ? 'bg-yellow-400 border-yellow-300 shadow-[8px_8px_16px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5)]' : 'bg-transparent border-transparent'}`}
+                 >
+                    <div className={`size-10 rounded-2xl flex items-center justify-center font-black text-xs ${row.isMe ? 'bg-black/10 text-black' : 'bg-zinc-800 text-zinc-500 shadow-inner'}`}>
+                       {row.rank}
+                    </div>
+                    <div className={`size-12 rounded-full flex items-center justify-center font-black text-sm border ${row.isMe ? 'bg-black/20 border-black/10 text-black' : 'bg-zinc-900 border-white/5 text-zinc-300'}`}>
+                       {row.avatar}
+                    </div>
+                    <div className="flex-1">
+                       <p className={`font-black text-sm ${row.isMe ? 'text-black' : 'text-white'}`}>{row.name}</p>
+                       <p className={`text-[9px] font-bold ${row.isMe ? 'text-black/60' : 'text-zinc-600'}`}>{row.xp.toLocaleString()} XP TOTAL</p>
+                    </div>
+                    {i < 3 && !row.isMe && (
+                       <span className={`material-symbols-outlined text-2xl ${row.medal}`} style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+                    )}
+                 </motion.div>
+               ))}
+            </div>
+          </section>
+
+        </main>
+      </div>
+    );
+  };
+
+  const renderNotificationsCenter = () => {
+    const notifications = [
+      { id: 1, title: 'Pedido Confirmado', content: 'Seu pedido da Casa do Baleiro está a caminho.', time: '2 min atrás', icon: 'shopping_bag', color: 'text-emerald-400', bg: 'bg-emerald-400/10', unread: true },
+      { id: 2, title: 'Nova Quest Disponível', content: 'Complete 3 pedidos hoje e ganhe 50 XP extras!', time: '1h atrás', icon: 'bolt', color: 'text-yellow-400', bg: 'bg-yellow-400/10', unread: true },
+      { id: 3, title: 'Promoção Izi Flash', content: 'Hambúrguer Gourmet com 50% de desconto por tempo limitado.', time: '3h atrás', icon: 'local_fire_department', color: 'text-orange-400', bg: 'bg-orange-400/10', unread: false },
+      { id: 4, title: 'Izi Pay: Depósito', content: 'Seu depósito de R$ 50,00 foi processado com sucesso.', time: '5h atrás', icon: 'account_balance_wallet', color: 'text-blue-400', bg: 'bg-blue-400/10', unread: false },
+      { id: 5, title: 'Nível Avançado!', content: 'Parabéns! Você alcançou o Nível 12 e desbloqueou novos badges.', time: '1 dia atrás', icon: 'military_tech', color: 'text-purple-400', bg: 'bg-purple-400/10', unread: false },
+    ];
+
+    return (
+      <div className="absolute inset-0 z-40 bg-[#050505] text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-32">
+        <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-between px-6 py-8 border-b border-white/5">
+          <div className="flex items-center gap-5">
+            <motion.button 
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setSubView("none")} 
+              className="size-12 rounded-[22px] bg-zinc-900 border border-white/5 flex items-center justify-center shadow-xl active:scale-95 px-0 py-0"
+            >
+              <span className="material-symbols-outlined text-white text-2xl">arrow_back</span>
+            </motion.button>
+            <div>
+              <h1 className="font-black text-2xl text-white tracking-tighter uppercase italic leading-none">Notificações</h1>
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] mt-2">Seu resumo de atividades Izi</p>
+            </div>
+          </div>
+          <button className="px-4 py-2 rounded-xl bg-zinc-900/50 border border-white/5 text-[9px] font-black text-zinc-500 uppercase tracking-widest active:scale-95 transition-all">
+            Limpar
+          </button>
+        </header>
+
+        <main className="px-6 py-10 space-y-6">
+          {notifications.map((n, i) => (
+            <motion.div 
+              key={n.id}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.05 }}
+              className={`p-6 rounded-[35px] border-2 flex items-start gap-5 transition-all active:scale-[0.98]
+                ${n.unread 
+                  ? 'bg-zinc-900/40 border-yellow-400/20 shadow-[15px_15px_30px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.02)]' 
+                  : 'bg-transparent border-white/5 shadow-none'
+                }`}
+            >
+              <div className={`size-14 rounded-[22px] ${n.bg} flex items-center justify-center shadow-inner shrink-0 relative`}>
+                <span className={`material-symbols-outlined ${n.color} text-2xl`}>{n.icon}</span>
+                {n.unread && (
+                  <div className="absolute -top-1 -right-1 size-3 bg-yellow-400 rounded-full border-2 border-black animate-pulse" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-center justify-between">
+                   <p className={`font-black text-sm tracking-tight ${n.unread ? 'text-white' : 'text-zinc-400'}`}>{n.title}</p>
+                   <span className="text-[9px] font-black text-zinc-600 uppercase italic shrink-0 ml-2">{n.time}</span>
+                </div>
+                <p className={`text-[11px] leading-relaxed ${n.unread ? 'text-zinc-300 font-medium' : 'text-zinc-500'}`}>{n.content}</p>
+              </div>
+            </motion.div>
+          ))}
         </main>
       </div>
     );
@@ -5642,6 +5817,68 @@ const navigateSubView = (target: string) => {
       setIsLoading(false);
     }
   };
+
+  const renderBroadcastPopup = () => (
+    <AnimatePresence>
+      {activeBroadcast && (
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          exit={{ opacity: 0 }} 
+          className="fixed inset-0 z-[3000] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
+        >
+          <motion.div 
+            initial={{ scale: 0.9, y: 50, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.9, y: 50, opacity: 0 }}
+            className="w-full max-w-sm bg-[#111] border-2 border-white/5 rounded-[50px] shadow-[30px_30px_60px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.02)] overflow-hidden flex flex-col relative"
+          >
+            {/* Header / Imagem */}
+            {activeBroadcast.image_url ? (
+              <div className="relative w-full h-56">
+                <img src={activeBroadcast.image_url} alt="Promo" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent" />
+              </div>
+            ) : (
+               <div className="pt-12 pb-4 flex items-center justify-center">
+                  <div className="size-20 rounded-[30px] bg-yellow-400 text-black flex items-center justify-center shadow-xl">
+                     <span className="material-symbols-outlined text-4xl font-black">campaign</span>
+                  </div>
+               </div>
+            )}
+
+            <div className="px-10 pb-12 pt-6 text-center space-y-6">
+               <div className="space-y-2">
+                 <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-none">{activeBroadcast.title}</h3>
+                 <p className="text-[12px] text-zinc-400 leading-relaxed font-medium">{activeBroadcast.message}</p>
+               </div>
+
+               <motion.button 
+                 whileTap={{ scale: 0.95 }}
+                 onClick={() => {
+                   localStorage.setItem('last_izi_broadcast', activeBroadcast.id);
+                   setActiveBroadcast(null);
+                 }}
+                 className="w-full bg-yellow-400 text-black font-black py-5 rounded-[22px] shadow-xl shadow-yellow-400/10 uppercase tracking-widest text-[10px]"
+               >
+                 Aproveitar
+               </motion.button>
+            </div>
+
+            <button 
+              onClick={() => {
+                localStorage.setItem('last_izi_broadcast', activeBroadcast.id);
+                setActiveBroadcast(null);
+              }}
+              className="absolute top-6 right-6 size-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/50 active:scale-90 transition-all font-black"
+            >
+              <span className="material-symbols-outlined text-xl">close</span>
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
   const renderDepositModal = () => {
     const coinRate = appSettings?.iziCoinRate || 1.0;
@@ -7053,6 +7290,12 @@ const navigateSubView = (target: string) => {
       
       const config = settings.shippingPriorities[priorityId as keyof typeof settings.shippingPriorities];
       if (!config) return basePrice;
+
+      // Prioridade com preço independente?
+      if ((config as any).km_fee > 0) {
+        const p = (config.min_fee || 0) + ((config as any).km_fee * distanceValueKm);
+        return parseFloat(p.toFixed(2));
+      }
       
       let price = basePrice * (config.multiplier || 1.0);
       if (price < (config.min_fee || 0)) price = config.min_fee;
@@ -7067,7 +7310,7 @@ const navigateSubView = (target: string) => {
           </motion.button>
           <div className="text-right">
             <h2 className="text-2xl font-black text-white tracking-tighter leading-none mb-1">Prioridade</h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Escolha a velocidade</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Escolha a prioridade</p>
           </div>
         </header>
 
@@ -7076,9 +7319,10 @@ const navigateSubView = (target: string) => {
             <motion.div 
                animate={{ scale: [1, 1.05, 1], rotate: [0, 2, -2, 0] }}
                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-               className="size-24 rounded-[35px] bg-yellow-400/10 flex items-center justify-center mx-auto mb-5 border border-yellow-400/20 shadow-[0_0_50px_-10px_rgba(255,215,9,0.2)]"
+               className="size-24 rounded-[35px] bg-yellow-400 flex items-center justify-center mx-auto mb-5 shadow-[15px_15px_30px_rgba(0,0,0,0.6),inset_4px_4px_10px_rgba(255,255,255,0.6),inset_-4px_-4px_10px_rgba(0,0,0,0.2)] border-2 border-yellow-300/30 relative group"
             >
-              <span className="material-symbols-outlined text-5xl text-yellow-400 drop-shadow-[0_0_15px_rgba(255,215,9,0.5)]">speed</span>
+              <div className="absolute inset-0 bg-white/20 rounded-[35px] opacity-0 group-hover:opacity-100 transition-opacity" />
+              <span className="material-symbols-outlined text-5xl text-black/80 drop-shadow-sm relative z-10">speed</span>
             </motion.div>
             <h3 className="text-xl font-black text-white tracking-tight">Qual a sua urgência?</h3>
             <p className="text-zinc-500 text-xs font-semibold mt-2 max-w-[240px] mx-auto opacity-80">Diferentes níveis de prioridade para sua necessidade</p>
@@ -7737,7 +7981,7 @@ const navigateSubView = (target: string) => {
       { id: "wallet", icon: "account_balance_wallet", label: "IZI Pay" },
       { id: "cart", icon: "shopping_cart", label: cart.length > 0 ? `R$ ${cart.reduce((sum: number, item: any) => sum + (item.price || 0), 0).toFixed(2).replace(".", ",")}` : "Carrinho", isCart: true },
       { id: "orders", icon: "receipt_long", label: "Pedidos" },
-      { id: "profile", icon: "person", label: "Perfil" },
+      { id: "quests", icon: "military_tech", label: "Quests" },
     ];
 
     return (
@@ -7757,6 +8001,8 @@ const navigateSubView = (target: string) => {
               onClick={() => {
                 if (item.isCart) {
                   navigateSubView("cart");
+                } else if (item.id === "quests") {
+                  setSubView("quest_center");
                 } else {
                   setTab(item.id as any);
                   setSubView("none");
@@ -8025,6 +8271,11 @@ const navigateSubView = (target: string) => {
                   {renderQuestCenter()}
                 </motion.div>
               )}
+              {subView === "notifications_center" && (
+                <motion.div key="notifs" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[190]">
+                  {renderNotificationsCenter()}
+                </motion.div>
+              )}
               {subView === "pix_payment" && (
                 <motion.div key="pixpay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[150]">
                   {renderPixPayment()}
@@ -8215,6 +8466,7 @@ const navigateSubView = (target: string) => {
       {renderTransferModal()}
 
       {renderDepositModal()}
+      {renderBroadcastPopup()}
 
       {toast && (
         <motion.div
@@ -8244,21 +8496,43 @@ const navigateSubView = (target: string) => {
       {/* GLOBAL MODALS (DATE, TIME, LOJISTAS) */}
       <AnimatePresence>
         {showLojistasModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[250] bg-black/98 backdrop-blur-2xl flex flex-col p-6">
-            <header className="flex items-center justify-between mb-8">
-              <h3 className="text-xl font-black text-white">Lojas Parceiras</h3>
-              <button onClick={() => setShowLojistasModal(false)} className="size-10 rounded-xl bg-zinc-900 flex items-center justify-center text-zinc-400">
-                <span className="material-symbols-outlined">close</span>
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 z-[250] bg-black/98 backdrop-blur-3xl flex flex-col p-6"
+          >
+            <header className="flex items-center justify-between mb-8 bg-black/40 backdrop-blur-2xl border border-white/10 p-5 rounded-[36px] shadow-[20px_20px_40px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.02),inset_-8px_-8px_16px_rgba(0,0,0,0.4)]">
+              <div className="flex items-center gap-4">
+                 <div className="size-11 rounded-2xl bg-zinc-900 flex items-center justify-center border border-white/5 shadow-[inset_4px_4px_8px_rgba(255,255,255,0.03)]">
+                    <span className="material-symbols-outlined text-yellow-400">storefront</span>
+                 </div>
+                 <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Lojas Parceiras</h3>
+              </div>
+              <button 
+                onClick={() => setShowLojistasModal(false)} 
+                className="size-11 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-400 active:scale-90 transition-all shadow-[6px_6px_12px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.03)]"
+              >
+                <span className="material-symbols-outlined font-black">close</span>
               </button>
             </header>
-            <div className="relative mb-6">
-               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">search</span>
-               <input type="text" placeholder="Buscar por nome ou região..." className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl py-4 pl-12 pr-6 text-sm font-bold focus:ring-1 focus:ring-yellow-400/50 outline-none text-white placeholder-zinc-600" />
+
+            <div className="relative mb-8 group">
+               <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-yellow-400 transition-colors z-10 text-xl">search</span>
+               <input 
+                 type="text" 
+                 placeholder="Buscar por nome ou região..." 
+                 className="w-full bg-zinc-900 shadow-[10px_10px_20px_rgba(0,0,0,0.5),inset_4px_4px_8px_rgba(255,255,255,0.02),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] border border-white/5 rounded-[26px] py-4.5 pl-14 pr-6 text-sm font-black focus:outline-none text-white placeholder-zinc-700 transition-all" 
+               />
             </div>
-            <div className="flex-1 overflow-y-auto no-scrollbar space-y-4">
-               {partnerStores.map((store) => (
+
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-5 pb-10">
+               {partnerStores.map((store, i) => (
                   <motion.div 
-                    whileTap={{ scale: 0.98 }}
+                    whileTap={{ scale: 0.97 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
                     key={store.id} 
                     onClick={() => { 
                       setTransitData(prev => ({
@@ -8269,14 +8543,25 @@ const navigateSubView = (target: string) => {
                       })); 
                       setShowLojistasModal(false); 
                     }}
-                    className="p-6 rounded-[30px] border border-zinc-800 hover:border-yellow-400/30 transition-all group cursor-pointer"
+                    className="p-7 rounded-[40px] bg-zinc-800 border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-10px_-10px_30px_rgba(255,255,255,0.01),inset_6px_6px_12px_rgba(255,255,255,0.03),inset_-6px_-6px_12px_rgba(0,0,0,0.4)] hover:border-yellow-400/30 transition-all group cursor-pointer relative overflow-hidden"
                   >
-                     <div className="flex justify-between items-start mb-2">
-                        <span className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded bg-yellow-400/10 text-yellow-400">{store.type || "Loja"}</span>
-                        <span className="text-[10px] font-bold text-zinc-500">{store.hours || "Horário não informado"}</span>
+                     <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                     
+                     <div className="flex justify-between items-start mb-3 relative z-10">
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-yellow-400/10 border border-yellow-400/20 text-yellow-400 shadow-[inset_1px_1px_2px_rgba(250,204,21,0.1)]">
+                           <div className="size-1 rounded-full bg-yellow-400 animate-pulse" />
+                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">{store.type || "Loja"}</span>
+                        </div>
+                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest bg-zinc-900/50 px-3 py-1.5 rounded-xl shadow-[inset_1px_1px_2px_rgba(0,0,0,0.3)]">{store.hours || "Disponível"}</span>
                      </div>
-                     <h4 className="font-black text-white text-base group-hover:text-yellow-400 transition-colors">{store.name || "Sem Nome"}</h4>
-                     <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">{store.address || store.store_address || "Endereço não informado"}</p>
+                     <h4 className="font-black text-white text-base group-hover:text-yellow-400 transition-colors uppercase italic tracking-tight relative z-10">{store.name || "Sem Nome"}</h4>
+                     <p className="text-[11px] font-bold text-zinc-400 mt-2 leading-relaxed opacity-60 group-hover:opacity-100 transition-opacity relative z-10">{store.address || store.store_address || "Endereço Coleta Izi"}</p>
+                     
+                     <div className="mt-5 flex items-center justify-end">
+                        <div className="size-10 rounded-[18px] bg-zinc-900 flex items-center justify-center text-zinc-600 group-hover:bg-yellow-400 group-hover:text-black transition-all shadow-[4px_4px_8px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.03)] group-hover:shadow-[0_0_15px_rgba(251,191,36,0.2)]">
+                           <span className="material-symbols-outlined text-[18px] font-black">chevron_right</span>
+                        </div>
+                     </div>
                   </motion.div>
                ))}
             </div>

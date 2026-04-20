@@ -21,7 +21,7 @@ type PromoType = 'banner' | 'coupon' | 'flash' | 'explore';
 export default function PromotionStudio({ merchantId = null, userRole, onClose, isModal = false }: PromotionStudioProps) {
   const { fetchPromotions, promotionsList, stats, appSettings, setAppSettings, handleFileUpload: uploadToSupabase } = useAdmin();
   
-  const [activeTab, setActiveTab] = useState<PromoType>('coupon');
+  const [activeTab, setActiveTab] = useState<PromoType>(userRole === 'merchant' ? 'coupon' : 'banner');
   const [showForm, setShowForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -101,6 +101,13 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
       fetchProducts(formData.merchant_ids);
     }
   }, [activeTab, formData.merchant_ids, fetchProducts]);
+
+  // Efeito de segurança: impede lojistas de acessarem abas restritas
+  useEffect(() => {
+    if (userRole === 'merchant' && (activeTab === 'banner' || activeTab === 'explore')) {
+      setActiveTab('coupon');
+    }
+  }, [userRole, activeTab]);
 
   const filteredPromos = promotionsList.filter(p => {
     if (merchantId) return p.merchant_id === merchantId;
@@ -318,12 +325,16 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
     setShowForm(true);
   };
 
-  const tabs = [
+  const availableTabs = [
     { id: 'banner', label: 'Banners Home (Geral)', icon: 'view_carousel', color: 'text-amber-500' },
     { id: 'explore', label: 'Cards de Exploração', icon: 'explore', color: 'text-indigo-400' },
     { id: 'coupon', label: 'Cupons de Desconto', icon: 'confirmation_number', color: 'text-primary' },
     { id: 'flash', label: 'Izi Flash (Ofertas)', icon: 'local_fire_department', color: 'text-rose-500' },
   ];
+
+  const tabs = userRole === 'merchant' 
+    ? availableTabs.filter(t => t.id === 'coupon' || t.id === 'flash')
+    : availableTabs;
 
   const containerClasses = isModal 
     ? "fixed inset-0 z-[120] flex items-center justify-center p-4 md:p-10 text-white overflow-hidden font-display"
@@ -622,16 +633,23 @@ export default function PromotionStudio({ merchantId = null, userRole, onClose, 
                                  <>
                                     <div className="space-y-2 md:col-span-2">
                                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Lojistas Associados</label>
-                                        <button
-                                            type="button"
-                                            onClick={() => setMerchantModalOpen(true)}
-                                            className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-left flex justify-between items-center group hover:bg-white/10 transition-all font-display"
-                                        >
-                                            <span className={formData.merchant_ids.length ? 'text-white' : 'text-slate-500'}>
-                                                {formData.merchant_ids.length ? `${formData.merchant_ids.length} lojistas participantes` : 'Clique para selecionar os lojistas'}
-                                            </span>
-                                            <span className="material-symbols-outlined text-slate-500 group-hover:text-primary transition-colors">storefront</span>
-                                        </button>
+                                        {userRole === 'merchant' ? (
+                                            <div className="w-full bg-white/5 border border-white/10 rounded-3xl px-8 py-5 font-bold text-slate-400 flex items-center gap-3">
+                                                <span className="material-symbols-outlined text-emerald-500">check_circle</span>
+                                                Sua loja já está selecionada para esta oferta
+                                            </div>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={() => setMerchantModalOpen(true)}
+                                                className="w-full bg-white/5 border border-white/5 rounded-3xl px-8 py-5 font-bold text-left flex justify-between items-center group hover:bg-white/10 transition-all font-display"
+                                            >
+                                                <span className={formData.merchant_ids.length ? 'text-white' : 'text-slate-500'}>
+                                                    {formData.merchant_ids.length ? `${formData.merchant_ids.length} lojistas participantes` : 'Clique para selecionar os lojistas'}
+                                                </span>
+                                                <span className="material-symbols-outlined text-slate-500 group-hover:text-primary transition-colors">storefront</span>
+                                            </button>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2 md:col-span-2">

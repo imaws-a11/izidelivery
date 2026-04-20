@@ -135,30 +135,30 @@ export const ExploreRestaurantsView = ({
       className="absolute inset-0 z-[100] bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10"
     >
       {/* HEADER PREMIUM - ILHA FLUTUANTE */}
-      <header className="fixed top-4 inset-x-4 z-[110] flex flex-col bg-black/60 backdrop-blur-3xl border border-white/5 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-4">
+      <header className="fixed top-4 inset-x-4 z-[110] flex flex-col bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[36px] shadow-[20px_20px_50px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.02),inset_-8px_-8px_16px_rgba(0,0,0,0.4)] overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-5">
+          <div className="flex items-center gap-5">
             <button 
               onClick={() => setSubView("none")} 
-              className="size-11 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center active:scale-90 transition-all hover:bg-zinc-800"
+              className="size-12 rounded-[22px] bg-zinc-900 border border-white/5 flex items-center justify-center active:scale-90 transition-all hover:bg-zinc-800 shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.03)]"
             >
-              <span className="material-symbols-outlined text-white text-[22px]">arrow_back</span>
+              <span className="material-symbols-outlined text-white text-[24px]">chevron_left</span>
             </button>
             <div>
-              <h1 className="text-base font-black tracking-tighter text-white leading-none uppercase italic">Izi Food</h1>
-              <p className="text-[9px] font-black text-yellow-400 font-bold uppercase tracking-[0.2em] mt-1.5 flex items-center gap-1.5">
-                <span className="size-1 rounded-full bg-yellow-400 animate-pulse" />
+              <h1 className="text-lg font-black tracking-tighter text-white leading-none uppercase italic drop-shadow-lg">Izi Food</h1>
+              <p className="text-[10px] font-black text-yellow-400 uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
+                <span className="size-1.5 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_8px_#facc15]" />
                 Explorar Sabores
               </p>
             </div>
           </div>
           <button 
             onClick={() => navigateSubView("cart")} 
-            className="group relative size-11 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center active:scale-90 transition-all hover:bg-zinc-800"
+            className="group relative size-12 rounded-[22px] bg-zinc-900 border border-white/5 flex items-center justify-center active:scale-90 transition-all hover:bg-zinc-800 shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.03)]"
           >
-            <span className="material-symbols-outlined text-white text-[20px] group-hover:text-yellow-400 transition-colors">shopping_bag</span>
+            <span className="material-symbols-outlined text-white text-[22px] group-hover:text-yellow-400 transition-colors">shopping_bag</span>
             {cart.length > 0 && (
-              <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-black">
+              <span className="absolute -top-1 -right-1 size-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-black shadow-lg">
                 {cart.length}
               </span>
             )}
@@ -166,17 +166,17 @@ export const ExploreRestaurantsView = ({
         </div>
 
         {/* BUSCA INTEGRADA */}
-        <div className="px-5 pb-4">
+        <div className="px-6 pb-5">
             <div className="relative group">
-               <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                 <span className="material-symbols-outlined text-zinc-500 group-focus-within:text-yellow-400 transition-all duration-500 text-xl">search</span>
+               <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none z-10">
+                 <span className="material-symbols-outlined text-zinc-500 group-focus-within:text-yellow-400 transition-all duration-500 text-2xl">search</span>
                </div>
                <input 
                  type="text"
                  placeholder="O que você quer comer?"
                  value={searchQuery}
                  onChange={(e) => setSearchQuery(e.target.value)}
-                 className="w-full h-14 bg-zinc-900 shadow-[10px_10px_20px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.3)] border border-white/5 rounded-[22px] pl-14 pr-4 text-sm font-black text-white placeholder:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-yellow-400/20 transition-all"
+                 className="w-full h-15 bg-zinc-900 shadow-[15px_15px_30px_rgba(0,0,0,0.5),inset_6px_6px_12px_rgba(255,255,255,0.02),inset_-6px_-6px_12px_rgba(0,0,0,0.4)] border border-white/10 rounded-[26px] pl-16 pr-6 text-sm font-black text-white placeholder:text-zinc-700 focus:outline-none focus:placeholder:text-zinc-500 transition-all"
                />
             </div>
         </div>
@@ -193,44 +193,41 @@ export const ExploreRestaurantsView = ({
         )}
         {/* CARROSSEL DE CATEGORIAS VISUAIS (ESTILO MARKET) */}
         <section className="mb-10">
-          <div className="flex items-center justify-between mb-6 px-1">
-            <h2 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Categorias Populares</h2>
+          <div className="flex items-center justify-between mb-8 px-1">
+            <h2 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.4em] drop-shadow-md">Categorias Populares</h2>
           </div>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 h-[120px]">
+          <div className="flex gap-5 overflow-x-auto no-scrollbar pb-6 -mx-4 px-4 h-[140px]">
              {categories.map((cat, i) => {
-               const isActive = selectedCategory === cat.id || (selectedCategory === "Todos" && cat.id === "all");
-               const catImg = ""; 
-               
-               return (
-                 <motion.button
-                   key={cat.id || i}
-                   onClick={() => setSelectedCategory(cat.id)}
-                   whileTap={{ scale: 0.95 }}
-                   initial={{ opacity: 0, scale: 0.8 }}
-                   animate={{ opacity: 1, scale: 1 }}
-                   transition={{ delay: i * 0.03 }}
-                   className={`relative flex-shrink-0 w-32 h-26 rounded-[32px] overflow-hidden group transition-all duration-500
-                     ${isActive 
-                       ? "bg-yellow-400 shadow-[10px_10px_20px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.5),inset_-4px_-4px_8px_rgba(0,0,0,0.2)]" 
-                       : "bg-zinc-800 shadow-[6px_6px_12px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.02),inset_-2px_-2px_4px_rgba(0,0,0,0.4)] hover:bg-zinc-750"}
-                   `}
-                 >
-                    {catImg && !isActive && (
-                      <img 
-                        src={catImg} 
-                        className="absolute inset-0 size-full object-cover opacity-10 blur-[1px] group-hover:scale-110 transition-transform duration-700" 
-                      />
+                const isActive = selectedCategory === cat.id || (selectedCategory === "Todos" && cat.id === "all");
+                const catImg = ""; 
+                
+                return (
+                  <motion.button
+                    key={cat.id || i}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    whileTap={{ scale: 0.92 }}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.03, type: "spring", stiffness: 300, damping: 20 }}
+                    className={`relative flex-shrink-0 w-36 h-28 rounded-[38px] overflow-hidden group transition-all duration-500
+                      ${isActive 
+                        ? "bg-yellow-400 shadow-[15px_15px_30px_rgba(0,0,0,0.5),inset_6px_6px_12px_rgba(255,255,255,0.6),inset_-6px_-6px_12px_rgba(0,0,0,0.2)]" 
+                        : "bg-zinc-800 shadow-[10px_10px_20px_rgba(0,0,0,0.5),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] hover:bg-zinc-750"}
+                    `}
+                  >
+                    {isActive && (
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-50" />
                     )}
-                    <div className="relative h-full flex flex-col items-center justify-center gap-2 p-2 z-10">
-                       <div className={`size-10 rounded-2xl flex items-center justify-center mb-1 transition-all duration-500
-                         ${isActive ? "bg-black/10 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)]" : "bg-zinc-900 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)]"}
+                    <div className="relative h-full flex flex-col items-center justify-center gap-2.5 p-3 z-10">
+                       <div className={`size-11 rounded-[20px] flex items-center justify-center mb-1 transition-all duration-500
+                         ${isActive ? "bg-black/10 shadow-[inset_3px_3px_6px_rgba(0,0,0,0.2)]" : "bg-zinc-900 shadow-[inset_4px_4px_8px_rgba(0,0,0,0.5)]"}
                        `}>
                           <span className={`material-symbols-outlined text-2xl ${isActive ? "text-black" : "text-yellow-400"}`}>{cat.icon || 'restaurant'}</span>
                        </div>
-                       <span className={`text-[11px] font-black uppercase tracking-tighter leading-tight transition-all duration-500 text-center ${isActive ? "text-black" : "text-zinc-400"}`}>{cat.name}</span>
+                       <span className={`text-[12px] font-black uppercase tracking-tighter leading-tight transition-all duration-500 text-center ${isActive ? "text-black" : "text-zinc-400"}`}>{cat.name}</span>
                     </div>
-                 </motion.button>
-               );
+                  </motion.button>
+                );
              })}
           </div>
         </section>
