@@ -58,10 +58,11 @@ export const playIziSound = (role: 'merchant' | 'driver' | 'success') => {
 
     const audio = new Audio(soundUrls[role]);
     if (role === 'driver') {
-        audio.loop = false; // Removido loop infinito
+        audio.loop = false;
         let count = 0;
+        const maxRepeats = 5; // Aumentado para 5 repetições (aprox. 30-40 segundos de som)
         audio.addEventListener('ended', () => {
-            if (count < 2) { 
+            if (count < maxRepeats) { 
                 count++;
                 audio.currentTime = 0;
                 audio.play().catch(e => console.error('Erro na repetição do som:', e));
@@ -77,9 +78,14 @@ export const playIziSound = (role: 'merchant' | 'driver' | 'success') => {
     if (playPromise !== undefined) {
         playPromise.catch((e) => {
             console.warn(`[iziSounds] Bloqueio de áudio detectado para ${role}:`, e);
-            // Fallback para tom sintético apenas se for crítico (driver)
+            // Fallback para melodia melódica rítmica se for driver (Certo para alertar)
             if (ctx && role === 'driver') {
-                playTone(ctx, 880, 'triangle', 0, 0.4, 0.1); 
+                const now = ctx.currentTime;
+                // Melodia ascendente tripla (Drip Sound)
+                [440, 660, 880].forEach((freq, index) => {
+                    playTone(ctx, freq, 'triangle', index * 0.15, 0.4, 0.1);
+                    playTone(ctx, freq * 1.5, 'sine', index * 0.15 + 0.05, 0.2, 0.05);
+                });
             }
         });
     }

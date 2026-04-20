@@ -63,26 +63,37 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   const [useCoins, setUseCoins] = React.useState(false);
   const subtotal = cart.reduce((sum, item) => {
     const basePrice = Number(item.price) || 0;
-    const addonsPrice = Array.isArray(item.addonDetails) 
-      ? item.addonDetails.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0)
-      : 0;
-    return sum + basePrice + addonsPrice;
+    // Tenta 'options' primeiro (usado no handlePlaceOrder), depois 'addonDetails' (usado no checkout)
+    const addons = Array.isArray(item.options) ? item.options : (Array.isArray(item.addonDetails) ? item.addonDetails : []);
+    const addonsPrice = addons.reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0);
+    return sum + (basePrice + addonsPrice) * (item.quantity || 1);
   }, 0);
-  const getAddonDetails = (item: any) => Array.isArray(item.addonDetails) ? item.addonDetails : [];
+
+  const getAddonDetails = (item: any) => {
+    if (Array.isArray(item.options)) return item.options;
+    if (Array.isArray(item.addonDetails)) return item.addonDetails;
+    return [];
+  };
+
   const getItemTotal = (item: any) => {
     const basePrice = Number(item.price) || 0;
     const addonsPrice = getAddonDetails(item).reduce((a: number, b: any) => a + (Number(b.total_price || b.price) || 0), 0);
     return basePrice + addonsPrice;
   };
+  
   const couponDiscount = appliedCoupon
     ? appliedCoupon.discount_type === "fixed"
       ? appliedCoupon.discount_value
       : (subtotal * appliedCoupon.discount_value) / 100
     : 0;
   
-  const coinDiscount = useCoins ? iziCoins * iziCoinValue : 0;
-  const serviceFeeAmount = (subtotal * serviceFee) / 100;
-  const total = Math.max(0, subtotal + deliveryFee + serviceFeeAmount - couponDiscount - coinDiscount);
+  const coinDiscount = useCoins ? (iziCoins || 0) * (iziCoinValue || 0.01) : 0;
+  
+  // Taxa de serviço é ZERO para membros Izi Black
+  const rawServiceFee = (subtotal * (Number(serviceFee) || 0)) / 100;
+  const serviceFeeAmount = isIziBlack ? 0 : rawServiceFee;
+  
+  const total = Math.max(0, subtotal + (Number(deliveryFee) || 0) + serviceFeeAmount - (Number(couponDiscount) || 0) - (Number(coinDiscount) || 0));
 
   const cashbackRate = isIziBlack ? (iziBlackCashback * (iziBlackCashbackMultiplier || 1)) : (iziCoinRate || 1);
   const estimatedCashbackCoins = (total * (cashbackRate / 100));
@@ -402,10 +413,17 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   )}
                 </div>
               </div>
-              {serviceFee > 0 && (
-                <div className="flex justify-between items-center">
-                  <span className="text-zinc-500 text-[11px] font-black uppercase tracking-[0.2em] italic text-blue-400">Taxa de Serviço ({serviceFee}%)</span>
-                  <span className="text-white font-black text-sm">R$ {serviceFeeAmount.toFixed(2).replace(".", ",")}</span>
+              {Number(serviceFee) > 0 && (
+                <div className="flex justify-between items-center py-1">
+                  <div className="flex flex-col">
+                    <span className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">Taxa de Serviço ({serviceFee.toString().replace(".", ",")}%):</span>
+                    {isIziBlack && (
+                      <span className="text-[7px] text-yellow-400 font-bold uppercase tracking-[0.2em] mt-1">Isento via Izi Black</span>
+                    )}
+                  </div>
+                  <span className={isIziBlack ? "text-zinc-600 line-through text-xs" : "text-amber-400 font-bold text-sm"}>
+                    R$ {rawServiceFee.toFixed(2).replace(".", ",")}
+                  </span>
                 </div>
               )}
               {couponDiscount > 0 && (

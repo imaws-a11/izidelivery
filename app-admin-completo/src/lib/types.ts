@@ -398,6 +398,9 @@ export interface AppSettings {
   withdrawalfeepercent?: number;
   withdrawal_period_h?: number;
   withdrawal_day?: string;
+  mercadopago_public_key?: string;
+  loan_interest_rate?: number;
+  paymentmethodsactive?: { pix: boolean; card: boolean; lightning: boolean; wallet: boolean };
   created_at?: string;
   updated_at?: string;
 }
