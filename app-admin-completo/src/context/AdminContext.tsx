@@ -275,6 +275,7 @@ export interface AdminContextType {
   savePromotion: (promo: any) => Promise<void>;
   autoSavePromo: (updatedPromo: any) => void;
   handleSaveAppSettings: () => Promise<void>;
+  handleUpdateMerchantProfile: (data: Partial<MerchantProfile>) => Promise<void>;
 }
 
 export const AdminContext = createContext<AdminContextType | null>(null);

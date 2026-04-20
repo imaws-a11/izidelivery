@@ -13,7 +13,7 @@ export default function DriversTab() {
     isSaving, setIsSaving, session, fetchMyDrivers
   } = useAdmin();
 
-  // Estado próprio — não depende do AdminProvider para o status online
+  // Estado próprio â�� não depende do AdminProvider para o status online
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -35,12 +35,12 @@ export default function DriversTab() {
     return () => clearInterval(interval);
   }, []);
 
-  // Subscription Realtime própria — independente do AdminProvider
+  // Subscription Realtime própria â�� independente do AdminProvider
   useEffect(() => {
     const channel = supabase
       .channel('drivers_tab_live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers_delivery' }, () => {
-        // Qualquer mudança na tabela → rebusca imediatamente
+        // Qualquer mudança na tabela â�� rebusca imediatamente
         loadDrivers();
       })
       .subscribe();
@@ -185,7 +185,7 @@ export default function DriversTab() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-6 text-xs font-bold text-slate-500 uppercase tracking-widest">{d.vehicle_type || 'Moto'} • {d.license_plate || 'N/A'}</td>
+                  <td className="px-8 py-6 text-xs font-bold text-slate-500 uppercase tracking-widest">{d.vehicle_type || 'Moto'} â�� {d.license_plate || 'N/A'}</td>
                   <td className="px-8 py-6 text-center">
                     <span className={`px-3 py-1 text-[9px] font-black rounded-full uppercase tracking-widest ${
                       d.is_active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'

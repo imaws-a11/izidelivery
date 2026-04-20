@@ -144,6 +144,7 @@ export interface MerchantProfile {
     account?: string;
     pix_key?: string;
   };
+  monthly_goal?: number;
   metadata?: any;
 }
 
