@@ -24,9 +24,12 @@ const STATUS_TIMELINE = [
 const CANCELLED_STATUSES = ["cancelado", "recusado"];
 
 const STATUS_ORDER_MAP: Record<string, number> = {
-  novo: 0, searching_driver: 0, waiting_driver: 0,
-  waiting_merchant: 0, pendente_pagamento: 0,
-  aceito: 1, a_caminho: 2, chegou: 3, in_transit: 4, concluido: 5,
+  novo: 0, searching_driver: 0, waiting_driver: 0, waiting_merchant: 0, pendente_pagamento: 0,
+  aceito: 1, confirmante: 1, atribuido: 1,
+  a_caminho_coleta: 2, saiu_para_coleta: 2,
+  chegou_coleta: 3, chegou: 3, no_local_coleta: 3,
+  picked_up: 4, in_transit: 4, a_caminho: 4, em_rota: 4, saiu_para_entrega: 4, no_local: 4,
+  concluido: 5, entregue: 5, finalizado: 5, delivered: 5
 };
 
 const COLOR_MAP: Record<string, Record<"text" | "bg" | "border", string>> = {
