@@ -4373,9 +4373,15 @@ const navigateSubView = (target: string) => {
                 },
             });
 
-            if (fnErr || (fnData && fnData.status !== 'approved')) {
+            const isSuccess = !fnErr && fnData && fnData.success === true && fnData.status === 'approved';
+
+            if (!isSuccess) {
                 const mpMsg = fnData?.details || fnData?.error || fnErr?.message || "O cartão foi recusado pela operadora.";
                 toastError(`Pagamento não aprovado: ${mpMsg}`);
+                
+                if (fnData?.raw) {
+                   console.error("[DETALHES BRUTOS MP]:", fnData.raw);
+                }
                 if (isSubscription) {
                   setSubView("izi_black_purchase");
                 } else if (isCoinPurchase) {
