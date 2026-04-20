@@ -3088,56 +3088,71 @@ function App() {
 
             <div className="flex-1 overflow-y-auto w-full no-scrollbar pt-6 pb-40">
                 <div className="px-6 space-y-10">
-                {/* Refined Profile Card */}
-                <header className="clay-profile-card rounded-[2.5rem] flex flex-col gap-8 relative overflow-hidden p-6">
-                    <div className="flex items-center gap-6">
-                        {/* 3D Claymorphic Profile Picture */}
-                        <div className="w-24 h-24 rounded-full border-[8px] border-white/40 overflow-hidden clay-card-yellow shadow-2xl relative">
-                            {driverAvatar ? (
-                                <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-stone-900/10">
-                                    <Icon name="person" size={48} className="text-stone-950/40" />
-                                </div>
-                            )}
-                        </div>
-                        <div className="space-y-2">
-                            <h1 className="text-4xl font-extrabold text-stone-950 tracking-tight leading-none">
-                                {driverName.split(' ')[0] || 'Piloto'}
-                            </h1>
-                            <div className="flex items-center gap-1.5 bg-stone-950/15 px-3 py-1 rounded-full w-fit">
-                                <Icon name="stars" size={14} className="text-stone-950" />
-                                <span className="text-stone-900 text-[10px] font-black uppercase tracking-widest">
-                                    {stats.level >= 10 ? 'Motorista Elite' : 'Piloto Pro'}
-                                </span>
+                {/* New Premium Clay Consolidated Card */}
+                <header className="clay-profile-card rounded-[3.5rem] flex flex-col relative overflow-hidden p-8 gap-8">
+                    {/* Background Decorative Element */}
+                    <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/20 rounded-full blur-3xl pointer-events-none" />
+                    
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-5">
+                            <div className="w-20 h-20 rounded-[2rem] border-[6px] border-white/50 overflow-hidden clay-profile-inner shadow-xl relative preserve-3d group">
+                                {driverAvatar ? (
+                                    <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-stone-900/5">
+                                        <Icon name="person" size={40} className="text-stone-950/30" />
+                                    </div>
+                                )}
                             </div>
+                            <div className="space-y-1">
+                                <h1 className="text-3xl font-black text-stone-950 tracking-tighter leading-none">
+                                    Olá, {driverName.split(' ')[0] || 'Piloto'}
+                                </h1>
+                                <div className="flex items-center gap-1.5 bg-stone-950/10 px-3 py-1 rounded-full w-fit backdrop-blur-sm border border-black/5">
+                                    <Icon name="verified" size={14} className="text-stone-950" />
+                                    <span className="text-stone-900 text-[10px] font-black uppercase tracking-wider">
+                                        {stats.level >= 10 ? 'Nível Elite' : `Nível ${stats.level}`}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="clay-profile-inner p-3 rounded-2xl flex flex-col items-center justify-center border border-white/30">
+                           <p className="text-[8px] font-black uppercase text-stone-800 tracking-tighter opacity-70">Semanal</p>
+                           <p className="text-sm font-black text-stone-950 italic">R$ {stats.weekly.toFixed(0)}</p>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="clay-profile-inner rounded-3xl p-4 border border-white/20">
-                            <p className="text-stone-800 text-[9px] font-bold uppercase tracking-[0.1em] mb-1">Ganhos Hoje</p>
-                            <p className="text-xl font-black text-stone-950 truncate italic leading-none">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
-                            <div className="flex items-center gap-1 mt-1.5 opacity-60">
-                                <span className="text-[7px] font-black uppercase text-stone-800 tracking-tighter">Na Semana:</span>
-                                <span className="text-[9px] font-black text-stone-900">R$ {stats.weekly.toFixed(2).replace('.', ',')}</span>
+
+                    <div className="flex flex-col items-center justify-center py-2">
+                        <p className="text-stone-950/60 text-[11px] font-black uppercase tracking-[0.2em] mb-2">Ganhos de Hoje</p>
+                        <div className="flex items-start gap-1">
+                            <span className="text-2xl font-black text-stone-950/50 mt-2">R$</span>
+                            <span className="text-7xl font-black text-stone-950 tracking-tighter drop-shadow-sm italic leading-none">
+                                {stats.today.toFixed(2).replace('.', ',').split(',')[0]}
+                                <small className="text-3xl font-black opacity-40">,{stats.today.toFixed(2).split('.')[1]}</small>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="clay-profile-inner rounded-[2rem] p-5 border border-white/20">
+                        <div className="flex justify-between items-end mb-3">
+                            <div className="space-y-0.5">
+                                <p className="text-stone-950 text-[11px] font-black uppercase tracking-widest italic">Reputação XP</p>
+                                <p className="text-stone-950/60 text-[9px] font-bold">Progresso para o Lv. {stats.level + 1}</p>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-lg font-black text-stone-950 italic">{stats.xp}</span>
+                                <span className="text-[9px] font-black text-stone-950/40 uppercase ml-1">pts</span>
                             </div>
                         </div>
-                        <div className="clay-profile-inner rounded-3xl p-4 border border-white/20">
-                            <div className="flex justify-between items-center mb-1">
-                                <p className="text-stone-800 text-[9px] font-bold uppercase tracking-[0.1em]">ExperiÃência</p>
-                                <p className="text-stone-800 text-[8px] font-black uppercase tracking-tighter">Lv. {stats.level}</p>
-                            </div>
-                            <div className="flex items-baseline gap-1 leading-none">
-                                <span className="text-xl font-black text-stone-950 italic">{stats.xp}</span>
-                                <span className="text-[9px] font-bold text-stone-800/50 uppercase">XP</span>
-                            </div>
-                            <div className="w-full h-1.5 bg-stone-950/10 rounded-full mt-2 overflow-hidden">
-                                <motion.div 
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${(stats.xp % 100)}%` }}
-                                    className="h-full bg-stone-950 rounded-full"
-                                />
-                            </div>
+                        <div className="w-full h-4 bg-stone-950/10 rounded-full relative overflow-hidden p-1 shadow-inner border border-black/5">
+                            <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${(stats.xp % 100)}%` }}
+                                className="h-full bg-stone-950 rounded-full flex items-center justify-end px-1 relative"
+                            >
+                                <div className="size-1.5 bg-yellow-400 rounded-full shadow-[0_0_8px_white]" />
+                            </motion.div>
                         </div>
                     </div>
                 </header>
