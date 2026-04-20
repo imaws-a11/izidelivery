@@ -192,12 +192,14 @@ interface WalletViewProps {
   iziCoinValue?: number;
   iziCoinRate?: number;
   iziBlackRate?: number;
+  setIziCoins?: React.Dispatch<React.SetStateAction<number>>;
 }
 
 export const WalletView: React.FC<WalletViewProps> = ({
   walletTransactions = [],
   myOrders = [],
   iziCoins = 0,
+  setIziCoins,
   iziCashback = 0,
   userXP = 0,
   savedCards = [],
@@ -498,36 +500,53 @@ export const WalletView: React.FC<WalletViewProps> = ({
 
   const handleSearchRecipient = useCallback(async (query = searchTarget) => {
     if (!query.trim()) return;
+    
     setIsSearching(true);
     setSearchTarget(query);
+
+    const cleanQuery = query.trim();
+    const cleanEmail = cleanQuery.toLowerCase();
+    const onlyDigits = cleanQuery.replace(/\D/g, "");
+
     try {
       // 1. Tenta buscar em usuários comuns
-      const { data: userData } = await supabase
+      // Filtros: id exato OR email ilike (case insensitive) OR telefone exato (com ou sem formatação)
+      let userOrFilters = `email.ilike.${cleanEmail},id.eq.${cleanQuery},phone.eq.${cleanQuery}`;
+      if (onlyDigits && onlyDigits.length >= 8) {
+        userOrFilters += `,phone.eq.${onlyDigits}`;
+      }
+
+      const { data: users, error: userErr } = await supabase
         .from("users_delivery")
         .select("id, name, email, phone")
-        .or(`email.eq.${query},phone.eq.${query},id.eq.${query}`)
+        .or(userOrFilters)
         .not("id", "eq", userId)
-        .single();
+        .limit(1);
 
-      if (userData) {
-        setRecipient({ ...userData, type: 'user' });
+      if (users && users.length > 0) {
+        setRecipient({ ...users[0], type: 'user' });
         return;
       }
 
       // 2. Se não achou, tenta buscar em estabelecimentos (admin_users com role merchant)
-      const { data: merchantData } = await supabase
+      let merchantOrFilters = `email.ilike.${cleanEmail},id.eq.${cleanQuery},store_phone.eq.${cleanQuery}`;
+      if (onlyDigits && onlyDigits.length >= 8) {
+        merchantOrFilters += `,store_phone.eq.${onlyDigits}`;
+      }
+
+      const { data: merchants, error: merchantErr } = await supabase
         .from("admin_users")
         .select("id, store_name, email, store_phone")
-        .or(`email.eq.${query},store_phone.eq.${query},id.eq.${query}`)
+        .or(merchantOrFilters)
         .eq("role", "merchant")
-        .single();
+        .limit(1);
 
-      if (merchantData) {
+      if (merchants && merchants.length > 0) {
         setRecipient({ 
-          id: merchantData.id, 
-          name: merchantData.store_name, 
-          email: merchantData.email, 
-          phone: merchantData.store_phone,
+          id: merchants[0].id, 
+          name: merchants[0].store_name, 
+          email: merchants[0].email, 
+          phone: merchants[0].store_phone,
           type: 'merchant' 
         });
       } else {
@@ -535,6 +554,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
         setRecipient(null);
       }
     } catch (err) {
+      console.error("Izi Pay Search Error:", err);
       showToast?.("Erro ao buscar destinatário", "error");
     } finally {
       setIsSearching(false);
@@ -551,12 +571,21 @@ export const WalletView: React.FC<WalletViewProps> = ({
     try {
       const newBalanceSelf = Number((iziCoins - val).toFixed(8));
       
-      // 1. Débito no remetente (Coins)
+      // 1. Débito Otimista no State (Feedback Instantâneo)
+      if (setIziCoins) {
+        setIziCoins(newBalanceSelf);
+      }
+
+      // 1. Débito no remetente (Banco)
       const { error: err1 } = await supabase.from("users_delivery").update({
         izi_coins: newBalanceSelf
       }).eq("id", userId);
 
-      if (err1) throw err1;
+      if (err1) {
+        // Reverter em caso de erro no banco
+        if (setIziCoins) setIziCoins(prev => prev + val);
+        throw err1;
+      }
 
       // 2. Registro da transação remetente
       await supabase.from("wallet_transactions").insert({
@@ -873,37 +902,34 @@ export const WalletView: React.FC<WalletViewProps> = ({
                   key={loan.id} 
                   whileTap={{ scale: 0.98 }}
                   onClick={() => { setSelectedLoan(loan); setShowLoanDetails(true); setSelectedInstallments([]); }}
-                  className="bg-zinc-900 p-5 rounded-[24px] border border-white/5 flex flex-col gap-4 cursor-pointer active:bg-zinc-800 transition-colors"
+                  className="bg-yellow-400 p-6 rounded-[32px] border-2 border-yellow-300 flex flex-col gap-4 cursor-pointer shadow-[inset_4px_4px_8px_rgba(255,255,255,0.7)] active:scale-95 transition-all"
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                       <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Dívida Total</p>
-                       <h4 className="text-xl font-black text-white">Z {Number(loan.total_payable).toLocaleString('pt-BR')}</h4>
+                       <p className="text-[10px] font-black text-black/40 uppercase tracking-widest">Dívida Total</p>
+                       <h4 className="text-2xl font-black text-black italic">Z {Number(loan.total_payable).toLocaleString('pt-BR')}</h4>
                     </div>
-                     <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
-                        loan.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500' : 
-                        loan.status === 'pending' ? 'bg-indigo-500/10 text-indigo-400' :
-                        loan.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
-                        'bg-yellow-500/10 text-yellow-500'
-                      }`}>
+                     <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-black/10 text-black`}>
                       {loan.status === 'paid' ? 'Liquidado' : loan.status === 'pending' ? 'Sob Análise' : loan.status === 'rejected' ? 'Recusado' : 'A pagar'}
                     </span>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 text-[10px]">
                     <div>
-                       <p className="text-zinc-600 uppercase font-black tracking-tight">Status de Pagamento</p>
-                       <p className="text-white font-bold">{loan.paid_installments || 0} de {loan.installments_count} parcelas pagas</p>
+                       <p className="text-black/40 uppercase font-black tracking-tight">Status Pagamento</p>
+                       <p className="text-black font-bold">{loan.paid_installments || 0} de {loan.installments_count} pagas</p>
                     </div>
                     <div>
-                      <p className="text-zinc-600 uppercase font-black tracking-tight">Valor Original</p>
-                      <p className="text-white font-bold">Z {Number(loan.amount).toLocaleString('pt-BR')}</p>
+                       <p className="text-black/40 uppercase font-black tracking-tight">Valor Original</p>
+                       <p className="text-black font-bold">Z {Number(loan.amount).toLocaleString('pt-BR')}</p>
                     </div>
                   </div>
-
-                  <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-                    <span className="text-[8px] font-black text-zinc-600 uppercase">Clique para ver detalhes</span>
-                    <span className="material-symbols-outlined text-xs text-zinc-600">chevron_right</span>
+                  
+                  <div className="mt-2 pt-3 border-t border-black/10 flex items-center justify-between">
+                    <span className="text-[9px] font-black text-black/50 uppercase italic tracking-widest">Detalhes do Empréstimo</span>
+                    <div className="size-6 rounded-full bg-black/5 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-sm text-black">arrow_forward</span>
+                    </div>
                   </div>
                 </motion.div>
               ))
@@ -1288,12 +1314,10 @@ export const WalletView: React.FC<WalletViewProps> = ({
     );
   }
 
-  return (
+    return (
     <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32 italic">
       {/* HERO SALDO - REDESIGN CLAYMORPHISM PREMIUM */}
       <div className="px-5 pt-14 pb-12 flex flex-col items-center relative overflow-hidden">
-        {/* Glow de Fundo */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-yellow-400/5 blur-[120px] rounded-full pointer-events-none" />
         
         <div className="flex items-center gap-3 mb-10 w-full justify-center opacity-80">
           <div className="size-2 rounded-full bg-yellow-400 shadow-[0_0_10px_#facc15]" />
@@ -1367,7 +1391,7 @@ export const WalletView: React.FC<WalletViewProps> = ({
         {/* AÇÕES RÁPIDAS - PREMIUM CLAY BUTTONS */}
         <div className="grid grid-cols-3 gap-6 w-full max-w-sm mx-auto mt-12 px-2">
           {[
-            { icon: "add", label: "Depositar", action: () => setShowDepositModal(true), highlight: true },
+            { icon: "add", label: "Depositar", action: () => setShowDepositModal(true) },
             { icon: "send", label: "Enviar", action: () => setWalletMode("transfer") },
             { icon: "qr_code_scanner", label: "Escanear", action: () => setWalletMode("scan") },
             { icon: "qr_code", label: "Meu QR", action: () => setWalletMode("my_qr") },
@@ -1379,16 +1403,12 @@ export const WalletView: React.FC<WalletViewProps> = ({
               onClick={a.action}
               className="flex flex-col items-center gap-3 active:scale-90 transition-all group"
             >
-              <div className={`size-16 rounded-[28px] flex items-center justify-center transition-all bg-[#0e0e0e] border-2 border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.02)]
-                ${a.highlight ? "bg-yellow-400 border-yellow-400 shadow-[inset_4px_4px_8px_rgba(255,255,255,0.7),0_8px_20px_rgba(250,204,21,0.2)]" : "group-hover:bg-zinc-900"}
-              `}>
-                <span className={`material-symbols-outlined text-2xl font-black transition-colors
-                  ${a.highlight ? "text-black" : "text-zinc-500 group-hover:text-yellow-400"}
-                `}>
+              <div className="size-16 rounded-[28px] flex items-center justify-center transition-all bg-yellow-400 border-2 border-yellow-300 shadow-[inset_4px_4px_8px_rgba(255,255,255,0.7)]">
+                <span className="material-symbols-outlined text-2xl font-black text-black">
                   {a.icon}
                 </span>
               </div>
-              <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest group-hover:text-zinc-300 transition-colors">
+              <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest group-hover:text-yellow-400 transition-colors">
                 {a.label}
               </span>
             </button>
@@ -1400,17 +1420,19 @@ export const WalletView: React.FC<WalletViewProps> = ({
         {/* STATS - LUXURY MINIMALIST */}
         <div className="flex gap-4">
           {[
-            { label: "Gastos", value: `${totalGasto.toFixed(0)}`, icon: "shopping_bag" },
-            { label: "Cashback", value: `${iziCashback.toFixed(0)}`, icon: "add_circle" },
-            { label: "Nível", value: `${Math.floor(userXP/1000) + 1}`, icon: "verified" },
+            { label: "Gastos", value: `${totalGasto.toFixed(0)}`, icon: "shopping_bag", color: "text-zinc-500" },
+            { label: "Cashback", value: `${iziCashback.toFixed(0)}`, icon: "add_circle", color: "text-yellow-400" },
+            { label: "Nível", value: `${Math.floor(userXP/1000) + 1}`, icon: "verified", color: "text-blue-400" },
           ].map((s, i) => (
             <div
               key={i}
-              className="flex-1 flex flex-col items-center py-6 px-2 gap-2 bg-[#0a0a0a] rounded-[35px] border-2 border-white/5 shadow-inner"
+              className="flex-1 flex flex-col items-center py-8 px-2 gap-3 bg-[#0d0d0d] rounded-[40px] border-2 border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.4),inset_4px_4px_8px_rgba(255,255,255,0.02)] relative overflow-hidden group"
             >
-              <span className="material-symbols-outlined text-zinc-800 text-xl">{s.icon}</span>
-              <p className="font-black text-lg text-white leading-none tracking-tight">{s.value}</p>
-              <p className="text-[8px] text-zinc-700 uppercase font-black tracking-widest mt-1">{s.label}</p>
+              <span className={`material-symbols-outlined ${s.color} text-2xl font-black`}>{s.icon}</span>
+              <div className="flex flex-col items-center">
+                <p className="font-black text-xl text-white tracking-tighter italic">{s.value}</p>
+                <p className="text-[8px] text-zinc-600 uppercase font-black tracking-[0.2em] mt-1">{s.label}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -1418,12 +1440,12 @@ export const WalletView: React.FC<WalletViewProps> = ({
         {/* HISTÓRICO - CLAYMOL DESIGN */}
         <section ref={historyRef} className="space-y-6">
           <div className="flex items-center justify-between px-2">
-            <h2 className="font-black text-lg text-white uppercase tracking-tighter italic">Timeline Izi</h2>
+            <h2 className="font-black text-lg text-white uppercase tracking-tighter italic">Histórico</h2>
             <button
               onClick={() => setShowAllHistory((prev) => !prev)}
-              className="text-[9px] font-black text-yellow-400 uppercase tracking-[0.2em] bg-yellow-400/5 px-4 py-2 rounded-full border border-yellow-400/10 active:scale-95 transition-all"
+              className="px-5 py-2.5 rounded-full bg-yellow-400 border border-yellow-300 text-[10px] font-black text-black uppercase tracking-widest shadow-[inset_2px_2px_4px_rgba(255,255,255,0.7),inset_-2px_-2px_4px_rgba(0,0,0,0.1)] active:scale-95 transition-all"
             >
-              {showAllHistory ? "Recolher" : "Full View"}
+              {showAllHistory ? "Recolher" : "Ver Todos"}
             </button>
           </div>
           <div className="flex flex-col gap-3">

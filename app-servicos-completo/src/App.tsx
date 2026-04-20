@@ -463,6 +463,22 @@ function App() {
         .subscribe();
     }
 
+    // Sincronização em tempo real das Transações da Carteira
+    let walletTxSub: any = null;
+    if (userId) {
+      walletTxSub = supabase
+        .channel(`wallet_tx_sync_${userId}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` },
+          (payload) => {
+            console.log("[REALTIME] Nova transação detectada:", payload.new);
+            setWalletTransactions(prev => [payload.new, ...prev].slice(0, 50));
+          }
+        )
+        .subscribe();
+    }
+
     const settingsChannel = supabase.channel('settings_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings_delivery' }, fetchGlobalSettings)
       .subscribe();
@@ -472,6 +488,7 @@ function App() {
       supabase.removeChannel(flashChannel);
       supabase.removeChannel(settingsChannel);
       if (userProfileSub) supabase.removeChannel(userProfileSub);
+      if (walletTxSub) supabase.removeChannel(walletTxSub);
     };
   }, [userId]);
 
@@ -5205,300 +5222,26 @@ const navigateSubView = (target: string) => {
 
 
   const renderWallet = () => {
-    const coinRate = appSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0;
-    const walletBalance = walletTransactions.reduce((acc: number, t: any) =>
-      ["deposito","reembolso"].includes(t.type) ? acc + Number(t.amount) : acc - Number(t.amount), 0);
-
-    const txIcon: Record<string, { icon: string; color: string }> = {
-      deposito:  { icon: "add_circle",           color: "text-emerald-400" },
-      reembolso: { icon: "refresh",              color: "text-blue-400" },
-      pagamento: { icon: "shopping_bag",         color: "text-zinc-400" },
-      saque:     { icon: "arrow_outward",        color: "text-red-400" },
-    };
-
-    const totalGasto = walletTransactions
-      .filter((t: any) => t.type === "pagamento")
-      .reduce((a: number, t: any) => a + Number(t.amount), 0);
-
-    const totalRecebido = walletTransactions
-      .filter((t: any) => ["deposito","reembolso"].includes(t.type))
-      .reduce((a: number, t: any) => a + Number(t.amount), 0);
-
-    const pedidosMes = myOrders.filter((o: any) => {
-      const d = new Date(o.created_at);
-      const now = new Date();
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    }).length;
-
     return (
-      <div className="flex flex-col h-full bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-32">
-
-        {/* HERO SALDO - CLAYMORPHISM */}
-        <div className="px-5 pt-14 pb-12 border-b border-zinc-900 bg-gradient-to-b from-yellow-400/5 to-transparent relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-400/5 blur-[100px] rounded-full -mr-32 -mt-32 pointer-events-none" />
-          
-          <div className="flex items-center justify-between mb-8 relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="size-2 rounded-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.8)] animate-pulse" />
-              <span className="text-yellow-400 font-black italic tracking-[0.3em] text-[10px] uppercase">IZI PAY NETWORK</span>
-            </div>
-            <div className="px-4 py-1.5 bg-zinc-900 border border-white/5 rounded-full shadow-[inset_2px_2px_4px_rgba(0,0,0,0.5)]">
-              <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Secure Node</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 relative z-10">
-            <p className="text-zinc-600 text-[10px] font-black tracking-[0.5em] uppercase px-1">Available Balance</p>
-            <div className="flex items-center gap-5 mt-2">
-              <div className="size-16 rounded-[28px] bg-yellow-400 flex items-center justify-center shadow-[8px_8px_16px_rgba(0,0,0,0.2),inset_4px_4px_8px_rgba(255,255,255,0.7)] relative overflow-hidden group">
-                <span className="material-symbols-outlined text-black font-black text-3xl">currency_bitcoin</span>
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-extrabold text-6xl tracking-tighter text-white italic drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)]">
-                    {Math.floor(iziCoins).toLocaleString("pt-BR")}
-                  </span>
-                  <span className="text-xs font-black text-yellow-400 uppercase tracking-[0.4em] mb-2">COINS</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-8 p-6 rounded-[35px] bg-[#1a1a1a] border border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.2),inset_4px_4px_8px_rgba(255,255,255,0.03)] flex items-center justify-between group transition-all">
-              <div className="flex items-center gap-4">
-                <div className="size-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-emerald-400 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>payments</span>
-                </div>
-                <div>
-                  <p className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.2em] leading-tight">Valor Fiduciário</p>
-                  <p className="text-xl font-black text-white leading-tight mt-1">
-                    <span className="text-zinc-500 text-xs mr-1 font-bold">R$</span>
-                    {(iziCoins * coinRate).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-black text-yellow-400/40 italic">1 IZI = R$ {coinRate.toFixed(4).replace(".", ",")}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* AÇÕES RÁPIDAS */}
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { icon: "add",           label: "Adicionar", action: () => setShowDepositModal(true) },
-              { icon: "arrow_outward", label: "Transferir", action: handleStartNativeTransferScan },
-              { icon: "history",       label: "Extrato" },
-              { icon: "qr_code_2", label: "Meu QR", action: () => setIsShowingMyQR(true) },
-            ].map((a) => (
-              <button key={a.icon} onClick={(a as any).action} className="flex flex-col items-center gap-2 py-4 active:scale-95 transition-all group">
-                <div className="size-12 rounded-2xl bg-zinc-900/60 border border-zinc-900 flex items-center justify-center group-hover:border-yellow-400/20 transition-all">
-                  <span className="material-symbols-outlined text-zinc-500 group-hover:text-yellow-400 transition-colors text-xl">{a.icon}</span>
-                </div>
-                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-400 transition-colors">{a.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <main className="px-5 py-8 space-y-10">
-
-          {/* STATS */}
-          <div className="grid grid-cols-3 gap-0 bg-zinc-900/30 border border-zinc-900 rounded-[32px] overflow-hidden backdrop-blur-md">
-            {[
-              { label: "Coins Gastos",  value: `${(totalGasto * 1).toFixed(0)}`,    icon: "shopping_bag", color: "text-zinc-500" },
-              { label: "Cashback Rec.", value: `${(iziCashbackEarned * 1).toFixed(0)}`, icon: "stars", color: "text-yellow-400" },
-              { label: "Nível Izi",     value: `${userLevel}`,                  icon: "verified", color: "text-blue-400" },
-            ].map((s, i) => (
-              <div key={i} className={`flex flex-col items-center py-6 gap-1 ${i < 2 ? "border-r border-zinc-900/50" : ""}`}>
-                <span className={`material-symbols-outlined ${s.color} text-lg`}>{s.icon}</span>
-                <p className="font-black text-base text-white">{s.value}</p>
-                <p className="text-[8px] text-zinc-500 font-black uppercase tracking-[0.2em]">{s.label}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* CARTÕES */}
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-extrabold text-base text-white uppercase tracking-tight">Meus Cartões</h2>
-              <button onClick={() => { setPaymentsOrigin("profile"); setSubView("mobility_payment"); }}
-                className="text-yellow-400 text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-opacity">
-                Gerenciar
-              </button>
-            </div>
-            <div className="flex gap-6 overflow-x-auto no-scrollbar -mx-5 px-5 pb-6">
-              {/* Card IZI Digital - CLAYMORPHISM AMARELO */}
-              <div className="min-w-[280px] h-44 rounded-[40px] p-6 relative overflow-hidden flex flex-col justify-between shrink-0 transition-transform active:scale-95 cursor-pointer
-                bg-yellow-400 
-                shadow-[12px_12px_24px_rgba(0,0,0,0.15),-8px_-8px_20px_rgba(255,255,255,0.1),inset_6px_6px_12px_rgba(255,255,255,0.6),inset_-6px_-6px_12px_rgba(0,0,0,0.05)]"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex flex-col">
-                    <span className="font-extrabold italic text-black/80 tracking-tighter text-xl leading-none">IZI</span>
-                    <span className="text-[8px] font-black uppercase tracking-[0.3em] text-black/40 mt-1">BLACK CREDIT</span>
-                  </div>
-                  <div className="size-10 rounded-2xl bg-black/5 flex items-center justify-center border border-black/5 shadow-inner">
-                    <span className="material-symbols-outlined text-black/80 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>wifi_tethering</span>
-                  </div>
-                </div>
-                <div>
-                   <p className="font-black text-lg tracking-[0.25em] text-black/90 mb-3 drop-shadow-sm">•••• •••• •••• 8820</p>
-                   <div className="flex justify-between items-end">
-                     <div>
-                       <p className="text-[7px] text-black/40 font-black uppercase tracking-widest mb-0.5">Validade</p>
-                       <p className="text-[10px] text-black/80 font-black uppercase tracking-widest leading-none">12/28</p>
-                     </div>
-                     <div className="size-9 rounded-2xl bg-black text-yellow-400 flex items-center justify-center shadow-lg">
-                       <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
-                     </div>
-                   </div>
-                </div>
-              </div>
-
-              {savedCards.map((card: any) => (
-                <div key={card.id} className="min-w-[280px] h-44 rounded-[40px] p-6 relative overflow-hidden flex flex-col justify-between shrink-0 transition-transform active:scale-95 cursor-pointer
-                  bg-[#222222] border border-white/5
-                  shadow-[12px_12px_24px_rgba(0,0,0,0.3),-8px_-8px_20px_rgba(255,255,255,0.02),inset_4px_4px_10px_rgba(255,255,255,0.05),inset_-4px_-4px_10px_rgba(0,0,0,0.2)]"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-col">
-                      <span className="font-extrabold italic text-white/40 tracking-tighter text-lg leading-none">{card.brand}</span>
-                      <span className="text-[8px] font-black uppercase tracking-[0.3em] text-zinc-700 mt-1">Physical Card</span>
-                    </div>
-                    <span className="material-symbols-outlined text-zinc-800 text-xl">contactless</span>
-                  </div>
-                  <div>
-                    <p className="font-black text-lg tracking-[0.25em] text-white/80 mb-3">•••• •••• •••• {card.last4}</p>
-                    <div className="flex justify-between items-end">
-                       <div>
-                         <p className="text-[7px] text-zinc-700 font-black uppercase tracking-widest mb-0.5">Expiração</p>
-                         <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest leading-none">{card.expiry}</p>
-                       </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <button onClick={() => { setPaymentsOrigin("profile"); setSubView("mobility_payment"); }}
-                className="min-w-[140px] h-44 rounded-[40px] border-2 border-dashed border-zinc-900 flex flex-col items-center justify-center gap-2 shrink-0 active:scale-95 transition-all hover:border-yellow-400/20 group"
-              >
-                <div className="size-12 rounded-full bg-zinc-900 flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
-                  <span className="material-symbols-outlined text-zinc-700 group-hover:text-yellow-400 transition-colors text-2xl">add</span>
-                </div>
-                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-wider group-hover:text-zinc-500 transition-colors">Novo Cartão</span>
-              </button>
-            </div>
-          </section>
-
-          {/* PONTOS E CASHBACK (MODIFICADO PARA CONSOLIDAR EM COINS) */}
-          <div className="p-6 rounded-[32px] bg-gradient-to-br from-yellow-400/10 via-zinc-900 to-zinc-900 border border-yellow-400/10 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
-              <span className="material-symbols-outlined text-6xl text-yellow-400">currency_bitcoin</span>
-            </div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-yellow-400 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
-                <h3 className="text-xs font-black text-white uppercase tracking-widest">Programa de Cashback</h3>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Acumulado em Coins</p>
-                  <p className="text-3xl font-black text-white">{iziCoins < 1 ? iziCoins.toFixed(8).replace(".", ",") : iziCoins.toLocaleString("pt-BR")} <span className="text-sm text-yellow-400 italic">coins</span></p>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-1 p-3 rounded-2xl bg-black/40 border border-white/5">
-                    <p className="text-[8px] font-black text-zinc-500 uppercase mb-1">Meta Mensal</p>
-                    <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden mb-2">
-                       <div className="h-full bg-yellow-400 w-[65%]" />
-                    </div>
-                    <p className="text-[9px] font-bold text-white">650 / 1000 coins</p>
-                  </div>
-                  <div className="flex-1 p-3 rounded-2xl bg-black/40 border border-white/5">
-                    <p className="text-[8px] font-black text-zinc-500 uppercase mb-1">Nível Multiplicador</p>
-                    <p className="text-xs font-black text-emerald-400">2.5x Ativo</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* MÉTODOS DE PAGAMENTO - CLAYMORPHISM */}
-          <section>
-            <h2 className="font-extrabold text-base text-white uppercase tracking-tight mb-6 px-1">Gateway de Pagamento</h2>
-            <div className="grid grid-cols-1 gap-4">
-              {[
-                { icon: "pix",                    label: "PIX",             desc: "Instantâneo via Mercado Pago",    id: "pix", border: "border-emerald-500/10" },
-                { icon: "bolt",                   label: "Lightning", desc: "Rede Bitcoin (0 Taxa)",           id: "bitcoin_lightning", border: "border-orange-500/10" },
-                { icon: "credit_card",            label: "Cartão Online",   desc: "Crédito ou Débito Imediato",     id: "cartao", border: "border-blue-500/10" },
-                { icon: "currency_bitcoin",       label: "Saldo IZI",       desc: "Usar seus coins acumulados",      id: "saldo", border: "border-yellow-500/10" },
-              ].map((m) => (
-                <button 
-                  key={m.id} 
-                  onClick={() => setPaymentMethod(m.id as any)}
-                  className={`group relative p-5 rounded-[32px] border-2 transition-all flex items-center gap-5 italic
-                    ${paymentMethod === m.id 
-                      ? "bg-white border-white text-black shadow-[10px_10px_20px_rgba(255,255,255,0.05),inset_4px_4px_10px_rgba(0,0,0,0.1)]" 
-                      : "bg-[#111111] border-white/5 text-zinc-400 hover:border-white/10 active:scale-[0.98] shadow-lg"
-                    }`}
-                >
-                  <div className={`size-12 rounded-2xl flex items-center justify-center transition-all shadow-inner
-                    ${paymentMethod === m.id ? "bg-black text-yellow-400" : "bg-zinc-900 text-zinc-600"}
-                  `}>
-                    <span className="material-symbols-outlined font-black text-2xl">{m.icon}</span>
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className={`font-black text-sm uppercase tracking-tight ${paymentMethod === m.id ? "text-black" : "text-white"}`}>{m.label}</p>
-                    <p className={`text-[10px] font-bold mt-0.5 ${paymentMethod === m.id ? "text-black/50" : "text-zinc-600"}`}>{m.desc}</p>
-                  </div>
-                  {paymentMethod === m.id && (
-                    <div className="size-6 rounded-full bg-black flex items-center justify-center shadow-lg animate-in zoom-in">
-                       <span className="material-symbols-outlined text-yellow-400 text-sm font-black">check</span>
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* HISTÓRICO */}
-          <section>
-            <div className="flex items-center justify-between mb-6 px-1">
-              <h2 className="font-extrabold text-sm text-zinc-500 uppercase tracking-[0.2em]">Fluxo de Caixa</h2>
-              <button className="px-4 py-1.5 rounded-full bg-zinc-900 border border-white/5 text-[9px] font-black text-yellow-400 uppercase tracking-widest active:scale-95 transition-all">Ver Ledger</button>
-            </div>
-            <div className="flex flex-col">
-              {walletTransactions.length === 0 ? (
-                <div className="py-10 flex flex-col items-center gap-3">
-                  <span className="material-symbols-outlined text-4xl text-zinc-900">receipt_long</span>
-                  <p className="text-zinc-700 text-sm">Nenhuma transação ainda</p>
-                </div>
-              ) : walletTransactions.slice(0, 20).map((t: any, i: number) => {
-                const tx = txIcon[t.type] || { icon: "payments", color: "text-zinc-400" };
-                return (
-                  <div key={t.id || i} className="flex items-center gap-4 py-4 border-b border-zinc-900/60 last:border-0">
-                    <span className={`material-symbols-outlined text-xl ${tx.color}`} style={{ fontVariationSettings: "'FILL' 1" }}>
-                      {tx.icon}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-white truncate">{t.description || t.type}</p>
-                      <p className="text-[10px] text-zinc-600 uppercase tracking-widest mt-0.5">
-                        {new Date(t.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} ÃÂ¢ââ€šÂ¬Â¢ {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className={`font-black text-sm ${["deposito","reembolso"].includes(t.type) ? "text-emerald-400" : "text-zinc-300"}`}>
-                        {["deposito","reembolso"].includes(t.type) ? "+" : "-"} {Number(t.amount).toFixed(0)} <span className="text-[8px] uppercase tracking-tighter italic">coins</span>
-                      </p>
-                      <p className="text-[9px] text-zinc-700 font-bold uppercase tracking-widest">{t.type}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-        </main>
-      </div>
+      <WalletView 
+        walletTransactions={walletTransactions}
+        myOrders={myOrders}
+        userXP={userXP}
+        iziCoins={iziCoins}
+        setIziCoins={setIziCoins}
+        iziCashback={iziCashbackEarned}
+        savedCards={savedCards}
+        paymentMethod={paymentMethod}
+        setPaymentsOrigin={setPaymentsOrigin}
+        setSubView={setSubView}
+        userId={userId}
+        userName={userName}
+        showToast={showToast as any}
+        setShowDepositModal={setShowDepositModal}
+        iziCoinValue={appSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0}
+        iziCoinRate={appSettings?.iziCoinRate || globalSettings?.izi_coin_rate || 1.0}
+        iziBlackRate={globalSettings?.izi_black_cashback || 5.0}
+      />
     );
   };
 
@@ -7179,7 +6922,7 @@ const navigateSubView = (target: string) => {
       { id: "coleta",  name: "Click e Retire Izi", desc: "Retirada rápida em lojas parceiras", icon: "inventory_2", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "coleta" }); navigateSubView("shipping_details"); } },
     ];
     return (
-      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar pb-10">
+      <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar">
         <div className="fixed inset-0 pointer-events-none opacity-20">
            <div className="absolute bottom-0 right-0 w-80 h-80 bg-yellow-400/20 rounded-full blur-[120px]" />
            <div className="absolute top-40 left-0 w-60 h-60 bg-yellow-400/10 rounded-full blur-[100px]" />
@@ -7191,7 +6934,7 @@ const navigateSubView = (target: string) => {
               <span className="material-symbols-outlined text-zinc-100">arrow_back</span>
             </motion.button>
             <div>
-              <h1 className="text-xl font-black tracking-tighter text-white">Envios</h1>
+              <h1 className="text-xl font-black tracking-tighter text-white">Izi Envios</h1>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400 mt-0.5">Entregamos qualquer coisa</p>
             </div>
           </div>
@@ -7207,7 +6950,7 @@ const navigateSubView = (target: string) => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={svc.action} 
-              className="relative group bg-zinc-900/40 border border-white/5 rounded-[35px] p-7 cursor-pointer shadow-2xl transition-all"
+              className="relative group bg-zinc-800 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] border border-white/5 rounded-[40px] p-7 cursor-pointer transition-all"
             >
               <div className="flex items-center gap-6">
                 <div className="size-16 rounded-[22px] bg-yellow-400 flex items-center justify-center shrink-0 shadow-lg shadow-yellow-400/20">
@@ -7224,14 +6967,14 @@ const navigateSubView = (target: string) => {
             </motion.div>
           ))}
 
-          <div className="mt-4 p-8 rounded-[45px] bg-gradient-to-br from-zinc-900/40 to-black border border-white/5 relative overflow-hidden group">
+          <div className="mt-4 p-8 rounded-[45px] bg-zinc-800 shadow-[20px_20px_40px_rgba(0,0,0,0.6),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] border border-yellow-400/20 relative overflow-hidden group">
              <div className="relative z-10">
                 <h4 className="text-white font-black text-lg tracking-tight mb-2">Izi Versátil</h4>
                 <p className="text-zinc-500 text-xs leading-relaxed max-w-[200px]">Transporte de cargas pesadas, utilitários e vans para empresas ou particulares.</p>
-                <div className="mt-6 flex gap-3">
-                   <button onClick={() => { setTransitData({ ...transitData, type: "van", scheduled: true }); setSubView("excursion_wizard"); setMobilityStep(1); }} className="px-5 py-3 bg-yellow-400 text-black text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-yellow-400/20 active:scale-95 transition-all">Excursões & Viagens</button>
-                   <button onClick={() => setShowLojistasModal(true)} className="px-5 py-3 bg-white/5 text-white text-[10px] font-black rounded-xl uppercase tracking-widest border border-white/5 active:scale-95 transition-all">Ver Parceiros</button>
-                </div>
+                <div className="mt-6 flex flex-col gap-3">
+                    <button onClick={() => { setTransitData({ ...transitData, type: "van", scheduled: true }); setSubView("excursion_wizard"); setMobilityStep(1); }} className="px-6 py-4 bg-yellow-400 text-black text-[11px] font-black rounded-2xl uppercase tracking-widest shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] active:scale-95 transition-all text-center">Excursões & Viagens</button>
+                    <button onClick={() => setShowLojistasModal(true)} className="px-6 py-4 bg-zinc-900 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.02)] text-white text-[11px] font-black rounded-2xl uppercase tracking-widest border border-white/5 active:scale-95 transition-all text-center">Ver Parceiros</button>
+                 </div>
              </div>
              <span className="material-symbols-outlined absolute -right-4 -bottom-4 text-[130px] text-yellow-400/5 rotate-12">local_shipping</span>
           </div>
@@ -7245,7 +6988,7 @@ const navigateSubView = (target: string) => {
                   { icon: 'share_location', label: 'Real-time', desc: 'Rastreio preciso' },
                   { icon: 'support_agent', label: 'Suporte 24h', desc: 'Fale com humanos' }
                 ].map((item, i) => (
-                  <div key={i} className="bg-zinc-900/20 p-5 rounded-[30px] border border-white/5">
+                  <div key={i} className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-3px_-3px_10px_rgba(255,255,255,0.01),inset_3px_3px_6px_rgba(255,255,255,0.02),inset_-3px_-3px_6px_rgba(0,0,0,0.3)]">
                      <span className="material-symbols-outlined text-yellow-400 text-xl mb-3">{item.icon}</span>
                      <p className="text-[10px] font-black text-white uppercase tracking-tight">{item.label}</p>
                      <p className="text-[9px] text-zinc-500 font-medium mt-1">{item.desc}</p>
@@ -7280,7 +7023,7 @@ const navigateSubView = (target: string) => {
     };
 
     return (
-      <div className="absolute inset-0 z-40 bg-black text-white flex flex-col hide-scrollbar overflow-y-auto pb-10">
+      <div className="absolute inset-0 z-40 bg-black text-white flex flex-col hide-scrollbar overflow-y-auto pb-4">
         <header className="px-6 py-8 flex items-center justify-between gap-4 sticky top-0 bg-black/80 backdrop-blur-xl z-50 border-b border-white/5">
           <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigateSubView("explore_envios")} className="size-12 rounded-2xl bg-zinc-900/50 backdrop-blur-xl border border-white/10 shadow-xl flex items-center justify-center text-white active:scale-90 transition-all leading-none">
             <span className="material-symbols-outlined">arrow_back</span>
@@ -7325,10 +7068,10 @@ const navigateSubView = (target: string) => {
                     });
                     navigateSubView("shipping_details");
                   }}
-                  className={`p-7 rounded-[40px] border cursor-pointer transition-all flex items-center gap-6 shadow-2xl relative overflow-hidden group ${
+                  className={`p-7 rounded-[40px] border cursor-pointer transition-all flex items-center gap-6 relative overflow-hidden group ${
                     isSelected 
-                      ? "bg-yellow-400 border-yellow-400 shadow-yellow-400/10" 
-                      : "bg-zinc-900/30 backdrop-blur-3xl border-white/5 hover:border-white/10 shadow-black/40"
+                      ? "bg-yellow-400 border-yellow-400 shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" 
+                      : "bg-zinc-800 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] border-white/5"
                   }`}
                 >
                   <div className={`size-16 rounded-[22px] flex items-center justify-center transition-all duration-500 ${isSelected ? 'bg-black/10' : p.bg + ' group-hover:scale-110 shadow-inner'}`}>
@@ -7356,7 +7099,7 @@ const navigateSubView = (target: string) => {
             })}
           </div>
 
-          <div className="bg-zinc-900/40 backdrop-blur-3xl border border-white/10 p-7 rounded-[40px] flex items-center gap-5 mt-10 shadow-xl">
+          <div className="bg-zinc-800 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] border border-white/5 p-7 rounded-[40px] flex items-center gap-5 mt-10">
             <div className="size-12 rounded-2xl bg-yellow-400/20 flex items-center justify-center shrink-0 border border-yellow-400/10">
                <span className="material-symbols-outlined text-yellow-400 text-xl font-bold">info</span>
             </div>
@@ -7371,7 +7114,7 @@ const navigateSubView = (target: string) => {
 
   const renderShippingDetails = () => {
     return (
-      <div className="absolute inset-0 z-[120] bg-black text-zinc-100 flex flex-col hide-scrollbar overflow-y-auto animate-in fade-in duration-500 pb-40">
+      <div className="absolute inset-0 z-[120] bg-black text-zinc-100 flex flex-col hide-scrollbar overflow-y-auto animate-in fade-in duration-500 pb-6">
         <header className="px-6 py-8 flex items-center justify-between gap-4 sticky top-0 bg-black/80 backdrop-blur-xl z-50">
           <button
             onClick={() =>
@@ -7403,8 +7146,8 @@ const navigateSubView = (target: string) => {
               
               <div className="space-y-4">
                 {/* ORIGEM (COLETA) */}
-                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl flex flex-col gap-2">
-                  <div className="flex justify-between items-center mb-1 ml-1">
+                <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] flex flex-col gap-2">
+                  <div className="flex justify-between items-center mb-4 ml-1">
                      <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em]">Origem (Onde Coletar?)</p>
                      <button 
                        onClick={() => updateLocation()}
@@ -7436,7 +7179,7 @@ const navigateSubView = (target: string) => {
                 </div>
 
                 {/* DESTINO */}
-                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Para onde levar?</p>
                    <AddressSearchInput 
                      initialValue={transitData.destination}
@@ -7472,38 +7215,37 @@ const navigateSubView = (target: string) => {
                   <div className="grid grid-cols-2 gap-3">
                     <button 
                       onClick={() => setTransitData({...transitData, operationType: "enviar"})}
-                      className={`py-6 rounded-[30px] border-2 transition-all flex flex-col items-center gap-2 ${transitData.operationType === "enviar" ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700"}`}
+                      className={`py-8 rounded-[35px] border transition-all flex flex-col items-center justify-center gap-3 ${transitData.operationType === "enviar" ? "bg-yellow-400 border-yellow-400 text-black shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : "bg-zinc-800 border-white/5 text-zinc-500 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-3px_-3px_10px_rgba(255,255,255,0.01),inset_3px_3px_6px_rgba(255,255,255,0.02),inset_-3px_-3px_6px_rgba(0,0,0,0.3)]"}`}
                     >
-                      <span className="material-symbols-outlined text-2xl">outbox</span>
-                      <span className="text-[9px] font-black uppercase tracking-widest text-center">Vou Enviar Algo</span>
+                      <span className="material-symbols-outlined text-3xl">outbox</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-center">Vou Enviar</span>
                     </button>
                     <button 
                       onClick={() => setTransitData({...transitData, operationType: "retirar"})}
-                      className={`py-6 rounded-[30px] border-2 transition-all flex flex-col items-center gap-2 ${transitData.operationType === "retirar" ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700"}`}
+                      className={`py-8 rounded-[35px] border transition-all flex flex-col items-center justify-center gap-3 ${transitData.operationType === "retirar" ? "bg-yellow-400 border-yellow-400 text-black shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" : "bg-zinc-800 border-white/5 text-zinc-500 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-3px_-3px_10px_rgba(255,255,255,0.01),inset_3px_3px_6px_rgba(255,255,255,0.02),inset_-3px_-3px_6px_rgba(0,0,0,0.3)]"}`}
                     >
-                      <span className="material-symbols-outlined text-2xl">store</span>
-                      <span className="text-[9px] font-black uppercase tracking-widest text-center px-2">Retirar em Loja/Casa</span>
+                      <span className="material-symbols-outlined text-3xl">store</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-center px-2">Retirar em Loja</span>
                     </button>
                   </div>
                 ) : (
                   <button 
                     onClick={() => setShowLojistasModal(true)}
-                    className="w-full py-8 rounded-[35px] border-2 bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20 flex flex-col items-center gap-2 active:scale-[0.98] transition-all group"
+                    className="w-full py-10 rounded-[40px] border bg-yellow-400 border-yellow-400 text-black shadow-[8px_8px_20px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] flex flex-col items-center gap-3 active:scale-[0.98] transition-all group"
                   >
-                    <span className="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform">storefront</span>
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-center">
+                    <div className="size-14 rounded-full bg-black/10 flex items-center justify-center mb-1">
+                      <span className="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform">storefront</span>
+                    </div>
+                    <span className="text-[11px] font-black uppercase tracking-[0.3em] text-center px-6">
                       {transitData.receiverName ? `Loja: ${transitData.receiverName}` : "Selecionar Loja Parceira"}
                     </span>
-                    {transitData.receiverName && (
-                      <p className="text-[8px] font-bold opacity-70 uppercase tracking-widest">{transitData.origin}</p>
-                    )}
                   </button>
                 )}
               </div>
 
               {transitData.subService === "express" && (
                 <>
-                  <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                  <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
                      <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nome de quem recebe</p>
                      <input 
                        type="text" 
@@ -7514,7 +7256,7 @@ const navigateSubView = (target: string) => {
                      />
                   </div>
 
-                  <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                  <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
                      <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Telefone de Contato</p>
                      <input 
                        type="tel" 
@@ -7529,7 +7271,7 @@ const navigateSubView = (target: string) => {
 
               {transitData.subService === "coleta" && (
                 <div className="space-y-4">
-                  <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl ring-1 ring-yellow-400/10">
+                  <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
                      <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Endereço de Coleta (Origem/Parceiro)</p>
                      <AddressSearchInput 
                        initialValue={transitData.origin || ""}
@@ -7538,7 +7280,7 @@ const navigateSubView = (target: string) => {
                        className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-white"
                      />
                   </div>
-                  <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl ring-1 ring-yellow-400/10">
+                  <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
                     <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Endereço de Entrega (Destino)</p>
                    <AddressSearchInput 
                      initialValue={transitData.destination || ""}
@@ -7566,7 +7308,7 @@ const navigateSubView = (target: string) => {
                 <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Detalhes do Parceiro Izi</h3>
               </div>
               <div className="space-y-4">
-                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.01),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Nome do Parceiro / Loja</p>
                    <input 
                      type="text" 
@@ -7577,7 +7319,7 @@ const navigateSubView = (target: string) => {
                    />
                 </div>
 
-                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.01),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Telefone do Parceiro</p>
                    <input 
                      type="tel" 
@@ -7588,7 +7330,7 @@ const navigateSubView = (target: string) => {
                    />
                 </div>
 
-                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.01),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Cód. do Pedido / Retirada</p>
                    <input 
                      type="text" 
@@ -7599,7 +7341,7 @@ const navigateSubView = (target: string) => {
                    />
                 </div>
 
-                <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+                <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Setor / Guichê</p>
                    <input 
                      type="text" 
@@ -7620,7 +7362,7 @@ const navigateSubView = (target: string) => {
             </div>
 
             <div className="space-y-4">
-               <div className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl">
+               <div className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
                   <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Descrição do Item</p>
                   <textarea 
                     value={transitData.packageDesc || ""}
@@ -7636,7 +7378,11 @@ const navigateSubView = (target: string) => {
                     <button
                       key={weight}
                       onClick={() => setTransitData({...transitData, weightClass: weight})}
-                      className={`py-4 rounded-[25px] text-[10px] font-black uppercase tracking-widest border-2 transition-all ${transitData.weightClass === weight ? 'bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20' : 'bg-transparent border-zinc-800 text-zinc-500'}`}
+                      className={`py-5 px-4 rounded-[30px] text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95 ${
+                        transitData.weightClass === weight 
+                          ? 'bg-yellow-400 border-yellow-400 text-black shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]' 
+                          : 'bg-zinc-800 border-white/5 text-zinc-500 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-3px_-3px_10px_rgba(255,255,255,0.01),inset_3px_3px_6px_rgba(255,255,255,0.02),inset_-3px_-3px_6px_rgba(0,0,0,0.3)] hover:border-zinc-700'
+                      }`}
                     >
                       {weight}
                     </button>
@@ -7652,14 +7398,14 @@ const navigateSubView = (target: string) => {
                 <h3 className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Agendamento da Coleta</h3>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div onClick={() => setShowDatePicker(true)} className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl cursor-pointer active:scale-95 transition-all">
+                <div onClick={() => setShowDatePicker(true)} className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.01),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] cursor-pointer active:scale-95 transition-all">
                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Data</p>
                    <div className="flex items-center justify-between">
                      <span className="text-base font-bold text-white">{transitData.scheduledDate || "Selecionar data"}</span>
                      <span className="material-symbols-outlined text-yellow-400 text-sm">calendar_month</span>
                    </div>
                 </div>
-                <div onClick={() => setShowTimePicker(true)} className="bg-transparent p-6 rounded-[35px] border border-zinc-800 shadow-xl cursor-pointer active:scale-95 transition-all">
+                <div onClick={() => setShowTimePicker(true)} className="bg-zinc-800 p-6 rounded-[35px] border border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.4),-5px_-5px_15px_rgba(255,255,255,0.01),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] cursor-pointer active:scale-95 transition-all">
                    <p className="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-2 ml-1">Horário</p>
                    <div className="flex items-center justify-between">
                      <span className="text-base font-bold text-white">{transitData.scheduledTime || "Selecionar hora"}</span>
@@ -7670,11 +7416,11 @@ const navigateSubView = (target: string) => {
             </motion.section>
           )}
 
-          <div className="bg-amber-400/5  p-6 rounded-[35px] border border-amber-400/10  flex items-start gap-4">
-             <div className="size-10 rounded-full bg-amber-400/20 flex items-center justify-center shrink-0">
-               <span className="material-symbols-outlined text-amber-400 text-sm">warning</span>
+          <div className="bg-zinc-800 p-7 rounded-[40px] border border-amber-400/20 shadow-[15px_15px_30px_rgba(0,0,0,0.5),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] flex items-start gap-5">
+             <div className="size-12 rounded-2xl bg-amber-400/10 flex items-center justify-center shrink-0 border border-amber-400/20 shadow-inner">
+               <span className="material-symbols-outlined text-amber-400 text-xl font-bold">warning</span>
              </div>
-             <p className="text-[10px] font-bold text-amber-400/80 leading-relaxed uppercase tracking-wider">
+             <p className="text-[10px] font-black text-amber-400/70 leading-relaxed uppercase tracking-[0.1em]">
                Certifique-se de que o objeto esteja bem embalado. Não transportamos itens proibidos por lei ou inflamáveis.
              </p>
           </div>
@@ -7683,7 +7429,7 @@ const navigateSubView = (target: string) => {
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-zinc-900/60 backdrop-blur-2xl border border-white/10 p-8 rounded-[40px] shadow-2xl relative overflow-hidden"
+              className="bg-zinc-800 border border-white/10 p-8 rounded-[45px] shadow-[20px_20px_40px_rgba(0,0,0,0.6),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 size-32 bg-yellow-400/5 blur-[50px] -mr-16 -mt-16 pointer-events-none" />
               <div className="flex items-center justify-between gap-4">
@@ -7713,11 +7459,11 @@ const navigateSubView = (target: string) => {
           )}
         </main>
 
-        <div className="fixed bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-black via-black/90 to-transparent z-50">
+        <div className="fixed bottom-0 left-0 right-0 p-8 pb-8 bg-gradient-to-t from-black via-black/95 to-transparent z-50">
           <button
             disabled={isLoading}
             onClick={handleRequestTransit}
-            className="w-full bg-yellow-400 text-black font-black text-xl py-6 rounded-[32px] shadow-[0_20px_40px_rgba(255,215,9,0.2)] active:scale-[0.98] transition-all disabled:opacity-30 flex justify-center items-center gap-4 group"
+            className="w-full bg-yellow-400 text-black font-black text-xl py-6 rounded-[30px] shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] active:scale-[0.98] transition-all disabled:opacity-30 flex justify-center items-center gap-4 group"
           >
             {isLoading ? (
               <div className="size-7 border-4 border-black/30 border-t-black rounded-full animate-spin"></div>
@@ -8517,44 +8263,83 @@ const navigateSubView = (target: string) => {
 
         {showDatePicker && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
-            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-zinc-800 border border-white/5 rounded-[50px] p-8 overflow-hidden shadow-[20px_20px_40px_rgba(0,0,0,0.6),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
               <div className="text-center mb-8">
-                <h3 className="text-xl font-black text-white">Próximos 7 dias</h3>
-                <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Selecione uma data</p>
+                <h3 className="text-xl font-black text-white uppercase tracking-tighter">Próximos 30 dias</h3>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black mt-1">Selecione uma data</p>
               </div>
-              <div className="grid grid-cols-1 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
-                {[...Array(7)].map((_, i) => {
+              <div className="grid grid-cols-1 gap-4 max-h-[45vh] overflow-y-auto no-scrollbar pr-2 py-2">
+                {[...Array(30)].map((_, i) => {
                   const d = new Date();
                   d.setDate(d.getDate() + i);
-                  const label = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' });
+                  const label = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
                   const iso = d.toISOString().split('T')[0];
+                  const isSelected = transitData.scheduledDate === iso;
+
                   return (
-                    <button key={i} onClick={() => { setTransitData({...transitData, scheduledDate: iso}); setShowDatePicker(false); }} className={`w-full py-5 rounded-[25px] border-2 transition-all font-bold text-sm capitalize ${transitData.scheduledDate === iso ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-900 text-zinc-400 hover:border-zinc-800"}`}>
+                    <button 
+                      key={i} 
+                      onClick={() => { setTransitData({...transitData, scheduledDate: iso}); setShowDatePicker(false); }} 
+                      className={`w-full py-6 rounded-[30px] border transition-all font-black text-xs uppercase tracking-widest active:scale-95 ${
+                        isSelected 
+                          ? "bg-yellow-400 border-yellow-400 text-black shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)]" 
+                          : "bg-zinc-800 border-white/5 text-zinc-400 shadow-[8px_8px_16px_rgba(0,0,0,0.4),-3px_-3px_10px_rgba(255,255,255,0.01),inset_3px_3px_6px_rgba(255,255,255,0.02),inset_-3px_-3px_6px_rgba(0,0,0,0.3)] hover:border-zinc-700"
+                      }`}
+                    >
                       {label}
                     </button>
                   );
                 })}
               </div>
-              <button onClick={() => setShowDatePicker(false)} className="mt-8 w-full py-4 text-zinc-500 font-black uppercase text-[10px] tracking-widest ring-1 ring-zinc-800 rounded-[20px]">Fechar</button>
+              <button 
+                onClick={() => setShowDatePicker(false)} 
+                className="mt-8 w-full py-5 text-zinc-500 font-black uppercase text-[10px] tracking-[0.2em] bg-zinc-900/50 border border-white/5 rounded-[25px] active:scale-95 transition-all shadow-xl"
+              >
+                Fechar
+              </button>
             </motion.div>
           </motion.div>
         )}
 
         {showTimePicker && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
-            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-black border border-zinc-800 rounded-[40px] p-8 overflow-hidden">
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-sm bg-zinc-800 border border-white/5 rounded-[50px] p-8 overflow-hidden shadow-[20px_20px_40px_rgba(0,0,0,0.6),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)]">
               <div className="text-center mb-8">
-                <h3 className="text-xl font-black text-white">Horário</h3>
-                <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-1">Das 08:00 às 22:00</p>
+                <h3 className="text-xl font-black text-white uppercase tracking-tighter">Horário</h3>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black mt-1">Das 08:00 às 22:00</p>
               </div>
-              <div className="grid grid-cols-3 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
-                {["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"].map((h) => (
-                  <button key={h} onClick={() => { setTransitData({...transitData, scheduledTime: h}); setShowTimePicker(false); }} className={`py-4 rounded-[20px] border-2 transition-all font-black text-xs ${transitData.scheduledTime === h ? "bg-yellow-400 border-yellow-400 text-black shadow-lg shadow-yellow-400/20" : "bg-transparent border-zinc-900 text-zinc-400 hover:border-zinc-800"}`}>
-                    {h}
-                  </button>
-                ))}
+              <div className="grid grid-cols-3 gap-3 max-h-[40vh] overflow-y-auto no-scrollbar pr-2 py-2">
+                {(() => {
+                  const slots = [];
+                  for (let h = 8; h <= 22; h++) {
+                    const hh = h < 10 ? `0${h}` : `${h}`;
+                    slots.push(`${hh}:00`);
+                    if (h < 22) slots.push(`${hh}:30`);
+                  }
+                  return slots.map((h) => {
+                    const isSelected = transitData.scheduledTime === h;
+                    return (
+                      <button 
+                        key={h} 
+                        onClick={() => { setTransitData({...transitData, scheduledTime: h}); setShowTimePicker(false); }} 
+                        className={`py-4 rounded-[20px] border transition-all font-black text-xs active:scale-90 ${
+                          isSelected 
+                            ? "bg-yellow-400 border-yellow-400 text-black shadow-[4px_4px_8px_rgba(0,0,0,0.3),inset_1px_1px_2px_rgba(255,255,255,0.5)]" 
+                            : "bg-zinc-800 border-white/5 text-zinc-400 shadow-[4px_4px_8px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.02)] hover:border-zinc-700"
+                        }`}
+                      >
+                        {h}
+                      </button>
+                    );
+                  });
+                })()}
               </div>
-              <button onClick={() => setShowTimePicker(false)} className="mt-8 w-full py-4 text-zinc-500 font-black uppercase text-[10px] tracking-widest ring-1 ring-zinc-800 rounded-[20px]">Fechar</button>
+              <button 
+                onClick={() => setShowTimePicker(false)} 
+                className="mt-8 w-full py-5 text-zinc-500 font-black uppercase text-[10px] tracking-[0.2em] bg-zinc-900/50 border border-white/5 rounded-[25px] active:scale-95 transition-all shadow-xl"
+              >
+                Fechar
+              </button>
             </motion.div>
           </motion.div>
         )}
