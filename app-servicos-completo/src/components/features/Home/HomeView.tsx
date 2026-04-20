@@ -204,7 +204,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     { icon: "local_mall",     img: "/images/mercados.png", tagline: "MERCAIDT",         highlight: "cyan", label: "Mercados",     type: "market",     action: null },
     { icon: "local_bar",      img: "/images/bebidas.png",  tagline: "BEBIDAS FINAIS",   highlight: "none", label: "Bebidas",      type: "beverages",  action: null },
     { icon: "local_pharmacy", img: "/images/saude.png",    tagline: "SAÚDE INTEGRAL",   highlight: "cyan", label: "Saúde",        type: "pharmacy",   action: null },
-    { icon: "pedal_bike",     img: "/images/envios.png",   tagline: "",                 highlight: "none", label: "Izi Envios",   type: null,         action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
+    { icon: "inventory_2",    img: "/images/envios.png",   tagline: "ENTREGAS RÁPIDAS",  highlight: "none", label: "Izi Envios",   type: null,         action: () => { setTransitData({ ...transitData, type: "utilitario", destination: "" }); navigateSubView("explore_envios"); } },
     { icon: "pets",           img: "/images/petshop.png",  tagline: "CONFORTO PET",     highlight: "gold", label: "Petshop",      type: "generic",    action: () => { setExploreCategoryState({ id: "pets", title: "Pet Shop Premium", tagline: "Mimo para seu melhor amigo", primaryColor: "rose-500", icon: "pets" }); navigateSubView("explore_category"); } },
     { icon: "propane_tank",   img: "/images/gas-agua.png", tagline: "VITAIS",           highlight: "cyan", label: "Gás e Água",   type: "generic",    action: () => { setExploreCategoryState({ id: "gas", title: "Gás e Água", tagline: "Essencial na sua porta", primaryColor: "blue-500", icon: "propane_tank" }); navigateSubView("explore_category"); } },
     { icon: "kebab_dining",   img: "/images/acougue.png",  tagline: "CARNES PRIME",     highlight: "gold", label: "Açougue",      type: "generic",    action: () => { setExploreCategoryState({ id: "açougue", title: "Corte Prime", tagline: "Os melhores cortes selecionados", primaryColor: "red-600", icon: "kebab_dining" }); navigateSubView("explore_category"); } },
@@ -1075,7 +1075,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
                     <div className="text-center relative z-10 flex flex-col items-center px-1">
                       <h3 className="font-black text-[9px] text-white tracking-widest uppercase truncate w-full leading-none group-hover:text-yellow-400/90 transition-colors">
-                        {svc.label.split(' ')[0]}
+                        {svc.label}
                       </h3>
                     </div>
                   </motion.div>
@@ -1132,7 +1132,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
                     <div className="text-center relative z-10 flex flex-col items-center px-1">
                       <h3 className="font-black text-[9px] text-white tracking-widest uppercase truncate w-full leading-none group-hover:text-yellow-400/90 transition-colors">
-                        {svc.label.split(' ')[0]}
+                        {svc.label}
                       </h3>
                     </div>
                   </motion.div>

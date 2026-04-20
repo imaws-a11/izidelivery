@@ -9,6 +9,9 @@ pluginManagement {
         id 'com.android.library' version '9.0.1'
     }
 }
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
 
 include ':app'
 include ':capacitor-cordova-android-plugins'
