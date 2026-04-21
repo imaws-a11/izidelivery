@@ -12,6 +12,7 @@ dependencies {
     implementation project(':capacitor-mlkit-barcode-scanning')
     implementation project(':capacitor-geolocation')
     implementation project(':capacitor-push-notifications')
+    implementation project(':capawesome-team-capacitor-android-foreground-service')
 
 }
 

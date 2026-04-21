@@ -216,13 +216,14 @@ export const AddressSearchInput = ({
               top: dropdownPos.top,
               left: dropdownPos.left,
               width: dropdownPos.width,
-              borderRadius: "20px",
-              boxShadow: "0 24px 60px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.06)",
+              borderRadius: "28px",
+              background: "rgba(18, 18, 20, 0.95)",
+              backdropFilter: "blur(24px)",
+              boxShadow: "0 30px 60px rgba(0,0,0,0.6), inset 3px 3px 6px rgba(255,255,255,0.03), inset -3px -3px 6px rgba(0,0,0,0.5)",
               zIndex: 2147483647,
               overflow: "hidden",
-              maxHeight: "340px",
+              maxHeight: "380px",
               overflowY: "auto",
-              background: "#111827",
               border: "1px solid rgba(255,255,255,0.08)",
             }}
           >

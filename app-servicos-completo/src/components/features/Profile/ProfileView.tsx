@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ProfileViewProps {
   userId: string | null;
@@ -37,286 +37,252 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     {
       icon: "location_on",
       label: "Meus Endereços",
-      sub: "Locais salvos",
+      sub: "Gestão de locais salvos",
       action: () => setSubView?.("addresses"),
       color: "text-blue-400",
       bg: "bg-blue-400/10",
     },
     {
       icon: "payments",
-      label: "Pagamentos",
-      sub: "Cartões e PIX",
+      label: "Métodos de Pagamento",
+      sub: "Cartões, PIX e Izi Coin",
       action: () => setSubView?.("payments"),
       color: "text-emerald-400",
       bg: "bg-emerald-400/10",
     },
     {
+      icon: "verified_user",
+      label: "Segurança e Privacidade",
+      sub: "Proteja seus dados",
+      action: () => {},
+      color: "text-indigo-400",
+      bg: "bg-indigo-400/10",
+    },
+    {
       icon: "workspace_premium",
-      label: "Clube Izi Black",
-      sub: "Benefícios exclusivos",
+      label: "Izi Black Elite",
+      sub: "Acesso total a benefícios VIP",
       action: () => setSubView?.("izi_black_purchase"),
       isPremium: true,
     },
     {
-      icon: "help_center",
-      label: "Ajuda & Suporte",
-      sub: "Fale com o Izi",
+      icon: "support_agent",
+      label: "Suporte Prioritário",
+      sub: "Fale com nosso Concierge",
       action: () => {},
-      color: "text-purple-400",
-      bg: "bg-purple-400/10",
+      color: "text-rose-400",
+      bg: "bg-rose-400/10",
     },
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 overflow-y-auto no-scrollbar pb-40"
-      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-    >
-      {/* Header Clay */}
-      <header
-        className="sticky top-0 z-50 px-6 py-6 flex items-center justify-between"
-        style={{
-          background: "rgba(9,9,11,0.85)",
-          backdropFilter: "blur(24px)",
-          boxShadow: "0 4px 30px rgba(0,0,0,0.5), inset 0 -1px 0 rgba(255,255,255,0.04)",
-        }}
-      >
+    <div className="flex flex-col min-h-screen bg-black text-zinc-100 overflow-y-auto no-scrollbar pb-40 relative">
+      {/* Background Decorative Glows */}
+      <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-yellow-400/5 blur-[150px] -mr-64 -mt-64 pointer-events-none" />
+      <div className="fixed bottom-0 left-0 w-[400px] h-[400px] bg-yellow-400/5 blur-[120px] -ml-40 -mb-40 pointer-events-none" />
+
+      {/* STICKY HEADER LUXURY */}
+      <header className="sticky top-0 z-[100] px-6 py-8 flex items-center justify-between bg-black/60 backdrop-blur-3xl border-b border-white/5">
         <div className="flex items-center gap-5">
           <motion.button
-            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setTab("home")}
-            style={{
-              boxShadow: "8px 8px 20px rgba(0,0,0,0.6), inset 3px 3px 6px rgba(255,255,255,0.07), inset -3px -3px 6px rgba(0,0,0,0.5)",
-            }}
-            className="w-12 h-12 rounded-[22px] bg-zinc-900 flex items-center justify-center transition-all text-white"
+            className="w-12 h-12 rounded-2xl bg-zinc-900/50 border border-white/10 flex items-center justify-center shadow-[10px_10px_20px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.05)] text-white"
           >
-            <span className="material-symbols-outlined font-black">arrow_back_ios_new</span>
+            <span className="material-symbols-outlined font-black">arrow_back</span>
           </motion.button>
           <div>
             <h1 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-none">
-              Meu <span className="text-yellow-400">Perfil</span>
+              Elite <span className="text-yellow-400">Profile</span>
             </h1>
-            <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.4em] mt-1">Configurações</p>
+            <div className="flex items-center gap-2 mt-1.5">
+               <div className="size-1.5 rounded-full bg-yellow-400 animate-pulse" />
+               <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.4em]">Personal Space</p>
+            </div>
           </div>
         </div>
 
         <motion.button
-          whileTap={{ scale: 0.9 }}
+          whileHover={{ scale: 1.05, rotate: 5 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleLogout}
-          style={{
-            boxShadow: "8px 8px 20px rgba(0,0,0,0.6), inset 2px 2px 4px rgba(255,100,100,0.08), inset -2px -2px 4px rgba(0,0,0,0.5)",
-          }}
-          className="size-12 rounded-full bg-zinc-900 flex items-center justify-center text-red-500 transition-all"
+          className="size-12 rounded-2xl bg-zinc-900/50 border border-red-500/20 flex items-center justify-center text-red-500 transition-all shadow-lg"
         >
-          <span className="material-symbols-outlined">logout</span>
+          <span className="material-symbols-outlined font-black">power_settings_new</span>
         </motion.button>
       </header>
 
-      <main className="px-5 py-10 space-y-8">
+      <main className="px-6 py-10 space-y-10 relative z-10">
 
-        {/* === CARD PRINCIPAL DO USUÁRIO === */}
+        {/* === HERO PROFILE CARD (DESIGN CATÁLOGO LUXO) === */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative overflow-hidden rounded-[45px] p-8"
+          className="relative overflow-hidden rounded-[48px] p-1 shadow-[25px_25px_60px_rgba(0,0,0,0.8)]"
           style={{
-            background: "linear-gradient(145deg, #1a1a1a 0%, #111111 100%)",
-            boxShadow: "20px 20px 50px rgba(0,0,0,0.7), inset 4px 4px 10px rgba(255,255,255,0.04), inset -4px -4px 10px rgba(0,0,0,0.5)",
+            background: "linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(20,20,20,1) 40%, rgba(10,10,10,1) 100%)",
           }}
         >
-          {/* Glow decorativo */}
-          <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-400/8 rounded-full blur-[80px] pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-yellow-400/5 rounded-full blur-[60px] pointer-events-none" />
-
-          <div className="flex flex-col items-center gap-7 relative z-10">
-            {/* Avatar clay */}
-            <div className="relative">
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => onEditPhoto?.()}
-                className="relative size-28 rounded-[40px] overflow-hidden group transition-all"
-                style={{
-                  boxShadow: "15px 15px 35px rgba(0,0,0,0.7), inset 3px 3px 8px rgba(255,255,255,0.12), inset -3px -3px 8px rgba(0,0,0,0.6), 0 0 0 3px rgba(250,204,21,0.25)",
-                }}
-              >
-                <img
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "izi"}`}
-                  alt="User"
-                  className="size-full object-cover rounded-[36px] group-hover:brightness-50 transition-all"
-                />
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="material-symbols-outlined text-white text-3xl">photo_camera</span>
-                </div>
-              </motion.button>
-
-              {isIziBlackMembership && (
-                <div
-                  className="absolute -bottom-2 -right-2 bg-yellow-400 text-black size-10 rounded-[18px] flex items-center justify-center border-4 border-zinc-950 z-20"
-                  style={{ boxShadow: "0 8px 20px rgba(250,204,21,0.4), inset 2px 2px 4px rgba(255,255,255,0.7)" }}
-                >
-                  <span className="material-symbols-outlined text-xl font-black" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
-                </div>
-              )}
-            </div>
-
-            {/* Nome e nível */}
-            <div className="text-center space-y-3">
-              <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase drop-shadow-lg">
-                {userName || "Usuário"}
-              </h2>
-              <div
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full"
-                style={{
-                  background: "#facc15",
-                  boxShadow: "inset 3px 3px 6px rgba(255,255,255,0.6), inset -3px -3px 6px rgba(0,0,0,0.25), 0 8px 20px rgba(250,204,21,0.25)",
-                }}
-              >
-                <span className="material-symbols-outlined text-black text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                <span className="text-[11px] font-black text-black uppercase tracking-widest">Nível {userLevel}</span>
-              </div>
-            </div>
-
-            {/* Barra de XP */}
-            <div className="w-full space-y-2">
-              <div className="flex justify-between items-center px-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Mastery XP</p>
-                <p className="text-[11px] font-black italic text-white">
-                  {userXP} <span className="text-zinc-600 not-italic">/ {nextLevelXP}</span>
-                </p>
-              </div>
-              <div
-                className="h-4 w-full rounded-full p-1 overflow-hidden"
-                style={{
-                  background: "#0a0a0a",
-                  boxShadow: "inset 3px 3px 8px rgba(0,0,0,0.7), inset -1px -1px 3px rgba(255,255,255,0.03)",
-                }}
-              >
+          <div className="bg-zinc-950/40 backdrop-blur-2xl rounded-[46px] p-8 relative overflow-hidden border border-white/5">
+            {/* Background Texture */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: "url('/images/pattern-gold.png')" }} />
+            
+            <div className="flex flex-col items-center relative z-10">
+              {/* Avatar Elite Section */}
+              <div className="relative mb-8">
                 <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressPct}%` }}
-                  transition={{ duration: 1.2, ease: "easeOut" }}
-                  className="h-full rounded-full"
-                  style={{
-                    background: "linear-gradient(90deg, #ca8a04, #facc15)",
-                    boxShadow: "0 0 12px rgba(250,204,21,0.5), inset 1px 1px 3px rgba(255,255,255,0.4)",
-                  }}
-                />
+                  whileHover={{ scale: 1.02 }}
+                  className="relative size-32 rounded-[42px] p-1.5 bg-gradient-to-tr from-yellow-400 to-yellow-600 shadow-2xl"
+                >
+                  <div className="size-full rounded-[38px] bg-zinc-900 overflow-hidden relative group">
+                    <img
+                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userId || "izi"}`}
+                      alt="Profile"
+                      className="size-full object-cover rounded-[38px] group-hover:scale-110 group-hover:rotate-3 transition-all duration-700"
+                    />
+                    <div 
+                      onClick={() => onEditPhoto?.()}
+                      className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 cursor-pointer backdrop-blur-sm"
+                    >
+                      <span className="material-symbols-outlined text-white text-3xl font-black">edit_square</span>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Status Badge */}
+                <div className="absolute -bottom-2 translate-x-1/2 right-1/2 bg-black text-yellow-400 px-4 py-1.5 rounded-full border border-yellow-400/30 shadow-[0_10px_20px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.05)] flex items-center gap-1.5 min-w-[100px] justify-center">
+                   <span className="material-symbols-outlined text-[12px] fill-1">verified</span>
+                   <span className="text-[10px] font-black uppercase tracking-widest italic">Vip Elite</span>
+                </div>
+              </div>
+
+              {/* Identity Section */}
+              <div className="text-center space-y-4 w-full">
+                <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none drop-shadow-2xl">
+                  {userName || "Izi Member"}
+                </h2>
+                
+                {/* ID Badge */}
+                <div className="inline-flex flex-col items-center gap-1">
+                   <p className="text-zinc-600 font-black text-[8px] uppercase tracking-[0.5em]">Membership ID</p>
+                   <p className="text-zinc-400 font-mono text-[10px] bg-white/5 px-4 py-1 rounded-full border border-white/5">#IZI-{String(userId).slice(-6).toUpperCase()}</p>
+                </div>
+              </div>
+
+              {/* Progress Mastery Elite */}
+              <div className="w-full mt-10 space-y-3">
+                <div className="flex justify-between items-end px-2">
+                  <div className="flex flex-col">
+                    <span className="text-yellow-400 font-black text-xs uppercase tracking-tighter italic">Tier Level {userLevel}</span>
+                    <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mt-0.5">Mastery Evolution</span>
+                  </div>
+                  <span className="text-sm font-black text-white italic">{userXP} <span className="text-zinc-600 text-[10px] not-italic">/ {nextLevelXP} XP</span></span>
+                </div>
+                <div className="h-4 w-full bg-zinc-900 rounded-2xl p-1 shadow-[inset_4px_4px_8px_rgba(0,0,0,0.8)] border border-white/5">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPct}%` }}
+                    transition={{ duration: 2, ease: "circOut" }}
+                    className="h-full rounded-xl relative overflow-hidden"
+                    style={{ background: "linear-gradient(90deg, #ca8a04, #facc15)" }}
+                  >
+                    <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.3)_50%,transparent_100%)] animate-[shimmer_2s_infinite]" />
+                  </motion.div>
+                </div>
               </div>
             </div>
           </div>
         </motion.section>
 
-        {/* === GRID STATS === */}
-        <section className="grid grid-cols-2 gap-4">
-          {[
-            {
-              icon: "payments",
-              label: "Saldo Izi",
-              value: `R$ ${walletBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
-              iconColor: "text-yellow-400",
-              iconBg: "bg-yellow-400/10",
-              onClick: undefined,
-            },
-            {
-              icon: "account_balance_wallet",
-              label: "Izi Pay",
-              value: "Expandir",
-              iconColor: "text-blue-400",
-              iconBg: "bg-blue-400/10",
-              onClick: () => setTab("wallet"),
-            },
-          ].map((stat, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.1 + 0.2 }}
-              whileTap={stat.onClick ? { scale: 0.96 } : {}}
-              onClick={stat.onClick}
-              className={`p-7 rounded-[38px] flex flex-col gap-4 ${stat.onClick ? "cursor-pointer" : ""}`}
-              style={{
-                background: "linear-gradient(145deg, #181818 0%, #111 100%)",
-                boxShadow: "15px 15px_35px rgba(0,0,0,0.6), inset 3px 3px 7px rgba(255,255,255,0.04), inset -3px -3px 7px rgba(0,0,0,0.5)".replace(/_/g, " "),
-              }}
-            >
-              <div
-                className={`size-12 rounded-[18px] flex items-center justify-center ${stat.iconBg}`}
-                style={{ boxShadow: "inset 2px 2px 5px rgba(255,255,255,0.06), inset -2px -2px 5px rgba(0,0,0,0.4)" }}
-              >
-                <span className={`material-symbols-outlined text-xl ${stat.iconColor}`} style={{ fontVariationSettings: "'FILL' 1" }}>
-                  {stat.icon}
-                </span>
+        {/* === STATS BENTO BOX (PREMIUM) === */}
+        <section className="grid grid-cols-2 gap-5">
+           <motion.div
+             whileHover={{ y: -5 }}
+             className="bg-zinc-900/40 p-6 rounded-[32px] border border-white/5 shadow-2xl relative overflow-hidden group"
+           >
+              <div className="absolute top-0 right-0 size-24 bg-emerald-400/5 blur-3xl -mr-12 -mt-12 group-hover:bg-emerald-400/10 transition-all" />
+              <div className="flex items-center gap-3 mb-4">
+                 <div className="size-10 rounded-xl bg-emerald-400/10 flex items-center justify-center text-emerald-400 border border-emerald-400/20">
+                    <span className="material-symbols-outlined text-xl italic font-black">payments</span>
+                 </div>
+                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Saldo Atual</span>
               </div>
-              <div>
-                <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">{stat.label}</p>
-                <h4 className="text-lg font-black text-white italic tracking-tight leading-none">{stat.value}</h4>
+              <h3 className="text-2xl font-black text-white italic tracking-tighter leading-none">R$ {walletBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</h3>
+           </motion.div>
+
+           <motion.div
+             whileHover={{ y: -5 }}
+             onClick={() => setTab("wallet")}
+             className="bg-zinc-900/40 p-6 rounded-[32px] border border-white/5 shadow-2xl relative overflow-hidden group cursor-pointer"
+           >
+              <div className="absolute top-0 right-0 size-24 bg-blue-400/5 blur-3xl -mr-12 -mt-12 group-hover:bg-blue-400/10 transition-all" />
+              <div className="flex items-center gap-3 mb-4">
+                 <div className="size-10 rounded-xl bg-blue-400/10 flex items-center justify-center text-blue-400 border border-blue-400/20">
+                    <span className="material-symbols-outlined text-xl italic font-black">account_balance_wallet</span>
+                 </div>
+                 <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Izi Wallet</span>
               </div>
-            </motion.div>
-          ))}
+              <div className="flex items-center justify-between">
+                 <h3 className="text-lg font-black text-white italic tracking-tighter leading-none">Acessar</h3>
+                 <span className="material-symbols-outlined text-zinc-700 group-hover:text-blue-400 transition-colors">arrow_forward</span>
+              </div>
+           </motion.div>
         </section>
 
-        {/* === MENU ITEMS === */}
+        {/* === MENU LIST LUXURY SELECTION === */}
         <section className="space-y-4">
-          <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.4em] px-2">Preferências e Conta</p>
+          <div className="flex items-center justify-between px-2 mb-2">
+            <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em]">Elite Settings</h3>
+            <span className="text-[9px] font-black text-yellow-400/50 uppercase tracking-widest">v 4.2.0</span>
+          </div>
 
-          {menuItems.map((item, i) => (
-            <motion.button
-              key={i}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.08 + 0.3 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={item.action}
-              className="w-full p-6 rounded-[38px] flex items-center justify-between group transition-all"
-              style={
-                item.isPremium
-                  ? {
-                      background: "#facc15",
-                      boxShadow: "inset 4px 4px 10px rgba(255,255,255,0.6), inset -4px -4px 10px rgba(0,0,0,0.2), 0 12px 30px rgba(250,204,21,0.25)",
-                    }
-                  : {
-                      background: "linear-gradient(145deg, #161616 0%, #101010 100%)",
-                      boxShadow: "12px 12px 30px rgba(0,0,0,0.6), inset 3px 3px 6px rgba(255,255,255,0.04), inset -3px -3px 6px rgba(0,0,0,0.5)",
-                    }
-              }
-            >
-              <div className="flex items-center gap-5">
-                <div
-                  className={`size-14 rounded-[22px] flex items-center justify-center transition-transform group-hover:scale-110 ${item.isPremium ? "bg-black/10" : (item.bg || "bg-zinc-800/50")}`}
-                  style={!item.isPremium ? { boxShadow: "inset 2px 2px 5px rgba(0,0,0,0.5), inset -1px -1px 3px rgba(255,255,255,0.04)" } : {}}
-                >
-                  <span
-                    className={`material-symbols-outlined text-2xl font-black ${item.isPremium ? "text-black" : (item.color || "text-yellow-400")}`}
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    {item.icon}
-                  </span>
-                </div>
-                <div className="text-left">
-                  <h4 className={`text-base font-black italic tracking-tight leading-none ${item.isPremium ? "text-black" : "text-white"}`}>
-                    {item.label}
-                  </h4>
-                  <p className={`text-[9px] font-bold uppercase tracking-widest mt-1.5 ${item.isPremium ? "text-black/60" : "text-zinc-600"}`}>
-                    {item.sub}
-                  </p>
-                </div>
-              </div>
-              <div
-                className={`size-10 rounded-full flex items-center justify-center ${item.isPremium ? "bg-black/10" : "bg-zinc-950"}`}
-                style={!item.isPremium ? { boxShadow: "inset 2px 2px 5px rgba(0,0,0,0.7), inset -1px -1px 3px rgba(255,255,255,0.03)" } : {}}
+          <div className="space-y-3">
+            {menuItems.map((item, i) => (
+              <motion.button
+                key={i}
+                whileHover={{ x: 8, backgroundColor: "rgba(255,255,255,0.02)" }}
+                whileTap={{ scale: 0.98 }}
+                onClick={item.action}
+                className={`w-full p-6 rounded-[34px] flex items-center justify-between transition-all relative overflow-hidden border ${item.isPremium ? 'bg-yellow-400 border-yellow-500 shadow-[0_20px_40px_rgba(250,204,21,0.15)]' : 'bg-white/[0.03] border-white/5 shadow-xl'}`}
               >
-                <span className={`material-symbols-outlined text-sm font-black ${item.isPremium ? "text-black" : "text-zinc-700 group-hover:text-yellow-400 transition-colors"}`}>
-                  arrow_forward_ios
-                </span>
-              </div>
-            </motion.button>
-          ))}
+                {item.isPremium && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 opacity-10 animate-pulse" />
+                )}
+                
+                <div className="flex items-center gap-5 relative z-10">
+                  <div className={`size-14 rounded-2xl flex items-center justify-center shadow-lg ${item.isPremium ? "bg-black/10" : (item.bg || "bg-zinc-800/40")} border ${item.isPremium ? 'border-black/5' : 'border-white/5'}`}>
+                    <span className={`material-symbols-outlined text-2xl font-black ${item.isPremium ? "text-black" : (item.color || "text-yellow-400")}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                      {item.icon}
+                    </span>
+                  </div>
+                  <div className="text-left">
+                    <h4 className={`text-base font-black italic tracking-tight leading-none ${item.isPremium ? "text-black" : "text-white"}`}>
+                      {item.label}
+                    </h4>
+                    <p className={`text-[9px] font-bold uppercase tracking-widest mt-1.5 ${item.isPremium ? "text-black/50" : "text-zinc-600"}`}>
+                      {item.sub}
+                    </p>
+                  </div>
+                </div>
+
+                <div className={`size-10 rounded-full flex items-center justify-center ${item.isPremium ? "bg-black/10 shadow-inner" : "bg-zinc-950 border border-white/5"} relative z-10`}>
+                   <span className={`material-symbols-outlined text-xs font-black ${item.isPremium ? "text-black" : "text-zinc-700"}`}>arrow_forward_ios</span>
+                </div>
+              </motion.button>
+            ))}
+          </div>
         </section>
 
-        {/* Footer */}
-        <div className="flex flex-col items-center py-8 opacity-25">
-          <p className="text-[10px] font-black uppercase tracking-[0.6em] text-zinc-500">Izi Delivery App</p>
-          <p className="text-[8px] font-bold text-zinc-600 mt-2">Versão 4.2.0 • Premium Build</p>
+        {/* Brand Footer */}
+        <div className="flex flex-col items-center pt-8">
+           <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-px bg-yellow-400/20" />
+              <img src="/images/logo-footer.png" className="w-12 opacity-30 grayscale" alt="Izi" />
+              <div className="w-8 h-px bg-yellow-400/20" />
+           </div>
+           <p className="text-[8px] font-black uppercase tracking-[0.6em] text-zinc-700">Digital Luxury Ecosystem</p>
+           <p className="text-[7px] font-bold text-zinc-800 mt-2 uppercase tracking-widest">© 2026 Izi Global Technologies</p>
         </div>
       </main>
     </div>

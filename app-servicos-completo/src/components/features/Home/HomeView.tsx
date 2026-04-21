@@ -1149,9 +1149,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
             <div className="grid grid-cols-4 gap-4 relative z-10 px-1">
               {[
-                { icon: "two_wheeler", label: "Moto", action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("taxi_wizard"); } },
+                { icon: "two_wheeler", label: "Moto Izi", action: () => { setTransitData({ ...transitData, type: "mototaxi", scheduled: false }); navigateSubView("taxi_wizard"); } },
                 { icon: "airport_shuttle", label: "Excursões", action: () => { setTransitData({ ...transitData, type: "van", scheduled: true }); navigateSubView("excursion_wizard"); } },
-                { icon: "directions_car", label: "Izi Taxi", action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("taxi_wizard"); } },
+                { icon: "directions_car", label: "Motorista Particular", action: () => { setTransitData({ ...transitData, type: "carro", scheduled: false }); navigateSubView("taxi_wizard"); } },
                 { icon: "local_shipping", label: "Logística", action: () => { setTransitData({ ...transitData, type: "utilitario", scheduled: false }); navigateSubView("freight_wizard"); } },
               ].map((svc, i) => (
                 <motion.div 
@@ -1218,7 +1218,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   <p className="text-yellow-400 font-black text-[10px] tracking-[0.2em] uppercase">Categorias</p>
                   <h2 className="text-zinc-100 font-bold text-2xl italic tracking-tighter leading-none">O que você busca?</h2>
                 </div>
-                <button className="text-zinc-500 hover:text-yellow-400 transition-colors text-[10px] font-black uppercase tracking-widest">Ver todas</button>
+                <div></div>
               </div>
               <div className="grid grid-cols-4 gap-4 px-3">
                 {/* Category Card 1 */}
@@ -1284,12 +1284,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em]">Os melhores perto de você</p>
                 </div>
               </div>
-              <button
-                onClick={() => { setRestaurantInitialCategory("Todos"); navigateSubView("explore_restaurants"); }}
-                className="text-[10px] font-black text-yellow-400 uppercase tracking-widest px-6 py-2.5 bg-zinc-900 rounded-2xl border border-white/5 shadow-[6px_6px_12px_rgba(0,0,0,0.6),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.4)] active:scale-95 transition-all"
-              >
-                Ver todos
-              </button>
+              <div></div>
             </div>
             
             <div className="flex gap-6 overflow-x-auto no-scrollbar pb-6 -mx-5 px-5">

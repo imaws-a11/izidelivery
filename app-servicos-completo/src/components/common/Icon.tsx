@@ -62,6 +62,8 @@ export function Icon({ name, className = "", size = 20 }: IconProps) {
     'burger': BespokeIcons.Burger,
     'local_cafe': BespokeIcons.Coffee,
     'coffee': BespokeIcons.Coffee,
+    'flag': BespokeIcons.Flag,
+    'route': BespokeIcons.Route,
     'package': BespokeIcons.Package,
     'inventory_2': BespokeIcons.Package,
   };

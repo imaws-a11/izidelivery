@@ -5292,27 +5292,28 @@ function App() {
     const renderActiveMissionView = () => {
         if (!activeMission) {
             return (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-10 text-center">
-                    <div className="size-24 rounded-[40px] bg-white/5 border border-white/10 flex items-center justify-center mb-6">
-                        <Icon name="route" size={40} className="text-white/20" />
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-10 text-center font-['Plus_Jakarta_Sans']">
+                    <div className="size-28 rounded-[45px] bg-white/5 border border-white/10 flex items-center justify-center mb-8 shadow-[20px_20px_40px_rgba(0,0,0,0.6),inset_8px_8px_16px_rgba(255,255,255,0.02)]">
+                        <Icon name="route" size={48} className="text-white/20" />
                     </div>
-                    <h2 className="text-xl font-black text-white uppercase tracking-tight mb-2">Sem Missão Ativa</h2>
-                    <p className="text-sm text-white/40 leading-relaxed mb-8">Você não possui nenhuma corrida em andamento no momento. Vá ao Dashboard para aceitar novos pedidos.</p>
+                    <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-3 italic">Sem Missão Ativa</h2>
+                    <p className="text-sm text-white/40 leading-relaxed mb-10 max-w-xs font-medium">Você não possui nenhuma corrida em andamento. Vá ao Dashboard para aceitar novos desafios e lucrar.</p>
                     
                     <div className="flex flex-col gap-4 w-full max-w-xs">
                         <button 
                             onClick={() => setActiveTab('dashboard')}
-                            className="h-16 clay-profile-inner bg-primary text-slate-900 font-black text-xs uppercase tracking-[0.2em] rounded-[28px] w-full active:scale-95 transition-all shadow-[0_15px_30px_rgba(250,204,21,0.2)] border-t border-white/40"
+                            className="h-18 bg-yellow-400 text-black font-black text-[11px] uppercase tracking-[0.25em] rounded-[30px] w-full active:scale-95 transition-all shadow-[0_20px_40px_rgba(250,204,21,0.25),inset_6px_6px_12px_rgba(255,255,255,0.4),inset_-6px_-6px_12px_rgba(0,0,0,0.1)] border border-yellow-300/30 flex items-center justify-center gap-3 py-5"
                         >
-                            Ir para o Dashboard
+                            <Icon name="grid_view" size={18} />
+                            Ir para Dashboard
                         </button>
                         <button 
-                            onClick={syncMissionWithDB}
+                            onClick={() => { syncMissionWithDB(); toastSuccess("Sincronizando com o servidor..."); }}
                             disabled={isSyncingMission}
-                            className="h-16 bg-[#121212] shadow-[inset_2px_2px_8px_rgba(255,255,255,0.05),inset_-2px_-2px_8px_rgba(0,0,0,0.4)] border border-white/5 text-white/60 font-black text-xs uppercase tracking-[0.2em] rounded-[28px] w-full active:scale-95 transition-all flex items-center justify-center gap-3"
+                            className="h-16 bg-zinc-900 border border-white/5 text-white/60 font-black text-[10px] uppercase tracking-[0.2em] rounded-[28px] w-full active:scale-95 transition-all flex items-center justify-center gap-3 shadow-[8px_8px_16px_rgba(0,0,0,0.4),inset_2px_2px_4px_rgba(255,255,255,0.02)]"
                         >
-                            {isSyncingMission ? <Icon name="sync" className="animate-spin" /> : <Icon name="cloud_sync" />}
-                            {isSyncingMission ? 'Sincronizando...' : 'Verificar no Servidor'}
+                            {isSyncingMission ? <Icon name="sync" className="animate-spin text-yellow-400" /> : <Icon name="cloud_sync" />}
+                            {isSyncingMission ? 'Sincronizando...' : 'Verificar Servidor'}
                         </button>
                     </div>
                 </motion.div>
@@ -5332,14 +5333,14 @@ function App() {
         const getStatusDisplay = () => {
             switch(activeMission.status) {
                 case 'saiu_para_coleta':
-                case 'a_caminho_coleta': return { label: 'Indo retirar', color: 'text-blue-400', bg: 'bg-blue-400/10', icon: 'navigation' };
+                case 'a_caminho_coleta': return { label: 'Indo retirar', color: 'text-blue-400', bg: 'bg-blue-400/15', icon: 'navigation', glow: 'shadow-[0_0_20px_rgba(96,165,250,0.3)]' };
                 case 'no_local_coleta':
-                case 'chegou_coleta': return { label: 'No local de coleta', color: 'text-amber-400', bg: 'bg-amber-400/10', icon: 'location_on' };
-                case 'picked_up': return { label: 'Pedido coletado', color: 'text-emerald-400', bg: 'bg-emerald-400/10', icon: 'package_2' };
+                case 'chegou_coleta': return { label: 'No local de coleta', color: 'text-amber-400', bg: 'bg-amber-400/15', icon: 'location_on', glow: 'shadow-[0_0_20px_rgba(251,191,36,0.3)]' };
+                case 'picked_up': return { label: 'Pedido coletado', color: 'text-emerald-400', bg: 'bg-emerald-400/15', icon: 'package_2', glow: 'shadow-[0_0_20px_rgba(52,211,153,0.3)]' };
                 case 'a_caminho': 
-                case 'em_rota': return { label: 'Em rota de entrega', color: 'text-primary', bg: 'bg-primary/10', icon: 'moped' };
-                case 'no_local': return { label: 'No destino final', color: 'text-blue-400', bg: 'bg-blue-400/10', icon: 'person_pin_circle' };
-                default: return { label: 'Em andamento', color: 'text-white/40', bg: 'bg-white/5', icon: 'radar' };
+                case 'em_rota': return { label: 'Em rota de entrega', color: 'text-yellow-400', bg: 'bg-yellow-400/15', icon: 'moped', glow: 'shadow-[0_0_20px_rgba(250,204,21,0.3)]' };
+                case 'no_local': return { label: 'No destino final', color: 'text-blue-400', bg: 'bg-blue-400/15', icon: 'person_pin_circle', glow: 'shadow-[0_0_20px_rgba(96,165,250,0.3)]' };
+                default: return { label: 'Em andamento', color: 'text-white/50', bg: 'bg-white/5', icon: 'radar', glow: '' };
             }
         };
 
@@ -5355,37 +5356,41 @@ function App() {
         const getMainBtnData = () => {
             const s = activeMission.status || '';
             if (['a_caminho_coleta', 'saiu_para_coleta', 'confirmado', 'preparando', 'aceito', 'atribuido', 'accepted', 'waiting_driver', 'pending'].includes(s)) 
-                return { label: 'Ir para a Coleta', action: () => handleUpdateStatus('chegou_coleta'), icon: 'navigation' };
+                return { label: 'Cheguei na Coleta', action: () => handleUpdateStatus('chegou_coleta'), icon: 'location_on' };
             if (['chegou_coleta', 'no_local_coleta'].includes(s) || activeMission.status === 'pronto') 
-                return { label: 'Confirmar Coleta', action: () => handleUpdateStatus('picked_up'), icon: 'package_2' };
+                return { label: 'Confirmar Coleta', action: () => handleUpdateStatus('picked_up'), icon: 'inventory_2' };
             if (s === 'picked_up') 
                 return { label: 'Iniciar Entrega', action: () => handleUpdateStatus('a_caminho'), icon: 'moped' };
             if (s === 'a_caminho' || s === 'em_rota') 
-                return { label: 'Tô no Destino', action: () => handleUpdateStatus('no_local'), icon: 'person_pin_circle' };
+                return { label: 'Cheguei no Destino', action: () => handleUpdateStatus('person_pin_circle'), icon: 'push_pin' };
             if (s === 'no_local' || s === 'saiu_para_entrega') 
-                return { label: isMobility ? 'Encerrar Corrida' : 'Finalizar Entrega', action: () => handleUpdateStatus('concluido'), icon: 'check_circle' };
-            return { label: 'Ir Para a Coleta', action: () => {}, icon: 'arrow_forward' };
+                return { label: isMobility ? 'Encerrar Corrida' : 'Finalizar Entrega', action: () => handleUpdateStatus('concluido'), icon: 'task_alt' };
+            return { label: 'Prosseguir', action: () => {}, icon: 'arrow_forward' };
         };
 
         const btn = getMainBtnData();
         const driverEarnings = getNetEarnings(activeMission);
 
         const sClayDark: React.CSSProperties = {
-            background: '#121212',
-            boxShadow: '12px 12px 24px rgba(0,0,0,0.5), inset 4px 4px 10px rgba(255,255,255,0.03), inset -4px -4px 10px rgba(0,0,0,0.7)',
-            borderRadius: '2.5rem'
+            background: '#0c0f10',
+            boxShadow: '15px 15px 35px rgba(0,0,0,0.6), inset 5px 5px 12px rgba(255,255,255,0.02), inset -5px -5px 12px rgba(0,0,0,0.8)',
+            borderRadius: '2.8rem'
         };
         const sClayYellow: React.CSSProperties = {
             background: '#FACD05',
-            boxShadow: '0 15px 35px rgba(250,204,21,0.25), inset 8px 8px 16px rgba(255,255,255,0.7), inset -8px -8px 16px rgba(0,0,0,0.15)',
-            borderRadius: '2.5rem'
+            boxShadow: '0 20px 45px rgba(250,204,21,0.25), inset 8px 8px 16px rgba(255,255,255,0.5), inset -8px -8px 16px rgba(0,0,0,0.15)',
+            borderRadius: '3rem'
         };
 
         return (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] bg-zinc-100 flex flex-col overflow-hidden text-[#f5f6f7]">
+            <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                className="fixed inset-0 z-[100] bg-black flex flex-col overflow-hidden text-[#f5f6f7] font-['Plus_Jakarta_Sans']"
+            >
                 
-                {/* 1. BACKGROUND MAP SECTION (55% Height) */}
-                <div className="absolute top-0 left-0 w-full h-[55vh] z-0">
+                {/* 1. MAP SECTION (60% Height) */}
+                <div className="absolute top-0 left-0 w-full h-[60vh] z-0">
                     <MissionRouteMap 
                         pickup={{ lat: Number(activeMission.pickup_lat), lng: Number(activeMission.pickup_lng) }}
                         delivery={{ lat: Number(activeMission.delivery_lat), lng: Number(activeMission.delivery_lng) }}
@@ -5394,11 +5399,14 @@ function App() {
                         driverCoords={driverCoords}
                         onRouteInfo={(info) => setRealTimeRoute(info)}
                     />
-                    {/* Sombra sutil de separação */}
-                    <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-neutral-200/50 to-transparent pointer-events-none" />
                     
-                    {/* Botão de abrir no Google Maps flutuando no mapa */}
-                    <button 
+                    {/* Shadow transition to Bottom Sheet */}
+                    <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none" />
+                    
+                    {/* Floating Map Navigation Button */}
+                    <motion.button 
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
                         onClick={() => {
                             const isDeliveryPhase = activeMission.status === 'picked_up' || activeMission.status === 'em_rota' || activeMission.status === 'a_caminho' || activeMission.status === 'saiu_para_entrega';
                             let lat = Number(isDeliveryPhase ? activeMission.delivery_lat : activeMission.pickup_lat);
@@ -5414,156 +5422,258 @@ function App() {
                             const destination = hasValidCoords ? `${lat},${lng}` : encodeURIComponent(String(addr || "Destino").split("| ITENS:")[0].trim());
                             window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
                         }}
-                        className="absolute bottom-20 right-6 size-12 bg-yellow-400 rounded-2xl flex items-center justify-center shadow-2xl active:scale-90 transition-all z-20"
+                        className="absolute bottom-28 right-8 size-16 bg-yellow-400 rounded-[24px] flex items-center justify-center shadow-[0_15px_35px_rgba(250,204,21,0.4),inset_6px_6px_12px_rgba(255,255,255,0.5),inset_-6px_-6px_12px_rgba(0,0,0,0.1)] active:scale-90 transition-all z-20 group"
                     >
-                        <Icon name="navigation" size={20} className="text-black" />
-                    </button>
+                        <Icon name="navigation" size={28} className="text-black group-hover:rotate-12 transition-transform" />
+                    </motion.button>
                 </div>
 
-                {/* 2. OVERLAY HEADER (Top Level) */}
-                <header className="fixed top-0 w-full z-[300] flex justify-between items-center px-6 py-4 safe-area-top">
-                    <button onClick={() => setActiveTab('dashboard')} className="size-10 bg-black/40 backdrop-blur-md border border-white/10 active:scale-95 transition-all p-2 rounded-full flex items-center justify-center">
-                        <Icon name="arrow_back" className="text-yellow-400" />
-                    </button>
-                    <h1 className="text-white font-black tracking-tight text-xs uppercase italic truncate px-4 py-1.5 bg-black/40 backdrop-blur-md rounded-full border border-white/5 shadow-lg">Missão Ativa</h1>
-                    <div className="flex items-center gap-2">
-                        <button onClick={handleScanQR} className="size-10 bg-yellow-400 active:scale-95 transition-all p-2 rounded-full flex items-center justify-center shadow-lg relative overflow-hidden">
-                            {isScanning && <div className="absolute inset-0 border-2 border-black border-t-transparent rounded-full animate-spin" />}
-                            <Icon name="qr_code_scanner" className="text-black" />
-                        </button>
+                {/* 2. OVERLAY HEADER */}
+                <header className="fixed top-0 w-full z-[300] flex justify-between items-center px-8 py-6 safe-area-top">
+                    <motion.button 
+                        whileHover={{ x: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setActiveTab('dashboard')} 
+                        className="size-12 bg-black/60 backdrop-blur-xl border border-white/10 p-2 rounded-[18px] flex items-center justify-center shadow-2xl"
+                    >
+                        <Icon name="arrow_back" className="text-yellow-400" size={20} />
+                    </motion.button>
+                    
+                    <div className="px-6 py-2.5 bg-black/60 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl flex items-center gap-3">
+                        <div className={`size-2 rounded-full animate-pulse ${statusDisplay.color.replace('text-', 'bg-')}`} />
+                        <span className="text-white font-black tracking-widest text-[9px] uppercase italic leading-none">{statusDisplay.label}</span>
                     </div>
+
+                    <motion.button 
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleScanQR} 
+                        className="size-12 bg-yellow-400 p-2 rounded-[18px] flex items-center justify-center shadow-[0_10px_25px_rgba(250,204,21,0.3),inset_4px_4px_8px_rgba(255,255,255,0.4)] relative overflow-hidden"
+                    >
+                        {isScanning && <div className="absolute inset-0 border-2 border-black border-t-transparent rounded-full animate-spin" />}
+                        <Icon name="qr_code_scanner" className="text-black" size={22} />
+                    </motion.button>
                 </header>
 
-                {/* 3. INTERACTIVE BOTTOM SHEET */}
+                {/* 3. LUXURY BOTTOM SHEET */}
                 <motion.div 
-                    initial={{ y: "55vh" }}
-                    animate={{ y: "55vh" }}
+                    initial={{ y: "52vh" }}
+                    animate={{ y: "52vh" }}
                     drag="y"
-                    dragConstraints={{ top: 0, bottom: 500 }}
+                    dragConstraints={{ top: 0, bottom: 400 }}
                     dragElastic={0.05}
-                    className="fixed inset-0 z-[150] bg-[#0c0f10] border-t border-white/10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)] flex flex-col rounded-t-[40px] will-change-transform"
+                    className="fixed inset-0 z-[150] bg-[#0c0f10] border-t border-white/5 shadow-[0_-30px_70px_rgba(0,0,0,0.9)] flex flex-col rounded-t-[50px] shadow-[inset_10px_10px_20px_rgba(255,255,255,0.01)]"
                 >
-                    {/* Drag Handle Indicator */}
-                    <div className="w-full flex justify-center py-4 shrink-0">
-                        <div className="w-12 h-1.5 bg-white/10 rounded-full" />
+                    {/* Drag Handle */}
+                    <div className="w-full flex justify-center py-5 shrink-0">
+                        <div className="w-16 h-1.5 bg-white/10 rounded-full shadow-inner" />
                     </div>
 
-                    {/* Scrollable Content inside Sheet */}
-                    <div className="flex-1 overflow-y-auto px-4 pb-[500px] space-y-6 no-scrollbar">
-                        {/* Status & Identidade do Piloto */}
-                        <section className="bg-neutral-900/50 rounded-[32px] p-5 flex items-center gap-4 border border-white/5" style={sClayDark}>
-                            <div className="size-14 rounded-full overflow-hidden border border-yellow-400 shadow-lg bg-zinc-800 flex items-center justify-center">
-                                <Icon name="person" size={24} className="text-white/20" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h2 className="text-base font-black text-white truncate">{driverName}</h2>
-                                <div className="bg-yellow-400/10 self-start px-2 py-0.5 rounded-lg border border-yellow-400/20 inline-flex items-center gap-1.5">
-                                    <Icon name="route" size={10} className="text-yellow-400" />
-                                    <span className="text-yellow-400 font-black text-[9px] uppercase tracking-widest">{realTimeRoute ? realTimeRoute.distanceText : `${(parseFloat(activeMission.distance_km || '0')).toFixed(1)} KM`}</span>
+                    <div className="flex-1 overflow-y-auto px-6 pb-[480px] space-y-8 no-scrollbar pt-2">
+                        
+                        {/* Status Imersivo - Clay Card */}
+                        <section className="bg-zinc-900 border border-white/5 p-6 flex flex-col gap-5" style={sClayDark}>
+                            <div className="flex items-center gap-5">
+                                <div className="size-16 rounded-[22px] overflow-hidden border-2 border-yellow-400/30 shadow-2xl bg-zinc-800 flex items-center justify-center relative">
+                                    {driverAvatar ? (
+                                        <img src={driverAvatar} alt="Profile" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <Icon name="person" size={32} className="text-white/20" />
+                                    )}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h2 className="text-lg font-black text-white truncate italic tracking-tighter">{driverName}</h2>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <div className="bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1">
+                                            <div className="size-1.5 rounded-full bg-emerald-400" />
+                                            <span className="text-emerald-400 font-black text-[8px] uppercase tracking-widest">{stats.level >= 10 ? 'Elite' : `Piloto`}</span>
+                                        </div>
+                                        <div className="bg-yellow-400/10 px-2 py-0.5 rounded-md border border-yellow-400/20 flex items-center gap-1">
+                                            <Icon name="route" size={10} className="text-yellow-400" />
+                                            <span className="text-yellow-400 font-black text-[8px] uppercase tracking-widest">
+                                                {realTimeRoute ? realTimeRoute.distanceText : `${(parseFloat(activeMission.distance_km || '0')).toFixed(1)} KM`}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-zinc-600 text-[8px] uppercase tracking-[0.3em] font-black mb-1">XP HOJE</p>
+                                    <p className="text-xl font-black text-yellow-400 italic tracking-tighter">+{Math.floor(driverEarnings)} pts</p>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <p className="text-neutral-500 text-[8px] uppercase tracking-widest font-black">Meta Hoje</p>
-                                <p className="text-lg font-black text-yellow-400 italic">R$ {stats.today.toFixed(2).replace('.', ',')}</p>
+                            
+                            <div className="h-px bg-white/5 w-full" />
+                            
+                            <div className="flex justify-between items-center bg-black/40 p-4 rounded-[22px] border border-white/5 shadow-inner">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-xl bg-white/5 ${statusDisplay.color} ${statusDisplay.glow}`}>
+                                        <Icon name={statusDisplay.icon} size={20} />
+                                    </div>
+                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{statusDisplay.label}</span>
+                                </div>
+                                <div className="flex flex-col items-end">
+                                    <span className="text-yellow-400 font-black text-xs italic">{realTimeRoute?.durationText || '-- min'}</span>
+                                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest">Estimado</span>
+                                </div>
                             </div>
                         </section>
 
-                        {/* Itens do Pedido */}
-                        {orderItems.length > 0 && (
-                            <section className="space-y-4">
-                                <h2 className="text-neutral-500 font-black text-[9px] uppercase tracking-[0.3em] px-2">Conteúdo da Carga</h2>
-                                <div className="grid gap-3">
-                                    {orderItems.map((item: any, idx: number) => (
-                                        <div key={idx} className="bg-neutral-900/40 rounded-[28px] p-4 flex items-center gap-4 border border-white/5" style={sClayDark}>
-                                            <div className="size-12 bg-black rounded-2xl flex items-center justify-center border border-white/5 shrink-0">
-                                                <Icon name={isMobility ? 'person' : 'package_2'} className="text-white/20" size={24} />
+                        {/* Detalhes da Carga/Passageiro */}
+                        <section className="space-y-4">
+                            <div className="flex justify-between items-end px-2">
+                                <h2 className="text-zinc-600 font-black text-[9px] uppercase tracking-[0.4em]">Detalhes da Missão</h2>
+                                <span className={isMobility ? "text-cyan-400 font-black text-[9px] uppercase tracking-widest" : "text-yellow-400 font-black text-[9px] uppercase tracking-widest"}>
+                                    {isMobility ? 'Mobilidade' : 'Logística'}
+                                </span>
+                            </div>
+                            
+                            <div className="grid gap-4">
+                                {orderItems.length > 0 ? (
+                                    orderItems.map((item: any, idx: number) => (
+                                        <motion.div 
+                                            key={idx} 
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: idx * 0.1 }}
+                                            className="bg-zinc-900 rounded-[28px] p-5 flex items-center gap-5 border border-white/5 shadow-[10px_10px_20px_rgba(0,0,0,0.5),inset_4px_4px_8px_rgba(255,255,255,0.01)]"
+                                        >
+                                            <div className="size-14 bg-black rounded-[20px] flex items-center justify-center border border-white/5 shadow-inner shrink-0 relative">
+                                                <Icon name={isMobility ? 'person' : 'package_2'} className="text-yellow-400/40" size={28} />
+                                                <div className="absolute -top-1 -right-1 size-6 bg-yellow-400 rounded-lg flex items-center justify-center shadow-lg">
+                                                    <span className="text-black font-black text-[10px]">{item.quantity || 1}x</span>
+                                                </div>
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between">
-                                                    <span className="text-white font-black text-xs uppercase italic truncate">{item.name}</span>
-                                                    {item.quantity > 1 && <span className="text-yellow-400 font-black text-[10px]">x{item.quantity}</span>}
+                                                <h3 className="text-white font-black text-xs uppercase italic tracking-tight truncate">{item.name}</h3>
+                                                {item.options && <p className="text-zinc-500 text-[10px] font-bold italic truncate mt-1">{item.options}</p>}
+                                                <div className="flex items-center gap-2 mt-2">
+                                                     <div className="size-1.5 rounded-full bg-yellow-400/30" />
+                                                     <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Verificado no sistema</span>
                                                 </div>
-                                                {item.options && <p className="text-neutral-500 text-[9px] italic truncate">{item.options}</p>}
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
-                        )}
-
-                        {/* Financeiro / Izi Pay */}
-                        <section className="space-y-4">
-                            <h2 className="text-neutral-500 font-black text-[9px] uppercase tracking-[0.3em] px-2">Izi Pay / Financeiro</h2>
-                            <div className="bg-neutral-900 rounded-[35px] p-6 border-l-4 border-yellow-400 space-y-6 shadow-2xl" style={sClayDark}>
-                                <div className="flex justify-between items-center">
-                                    <div className="flex items-center gap-3">
-                                        <div className="size-10 rounded-2xl bg-yellow-400/10 flex items-center justify-center border border-yellow-400/10">
-                                            <Icon name="payments" size={20} className="text-yellow-400" />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-white font-black text-[10px] uppercase italic leading-none">Seu Ganho</span>
-                                            <span className="text-neutral-500 text-[8px] uppercase tracking-widest mt-1">Líquido Estimado</span>
-                                        </div>
+                                        </motion.div>
+                                    ))
+                                ) : (
+                                    <div className="bg-zinc-900 rounded-[28px] p-6 flex flex-col items-center justify-center gap-3 border border-white/5 border-dashed opacity-50">
+                                        <Icon name="info" className="text-white/20" size={24} />
+                                        <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Sem notas adicionais</p>
                                     </div>
-                                    <span className="text-yellow-400 text-3xl font-black italic tracking-tighter">R$ {driverEarnings.toFixed(2).replace('.', ',')}</span>
-                                </div>
-                                
-                                <div className="h-px bg-white/5 w-full" />
-
-                                <div className="space-y-4">
-                                     <div className="flex justify-between items-center">
-                                        <span className="text-white font-black text-[10px] uppercase italic">{activeMission.payment_method === 'online' ? 'Já Pago Online' : `A Receber do Cliente`}</span>
-                                        <div className="flex items-center gap-2 bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/20">
-                                            <Icon name={activeMission.payment_method === 'online' ? 'verified_user' : 'payments'} size={12} className="text-yellow-400" />
-                                            <span className="text-yellow-400 font-black text-[10px] uppercase italic">{getPaymentLabel(activeMission)}</span>
-                                        </div>
-                                    </div>
-
-                                    {!(activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago') && activeMission.payment_method !== 'online' ? (
-                                        <div className="bg-black/30 p-5 rounded-[24px] border border-white/5 flex flex-col gap-2 shadow-inner">
-                                            <div className="flex justify-between text-[10px] font-bold text-neutral-500 uppercase tracking-tighter">
-                                                <span>Subtotal Itens</span>
-                                                <span>R$ {(Number(activeMission.total_price || 0) - Number(activeMission.delivery_fee || 0)).toFixed(2).replace('.', ',')}</span>
-                                            </div>
-                                            <div className="flex justify-between items-end pt-1">
-                                                <span className="text-white font-black text-xs uppercase italic">Total em Dinheiro</span>
-                                                <span className="text-yellow-400 text-xl font-black italic tracking-tighter leading-none">R$ {parseFloat(activeMission.total_price || 0).toFixed(2).replace('.', ',')}</span>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/10 flex items-center gap-3">
-                                            <Icon name="verified" className="text-emerald-400" size={16} />
-                                            <p className="text-emerald-400/80 text-[10px] font-black uppercase italic">Pagamento Confirmado. Não cobre o cliente.</p>
-                                        </div>
-                                    )}
-
-                                    {activeMission.observations && (
-                                        <div className="bg-orange-500/5 p-4 rounded-2xl border border-orange-500/10 flex items-start gap-3">
-                                            <Icon name="error_outline" className="text-orange-400" size={16} />
-                                            <p className="text-neutral-400 text-[10px] leading-relaxed italic font-medium">"{activeMission.observations}"</p>
-                                        </div>
-                                    )}
-                                </div>
+                                )}
                             </div>
+                        </section>
+
+                        {/* Izi Pay Premium Section */}
+                        <section className="space-y-4 pb-4">
+                             <h2 className="text-zinc-600 font-black text-[9px] uppercase tracking-[0.4em] px-2">Izi Pay • Rendimento</h2>
+                             <div className="bg-zinc-900 border-l-[6px] border-yellow-400 p-8 shadow-2xl relative overflow-hidden" style={sClayDark}>
+                                 <div className="absolute top-0 right-0 size-40 bg-yellow-400/5 blur-[50px] rounded-full -mr-20 -mt-20 pointer-events-none" />
+                                 
+                                 <div className="flex justify-between items-center relative z-10">
+                                     <div className="flex items-center gap-4">
+                                         <div className="size-14 rounded-[20px] bg-yellow-400 flex items-center justify-center shadow-[inset_4px_4px_8px_rgba(255,255,255,0.5),inset_-4px_-4px_8px_rgba(0,0,0,0.1)]">
+                                             <Icon name="payments" size={28} className="text-black" />
+                                         </div>
+                                         <div>
+                                             <span className="text-white font-black text-[11px] uppercase italic tracking-widest block leading-none">Lucro Real</span>
+                                             <span className="text-yellow-400/40 text-[9px] font-black uppercase tracking-[0.2em] mt-1 block">Líquido Creditado</span>
+                                         </div>
+                                     </div>
+                                     <div className="text-right">
+                                         <span className="text-yellow-400 text-4xl font-black italic tracking-tighter drop-shadow-[0_0_15px_rgba(250,204,21,0.3)]">
+                                             R$ {driverEarnings.toFixed(2).replace('.', ',')}
+                                         </span>
+                                     </div>
+                                 </div>
+                                 
+                                 <div className="h-px bg-white/5 w-full my-6" />
+
+                                 <div className="space-y-5">
+                                     <div className="flex justify-between items-center bg-black/30 p-4 rounded-2xl border border-white/5">
+                                         <div className="flex flex-col">
+                                            <span className="text-zinc-500 font-black text-[8px] uppercase tracking-widest mb-1">Método</span>
+                                            <span className="text-white font-black text-[10px] uppercase italic">{activeMission.payment_method === 'online' ? 'Liquidado Online' : 'Pagar no Destino'}</span>
+                                         </div>
+                                         <div className="bg-yellow-400/10 px-4 py-2 rounded-xl border border-yellow-400/20 flex items-center gap-2">
+                                             <Icon name={activeMission.payment_method === 'online' ? 'verified_user' : 'monetization_on'} size={14} className="text-yellow-400" />
+                                             <span className="text-yellow-400 font-black text-[10px] uppercase italic">{getPaymentLabel(activeMission)}</span>
+                                         </div>
+                                     </div>
+
+                                     {!(activeMission.payment_status === 'paid' || activeMission.payment_status === 'pago') && activeMission.payment_method !== 'online' ? (
+                                         <div className="bg-zinc-800/50 p-6 rounded-[28px] border border-white/5 flex flex-col gap-3 shadow-inner">
+                                             <div className="flex justify-between items-center text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+                                                 <span>Subtotal Carga</span>
+                                                 <span className="text-white/60">R$ {(Number(activeMission.total_price || 0) - Number(activeMission.delivery_fee || 0)).toFixed(2).replace('.', ',')}</span>
+                                             </div>
+                                             <div className="flex justify-between items-end pt-2 border-t border-white/5">
+                                                 <span className="text-white font-black text-xs uppercase italic tracking-widest">Coleta em Dinheiro</span>
+                                                 <span className="text-yellow-400 text-2xl font-black italic tracking-tighter drop-shadow-lg">R$ {parseFloat(activeMission.total_price || 0).toFixed(2).replace('.', ',')}</span>
+                                             </div>
+                                             {activeMission.change_for > 0 && (
+                                                 <div className="mt-2 bg-yellow-400 p-2 rounded-lg flex items-center justify-between shadow-lg">
+                                                     <span className="text-black font-black text-[9px] uppercase tracking-tighter">Troco Para</span>
+                                                     <span className="text-black font-black text-sm italic">R$ {parseFloat(activeMission.change_for).toFixed(2).replace('.', ',')}</span>
+                                                 </div>
+                                             )}
+                                         </div>
+                                     ) : (
+                                         <motion.div 
+                                            initial={{ scale: 0.95 }}
+                                            animate={{ scale: 1 }}
+                                            className="bg-emerald-500/5 p-5 rounded-[22px] border border-emerald-500/10 flex items-center gap-4 shadow-[0_0_20px_rgba(16,185,129,0.05)]"
+                                         >
+                                             <div className="size-10 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
+                                                 <Icon name="check" className="text-black" size={20} />
+                                             </div>
+                                             <div>
+                                                 <p className="text-emerald-400 font-black text-[10px] uppercase italic tracking-widest">Pagamento Confirmado</p>
+                                                 <p className="text-emerald-400/40 text-[8px] font-bold uppercase mt-0.5">Liberado para entrega imediata</p>
+                                             </div>
+                                         </motion.div>
+                                     )}
+
+                                     {activeMission.observations && (
+                                         <div className="bg-orange-500/5 p-4 rounded-xl border border-orange-500/10 flex items-start gap-3">
+                                             <Icon name="warning" className="text-orange-400 mt-0.5" size={16} />
+                                             <p className="text-orange-400/70 text-[9px] leading-relaxed italic font-black uppercase tracking-tight line-clamp-3">
+                                                 "{activeMission.observations}"
+                                             </p>
+                                         </div>
+                                     )}
+                                 </div>
+                             </div>
                         </section>
                     </div>
                 </motion.div>
 
-                {/* Final Action Container - FIXED at bottom of screen to avoid layout issues */}
-                <div className="fixed bottom-0 left-0 w-full p-6 pb-10 bg-gradient-to-t from-[#0c0f10] via-[#0c0f10] to-transparent z-[200]">
-                    <button 
+                {/* PREMIUM ACTION DOCK (Fixed at Bottom) */}
+                <div className="fixed bottom-0 left-0 w-full p-8 pb-12 bg-gradient-to-t from-black via-black/95 to-transparent z-[200] flex flex-col gap-4">
+                    <motion.button 
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.96 }}
                         onClick={btn.action}
                         disabled={isAccepting}
-                        className="w-full h-20 bg-yellow-400 rounded-3xl flex items-center justify-center shadow-2xl active:scale-[0.98] transition-all disabled:opacity-50 border-t border-white/50 group" 
+                        className="w-full h-22 bg-yellow-400 rounded-[35px] flex items-center justify-center shadow-[0_30px_60px_rgba(250,204,21,0.25),inset_8px_8px_16px_rgba(255,255,255,0.5),inset_-8px_-8px_16px_rgba(0,0,0,0.15)] disabled:opacity-50 border-t border-yellow-300/40 relative overflow-hidden group" 
                         style={sClayYellow}
                     >
-                        <span className="text-black font-black text-lg uppercase italic tracking-tighter">{isAccepting ? 'Sincronizando...' : btn.label}</span>
-                    </button>
+                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                        <div className="flex items-center gap-4">
+                            {isAccepting ? (
+                                <div className="size-7 border-4 border-black/20 border-t-black rounded-full animate-spin" />
+                            ) : (
+                                <Icon name={btn.icon} size={28} className="text-black group-hover:scale-110 transition-transform" />
+                            )}
+                            <span className="text-black font-black text-xl uppercase italic tracking-tighter">
+                                {isAccepting ? 'Sincronizando...' : btn.label}
+                            </span>
+                        </div>
+                    </motion.button>
                     
                     {['a_caminho_coleta', 'saiu_para_coleta', 'aceito', 'confirmado'].includes(activeMission.status || '') && (
                         <button 
                             onClick={async () => { if (await showConfirm({ message: 'Deseja realmente cancelar esta missão?' })) handleUpdateStatus('cancelado'); }}
-                            className="w-full py-4 text-red-500 text-[9px] font-black uppercase tracking-[0.4em] hover:text-red-700 transition-colors mt-2"
+                            className="w-full py-4 text-red-500/50 text-[10px] font-black uppercase tracking-[0.4em] hover:text-red-500 transition-all hover:scale-105 active:scale-95"
                         >
                             Cancelar Missão
                         </button>
