@@ -905,66 +905,56 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         navigateSubView("exclusive_offer");
                       }
                     }}
-                    className={`relative flex-shrink-0 w-[280px] h-[210px] snap-center rounded-[48px] overflow-hidden group cursor-pointer border-[1px] shadow-[15px_15px_35px_rgba(0,0,0,0.6),inset_6px_6px_12px_rgba(255,255,255,0.05),inset_-6px_-6px_12px_rgba(0,0,0,0.5)] ${story.isRedeemed ? "border-zinc-800 opacity-80" : story.isMaster ? "border-yellow-400" : "border-white/10"} transition-all duration-500`}
+                    className={`flex-shrink-0 w-[240px] h-[320px] snap-center relative rounded-[32px] overflow-hidden group cursor-pointer shadow-2xl border border-white/5 transition-all duration-500 ${story.isRedeemed ? "grayscale brightness-50 cursor-not-allowed" : story.isMaster ? "border-yellow-400" : ""}`}
                   >
-                    {/* Imagem de Fundo com Overlay Gradiente Pesado */}
-                    <img 
-                      src={story.img} 
-                      className="absolute inset-0 size-full object-cover group-hover:scale-110 transition-transform duration-[2s] brightness-[0.7] saturate-[1.1]" 
+                    {/* Imagem de Fundo */}
+                    <img
+                      src={story.img}
+                      className="absolute inset-0 size-full object-cover transition-transform duration-700 group-hover:scale-110 brightness-[0.85] saturate-[1.1]"
                       alt={story.name}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-                    
-                    {/* Badge de Tempo - Design "Relógio de Pulso" */}
-                    <div className="absolute top-5 right-5 z-20 bg-black/60 backdrop-blur-xl border border-white/20 px-3 py-2 rounded-2xl flex items-center gap-2 shadow-[12px_12px_24px_rgba(0,0,0,0.6),inset_4px_4px_8px_rgba(255,255,255,0.06),inset_-4px_-4px_8px_rgba(0,0,0,0.5)]">
-                       {story.isRedeemed ? (
-                         <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1">
-                            OK <span className="material-symbols-outlined text-xs">check_circle</span>
-                         </span>
-                       ) : (
-                         <>
-                           <div className="size-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.6)]" />
-                           <span className="text-[11px] font-black text-white uppercase tracking-widest">
-                             <FlashCountdown expiresAt={story.offer.expires_at} />
-                           </span>
-                         </>
-                       )}
-                    </div>
+                    {/* Gradiente overlay — mesmo padrão do turismo */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
 
-                    {/* Badge de Loja */}
-                    <div className="absolute top-5 left-5 z-20 flex items-center gap-2">
-                       <div className="size-8 rounded-full overflow-hidden border-2 border-white/20 shadow-lg bg-zinc-900 shrink-0">
-                          <img src={story.offer.admin_users?.store_logo || `https://api.dicebear.com/7.x/identicon/svg?seed=${story.merchant}`} className="size-full object-cover" alt="logo" />
-                       </div>
-                       <span className="text-[10px] font-black text-white uppercase tracking-tight truncate max-w-[120px] italic drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                          {story.merchant}
-                       </span>
-                    </div>
+                    {/* Badge de Tempo — topo direito (só quando disponível) */}
+                    {!story.isRedeemed && (
+                      <div className="absolute top-5 right-5 z-20 bg-black/60 backdrop-blur-xl border border-white/20 px-3 py-2 rounded-2xl flex items-center gap-2 shadow-[12px_12px_24px_rgba(0,0,0,0.6),inset_4px_4px_8px_rgba(255,255,255,0.06),inset_-4px_-4px_8px_rgba(0,0,0,0.5)]">
+                        <div className="size-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.6)]" />
+                        <span className="text-[11px] font-black text-white uppercase tracking-widest">
+                          <FlashCountdown expiresAt={story.offer.expires_at} />
+                        </span>
+                      </div>
+                    )}
 
-                    {/* Conteúdo Principal */}
-                    <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col justify-end z-10">
-                      <h5 className="text-lg font-black text-white leading-tight tracking-tighter uppercase italic drop-shadow-2xl line-clamp-1 group-hover:text-yellow-400 transition-colors">
+                    {/* Conteúdo Overlay — mesmo padrão do turismo */}
+                    <div className="absolute bottom-5 left-5 right-5 z-10">
+                      {/* Badge loja — turismo style */}
+                      <span className="bg-yellow-400 text-zinc-950 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest mb-2 inline-flex items-center gap-1.5">
+                        <img
+                          src={story.offer.admin_users?.store_logo || `https://api.dicebear.com/7.x/identicon/svg?seed=${story.merchant}`}
+                          className="size-3.5 rounded-full object-cover"
+                          alt="logo"
+                        />
+                        {story.merchant}
+                      </span>
+                      <h5 className="text-white text-xl font-black uppercase italic tracking-tighter leading-none group-hover:text-yellow-400 transition-colors drop-shadow-2xl line-clamp-1 mt-1">
                         {story.name}
                       </h5>
-                      
-                      <div className="flex items-end justify-between mt-2">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-black text-white italic tracking-tighter drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]">
-                            R$ {story.finalPrice}
+                      <div className="flex items-baseline gap-2 mt-1.5">
+                        <span className="text-2xl font-black text-white italic tracking-tighter drop-shadow-lg">
+                          R$ {story.finalPrice}
+                        </span>
+                        {story.originalPrice && (
+                          <span className="text-[10px] text-white/30 line-through font-bold italic">
+                            R$ {story.originalPrice}
                           </span>
-                          {story.originalPrice && (
-                            <span className="text-[10px] text-white/30 line-through font-bold italic">
-                              R$ {story.originalPrice}
-                            </span>
-                          )}
-                        </div>
-                        
+                        )}
                       </div>
                     </div>
 
-                    {/* Barra de Progresso de Escassez (Simulada) */}
+                    {/* Barra de Escassez */}
                     <div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-800/50 overflow-hidden">
-                       <motion.div 
+                       <motion.div
                          initial={{ width: "100%" }}
                          animate={{ width: "15%" }}
                          transition={{ duration: 60, repeat: Infinity, repeatType: "reverse" }}
@@ -974,16 +964,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   </motion.div>
                 ))}
 
-                {/* Card de "Ver Mais" minimalista */}
-                <div 
-                  onClick={() => navigateSubView("flash_offers_list")}
-                  className="flex-shrink-0 w-24 h-[160px] flex flex-col items-center justify-center gap-3 bg-zinc-900/40 rounded-[40px] border border-white/5 cursor-pointer hover:bg-zinc-800 transition-all"
-                >
-                   <div className="size-10 rounded-full border border-white/10 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-zinc-500">add</span>
-                   </div>
-                   <span className="text-[10px] font-black text-zinc-600 uppercase vertical-text tracking-widest">Ver Tudo</span>
-                </div>
+
               </div>
             </section>
           )}
