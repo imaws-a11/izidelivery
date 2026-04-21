@@ -59,6 +59,10 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
     }));
   };
 
+  React.useEffect(() => {
+    updateLocation();
+  }, []);
+
   const vehicleTypes = [
     { id: "fiorino", name: "Fiorino", icon: "local_shipping", priceKey: "fiorino" },
     { id: "van", name: "Van Carga", icon: "airport_shuttle", priceKey: "van_carga" },
@@ -241,9 +245,10 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
         </div>
 
         {/* ── BOTÃO FIXO ── */}
-        <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent z-50">
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
+        <div className="absolute bottom-0 left-0 right-0 p-8 pb-32 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent z-50 pointer-events-none">
+          <div className="pointer-events-auto">
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               if (mobilityStep === 1) {
@@ -266,6 +271,7 @@ export const FreightWizard: React.FC<FreightWizardProps> = ({
             </span>
             <Icon name={mobilityStep === 1 ? "arrow_forward" : "local_shipping"} className="relative z-10 text-black font-black" size={28} />
           </motion.button>
+          </div>
         </div>
       </IziBottomSheet>
 

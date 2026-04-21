@@ -405,18 +405,20 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
                   </motion.button>
                 )}
 
-                {/* CONCLUÍDO */}
                 {isFinished && (
                   <motion.button
                     whileTap={{ scale: 0.97 }}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     onClick={onBack}
-                    className="w-full py-6 rounded-[35px] bg-emerald-500 text-black font-black text-sm uppercase tracking-widest shadow-[0_20px_50px_rgba(34,197,94,0.3)] active:scale-95 transition-all italic"
+                    className="w-full py-6 rounded-[35px] bg-emerald-500 text-black font-black text-sm uppercase tracking-widest shadow-[0_20px_50px_rgba(34,197,94,0.3)] active:scale-95 transition-all italic mb-6"
                   >
                     Mudar para Nova Missão ✓
                   </motion.button>
                 )}
+                
+                {/* Safe area spacer */}
+                <div className="h-20 w-full" />
               </motion.div>
             )}
           </AnimatePresence>
