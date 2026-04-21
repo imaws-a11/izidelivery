@@ -10,7 +10,7 @@ export const ExploreHotelsView: React.FC<ExploreHotelsViewProps> = ({ onBack, on
     <div className="fixed inset-0 z-[150] bg-black text-white font-['Plus_Jakarta_Sans'] selection:bg-yellow-400 selection:text-black h-[100dvh] overflow-y-auto w-full pb-12">
       {/* Native Inline Header */}
       <header className="w-full flex items-center px-6 pt-12 pb-6 relative">
-        <button onClick={onBack} className="absolute left-6 w-12 h-12 flex items-center justify-center rounded-[20px] bg-zinc-900 shadow-[8px_8px_16px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.4)] hover:bg-zinc-800 transition-colors active:scale-95 duration-200">
+        <button onClick={onBack} className="absolute left-6 w-12 h-12 flex items-center justify-center rounded-[20px] bg-zinc-900 shadow-[8px_8px_16px_rgba(0,0,0,0.5),inset_2px_2px_4px_rgba(255,255,255,0.05),inset_-2px_-2px_4px_rgba(0,0,0,0.4)] hover:bg-zinc-800 transition-colors active:scale-95 duration-200 z-[50]">
           <span className="material-symbols-outlined text-yellow-400 text-xl font-black">arrow_back</span>
         </button>
         <h1 className="w-full text-center text-4xl font-black italic tracking-tighter uppercase drop-shadow-lg text-white">Hospedagens</h1>

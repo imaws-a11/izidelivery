@@ -16,188 +16,191 @@ export const ExcursionDetail: React.FC<ExcursionDetailProps> = ({
 
   return (
     <motion.div 
-      initial={{ opacity: 0, x: 100 }}
+      initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 100 }}
-      transition={{ type: "spring", damping: 25, stiffness: 200 }}
-      className="absolute inset-0 z-[140] bg-black text-white flex flex-col overflow-y-auto no-scrollbar pb-32 font-['Plus_Jakarta_Sans']"
+      exit={{ opacity: 0, x: 50 }}
+      transition={{ type: "spring", damping: 30, stiffness: 300 }}
+      className="absolute inset-0 z-[140] bg-black text-white flex flex-col overflow-y-auto no-scrollbar pb-40 font-['Plus_Jakarta_Sans']"
     >
       <style>{`
-        .clay-card {
-            background: #1a1a1a;
+        .clay-premium {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
             box-shadow: 
-                8px 8px 16px rgba(0,0,0,0.4),
-                inset 2px 2px 4px rgba(255,255,255,0.05),
-                inset -2px -2px 4px rgba(0,0,0,0.5);
+                20px 20px 40px rgba(0,0,0,0.6),
+                inset 2px 2px 4px rgba(255,255,255,0.05);
         }
-        .clay-card-yellow {
-            background: #FFD700;
-            box-shadow: 
-                inset 4px 4px 8px rgba(255,255,255,0.4),
-                inset -4px -4px 8px rgba(0,0,0,0.1),
-                0 10px 20px rgba(255,215,0,0.2);
-        }
-        .clay-icon-container {
-            box-shadow: 
-                inset 2px 2px 4px rgba(255,255,255,0.1),
-                inset -2px -2px 4px rgba(0,0,0,0.3);
-        }
-        .fill-icon {
-            font-variation-settings: 'FILL' 1;
+        .text-glow {
+            text-shadow: 0 0 20px rgba(250, 204, 21, 0.3);
         }
       `}</style>
 
-      {/* Immersive Header */}
-      <div className="relative w-full h-[397px] overflow-hidden rounded-b-[2rem] shadow-2xl shrink-0">
+      {/* FULLSCREEN HERO IMAGE */}
+      <div className="relative w-full h-[550px] shrink-0 border-b border-white/10">
         <img 
           className="w-full h-full object-cover" 
           src={excursion.image} 
           alt={excursion.title}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
         
-        {/* Quick Nav Overlays */}
-        <div className="absolute top-6 left-6 flex gap-4">
-          <button 
+        {/* Dynamic Overlays */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/80 to-transparent" />
+        
+        {/* UPPER NAVIGATION */}
+        <div className="absolute top-10 left-6 right-6 flex justify-between items-center z-20">
+          <motion.button 
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={onBack}
-            className="clay-card w-12 h-12 rounded-full flex items-center justify-center text-yellow-400 active:scale-95 transition-all"
+            className="size-14 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white"
           >
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
-        </div>
-        <div className="absolute top-6 right-6 flex gap-4">
-          <button className="clay-card w-12 h-12 rounded-full flex items-center justify-center text-yellow-400 active:scale-95 transition-all">
-            <span className="material-symbols-outlined">share</span>
-          </button>
-          <button className="clay-card w-12 h-12 rounded-full flex items-center justify-center text-yellow-400 active:scale-95 transition-all">
-            <span className="material-symbols-outlined">favorite</span>
-          </button>
+            <span className="material-symbols-outlined font-black">arrow_back</span>
+          </motion.button>
+          
+          <div className="flex gap-4">
+             <button className="size-14 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white active:scale-95 transition-all">
+                <span className="material-symbols-outlined">share</span>
+             </button>
+             <button className="size-14 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-yellow-400 active:scale-95 transition-all">
+                <span className="material-symbols-outlined fill-1">favorite</span>
+             </button>
+          </div>
         </div>
 
-        <div className="absolute bottom-8 left-6 right-6">
-          <div className="inline-block px-4 py-1 bg-yellow-400 text-black rounded-full text-[10px] font-extrabold uppercase tracking-widest mb-3">
-            PREMIUM EXPERIENCE
-          </div>
-          <h1 className="text-4xl font-black tracking-tight text-white mb-1 leading-tight">{excursion.title}</h1>
-          <div className="flex items-center gap-2 text-yellow-400">
-            <span className="material-symbols-outlined text-sm fill-icon">location_on</span>
-            <span className="text-sm font-semibold opacity-90">{excursion.origin}</span>
-          </div>
+        {/* HERO CONTENT */}
+        <div className="absolute bottom-12 left-8 right-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="flex flex-col gap-4"
+          >
+             <div className="inline-flex items-center gap-2 bg-yellow-400 text-black px-4 py-1.5 rounded-full w-fit">
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] italic">Luxury Experience</span>
+             </div>
+             <h1 className="text-5xl font-black tracking-tighter text-white uppercase italic leading-[0.9] drop-shadow-2xl">
+                {excursion.title.split(':').map((part: string, i: number) => (
+                   <span key={i} className={i === 1 ? "text-yellow-400 block mt-1" : "block"}>{part}</span>
+                ))}
+             </h1>
+             <div className="flex items-center gap-4 mt-2">
+                <div className="flex items-center gap-1.5 text-zinc-400">
+                   <span className="material-symbols-outlined text-sm fill-1 text-yellow-400">location_on</span>
+                   <span className="text-[11px] font-black uppercase tracking-widest">{excursion.origin}</span>
+                </div>
+                <div className="w-1 h-1 rounded-full bg-zinc-700" />
+                <div className="flex items-center gap-1.5 text-zinc-400">
+                   <span className="material-symbols-outlined text-sm fill-1 text-yellow-400">schedule</span>
+                   <span className="text-[11px] font-black uppercase tracking-widest">3 Dias • Elite Plan</span>
+                </div>
+             </div>
+          </motion.div>
         </div>
       </div>
 
-      {/* Main Content Grid */}
-      <main className="px-6 mt-8 relative z-10 space-y-8">
-        {/* Package Details Bento */}
+      {/* DETALHES GRID BENTO */}
+      <main className="px-8 -mt-10 relative z-20 space-y-12">
+        
+        {/* Core Specs Bento */}
         <section className="grid grid-cols-2 gap-4">
-          <div className="clay-card p-5 rounded-3xl flex flex-col items-center justify-center text-center space-y-2">
-            <div className="w-12 h-12 clay-icon-container bg-zinc-900 rounded-full flex items-center justify-center text-yellow-400 mb-1">
-              <span className="material-symbols-outlined text-3xl">restaurant</span>
+          <div className="clay-premium p-6 rounded-[32px] flex flex-col gap-4 group">
+            <div className="size-12 rounded-xl bg-white/5 flex items-center justify-center text-yellow-400 group-hover:scale-110 transition-transform">
+              <span className="material-symbols-outlined text-2xl font-black">restaurant</span>
             </div>
-            <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Refeições</span>
-            <span className="text-sm font-bold text-white leading-tight">{excursion.includes?.[0] || 'Refeição Inclusa'}</span>
+            <div>
+               <p className="text-[9px] uppercase font-black text-zinc-500 tracking-widest mb-1">Culinária</p>
+               <p className="text-sm font-black text-white italic uppercase tracking-tight leading-none">{excursion.includes?.[0] || 'Refeição Inclusa'}</p>
+            </div>
           </div>
-          <div className="clay-card p-5 rounded-3xl flex flex-col items-center justify-center text-center space-y-2">
-            <div className="w-12 h-12 clay-icon-container bg-zinc-900 rounded-full flex items-center justify-center text-yellow-400 mb-1">
-              <span className="material-symbols-outlined text-3xl">directions_bus</span>
+
+          <div className="clay-premium p-6 rounded-[32px] flex flex-col gap-4 group">
+            <div className="size-12 rounded-xl bg-white/5 flex items-center justify-center text-yellow-400 group-hover:scale-110 transition-transform">
+              <span className="material-symbols-outlined text-2xl font-black">directions_bus</span>
             </div>
-            <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Transporte</span>
-            <span className="text-sm font-bold text-white leading-tight">{excursion.transporte}</span>
+            <div>
+               <p className="text-[9px] uppercase font-black text-zinc-500 tracking-widest mb-1">Transporte</p>
+               <p className="text-sm font-black text-white italic uppercase tracking-tight leading-none">{excursion.transporte}</p>
+            </div>
           </div>
         </section>
 
-        {/* Premium Accommodation Section (only if exists) */}
+        {/* Accomodation Section */}
         {excursion.hospedagem && (
-          <section className="space-y-4">
-            <div className="flex justify-between items-end">
-              <h2 className="text-2xl font-black tracking-tight text-white">Acomodação Elite</h2>
-              <span className="text-yellow-400 text-xs font-bold uppercase tracking-widest">Ver Detalhes</span>
+          <section className="space-y-6">
+            <div className="flex justify-between items-end px-2">
+              <h2 className="text-3xl font-black tracking-tighter text-white uppercase italic">Elite Stay</h2>
+              <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest italic">Ver Detalhes</span>
             </div>
-            <div className="clay-card p-2 rounded-3xl overflow-hidden">
-              <div className="relative h-48 rounded-2xl overflow-hidden mb-4">
+            <div className="clay-premium p-3 rounded-[40px] overflow-hidden group">
+              <div className="relative h-64 rounded-[32px] overflow-hidden mb-6">
                 <img 
-                   className="w-full h-full object-cover" 
-                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuAgooE49J24mqBW6rxiZETYjzy21yP7TH6LDGUl3BKVyCHI3t-ZHyedPt_G09OMnBa5jG0Dw6m6GHBIXabJpch8lAzJYTi1mbMAOCjeU_L-OBBNx_jai0FPyyUeaagX9glD_-hTViTNUtkAZVhH9DOUrPqA_ZCTvQxxbhoSgz2j2MDFWM2oPj9JY7k959OR_JuTXoTALoQHbFac5WRAhc62tDvC7JFpHCQ_Vpi5MMe3XPxIUpohlK6Wibmu_hB-7RP85hYHgbLL1X4"
-                   alt="Acomodação"
+                   className="w-full h-full object-cover group-hover:scale-110 transition-all duration-[1.5s]" 
+                   src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop"
+                   alt="Hospedagem"
                 />
-                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-yellow-400 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm fill-icon">star</span>
-                  <span className="text-xs font-bold">5.0</span>
+                <div className="absolute top-6 right-6 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-full text-yellow-400 flex items-center gap-1.5 border border-white/10">
+                  <span className="material-symbols-outlined text-[14px] fill-1">star</span>
+                  <span className="text-xs font-black">5.0 EXCELENCE</span>
                 </div>
               </div>
-              <div className="px-3 pb-4">
-                <h3 className="text-lg font-bold text-white">{excursion.hospedagem}</h3>
-                <p className="text-sm text-zinc-400 mt-1 leading-relaxed">Suíte master com vista panorâmica, jacuzzi privativa e serviço de luxo.</p>
+              <div className="px-5 pb-6">
+                <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter leading-none mb-3">{excursion.hospedagem}</h3>
+                <p className="text-xs text-zinc-500 font-bold leading-relaxed uppercase tracking-widest">Suítes presidenciais com concierge dedicado, lazer completo e serviços exclusivos da categoria Izi Black.</p>
               </div>
             </div>
           </section>
         )}
 
-        {/* Itinerary */}
-        <section className="space-y-6">
-          <h2 className="text-2xl font-black tracking-tight text-white">Roteiro Exclusivo</h2>
-          <div className="space-y-4">
-            {/* Day 1 */}
-            <div className="flex gap-4">
-              <div className="flex flex-col items-center">
-                <div className="w-10 h-10 clay-card-yellow rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-black text-black">01</span>
+        {/* EXCLUSIVE ITINERARY (DESIGN TIMELINE PREMIUM) */}
+        <section className="space-y-8">
+           <div className="px-2">
+              <h2 className="text-3xl font-black tracking-tighter text-white uppercase italic">Master Roteiro</h2>
+              <p className="text-zinc-600 text-[9px] font-black uppercase tracking-[0.4em] mt-1">Timeline do Destino</p>
+           </div>
+          
+           <div className="space-y-6">
+              {[
+                { day: '01', title: 'Check-in & VIP Lounge', desc: 'Embarque em transporte executivo com recepção personalizada.' },
+                { day: '02', title: 'Exploração Exclusive', desc: 'Passeio guiado pelos pontos icônicos com acesso prioritário.' },
+                { day: '03', title: 'Relax & Leisure', desc: 'Dia livre para desfrutar da estrutura premium ou atividades opcionais.' }
+              ].map((step, i) => (
+                <div key={i} className="flex gap-6">
+                   <div className="flex flex-col items-center shrink-0">
+                      <div className={`size-12 rounded-2xl flex items-center justify-center font-black text-sm italic ${i === 0 ? 'bg-yellow-400 text-black shadow-lg shadow-yellow-400/20' : 'bg-zinc-900 text-zinc-600 border border-white/5'}`}>
+                         {step.day}
+                      </div>
+                      {i < 2 && <div className="w-0.5 h-16 bg-gradient-to-b from-zinc-800 to-transparent my-2" />}
+                   </div>
+                   <div className="clay-premium flex-1 p-6 rounded-[28px] mb-2 border border-white/5">
+                      <h4 className="font-black text-white uppercase italic tracking-tight text-lg mb-1">{step.title}</h4>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-relaxed">{step.desc}</p>
+                   </div>
                 </div>
-                <div className="w-1 h-full bg-zinc-800 my-2 rounded-full"></div>
-              </div>
-              <div className="clay-card flex-1 p-5 rounded-3xl mb-2">
-                <h4 className="font-extrabold text-white mb-1">Embarque Premium</h4>
-                <p className="text-sm text-zinc-400">Recepção no local de partida com {excursion.transporte}.</p>
-              </div>
-            </div>
-            {/* Day 2 */}
-            <div className="flex gap-4">
-              <div className="flex flex-col items-center">
-                <div className="w-10 h-10 clay-card rounded-full flex items-center justify-center flex-shrink-0 text-yellow-400">
-                  <span className="text-xs font-black">02</span>
-                </div>
-                {excursion.atividades && <div className="w-1 h-full bg-zinc-800 my-2 rounded-full"></div>}
-              </div>
-              <div className="clay-card flex-1 p-5 rounded-3xl mb-2">
-                <h4 className="font-extrabold text-white mb-1">Exploração e Lazer</h4>
-                <p className="text-sm text-zinc-400">Passeio pelos principais pontos turísticos com guia especializado.</p>
-              </div>
-            </div>
-            {/* Day 3 (Se tiver atividades adicionais) */}
-            {excursion.atividades && (
-              <div className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="w-10 h-10 clay-card rounded-full flex items-center justify-center flex-shrink-0 text-yellow-400">
-                    <span className="text-xs font-black">03</span>
-                  </div>
-                </div>
-                <div className="clay-card flex-1 p-5 rounded-3xl mb-2">
-                  <h4 className="font-extrabold text-white mb-1">{excursion.atividades}</h4>
-                  <p className="text-sm text-zinc-400">Dia focado em atividades especiais e contato com a natureza ou atrações.</p>
-                </div>
-              </div>
-            )}
-          </div>
+              ))}
+           </div>
         </section>
       </main>
 
-      {/* Sticky Bottom Section */}
-      <div className="fixed bottom-0 left-0 w-full z-50 p-6 bg-gradient-to-t from-black via-black/95 to-transparent">
-        <div className="w-full clay-card rounded-3xl flex items-center justify-between shadow-2xl px-6 py-5">
+      {/* FOOTER ACTION STICKY */}
+      <footer className="fixed bottom-0 left-0 w-full z-[150] p-8 bg-gradient-to-t from-black via-black/95 to-transparent">
+        <div className="clay-premium rounded-[32px] p-6 flex items-center justify-between shadow-[0_40px_80px_rgba(0,0,0,1)]">
           <div className="flex flex-col">
-            <span className="text-[10px] uppercase font-extrabold text-zinc-400 tracking-[0.1em] mb-1">Total por pessoa</span>
-            <div className="flex items-center gap-1.5">
-              <span className="font-black text-white tracking-tighter text-2xl">R$ {excursion.price.toFixed(2).replace('.', ',')}</span>
+            <span className="text-[8px] uppercase font-black text-zinc-500 tracking-[0.2em] mb-1">Luxury Package • PP</span>
+            <div className="flex items-baseline gap-1">
+              <span className="font-black text-white text-3xl tracking-tighter italic">R$ {excursion.price.toFixed(2).replace('.', ',')}</span>
             </div>
           </div>
           <button 
              onClick={onConfirmReservation}
-             className="clay-card-yellow h-14 px-6 rounded-full flex items-center justify-center active:scale-95 transition-all flex-shrink-0 ml-4"
+             className="h-16 px-10 rounded-[24px] bg-yellow-400 text-black font-black uppercase tracking-[0.2em] text-[11px] hover:bg-yellow-300 transition-colors shadow-[0_15px_30px_rgba(250,204,21,0.25)] flex items-center gap-3 active:scale-95"
           >
-            <span className="text-[11px] font-black tracking-widest text-black whitespace-nowrap">RESERVAR AGORA</span>
+            Reservar Experiência
+            <span className="material-symbols-outlined font-black">navigate_next</span>
           </button>
         </div>
-      </div>
+      </footer>
 
     </motion.div>
   );

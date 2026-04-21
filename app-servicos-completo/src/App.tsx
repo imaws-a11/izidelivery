@@ -40,12 +40,14 @@ import { FlashOffersListView } from "./components/features/FlashOffersListView";
 import { TaxiWizard } from "./components/features/Mobility/TaxiWizard";
 import { VanWizard } from "./components/features/Mobility/VanWizard";
 import { ExcursionWizard } from "./components/features/Excursions/ExcursionWizard";
+import { ExcursionDetail } from "./components/features/Excursions/ExcursionDetail";
 import { LogisticsTrackingView } from "./components/features/Mobility/LogisticsTrackingView";
 import { FreightWizard } from "./components/features/Mobility/FreightWizard";
 import { MobilityPaymentView } from "./components/features/Mobility/MobilityPaymentView";
 import SplashScreenComponent from "./components/common/SplashScreen";
 import { SplashScreen as CapacitorSplash } from "@capacitor/splash-screen";
 import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 import { Geolocation } from "@capacitor/geolocation";
 import { PushNotifications } from '@capacitor/push-notifications';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
@@ -580,10 +582,54 @@ function App() {
 
     setupPush();
 
+    // Listener para o botão de voltar do Android (Capacitor)
+    const backButtonHandler = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      console.log("[BACK] Botão físico detectado. canGoBack:", canGoBack);
+      
+      // Se houver uma subview aberta, voltamos para 'none'
+      if (subViewRef.current !== "none") {
+        console.log("[BACK] Fechando subView:", subViewRef.current);
+        window.history.back();
+        return;
+      }
+      
+      // Se estivermos em uma aba diferente de 'home', voltamos para 'home'
+      if (tabRef.current !== "home") {
+        console.log("[BACK] Voltando para aba Home");
+        window.history.back();
+        return;
+      }
+
+      // Se não houver histórico para voltar no navegador, podemos deixar o Capacitor fechar o app
+      // ou apenas registrar. Se canGoBack for false, o app geralmente fecha.
+      if (!canGoBack) {
+        CapacitorApp.exitApp();
+      } else {
+        window.history.back();
+      }
+    });
+
+    // Listener para mudanças no histórico (popstate) do navegador
+    const handlePopState = (event: PopStateEvent) => {
+      console.log("[POPSTATE] Mudança detetada:", event.state);
+      if (event.state) {
+        if (event.state.subView) setSubView(event.state.subView);
+        if (event.state.tab) setTab(event.state.tab);
+      } else {
+        // Se voltarmos ao estado inicial (sem state)
+        setSubView("none");
+        setTab("home");
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
     return () => {
       if (Capacitor.isNativePlatform()) {
         PushNotifications.removeAllListeners();
+        backButtonHandler.then(h => h.remove());
       }
+      window.removeEventListener("popstate", handlePopState);
     };
   }, [userId, user]);
 
@@ -1929,7 +1975,29 @@ function App() {
     };
     window.addEventListener("popstate", handlePopState);
     window.history.replaceState({ view, tab, subView }, "");
-    return () => window.removeEventListener("popstate", handlePopState);
+
+    // [NOVO] Handler para o botão voltar físico do dispositivo (Android)
+    const backHandler = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      console.log("[BACK] Botão voltar físico pressionado. subView atual:", subViewRef.current);
+      
+      if (subViewRef.current !== 'none') {
+        // Se houver uma subView (modal/overlay) aberta, volta no histórico do navegador
+        window.history.back();
+      } else if (tabRef.current !== 'home' && viewRef.current === 'app') {
+        // Se estiver em outra aba, volta para a home
+        setTab('home');
+        window.history.replaceState({ view: viewRef.current, tab: 'home', subView: 'none' }, "");
+      } else {
+        // Caso contrário, sai do app
+        CapacitorApp.exitApp();
+      }
+    });
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      // @ts-ignore - backHandler is a Promise
+      backHandler.then(h => h.remove());
+    };
   }, []);
 
   const appTabs = ["home", "orders", "wallet", "profile"] as const;
@@ -7168,6 +7236,23 @@ const navigateSubView = (target: string) => {
         userName={userName}
         setSubView={setSubView}
         navigateSubView={navigateSubView}
+        onSelectExcursion={(excursion) => {
+          setSelectedItem(excursion);
+          setSubView("excursion_detail");
+        }}
+      />
+    );
+  };
+
+  const renderExcursionDetail = () => {
+    return (
+      <ExcursionDetail 
+        excursion={selectedItem}
+        onBack={() => setSubView("excursion_wizard")}
+        onConfirmReservation={() => {
+          toastSuccess("Reserva solicitada com sucesso!");
+          setSubView("none");
+        }}
       />
     );
   };
@@ -8218,13 +8303,13 @@ const navigateSubView = (target: string) => {
 
               {subView === "explore_bars" && (
                 <motion.div key="explore_bars" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  <ExploreBarsView onBack={() => setSubView("none")} />
+                  <ExploreBarsView onBack={() => window.history.back()} />
                 </motion.div>
               )}
 
               {subView === "explore_hotels" && (
                 <motion.div key="explore_hotels" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
-                  <ExploreHotelsView onBack={() => setSubView("none")} onReserve={() => setSubView("hotel_reservation")} />
+                  <ExploreHotelsView onBack={() => window.history.back()} onReserve={() => setSubView("hotel_reservation")} />
                 </motion.div>
               )}
 
@@ -8387,6 +8472,11 @@ const navigateSubView = (target: string) => {
               {subView === "excursion_wizard" && (
                 <motion.div key="excv" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[120]">
                   {renderExcursionWizard()}
+                </motion.div>
+              )}
+              {subView === "excursion_detail" && (
+                <motion.div key="excd" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute inset-0 z-[130]">
+                  {renderExcursionDetail()}
                 </motion.div>
               )}
               {subView === "mobility_payment" && (

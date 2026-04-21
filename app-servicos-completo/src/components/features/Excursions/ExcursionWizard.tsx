@@ -1,7 +1,5 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Icon } from "../../common/Icon";
-import { ExcursionDetail } from "./ExcursionDetail";
+import { motion } from "framer-motion";
 
 interface Excursion {
   id: string;
@@ -15,21 +13,23 @@ interface Excursion {
   hospedagem?: string;
   destaque?: boolean;
   atividades?: string;
+  category: string;
 }
 
 interface ExcursionWizardProps {
   userName?: string;
   setSubView: (view: any) => void;
   navigateSubView: (view: any) => void;
+  onSelectExcursion: (excursion: any) => void;
 }
 
 export const ExcursionWizard: React.FC<ExcursionWizardProps> = ({
-  userName = "Viajante",
+  userName = "Marcos Silva",
   setSubView,
   navigateSubView,
+  onSelectExcursion,
 }) => {
-  const [activeFilter, setActiveFilter] = useState('Bate e Volta');
-  const [selectedExcursion, setSelectedExcursion] = useState<Excursion | null>(null);
+  const [activeFilter, setActiveFilter] = useState('Todos');
 
   const excursions: Excursion[] = [
     {
@@ -42,7 +42,8 @@ export const ExcursionWizard: React.FC<ExcursionWizardProps> = ({
       hospedagem: 'Hotel 4 Estrelas',
       vagas: 42,
       transporte: 'Ônibus DD Luxo',
-      destaque: true
+      destaque: true,
+      category: 'Bate e Volta'
     },
     {
       id: '2',
@@ -53,7 +54,8 @@ export const ExcursionWizard: React.FC<ExcursionWizardProps> = ({
       includes: ['Guias & Festas'],
       hospedagem: 'Hostel Boutique',
       vagas: 18,
-      transporte: 'Van Executiva'
+      transporte: 'Van Executiva',
+      category: 'Final de Semana'
     },
     {
       id: '3',
@@ -64,64 +66,95 @@ export const ExcursionWizard: React.FC<ExcursionWizardProps> = ({
       atividades: 'Trilhas & Cachoeiras',
       hospedagem: 'Casa de Campo',
       vagas: 12,
-      transporte: 'Van Premium'
+      transporte: 'Van Premium',
+      category: 'Bate e Volta'
     }
   ];
 
-  if (selectedExcursion) {
-    return (
-      <AnimatePresence>
-        <ExcursionDetail 
-          excursion={selectedExcursion} 
-          onBack={() => setSelectedExcursion(null)} 
-          onConfirmReservation={() => navigateSubView('checkout')} 
-        />
-      </AnimatePresence>
-    );
-  }
+  const categories = ['Todos', 'Bate e Volta', 'Final de Semana', 'Ônibus', 'Vans'];
+
+  const filteredExcursions = activeFilter === 'Todos' 
+    ? excursions 
+    : excursions.filter(ex => ex.category === activeFilter);
 
   return (
-    <div className="absolute inset-0 z-[120] bg-black text-white flex flex-col overflow-y-auto no-scrollbar font-['Plus_Jakarta_Sans']">
+    <div className="absolute inset-0 z-[120] bg-black text-white flex flex-col overflow-y-auto no-scrollbar font-['Plus_Jakarta_Sans'] pb-20">
+      <style>{`
+        .clay-card {
+            box-shadow: inset 4px 4px 10px rgba(255, 255, 255, 0.05), 
+                        inset -4px -4px 10px rgba(0, 0, 0, 0.5),
+                        0 10px 30px rgba(0, 0, 0, 0.6);
+        }
+        .clay-button-primary {
+            background: linear-gradient(135deg, #facc15 0%, #fde047 100%);
+            box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.4),
+                        0 8px 16px rgba(250, 204, 21, 0.2);
+        }
+        .clay-filter {
+            box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.1),
+                        0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+        .clay-filter-active {
+            background: linear-gradient(135deg, #facc15 0%, #fde047 100%);
+            box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.4),
+                        0 8px 16px rgba(250, 204, 21, 0.2);
+        }
+        .neon-glow {
+            text-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
       
-      {/* Header Estilo Luxury */}
-      <header className="px-6 pt-8 pb-4 shrink-0">
-        <div className="bg-zinc-900/50 backdrop-blur-xl rounded-[32px] p-5 flex items-center justify-between border border-white/5 shadow-[inset_4px_4px_10px_rgba(255,255,255,0.02),0_10px_30px_rgba(0,0,0,0.5)]">
+      {/* Custom Luxury Profile Header */}
+      <header className="px-6 pt-8 pb-4 sticky top-0 z-[130] bg-black/50 backdrop-blur-xl">
+        <div className="clay-card bg-zinc-900/80 rounded-2xl p-5 flex items-center justify-between border border-white/5">
           <div className="flex items-center gap-4">
             <div className="relative">
               <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-yellow-400 p-0.5">
                 <img 
-                  className="w-full h-full rounded-full object-cover" 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9r2uWjyR4PJIf6ve4uL4A4TkYfzqzager2hIBJOkez7m46emVfyxo4qidZfP1NpLUTkdihXg55-KY7zWBAoMrDVGFNgFkT19wIwHSTM4ITCy-pyeDG6jldusiLrjRsYAdfBcrKky55hw1bHMAoM1SUVockuz4-GDzYgm-whjWQQDiGf__cnXpOb2clsreHouY5bJnF7flNke2liMyNpKff29uBzaLJ4taEisPyd3oBYiOrs2gqoklHfCJjfmgq2bMIP7j-03NBHg" 
+                  className="w-full h-full object-cover rounded-full" 
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userName}`} 
                   alt="Perfil"
                 />
               </div>
-              <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-zinc-900">
-                <span className="material-symbols-outlined text-[14px] fill-1">star</span>
+              <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-zinc-900 shadow-lg scale-90">
+                <span className="material-symbols-outlined text-[14px] font-black" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
               </div>
             </div>
             <div>
               <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em]">Olá, Viajante</p>
-              <h1 className="text-lg font-black tracking-tighter text-white uppercase italic">{userName}</h1>
+              <h1 className="text-xl font-black tracking-tight text-white uppercase neon-glow">{userName}</h1>
             </div>
           </div>
-          <button onClick={() => setSubView("none")} className="size-12 rounded-full bg-zinc-800 flex items-center justify-center text-yellow-400 active:scale-95 transition-all">
-            <span className="material-symbols-outlined">close</span>
-          </button>
+          <div className="flex gap-3">
+            <button 
+              onClick={() => setSubView("none")}
+              className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center clay-filter text-yellow-400 transition-transform active:scale-95 border border-white/10"
+            >
+              <span className="material-symbols-outlined font-black">close</span>
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* Título e Filtros */}
-      <section className="px-6 py-4">
-        <h2 className="text-yellow-400 font-black text-3xl uppercase italic mb-6 tracking-tighter">Excursões</h2>
+      {/* Filters Section */}
+      <section className="px-6 py-4 relative z-20">
+        <h2 className="text-yellow-400 font-black text-2xl uppercase mb-4 tracking-tighter">Excursões</h2>
         <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6">
-          {['Bate e Volta', 'Final de Semana', 'Ônibus', 'Vans'].map((filter) => (
+          {categories.map((filter) => (
             <button 
               key={filter}
               onClick={() => setActiveFilter(filter)}
-              className={`px-6 py-3.5 rounded-full font-black text-[11px] uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${
+              className={`px-8 py-3 rounded-full font-black text-[11px] uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${
                 activeFilter === filter 
-                ? 'bg-yellow-400 text-black shadow-[0_8px_20px_rgba(250,204,21,0.3),inset_2px_2px_4px_rgba(255,255,255,0.4)]' 
-                : 'bg-zinc-900 text-zinc-500 border border-white/5'
+                ? 'clay-filter-active text-black' 
+                : 'clay-filter bg-zinc-900 text-zinc-500 border border-white/5 active:scale-95'
               }`}
             >
               {filter}
@@ -130,105 +163,100 @@ export const ExcursionWizard: React.FC<ExcursionWizardProps> = ({
         </div>
       </section>
 
-      {/* Conteúdo Principal */}
-      <main className="px-6 space-y-8 pb-32">
-        {excursions.map((ex, idx) => (
+      {/* Main Excursions Content */}
+      <main className="px-6 space-y-10 relative z-10">
+        {filteredExcursions.map((ex, idx) => (
           <motion.article 
             key={ex.id}
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: idx * 0.1 }}
-            className="bg-zinc-900 border border-white/5 rounded-[40px] overflow-hidden relative group shadow-2xl"
+            transition={{ delay: idx * 0.1, duration: 0.6 }}
+            className="clay-card bg-zinc-900/40 rounded-[40px] overflow-hidden relative group border border-white/5"
           >
             <div className="relative h-72 overflow-hidden">
-              <img src={ex.image} alt={ex.title} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-1000" />
-              <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-transparent" />
+              <img 
+                className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-[1.5s]" 
+                src={ex.image} 
+                alt={ex.title} 
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-transparent opacity-90"></div>
               {ex.destaque && (
-                <div className="absolute top-6 left-6 bg-yellow-400 text-black font-black px-4 py-1.5 rounded-full text-[10px] uppercase tracking-widest shadow-xl">
+                <div className="absolute top-6 left-6 bg-yellow-400 text-black font-black px-5 py-1.5 rounded-full text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[14px] fill-1">verified</span>
                   Destaque
                 </div>
               )}
             </div>
 
             <div className="p-8 space-y-6">
-              <div className="flex justify-between items-start gap-4">
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-tight">{ex.title}</h3>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-3xl font-black text-white tracking-tighter uppercase leading-none truncate max-w-[200px] mb-2">{ex.title}</h3>
                   <div className="flex items-center gap-1.5 text-yellow-400">
-                    <span className="material-symbols-outlined text-sm fill-1">location_on</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest">Saída: {ex.origin}</span>
+                    <span className="material-symbols-outlined text-sm font-black" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest">{ex.origin}</span>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">A partir de</p>
-                  <p className="text-3xl font-black text-yellow-400 italic tracking-tighter">R$ {ex.price}</p>
+                <div className="text-right">
+                  <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">A partir de</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-yellow-400 font-black text-sm uppercase">R$</span>
+                    <span className="text-3xl font-black text-white neon-glow leading-none">{ex.price}</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-3 bg-white/5 p-4 rounded-3xl border border-white/5 shadow-inner">
-                  <span className="material-symbols-outlined text-yellow-400 text-lg fill-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-3 bg-zinc-800/50 p-4 rounded-2xl clay-filter border border-white/5">
+                  <span className="material-symbols-outlined text-yellow-400 text-xl font-black" style={{ fontVariationSettings: "'FILL' 1" }}>
                     {ex.atividades ? 'hiking' : 'restaurant'}
                   </span>
                   <div>
-                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest">{ex.atividades ? 'Atividade' : 'Inclui'}</p>
-                    <p className="text-[11px] font-black text-white uppercase italic leading-none mt-0.5">{ex.atividades || ex.includes?.[0]}</p>
+                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest leading-none mb-1">{ex.atividades ? 'Atividade' : 'Inclui'}</p>
+                    <p className="text-[11px] font-black text-white leading-tight uppercase tracking-tight">{ex.atividades || ex.includes[0]}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 bg-white/5 p-4 rounded-3xl border border-white/5 shadow-inner">
-                  <span className="material-symbols-outlined text-yellow-400 text-lg fill-1">hotel</span>
+
+                <div className="flex items-center gap-3 bg-zinc-800/50 p-4 rounded-2xl clay-filter border border-white/5">
+                  <span className="material-symbols-outlined text-yellow-400 text-xl font-black" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    {ex.hospedagem ? 'hotel' : 'home'}
+                  </span>
                   <div>
-                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Hospedagem</p>
-                    <p className="text-[11px] font-black text-white uppercase italic leading-none mt-0.5">{ex.hospedagem}</p>
+                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest leading-none mb-1">Hospedagem</p>
+                    <p className="text-[11px] font-black text-white leading-tight uppercase tracking-tight">{ex.hospedagem || 'Day Use'}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 bg-white/5 p-4 rounded-3xl border border-white/5 shadow-inner">
-                  <span className="material-symbols-outlined text-yellow-400 text-lg fill-1">groups</span>
+
+                <div className="flex items-center gap-3 bg-zinc-800/50 p-4 rounded-2xl clay-filter border border-white/5">
+                  <span className="material-symbols-outlined text-yellow-400 text-xl font-black" style={{ fontVariationSettings: "'FILL' 1" }}>group</span>
                   <div>
-                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Vagas</p>
-                    <p className="text-[11px] font-black text-white uppercase italic leading-none mt-0.5">{ex.vagas} Pessoas</p>
+                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest leading-none mb-1">Vagas</p>
+                    <p className="text-[11px] font-black text-white leading-tight uppercase tracking-tight">{ex.vagas} Pessoas</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 bg-white/5 p-4 rounded-3xl border border-white/5 shadow-inner">
-                  <span className="material-symbols-outlined text-yellow-400 text-lg fill-1">directions_bus</span>
+
+                <div className="flex items-center gap-3 bg-zinc-800/50 p-4 rounded-2xl clay-filter border border-white/5">
+                  <span className="material-symbols-outlined text-yellow-400 text-xl font-black" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    {ex.transporte.includes('Van') ? 'airport_shuttle' : 'directions_bus'}
+                  </span>
                   <div>
-                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Transporte</p>
-                    <p className="text-[11px] font-black text-white uppercase italic leading-none mt-0.5">{ex.transporte}</p>
+                    <p className="text-[8px] text-zinc-500 font-black uppercase tracking-widest leading-none mb-1">Transporte</p>
+                    <p className="text-[11px] font-black text-white leading-tight uppercase tracking-tight">{ex.transporte}</p>
                   </div>
                 </div>
               </div>
 
               <button 
-                onClick={() => setSelectedExcursion(ex)}
-                className="w-full bg-yellow-400 hover:bg-yellow-300 text-black py-5 rounded-full font-black uppercase tracking-[0.2em] text-[11px] shadow-[0_15px_30px_rgba(250,204,21,0.2),inset_4px_4px_8px_rgba(255,255,255,0.4)] transition-all active:scale-95"
+                onClick={() => onSelectExcursion(ex)}
+                className="w-full clay-button-primary py-5 rounded-[24px] font-black text-black uppercase tracking-[0.2em] text-[12px] active:scale-95 transition-all"
               >
-                Detalhes da Viagem
+                Reservar Agora
               </button>
             </div>
           </motion.article>
         ))}
       </main>
-
-      {/* Navegação Inferior (Mock) */}
-      <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center h-24 px-6 bg-zinc-900/60 backdrop-blur-3xl rounded-t-[40px] border-t border-white/5 z-[130] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-        <button className="flex flex-col items-center gap-1.5 opacity-40">
-          <span className="material-symbols-outlined text-2xl">home</span>
-          <span className="text-[8px] font-black uppercase tracking-widest">Início</span>
-        </button>
-        <button className="flex flex-col items-center gap-1.5 bg-yellow-400 text-black px-6 py-2.5 rounded-full shadow-[inset_0_4px_8px_rgba(255,255,255,0.4)]">
-          <span className="material-symbols-outlined text-2xl fill-1">explore</span>
-          <span className="text-[8px] font-black uppercase tracking-widest">Explorar</span>
-        </button>
-        <button className="flex flex-col items-center gap-1.5 opacity-40">
-          <span className="material-symbols-outlined text-2xl">confirmation_number</span>
-          <span className="text-[8px] font-black uppercase tracking-widest">Reservas</span>
-        </button>
-        <button className="flex flex-col items-center gap-1.5 opacity-40">
-          <span className="material-symbols-outlined text-2xl">person</span>
-          <span className="text-[8px] font-black uppercase tracking-widest">Perfil</span>
-        </button>
-      </nav>
     </div>
   );
 };
