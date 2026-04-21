@@ -53,6 +53,10 @@ export const VanWizard: React.FC<VanWizardProps> = ({
     return base + (distanceMultiplier * 4.5);
   }, [distancePrices, transitData.type, routeDistance]);
 
+  React.useEffect(() => {
+    updateLocation();
+  }, []);
+
   return (
     <div className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden"
          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -213,9 +217,10 @@ export const VanWizard: React.FC<VanWizardProps> = ({
         </div>
 
         {/* ── BOTÃO FIXO (Dentro do Sheet) ── */}
-        <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent z-50">
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
+        <div className="absolute bottom-0 left-0 right-0 p-8 pb-32 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent z-50 pointer-events-none">
+          <div className="pointer-events-auto">
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               if (mobilityStep === 1) {
@@ -238,6 +243,7 @@ export const VanWizard: React.FC<VanWizardProps> = ({
             </span>
             <Icon name={mobilityStep === 1 ? "arrow_forward" : "local_shipping"} className="relative z-10 text-white font-black group-hover:translate-x-2 transition-transform" size={28} />
           </motion.button>
+          </div>
         </div>
       </IziBottomSheet>
 

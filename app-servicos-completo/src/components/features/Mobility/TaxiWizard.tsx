@@ -53,6 +53,10 @@ export const TaxiWizard: React.FC<TaxiWizardProps> = ({
     return base + (distanceMultiplier * 3.5);
   }, [distancePrices, transitData.type, routeDistance]);
 
+  React.useEffect(() => {
+    updateLocation();
+  }, []);
+
   return (
     <div
       className="absolute inset-0 z-[120] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden"
@@ -331,9 +335,10 @@ export const TaxiWizard: React.FC<TaxiWizardProps> = ({
         </div>
 
         {/* ── BOTÃO FIXO (Dentro do Sheet, fixo na base do sheet) ── */}
-        <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black via-black/95 to-transparent z-50">
-          <motion.button
-            whileHover={{ scale: 1.02, y: -2 }}
+        <div className="absolute bottom-0 left-0 right-0 p-8 pb-32 bg-gradient-to-t from-black via-black/95 to-transparent z-50 pointer-events-none">
+          <div className="pointer-events-auto">
+            <motion.button
+              whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.96 }}
             onClick={() => {
               if (mobilityStep === 1) {
@@ -367,6 +372,7 @@ export const TaxiWizard: React.FC<TaxiWizardProps> = ({
               />
             </div>
           </motion.button>
+          </div>
         </div>
       </IziBottomSheet>
     </div>

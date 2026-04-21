@@ -75,6 +75,7 @@ export const IziBottomSheet: React.FC<IziBottomSheetProps> = ({
 
       {/* O Sheet real */}
       <div 
+        onPointerDown={(e) => e.stopPropagation()}
         className="pointer-events-auto flex flex-col w-full h-full relative"
         style={{
           background: "linear-gradient(180deg, #09090b 0%, #000000 100%)",
@@ -88,8 +89,8 @@ export const IziBottomSheet: React.FC<IziBottomSheetProps> = ({
           <div className="w-12 h-1.5 rounded-full bg-zinc-800/80" />
         </div>
 
-        {/* Conteúdo com Scroll */}
-        <div className="flex-1 overflow-y-auto no-scrollbar">
+        {/* Conteúdo com Scroll - pb-56 garante que o botão fixo + nav bar não sobreponham o conteúdo */}
+        <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: "14rem" }}>
           {children}
         </div>
       </div>
