@@ -368,27 +368,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black to-transparent" />
 
                   <div className="absolute inset-x-0 bottom-0 px-6 pb-12 z-20">
-                    <motion.div
-                      initial={{ y: 20, opacity: 0 }}
-                      whileInView={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 0.1 }}
-                      className="flex flex-col"
-                    >
-                      <span className="bg-white/10 backdrop-blur-md text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-[0.2em] w-fit mb-4 border border-white/10">
-                        {banner.target_view === 'izi_black_purchase' ? 'Izi Black' : 'Exclusivo Izi'}
-                      </span>
-                      <h2 className="text-4xl font-black text-white leading-[0.9] tracking-tighter uppercase italic drop-shadow-2xl">
-                        {banner.title || "Experimente o Novo"}
-                      </h2>
-                      <p className="text-zinc-300 text-xs font-medium mt-4 line-clamp-2 max-w-[280px] leading-relaxed drop-shadow-lg">
-                        {banner.description || "Confira as melhores ofertas selecionadas especialmente para você hoje."}
-                      </p>
-                      <div className="flex gap-4 mt-8">
-                         <button className="flex items-center gap-2 px-8 py-3.5 bg-yellow-400 text-black font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-2xl shadow-yellow-400/20">
-                            Aproveitar Agora
-                         </button>
-                      </div>
-                    </motion.div>
+                    <button className="flex items-center gap-2 px-8 py-3.5 bg-yellow-400 text-black font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-2xl shadow-yellow-400/20">
+                      Aproveitar Agora
+                    </button>
                   </div>
                 </div>
               ))}

@@ -7216,9 +7216,35 @@ const navigateSubView = (target: string) => {
   };
 
   const renderExploreEnvios = () => {
+    const getPriorityPrice = (priorityId: string) => {
+      const basePrice = distancePrices[transitData.type as keyof typeof distancePrices] || distancePrices.mototaxi || 0;
+      const settings = marketConditions.settings;
+      if (!settings || !settings.shippingPriorities) return basePrice;
+      
+      const config = settings.shippingPriorities[priorityId as keyof typeof settings.shippingPriorities];
+      if (!config) return basePrice;
+
+      // Se não temos km, tentamos mostrar a taxa mínima ou o próprio baseprice
+      if (distanceValueKm === 0 && config.min_fee) {
+        return config.min_fee;
+      }
+
+      if ((config as any).km_fee > 0) {
+        const p = (config.min_fee || 0) + ((config as any).km_fee * distanceValueKm);
+        return parseFloat(p.toFixed(2));
+      }
+      
+      let price = basePrice * (config.multiplier || 1.0);
+      if (price < (config.min_fee || 0)) price = config.min_fee;
+      return price;
+    };
+
     const services = [
-      { id: "express", name: "Izi Express", desc: "Documentos e pequenos volumes", icon: "bolt", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "express" }); navigateSubView("shipping_priority"); } },
-      { id: "coleta",  name: "Click e Retire Izi", desc: "Retirada rápida em lojas parceiras", icon: "inventory_2", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "coleta" }); navigateSubView("shipping_details"); } },
+      { id: "coleta",  name: "Click e Retire Izi", desc: "Retirada rápida em lojas parceiras", icon: "inventory_2", isPriority: false, action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "coleta" }); navigateSubView("shipping_details"); } },
+      { id: "turbo", name: "Izi Turbo Flash", desc: "Entrega ultra-rápida até 15 min", time: "15 min", color: "text-amber-400", isPriority: true, icon: "bolt", priorityId: "turbo", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "express", priority: "turbo", scheduled: false }); navigateSubView("shipping_details"); } },
+      { id: "light", name: "Izi Light Flash", desc: "Entrega agilizada até 30 min", time: "30 min", color: "text-yellow-400", isPriority: true, icon: "electric_bolt", priorityId: "light", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "express", priority: "light", scheduled: false }); navigateSubView("shipping_details"); } },
+      { id: "normal", name: "Izi Express", desc: "Categoria normal de entrega", time: "1 hr", color: "text-zinc-100", isPriority: true, icon: "moped", priorityId: "normal", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "express", priority: "normal", scheduled: false }); navigateSubView("shipping_details"); } },
+      { id: "scheduled", name: "Izi Agendado", desc: "Você escolhe data e horário", time: "Agendar", color: "text-blue-400", isPriority: true, icon: "event", priorityId: "scheduled", action: () => { setTransitData({ ...transitData, type: "utilitario", subService: "express", priority: "scheduled", scheduled: true }); navigateSubView("shipping_details"); } }
     ];
     return (
       <div className="absolute inset-0 z-40 bg-black text-zinc-100 flex flex-col overflow-y-auto no-scrollbar">
@@ -7256,7 +7282,15 @@ const navigateSubView = (target: string) => {
                   <span className="material-symbols-outlined text-3xl text-black font-black">{svc.icon}</span>
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-black text-lg text-white group-hover:text-yellow-400 transition-all duration-300 tracking-tight">{svc.name}</h3>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <h3 className="font-black text-lg text-white group-hover:text-yellow-400 transition-all duration-300 tracking-tight">{svc.name}</h3>
+                    {svc.isPriority && (
+                      <div className="flex flex-col items-end">
+                        <span className={`text-[10px] font-black uppercase tracking-[0.1em] ${svc.color}`}>{svc.time}</span>
+                        <span className="text-[11px] font-black text-white mt-0.5 whitespace-nowrap">R$ {getPriorityPrice(svc.priorityId).toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-zinc-500 text-[11px] mt-1 font-medium leading-tight">{svc.desc}</p>
                 </div>
                 <div className="size-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-yellow-400 group-hover:text-black transition-all">
@@ -7266,17 +7300,7 @@ const navigateSubView = (target: string) => {
             </motion.div>
           ))}
 
-          <div className="mt-4 p-8 rounded-[45px] bg-zinc-800 shadow-[20px_20px_40px_rgba(0,0,0,0.6),-5px_-5px_15px_rgba(255,255,255,0.02),inset_4px_4px_8px_rgba(255,255,255,0.03),inset_-4px_-4px_8px_rgba(0,0,0,0.4)] border border-yellow-400/20 relative overflow-hidden group">
-             <div className="relative z-10">
-                <h4 className="text-white font-black text-lg tracking-tight mb-2">Izi Versátil</h4>
-                <p className="text-zinc-500 text-xs leading-relaxed max-w-[200px]">Transporte de cargas pesadas, utilitários e vans para empresas ou particulares.</p>
-                <div className="mt-6 flex flex-col gap-3">
-                    <button onClick={() => { setTransitData({ ...transitData, type: "van", scheduled: true }); setSubView("excursion_wizard"); setMobilityStep(1); }} className="px-6 py-4 bg-yellow-400 text-black text-[11px] font-black rounded-2xl uppercase tracking-widest shadow-[6px_6px_12px_rgba(0,0,0,0.3),inset_2px_2px_4px_rgba(255,255,255,0.5),inset_-2px_-2px_4px_rgba(0,0,0,0.2)] active:scale-95 transition-all text-center">Excursões & Viagens</button>
-                    <button onClick={() => setShowLojistasModal(true)} className="px-6 py-4 bg-zinc-900 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4),inset_-2px_-2px_4px_rgba(255,255,255,0.02)] text-white text-[11px] font-black rounded-2xl uppercase tracking-widest border border-white/5 active:scale-95 transition-all text-center">Ver Parceiros</button>
-                 </div>
-             </div>
-             <span className="material-symbols-outlined absolute -right-4 -bottom-4 text-[130px] text-yellow-400/5 rotate-12">local_shipping</span>
-          </div>
+
 
           <section className="mt-8 space-y-4">
              <h5 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em] px-2">Diferenciais Izi</h5>
@@ -7423,13 +7447,7 @@ const navigateSubView = (target: string) => {
       <div className="absolute inset-0 z-[120] bg-black text-zinc-100 flex flex-col hide-scrollbar overflow-y-auto animate-in fade-in duration-500 pb-6">
         <header className="px-6 py-8 flex items-center justify-between gap-4 sticky top-0 bg-black/80 backdrop-blur-xl z-50">
           <button
-            onClick={() =>
-              navigateSubView(
-                transitData.subService === "express"
-                  ? "shipping_priority"
-                  : "explore_envios",
-              )
-            }
+            onClick={() => navigateSubView("explore_envios")}
             className="size-12 rounded-2xl bg-zinc-900 shadow-xl flex items-center justify-center text-white active:scale-90 transition-all border border-zinc-800"
           >
             <Icon name="arrow_back" />
