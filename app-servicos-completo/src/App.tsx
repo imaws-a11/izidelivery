@@ -7160,24 +7160,9 @@ const navigateSubView = (target: string) => {
   const renderExcursionWizard = () => {
     return (
       <ExcursionWizard 
-        transitData={transitData}
-        setTransitData={setTransitData}
-        mobilityStep={mobilityStep}
-        setMobilityStep={setMobilityStep}
-        userLocation={userLocation}
-        updateLocation={updateLocation}
-        routePolyline={routePolyline}
-        driverLocation={driverLocation}
-        distancePrices={distancePrices}
-        isCalculatingPrice={isCalculatingPrice}
-        marketConditions={marketConditions}
-        paymentMethod={paymentMethod}
-        userLevel={userLevel}
-        routeDistance={routeDistance}
-        setPaymentsOrigin={setPaymentsOrigin}
+        userName={userName}
         setSubView={setSubView}
         navigateSubView={navigateSubView}
-        showToast={showToast}
       />
     );
   };
