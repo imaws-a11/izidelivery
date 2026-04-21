@@ -799,7 +799,7 @@ function App() {
   const updateLocation = (onSuccess?: (address: string) => void) => {
     setUserLocation((prev) => ({ ...prev, loading: true }));
 
-    const processCoords = async (latitude: number, longitude: number) => {
+    const processCoords = async (latitude: number, longitude: number, accuracy?: number) => {
       try {
         let address = "";
 
@@ -836,7 +836,8 @@ function App() {
           address = nomData.display_name?.split(",").slice(0, 3).join(",").trim() || "Localização atual";
         }
 
-        setUserLocation({ address, loading: false, lat: latitude, lng: longitude });
+        setUserLocation({ address, loading: false, lat: latitude, lng: longitude, accuracy });
+        localStorage.setItem("lastKnownLocation", JSON.stringify({ address, loading: false, lat: latitude, lng: longitude, accuracy }));
         setTransitData((prev) => ({ 
           ...prev, 
           origin: { 
@@ -859,9 +860,10 @@ function App() {
           if (perm.location === "granted") {
             const pos = await Geolocation.getCurrentPosition({
               enableHighAccuracy: true,
-              timeout: 10000,
+              timeout: 15000,
+              maximumAge: 0
             });
-            await processCoords(pos.coords.latitude, pos.coords.longitude);
+            await processCoords(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
           } else {
             setUserLocation({ address: "Permissão de localização negada", loading: false });
           }
@@ -879,18 +881,65 @@ function App() {
     }
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        await processCoords(position.coords.latitude, position.coords.longitude);
+        await processCoords(position.coords.latitude, position.coords.longitude, position.coords.accuracy);
       },
       () => {
         setUserLocation({ address: "Permissão de localização negada", loading: false });
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
   useEffect(() => {
     updateLocation();
   }, []);
+
+  useEffect(() => {
+    const mobilityViews = ["taxi_wizard", "freight_wizard", "logistics_tracking", "excursion_wizard", "van_wizard"];
+    let watchId: any = null;
+
+    if (mobilityViews.includes(subView)) {
+      console.log("[GEO] Ativando monitoramento contínuo para subView:", subView);
+      if (Capacitor.isNativePlatform()) {
+        Geolocation.watchPosition({
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }, (pos) => {
+          if (pos?.coords) {
+            setUserLocation(prev => ({ 
+              ...prev, 
+              lat: pos.coords.latitude, 
+              lng: pos.coords.longitude, 
+              loading: false,
+              accuracy: pos.coords.accuracy 
+            }));
+          }
+        }).then(id => { watchId = id; });
+      } else {
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            setUserLocation(prev => ({ 
+              ...prev, 
+              lat: pos.coords.latitude, 
+              lng: pos.coords.longitude, 
+              loading: false,
+              accuracy: pos.coords.accuracy 
+            }));
+          },
+          () => {},
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+      }
+    }
+
+    return () => {
+      if (watchId !== null) {
+        if (Capacitor.isNativePlatform()) Geolocation.clearWatch({ id: watchId });
+        else navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [subView]);
 
   useEffect(() => {
     if (user) {
@@ -908,7 +957,7 @@ function App() {
     } else if (!authInitLoading) {
       setView("login");
     }
-  }, [user, authInitLoading]);
+  }, [user, authInitLoading, userId]);
   useEffect(() => {
     if (!userId) return;
     const sub = supabase
@@ -2776,9 +2825,18 @@ const navigateSubView = (target: string) => {
     loading: boolean;
     lat?: number;
     lng?: number;
-  }>({
-    address: "Buscando localização...",
-    loading: true,
+  }>(() => {
+    const saved = localStorage.getItem("lastKnownLocation");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return { ...parsed, loading: false };
+      } catch { /* ignore */ }
+    }
+    return {
+      address: "Buscando localização...",
+      loading: true,
+    };
   });
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao" | "dinheiro" | "cartao_entrega" | "saldo" | "bitcoin_lightning" | "google_pay">(() => (localStorage.getItem("preferredPaymentMethod") as any) || "cartao");
   const [changeFor, setChangeFor] = useState("");
@@ -8503,7 +8561,8 @@ const navigateSubView = (target: string) => {
                     driverLocation={driverLocation} 
                     userLocation={(userLocation?.lat && userLocation?.lng) ? { lat: userLocation.lat as number, lng: userLocation.lng as number } : null} 
                     onBack={() => setSubView("none")} 
-                    onCancel={() => handleCancelOrder(selectedItem?.id)} 
+                    onCancel={() => handleCancelOrder(selectedItem?.id)}
+                    onUpdateLocation={updateLocation}
                   />
                 </motion.div>
               )}

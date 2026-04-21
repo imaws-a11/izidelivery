@@ -3,6 +3,7 @@ import { useGoogleMapsLoader } from '../../../hooks/useGoogleMapsLoader';
 import { GMAPS_KEY } from '../../../config';
 import { useRef, useCallback, useState, useMemo, useEffect } from 'react';
 import { Icon } from '../../common/Icon';
+import { motion } from 'framer-motion';
 
 interface IziTrackingMapProps {
   driverLoc?: { lat: number; lng: number } | null;
@@ -82,10 +83,19 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
       path.forEach(p => bounds.extend(p));
       map.fitBounds(bounds, 80);
       setIsFollowing(false);
+    } else if (isValidCoord(userLoc)) {
+      // Mapa abre IMEDIATAMENTE na localizacao do usuario
+      map.setCenter(new google.maps.LatLng(userLoc!.lat, userLoc!.lng));
+      map.setZoom(17);
+      setInitialLoaded(true);
+    } else if (isValidCoord(driverLoc)) {
+      map.setCenter(new google.maps.LatLng(driverLoc!.lat, driverLoc!.lng));
+      map.setZoom(17);
+      setInitialLoaded(true);
     } else {
       setInitialLoaded(true);
     }
-  }, [path]);
+  }, [path, userLoc, driverLoc]);
 
   // Auto-fit bounds quando path chega (mount assíncrono após cálculo de rota)
   useEffect(() => {
@@ -93,34 +103,56 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
     const bounds = new google.maps.LatLngBounds();
     path.forEach(p => bounds.extend(p));
     mapRef.current.fitBounds(bounds, { top: 60, bottom: 80, right: 40, left: 40 });
+    setInitialLoaded(true);
     setIsFollowing(false);
-  }, [path]); // reage a qualquer mudança no array (referência ou tamanho)
+  }, [path]);
 
   const onUnmount = useCallback(() => {
     mapRef.current = null;
   }, []);
 
-  // Centralização dinâmica baseada em mudanças de localização
+  // Centralização e Seguimento: reage a mudanças na localização do usuário
   useEffect(() => {
-    if (isValidCoord(userLoc) && isFollowing && !routePolyline && mapRef.current) {
-      mapRef.current.panTo(userLoc!);
+    if (!mapRef.current || !isValidCoord(userLoc)) return;
+    
+    if (!initialLoaded) {
+      // Primeira vez com coordenadas válidas: jump imediato
+      console.log("[MAP] Primeira localização detectada, centralizando...");
+      mapRef.current.setCenter(new google.maps.LatLng(userLoc!.lat, userLoc!.lng));
+      mapRef.current.setZoom(17);
+      setMapCenter(userLoc!);
+      setInitialLoaded(true);
+    } else if (isFollowing) {
+      // Modo seguindo ou botão clicado: pan suave
+      console.log("[MAP] Atualizando centralização (seguindo):", userLoc);
+      mapRef.current.panTo(new google.maps.LatLng(userLoc!.lat, userLoc!.lng));
+      
+      // Se estávamos "localizando" (esperando GPS), agora que chegou podemos parar o spinner
+      if (isLocating) {
+        setIsLocating(false);
+      }
     }
-  }, [userLoc, isFollowing, routePolyline]);
+  }, [userLoc, isFollowing, routePolyline, initialLoaded, isLocating]);
 
   const handleCenterUser = () => {
+    if (isLocating) return;
+
     setIsLocating(true);
     setIsFollowing(true);
     
+    // Chama o callback externo para atualizar GPS (App.tsx)
     if (onMyLocationClick) {
       onMyLocationClick();
     }
     
+    // Centraliza IMEDIATAMENTE (sem suavidade no primeiro clique para parecer instantâneo)
     if (isValidCoord(userLoc) && mapRef.current) {
-      mapRef.current.panTo(userLoc!);
-      mapRef.current.setZoom(16);
+      mapRef.current.setCenter(new google.maps.LatLng(userLoc!.lat, userLoc!.lng));
+      mapRef.current.setZoom(17);
     }
-    
-    setTimeout(() => setIsLocating(false), 1500);
+
+    // Timeout de segurança
+    setTimeout(() => setIsLocating(false), 3000);
   };
 
   // RENDERIZAÇÃO CONDICIONAL APÓS TODOS OS HOOKS
@@ -162,8 +194,8 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
     <div className="w-full h-full relative z-0 overflow-hidden rounded-[inherit] italic">
       <GoogleMap
         mapContainerStyle={{ width: '100%', height: '100%' }}
-        center={mapCenter}
-        zoom={path.length > 0 ? 15 : 14}
+        defaultCenter={initialCenter}
+        zoom={path.length > 0 ? 15 : 17}
         onLoad={onLoad}
         onUnmount={onUnmount}
         onDragStart={() => setIsFollowing(false)}
@@ -226,62 +258,70 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
           </OverlayView>
         )}
 
-        {/* Marcador do Usuário — Ponto Pulsante Estilo Google Maps */}
+        {/* Marcador do Usuário — Pin Izi Amarelo com Círculo Preto */}
         {isValidCoord(userLoc) && (
           <OverlayView position={userLoc!} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-            <div className="relative flex items-center justify-center" style={{ transform: 'translate(-50%, -50%)' }}>
-              {/* Anel externo — pulsa mais devagar */}
+            <div className="relative flex items-center justify-center" style={{ transform: 'translate(-50%, -100%)' }}>
+              
+              {/* Pulso de localização na base do PIN */}
               <div
                 className="absolute rounded-full animate-ping"
                 style={{
-                  width: 40,
-                  height: 40,
-                  background: 'rgba(250,204,21,0.2)',
-                  animationDuration: '1.8s',
+                  width: 32,
+                  height: 32,
+                  background: 'rgba(250,204,21,0.25)',
+                  animationDuration: '2s',
+                  bottom: -16
                 }}
               />
-              {/* Anel intermediário — pulsa um pouco mais rápido */}
-              <div
-                className="absolute rounded-full animate-pulse"
-                style={{
-                  width: 24,
-                  height: 24,
-                  background: 'rgba(250,204,21,0.35)',
-                  animationDuration: '1.2s',
-                }}
-              />
-              {/* Ponto central sólido com borda branca */}
-              <div
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: '50%',
-                  background: '#facc15',
-                  border: '3px solid white',
-                  boxShadow: '0 0 12px rgba(250,204,21,0.9), 0 2px 6px rgba(0,0,0,0.5)',
-                  position: 'relative',
-                  zIndex: 10,
-                }}
-              />
+
+              {/* Corpo do PIN (SVG para precisão total do shape da imagem) */}
+              <motion.div 
+                initial={{ scale: 0, y: 10 }}
+                animate={{ scale: 1, y: 0 }}
+                className="relative z-10 flex flex-col items-center"
+              >
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))' }}>
+                  {/* Forma da Gota/Pin */}
+                  <path 
+                    d="M12 22C12 22 19 15.5 19 10C19 6.13401 15.866 3 12 3C8.13401 3 5 6.13401 5 10C5 15.5 12 22 12 22Z" 
+                    fill="#facc15" 
+                    stroke="white"
+                    strokeWidth="0.5"
+                  />
+                  {/* Círculo Preto Central */}
+                  <circle cx="12" cy="10" r="3.5" fill="#000000" />
+                </svg>
+
+                {/* Sombra pequena no pé do pin */}
+                <div className="size-1.5 rounded-full bg-black/40 blur-[1px] -mt-1" />
+              </motion.div>
             </div>
           </OverlayView>
         )}
       </GoogleMap>
 
-      {/* Botão de Localização Atual - Apenas se não for boxed */}
+      {/* Botão de Localização — FORÇADO FIXED z-[1000] para garantir visibilidade */}
       {!boxed && (
-        <div className="absolute bottom-32 right-6 flex flex-col gap-3 z-10">
+        <div className="fixed z-[1000]" style={{ bottom: 'calc(35vh + 30px)', left: '24px' }}>
           <button
             onClick={handleCenterUser}
             disabled={isLocating}
-            className={`size-14 rounded-[22px] flex items-center justify-center shadow-[0_20px_40px_rgba(0,0,0,0.3)] transition-all active:scale-[0.85]
-              ${isLocating ? 'bg-yellow-400' : 'bg-white/95 hover:bg-white'} 
-              backdrop-blur-xl border border-white`}
+            className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 relative
+              ${isLocating ? 'scale-90' : 'active:scale-90'}`}
+            style={{
+              background: 'linear-gradient(145deg, #facc15, #eab308)',
+              boxShadow: 'inset 4px 4px 8px rgba(255,255,255,0.7), inset -4px -4px 8px rgba(0,0,0,0.12)',
+              border: '2px solid rgba(255,255,255,0.3)',
+            }}
           >
-            <span className={`material-symbols-rounded text-2xl 
-              ${isLocating ? 'text-black animate-spin' : 'text-zinc-800'}`}>
+            <span className={`material-symbols-outlined text-[26px] font-black text-black leading-none
+              ${isLocating ? 'animate-spin' : ''}`}>
               {isLocating ? 'progress_activity' : 'my_location'}
             </span>
+            {isFollowing && !isLocating && (
+              <div className="absolute inset-0 rounded-2xl border-[3px] border-yellow-300/40 animate-ping pointer-events-none" />
+            )}
           </button>
         </div>
       )}

@@ -11,6 +11,7 @@ interface LogisticsTrackingViewProps {
   onBack: () => void;
   onContactDriver: () => void;
   onCancel: () => void;
+  onUpdateLocation?: () => void;
 }
 
 const STATUS_TIMELINE = [
@@ -70,6 +71,7 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
   onBack,
   onContactDriver,
   onCancel,
+  onUpdateLocation,
 }) => {
   const [routePath, setRoutePath] = useState<any[]>([]);
   const [routeLoading, setRouteLoading] = useState(false);
@@ -170,6 +172,7 @@ export const LogisticsTrackingView: React.FC<LogisticsTrackingViewProps> = ({
           vehicleIcon={order?.service_type === "van" ? "airport_shuttle" : "local_shipping"}
           originLabel="COLETA"
           boxed={false}
+          onMyLocationClick={onUpdateLocation}
         />
         <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" />
       </div>
