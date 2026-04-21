@@ -28,6 +28,8 @@ import SupportTab from './components/SupportTab';
 import MerchantDashboardTab from './components/MerchantDashboardTab';
 import CategoriesTab from './components/CategoriesTab';
 import NotificationsTab from './components/NotificationsTab';
+import GamificationTab from './components/GamificationTab';
+
 
 
 function App() {
@@ -167,6 +169,7 @@ function App() {
                   <NavTab id="users" icon="group" label="Usuários" />
                    <NavTab id="izi_black" icon="workspace_premium" label="Izi Black VIP" />
                   <NavTab id="promotions" icon="campaign" label="Promoções" />
+                  <NavTab id="gamification" icon="military_tech" label="Gamificação" />
                   <NavTab id="notifications" icon="notifications_active" label="Notificações" />
                    <NavTab id="financial" icon="bar_chart" label="Financeiro" />
                   <NavTab id="dynamic_rates" icon="payments" label="Taxas" />
@@ -221,6 +224,7 @@ function App() {
               {activeTab === 'izi_black' && <IziBlackTab />}
               {activeTab === 'support' && <SupportTab />}
               {activeTab === 'notifications' && <NotificationsTab />}
+              {activeTab === 'gamification' && <GamificationTab />}
             </motion.div>
           </AnimatePresence>
         </main>
