@@ -40,7 +40,7 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
   const mapRef = useRef<google.maps.Map | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [initialLoaded, setInitialLoaded] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(!routePolyline);
 
   const isValidCoord = (coord: any) => coord && coord.lat !== 0 && coord.lng !== 0;
 
@@ -86,11 +86,11 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
     } else if (isValidCoord(userLoc)) {
       // Mapa abre IMEDIATAMENTE na localizacao do usuario
       map.setCenter(new google.maps.LatLng(userLoc!.lat, userLoc!.lng));
-      map.setZoom(17);
+      map.setZoom(16);
       setInitialLoaded(true);
     } else if (isValidCoord(driverLoc)) {
       map.setCenter(new google.maps.LatLng(driverLoc!.lat, driverLoc!.lng));
-      map.setZoom(17);
+      map.setZoom(16);
       setInitialLoaded(true);
     } else {
       setInitialLoaded(true);
@@ -119,7 +119,7 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
       // Primeira vez com coordenadas válidas: jump imediato
       console.log("[MAP] Primeira localização detectada, centralizando...");
       mapRef.current.setCenter(new google.maps.LatLng(userLoc!.lat, userLoc!.lng));
-      mapRef.current.setZoom(17);
+      mapRef.current.setZoom(16);
       setMapCenter(userLoc!);
       setInitialLoaded(true);
     } else if (isFollowing) {
@@ -136,23 +136,45 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
 
   const handleCenterUser = () => {
     if (isLocating) return;
-
     setIsLocating(true);
     setIsFollowing(true);
     
-    // Chama o callback externo para atualizar GPS (App.tsx)
+    const moveMap = (lat: number, lng: number) => {
+      if (mapRef.current) {
+        console.log("[MAP] Centralização DIRETA disparada:", lat, lng);
+        const newPos = new google.maps.LatLng(lat, lng);
+        mapRef.current.setCenter(newPos);
+        mapRef.current.setZoom(16);
+        setIsLocating(false);
+      }
+    };
+
+    // 1. TENTA NATIVO (Capacitor)
+    if (Capacitor.isNativePlatform()) {
+      Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 })
+        .then(pos => {
+          moveMap(pos.coords.latitude, pos.coords.longitude);
+        })
+        .catch(() => setIsLocating(false));
+    } 
+    // 2. TENTA WEB (Browser)
+    else if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          moveMap(pos.coords.latitude, pos.coords.longitude);
+        },
+        () => setIsLocating(false),
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+
+    // 3. SEMPRE CHAMA O GLOBAL (para atualizar endereço e outros componentes)
     if (onMyLocationClick) {
       onMyLocationClick();
     }
-    
-    // Centraliza IMEDIATAMENTE (sem suavidade no primeiro clique para parecer instantâneo)
-    if (isValidCoord(userLoc) && mapRef.current) {
-      mapRef.current.setCenter(new google.maps.LatLng(userLoc!.lat, userLoc!.lng));
-      mapRef.current.setZoom(17);
-    }
 
-    // Timeout de segurança
-    setTimeout(() => setIsLocating(false), 3000);
+    // Backup para desligar o spinner
+    setTimeout(() => setIsLocating(false), 5000);
   };
 
   // RENDERIZAÇÃO CONDICIONAL APÓS TODOS OS HOOKS
@@ -195,7 +217,7 @@ export function IziTrackingMap({ driverLoc, userLoc, routePolyline, onMyLocation
       <GoogleMap
         mapContainerStyle={{ width: '100%', height: '100%' }}
         defaultCenter={initialCenter}
-        zoom={path.length > 0 ? 15 : 17}
+        zoom={path.length > 0 ? 15 : 16}
         onLoad={onLoad}
         onUnmount={onUnmount}
         onDragStart={() => setIsFollowing(false)}
